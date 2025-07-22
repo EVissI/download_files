@@ -1,0 +1,19 @@
+# Игнорирование виртуальной среды Python
+venv/
+.venv/
+
+
+# Игнорирование файлов с окружением
+.env
+
+data/db.sqlite3
+app/log.txt
+log/log_bot.txt
+log/log_bot_error.txt
+# Игнорирование скомпилированных файлов Python
+__pycache__/
+**/__pycache__/
+
+# Игнорирование настроек проекта для PyCharm
+.idea/
+**/.idea/

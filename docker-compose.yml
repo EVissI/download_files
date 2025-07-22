@@ -1,0 +1,39 @@
+﻿services:
+  backgammon-bot:
+    build: .
+    command: /bin/sh -c "alembic upgrade head && python -m bot.init"
+    container_name: backgammon_bot
+    volumes:
+      - ./bot:/app/bot
+      - ./log:/app/log
+      - ./files:/app/files
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: backgammon
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  redis_data:
+  pgdata:
+  files_data:

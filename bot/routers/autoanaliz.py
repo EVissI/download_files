@@ -1,0 +1,200 @@
+﻿import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from aiogram import Router, F
+from aiogram.types import Message, CallbackQuery
+from aiogram.filters import Command, StateFilter
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.fsm.context import FSMContext
+from sqlalchemy.ext.asyncio import AsyncSession
+from loguru import logger
+import os
+import json
+
+from bot.common.filters.user_info import UserInfo
+from bot.common.func.func import (
+    format_detailed_analysis,
+    get_analysis_data,
+    get_user_file_name,
+)
+from bot.common.func.waiting_message import WaitingMessageManager
+from bot.common.func.yadisk import save_file_to_yandex_disk
+from bot.common.kbds.markup.cancel import get_cancel_kb
+from bot.common.kbds.markup.main_kb import MainKeyboard
+from bot.common.texts import get_text
+from bot.db.dao import DetailedAnalysisDAO, UserDAO
+from bot.db.models import User
+from bot.common.func.analiz_func import analyze_mat_file
+from bot.db.schemas import SDetailedAnalysis, SUser
+
+auto_analyze_router = Router()
+
+
+class AutoAnalyzeDialog(StatesGroup):
+    file = State()
+
+
+@auto_analyze_router.message(
+    F.text == MainKeyboard.get_user_kb_text().get("auto_analyze")
+)
+async def start_auto_analyze(message: Message, state: FSMContext):
+    await state.set_state(AutoAnalyzeDialog.file)
+    await message.answer(
+        "Submit .mat file for automatic analysis", reply_markup=get_cancel_kb()
+    )
+
+
+@auto_analyze_router.message(
+    F.text == get_text("cancel"), StateFilter(AutoAnalyzeDialog.file), UserInfo()
+)
+async def cancel_auto_analyze(message: Message, state: FSMContext, user_info: User):
+    await state.clear()
+    await message.answer(message.text, reply_markup=MainKeyboard.build(user_info.role))
+
+
+@auto_analyze_router.message(F.document, StateFilter(AutoAnalyzeDialog.file), UserInfo())
+async def handle_mat_file(
+    message: Message,
+    state: FSMContext,
+    session_without_commit: AsyncSession,
+    user_info: User,
+):
+    try:
+        waiting_manager = WaitingMessageManager(message.chat.id, message.bot)
+        file = message.document
+        if not file.file_name.endswith(".mat"):
+            return await message.answer("Please send .mat file.")
+
+        # Создаем директорию если её нет
+        files_dir = os.path.join(os.getcwd(), "files")
+        os.makedirs(files_dir, exist_ok=True)
+        await waiting_manager.start()
+        file_path = os.path.join(files_dir, file.file_name)
+
+        await message.bot.download(file.file_id, destination=file_path)
+
+        loop = asyncio.get_running_loop()
+        analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path)
+        analysis_data = await loop.run_in_executor(None, json.loads, analysis_result)
+
+        player_names = list(analysis_data["chequerplay"].keys())
+        if len(player_names) != 2:
+            raise ValueError("Incorrect number of players in analysis")
+
+        # Генерируем новое имя файла
+        current_date = datetime.now().strftime("%d.%m.%y-%H.%M.%S")
+        new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
+        new_file_path = os.path.join(files_dir, new_file_name)
+
+        # Переименовываем файл
+        os.rename(file_path, new_file_path)
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                ThreadPoolExecutor(),
+                lambda: asyncio.run_coroutine_threadsafe(
+                    save_file_to_yandex_disk(new_file_path, new_file_name),
+                    loop
+                ).result()
+            )
+        except Exception as e:
+            logger.error(f"Error saving file to Yandex Disk: {e}")
+
+        if user_info.player_username and user_info.player_username in player_names:
+            selected_player = user_info.player_username
+            game_id = f"auto_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+            player_data = {
+                "user_id": message.from_user.id,
+                "player_name": selected_player,
+                "file_name": new_file_name,
+                "file_path": new_file_path,
+                "game_id": game_id,
+                **get_analysis_data(analysis_data, selected_player),
+            }
+
+            dao = DetailedAnalysisDAO(session_without_commit)
+            await dao.add(SDetailedAnalysis(**player_data))
+            await session_without_commit.commit()
+
+            formatted_analysis = format_detailed_analysis(analysis_data)
+            await waiting_manager.stop()
+            await message.answer(
+                f"{formatted_analysis}\n\n",
+                parse_mode="HTML",
+                reply_markup=MainKeyboard.build(user_info.role),
+            )
+            await state.clear()
+
+        else:
+            await state.update_data(
+                analysis_data=analysis_data,
+                file_name=new_file_name,
+                file_path=new_file_path,
+                player_names=player_names,
+            )
+
+            keyboard = InlineKeyboardBuilder()
+            for player in player_names:
+                keyboard.button(text=player, callback_data=f"auto_player:{player}")
+            keyboard.adjust(1)
+            await waiting_manager.stop()
+            await message.answer(
+                "File analysis complete. Select which player you were:",
+                reply_markup=keyboard.as_markup(),
+            )
+
+    except Exception as e:
+        logger.error(f"Ошибка при автоматическом анализе файла: {e}")
+        await message.answer("An error occurred while parsing the file.")
+        await waiting_manager.stop()
+
+@auto_analyze_router.callback_query(F.data.startswith("auto_player:"), UserInfo())
+async def handle_player_selection(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session_without_commit: AsyncSession,
+    user_info: User,
+):
+    try:
+        data = await state.get_data()
+        analysis_data = data["analysis_data"]
+        file_name = data["file_name"]
+        file_path = data["file_path"]
+
+        selected_player = callback.data.split(":")[1]
+        user_dao = UserDAO(session_without_commit)
+        if not user_info.player_username:
+            await user_dao.update(user_info.id, {"player_username": selected_player})
+            logger.info(f"Updated player_username for user {user_info.id} to {selected_player}")
+
+        game_id = f"auto_{callback.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        dao = DetailedAnalysisDAO(session_without_commit)
+
+        player_data = {
+            "user_id": callback.from_user.id,
+            "player_name": selected_player,
+            "file_name": file_name,
+            "file_path": file_path,
+            "game_id": game_id,
+            **get_analysis_data(analysis_data, selected_player),
+        }
+
+        await dao.add(SDetailedAnalysis(**player_data))
+
+        formatted_analysis = format_detailed_analysis(analysis_data)
+
+        await callback.message.delete()
+        await callback.message.answer(
+            f"{formatted_analysis}\n\n",
+            parse_mode="HTML",
+            reply_markup=MainKeyboard.build(user_info.role),
+        )
+        await session_without_commit.commit()
+        await state.clear()
+
+    except Exception as e:
+        logger.error(f"Ошибка при сохранении выбора игрока: {e}")
+        await callback.message.answer("An error occurred while saving data.")
