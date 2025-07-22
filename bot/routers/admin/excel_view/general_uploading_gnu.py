@@ -43,13 +43,13 @@ async def handle_detailed_unloading_callback(
 ):
     await callback.message.delete()
     match callback_data.action:
-        case "detailed_uploading_by_date":
+        case "uploading_by_date":
             await callback.message.answer(
                 "Введите дату в формате DD.MM.YYYY-DD.MM.YYYY для выгрузки детального анализа",
                 reply_markup=get_cancel_kb(),
             )
             await state.set_state(DetailedAnalysisInputDate.Date)
-        case "detailed_unloading":
+        case "general_unloading":
             dao = DetailedAnalysisDAO(session_without_commit)
             excel_buffer = await generate_detailed_analysis_report(dao)
             await callback.message.answer_document(
