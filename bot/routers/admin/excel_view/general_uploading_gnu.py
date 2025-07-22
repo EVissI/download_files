@@ -51,14 +51,18 @@ async def handle_detailed_unloading_callback(
             await state.set_state(DetailedAnalysisInputDate.Date)
         case "general_unloading":
             dao = DetailedAnalysisDAO(session_without_commit)
-            excel_buffer = await generate_detailed_analysis_report(dao)
-            await callback.message.answer_document(
-                document=BufferedInputFile(
-                    excel_buffer.getvalue(),
-                    filename=f"detailed_statistics_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                ),
-                caption="Детальный анализ за последний месяц",
-            )
+            try:
+                excel_buffer = await generate_detailed_analysis_report(dao)
+                await callback.message.answer_document(
+                    document=BufferedInputFile(
+                        excel_buffer.getvalue(),
+                        filename=f"detailed_statistics_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                    ),
+                    caption="Детальный анализ за последний месяц",
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при генерации отчета: {e}")
+                await callback.message.answer("Ошибка при генерации отчета. Попробуйте позже.")
         case "back":
             await state.set_state(GeneralStates.excel_view)
             await callback.message.answer(

@@ -213,53 +213,38 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
     async def get_all_detailed_analyzes(
         self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
     ) -> List[DetailedAnalysis]:
-        """
-        Получает все записи детального анализа с фильтрацией по дате.
-
-        Args:
-            start_date: Начальная дата для фильтрации анализов
-            end_date: Конечная дата для фильтрации анализов
-
-        Returns:
-            List[DetailedAnalysis]: Список записей детального анализа
-        """
         try:
-            # Формируем базовые условия для фильтрации
             conditions = []
             if start_date:
                 conditions.append(self.model.created_at >= start_date)
             if end_date:
                 conditions.append(self.model.created_at <= end_date)
 
-            # Получаем ID записей детального анализа за указанный период
-            analysis_ids_query = select(self.model.id).where(*conditions).distinct()
-            analysis_ids_result = await self._session.execute(analysis_ids_query)
-            analysis_ids = [row[0] for row in analysis_ids_result]
+            async with self._session as session:
+                analysis_ids_query = select(self.model.id).where(*conditions).distinct()
+                analysis_ids_result = await session.execute(analysis_ids_query)
+                analysis_ids = [row[0] for row in analysis_ids_result.fetchall()]
 
-            if not analysis_ids:
-                logger.info("Нет записей детального анализа за указанный период")
-                return []
+                if not analysis_ids:
+                    logger.info("Нет записей детального анализа за указанный период")
+                    return []
 
-            # Получаем записи с их пользователями
-            query = (
-                select(self.model)
-                .where(self.model.id.in_(analysis_ids))
-                .options(
-                    selectinload(self.model.user)  # Load user relationship
-                )
-            )
-
-            result = await self._session.execute(query)
-            analyses = result.scalars().all()
-
-            # Подробное логирование
-            logger.info(f"Загружено {len(analyses)} записей детального анализа")
-            for analysis in analyses:
-                logger.debug(
-                    f"Анализ {analysis.id} для пользователя {analysis.user_id} имеет {len(analysis.user.detailed_analyzes)} записей, created_at: {analysis.created_at}"
+                query = (
+                    select(self.model)
+                    .where(self.model.id.in_(analysis_ids))
+                    .options(selectinload(self.model.user))
                 )
 
-            return analyses
+                result = await session.execute(query)
+                analyses = result.scalars().all()
+
+                logger.info(f"Загружено {len(analyses)} записей детального анализа")
+                for analysis in analyses:
+                    logger.debug(
+                        f"Анализ {analysis.id} для пользователя {analysis.user_id} имеет {len(analysis.user.detailed_analyzes)} записей, created_at: {analysis.created_at}"
+                    )
+
+                return analyses
 
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке записей детального анализа: {e}")

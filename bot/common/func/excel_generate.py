@@ -7,7 +7,7 @@ from loguru import logger
 from sqlalchemy.exc import SQLAlchemyError
 
 from bot.common.func.func import determine_rank
-from bot.db.dao import UserDAO
+from bot.db.dao import UserDAO, DetailedAnalysisDAO
 
 async def generate_users_analysis_report(
     dao, 
@@ -215,59 +215,36 @@ async def generate_user_analysis_report(
 
 
 async def generate_detailed_analysis_report(
-    dao:UserDAO,
-    start_date: datetime = None,
-    end_date: datetime = None
+    dao: DetailedAnalysisDAO,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
 ) -> io.BytesIO:
-    """
-    Генерирует Excel отчет со статистикой детального анализа
-
-    Args:
-        dao: DetailedAnalysisDAO instance
-        start_date: Начальная дата для фильтрации
-        end_date: Конечная дата для фильтрации
-
-    Returns:
-        io.BytesIO: Excel файл в виде буфера байтов
-    """
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Детальный анализ"
-
-    # Стили
-    header_font = Font(bold=True)
-    header_fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
-    center_align = Alignment(horizontal="center")
-
-    # Заголовки
-    headers = [
-        "ID анализа",
-        "ID пользователя",
-        "Имя игрока",
-        "Дата анализа",
-        "Плохие ходы",
-        "Очень плохие ходы",
-        "Ошибка (Chequerplay)",
-        "Рейтинг Chequerplay",
-        "Очень удачные броски",
-        "Удачные броски",
-        "Неудачные броски",
-        "Очень неудачные броски",
-        "Рейтинг удачи",
-        "Рейтинг кубика",
-        "Общая ошибка",
-        "Общий рейтинг"
-    ]
-
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col)
-        cell.value = header
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = center_align
-
-    # Получаем данные детального анализа
     try:
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Детальный анализ"
+
+        # Стили
+        header_font = Font(bold=True)
+        header_fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+        center_align = Alignment(horizontal="center")
+
+        # Заголовки
+        headers = [
+            "ID анализа", "ID пользователя", "Имя игрока", "Дата анализа",
+            "Плохие ходы", "Очень плохие ходы", "Ошибка (Chequerplay)",
+            "Рейтинг Chequerplay", "Очень удачные броски", "Удачные броски",
+            "Неудачные броски", "Очень неудачные броски", "Рейтинг удачи",
+            "Рейтинг кубика", "Общая ошибка", "Общий рейтинг"
+        ]
+
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col)
+            cell.value = header
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_align
+
         analyses = await dao.get_all_detailed_analyzes(start_date, end_date)
         current_row = 2
 
@@ -288,33 +265,17 @@ async def generate_detailed_analysis_report(
             ws.cell(row=current_row, column=14).value = analysis.cube_decision_rating
             ws.cell(row=current_row, column=15).value = analysis.snowie_error_rate
             ws.cell(row=current_row, column=16).value = analysis.overall_rating
-
             current_row += 1
 
-        # Устанавливаем ширину столбцов
         column_widths = {
-            "A": 15,  # ID анализа
-            "B": 15,  # ID пользователя
-            "C": 20,  # Имя игрока
-            "D": 20,  # Дата анализа
-            "E": 15,  # Плохие ходы
-            "F": 15,  # Очень плохие ходы
-            "G": 15,  # Ошибка (Chequerplay)
-            "H": 20,  # Рейтинг Chequerplay
-            "I": 15,  # Очень удачные броски
-            "J": 15,  # Удачные броски
-            "K": 15,  # Неудачные броски
-            "L": 15,  # Очень неудачные броски
-            "M": 20,  # Рейтинг удачи
-            "N": 20,  # Рейтинг кубика
-            "O": 15,  # Общая ошибка
-            "P": 20,  # Общий рейтинг
+            "A": 15, "B": 15, "C": 20, "D": 20, "E": 15, "F": 15,
+            "G": 15, "H": 20, "I": 15, "J": 15, "K": 15, "L": 15,
+            "M": 20, "N": 20, "O": 15, "P": 20
         }
 
         for col, width in column_widths.items():
             ws.column_dimensions[col].width = width
 
-        # Сохраняем в буфер
         excel_buffer = io.BytesIO()
         wb.save(excel_buffer)
         excel_buffer.seek(0)
@@ -327,7 +288,7 @@ async def generate_detailed_analysis_report(
         raise
 
 async def generate_detailed_user_analysis_report(
-    dao:UserDAO,
+    dao:DetailedAnalysisDAO,
     user_id: int = None,
     start_date: datetime = None,
     end_date: datetime = None
