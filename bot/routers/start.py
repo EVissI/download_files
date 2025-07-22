@@ -15,8 +15,8 @@ async def start_command(message: Message, session_with_commit: AsyncSession):
     user_data = message.from_user
     user_id = user_data.id
     user_info:User = await UserDAO(session_with_commit).find_one_or_none_by_id(user_id)
-    if user_info and user_data.id not in settings.ROOT_ADMIN_IDS:
-        user_info.role = User.Role.USER.value
+    if user_info and user_data.id in settings.ROOT_ADMIN_IDS:
+        user_info.role = User.Role.ADMIN.value
         await UserDAO(session_with_commit).update(user_info.id, user_info.to_dict())
         await message.answer(
             get_text('start'), reply_markup=MainKeyboard.build(user_info.role)
