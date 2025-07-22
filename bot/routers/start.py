@@ -22,7 +22,7 @@ async def start_command(message: Message, session_with_commit: AsyncSession):
                             first_name=user_data.first_name,
                             last_name=user_data.last_name, 
                             username=user_data.username,
-                            role=role))
+                            role=user_info.role))
         await message.answer(
             get_text('start'), reply_markup=MainKeyboard.build(user_info.role)
         )
