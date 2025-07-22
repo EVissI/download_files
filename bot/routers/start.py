@@ -15,7 +15,7 @@ async def start_command(message: Message, session_with_commit: AsyncSession):
     user_data = message.from_user
     user_id = user_data.id
     user_info:User = await UserDAO(session_with_commit).find_one_or_none_by_id(user_id)
-    if user_info and user_data.id in settings.ROOT_ADMIN_IDS:
+    if user_info and user_data.id in settings.ROOT_ADMIN_IDS and user_info.role != User.Role.ADMIN.value:
         user_info.role = User.Role.ADMIN.value
         await UserDAO(session_with_commit).update(user_info.id, SUser(id=user_id, 
                             player_username = user_info.username,
