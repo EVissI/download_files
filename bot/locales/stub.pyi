@@ -11,6 +11,7 @@ class TranslatorRunner:
     user: User
     keyboard: Keyboard
     auto: Auto
+    analysis: Analysis
 
 class UserStatic:
     @staticmethod
@@ -111,3 +112,58 @@ class AutoAnalyze:
 
 class Auto:
     analyze: AutoAnalyze
+
+class AnalysisLuck:
+    @staticmethod
+    def __call__() -> Literal["""Luck"""]: ...
+    @staticmethod
+    def luck_plus_move() -> Literal["""Luck+ move"""]: ...
+    @staticmethod
+    def luck_move() -> Literal["""Luck move"""]: ...
+    @staticmethod
+    def unluck_plus_move() -> Literal["""Unluck+ move"""]: ...
+    @staticmethod
+    def unluck_move() -> Literal["""Unluck move"""]: ...
+    @staticmethod
+    def luck_rate() -> Literal["""Luck rate"""]: ...
+    @staticmethod
+    def rating() -> Literal["""Rating"""]: ...
+
+class AnalysisCube:
+    @staticmethod
+    def __call__() -> Literal["""Cube"""]: ...
+    @staticmethod
+    def rating() -> Literal["""Rating"""]: ...
+
+class AnalysisChequerplay:
+    @staticmethod
+    def bad_move() -> Literal["""Bad move"""]: ...
+    @staticmethod
+    def bad_plus_move() -> Literal["""Bad+ move"""]: ...
+    @staticmethod
+    def error_rate() -> Literal["""Error rate"""]: ...
+    @staticmethod
+    def rating() -> Literal["""Rating"""]: ...
+
+class AnalysisOverall:
+    @staticmethod
+    def error_rate() -> Literal["""Error rate"""]: ...
+    @staticmethod
+    def rating() -> Literal["""Rating"""]: ...
+
+class Analysis:
+    luck: AnalysisLuck
+    cube: AnalysisCube
+    chequerplay: AnalysisChequerplay
+    overall: AnalysisOverall
+
+    @staticmethod
+    def results() -> Literal["""Analysis results"""]: ...
+    @staticmethod
+    def vs(*, player1_name: PossibleValue, player2_name: PossibleValue) -> Literal["""{ $player1_name } vs { $player2_name }"""]: ...
+    @staticmethod
+    def playing_checkers() -> Literal["""Playing checkers"""]: ...
+    @staticmethod
+    def overall_statistic() -> Literal["""Overall statistic"""]: ...
+    @staticmethod
+    def error_formatting() -> Literal["""Error formatting analysis results."""]: ...

@@ -42,3 +42,28 @@ auto-analyze-invalid = Пожалуйста, отправьте .mat файл.
 auto-analyze-complete = Анализ файла завершен. Выберите, кем вы были: 
 auto-analyze-error-parse = Произошла ошибка при разборе файла. 
 auto-analyze-error-save = Произошла ошибка при сохранении данных.
+
+analysis-results = Результаты анализа 
+analysis-vs = { $player1_name } против { $player2_name } 
+analysis-playing_checkers = Игра c шашками 
+analysis-luck = Удача 
+analysis-cube = Кубик 
+analysis-overall_statistic = Общая статистика 
+analysis-error_formatting = Ошибка при форматировании результатов анализа.
+
+analysis-chequerplay-bad_move = Плохой ход 
+analysis-chequerplay-bad_plus_move = Плохой+ ход 
+analysis-chequerplay-error_rate = Ошибки 
+analysis-chequerplay-rating = Рейтинг
+
+analysis-luck-luck_plus_move = Удачный+ ход 
+analysis-luck-luck_move = Удачный ход 
+analysis-luck-unluck_plus_move = Неудачный+ ход 
+analysis-luck-unluck_move = Неудачный ход 
+analysis-luck-luck_rate = Удача
+analysis-luck-rating = Рейтинг
+
+analysis-cube-rating = Общ Рейтинг
+
+analysis-overall-error_rate = Ошибка 
+analysis-overall-rating = Рейтинг

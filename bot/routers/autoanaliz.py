@@ -175,7 +175,7 @@ async def handle_player_selection(
 
         selected_player = callback.data.split(":")[1]
         user_dao = UserDAO(session_without_commit)
-        if not user_info.player_username:
+        if not user_info.player_username or user_info.player_username != selected_player:
             await user_dao.update(user_info.id, {"player_username": selected_player})
             logger.info(f"Updated player_username for user {user_info.id} to {selected_player}")
 

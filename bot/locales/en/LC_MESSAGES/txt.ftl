@@ -40,3 +40,28 @@ auto-analyze-invalid = Please send .mat file.
 auto-analyze-complete = File analysis complete. Select which player you were: 
 auto-analyze-error-parse = An error occurred while parsing the file. 
 auto-analyze-error-save = An error occurred while saving data.
+
+analysis-results = Analysis results 
+analysis-vs = { $player1_name } vs { $player2_name } 
+analysis-playing_checkers = Playing checkers 
+analysis-luck = Luck 
+analysis-cube = Cube 
+analysis-overall_statistic = Overall statistic 
+analysis-error_formatting = Error formatting analysis results.
+
+analysis-chequerplay-bad_move = Bad move 
+analysis-chequerplay-bad_plus_move = Bad+ move 
+analysis-chequerplay-error_rate = Error rate 
+analysis-chequerplay-rating = Rating
+
+analysis-luck-luck_plus_move = Luck+ move 
+analysis-luck-luck_move = Luck move 
+analysis-luck-unluck_plus_move = Unluck+ move 
+analysis-luck-unluck_move = Unluck move 
+analysis-luck-luck_rate = Luck rate 
+analysis-luck-rating = Rating
+
+analysis-cube-rating = Rating
+
+analysis-overall-error_rate = Error rate 
+analysis-overall-rating = Rating
