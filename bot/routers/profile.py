@@ -9,7 +9,7 @@ from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import UserDAO
 from bot.db.models import User
 from bot.db.schemas import SUser
-from bot.init import translator_hub
+from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 from bot.common.utils.i18n import get_all_locales_for_key

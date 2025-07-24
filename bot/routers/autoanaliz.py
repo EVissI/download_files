@@ -29,7 +29,7 @@ from bot.db.models import User
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.db.schemas import SDetailedAnalysis, SUser
 
-from bot.init import translator_hub
+from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 from bot.common.utils.i18n import get_all_locales_for_key
