@@ -66,8 +66,6 @@ async def handle_user_statistics(
                 snowie_error_rate=snowie_error_rate,
                 detailed_rank_overall=detailed_rank_overall
             ) 
-
-        if detailed_count > 0:
             await callback.message.edit_text(
                 detailed_statistics,
                 parse_mode="HTML",
