@@ -17,7 +17,10 @@ user-profile-inline_button-my_stats = Моя статистика
 user-profile-inline_button-change_language = Изменить язык
 user-profile-change_language-confirm = Язык бота успешно изменён!
 
-user-profile-detailed_statistics = 🎯 Gnu({ $detailed_count } игр, Никнейм: { $player_username }
+user-profile-detailed_statistics = 🎯 Gnu({ $detailed_count -> 
+    [one] 1 игра 
+    [few] { $detailed_count } игры 
+    *[other] { $detailed_count } игр }, Никнейм: { $player_username })
     Игра в шашки:
     ├ Ошибка: { $error_rate_chequer }
     └ Рейтинг: { $detailed_rank_chequer }
