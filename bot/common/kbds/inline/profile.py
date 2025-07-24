@@ -19,7 +19,7 @@ def get_profile_kb(i18n: TranslatorRunner) -> InlineKeyboardMarkup:
     )
     builder.button(
         text=i18n.user.profile.inline_button.my_stats(),
-        callback_data=ProfileCallback(action="my_stat").pack()
+        callback_data=ProfileCallback(action="stat").pack()
     )
 
     builder.adjust(1)

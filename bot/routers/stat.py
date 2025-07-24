@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 stat_router = Router()
 
-@stat_router.callback_query(ProfileCallback.filter(F.action == "change_lang"), UserInfo())
+@stat_router.callback_query(ProfileCallback.filter(F.action == "stat"), UserInfo())
 async def handle_user_statistics(
     callback: CallbackQuery,
     user_info: User,
