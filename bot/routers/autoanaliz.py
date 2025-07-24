@@ -23,10 +23,18 @@ from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.texts import get_text
+from bot.common.utils.i18n import get_all_locales_for_key
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
 from bot.db.models import User
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.db.schemas import SDetailedAnalysis, SUser
+
+from bot.init import translator_hub
+from typing import TYPE_CHECKING
+from fluentogram import TranslatorRunner
+from bot.common.utils.i18n import get_all_locales_for_key
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
 
 auto_analyze_router = Router()
 
@@ -36,7 +44,7 @@ class AutoAnalyzeDialog(StatesGroup):
 
 
 @auto_analyze_router.message(
-    F.text == MainKeyboard.get_user_kb_text().get("auto_analyze")
+    F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-user-reply-autoanalyze"))
 )
 async def start_auto_analyze(message: Message, state: FSMContext):
     await state.set_state(AutoAnalyzeDialog.file)
