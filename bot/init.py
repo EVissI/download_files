@@ -6,16 +6,14 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram import Bot, Dispatcher
-from fluentogram import TranslatorHub
 from bot.common.middlewares.database_middleware import DatabaseMiddlewareWithCommit, DatabaseMiddlewareWithoutCommit
 from bot.common.middlewares.i18n import TranslatorRunnerMiddleware
-from bot.common.utils.i18n import create_translator_hub
 from bot.routers.setup import setup_router
 from bot.config import settings, setup_logger
 from bot.db.redis import redis_client
 setup_logger("bot")
 from aiogram.types import BotCommand, BotCommandScopeDefault
-
+from bot.config import translator_hub
 from loguru import logger
 
 async def set_commands():
@@ -29,7 +27,6 @@ bot = Bot(
     token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 admins = settings.ROOT_ADMIN_IDS
-translator_hub: TranslatorHub = create_translator_hub()
 
 async def start_bot():
     await set_commands()

@@ -1,10 +1,8 @@
-﻿import locale
+﻿
 import os
 from loguru import logger
-from aiogram import Bot, Dispatcher
-from aiogram.enums import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.client.default import DefaultBotProperties
+from bot.common.utils.i18n import create_translator_hub
+from fluentogram import TranslatorHub
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
@@ -23,6 +21,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=f"{BASE_DIR}/.env")
 
 settings = Settings()
+translator_hub: TranslatorHub = create_translator_hub()
 
 def setup_logger(app_name: str):
     log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "log")
