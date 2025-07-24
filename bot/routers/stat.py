@@ -76,7 +76,7 @@ async def handle_user_statistics(
             )
         else:
             await callback.answer(
-                i18n.no_detailed_statistics(),
+                i18n.user.profile.no_detailed_statistics(),
                 parse_mode="HTML"
             )
 
@@ -84,4 +84,4 @@ async def handle_user_statistics(
         logger.error(
             f"Error retrieving statistics for user {callback.from_user.id}: {e}"
         )
-        await callback.message.answer(i18n.error_retrieving_statistics())
+        await callback.message.answer(i18n.user.profile.error_retrieving_statistics())
