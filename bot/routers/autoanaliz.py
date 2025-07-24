@@ -56,9 +56,9 @@ async def start_auto_analyze(message: Message, state: FSMContext):
 @auto_analyze_router.message(
     F.text == get_text("cancel"), StateFilter(AutoAnalyzeDialog.file), UserInfo()
 )
-async def cancel_auto_analyze(message: Message, state: FSMContext, user_info: User):
+async def cancel_auto_analyze(message: Message, state: FSMContext, i18n:TranslatorRunner, user_info: User):
     await state.clear()
-    await message.answer(message.text, reply_markup=MainKeyboard.build(user_info.role))
+    await message.answer(message.text, reply_markup=MainKeyboard.build(user_info.role, i18n))
 
 
 @auto_analyze_router.message(F.document, StateFilter(AutoAnalyzeDialog.file), UserInfo())
@@ -66,6 +66,7 @@ async def handle_mat_file(
     message: Message,
     state: FSMContext,
     session_without_commit: AsyncSession,
+    i18n:TranslatorRunner,
     user_info: User,
 ):
     try:
@@ -131,7 +132,7 @@ async def handle_mat_file(
             await message.answer(
                 f"{formatted_analysis}\n\n",
                 parse_mode="HTML",
-                reply_markup=MainKeyboard.build(user_info.role),
+                reply_markup=MainKeyboard.build(user_info.role, i18n)
             )
             await state.clear()
 

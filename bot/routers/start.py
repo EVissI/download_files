@@ -25,7 +25,7 @@ async def start_command(message: Message, i18n:TranslatorRunner, session_with_co
         user_info.role = User.Role.ADMIN.value
         await UserDAO(session_with_commit).update(user_info.id, SUser.model_validate(user_info.to_dict()))
         await message.answer(
-            i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_info.role)
+            i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_info.role, i18n)
         )
         return
     if user_info is None:
@@ -39,9 +39,9 @@ async def start_command(message: Message, i18n:TranslatorRunner, session_with_co
                             role=role)
         await UserDAO(session_with_commit).add(user_schema)
         await message.answer(
-            i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_schema.role)
+            i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_info.role, i18n)
         )
         return
     await message.answer(
-        i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_info.role)
+        i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_info.role, i18n)
     )

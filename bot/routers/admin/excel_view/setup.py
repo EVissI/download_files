@@ -14,6 +14,13 @@ from bot.routers.admin.excel_view.upload_by_user import user_unloading_router
 from bot.routers.admin.excel_view.upload_by_user_gnu import detailed_user_unloading_router
 from bot.routers.admin.excel_view.general_uploading_gnu import detailed_unloading_router
 
+from bot.config import translator_hub
+from typing import TYPE_CHECKING
+from fluentogram import TranslatorRunner
+from bot.common.utils.i18n import get_all_locales_for_key
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
+
 excel_setup_router = Router()
 excel_setup_router.include_routers(
     general_unloading_router,
@@ -35,12 +42,12 @@ async def handle_excel_setup(message: Message, state: FSMContext):
     await state.set_state(GeneralStates.excel_view)
 
 @excel_setup_router.message(F.text == ExcelKeyboard.get_kb_text()['back'], StateFilter(GeneralStates.excel_view), UserInfo())
-async def handle_excel_back(message: Message, state: FSMContext, user_info: User):
+async def handle_excel_back(message: Message, state: FSMContext, i18n:TranslatorRunner, user_info: User):
     """
     Handles the back command in the Excel setup state.
     """
     await state.clear()
     await message.answer(
         message.text,
-        reply_markup=MainKeyboard.build(user_info.role)
+        reply_markup=MainKeyboard.build(user_info.role, i18n)
     )
