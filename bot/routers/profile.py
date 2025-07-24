@@ -45,11 +45,12 @@ async def change_language_callback(callback: CallbackQuery,
                                    session_with_commit: AsyncSession, 
                                    user_info: User, 
                                    i18n: TranslatorRunner):
+    await callback.message.delete()
     user_info.lang_code = callback_data.language
     await UserDAO(session_with_commit).update(user_info.id, SUser.model_validate(user_info.to_dict()))
-    await callback.message.edit_text(
-        i18n.user.profile.text(),
-        reply_markup=get_profile_kb(i18n)
+    await callback.message.answer(
+        i18n.user.profile.change_language.confirm(),
+        reply_markup=MainKeyboard.build(user_info.role, i18n)
     )
 
 @profile_router.callback_query(BackCallback.filter(F.context == 'profile'), UserInfo())

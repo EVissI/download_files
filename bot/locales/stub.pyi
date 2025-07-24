@@ -21,8 +21,13 @@ class UserProfileInlineButton:
     @staticmethod
     def change_language() -> Literal["""Change Language"""]: ...
 
+class UserProfileChangeLanguage:
+    @staticmethod
+    def confirm() -> Literal["""Language changed successfully!"""]: ...
+
 class UserProfile:
     inline_button: UserProfileInlineButton
+    change_language: UserProfileChangeLanguage
 
     @staticmethod
     def change_language_text() -> Literal["""Select a language for the bot:"""]: ...

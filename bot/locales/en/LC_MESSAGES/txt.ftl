@@ -15,6 +15,7 @@ user-profile-change_language_text = Select a language for the bot:
 user-profile-text = Placeholder
 user-profile-inline_button-my_stats = My Statistics
 user-profile-inline_button-change_language = Change Language
+user-profile-change_language-confirm = Language changed successfully!
 
 user-profile-detailed_statistics = 🎯 Gnu({ $detailed_count } games, Nickname: { $player_username })\n\n Playing checkers:\n ├ Error rate: { $error_rate_chequer }\n\n └ Rating: { $detailed_rank_chequer }\n Luck:\n ├ Very Lucky: { $rolls_marked_very_lucky }\n ├ Lucky: { $rolls_marked_lucky }\n ├ Unlucky: { $rolls_marked_unlucky }\n └ Very Unlucky: { $rolls_marked_very_unlucky }\n\n Overall Stats:\n ├ Error Rate: { $snowie_error_rate }\n\n └ Your Rank: { $detailed_rank_overall }
 user-profile-no_detailed_statistics = No detailed statistics available. Please play more games to generate detailed stats. 
