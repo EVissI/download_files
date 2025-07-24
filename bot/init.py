@@ -60,10 +60,10 @@ async def main():
     dp.update.middleware.register(DatabaseMiddlewareWithoutCommit())
     dp.update.middleware.register(DatabaseMiddlewareWithCommit())
     dp.update.middleware.register(TranslatorRunnerMiddleware())
-    dp.include_router(setup_router, _translator_hub=translator_hub)
+    dp.include_router(setup_router)
     try:
         await bot.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot)
+        await dp.start_polling(bot, _translator_hub=translator_hub)
     finally:
         await bot.session.close()
 
