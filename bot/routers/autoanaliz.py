@@ -127,7 +127,7 @@ async def handle_mat_file(
             await dao.add(SDetailedAnalysis(**player_data))
             await session_without_commit.commit()
 
-            formatted_analysis = format_detailed_analysis(analysis_data)
+            formatted_analysis = format_detailed_analysis(analysis_data, i18n)
             await waiting_manager.stop()
             await message.answer(
                 f"{formatted_analysis}\n\n",
@@ -194,7 +194,7 @@ async def handle_player_selection(
 
         await dao.add(SDetailedAnalysis(**player_data))
 
-        formatted_analysis = format_detailed_analysis(analysis_data)
+        formatted_analysis = format_detailed_analysis(analysis_data,i18n)
 
         await callback.message.delete()
         await callback.message.answer(
