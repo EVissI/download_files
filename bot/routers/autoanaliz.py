@@ -45,7 +45,7 @@ class AutoAnalyzeDialog(StatesGroup):
 async def start_auto_analyze(message: Message, state: FSMContext, i18n: TranslatorRunner):
     await state.set_state(AutoAnalyzeDialog.file)
     await message.answer(
-        i18n.auto_analyze.submit(),
+        i18n.auto.analyze.submit(),
         reply_markup=get_cancel_kb()
     )
 
@@ -71,7 +71,7 @@ async def handle_mat_file(
         waiting_manager = WaitingMessageManager(message.chat.id, message.bot)
         file = message.document
         if not file.file_name.endswith(".mat"):
-            return await message.answer(i18n.auto_analyze.invalid())
+            return await message.answer(i18n.auto.analyze.invalid())
 
         # Создаем директорию если её нет
         files_dir = os.path.join(os.getcwd(), "files")
@@ -148,13 +148,13 @@ async def handle_mat_file(
             keyboard.adjust(1)
             await waiting_manager.stop()
             await message.answer(
-                i18n.auto_analyze.complete(),
+                i18n.auto.analyze.complete(),
                 reply_markup=keyboard.as_markup(),
             )
 
     except Exception as e:
         logger.error(f"Ошибка при автоматическом анализе файла: {e}")
-        await message.answer(i18n.auto_analyze.error_parse())
+        await message.answer(i18n.auto.analyze.error.parse())
         await waiting_manager.stop()
 
 @auto_analyze_router.callback_query(F.data.startswith("auto_player:"), UserInfo())
@@ -205,4 +205,4 @@ async def handle_player_selection(
 
     except Exception as e:
         logger.error(f"Ошибка при сохранении выбора игрока: {e}")
-        await callback.message.answer(i18n.auto_analyze.error_save())
+        await callback.message.answer(i18n.auto.analyze.error.save())
