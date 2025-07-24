@@ -34,6 +34,21 @@ class UserProfile:
     @staticmethod
     def text() -> Literal["""Placeholder"""]: ...
     @staticmethod
+    def detailed_statistics(*, detailed_count: PossibleValue, detailed_rank_chequer: PossibleValue, detailed_rank_overall: PossibleValue, error_rate_chequer: PossibleValue, player_username: PossibleValue, rolls_marked_lucky: PossibleValue, rolls_marked_unlucky: PossibleValue, rolls_marked_very_lucky: PossibleValue, rolls_marked_very_unlucky: PossibleValue, snowie_error_rate: PossibleValue) -> Literal["""🎯 Gnu(
+{ $detailed_count } games, 
+Nickname: { $player_username })
+Playing checkers:
+├ Error rate: { $error_rate_chequer }
+└ Rating: { $detailed_rank_chequer }
+Luck:
+├ Very Lucky: { $rolls_marked_very_lucky }
+├ Lucky: { $rolls_marked_lucky }
+├ Unlucky: { $rolls_marked_unlucky }
+└ Very Unlucky: { $rolls_marked_very_unlucky }
+Overall Stats:
+├ Error Rate: { $snowie_error_rate }
+└ Your Rank: { $detailed_rank_overall }"""]: ...
+    @staticmethod
     def no_detailed_statistics() -> Literal["""No detailed statistics available. Please play more games to generate detailed stats."""]: ...
     @staticmethod
     def error_retrieving_statistics() -> Literal["""There was an error retrieving your statistics."""]: ...

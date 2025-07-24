@@ -20,8 +20,9 @@ user-profile-change_language-confirm = Language changed successfully!
 user-profile-detailed_statistics = 🎯 Gnu(
     { $detailed_count -> 
     [one] 1 game 
-    *[other] { $detailed_count } games }, 
-    Nickname: { $player_username }\)
+    *[other] { $detailed_count } games 
+    }, 
+    Nickname: { $player_username })
     Playing checkers:
     ├ Error rate: { $error_rate_chequer }
     └ Rating: { $detailed_rank_chequer }

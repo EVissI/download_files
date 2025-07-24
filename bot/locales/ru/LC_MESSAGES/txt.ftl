@@ -20,7 +20,8 @@ user-profile-change_language-confirm = Язык бота успешно изме
 user-profile-detailed_statistics = 🎯 Gnu({ $detailed_count -> 
     [one] 1 игра 
     [few] { $detailed_count } игры 
-    *[other] { $detailed_count } игр }, Никнейм: { $player_username })
+    *[other] { $detailed_count } игр 
+    }, Никнейм: { $player_username })
     Игра в шашки:
     ├ Ошибка: { $error_rate_chequer }
     └ Рейтинг: { $detailed_rank_chequer }
