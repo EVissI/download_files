@@ -10,6 +10,7 @@ class TranslatorRunner:
     def get(self, path: str, **kwargs: PossibleValue) -> str: ...
     user: User
     keyboard: Keyboard
+    auto: Auto
 
 class UserStatic:
     @staticmethod
@@ -34,9 +35,7 @@ class UserProfile:
     @staticmethod
     def text() -> Literal["""Placeholder"""]: ...
     @staticmethod
-    def detailed_statistics(*, detailed_count: PossibleValue, detailed_rank_chequer: PossibleValue, detailed_rank_overall: PossibleValue, error_rate_chequer: PossibleValue, player_username: PossibleValue, rolls_marked_lucky: PossibleValue, rolls_marked_unlucky: PossibleValue, rolls_marked_very_lucky: PossibleValue, rolls_marked_very_unlucky: PossibleValue, snowie_error_rate: PossibleValue) -> Literal["""🎯 Gnu(
-{ $detailed_count } games, 
-Nickname: { $player_username })
+    def detailed_statistics(*, detailed_count: PossibleValue, detailed_rank_chequer: PossibleValue, detailed_rank_overall: PossibleValue, error_rate_chequer: PossibleValue, player_username: PossibleValue, rolls_marked_lucky: PossibleValue, rolls_marked_unlucky: PossibleValue, rolls_marked_very_lucky: PossibleValue, rolls_marked_very_unlucky: PossibleValue, snowie_error_rate: PossibleValue) -> Literal["""🎯 Gnu( { $detailed_count } games, Nickname: { $player_username })
 Playing checkers:
 ├ Error rate: { $error_rate_chequer }
 └ Rating: { $detailed_rank_chequer }
@@ -93,3 +92,22 @@ class Keyboard:
     admin: KeyboardAdmin
     reply: KeyboardReply
     inline: KeyboardInline
+
+class AutoAnalyzeError:
+    @staticmethod
+    def parse() -> Literal["""An error occurred while parsing the file."""]: ...
+    @staticmethod
+    def save() -> Literal["""An error occurred while saving data."""]: ...
+
+class AutoAnalyze:
+    error: AutoAnalyzeError
+
+    @staticmethod
+    def submit() -> Literal["""Submit .mat file for automatic analysis"""]: ...
+    @staticmethod
+    def invalid() -> Literal["""Please send .mat file."""]: ...
+    @staticmethod
+    def complete() -> Literal["""File analysis complete."""]: ...
+
+class Auto:
+    analyze: AutoAnalyze

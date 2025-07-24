@@ -17,7 +17,7 @@ user-profile-inline_button-my_stats = Моя статистика
 user-profile-inline_button-change_language = Изменить язык
 user-profile-change_language-confirm = Язык бота успешно изменён!
 
-user-profile-detailed_statistics = 🎯 Gnu({ $detailed_count -> 
+user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count -> 
     [one] 1 игра 
     [few] { $detailed_count } игры 
     *[other] { $detailed_count } игр 
@@ -36,3 +36,9 @@ user-profile-detailed_statistics = 🎯 Gnu({ $detailed_count ->
 
 user-profile-no_detailed_statistics = Подробная статистика отсутствует. Пожалуйста, сыграйте больше игр для её генерации. 
 user-profile-error_retrieving_statistics = Произошла ошибка при получении ваших статистических данных.
+
+auto-analyze-submit = Отправьте .mat файл для автоматического анализа 
+auto-analyze-invalid = Пожалуйста, отправьте .mat файл. 
+auto-analyze-complete = Анализ файла завершен. Выберите, кем вы были: 
+auto-analyze-error-parse = Произошла ошибка при разборе файла. 
+auto-analyze-error-save = Произошла ошибка при сохранении данных.

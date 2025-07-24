@@ -22,7 +22,6 @@ from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
-from bot.common.texts import get_text
 from bot.common.utils.i18n import get_all_locales_for_key
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
 from bot.db.models import User
@@ -32,48 +31,47 @@ from bot.db.schemas import SDetailedAnalysis, SUser
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
-from bot.common.utils.i18n import get_all_locales_for_key
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 auto_analyze_router = Router()
 
-
 class AutoAnalyzeDialog(StatesGroup):
     file = State()
-
 
 @auto_analyze_router.message(
     F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-user-reply-autoanalyze"))
 )
-async def start_auto_analyze(message: Message, state: FSMContext):
+async def start_auto_analyze(message: Message, state: FSMContext, i18n: TranslatorRunner):
     await state.set_state(AutoAnalyzeDialog.file)
     await message.answer(
-        "Submit .mat file for automatic analysis", reply_markup=get_cancel_kb()
+        i18n.auto_analyze.submit(),
+        reply_markup=get_cancel_kb()
     )
 
-
 @auto_analyze_router.message(
-    F.text == get_text("cancel"), StateFilter(AutoAnalyzeDialog.file), UserInfo()
+    F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(AutoAnalyzeDialog.file), UserInfo()
 )
-async def cancel_auto_analyze(message: Message, state: FSMContext, i18n:TranslatorRunner, user_info: User):
+async def cancel_auto_analyze(message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User):
     await state.clear()
-    await message.answer(message.text, reply_markup=MainKeyboard.build(user_info.role, i18n))
-
+    await message.answer(
+        message.text,
+        reply_markup=MainKeyboard.build(user_info.role, i18n)
+    )
 
 @auto_analyze_router.message(F.document, StateFilter(AutoAnalyzeDialog.file), UserInfo())
 async def handle_mat_file(
     message: Message,
     state: FSMContext,
     session_without_commit: AsyncSession,
-    i18n:TranslatorRunner,
+    i18n: TranslatorRunner,
     user_info: User,
 ):
     try:
         waiting_manager = WaitingMessageManager(message.chat.id, message.bot)
         file = message.document
         if not file.file_name.endswith(".mat"):
-            return await message.answer("Please send .mat file.")
+            return await message.answer(i18n.auto_analyze.invalid())
 
         # Создаем директорию если её нет
         files_dir = os.path.join(os.getcwd(), "files")
@@ -150,13 +148,13 @@ async def handle_mat_file(
             keyboard.adjust(1)
             await waiting_manager.stop()
             await message.answer(
-                "File analysis complete. Select which player you were:",
+                i18n.auto_analyze.complete(),
                 reply_markup=keyboard.as_markup(),
             )
 
     except Exception as e:
         logger.error(f"Ошибка при автоматическом анализе файла: {e}")
-        await message.answer("An error occurred while parsing the file.")
+        await message.answer(i18n.auto_analyze.error_parse())
         await waiting_manager.stop()
 
 @auto_analyze_router.callback_query(F.data.startswith("auto_player:"), UserInfo())
@@ -165,6 +163,7 @@ async def handle_player_selection(
     state: FSMContext,
     session_without_commit: AsyncSession,
     user_info: User,
+    i18n: TranslatorRunner,
 ):
     try:
         data = await state.get_data()
@@ -199,11 +198,11 @@ async def handle_player_selection(
         await callback.message.answer(
             f"{formatted_analysis}\n\n",
             parse_mode="HTML",
-            reply_markup=MainKeyboard.build(user_info.role),
+            reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
         await session_without_commit.commit()
         await state.clear()
 
     except Exception as e:
         logger.error(f"Ошибка при сохранении выбора игрока: {e}")
-        await callback.message.answer("An error occurred while saving data.")
+        await callback.message.answer(i18n.auto_analyze.error_save())
