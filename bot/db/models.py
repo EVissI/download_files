@@ -16,6 +16,7 @@ class User(Base):
     player_username: Mapped[str | None] = mapped_column(String(50), nullable=True)
     first_name: Mapped[str | None]
     last_name: Mapped[str | None]
+    lang_code: Mapped[str | None] = mapped_column(String(3), nullable=True, default="en")
     role: Mapped["Role"] = mapped_column(
         String(5), default=Role.USER.value, nullable=False
     )

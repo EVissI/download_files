@@ -7,6 +7,7 @@ class SUser(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     role: str | None = None
+    lang_code: str | None = None
 
 
 class SAnalysis(BaseModel):

@@ -159,6 +159,23 @@ def determine_rank(pr: float) -> str:
         return "Beginner"
     else:
         return "Confused"
+    
+def determine_rank_rate_chequer(deviation: float) -> str:
+    """
+    Определяет рейтинг броска на основе отклонения эквити от среднего значения.
+    :param deviation: Отклонение эквити от среднего (float)
+    :return: Рейтинг броска ("very lucky", "lucky", "unmarked", "unlucky", "very unlucky")
+    """
+    if deviation > 0.6:
+        return "very lucky"
+    elif deviation > 0.3:
+        return "lucky"
+    elif deviation > -0.3:
+        return "unmarked"
+    elif deviation > -0.6:
+        return "unlucky"
+    else:
+        return "very unlucky"
 
 
 def get_analysis_data(analysis_data: dict, selected_player: str) -> dict:

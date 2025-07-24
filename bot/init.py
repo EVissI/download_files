@@ -6,7 +6,10 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram import Bot, Dispatcher
+from fluentogram import TranslatorHub
 from bot.common.middlewares.database_middleware import DatabaseMiddlewareWithCommit, DatabaseMiddlewareWithoutCommit
+from bot.common.middlewares.i18n import TranslatorRunnerMiddleware
+from bot.common.utils.i18n import create_translator_hub
 from bot.routers.setup import setup_router
 from bot.config import settings, setup_logger
 from bot.db.redis import redis_client
@@ -26,6 +29,7 @@ bot = Bot(
     token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 admins = settings.ROOT_ADMIN_IDS
+translator_hub: TranslatorHub = create_translator_hub()
 
 async def start_bot():
     await set_commands()
@@ -58,7 +62,8 @@ async def main():
     dp.shutdown.register(stop_bot)
     dp.update.middleware.register(DatabaseMiddlewareWithoutCommit())
     dp.update.middleware.register(DatabaseMiddlewareWithCommit())
-    dp.include_router(setup_router)
+    dp.update.middleware.register(TranslatorRunnerMiddleware())
+    dp.include_router(setup_router, _translator_hub=translator_hub)
     try:
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)

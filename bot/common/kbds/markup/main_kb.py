@@ -1,35 +1,35 @@
-﻿from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+﻿
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 from bot.db.models import User
 
+from fluentogram import TranslatorRunner
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
 
 class MainKeyboard:
-    user_text_kb = {
-        'auto_analyze': 'Auto analysis',
-        'analize':'Advanced analysis',
-        'my_stat':'My statistics',
-    }
-    admin_text_kb = {
-        'excel':'Выгрузки Excel'
-    }
     @staticmethod
-    def get_user_kb_text() -> dict:
-        return MainKeyboard.user_text_kb
+    def get_user_keyboard(i18n:TranslatorRunner) -> dict:
+        return {
+            'autoanalize': i18n.keyboard.user.reply.autoanalyze(),
+            'profile': i18n.keyboard.user.reply.profile(),
+        }
     
     @staticmethod
-    def get_admin_kb_text() -> dict:
-        return MainKeyboard.admin_text_kb
+    def get_admin_kb_text(i18n:TranslatorRunner) -> dict:
+        return {
+            'admin_panel': i18n.keyboard.admin.reply.admin_panel(),
+        }
     
     @staticmethod
-    def build(user_role:str) -> ReplyKeyboardMarkup:
+    def build(user_role:str, i18n:TranslatorRunner) -> ReplyKeyboardMarkup:
         kb = ReplyKeyboardBuilder()
-        for text in MainKeyboard.get_user_kb_text().values():
-            kb.add(
-                KeyboardButton(text=text)
-            )
+        for text in MainKeyboard.get_user_keyboard(i18n).values():
+            kb.add(KeyboardButton(text=text))
         if user_role == User.Role.ADMIN.value:
-            for text in MainKeyboard.get_admin_kb_text().values():
+            for text in MainKeyboard.get_admin_kb_text(i18n).values():
                 kb.add(
                     KeyboardButton(text=text)
                 )
