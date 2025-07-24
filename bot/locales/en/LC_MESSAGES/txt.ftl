@@ -11,6 +11,7 @@ keyboard-reply-back = Back
 keyboard-inline-change_language-ru = 🇷🇺 Русский
 keyboard-inline-change_language-en = 🇺🇸 English
 
+user-profile-change_language_text = Select a language for the bot:
 user-profile-text = Placeholder
 user-profile-inline_button-my_stats = My Statistics
 user-profile-inline_button-change_language = Change Language
