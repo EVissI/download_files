@@ -22,6 +22,9 @@ class TranslatorRunnerMiddleware(BaseMiddleware):
         user_info = await UserDAO(session).find_one_or_none_by_id(user.id)
         if user_info is None:
             return await handler(event, data)
+        if user_info.language_code is None:
+            user_info.language_code = 'en'
+            await session.commit()
         hub: TranslatorHub = data.get('_translator_hub')
         data['i18n'] = hub.get_translator_by_locale(locale=user_info.language_code if user_info else 'en')
         logger.info(data['i18n'])
