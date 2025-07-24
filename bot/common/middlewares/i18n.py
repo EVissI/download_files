@@ -29,6 +29,6 @@ class TranslatorRunnerMiddleware(BaseMiddleware):
             )
             await session.commit()
         hub: TranslatorHub = data.get('_translator_hub')
-        data['i18n'] = hub.get_translator_by_locale(locale=user_info.language_code if user_info else 'en')
+        data['i18n'] = hub.get_translator_by_locale(locale=user_info.lang_code if user_info else 'en')
         logger.info(data['i18n'])
         return await handler(event, data)
