@@ -5,7 +5,7 @@ keyboard-user-reply-autoanalyze = 🔮 Автоанализ
 keyboard-user-reply-profile = 🧍‍♂️ Профиль
 keyboard-admin-reply-admin_panel = Админпанель
 
-keyboard--reply-cancel = Отмена
+keyboard-reply-cancel = Отмена
 keyboard-reply-back = Назад
 
 keyboard-inline-change_language-ru = 🇷🇺 Русский

@@ -55,7 +55,7 @@ async def start_auto_analyze(message: Message, state: FSMContext, i18n: Translat
 async def cancel_auto_analyze(message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User):
     await state.clear()
     await message.answer(
-        message.text,
+        text=i18n.keyboard.reply.cancel(),
         reply_markup=MainKeyboard.build(user_info.role, i18n)
     )
 
