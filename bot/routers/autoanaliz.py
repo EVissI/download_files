@@ -69,7 +69,7 @@ async def handle_mat_file(
     user_info: User,
 ):
     try:
-        waiting_manager = WaitingMessageManager(message.chat.id, message.bot)
+        waiting_manager = WaitingMessageManager(message.chat.id, message.bot,i18n)
         file = message.document
         if not file.file_name.endswith(".mat"):
             return await message.answer(i18n.auto.analyze.invalid())

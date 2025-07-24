@@ -2,21 +2,23 @@
 import random
 from aiogram.types import Message
 from typing import Optional
-
-WAITING_MSG = ["Think.", "Think..", "Think..."]
-
+from fluentogram import TranslatorRunner
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
 
 class WaitingMessageManager:
-    def __init__(self, chat_id, bot):
+    def __init__(self, chat_id, bot, i18n: TranslatorRunner):
         self.chat_id = chat_id
         self.bot = bot
         self.message: Optional[Message] = None
         self.task: Optional[asyncio.Task] = None
         self.active = False
+        self.i18n = i18n
 
     async def start(self):
         self.active = True
-        self.message = await self.bot.send_message(self.chat_id, WAITING_MSG[0])
+        self.message = await self.bot.send_message(self.chat_id, self.i18n.waiting.think1())
         self.task = asyncio.create_task(self._update_loop())
 
     async def stop(self):
@@ -37,7 +39,7 @@ class WaitingMessageManager:
                 await asyncio.sleep(0.1)
                 if not self.active:
                     break
-                new_text = WAITING_MSG[idx % len(WAITING_MSG)]
+                new_text = getattr(self.i18n.waiting, f"think{idx % 3 + 1}")()
                 await self.message.edit_text(new_text)
                 idx += 1
             except Exception:

@@ -318,8 +318,8 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
 
         # Таблица для Luck
         luck_table = pt.PrettyTable()
-        luck_table.field_names = ["Param", player1_name, player2_name]
-        luck_table.max_width["Param"] = 15
+        luck_table.field_names = [i18n.analysis.param(), player1_name, player2_name]
+        luck_table.max_width[i18n.analysis.param()] = 15
         luck_table.max_width[player1_name] = 15
         luck_table.max_width[player2_name] = 15
         luck_table.add_row([i18n.analysis.luck.luck_plus_move(), format_value(l1.get("rolls_marked_very_lucky", 0)), format_value(l2.get("rolls_marked_very_lucky", 0))])
@@ -331,16 +331,16 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
 
         # Таблица для Cube
         cube_table = pt.PrettyTable()
-        cube_table.field_names = ["Param", player1_name, player2_name]
-        cube_table.max_width["Param"] = 15
+        cube_table.field_names = [i18n.analysis.param(), player1_name, player2_name]
+        cube_table.max_width[i18n.analysis.param()] = 15
         cube_table.max_width[player1_name] = 15
         cube_table.max_width[player2_name] = 15
         cube_table.add_row([i18n.analysis.cube.rating(), format_value(c1.get("cube_decision_rating", "No data")), format_value(c2.get("cube_decision_rating", "No data"))])
 
         # Таблица для Overall
         overall_table = pt.PrettyTable()
-        overall_table.field_names = ["Param", player1_name, player2_name]
-        overall_table.max_width["Param"] = 15
+        overall_table.field_names = [i18n.analysis.param(), player1_name, player2_name]
+        overall_table.max_width[i18n.analysis.param()] = 15
         overall_table.max_width[player1_name] = 15
         overall_table.max_width[player2_name] = 15
         overall_table.add_row([i18n.analysis.overall.error_rate(), format_value(o1.get("snowie_error_rate", 0), True), format_value(o2.get("snowie_error_rate", 0), True)])

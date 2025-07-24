@@ -12,6 +12,7 @@ class TranslatorRunner:
     keyboard: Keyboard
     auto: Auto
     analysis: Analysis
+    waiting: Waiting
 
 class UserStatic:
     @staticmethod
@@ -167,3 +168,13 @@ class Analysis:
     def overall_statistic() -> Literal["""Overall statistic"""]: ...
     @staticmethod
     def error_formatting() -> Literal["""Error formatting analysis results."""]: ...
+    @staticmethod
+    def param() -> Literal["""Param"""]: ...
+
+class Waiting:
+    @staticmethod
+    def think1() -> Literal["""Think."""]: ...
+    @staticmethod
+    def think2() -> Literal["""Think.."""]: ...
+    @staticmethod
+    def think3() -> Literal["""Think..."""]: ...

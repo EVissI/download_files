@@ -49,6 +49,7 @@ analysis-cube = Cube
 analysis-overall_statistic = Overall statistic 
 analysis-error_formatting = Error formatting analysis results.
 
+analysis-param = Param
 analysis-chequerplay-bad_move = Bad move 
 analysis-chequerplay-bad_plus_move = Bad+ move 
 analysis-chequerplay-error_rate = Error rate 
@@ -65,3 +66,7 @@ analysis-cube-rating = Rating
 
 analysis-overall-error_rate = Error rate 
 analysis-overall-rating = Rating
+
+waiting-think1 = Think. 
+waiting-think2 = Think.. 
+waiting-think3 = Think...

@@ -45,12 +45,13 @@ auto-analyze-error-save = Произошла ошибка при сохране�
 
 analysis-results = Результаты анализа 
 analysis-vs = { $player1_name } против { $player2_name } 
-analysis-playing_checkers = Игра c шашками 
+analysis-playing_checkers = Игра шашками 
 analysis-luck = Удача 
-analysis-cube = Кубик 
+analysis-cube = Игра кубом
 analysis-overall_statistic = Общая статистика 
 analysis-error_formatting = Ошибка при форматировании результатов анализа.
 
+analysis-param = Параметр
 analysis-chequerplay-bad_move = Плохой ход 
 analysis-chequerplay-bad_plus_move = Плохой+ ход 
 analysis-chequerplay-error_rate = Ошибки 
@@ -67,3 +68,7 @@ analysis-cube-rating = Общ Рейтинг
 
 analysis-overall-error_rate = Ошибка 
 analysis-overall-rating = Рейтинг
+
+waiting-think1 = Думаю. 
+waiting-think2 = Думаю.. 
+waiting-think3 = Думаю...
