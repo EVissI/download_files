@@ -7,6 +7,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
+import pytz
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 import os
@@ -90,7 +91,8 @@ async def handle_mat_file(
             raise ValueError("Incorrect number of players in analysis")
 
         # Генерируем новое имя файла
-        current_date = datetime.now().strftime("%d.%m.%y-%H.%M.%S")
+        moscow_tz = pytz.timezone("Europe/Moscow")
+        current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
         new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
         new_file_path = os.path.join(files_dir, new_file_name)
 

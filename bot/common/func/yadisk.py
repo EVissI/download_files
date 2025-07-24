@@ -16,9 +16,10 @@ async def save_file_to_yandex_disk(
     # Разбиваем file_name на компоненты
     date_part, time_player_part = file_name.split(":", 1)
     time_part, players_part = time_player_part.rsplit(":", 1)
-    players = players_part.replace(".mat", "")  # Убираем .mat для имени папки
+    # Извлекаем обоих игроков (player1:player2) и убираем .mat
+    players = time_player_part.rsplit(":", 1)[1].replace(".mat", "")
     date_folder = date_part  # dd.mm.yy
-    time_file = time_player_part.replace(".mat", "")  # HH.MM.SS:player1:player2
+    time_file = f"{time_part}:{players}"  # HH.MM.SS:player1:player2
 
     # Формируем полный путь
     base_path = "/BG_match"
