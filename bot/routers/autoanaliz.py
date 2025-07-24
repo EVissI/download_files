@@ -46,7 +46,7 @@ async def start_auto_analyze(message: Message, state: FSMContext, i18n: Translat
     await state.set_state(AutoAnalyzeDialog.file)
     await message.answer(
         i18n.auto.analyze.submit(),
-        reply_markup=get_cancel_kb()
+        reply_markup=get_cancel_kb(i18n)
     )
 
 @auto_analyze_router.message(
