@@ -14,11 +14,10 @@ async def save_file_to_yandex_disk(
 ):
     client = new_client()  # Замените на вашу реализацию new_client()
     # Разбиваем file_name на компоненты
-    date_part, time_player_part = file_name.split(":", 1)
-    time_part, players_part = time_player_part.rsplit(":", 1)
-    # Извлекаем обоих игроков (player1:player2) и убираем .mat
-    players = time_player_part.rsplit(":", 1)[1].replace(".mat", "")
-    date_folder = date_part  # dd.mm.yy
+    date_part, players_part = file_name.split(":", 1)
+    date_folder = date_part.split("-")[0]  # Берем только dd.mm.yy
+    time_part = date_part.split("-")[1]  # Берем только HH.MM.SS
+    players = players_part.replace(".mat", "")  # Оба игрока player1:player2
     time_file = f"{time_part}:{players}"  # HH.MM.SS:player1:player2
 
     # Формируем полный путь
