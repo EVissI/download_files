@@ -2,22 +2,21 @@
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 
-class PromoKeyboard:
+class AdminKeyboard:
     excel_text_kb = {
-        'create_promo':'Cоздать промокод',
-        'view_promo':'Просмотр промокодов',
-        'delete_promo':'Удалить промокод',
+        'excel':'Excel выгрузки',
+        'promo':'Промокоды',
         'back':'Назад',
     }
 
     @staticmethod
     def get_kb_text() -> dict:
-        return PromoKeyboard.excel_text_kb
+        return AdminKeyboard.excel_text_kb
     
     @staticmethod
     def build() -> ReplyKeyboardMarkup:
         kb = ReplyKeyboardBuilder()
-        for text in PromoKeyboard.get_kb_text().values():
+        for text in AdminKeyboard.get_kb_text().values():
             kb.add(
                 KeyboardButton(text=text)
             )

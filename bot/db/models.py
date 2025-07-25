@@ -1,6 +1,7 @@
 ﻿import enum
+from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import BigInteger, ForeignKey, Integer, Enum, String
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, Enum, String
 from bot.db.database import Base
 
 
@@ -45,7 +46,7 @@ class Analysis(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
 
     user: Mapped["User"] = relationship("User", back_populates="user_game_analisis")
-
+    used_promocodes:Mapped[list['UserPromocode']] = relationship("UserPromocode", back_populates="user")
 
 class DetailedAnalysis(Base):
     __tablename__ = "detailed_analyzes"
@@ -81,3 +82,26 @@ class DetailedAnalysis(Base):
     game_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="detailed_analyzes")
+
+
+class Promocode(Base):
+    __tablename__ = 'promocode'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    discount_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    max_usage: Mapped[Optional[int]] = mapped_column(Integer, default=None)
+    activate_count: Mapped[int] = mapped_column(Integer, default=None)
+    
+    users:Mapped["UserPromocode"] = relationship("UserPromocode", back_populates="promocode")
+
+class UserPromocode(Base):
+    __tablename__ = 'user_promocode'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True,autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
+    promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey('promocode.id'))
+    
+    user:Mapped["User"]  = relationship("User", back_populates="used_promocodes")
+    promocode:Mapped["Promocode"]  = relationship("Promocode", back_populates="users")

@@ -55,3 +55,20 @@ class SDetailedAnalysis(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SPromocode(BaseModel):
+    code: str | None = None
+    discount_days: int | None = None
+    is_active: bool | None = None
+    max_usage: int | None = None
+    activate_count: int | None = None
+    
+    class Config:
+        from_attributes = True
+
+class SUserPromocode(BaseModel):
+    user_id: int
+    promocode_id: str
+
+    class Config:
+        from_attributes = True

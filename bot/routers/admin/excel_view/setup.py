@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 
 from bot.common.filters.user_info import UserInfo
 from bot.common.general_states import GeneralStates
+from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.kbds.markup.excel_view import ExcelKeyboard
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.models import User
@@ -30,7 +31,7 @@ excel_setup_router.include_routers(
 )
 
 
-@excel_setup_router.message(F.text == MainKeyboard.get_admin_kb_text()['excel'],UserInfo())
+@excel_setup_router.message(F.text == AdminKeyboard.get_kb_text()['excel'], StateFilter(GeneralStates.admin_panel))
 async def handle_excel_setup(message: Message, state: FSMContext):
     """
     Handles the Excel setup command from the admin keyboard.
@@ -42,12 +43,12 @@ async def handle_excel_setup(message: Message, state: FSMContext):
     await state.set_state(GeneralStates.excel_view)
 
 @excel_setup_router.message(F.text == ExcelKeyboard.get_kb_text()['back'], StateFilter(GeneralStates.excel_view), UserInfo())
-async def handle_excel_back(message: Message, state: FSMContext, i18n:TranslatorRunner, user_info: User):
+async def handle_excel_back(message: Message, state: FSMContext):
     """
     Handles the back command in the Excel setup state.
     """
     await state.clear()
     await message.answer(
         message.text,
-        reply_markup=MainKeyboard.build(user_info.role, i18n)
+        reply_markup=AdminKeyboard.build()
     )
