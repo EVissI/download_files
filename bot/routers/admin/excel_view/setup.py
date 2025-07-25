@@ -47,7 +47,7 @@ async def handle_excel_back(message: Message, state: FSMContext):
     """
     Handles the back command in the Excel setup state.
     """
-    await state.clear()
+    await state.set_state(GeneralStates.admin_panel)
     await message.answer(
         message.text,
         reply_markup=AdminKeyboard.build()
