@@ -8,7 +8,7 @@ from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.promo_code import PromoKeyboard
 from bot.db.dao import PromoCodeDAO
 from bot.db.models import Promocode
-
+from bot.db.schemas import SPromocode
 promo_create_router = Router()
 
 class PromoCreateStates(StatesGroup):
@@ -19,7 +19,7 @@ class PromoCreateStates(StatesGroup):
 @promo_create_router.message(F.text == PromoKeyboard.get_kb_text()['create_promo'])
 async def start_create_promo(message: Message, state: FSMContext):
     await state.set_state(PromoCreateStates.waiting_for_code)
-    await message.answer("Введите код промокода:")
+    await message.answer("Введите название промокода(например: Happy2025):")
 
 @promo_create_router.message(StateFilter(PromoCreateStates.waiting_for_code))
 async def get_code(message: Message, state: FSMContext):
@@ -46,7 +46,7 @@ async def get_max_usage(message: Message, state: FSMContext, session_without_com
     code = data["code"]
     discount_days = data["discount_days"]
 
-    promocode = Promocode(
+    promocode = SPromocode(
         code=code,
         discount_days=discount_days,
         is_active=True,
