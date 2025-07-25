@@ -13,6 +13,7 @@ from bot.db.dao import PromoCodeDAO
 from bot.common.kbds.inline.activate_promo import PromoCallback
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.utils.i18n import get_all_locales_for_key
+from bot.config import translator_hub
 from bot.db.models import User
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -42,7 +43,7 @@ async def handle_activate_promo(
         logger.error(f"Error activating promo code: {e}")
         await callback.answer()
 
-@activate_promo_router.message(F.text.in_(get_all_locales_for_key("keyboard-reply-cancel")), 
+@activate_promo_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")),
                                StateFilter(ActivatePromoState.promo_code), UserInfo())
 async def cancel_promo_activation(
     message: Message,
