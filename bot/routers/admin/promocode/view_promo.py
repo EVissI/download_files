@@ -9,7 +9,7 @@ from bot.db.dao import PromoCodeDAO
 
 view_promo_router = Router()
 
-@view_promo_router.message(F.text == PromoKeyboard.get_kb_text()['view_active'], StateFilter(GeneralStates.promo_view))
+@view_promo_router.message(F.text == PromoKeyboard.get_kb_text()['view_promo'], StateFilter(GeneralStates.promo_view))
 async def view_active_promos(message: Message, session_without_commit):
     dao = PromoCodeDAO(session_without_commit)
     promo_codes = await dao.get_active_promo_codes()

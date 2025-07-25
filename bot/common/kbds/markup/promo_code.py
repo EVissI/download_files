@@ -6,7 +6,7 @@ class PromoKeyboard:
     promo_text_kb = {
         'create_promo':'Cоздать промокод',
         'view_promo':'Просмотр промокодов',
-        'delete_promo':'Деактивировать промокод',
+        'deactivate_promo':'Деактивировать промокод',
         'back':'Назад',
     }
 
