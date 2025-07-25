@@ -1,4 +1,5 @@
 ﻿from loguru import logger
+import pytz
 from bot.db.base import BaseDAO
 from bot.db.models import User, Analysis, DetailedAnalysis, Promocode, UserPromocode
 from sqlalchemy import func, select
@@ -258,8 +259,7 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 
             # Увеличиваем счетчик активаций
             promocode.activate_count = (promocode.activate_count or 0) + 1
-
-            now = datetime.now(timezone.utc)
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             if user.end_sub_time and user.end_sub_time > now:
                 user.end_sub_time += timedelta(days=promocode.discount_days)
             else:

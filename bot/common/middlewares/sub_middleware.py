@@ -25,7 +25,7 @@ class SubscriptionMiddleware(BaseMiddleware):
         user_id = event.from_user.id
 
         user = await UserDAO(session).find_one_or_none_by_id(user_id)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         logger.info(user.end_sub_time)
         if not user or not user.end_sub_time or user.end_sub_time < now:
             await event.answer(i18n.user.static.has_no_sub(), reply_markup=get_activate_promo_keyboard(i18n))
