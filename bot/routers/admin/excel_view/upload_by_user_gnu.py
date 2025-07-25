@@ -13,12 +13,12 @@ from aiogram.types import InlineKeyboardMarkup
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.excel_generate import generate_detailed_user_analysis_report
 from bot.common.general_states import GeneralStates
+from bot.common.kbds.inline.paginate import PlayerNameCallback, get_player_names_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.excel_view import ExcelKeyboard
 from bot.common.texts import get_text
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
 from bot.db.models import DetailedAnalysis
-from bot.common.kbds.inline.answer import get_player_names_kb, PlayerNameCallback
 
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
