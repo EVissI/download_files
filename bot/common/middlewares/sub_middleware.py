@@ -5,7 +5,7 @@ from aiogram.types import Message, CallbackQuery
 
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.db.dao import UserDAO
-
+from loguru import logger
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 from bot.common.utils.i18n import get_all_locales_for_key
@@ -26,6 +26,7 @@ class SubscriptionMiddleware(BaseMiddleware):
 
         user = await UserDAO(session).find_one_or_none_by_id(user_id)
         now = datetime.now(timezone.utc)
+        logger.info(user.end_sub_time)
         if not user or not user.end_sub_time or user.end_sub_time < now:
             await event.answer(i18n.user.static.has_no_sub(), reply_markup=get_activate_promo_keyboard(i18n))
             return
