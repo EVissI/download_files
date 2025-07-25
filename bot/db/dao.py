@@ -247,6 +247,11 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             if not promocode:
                 return False
 
+            # Продлеваем подписку пользователю
+            user = await self._session.get(User, user_id)
+            if not user:
+                return False  # Не создавать нового пользователя
+
             # Добавляем запись о том, что пользователь активировал промокод
             user_promo = UserPromocode(user_id=user_id, promocode_id=promocode.id)
             self._session.add(user_promo)
@@ -254,14 +259,11 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             # Увеличиваем счетчик активаций
             promocode.activate_count = (promocode.activate_count or 0) + 1
 
-            # Продлеваем подписку пользователю
-            user = await self._session.get(User, user_id)
-            if user:
-                now = datetime.now(timezone.utc)
-                if user.end_sub_time and user.end_sub_time > now:
-                    user.end_sub_time += timedelta(days=promocode.discount_days)
-                else:
-                    user.end_sub_time = now + timedelta(days=promocode.discount_days)
+            now = datetime.now(timezone.utc)
+            if user.end_sub_time and user.end_sub_time > now:
+                user.end_sub_time += timedelta(days=promocode.discount_days)
+            else:
+                user.end_sub_time = now + timedelta(days=promocode.discount_days)
 
             await self._session.commit()
             return True
