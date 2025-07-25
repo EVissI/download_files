@@ -23,12 +23,12 @@ from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
-from bot.common.utils.i18n import get_all_locales_for_key
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
 from bot.db.models import User
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.db.schemas import SDetailedAnalysis, SUser
 
+from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner

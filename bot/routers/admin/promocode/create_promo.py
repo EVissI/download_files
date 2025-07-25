@@ -5,10 +5,20 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from sqlalchemy.exc import IntegrityError
 from bot.common.general_states import GeneralStates
+from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.promo_code import PromoKeyboard
 from bot.db.dao import PromoCodeDAO
 from bot.db.models import Promocode
 from bot.db.schemas import SPromocode
+
+from bot.common.utils.i18n import get_all_locales_for_key
+from bot.config import translator_hub
+from typing import TYPE_CHECKING
+from fluentogram import TranslatorRunner
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
+
+
 promo_create_router = Router()
 
 class PromoCreateStates(StatesGroup):
@@ -16,10 +26,16 @@ class PromoCreateStates(StatesGroup):
     waiting_for_days = State()
     waiting_for_max_usage = State()
 
-@promo_create_router.message(F.text == PromoKeyboard.get_kb_text()['create_promo'])
-async def start_create_promo(message: Message, state: FSMContext):
+@promo_create_router.message(F.text == PromoKeyboard.get_kb_text()['create_promo'], StateFilter(GeneralStates.promo_view))
+async def start_create_promo(message: Message, state: FSMContext, i18n:TranslatorRunner):
     await state.set_state(PromoCreateStates.waiting_for_code)
-    await message.answer("Введите название промокода(например: Happy2025):")
+    await message.answer("Введите название промокода(например: Happy2025):", reply_markup=get_cancel_kb(i18n))
+
+@promo_create_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), 
+                             StateFilter(PromoCreateStates))
+async def cancel_create_promo(message: Message, state: FSMContext, i18n: TranslatorRunner):
+    await state.set_state(GeneralStates.promo_view)
+    await message.answer("Создание промокода отменено.", reply_markup=PromoKeyboard.build(), parse_mode="HTML")
 
 @promo_create_router.message(StateFilter(PromoCreateStates.waiting_for_code))
 async def get_code(message: Message, state: FSMContext):
