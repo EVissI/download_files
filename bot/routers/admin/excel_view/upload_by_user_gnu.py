@@ -131,24 +131,6 @@ async def cancel_detailed_user_unloading(
     await state.set_state(GeneralStates.excel_view)
 
 
-@detailed_user_unloading_router.message(
-    F.text, StateFilter(DetailedUserInputData.PlayerName)
-)
-async def handle_detailed_player_name_input(
-    message: Message,
-    state: FSMContext,
-):
-    """
-    Обрабатываем ввод player_name.
-    """
-    player_name = message.text.strip()
-    await state.update_data(player_name=player_name)
-    await message.answer(
-        "Выберите действие для выгрузки детального анализа",
-        reply_markup=get_detailed_user_unloading_kb(),
-    )
-    await state.set_state(GeneralStates.excel_view)
-
 
 @detailed_user_unloading_router.callback_query(
     DetailedUserUnloadingCallback.filter(), UserInfo()
