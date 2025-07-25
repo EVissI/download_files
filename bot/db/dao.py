@@ -54,7 +54,20 @@ class AnalisisDAO(BaseDAO[Analysis]):
 
 class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
     model = DetailedAnalysis
-
+    async def get_all_unique_player_names(self) -> list[str]:
+        """
+        Получает список всех уникальных никнеймов игроков (player_name) без повторений.
+        """
+        try:
+            query = select(self.model.player_name).distinct()
+            result = await self._session.execute(query)
+            names = [row[0] for row in result.fetchall() if row[0]]
+            logger.info(f"Найдено {len(names)} уникальных никнеймов игроков")
+            return names
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении уникальных никнеймов игроков: {e}")
+            raise
+        
     async def get_average_analysis_by_user(self, user_id: int) -> dict:
         try:
             logger.info(
@@ -126,59 +139,31 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
             logger.error(f"Ошибка при загрузке всех записей детального анализа: {e}")
             raise
 
-    async def get_detailed_analyzes_by_user(
+    async def get_detailed_analyzes_by_player_name(
         self,
-        user_id: int,
+        player_name: str,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> List[DetailedAnalysis]:
         """
-        Получает записи детального анализа для конкретного пользователя с фильтрацией по дате.
-
-        Args:
-            user_id: ID пользователя
-            start_date: Начальная дата для фильтрации анализов
-            end_date: Конечная дата для фильтрации анализов
-
-        Returns:
-            List[DetailedAnalysis]: Список записей детального анализа для пользователя
+        Получает записи детального анализа для конкретного игрового имени с фильтрацией по дате.
         """
         try:
-            # Формируем базовые условия для фильтрации
-            conditions = [self.model.user_id == user_id]
-            if start_date or end_date:
-                if start_date and end_date:
-                    conditions.append(self.model.created_at.between(start_date, end_date))
-                elif start_date:
-                    conditions.append(self.model.created_at >= start_date)
-                else:
-                    conditions.append(self.model.created_at <= end_date)
+            conditions = [self.model.player_name == player_name]
+            if start_date and end_date:
+                conditions.append(self.model.created_at.between(start_date, end_date))
+            elif start_date:
+                conditions.append(self.model.created_at >= start_date)
+            elif end_date:
+                conditions.append(self.model.created_at <= end_date)
 
-            # Основной запрос с фильтрацией
-            query = (
-                select(self.model)
-                .where(*conditions)
-                .options(selectinload(self.model.user))  # Load user relationship
-            )
-
+            query = select(self.model).where(*conditions)
             result = await self._session.execute(query)
             analyses = result.scalars().all()
-
-            if not analyses:
-                logger.info(f"Нет записей детального анализа для пользователя {user_id} за указанный период")
-                return []
-
-            # Подробное логирование
-            logger.info(f"Загружено {len(analyses)} записей детального анализа для пользователя {user_id}")
-            for analysis in analyses:
-                logger.debug(
-                    f"Анализ {analysis.id}, created_at: {analysis.created_at}"
-                )
-
+            logger.info(f"Загружено {len(analyses)} записей детального анализа для игрока {player_name}")
             return analyses
-
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при загрузке записей детального анализа для пользователя {user_id}: {e}")
+            logger.error(f"Ошибка при загрузке записей детального анализа для игрока {player_name}: {e}")
             raise
 
 

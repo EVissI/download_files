@@ -18,6 +18,13 @@ from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.excel_view import ExcelKeyboard
 from bot.db.dao import DetailedAnalysisDAO
 from bot.db.models import User
+from typing import TYPE_CHECKING
+from fluentogram import TranslatorRunner
+from bot.common.utils.i18n import get_all_locales_for_key
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
+
+
 
 detailed_unloading_router = Router()
 
@@ -40,13 +47,14 @@ async def handle_detailed_unloading_callback(
     callback_data: GeneralUnloadingCallback,
     state: FSMContext,
     session_without_commit: AsyncSession,
+    i18n: TranslatorRunner,
 ):
     await callback.message.delete()
     match callback_data.action:
         case "uploading_by_date":
             await callback.message.answer(
                 "Введите дату в формате DD.MM.YYYY-DD.MM.YYYY для выгрузки детального анализа",
-                reply_markup=get_cancel_kb(),
+                reply_markup=get_cancel_kb(i18n),
             )
             await state.set_state(DetailedAnalysisInputDate.Date)
         case "general_unloading":

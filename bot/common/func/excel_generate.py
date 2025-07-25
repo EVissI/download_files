@@ -9,10 +9,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from bot.common.func.func import determine_rank
 from bot.db.dao import UserDAO, DetailedAnalysisDAO
 
+
 async def generate_users_analysis_report(
-    dao, 
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None
+    dao, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
 ) -> io.BytesIO:
     """
     Генерирует Excel отчет со статистикой пользователей
@@ -46,7 +45,7 @@ async def generate_users_analysis_report(
         "Ошибки взятий",
         "Удача",
         "PR",
-        "Ранг"
+        "Ранг",
     ]
 
     for col, header in enumerate(headers, 1):
@@ -65,13 +64,15 @@ async def generate_users_analysis_report(
             for analysis in user.user_game_analisis:
                 ws.cell(row=current_row, column=1).value = user.id
                 ws.cell(row=current_row, column=2).value = user.username
-                ws.cell(row=current_row, column=3).value = analysis.created_at.strftime("%Y-%m-%d")
+                ws.cell(row=current_row, column=3).value = analysis.created_at.strftime(
+                    "%Y-%m-%d"
+                )
                 ws.cell(row=current_row, column=4).value = analysis.mistake_total
                 ws.cell(row=current_row, column=5).value = analysis.mistake_doubling
                 ws.cell(row=current_row, column=6).value = analysis.mistake_taking
                 ws.cell(row=current_row, column=7).value = analysis.luck
                 ws.cell(row=current_row, column=8).value = analysis.pr
-                
+
                 rank = determine_rank(analysis.pr)
                 ws.cell(row=current_row, column=9).value = rank
 
@@ -110,7 +111,7 @@ async def generate_user_analysis_report(
     dao: UserDAO,
     user_id: int,
     start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None,
 ) -> io.BytesIO:
     """
     Генерирует Excel-отчёт со статистикой для одного пользователя.
@@ -149,7 +150,7 @@ async def generate_user_analysis_report(
         "Ошибки взятий",
         "Удача",
         "PR",
-        "Ранг"
+        "Ранг",
     ]
 
     for col, header in enumerate(headers, 1):
@@ -170,13 +171,15 @@ async def generate_user_analysis_report(
         for analysis in user.user_game_analisis:
             ws.cell(row=current_row, column=1).value = user.id
             ws.cell(row=current_row, column=2).value = user.username
-            ws.cell(row=current_row, column=3).value = analysis.created_at.strftime("%Y-%m-%d")
+            ws.cell(row=current_row, column=3).value = analysis.created_at.strftime(
+                "%Y-%m-%d"
+            )
             ws.cell(row=current_row, column=4).value = analysis.mistake_total
             ws.cell(row=current_row, column=5).value = analysis.mistake_doubling
             ws.cell(row=current_row, column=6).value = analysis.mistake_taking
             ws.cell(row=current_row, column=7).value = analysis.luck
             ws.cell(row=current_row, column=8).value = analysis.pr
-            
+
             rank = determine_rank(analysis.pr)
             ws.cell(row=current_row, column=9).value = rank
 
@@ -203,21 +206,25 @@ async def generate_user_analysis_report(
         wb.save(excel_buffer)
         excel_buffer.seek(0)
 
-        logger.info(f"Сгенерирован Excel-отчёт для пользователя {user_id} с {current_row-2} записями")
+        logger.info(
+            f"Сгенерирован Excel-отчёт для пользователя {user_id} с {current_row-2} записями"
+        )
         return excel_buffer
 
     except SQLAlchemyError as e:
         logger.error(f"Ошибка при загрузке данных пользователя {user_id}: {e}")
         raise
     except Exception as e:
-        logger.error(f"Ошибка при генерации Excel-отчёта для пользователя {user_id}: {e}")
+        logger.error(
+            f"Ошибка при генерации Excel-отчёта для пользователя {user_id}: {e}"
+        )
         raise
 
 
 async def generate_detailed_analysis_report(
     dao: DetailedAnalysisDAO,
     start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None,
 ) -> io.BytesIO:
     try:
         wb = Workbook()
@@ -226,16 +233,29 @@ async def generate_detailed_analysis_report(
 
         # Стили
         header_font = Font(bold=True)
-        header_fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+        header_fill = PatternFill(
+            start_color="CCCCCC", end_color="CCCCCC", fill_type="solid"
+        )
         center_align = Alignment(horizontal="center")
 
         # Заголовки
         headers = [
-            "ID анализа", "ID пользователя", "Имя игрока", "Дата анализа",
-            "Плохие ходы", "Очень плохие ходы", "Ошибка (Chequerplay)",
-            "Рейтинг Chequerplay", "Очень удачные броски", "Удачные броски",
-            "Неудачные броски", "Очень неудачные броски", "Рейтинг удачи",
-            "Рейтинг кубика", "Общая ошибка", "Общий рейтинг"
+            "ID анализа",
+            "ID пользователя",
+            "Имя игрока",
+            "Дата анализа",
+            "Плохие ходы",
+            "Очень плохие ходы",
+            "Ошибка (Chequerplay)",
+            "Рейтинг Chequerplay",
+            "Очень удачные броски",
+            "Удачные броски",
+            "Неудачные броски",
+            "Очень неудачные броски",
+            "Рейтинг удачи",
+            "Рейтинг кубика",
+            "Общая ошибка",
+            "Общий рейтинг",
         ]
 
         for col, header in enumerate(headers, 1):
@@ -252,7 +272,11 @@ async def generate_detailed_analysis_report(
             ws.cell(row=current_row, column=1).value = analysis.id
             ws.cell(row=current_row, column=2).value = analysis.user_id
             ws.cell(row=current_row, column=3).value = analysis.player_name
-            ws.cell(row=current_row, column=4).value = analysis.created_at.strftime("%Y-%m-%d") if analysis.created_at else "N/A"
+            ws.cell(row=current_row, column=4).value = (
+                analysis.created_at.strftime("%Y-%m-%d")
+                if analysis.created_at
+                else "N/A"
+            )
             ws.cell(row=current_row, column=5).value = analysis.moves_marked_bad
             ws.cell(row=current_row, column=6).value = analysis.moves_marked_very_bad
             ws.cell(row=current_row, column=7).value = analysis.error_rate_chequer
@@ -260,7 +284,9 @@ async def generate_detailed_analysis_report(
             ws.cell(row=current_row, column=9).value = analysis.rolls_marked_very_lucky
             ws.cell(row=current_row, column=10).value = analysis.rolls_marked_lucky
             ws.cell(row=current_row, column=11).value = analysis.rolls_marked_unlucky
-            ws.cell(row=current_row, column=12).value = analysis.rolls_marked_very_unlucky
+            ws.cell(row=current_row, column=12).value = (
+                analysis.rolls_marked_very_unlucky
+            )
             ws.cell(row=current_row, column=13).value = analysis.luck_rating
             ws.cell(row=current_row, column=14).value = analysis.cube_decision_rating
             ws.cell(row=current_row, column=15).value = analysis.snowie_error_rate
@@ -268,9 +294,22 @@ async def generate_detailed_analysis_report(
             current_row += 1
 
         column_widths = {
-            "A": 15, "B": 15, "C": 20, "D": 20, "E": 15, "F": 15,
-            "G": 15, "H": 20, "I": 15, "J": 15, "K": 15, "L": 15,
-            "M": 20, "N": 20, "O": 15, "P": 20
+            "A": 15,
+            "B": 15,
+            "C": 20,
+            "D": 20,
+            "E": 15,
+            "F": 15,
+            "G": 15,
+            "H": 20,
+            "I": 15,
+            "J": 15,
+            "K": 15,
+            "L": 15,
+            "M": 20,
+            "N": 20,
+            "O": 15,
+            "P": 20,
         }
 
         for col, width in column_widths.items():
@@ -287,18 +326,19 @@ async def generate_detailed_analysis_report(
         logger.error(f"Ошибка при генерации Excel отчета: {e}")
         raise
 
+
 async def generate_detailed_user_analysis_report(
-    dao:DetailedAnalysisDAO,
-    user_id: int = None,
+    dao: DetailedAnalysisDAO,
+    player_name: str = None,
     start_date: datetime = None,
-    end_date: datetime = None
+    end_date: datetime = None,
 ) -> io.BytesIO:
     """
-    Генерирует Excel отчет со статистикой детального анализа
+    Генерирует Excel отчет со статистикой детального анализа по player_name.
 
     Args:
         dao: DetailedAnalysisDAO instance
-        user_id: ID пользователя для фильтрации (опционально)
+        player_name: Игровое имя для фильтрации (обязательно)
         start_date: Начальная дата для фильтрации
         end_date: Конечная дата для фильтрации
 
@@ -307,11 +347,13 @@ async def generate_detailed_user_analysis_report(
     """
     wb = Workbook()
     ws = wb.active
-    ws.title = f"Детальный анализ{' пользователя ' + str(user_id) if user_id else ''}"
+    ws.title = f"Детальный анализ {player_name or ''}"
 
     # Стили
     header_font = Font(bold=True)
-    header_fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+    header_fill = PatternFill(
+        start_color="CCCCCC", end_color="CCCCCC", fill_type="solid"
+    )
     center_align = Alignment(horizontal="center")
 
     # Заголовки
@@ -331,7 +373,7 @@ async def generate_detailed_user_analysis_report(
         "Рейтинг удачи",
         "Рейтинг кубика",
         "Общая ошибка",
-        "Общий рейтинг"
+        "Общий рейтинг",
     ]
 
     for col, header in enumerate(headers, 1):
@@ -341,16 +383,25 @@ async def generate_detailed_user_analysis_report(
         cell.fill = header_fill
         cell.alignment = center_align
 
-    # Получаем данные детального анализа
+    # Получаем данные детального анализа по player_name
     try:
-        analyses = await dao.get_detailed_analyzes_by_user(user_id, start_date, end_date) if user_id else await dao.get_all_detailed_analyzes(start_date, end_date)
+        if not player_name:
+            raise ValueError("Не указано игровое имя (player_name)")
+
+        analyses = await dao.get_detailed_analyzes_by_player_name(
+            player_name, start_date, end_date
+        )
         current_row = 2
 
         for analysis in analyses:
             ws.cell(row=current_row, column=1).value = analysis.id
             ws.cell(row=current_row, column=2).value = analysis.user_id
             ws.cell(row=current_row, column=3).value = analysis.player_name
-            ws.cell(row=current_row, column=4).value = analysis.created_at.strftime("%Y-%m-%d") if analysis.created_at else "N/A"
+            ws.cell(row=current_row, column=4).value = (
+                analysis.created_at.strftime("%Y-%m-%d")
+                if analysis.created_at
+                else "N/A"
+            )
             ws.cell(row=current_row, column=5).value = analysis.moves_marked_bad
             ws.cell(row=current_row, column=6).value = analysis.moves_marked_very_bad
             ws.cell(row=current_row, column=7).value = analysis.error_rate_chequer
@@ -358,7 +409,9 @@ async def generate_detailed_user_analysis_report(
             ws.cell(row=current_row, column=9).value = analysis.rolls_marked_very_lucky
             ws.cell(row=current_row, column=10).value = analysis.rolls_marked_lucky
             ws.cell(row=current_row, column=11).value = analysis.rolls_marked_unlucky
-            ws.cell(row=current_row, column=12).value = analysis.rolls_marked_very_unlucky
+            ws.cell(row=current_row, column=12).value = (
+                analysis.rolls_marked_very_unlucky
+            )
             ws.cell(row=current_row, column=13).value = analysis.luck_rating
             ws.cell(row=current_row, column=14).value = analysis.cube_decision_rating
             ws.cell(row=current_row, column=15).value = analysis.snowie_error_rate
@@ -394,7 +447,9 @@ async def generate_detailed_user_analysis_report(
         wb.save(excel_buffer)
         excel_buffer.seek(0)
 
-        logger.info(f"Сгенерирован Excel отчет с {current_row-2} записями")
+        logger.info(
+            f"Сгенерирован Excel отчет с {current_row-2} записями для {player_name}"
+        )
         return excel_buffer
 
     except Exception as e:

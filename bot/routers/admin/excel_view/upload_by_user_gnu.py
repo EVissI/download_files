@@ -11,34 +11,39 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup
 
 from bot.common.filters.user_info import UserInfo
-from bot.common.func.excel_generate import generate_detailed_user_analysis_report 
+from bot.common.func.excel_generate import generate_detailed_user_analysis_report
 from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.excel_view import ExcelKeyboard
 from bot.common.texts import get_text
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
 from bot.db.models import DetailedAnalysis
+from bot.common.kbds.inline.answer import get_player_names_kb, PlayerNameCallback
 
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 from bot.common.utils.i18n import get_all_locales_for_key
+
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 detailed_user_unloading_router = Router()
 
+
 class DetailedUserInputData(StatesGroup):
     """
-    States for inputting user ID and date range in the detailed user unloading process.
+    States for inputting player username and date range in the detailed user unloading process.
     """
-    UserID = State()
     Date = State()
+
 
 class DetailedUserUnloadingCallback(CallbackData, prefix="detailed_user_unloading"):
     """
     Callback data for detailed user unloading actions.
     """
+
     action: str
+
 
 def get_detailed_user_unloading_kb() -> InlineKeyboardMarkup:
     """
@@ -47,43 +52,77 @@ def get_detailed_user_unloading_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text="Выгрузка за месяц",
-        callback_data=DetailedUserUnloadingCallback(action="detailed_user_unloading").pack()
+        callback_data=DetailedUserUnloadingCallback(
+            action="detailed_user_unloading"
+        ).pack(),
     )
     builder.button(
         text="Выгрузка по дате",
-        callback_data=DetailedUserUnloadingCallback(action="uploading_by_date").pack()
+        callback_data=DetailedUserUnloadingCallback(action="uploading_by_date").pack(),
     )
     builder.button(
-        text="Отмена",
-        callback_data=DetailedUserUnloadingCallback(action="back").pack()
+        text="Отмена", callback_data=DetailedUserUnloadingCallback(action="back").pack()
     )
     builder.adjust(1)
     return builder.as_markup()
 
 
 @detailed_user_unloading_router.message(
-    F.text == ExcelKeyboard.get_kb_text()["upload_by_user_gnu"],  # Assuming a new button text
+    F.text == ExcelKeyboard.get_kb_text()["upload_by_user_gnu"],
     StateFilter(GeneralStates.excel_view),
 )
-async def handle_detailed_user_unloading(message: Message, state: FSMContext, i18n: TranslatorRunner):
+async def handle_detailed_user_unloading(
+    message: Message,
+    state: FSMContext,
+    i18n: TranslatorRunner,
+    session_without_commit: AsyncSession,
+):
     """
-    Handles the detailed user unloading command in the Excel view state.
-    Initiates the process by asking for user ID.
+    Показываем клавиатуру с никнеймами игроков для выгрузки детального анализа.
     """
+    dao = DetailedAnalysisDAO(session_without_commit)
+    player_names = await dao.get_all_unique_player_names()
+    if not player_names:
+        await message.answer("Нет доступных никнеймов игроков.")
+        return
     await message.answer(
-        "Введите ID пользователя для выгрузки детального анализа",
-        reply_markup=get_cancel_kb(i18n),
+        "Выберите никнейм игрока для выгрузки детального анализа:",
+        reply_markup=get_player_names_kb(player_names, page=0),
     )
-    await state.set_state(DetailedUserInputData.UserID)
 
-@detailed_user_unloading_router.message(F.text == get_text("cancel"), StateFilter(DetailedUserInputData))
+@detailed_user_unloading_router.callback_query(
+    PlayerNameCallback.filter()
+)
+async def handle_player_name_pagination(
+    callback: CallbackQuery,
+    callback_data: PlayerNameCallback,
+    state: FSMContext,
+    session_without_commit: AsyncSession,
+):
+    dao = DetailedAnalysisDAO(session_without_commit)
+    player_names = await dao.get_all_unique_player_names()
+    page = callback_data.page
+
+    if callback_data.action == "select":
+        await state.update_data(player_name=callback_data.player_name)
+        await callback.message.edit_text(
+            "Выберите действие для выгрузки детального анализа",
+            reply_markup=get_detailed_user_unloading_kb(),
+        )
+        await state.set_state(GeneralStates.excel_view)
+    elif callback_data.action in ("prev", "next"):
+        await callback.message.edit_reply_markup(
+            reply_markup=get_player_names_kb(player_names, page=page)
+        )
+
+
+@detailed_user_unloading_router.message(
+    F.text == get_text("cancel"), StateFilter(DetailedUserInputData)
+)
 async def cancel_detailed_user_unloading(
     message: Message,
     state: FSMContext,
 ):
-    """
-    Cancels the detailed user unloading process and returns to the Excel view state.
-    """
     await state.clear()
     await message.answer(
         message.text,
@@ -91,46 +130,43 @@ async def cancel_detailed_user_unloading(
     )
     await state.set_state(GeneralStates.excel_view)
 
-@detailed_user_unloading_router.message(F.text, StateFilter(DetailedUserInputData.UserID))
-async def handle_detailed_user_id_input(
+
+@detailed_user_unloading_router.message(
+    F.text, StateFilter(DetailedUserInputData.PlayerName)
+)
+async def handle_detailed_player_name_input(
     message: Message,
     state: FSMContext,
 ):
     """
-    Handles the input of a user ID for detailed analysis unloading.
+    Обрабатываем ввод player_name.
     """
-    try:
-        user_id = int(message.text.strip())
-        await state.update_data(user_id=user_id)
-        await message.answer(
-            "Выберите действие для выгрузки детального анализа",
-            reply_markup=get_detailed_user_unloading_kb(),
-        )
-        await state.set_state(GeneralStates.excel_view)
-    except ValueError as e:
-        logger.error(f"Ошибка при обработке ID пользователя: {e}")
-        await message.answer(
-            "Неверный формат ID пользователя. Пожалуйста, введите целое число."
-        )
+    player_name = message.text.strip()
+    await state.update_data(player_name=player_name)
+    await message.answer(
+        "Выберите действие для выгрузки детального анализа",
+        reply_markup=get_detailed_user_unloading_kb(),
+    )
+    await state.set_state(GeneralStates.excel_view)
 
-@detailed_user_unloading_router.callback_query(DetailedUserUnloadingCallback.filter(), UserInfo())
+
+@detailed_user_unloading_router.callback_query(
+    DetailedUserUnloadingCallback.filter(), UserInfo()
+)
 async def handle_detailed_user_unloading_callback(
     callback: CallbackQuery,
     callback_data: DetailedUserUnloadingCallback,
     state: FSMContext,
     session_without_commit: AsyncSession,
-    i18n: TranslatorRunner
+    i18n: TranslatorRunner,
 ):
-    """
-    Handles callback queries for detailed user unloading actions.
-    """
     await callback.message.delete()
     user_data = await state.get_data()
-    user_id = user_data.get("user_id")
+    player_name = user_data.get("player_name")
 
-    if not user_id:
+    if not player_name:
         await callback.message.answer(
-            "ID пользователя не указан. Введите /detailed_user_stats и укажите ID.",
+            "Игровой юзернейм не указан",
             reply_markup=ExcelKeyboard.build(),
         )
         await state.set_state(GeneralStates.excel_view)
@@ -146,18 +182,20 @@ async def handle_detailed_user_unloading_callback(
         case "detailed_user_unloading":
             dao = DetailedAnalysisDAO(session_without_commit)
             try:
-                excel_buffer = await generate_detailed_user_analysis_report(dao, user_id=user_id)
+                excel_buffer = await generate_detailed_user_analysis_report(
+                    dao, player_name=player_name
+                )
                 await callback.message.answer_document(
                     document=BufferedInputFile(
                         excel_buffer.getvalue(),
-                        filename=f"user_{user_id}_detailed_statistics_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                        filename=f"{player_name}_detailed_statistics_{datetime.now().strftime('%Y%m%d')}.xlsx",
                     ),
                     caption="Детальный анализ за последний месяц",
                     reply_markup=ExcelKeyboard.build(),
                 )
                 await state.set_state(GeneralStates.excel_view)
             except ValueError as e:
-                logger.error(f"Ошибка при генерации отчёта для пользователя {user_id}: {e}")
+                logger.error(f"Ошибка при генерации отчёта для {player_name}: {e}")
                 await callback.message.answer(str(e))
             await state.set_state(GeneralStates.excel_view)
         case "back":
@@ -166,21 +204,19 @@ async def handle_detailed_user_unloading_callback(
                 "Вы вернулись в главное меню.", reply_markup=ExcelKeyboard.build()
             )
 
+
 @detailed_user_unloading_router.message(F.text, StateFilter(DetailedUserInputData.Date))
 async def handle_detailed_user_date_input(
     message: Message,
     state: FSMContext,
     session_without_commit: AsyncSession,
 ):
-    """
-    Handles the input of a date range for detailed user analysis unloading.
-    """
     user_data = await state.get_data()
-    user_id = user_data.get("user_id")
+    player_name = user_data.get("player_name")
 
-    if not user_id:
+    if not player_name:
         await message.answer(
-            "ID пользователя не указан. Введите /detailed_user_stats и укажите ID.",
+            "Игровой юзернейм не указан",
             reply_markup=ExcelKeyboard.build(),
         )
         await state.set_state(GeneralStates.excel_view)
@@ -199,19 +235,19 @@ async def handle_detailed_user_date_input(
             await message.answer("Начальная дата не может быть позже конечной даты.")
             return
 
-        logger.info(f"Запрос данных пользователя {user_id} с {start_date} по {end_date}")
+        logger.info(f"Запрос данных игрока {player_name} с {start_date} по {end_date}")
 
         dao = DetailedAnalysisDAO(session_without_commit)
         excel_buffer = await generate_detailed_user_analysis_report(
-            dao, user_id=user_id, start_date=start_date, end_date=end_date
+            dao, player_name=player_name, start_date=start_date, end_date=end_date
         )
 
         await message.answer_document(
             document=BufferedInputFile(
                 excel_buffer.getvalue(),
-                filename=f"user_{user_id}_detailed_statistics_{start_date.strftime('%Y%m%d')}_to_{end_date.strftime('%Y%m%d')}.xlsx",
+                filename=f"{player_name}_detailed_statistics_{start_date.strftime('%Y%m%d')}_to_{end_date.strftime('%Y%m%d')}.xlsx",
             ),
-            caption=f"Детальный анализ пользователя за период {start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}",
+            caption=f"Детальный анализ игрока за период {start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}",
             reply_markup=ExcelKeyboard.build(),
         )
         await state.set_state(GeneralStates.excel_view)
