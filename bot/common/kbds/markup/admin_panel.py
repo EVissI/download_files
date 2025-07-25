@@ -3,7 +3,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 
 class AdminKeyboard:
-    excel_text_kb = {
+    admin_text_kb = {
         'excel':'Excel выгрузки',
         'promo':'Промокоды',
         'back':'Назад',
@@ -11,7 +11,7 @@ class AdminKeyboard:
 
     @staticmethod
     def get_kb_text() -> dict:
-        return AdminKeyboard.excel_text_kb
+        return AdminKeyboard.admin_text_kb
     
     @staticmethod
     def build() -> ReplyKeyboardMarkup:
