@@ -14,7 +14,6 @@ from bot.common.kbds.inline.answer import (
 )
 from bot.db.redis import redis_client
 from bot.common.func.func import determine_rank, extract_eg_summary, format_value
-
 from loguru import logger
 
 
@@ -22,9 +21,7 @@ class AnswerDialog(StatesGroup):
     photo = State()
     confirm = State()
 
-
 answer_router = Router()
-
 
 @answer_router.callback_query(AnswerCallback.filter())
 async def handle_reply_callback(
