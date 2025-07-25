@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
 
@@ -240,17 +240,29 @@ class PromoCodeDAO(BaseDAO[Promocode]):
     
     async def activate_promo_code(self, code: str, user_id: int) -> bool:
         """
-        Активирует промокод для пользователя (добавляет запись в user_promocode, увеличивает activate_count).
+        Активирует промокод для пользователя (добавляет запись в user_promocode, увеличивает activate_count и продлевает подписку).
         """
         try:
             promocode = await self.find_by_code(code)
             if not promocode:
                 return False
+
             # Добавляем запись о том, что пользователь активировал промокод
             user_promo = UserPromocode(user_id=user_id, promocode_id=promocode.id)
             self._session.add(user_promo)
+
             # Увеличиваем счетчик активаций
             promocode.activate_count = (promocode.activate_count or 0) + 1
+
+            # Продлеваем подписку пользователю
+            user = await self._session.get(User, user_id)
+            if user:
+                now = datetime.now(timezone.utc)
+                if user.end_sub_time and user.end_sub_time > now:
+                    user.end_sub_time += timedelta(days=promocode.discount_days)
+                else:
+                    user.end_sub_time = now + timedelta(days=promocode.discount_days)
+
             await self._session.commit()
             return True
         except SQLAlchemyError as e:
