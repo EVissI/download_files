@@ -6,7 +6,7 @@ class PromoKeyboard:
     promo_text_kb = {
         'create_promo':'Cоздать промокод',
         'view_promo':'Просмотр промокодов',
-        'delete_promo':'Удалить промокод',
+        'delete_promo':'Деактивировать промокод',
         'back':'Назад',
     }
 
@@ -21,5 +21,5 @@ class PromoKeyboard:
             kb.add(
                 KeyboardButton(text=text)
             )
-        kb.adjust(2)
+        kb.adjust(3,1)
         return kb.as_markup(resize_keyboard=True)

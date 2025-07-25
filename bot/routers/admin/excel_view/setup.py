@@ -10,8 +10,6 @@ from bot.common.kbds.markup.excel_view import ExcelKeyboard
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.models import User
 
-from bot.routers.admin.excel_view.general_unloading import general_unloading_router
-from bot.routers.admin.excel_view.upload_by_user import user_unloading_router
 from bot.routers.admin.excel_view.upload_by_user_gnu import detailed_user_unloading_router
 from bot.routers.admin.excel_view.general_uploading_gnu import detailed_unloading_router
 
@@ -24,8 +22,6 @@ if TYPE_CHECKING:
 
 excel_setup_router = Router()
 excel_setup_router.include_routers(
-    general_unloading_router,
-    user_unloading_router,
     detailed_user_unloading_router,
     detailed_unloading_router
 )

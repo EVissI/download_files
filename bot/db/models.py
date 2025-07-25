@@ -1,7 +1,8 @@
-﻿import enum
+﻿from datetime import datetime
+import enum
 from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, Enum, String
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Enum, String
 from bot.db.database import Base
 
 
@@ -21,6 +22,7 @@ class User(Base):
     role: Mapped["Role"] = mapped_column(
         String(5), default=Role.USER.value, nullable=False
     )
+    end_sub_time:Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
     user_game_analisis: Mapped[list["Analysis"]] = relationship(
         "Analysis", back_populates="user"
     )

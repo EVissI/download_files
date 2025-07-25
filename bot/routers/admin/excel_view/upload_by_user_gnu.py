@@ -19,6 +19,12 @@ from bot.common.texts import get_text
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
 from bot.db.models import DetailedAnalysis
 
+from typing import TYPE_CHECKING
+from fluentogram import TranslatorRunner
+from bot.common.utils.i18n import get_all_locales_for_key
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
+
 detailed_user_unloading_router = Router()
 
 class DetailedUserInputData(StatesGroup):
@@ -59,14 +65,14 @@ def get_detailed_user_unloading_kb() -> InlineKeyboardMarkup:
     F.text == ExcelKeyboard.get_kb_text()["upload_by_user_gnu"],  # Assuming a new button text
     StateFilter(GeneralStates.excel_view),
 )
-async def handle_detailed_user_unloading(message: Message, state: FSMContext):
+async def handle_detailed_user_unloading(message: Message, state: FSMContext, i18n: TranslatorRunner):
     """
     Handles the detailed user unloading command in the Excel view state.
     Initiates the process by asking for user ID.
     """
     await message.answer(
         "Введите ID пользователя для выгрузки детального анализа",
-        reply_markup=get_cancel_kb(),
+        reply_markup=get_cancel_kb(i18n),
     )
     await state.set_state(DetailedUserInputData.UserID)
 
@@ -113,6 +119,7 @@ async def handle_detailed_user_unloading_callback(
     callback_data: DetailedUserUnloadingCallback,
     state: FSMContext,
     session_without_commit: AsyncSession,
+    i18n: TranslatorRunner
 ):
     """
     Handles callback queries for detailed user unloading actions.
@@ -133,7 +140,7 @@ async def handle_detailed_user_unloading_callback(
         case "uploading_by_date":
             await callback.message.answer(
                 "Введите дату в формате DD.MM.YYYY-DD.MM.YYYY для выгрузки данных",
-                reply_markup=get_cancel_kb(),
+                reply_markup=get_cancel_kb(i18n),
             )
             await state.set_state(DetailedUserInputData.Date)
         case "detailed_user_unloading":

@@ -70,3 +70,13 @@ analysis-overall-rating = Rating
 waiting-think1 = Think. 
 waiting-think2 = Think.. 
 waiting-think3 = Think...
+
+user-static-has_no_sub = You have no active subscription. Please activate a subscription to continue.
+
+user-inline-activate_promo = Activate promocode
+user-inline-take_promo = Take promocode
+
+user-static-input_promo = Please enter the promocode to activate
+user-static-promo_activated = Promocode activated successfully!
+user-static-invalid_promo = Invalid promocode. Please check and try again.
+user-static-error_processing_promo = An error occurred while processing the promocode. Please try again

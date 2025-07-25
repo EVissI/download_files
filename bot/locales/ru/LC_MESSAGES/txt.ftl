@@ -72,3 +72,12 @@ analysis-overall-rating = Рейтинг
 waiting-think1 = Думаю. 
 waiting-think2 = Думаю.. 
 waiting-think3 = Думаю...
+
+user-static-has_no_sub = У вас нет активной подписки. Пожалуйста, активируйте подписку, чтобы продолжить.
+user-inline-activate_promo = Активировать промокод
+user-inline-take_promo = Получить промокод
+
+user-static-input_promo = Пожалуйста, введите промокод для активации
+user-static-promo_activated = Промокод успешно активирован!
+user-static-invalid_promo = Неверный промокод. Пожалуйста, проверьте и попробуйте снова.
+user-static-error_processing_promo = Произошла ошибка при обработке промокода. Пожалуйста, попробуйте позже.

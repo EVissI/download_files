@@ -17,6 +17,16 @@ class TranslatorRunner:
 class UserStatic:
     @staticmethod
     def hello() -> Literal["""Hello! I&#39;m an analysis bot.I can help you analyze your backgammon games and collect statistics."""]: ...
+    @staticmethod
+    def has_no_sub() -> Literal["""You have no active subscription. Please activate a subscription to continue."""]: ...
+    @staticmethod
+    def input_promo() -> Literal["""Please enter the promocode to activate"""]: ...
+    @staticmethod
+    def promo_activated() -> Literal["""Promocode activated successfully!"""]: ...
+    @staticmethod
+    def invalid_promo() -> Literal["""Invalid promocode. Please check and try again."""]: ...
+    @staticmethod
+    def error_processing_promo() -> Literal["""An error occurred while processing the promocode. Please try again"""]: ...
 
 class UserProfileInlineButton:
     @staticmethod
@@ -54,9 +64,16 @@ Overall Stats:
     @staticmethod
     def error_retrieving_statistics() -> Literal["""There was an error retrieving your statistics."""]: ...
 
+class UserInline:
+    @staticmethod
+    def activate_promo() -> Literal["""Activate promocode"""]: ...
+    @staticmethod
+    def take_promo() -> Literal["""Take promocode"""]: ...
+
 class User:
     static: UserStatic
     profile: UserProfile
+    inline: UserInline
 
 class KeyboardUserReply:
     @staticmethod

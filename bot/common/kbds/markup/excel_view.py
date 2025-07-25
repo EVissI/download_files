@@ -4,8 +4,8 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 class ExcelKeyboard:
     excel_text_kb = {
-        'general_unloading_ex':'Общая выгрузка ex',
-        'upload_by_user_ex':'Выгрузка по пользователю ex',
+        # 'general_unloading_ex':'Общая выгрузка ex',
+        # 'upload_by_user_ex':'Выгрузка по пользователю ex',
         'general_unloading_gnu':'Общая выгрузка gnu',
         'upload_by_user_gnu':'Выгрузка по пользователю gnu',
         'back':'Назад',
