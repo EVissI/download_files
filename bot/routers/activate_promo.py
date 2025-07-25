@@ -42,7 +42,7 @@ async def handle_activate_promo(
         logger.error(f"Error activating promo code: {e}")
         await callback.answer()
 
-@activate_promo_router.message(F.text.in_(get_all_locales_for_key("keyboard-reply-back")), 
+@activate_promo_router.message(F.text.in_(get_all_locales_for_key("keyboard-reply-cancel")), 
                                StateFilter(ActivatePromoState.promo_code), UserInfo())
 async def cancel_promo_activation(
     message: Message,
