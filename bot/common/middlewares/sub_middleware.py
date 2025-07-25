@@ -20,7 +20,7 @@ class SubscriptionMiddleware(BaseMiddleware):
         event: Message | CallbackQuery,
         data: Dict[str, Any]
     ) -> Any:
-        session = data.get("session_without_commit") or data.get("session_with_commit")
+        session = data.get("session_without_commit")
         i18n: TranslatorRunner = data.get("i18n", None)
         user_id = event.from_user.id
 
