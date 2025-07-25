@@ -27,6 +27,7 @@ class User(Base):
     detailed_analyzes: Mapped[list["DetailedAnalysis"]] = relationship(
         "DetailedAnalysis", back_populates="user"
     )
+    used_promocodes:Mapped[list['UserPromocode']] = relationship("UserPromocode", back_populates="user")
 
 
 class Analysis(Base):
@@ -46,7 +47,6 @@ class Analysis(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
 
     user: Mapped["User"] = relationship("User", back_populates="user_game_analisis")
-    used_promocodes:Mapped[list['UserPromocode']] = relationship("UserPromocode", back_populates="user")
 
 class DetailedAnalysis(Base):
     __tablename__ = "detailed_analyzes"
