@@ -33,7 +33,7 @@ async def profile_command(message: Message, user_info: User, i18n: TranslatorRun
     await message.answer(
         i18n.user.profile.text(
             player_username=user_info.player_username,
-            analiz_balance=user_info.analiz_balance,
+            analiz_balance=user_info.analiz_balance if user_info.analiz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
@@ -61,7 +61,7 @@ async def change_language_back_callback(
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username,
-            analiz_balance=user_info.analiz_balance,
+            analiz_balance=user_info.analiz_balance if user_info.analiz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
@@ -99,7 +99,7 @@ async def back_to_profile(
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username,
-            analiz_balance=user_info.analiz_balance,
+            analiz_balance=user_info.analiz_balance if user_info.analiz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
