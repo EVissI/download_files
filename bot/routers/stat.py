@@ -43,7 +43,7 @@ async def handle_user_statistics(
         if detailed_count > 0:
             detailed_averages = await detailed_dao.get_average_analysis_by_user(user_id)
             detailed_rank_overall = determine_rank(float(detailed_averages["snowie_error_rate"]))
-            detailed_rank_chequer = determine_rank_rate_chequer(float(detailed_averages["error_rate_chequer"]))
+            detailed_rank_chequer = determine_rank(float(detailed_averages["error_rate_chequer"]))
 
             # Форматируем числовые значения
             error_rate_chequer = "{:.1f}".format(float(detailed_averages['error_rate_chequer']))
