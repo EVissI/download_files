@@ -91,7 +91,7 @@ class Promocode(Base):
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    analiz_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    analiz_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     max_usage: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     activate_count: Mapped[int] = mapped_column(Integer, default=None)
