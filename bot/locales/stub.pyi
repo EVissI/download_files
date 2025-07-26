@@ -73,10 +73,27 @@ class UserInline:
     @staticmethod
     def take_promo() -> Literal["""Take promocode"""]: ...
 
+class UserRank:
+    @staticmethod
+    def superchamp() -> Literal["""🏆 World Champion"""]: ...
+    @staticmethod
+    def champ() -> Literal["""🥇 World Class"""]: ...
+    @staticmethod
+    def expert() -> Literal["""🥈 Expert"""]: ...
+    @staticmethod
+    def advanced() -> Literal["""🥉 Advanced"""]: ...
+    @staticmethod
+    def intermediate() -> Literal["""🎓 Intermediate"""]: ...
+    @staticmethod
+    def casual() -> Literal["""🎲 Casual"""]: ...
+    @staticmethod
+    def beginner() -> Literal["""🐣 Beginner"""]: ...
+
 class User:
     static: UserStatic
     profile: UserProfile
     inline: UserInline
+    rank: UserRank
 
 class KeyboardUserReply:
     @staticmethod

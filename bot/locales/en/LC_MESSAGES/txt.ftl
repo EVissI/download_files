@@ -84,3 +84,11 @@ user-static-input_promo = Please enter the promocode to activate
 user-static-promo_activated = Promocode activated successfully!
 user-static-invalid_promo = Invalid promocode. Please check and try again.
 user-static-error_processing_promo = An error occurred while processing the promocode. Please try again
+
+user-rank-superchamp = 🏆 World Champion
+user-rank-champ = 🥇 World Class
+user-rank-expert = 🥈 Expert
+user-rank-advanced = 🥉 Advanced
+user-rank-intermediate = 🎓 Intermediate
+user-rank-casual = 🎲 Casual
+user-rank-beginner = 🐣 Beginner

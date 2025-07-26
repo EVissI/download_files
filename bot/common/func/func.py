@@ -141,29 +141,28 @@ def extract_eg_summary(image_bytes: bytes) -> dict:
     return result
 
 
-def determine_rank(pr: float) -> str:
+def determine_rank(pr: float, i18n: TranslatorRunner) -> str:
     """
-    Определяет ранг пользователя на основе значения PR.
+    Определяет ранг пользователя на основе значения PR и локализации.
     :param pr: Performance Rating (PR)
-    :return: Ранг пользователя
+    :param i18n: TranslatorRunner для локализации
+    :return: Локализованный ранг пользователя
     """
-
+    pr = abs(pr)
     if pr < 2.5:
-        return "World Champion"
-    elif pr < 5.0:
-        return "World Class"
-    elif pr < 7.5:
-        return "Expert"
-    elif pr < 12.5:
-        return "Advanced"
-    elif pr < 17.5:
-        return "Intermediate"
-    elif pr < 22.5:
-        return "Amateur"
-    elif pr < 30.0:
-        return "Beginner"
+        return i18n.user.rank.superchamp()
+    elif pr < 4.0:
+        return i18n.user.rank.champ()
+    elif pr < 6.0:
+        return i18n.user.rank.expert()
+    elif pr < 8.0:
+        return i18n.user.rank.advanced()
+    elif pr < 10.0:
+        return i18n.user.rank.intermediate()
+    elif pr < 15.0:
+        return i18n.user.rank.casual()
     else:
-        return "Confused"
+        return i18n.user.rank.beginner()
     
 def determine_rank_rate_chequer(deviation: float) -> str:
     """
