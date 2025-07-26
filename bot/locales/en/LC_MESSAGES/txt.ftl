@@ -14,9 +14,18 @@ keyboard-inline-change_language-en = 🇺🇸 English
 user-profile-change_language_text = Select a language for the bot:
 user-profile-text = 
     🧍‍♂️ <b>Profile</b>
-    ├ 🎲 Nickname: <code>{ $player_username }</code>
-    ├ 📊 Games available for analysis: <b>{ $analiz_balance }</b>
-    └ 🌐 Language: <b>{ $lang_code }</b>
+    ├ 🎲 Nickname: <code>{ $player_username ->
+        [empty] N/A
+        *[other] { $player_username }
+    }</code>
+    ├ 📊 Games available for analysis: <b>{ $analiz_balance ->
+        [empty] ∞
+        *[other] { $analiz_balance }
+    }</b>
+    └ 🌐 Language: <b>{ $lang_code ->
+        [empty] N/A
+        *[other] { $lang_code }
+    }</b>
 user-profile-inline_button-my_stats = My Statistics
 user-profile-inline_button-change_language = Change Language
 user-profile-change_language-confirm = Language changed successfully!

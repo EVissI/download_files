@@ -14,9 +14,18 @@ keyboard-inline-change_language-en = 🇺🇸 English
 user-profile-change_language_text = Выберите язык для бота:
 user-profile-text = 
     🧍‍♂️ <b>Профиль</b>
-    ├ 🎲 Никнейм: <code>{ $player_username }</code>
-    ├ 📊 Доступно игр для анализа: <b>{ $analiz_balance }</b>
-    └ 🌐 Язык: <b>{ $lang_code }</b>
+    ├ 🎲 Никнейм: <code>{ $player_username ->
+        [empty] N/A
+        *[other] { $player_username }
+    }</code>
+    ├ 📊 Доступно игр для анализа: <b>{ $analiz_balance ->
+        [empty] ∞
+        *[other] { $analiz_balance }
+    }</b>
+    └ 🌐 Язык: <b>{ $lang_code ->
+        [empty] N/A
+        *[other] { $lang_code }
+    }</b>
 user-profile-inline_button-my_stats = Моя статистика
 user-profile-inline_button-change_language = Изменить язык
 user-profile-change_language-confirm = Язык бота успешно изменён!
