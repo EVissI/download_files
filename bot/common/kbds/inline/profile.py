@@ -4,6 +4,7 @@ from aiogram.types import InlineKeyboardMarkup
 
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
+from bot.common.kbds.inline.activate_promo import PromoCallback
 from bot.common.utils.i18n import get_all_locales_for_key
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -21,7 +22,10 @@ def get_profile_kb(i18n: TranslatorRunner) -> InlineKeyboardMarkup:
         text=i18n.user.profile.inline_button.my_stats(),
         callback_data=ProfileCallback(action="stat").pack()
     )
-
+    builder.button(
+        text=i18n.user.inline.activate_promo(),
+        callback_data=PromoCallback(action='activate').pack(),
+    )
     builder.adjust(1)
     return builder.as_markup()
 
