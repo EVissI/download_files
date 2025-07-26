@@ -23,7 +23,7 @@ promo_create_router = Router()
 
 class PromoCreateStates(StatesGroup):
     waiting_for_code = State()
-    waiting_for_days = State()
+    waiting_for_count = State()
     waiting_for_max_usage = State()
 
 @promo_create_router.message(F.text == PromoKeyboard.get_kb_text()['create_promo'], StateFilter(GeneralStates.promo_view))
@@ -40,15 +40,15 @@ async def cancel_create_promo(message: Message, state: FSMContext, i18n: Transla
 @promo_create_router.message(StateFilter(PromoCreateStates.waiting_for_code))
 async def get_code(message: Message, state: FSMContext):
     await state.update_data(code=message.text.strip())
-    await state.set_state(PromoCreateStates.waiting_for_days)
-    await message.answer("Введите количество дней действия промокода:")
+    await state.set_state(PromoCreateStates.waiting_for_count)
+    await message.answer("Введите кол-во анлиза игр доступных по промокоду(0 для неограниченного кол-ва):")
 
-@promo_create_router.message(StateFilter(PromoCreateStates.waiting_for_days))
+@promo_create_router.message(StateFilter(PromoCreateStates.waiting_for_count))
 async def get_days(message: Message, state: FSMContext):
     if not message.text.isdigit():
-        await message.answer("Введите число дней (целое число):")
+        await message.answer("Введите число (целое число):")
         return
-    await state.update_data(discount_days=int(message.text))
+    await state.update_data(analiz_count=int(message.text))
     await state.set_state(PromoCreateStates.waiting_for_max_usage)
     await message.answer("Введите максимальное количество использований (или 0 для неограниченного):")
 
@@ -61,11 +61,10 @@ async def get_max_usage(message: Message, state: FSMContext, session_without_com
         max_usage = int(message.text)
         data = await state.get_data()
         code = data["code"]
-        discount_days = data["discount_days"]
-
+        analiz_count = data["analiz_count"]
         promocode = SPromocode(
             code=code,
-            discount_days=discount_days,
+            analiz_count=analiz_count if analiz_count > 0 else None,
             is_active=True,
             max_usage=max_usage if max_usage > 0 else None,
             activate_count=0

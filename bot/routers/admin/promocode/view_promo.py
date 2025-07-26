@@ -20,9 +20,12 @@ async def view_active_promos(message: Message, session_without_commit):
     for promo in promo_codes:
         text = (
             f"Код: <code>{promo.code}</code>\n"
-            f"Дней: {promo.discount_days}\n"
+            f"Дает игр проанализировать: {promo.analiz_count if promo.analiz_count is not None else '∞'}\n"
             f"Максимум использований: {promo.max_usage if promo.max_usage is not None else '∞'}\n"
             f"Активировано: {promo.activate_count or 0}\n"
             f"Статус: {'Активен' if promo.is_active else 'Неактивен'}\n"
         )
-        await message.answer(text, parse_mode="HTML", reply_markup=PromoKeyboard.build())
+        if promo.analiz_count:
+            await message.answer(text, parse_mode="HTML", reply_markup=PromoKeyboard.build())
+        if not promo.analiz_count:
+            await message.answer(text, parse_mode="HTML", reply_markup=PromoKeyboard.build())

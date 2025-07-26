@@ -22,7 +22,7 @@ class User(Base):
     role: Mapped["Role"] = mapped_column(
         String(5), default=Role.USER.value, nullable=False
     )
-    end_sub_time:Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+    analiz_balance: Mapped[Optional[int]] = mapped_column(Integer, default=0)
     user_game_analisis: Mapped[list["Analysis"]] = relationship(
         "Analysis", back_populates="user"
     )
@@ -91,7 +91,7 @@ class Promocode(Base):
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    discount_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    analiz_count: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     max_usage: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     activate_count: Mapped[int] = mapped_column(Integer, default=None)

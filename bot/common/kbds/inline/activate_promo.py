@@ -16,4 +16,8 @@ def get_activate_promo_keyboard(i18n:TranslatorRunner) -> InlineKeyboardMarkup:
         text=i18n.user.inline.activate_promo(),
         callback_data=PromoCallback(action='activate').pack(),
     )
+    builder.button(
+        text=i18n.user.inline.take_promo(),
+        url="https://t.me/Bugemot",
+    )
     return builder.as_markup()

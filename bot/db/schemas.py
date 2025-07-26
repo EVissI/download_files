@@ -8,6 +8,7 @@ class SUser(BaseModel):
     last_name: str | None = None
     role: str | None = None
     lang_code: str | None = None
+    analiz_balance: int | None = None
 
 
 class SAnalysis(BaseModel):
@@ -58,7 +59,7 @@ class SDetailedAnalysis(BaseModel):
 
 class SPromocode(BaseModel):
     code: str | None = None
-    discount_days: int | None = None
+    analiz_count: int | None = None
     is_active: bool | None = None
     max_usage: int | None = None
     activate_count: int | None = None

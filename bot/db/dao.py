@@ -226,14 +226,13 @@ class PromoCodeDAO(BaseDAO[Promocode]):
     
     async def activate_promo_code(self, code: str, user_id: int) -> bool:
         """
-        Активирует промокод для пользователя (добавляет запись в user_promocode, увеличивает activate_count и продлевает подписку).
+        Активирует промокод для пользователя (добавляет запись в user_promocode, увеличивает activate_count и увеличивает analiz_balance).
         """
         try:
             promocode = await self.find_by_code(code)
             if not promocode:
                 return False
 
-            # Продлеваем подписку пользователю
             user = await self._session.get(User, user_id)
             if not user:
                 return False  # Не создавать нового пользователя
@@ -244,11 +243,12 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 
             # Увеличиваем счетчик активаций
             promocode.activate_count = (promocode.activate_count or 0) + 1
-            now = datetime.now(timezone.utc).replace(tzinfo=None)
-            if user.end_sub_time and user.end_sub_time > now:
-                user.end_sub_time += timedelta(days=promocode.discount_days)
+
+            # Логика увеличения analiz_balance
+            if promocode.analiz_count is None:
+                user.analiz_balance = None
             else:
-                user.end_sub_time = now + timedelta(days=promocode.discount_days)
+                user.analiz_balance += promocode.analiz_count
 
             await self._session.commit()
             return True
