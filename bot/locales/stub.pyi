@@ -45,7 +45,10 @@ class UserProfile:
     @staticmethod
     def change_language_text() -> Literal["""Select a language for the bot:"""]: ...
     @staticmethod
-    def text() -> Literal["""Placeholder"""]: ...
+    def text(*, analiz_balance: PossibleValue, lang_code: PossibleValue, player_username: PossibleValue) -> Literal["""🧍‍♂️ &lt;b&gt;Profile&lt;/b&gt;
+├ 🎲 Nickname: &lt;code&gt;{ $player_username }&lt;/code&gt;
+├ 📊 Games available for analysis: &lt;b&gt;{ $analiz_balance }&lt;/b&gt;
+└ 🌐 Language: &lt;b&gt;{ $lang_code }&lt;/b&gt;"""]: ...
     @staticmethod
     def detailed_statistics(*, detailed_count: PossibleValue, detailed_rank_chequer: PossibleValue, detailed_rank_overall: PossibleValue, error_rate_chequer: PossibleValue, player_username: PossibleValue, rolls_marked_lucky: PossibleValue, rolls_marked_unlucky: PossibleValue, rolls_marked_very_lucky: PossibleValue, rolls_marked_very_unlucky: PossibleValue, snowie_error_rate: PossibleValue) -> Literal["""🎯 Gnu( { $detailed_count } games, Nickname: { $player_username })
 Playing checkers:

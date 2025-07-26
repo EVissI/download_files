@@ -27,7 +27,7 @@ class SubscriptionMiddleware(BaseMiddleware):
         user = await UserDAO(session).find_one_or_none_by_id(user_id)
         if not user.analiz_balance:
             return await handler(event, data)
-        if not user or not user.analiz_balance or user.analiz_balance == 0:
+        if not user or user.analiz_balance == 0:
             await event.answer(i18n.user.static.has_no_sub(), reply_markup=get_activate_promo_keyboard(i18n))
             return
         return await handler(event, data)
