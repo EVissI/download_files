@@ -32,35 +32,47 @@ from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
+
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 auto_analyze_router = Router()
 
+
 class AutoAnalyzeDialog(StatesGroup):
     file = State()
 
-@auto_analyze_router.message(
-    F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-user-reply-autoanalyze"))
-)
-async def start_auto_analyze(message: Message, state: FSMContext, i18n: TranslatorRunner):
-    await state.set_state(AutoAnalyzeDialog.file)
-    await message.answer(
-        i18n.auto.analyze.submit(),
-        reply_markup=get_cancel_kb(i18n)
-    )
 
 @auto_analyze_router.message(
-    F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(AutoAnalyzeDialog.file), UserInfo()
+    F.text.in_(
+        get_all_locales_for_key(translator_hub, "keyboard-user-reply-autoanalyze")
+    )
 )
-async def cancel_auto_analyze(message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User):
+async def start_auto_analyze(
+    message: Message, state: FSMContext, i18n: TranslatorRunner
+):
+    await state.set_state(AutoAnalyzeDialog.file)
+    await message.answer(i18n.auto.analyze.submit(), reply_markup=get_cancel_kb(i18n))
+
+
+@auto_analyze_router.message(
+    F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")),
+    StateFilter(AutoAnalyzeDialog.file),
+    UserInfo(),
+)
+async def cancel_auto_analyze(
+    message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User
+):
     await state.clear()
     await message.answer(
         text=i18n.keyboard.reply.cancel(),
-        reply_markup=MainKeyboard.build(user_info.role, i18n)
+        reply_markup=MainKeyboard.build(user_info.role, i18n),
     )
 
-@auto_analyze_router.message(F.document, StateFilter(AutoAnalyzeDialog.file), UserInfo())
+
+@auto_analyze_router.message(
+    F.document, StateFilter(AutoAnalyzeDialog.file), UserInfo()
+)
 async def handle_mat_file(
     message: Message,
     state: FSMContext,
@@ -69,7 +81,7 @@ async def handle_mat_file(
     user_info: User,
 ):
     try:
-        waiting_manager = WaitingMessageManager(message.chat.id, message.bot,i18n)
+        waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
         file = message.document
         if not file.file_name.endswith(".mat"):
             return await message.answer(i18n.auto.analyze.invalid())
@@ -103,9 +115,8 @@ async def handle_mat_file(
             await loop.run_in_executor(
                 ThreadPoolExecutor(),
                 lambda: asyncio.run_coroutine_threadsafe(
-                    save_file_to_yandex_disk(new_file_path, new_file_name),
-                    loop
-                ).result()
+                    save_file_to_yandex_disk(new_file_path, new_file_name), loop
+                ).result(),
             )
         except Exception as e:
             logger.error(f"Error saving file to Yandex Disk: {e}")
@@ -125,6 +136,10 @@ async def handle_mat_file(
 
             dao = DetailedAnalysisDAO(session_without_commit)
             await dao.add(SDetailedAnalysis(**player_data))
+
+            user_dao = UserDAO(session_without_commit)
+            await user_dao.decrease_analiz_balance(user_info.id)
+
             await session_without_commit.commit()
 
             formatted_analysis = format_detailed_analysis(analysis_data, i18n)
@@ -132,7 +147,7 @@ async def handle_mat_file(
             await message.answer(
                 f"{formatted_analysis}\n\n",
                 parse_mode="HTML",
-                reply_markup=MainKeyboard.build(user_info.role, i18n)
+                reply_markup=MainKeyboard.build(user_info.role, i18n),
             )
             await state.clear()
 
@@ -159,6 +174,7 @@ async def handle_mat_file(
         await message.answer(i18n.auto.analyze.error.parse())
         await waiting_manager.stop()
 
+
 @auto_analyze_router.callback_query(F.data.startswith("auto_player:"), UserInfo())
 async def handle_player_selection(
     callback: CallbackQuery,
@@ -175,11 +191,18 @@ async def handle_player_selection(
 
         selected_player = callback.data.split(":")[1]
         user_dao = UserDAO(session_without_commit)
-        if not user_info.player_username or user_info.player_username != selected_player:
+        if (
+            not user_info.player_username
+            or user_info.player_username != selected_player
+        ):
             await user_dao.update(user_info.id, {"player_username": selected_player})
-            logger.info(f"Updated player_username for user {user_info.id} to {selected_player}")
+            logger.info(
+                f"Updated player_username for user {user_info.id} to {selected_player}"
+            )
 
-        game_id = f"auto_{callback.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        game_id = (
+            f"auto_{callback.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
 
         dao = DetailedAnalysisDAO(session_without_commit)
 
@@ -194,7 +217,9 @@ async def handle_player_selection(
 
         await dao.add(SDetailedAnalysis(**player_data))
 
-        formatted_analysis = format_detailed_analysis(analysis_data,i18n)
+        await user_dao.decrease_analiz_balance(user_info.id)
+        
+        formatted_analysis = format_detailed_analysis(analysis_data, i18n)
 
         await callback.message.delete()
         await callback.message.answer(

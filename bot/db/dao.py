@@ -13,6 +13,27 @@ from typing import Optional, List
 class UserDAO(BaseDAO[User]):
     model = User
 
+    async def decrease_analiz_balance(self, user_id: int) -> bool:
+        """
+        Уменьшает analiz_balance пользователя на 1, если баланс больше 0.
+        Если баланс None (безлимит), ничего не делает.
+        """
+        try:
+            user = await self._session.get(User, user_id)
+            if not user:
+                return False
+            if user.analiz_balance is None:
+                return True  # Безлимит, не уменьшаем
+            if user.analiz_balance > 0:
+                user.analiz_balance -= 1
+                await self._session.commit()
+                return True
+            return False  # Баланс уже 0
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при уменьшении analiz_balance для пользователя {user_id}: {e}")
+            await self._session.rollback()
+            return False
+
 class AnalisisDAO(BaseDAO[Analysis]):
     model = Analysis
 
