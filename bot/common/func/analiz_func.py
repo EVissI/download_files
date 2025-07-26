@@ -135,7 +135,7 @@ def analyze_mat_file(mat_file: str) -> str:
         raise
 
 if __name__ == "__main__":
-    mat_file = r"ppnards-match-a552d706-7879-4832-94ff-8e1d570bac8f-protocol.mat"
+    mat_file = r"match-4b7472b6-c6da-487a-bacd-7666f20ed31a-protocol.mat"
     try:
         result = analyze_mat_file(mat_file)
         print("Анализ:\n", result)
