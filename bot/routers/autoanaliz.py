@@ -111,13 +111,7 @@ async def handle_mat_file(
         # Переименовываем файл
         os.rename(file_path, new_file_path)
         try:
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(
-                ThreadPoolExecutor(),
-                lambda: asyncio.run_coroutine_threadsafe(
-                    save_file_to_yandex_disk(new_file_path, new_file_name), loop
-                ).result(),
-            )
+            asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
         except Exception as e:
             logger.error(f"Error saving file to Yandex Disk: {e}")
 
@@ -218,7 +212,7 @@ async def handle_player_selection(
         await dao.add(SDetailedAnalysis(**player_data))
 
         await user_dao.decrease_analiz_balance(user_info.id)
-        
+
         formatted_analysis = format_detailed_analysis(analysis_data, i18n)
 
         await callback.message.delete()
