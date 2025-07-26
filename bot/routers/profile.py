@@ -32,7 +32,7 @@ profile_router = Router()
 async def profile_command(message: Message, user_info: User, i18n: TranslatorRunner):
     await message.answer(
         i18n.user.profile.text(
-            player_username=user_info.player_username if user_info.analiz_balance is not None else 'N/A',
+            player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=user_info.analiz_balance if user_info.analiz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
@@ -60,7 +60,7 @@ async def change_language_back_callback(
 ):
     await callback.message.edit_text(
         i18n.user.profile.text(
-            player_username=user_info.player_username if user_info.analiz_balance is not None else 'N/A',
+            player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=user_info.analiz_balance if user_info.analiz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
@@ -98,7 +98,7 @@ async def back_to_profile(
 ):
     await callback.message.edit_text(
         i18n.user.profile.text(
-            player_username=user_info.player_username if user_info.analiz_balance is not None else 'N/A',
+            player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=user_info.analiz_balance if user_info.analiz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
