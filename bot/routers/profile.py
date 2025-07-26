@@ -98,7 +98,7 @@ async def back_to_profile(
 ):
     await callback.message.edit_text(
         i18n.user.profile.text(
-            player_username=user_info.player_username,
+            player_username=user_info.player_username if user_info.analiz_balance is not None else 'None',
             analiz_balance=user_info.analiz_balance if user_info.analiz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
