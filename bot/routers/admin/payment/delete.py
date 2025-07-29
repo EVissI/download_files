@@ -34,6 +34,7 @@ async def handle_delete_payment_select(
     """
     Handles the selection of a payment package for deletion.
     """
+    await callback.message.delete()
     dao = AnalizePaymentDAO(session_without_commit)
     payment_package = await dao.find_one_or_none_by_id(callback_data.payment_id)
     
