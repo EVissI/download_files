@@ -11,7 +11,7 @@ class PaymentKeyboard:
 
     @staticmethod
     def get_kb_text() -> dict:
-        return PaymentKeyboard.promo_text_kb
+        return PaymentKeyboard.payment_text_kb
     
     @staticmethod
     def build() -> ReplyKeyboardMarkup:
