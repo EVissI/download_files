@@ -1,5 +1,6 @@
 ﻿from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery,PreCheckoutQuery
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.common.kbds.inline.paginate import AnalizePaymentCallback, get_analize_payments_kb
 from bot.common.kbds.inline.profile import ProfileCallback
@@ -35,7 +36,7 @@ async def handle_payment_paginate(callback: CallbackQuery, callback_data: Analiz
 
 @payment_router.callback_query(AnalizePaymentCallback.filter((F.action == "select") & (F.context == 'payment')))
 async def handle_payment_select(callback: CallbackQuery, callback_data: AnalizePaymentCallback, i18n: TranslatorRunner, session_without_commit: AsyncSession):
-    payment = await AnalizePaymentDAO(session_without_commit).find_by_id(callback_data.payment_id)
+    payment = await AnalizePaymentDAO(session_without_commit).find_one_or_none_by_id(callback_data.payment_id)
     if not payment:
         await callback.answer(i18n.user.profile.payment_not_found(), show_alert=True)
         return
@@ -96,5 +97,4 @@ async def process_succesful_payment(message:Message, i18n: TranslatorRunner, ses
     except Exception as e:
         await session_without_commit.rollback()
         await message.answer(i18n.user.profile.payment_error(), reply_markup=None)
-        from loguru import logger
         logger.error(f"Ошибка при обработке успешной оплаты: {e}")
