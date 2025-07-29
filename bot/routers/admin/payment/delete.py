@@ -26,7 +26,7 @@ async def handle_delete_payment(message: Message, state: FSMContext, session_wit
         return
     await message.answer("Выберите пакет для удаления:", reply_markup=get_analize_payments_kb(payment_packages, context='delete'))
 
-@delete_payment_router.callback_query(AnalizePaymentCallback((F.action == "select")& (F.context == 'delete')), StateFilter(GeneralStates.payment_delete))
+@delete_payment_router.callback_query(AnalizePaymentCallback.filter(((F.action == "select")& (F.context == 'delete'))), StateFilter(GeneralStates.payment_delete))
 async def handle_delete_payment_select(
     callback: CallbackQuery,
     callback_data: AnalizePaymentCallback,
