@@ -70,7 +70,7 @@ async def get_price(message: Message, state: FSMContext,session_with_commit: Asy
         SAnalizePayment(
             name=package_name,
             price=price,
-            amout=amount
+            amount=amount
         )
     )
     await state.set_state(GeneralStates.payment_view)
