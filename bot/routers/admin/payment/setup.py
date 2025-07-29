@@ -6,9 +6,14 @@ from aiogram.fsm.context import FSMContext
 from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.kbds.markup.payment_kb import PaymentKeyboard
+from bot.routers.admin.payment.create import create_payment_router
+from bot.routers.admin.payment.delete import delete_payment_router
 
 payment_setup_router = Router()
-
+payment_setup_router.include_routers(
+    delete_payment_router,
+    create_payment_router,
+)
 @payment_setup_router.message(F.text == AdminKeyboard.get_kb_text()['promo'], StateFilter(GeneralStates.admin_panel))
 async def handle_back(message: Message, state: FSMContext):
     await state.set_state(GeneralStates.payment_view)
