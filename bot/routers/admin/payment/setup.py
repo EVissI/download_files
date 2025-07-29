@@ -14,8 +14,8 @@ payment_setup_router.include_routers(
     delete_payment_router,
     create_payment_router,
 )
-@payment_setup_router.message(F.text == AdminKeyboard.get_kb_text()['promo'], StateFilter(GeneralStates.admin_panel))
-async def handle_back(message: Message, state: FSMContext):
+@payment_setup_router.message(F.text == AdminKeyboard.get_kb_text()['payment'], StateFilter(GeneralStates.admin_panel))
+async def handle_payment(message: Message, state: FSMContext):
     await state.set_state(GeneralStates.payment_view)
     await message.answer(message.text, reply_markup=PaymentKeyboard.build())
 
