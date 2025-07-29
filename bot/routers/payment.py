@@ -44,7 +44,7 @@ async def handle_payment_select(callback: CallbackQuery, callback_data: AnalizeP
     await callback.bot.send_invoice(
         chat_id=callback.from_user.id,
         title=payment.name,
-        description=payment.name,
+        description="Покупка пакета для автоматического анализа",
         payload=f"autoanalyze_{payment.id}",
         provider_token=settings.YO_KASSA_TEL_API_KEY,
         currency="RUB",
@@ -54,7 +54,7 @@ async def handle_payment_select(callback: CallbackQuery, callback_data: AnalizeP
 @payment_router.pre_checkout_query()
 async def process_pre_check_out_query(
     pre_checkout_query: PreCheckoutQuery
-):
+):  
     await pre_checkout_query.bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 @payment_router.message(F.successful_payment)
@@ -85,8 +85,6 @@ async def process_succesful_payment(message:Message, i18n: TranslatorRunner, ses
         if user:
             user.analiz_balance = (user.analiz_balance or 0) + payment_package.amount
 
-        await session_without_commit.commit()
-
         await message.answer(
             i18n.user.profile.payment_success(
                 amount=payment_package.amount,
@@ -94,6 +92,7 @@ async def process_succesful_payment(message:Message, i18n: TranslatorRunner, ses
             ),
             reply_markup=None
         )
+        await session_without_commit.commit()
     except Exception as e:
         await session_without_commit.rollback()
         await message.answer(i18n.user.profile.payment_error(), reply_markup=None)
