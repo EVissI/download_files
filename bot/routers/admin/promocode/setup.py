@@ -10,8 +10,6 @@ from bot.routers.admin.promocode.create_promo import promo_create_router
 from bot.routers.admin.promocode.view_promo import view_promo_router
 from bot.routers.admin.promocode.delete_promo import deactivate_promo_router
 
-
-
 promo_setup_router = Router()
 promo_setup_router.include_routers(
     promo_create_router,

@@ -19,6 +19,7 @@ user-profile-text =
     └ 🌐 Язык: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = Моя статистика
 user-profile-inline_button-change_language = Изменить язык
+user-profile-inline_button-payment = Купить автоанализы
 user-profile-change_language-confirm = Язык бота успешно изменён!
 
 user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count -> 
@@ -93,3 +94,9 @@ user-rank-advanced = 🥉 Опытный
 user-rank-intermediate = 🎓 Средний
 user-rank-casual = 🎲 Ниже среднего
 user-rank-beginner = 🐣 Новичок
+
+user-profile-payment_success = ✅ Покупка пакета "{ $name }" на { $amount } анализов успешно завершена!
+user-profile-payment_error = ❌ Произошла ошибка при обработке оплаты. Попробуйте позже.
+user-profile-payment_not_found = ❌ Пакет не найден. Попробуйте выбрать другой.
+user-profile-payment_invalid_payload = ❌ Некорректный платеж. Попробуйте ещё раз.
+user-profile-payment_text = Выберите пакет для покупки:

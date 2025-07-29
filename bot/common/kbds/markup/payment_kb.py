@@ -2,24 +2,23 @@
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 
-class AdminKeyboard:
-    admin_text_kb = {
-        'excel':'Excel выгрузки',
-        'promo':'Промокоды',
-        'payment':'Пакеты услуг',
+class PaymentKeyboard:
+    payment_text_kb = {
+        'create':'Cоздать пакет',
+        'delete':'Удалить пакет',
         'back':'Назад',
     }
 
     @staticmethod
     def get_kb_text() -> dict:
-        return AdminKeyboard.admin_text_kb
+        return PaymentKeyboard.promo_text_kb
     
     @staticmethod
     def build() -> ReplyKeyboardMarkup:
         kb = ReplyKeyboardBuilder()
-        for text in AdminKeyboard.get_kb_text().values():
+        for text in PaymentKeyboard.get_kb_text().values():
             kb.add(
                 KeyboardButton(text=text)
             )
-        kb.adjust(2)
+        kb.adjust(3,1)
         return kb.as_markup(resize_keyboard=True)

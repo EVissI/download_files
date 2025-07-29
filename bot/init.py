@@ -1,6 +1,4 @@
 ﻿import asyncio
-
-
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage

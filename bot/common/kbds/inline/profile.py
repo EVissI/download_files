@@ -26,6 +26,10 @@ def get_profile_kb(i18n: TranslatorRunner) -> InlineKeyboardMarkup:
         text=i18n.user.inline.activate_promo(),
         callback_data=PromoCallback(action='activate').pack(),
     )
+    builder.button(
+        text=i18n.user.profile.inline_button.payment(),
+        callback_data=ProfileCallback(action='payment').pack()
+    )
     builder.adjust(1)
     return builder.as_markup()
 

@@ -19,6 +19,7 @@ user-profile-text =
     └ 🌐 Language: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = My Statistics
 user-profile-inline_button-change_language = Change Language
+user-profile-inline_button-payment = Buy Analysis
 user-profile-change_language-confirm = Language changed successfully!
 
 user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count -> 
@@ -92,3 +93,10 @@ user-rank-advanced = 🥉 Advanced
 user-rank-intermediate = 🎓 Intermediate
 user-rank-casual = 🎲 Casual
 user-rank-beginner = 🐣 Beginner
+
+user-profile-payment_success = ✅ Purchase of the "{ $name }" package for { $amount } analyses completed successfully!
+user-profile-payment_error = ❌ An error occurred while processing the payment. Please try again later.
+user-profile-payment_not_found = ❌ Package not found. Please select another one.
+user-profile-payment_invalid_payload = ❌ Invalid payment. Please try again.
+
+user-profile-payment_text = Select a package to buy:

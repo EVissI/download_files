@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     ROOT_ADMIN_IDS: List[int]
     YA_API_TOKEN: str
+    YO_KASSA_TEL_API_KEY: str
 
     DB_URL: str = 'sqlite+aiosqlite:///data/db.sqlite3'
 

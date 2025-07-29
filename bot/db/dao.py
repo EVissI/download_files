@@ -1,7 +1,7 @@
 ﻿from loguru import logger
 import pytz
 from bot.db.base import BaseDAO
-from bot.db.models import User, Analysis, DetailedAnalysis, Promocode, UserPromocode
+from bot.db.models import User, Analysis, DetailedAnalysis, Promocode, UserPromocode, AnalizePayment
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
@@ -277,3 +277,20 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             logger.error(f"Ошибка при активации промокода '{code}': {e}")
             await self._session.rollback()
             return False
+        
+class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
+    model = AnalizePayment
+
+    async def get_all_payments(self) -> List[AnalizePayment]:
+        """
+        Получает все доступные пакеты услуг.
+        """
+        try:
+            query = select(self.model)
+            result = await self._session.execute(query)
+            payments = result.scalars().all()
+            logger.info(f"Загружено {len(payments)} пакетов услуг")
+            return payments
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при загрузке пакетов услуг: {e}")
+            raise

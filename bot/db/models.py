@@ -30,6 +30,9 @@ class User(Base):
         "DetailedAnalysis", back_populates="user"
     )
     used_promocodes:Mapped[list['UserPromocode']] = relationship("UserPromocode", back_populates="user")
+    analize_payments_assoc: Mapped[list["UserAnalizePayment"]] = relationship(
+        "UserAnalizePayment", back_populates="user"
+    )
 
 
 class Analysis(Base):
@@ -95,8 +98,9 @@ class Promocode(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     max_usage: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     activate_count: Mapped[int] = mapped_column(Integer, default=None)
+    duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     
-    users:Mapped["UserPromocode"] = relationship("UserPromocode", back_populates="promocode")
+    users:Mapped[list["UserPromocode"]] = relationship("UserPromocode", back_populates="promocode")
 
 class UserPromocode(Base):
     __tablename__ = 'user_promocode'
@@ -107,3 +111,25 @@ class UserPromocode(Base):
     
     user:Mapped["User"]  = relationship("User", back_populates="used_promocodes")
     promocode:Mapped["Promocode"]  = relationship("Promocode", back_populates="users")
+
+class UserAnalizePayment(Base):
+    __tablename__ = "user_analize_payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    analize_payment_id: Mapped[int] = mapped_column(Integer, ForeignKey("analize_payments.id"), nullable=False)
+
+    user: Mapped["User"] = relationship("User", back_populates="analize_payments_assoc")
+    analize_payment: Mapped["AnalizePayment"] = relationship("AnalizePayment", back_populates="users_assoc")
+
+class AnalizePayment(Base):
+    __tablename__ = "analize_payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    price: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    users_assoc: Mapped[list["UserAnalizePayment"]] = relationship(
+        "UserAnalizePayment", back_populates="analize_payment"
+    )

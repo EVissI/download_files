@@ -73,3 +73,12 @@ class SUserPromocode(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SAnalizePayment(BaseModel):
+    id: int | None = None
+    name: str | None = None
+    price: int | None = None
+    amout: int | None = None
+
+    class Config:
+        from_attributes = True
