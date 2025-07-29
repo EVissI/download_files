@@ -17,7 +17,6 @@ async def handle_delete_payment(message: Message, state: FSMContext, session_wit
     """
     Handles the delete payment command in the payment view state.
     """
-    await state.set_state(GeneralStates.payment_delete)
     dao = AnalizePaymentDAO(session_without_commit)
     payment_packages = await dao.find_all()
     if not payment_packages:
