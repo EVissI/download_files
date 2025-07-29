@@ -41,6 +41,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.add_column('promocode', sa.Column('duration_days', sa.Integer(), nullable=True))
+    op.execute("UPDATE promocode SET analiz_count = 0 WHERE analiz_count IS NULL")
     op.alter_column('promocode', 'analiz_count',
                existing_type=sa.INTEGER(),
                nullable=False,
