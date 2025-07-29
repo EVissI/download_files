@@ -68,7 +68,7 @@ async def process_succesful_payment(message:Message, i18n: TranslatorRunner, ses
         # Получаем id пакета из payload
         payment_id = int(payload.replace("autoanalyze_", ""))
         # Получаем пакет
-        payment_package = await AnalizePaymentDAO(session_without_commit).find_by_id(payment_id)
+        payment_package = await AnalizePaymentDAO(session_without_commit).find_one_or_none_by_id(payment_id)
         if not payment_package:
             await message.answer(i18n.user.profile.payment_not_found(), reply_markup=None)
             return
