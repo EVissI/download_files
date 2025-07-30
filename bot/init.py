@@ -27,6 +27,7 @@ def setup_expire_scheduler():
 
 async def start_bot():
     await set_commands()
+    setup_expire_scheduler()
     for admin_id in admins:
         try:
             await bot.send_message(admin_id, f"Я запущен🥳.")
