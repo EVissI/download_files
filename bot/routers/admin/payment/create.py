@@ -104,6 +104,7 @@ async def get_duration_days(
             price=price,
             amount=amount,
             duration_days=duration_days if duration_days > 0 else None,
+            is_active=True
         )
     )
     await state.set_state(GeneralStates.payment_view)

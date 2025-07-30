@@ -12,6 +12,7 @@ from bot.common.utils.i18n import get_all_locales_for_key
 from bot.db.dao import AnalizePaymentDAO, UserDAO
 from bot.config import settings
 from bot.db.models import User, UserAnalizePayment
+from bot.db.schemas import SAnalizePayment
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
@@ -20,7 +21,7 @@ payment_router = Router()
 @payment_router.callback_query(ProfileCallback.filter(F.action == "payment"))
 async def handle_payment(callback: CallbackQuery, i18n: TranslatorRunner, session_without_commit: AsyncSession):
     await callback.message.delete()
-    payment_pacages = await AnalizePaymentDAO(session_without_commit).find_all()
+    payment_pacages = await AnalizePaymentDAO(session_without_commit).find_all(SAnalizePayment(is_active=True))
     await callback.message.answer(
         i18n.user.profile.payment_text(),
         reply_markup=get_analize_payments_kb(payment_pacages, context = 'payment')
@@ -28,7 +29,7 @@ async def handle_payment(callback: CallbackQuery, i18n: TranslatorRunner, sessio
     
 @payment_router.callback_query(AnalizePaymentCallback.filter(F.action.in_(["prev", "next"])))
 async def handle_payment_paginate(callback: CallbackQuery, callback_data: AnalizePaymentCallback, i18n: TranslatorRunner, session_without_commit: AsyncSession):
-    payment_pacages = await AnalizePaymentDAO(session_without_commit).find_all()
+    payment_pacages = await AnalizePaymentDAO(session_without_commit).find_all(SAnalizePayment(is_active=True))
     await callback.message.edit_reply_markup(
         reply_markup=get_analize_payments_kb(payment_pacages, page=callback_data.page, context=callback_data.context)
     )

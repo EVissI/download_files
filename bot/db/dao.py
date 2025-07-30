@@ -294,6 +294,21 @@ class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке пакетов услуг: {e}")
             raise
+    async def deactivate(self, payment_id: int) -> bool:
+        """
+        Деактивирует пакет услуг (is_active = False) по id.
+        """
+        try:
+            payment = await self._session.get(self.model, payment_id)
+            if not payment:
+                return False
+            payment.is_active = False
+            await self._session.commit()
+            return True
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при деактивации пакета услуг {payment_id}: {e}")
+            await self._session.rollback()
+            return False
 
 class UserPromocodeDAO(BaseDAO[UserPromocode]):
     model = UserPromocode

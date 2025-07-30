@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.payment_kb import PaymentKeyboard
 from bot.db.dao import AnalizePaymentDAO
+from bot.db.schemas import SAnalizePayment
 
 view_payment_router = Router()
 
@@ -16,7 +17,7 @@ view_payment_router = Router()
 )
 async def view_active_payments(message: Message, session_without_commit):
     dao = AnalizePaymentDAO(session_without_commit)
-    payments = await dao.get_all()
+    payments = await dao.find_all(SAnalizePayment(is_active=True))
     if not payments:
         await message.answer("Нет доступных пакетов для покупки.")
         return

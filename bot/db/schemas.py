@@ -81,6 +81,7 @@ class SAnalizePayment(BaseModel):
     price: int | None = None
     amount: int | None = None
     duration_days: int | None = None
+    is_active: bool | None = None
 
     class Config:
         from_attributes = True
