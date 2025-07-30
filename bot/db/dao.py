@@ -1,7 +1,7 @@
 ﻿from loguru import logger
 import pytz
 from bot.db.base import BaseDAO
-from bot.db.models import User, Analysis, DetailedAnalysis, Promocode, UserPromocode, AnalizePayment
+from bot.db.models import User, Analysis, DetailedAnalysis, Promocode, UserAnalizePayment, UserPromocode, AnalizePayment
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
@@ -293,4 +293,99 @@ class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
             return payments
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке пакетов услуг: {e}")
+            raise
+
+class UserPromocodeDAO(BaseDAO[UserPromocode]):
+    model = UserPromocode
+
+    async def get_active_with_promocode(self) -> list[UserPromocode]:
+        """
+        Получить все активные записи UserPromocode с подгруженными объектами Promocode.
+        """
+        try:
+            query = (
+                select(self.model)
+                .where(self.model.is_active == True)
+                .options(selectinload(self.model.promocode))
+            )
+            result = await self._session.execute(query)
+            return result.scalars().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении активных UserPromocode: {e}")
+            raise
+
+    async def get_all_with_promocode(self) -> list[UserPromocode]:
+        """
+        Получить все записи UserPromocode с подгруженными объектами Promocode.
+        """
+        try:
+            query = select(self.model).options(selectinload(self.model.promocode))
+            result = await self._session.execute(query)
+            return result.scalars().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении UserPromocode: {e}")
+            raise
+
+    async def get_all_by_user(self, user_id: int) -> list[UserPromocode]:
+        """
+        Получить все записи UserPromocode для пользователя с подгруженными промокодами.
+        """
+        try:
+            query = (
+                select(self.model)
+                .where(self.model.user_id == user_id)
+                .options(selectinload(self.model.promocode))
+            )
+            result = await self._session.execute(query)
+            return result.scalars().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении UserPromocode для пользователя {user_id}: {e}")
+            raise
+
+
+class UserAnalizePaymentDAO(BaseDAO[UserAnalizePayment]):
+    model = UserAnalizePayment
+
+    async def get_active_with_payment(self) -> list[UserAnalizePayment]:
+        """
+        Получить все активные записи UserAnalizePayment с подгруженными объектами AnalizePayment.
+        """
+        try:
+            query = (
+                select(self.model)
+                .where(self.model.is_active == True)
+                .options(selectinload(self.model.analize_payment))
+            )
+            result = await self._session.execute(query)
+            return result.scalars().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении активных UserAnalizePayment: {e}")
+            raise
+
+    async def get_all_with_payment(self) -> list[UserAnalizePayment]:
+        """
+        Получить все записи UserAnalizePayment с подгруженными объектами AnalizePayment.
+        """
+        try:
+            query = select(self.model).options(selectinload(self.model.analize_payment))
+            result = await self._session.execute(query)
+            return result.scalars().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении UserAnalizePayment: {e}")
+            raise
+
+    async def get_all_by_user(self, user_id: int) -> list[UserAnalizePayment]:
+        """
+        Получить все записи UserAnalizePayment для пользователя с подгруженными пакетами.
+        """
+        try:
+            query = (
+                select(self.model)
+                .where(self.model.user_id == user_id)
+                .options(selectinload(self.model.analize_payment))
+            )
+            result = await self._session.execute(query)
+            return result.scalars().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении UserAnalizePayment для пользователя {user_id}: {e}")
             raise

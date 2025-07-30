@@ -22,23 +22,40 @@ if TYPE_CHECKING:
 
 create_payment_router = Router()
 
+
 class PaymentCreateStates(StatesGroup):
     package_name = State()
     price = State()
     amount = State()
+    duration = State()  # новое состояние
 
-@create_payment_router.message(F.text == PaymentKeyboard.get_kb_text()['create'], StateFilter(GeneralStates.payment_view))
-async def start_create_payment(message: Message, state: FSMContext, i18n: TranslatorRunner):
+
+@create_payment_router.message(
+    F.text == PaymentKeyboard.get_kb_text()["create"],
+    StateFilter(GeneralStates.payment_view),
+)
+async def start_create_payment(
+    message: Message, state: FSMContext, i18n: TranslatorRunner
+):
     await state.set_state(PaymentCreateStates.package_name)
-    await message.answer("Введите название пакета (например: 10 Анализов):", reply_markup=get_cancel_kb(i18n))
+    await message.answer(
+        "Введите название пакета (например: 10 Анализов):",
+        reply_markup=get_cancel_kb(i18n),
+    )
 
 
-
-@create_payment_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")),
-                                StateFilter(PaymentCreateStates))
-async def cancel_create_payment(message: Message, state: FSMContext, i18n: TranslatorRunner):
+@create_payment_router.message(
+    F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")),
+    StateFilter(PaymentCreateStates),
+)
+async def cancel_create_payment(
+    message: Message, state: FSMContext, i18n: TranslatorRunner
+):
     await state.set_state(GeneralStates.payment_view)
-    await message.answer(message.text, reply_markup=PaymentKeyboard.build(), parse_mode="HTML")
+    await message.answer(
+        message.text, reply_markup=PaymentKeyboard.build(), parse_mode="HTML"
+    )
+
 
 @create_payment_router.message(F.text, StateFilter(PaymentCreateStates.package_name))
 async def get_package_name(message: Message, state: FSMContext):
@@ -46,6 +63,7 @@ async def get_package_name(message: Message, state: FSMContext):
     await state.update_data(package_name=package_name)
     await state.set_state(PaymentCreateStates.amount)
     await message.answer("Введите кол-во анализов в пакете:")
+
 
 @create_payment_router.message(F.text, StateFilter(PaymentCreateStates.amount))
 async def get_amount(message: Message, state: FSMContext):
@@ -56,23 +74,40 @@ async def get_amount(message: Message, state: FSMContext):
     await state.set_state(PaymentCreateStates.price)
     await message.answer("Введите цену пакета (в рублях):")
 
+
 @create_payment_router.message(F.text, StateFilter(PaymentCreateStates.price))
-async def get_price(message: Message, state: FSMContext,session_with_commit: AsyncSession):
+async def get_price(message: Message, state: FSMContext):
     if not message.text.isdigit():
         await message.answer("Введите цену (целое число):")
         return
+    await state.update_data(price=int(message.text))
+    await state.set_state(PaymentCreateStates.duration)
+    await message.answer("Введите срок действия пакета в днях (0 — бессрочно):")
+
+
+@create_payment_router.message(F.text, StateFilter(PaymentCreateStates.duration))
+async def get_duration_days(
+    message: Message, state: FSMContext, session_with_commit: AsyncSession
+):
+    if not message.text.isdigit():
+        await message.answer("Введите срок действия (целое число):")
+        return
+    duration_days = int(message.text)
     data = await state.get_data()
-    package_name = data.get('package_name')
-    amount = data.get('amount')
-    price = int(message.text)
+    package_name = data.get("package_name")
+    amount = data.get("amount")
+    price = data.get("price")
 
     await AnalizePaymentDAO(session_with_commit).add(
         SAnalizePayment(
             name=package_name,
             price=price,
-            amount=amount
+            amount=amount,
+            duration_days=duration_days if duration_days > 0 else None,
         )
     )
     await state.set_state(GeneralStates.payment_view)
-    await message.answer(f"Пакет '{package_name}' с {amount} анализами по цене {price} руб. успешно создан.",
-                         reply_markup=PaymentKeyboard.build())
+    await message.answer(
+        f"Пакет '{package_name}' с {amount} анализами по цене {price} руб. успешно создан.",
+        reply_markup=PaymentKeyboard.build(),
+    )

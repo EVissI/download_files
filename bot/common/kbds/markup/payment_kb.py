@@ -5,6 +5,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 class PaymentKeyboard:
     payment_text_kb = {
         'create':'Cоздать пакет',
+        'view':'Посмотреть пакеты',
         'delete':'Удалить пакет',
         'back':'Назад',
     }

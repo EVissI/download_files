@@ -18,6 +18,6 @@ def get_activate_promo_keyboard(i18n:TranslatorRunner) -> InlineKeyboardMarkup:
     )
     builder.button(
         text=i18n.user.inline.take_promo(),
-        url="https://t.me/Bugemot",
+        url="https://t.me/Matchbg",
     )
     return builder.as_markup()

@@ -1,11 +1,10 @@
 ﻿import asyncio
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram import Bot, Dispatcher
 from bot.common.middlewares.database_middleware import DatabaseMiddlewareWithCommit, DatabaseMiddlewareWithoutCommit
 from bot.common.middlewares.i18n import TranslatorRunnerMiddleware
+from bot.common.tasks.deactivate import expire_analiz_balances
 from bot.routers.setup import setup_router
 from bot.config import settings, setup_logger
 from bot.db.redis import redis_client
@@ -13,6 +12,7 @@ setup_logger("bot")
 from aiogram.types import BotCommand, BotCommandScopeDefault
 from bot.config import translator_hub
 from loguru import logger
+from bot.config import bot, admins
 
 async def set_commands():
     commands = [
@@ -20,11 +20,10 @@ async def set_commands():
     ]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
 
-
-bot = Bot(
-    token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
-admins = settings.ROOT_ADMIN_IDS
+def setup_expire_scheduler():
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(expire_analiz_balances, "interval", hours=1)
+    scheduler.start()
 
 async def start_bot():
     await set_commands()

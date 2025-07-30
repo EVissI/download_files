@@ -5,7 +5,9 @@ from bot.common.utils.i18n import create_translator_hub
 from fluentogram import TranslatorHub
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
-
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from aiogram import Bot
 
 class Settings(BaseSettings):
     BASE_DIR: str = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -23,6 +25,11 @@ class Settings(BaseSettings):
 
 settings = Settings()
 translator_hub: TranslatorHub = create_translator_hub()
+
+bot = Bot(
+    token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
+admins = settings.ROOT_ADMIN_IDS
 
 def setup_logger(app_name: str):
     log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "log")

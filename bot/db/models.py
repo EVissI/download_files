@@ -108,6 +108,7 @@ class UserPromocode(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True,autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
     promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey('promocode.id'))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     
     user:Mapped["User"]  = relationship("User", back_populates="used_promocodes")
     promocode:Mapped["Promocode"]  = relationship("Promocode", back_populates="users")
@@ -118,6 +119,7 @@ class UserAnalizePayment(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     analize_payment_id: Mapped[int] = mapped_column(Integer, ForeignKey("analize_payments.id"), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     user: Mapped["User"] = relationship("User", back_populates="analize_payments_assoc")
     analize_payment: Mapped["AnalizePayment"] = relationship("AnalizePayment", back_populates="users_assoc")
@@ -129,6 +131,8 @@ class AnalizePayment(Base):
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     price: Mapped[int] = mapped_column(Integer, nullable=False)
+    duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     users_assoc: Mapped[list["UserAnalizePayment"]] = relationship(
         "UserAnalizePayment", back_populates="analize_payment"

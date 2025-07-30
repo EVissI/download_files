@@ -63,6 +63,7 @@ class SPromocode(BaseModel):
     is_active: bool | None = None
     max_usage: int | None = None
     activate_count: int | None = None
+    duration_days:int | None = None
     
     class Config:
         from_attributes = True
@@ -79,6 +80,7 @@ class SAnalizePayment(BaseModel):
     name: str | None = None
     price: int | None = None
     amount: int | None = None
+    duration_days: int | None = None
 
     class Config:
         from_attributes = True

@@ -9,23 +9,26 @@ from bot.db.dao import PromoCodeDAO
 
 view_promo_router = Router()
 
-@view_promo_router.message(F.text == PromoKeyboard.get_kb_text()['view_promo'], StateFilter(GeneralStates.promo_view))
+
+@view_promo_router.message(
+    F.text == PromoKeyboard.get_kb_text()["view_promo"],
+    StateFilter(GeneralStates.promo_view),
+)
 async def view_active_promos(message: Message, session_without_commit):
     dao = PromoCodeDAO(session_without_commit)
     promo_codes = await dao.get_active_promo_codes()
     if not promo_codes:
         await message.answer("Нет активных промокодов.")
         return
-    text = "<b>Активные промокоды:</b>\n"
     for promo in promo_codes:
         text = (
             f"Код: <code>{promo.code}</code>\n"
-            f"Дает игр проанализировать: {promo.analiz_count if promo.analiz_count is not None else '∞'}\n"
-            f"Максимум использований: {promo.max_usage if promo.max_usage is not None else '∞'}\n"
-            f"Активировано: {promo.activate_count or 0}\n"
+            f"Дает игр проанализировать: <b>{promo.analiz_count if promo.analiz_count is not None else '∞'}</b>\n"
+            f"Максимум использований: <b>{promo.max_usage if promo.max_usage is not None else '∞'}</b>\n"
+            f"Срок действия: <b>{promo.duration_days if promo.duration_days is not None else '∞'}</b> дней\n"
+            f"Активировано: <b>{promo.activate_count or 0}</b>\n"
             f"Статус: {'Активен' if promo.is_active else 'Неактивен'}\n"
         )
-        if promo.analiz_count:
-            await message.answer(text, parse_mode="HTML", reply_markup=PromoKeyboard.build())
-        if not promo.analiz_count:
-            await message.answer(text, parse_mode="HTML", reply_markup=PromoKeyboard.build())
+        await message.answer(
+            text, parse_mode="HTML", reply_markup=PromoKeyboard.build()
+        )
