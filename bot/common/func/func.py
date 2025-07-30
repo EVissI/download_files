@@ -204,6 +204,35 @@ def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
         elif chequer.get("error_rate_memg_mwc_points") is not None:
             error_rate = format_value(chequer.get("error_rate_memg_mwc_points"), True)
 
+        def get_cube_param(name):
+            # Возможные суффиксы для поиска
+            suffixes = [
+                "_emg_mwc_points",
+                "_emg_points",
+                "_mwc_points",
+                "_memg_points"
+                "_memg_mwc_points",
+                "_memg",
+                "_memg_mwc",
+                "_memg_emg_points",
+                "_emg_mwc",
+                "_emg",
+                "_mwc",
+                "_points",
+                "",  
+            ]
+            for suffix in suffixes:
+                val = cube.get(f"{name}{suffix}")
+                if val is not None:
+                    try:
+                        return int(val)
+                    except ValueError:
+                        try:
+                            return float(val)
+                        except ValueError:
+                            return 0
+            return 0
+        
         return {
             # Chequerplay data
             "moves_marked_bad": int(chequer.get("moves_marked_bad", 0)),
@@ -218,12 +247,12 @@ def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
             "rolls_rate_chequer": float(luck_rate),
             "luck_rating": str(luck.get("luck_rating", "Нет данных")),
             # Cube data
-            "missed_doubles_below_cp": int(cube.get("missed_doubles_below_cp", 0)),
-            "missed_doubles_above_cp": int(cube.get("missed_doubles_above_cp", 0)),
-            "wrong_doubles_below_sp": int(cube.get("wrong_doubles_below_sp", 0)),
-            "wrong_doubles_above_tg": int(cube.get("wrong_doubles_above_tg", 0)),
-            "wrong_takes": int(cube.get("wrong_takes", 0)),
-            "wrong_passes": int(cube.get("wrong_passes", 0)),
+            "missed_doubles_below_cp": get_cube_param("missed_doubles_below_cp"),
+            "missed_doubles_above_cp": get_cube_param("missed_doubles_above_cp"),
+            "wrong_doubles_below_sp": get_cube_param("wrong_doubles_below_dp"),  
+            "wrong_doubles_above_tg": get_cube_param("wrong_doubles_above_tg"),
+            "wrong_takes": get_cube_param("wrong_takes"),
+            "wrong_passes": get_cube_param("wrong_passes"),
             "cube_error_rate": float(cube.get("error_rate", 0)),
             "cube_decision_rating": str(cube.get("cube_decision_rating", "Нет данных")),
             # Overall data
