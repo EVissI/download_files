@@ -139,16 +139,17 @@ async def handle_mat_file(
             user_dao = UserDAO(session_without_commit)
             await user_dao.decrease_analiz_balance(user_info.id)
 
-            await session_without_commit.commit()
-
-            formatted_analysis = format_detailed_analysis(analysis_data, i18n)
+            formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
             await waiting_manager.stop()
             await message.answer(
                 f"{formatted_analysis}\n\n",
                 parse_mode="HTML",
-                reply_markup=MainKeyboard.build(user_info.role, i18n),
             )
-            await state.clear()
+            await message.answer(
+            i18n.auto.analyze.ask_pdf(),
+            reply_markup=get_download_pdf_kb(i18n)
+            )
+            await session_without_commit.commit()
 
         else:
             await state.update_data(
@@ -169,6 +170,7 @@ async def handle_mat_file(
             )
 
     except Exception as e:
+        await session_without_commit.rollback()
         logger.error(f"Ошибка при автоматическом анализе файла: {e}")
         await message.answer(i18n.auto.analyze.error.parse())
         await waiting_manager.stop()
