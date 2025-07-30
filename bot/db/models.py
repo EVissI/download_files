@@ -18,7 +18,9 @@ class User(Base):
     player_username: Mapped[str | None] = mapped_column(String(50), nullable=True)
     first_name: Mapped[str | None]
     last_name: Mapped[str | None]
-    lang_code: Mapped[str | None] = mapped_column(String(3), nullable=True, default="en")
+    lang_code: Mapped[str | None] = mapped_column(
+        String(3), nullable=True, default="en"
+    )
     role: Mapped["Role"] = mapped_column(
         String(5), default=Role.USER.value, nullable=False
     )
@@ -29,7 +31,9 @@ class User(Base):
     detailed_analyzes: Mapped[list["DetailedAnalysis"]] = relationship(
         "DetailedAnalysis", back_populates="user"
     )
-    used_promocodes:Mapped[list['UserPromocode']] = relationship("UserPromocode", back_populates="user")
+    used_promocodes: Mapped[list["UserPromocode"]] = relationship(
+        "UserPromocode", back_populates="user"
+    )
     analize_payments_assoc: Mapped[list["UserAnalizePayment"]] = relationship(
         "UserAnalizePayment", back_populates="user"
     )
@@ -53,6 +57,7 @@ class Analysis(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="user_game_analisis")
 
+
 class DetailedAnalysis(Base):
     __tablename__ = "detailed_analyzes"
 
@@ -74,7 +79,14 @@ class DetailedAnalysis(Base):
     rolls_rate_chequer: Mapped[float]
     luck_rating: Mapped[str]
 
-    # Cube
+    # Cube (добавлены новые поля)
+    missed_doubles_below_cp: Mapped[int]
+    missed_doubles_above_cp: Mapped[int]
+    wrong_doubles_below_sp: Mapped[int]
+    wrong_doubles_above_tg: Mapped[int]
+    wrong_takes: Mapped[int]
+    wrong_passes: Mapped[int]
+    cube_error_rate: Mapped[float]
     cube_decision_rating: Mapped[str]
 
     # Overall
@@ -90,8 +102,8 @@ class DetailedAnalysis(Base):
 
 
 class Promocode(Base):
-    __tablename__ = 'promocode'
-    
+    __tablename__ = "promocode"
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     analiz_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
@@ -99,30 +111,41 @@ class Promocode(Base):
     max_usage: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     activate_count: Mapped[int] = mapped_column(Integer, default=None)
     duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
-    
-    users:Mapped[list["UserPromocode"]] = relationship("UserPromocode", back_populates="promocode")
+
+    users: Mapped[list["UserPromocode"]] = relationship(
+        "UserPromocode", back_populates="promocode"
+    )
+
 
 class UserPromocode(Base):
-    __tablename__ = 'user_promocode'
-    
-    id: Mapped[int] = mapped_column(Integer, primary_key=True,autoincrement=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
-    promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey('promocode.id'))
+    __tablename__ = "user_promocode"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
+    promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("promocode.id"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    
-    user:Mapped["User"]  = relationship("User", back_populates="used_promocodes")
-    promocode:Mapped["Promocode"]  = relationship("Promocode", back_populates="users")
+
+    user: Mapped["User"] = relationship("User", back_populates="used_promocodes")
+    promocode: Mapped["Promocode"] = relationship("Promocode", back_populates="users")
+
 
 class UserAnalizePayment(Base):
     __tablename__ = "user_analize_payments"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
-    analize_payment_id: Mapped[int] = mapped_column(Integer, ForeignKey("analize_payments.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=False
+    )
+    analize_payment_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("analize_payments.id"), nullable=False
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     user: Mapped["User"] = relationship("User", back_populates="analize_payments_assoc")
-    analize_payment: Mapped["AnalizePayment"] = relationship("AnalizePayment", back_populates="users_assoc")
+    analize_payment: Mapped["AnalizePayment"] = relationship(
+        "AnalizePayment", back_populates="users_assoc"
+    )
+
 
 class AnalizePayment(Base):
     __tablename__ = "analize_payments"

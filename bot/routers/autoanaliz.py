@@ -1,12 +1,14 @@
 ﻿import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+import io
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
+from aiogram.types import BufferedInputFile
 import pytz
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
@@ -19,8 +21,10 @@ from bot.common.func.func import (
     get_analysis_data,
     get_user_file_name,
 )
+from bot.common.func.generate_pdf import html_to_pdf_bytes
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
+from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
@@ -214,17 +218,48 @@ async def handle_player_selection(
 
         await user_dao.decrease_analiz_balance(user_info.id)
 
-        formatted_analysis = format_detailed_analysis(analysis_data, i18n)
+        formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
         await callback.message.delete()
         await callback.message.answer(
             f"{formatted_analysis}\n\n",
             parse_mode="HTML",
-            reply_markup=MainKeyboard.build(user_info.role, i18n),
+        )
+        await callback.message.answer(
+            i18n.auto.analyze.ask_pdf(),
+            reply_markup=get_download_pdf_kb(i18n)
         )
         await session_without_commit.commit()
-        await state.clear()
 
     except Exception as e:
         logger.error(f"Ошибка при сохранении выбора игрока: {e}")
         await callback.message.answer(i18n.auto.analyze.error.save())
+
+@auto_analyze_router.callback_query(DownloadPDFCallback.filter(), UserInfo())
+async def handle_download_pdf(
+    callback: CallbackQuery,
+    callback_data: DownloadPDFCallback,
+    user_info: User,
+    state: FSMContext,
+    i18n: TranslatorRunner,
+):
+    await callback.message.delete()
+    if callback_data.action == "yes":
+        data = await state.get_data()
+        analysis_data = data.get("analysis_data")
+        if not analysis_data:
+            await callback.answer("Нет данных для формирования PDF.", show_alert=True)
+            return
+        html_text = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
+        pdf_bytes = html_to_pdf_bytes(html_text)
+        await callback.message.answer_document(
+            document=BufferedInputFile(
+                pdf_bytes,
+                filename="analize.pdf"
+            ),
+            caption=i18n.auto.analyze.pdf_ready(),
+            reply_markup=MainKeyboard.build(role=user_info.role, i18n=i18n)
+        )
+    else:
+        await callback.message.answer(i18n.auto.analyze.no_pdf(), reply_markup=MainKeyboard.build(role=user_info.role, i18n=i18n))
+    await state.clear()

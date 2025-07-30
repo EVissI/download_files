@@ -10,8 +10,10 @@ import pytesseract
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
+
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
+
 
 def get_user_file_name(user_id: int, original_name: str, files_dir: str) -> str:
     """
@@ -130,12 +132,8 @@ def extract_eg_summary(image_bytes: bytes) -> dict:
             r"([-+]?\d+,\d+)\s*Качество игры\s*\(PR\)\s*([-+]?\d+,\d+)", line
         )
         if match:
-            result[nick1]["quality"] = float(
-                match.group(1).replace(",", ".")
-            ) 
-            result[nick2]["quality"] = float(
-                match.group(2).replace(",", ".")
-            )  
+            result[nick1]["quality"] = float(match.group(1).replace(",", "."))
+            result[nick2]["quality"] = float(match.group(2).replace(",", "."))
             break
 
     return result
@@ -163,7 +161,8 @@ def determine_rank(pr: float, i18n: TranslatorRunner) -> str:
         return i18n.user.rank.casual()
     else:
         return i18n.user.rank.beginner()
-    
+
+
 def determine_rank_rate_chequer(deviation: float) -> str:
     """
     Определяет рейтинг броска на основе отклонения эквити от среднего значения.
@@ -182,67 +181,77 @@ def determine_rank_rate_chequer(deviation: float) -> str:
         return "very unlucky"
 
 
-def get_analysis_data(analysis_data: dict, selected_player: str) -> dict:
-    """Helper function to safely get analysis data with defaults"""
-    chequer = analysis_data.get("chequerplay", {}).get(selected_player, {})
-    luck = analysis_data.get("luck", {}).get(selected_player, {})
-    cube = analysis_data.get("cube", {}).get(selected_player, {})
-    overall = analysis_data.get("overall", {}).get(selected_player, {})
-    luck_rate = 0
-    if luck.get("luck_rate_memg_points") is not None:
-        luck_rate= luck.get("luck_rate_memg_points")
-    elif luck.get("luck_rate_memg_mwc_points") is not None:
-        luck_rate= luck.get("luck_rate_memg_mwc_points")
+def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
+    """
+    Если передан selected_player — возвращает словарь только по нему.
+    Если не передан — возвращает словарь по всем игрокам (ключи — имена игроков).
+    """
 
-    error_rate = 0
-    if chequer.get("error_rate_memg_points") is not None:
-        error_rate = format_value(chequer.get("error_rate_memg_points"), True)
-    elif chequer.get("error_rate_memg_mwc_points") is not None:
-        error_rate = format_value(chequer.get("error_rate_memg_mwc_points"), True)
+    def extract(player):
+        chequer = analysis_data.get("chequerplay", {}).get(player, {})
+        luck = analysis_data.get("luck", {}).get(player, {})
+        cube = analysis_data.get("cube", {}).get(player, {})
+        overall = analysis_data.get("overall", {}).get(player, {})
+        luck_rate = 0
+        if luck.get("luck_rate_memg_points") is not None:
+            luck_rate = luck.get("luck_rate_memg_points")
+        elif luck.get("luck_rate_memg_mwc_points") is not None:
+            luck_rate = luck.get("luck_rate_memg_mwc_points")
 
-    return {
-        # Chequerplay data
-        "moves_marked_bad": int(chequer.get("moves_marked_bad", 0)),
-        "moves_marked_very_bad": int(chequer.get("moves_marked_very_bad", 0)),
-        "error_rate_chequer": float(error_rate),
-        "chequerplay_rating": str(chequer.get("chequerplay_rating", "Нет данных")),
-        # Luck data
-        "rolls_marked_very_lucky": int(luck.get("rolls_marked_very_lucky", 0)),
-        "rolls_marked_lucky": int(luck.get("rolls_marked_lucky", 0)),
-        "rolls_marked_unlucky": int(luck.get("rolls_marked_unlucky", 0)),
-        "rolls_marked_very_unlucky": int(luck.get("rolls_marked_very_unlucky", 0)),
-        "rolls_rate_chequer": float(luck_rate),
-        "luck_rating": str(luck.get("luck_rating", "Нет данных")),
-        # Cube data
-        "cube_decision_rating": str(cube.get("cube_decision_rating", "Нет данных")),
-        # Overall data
-        "snowie_error_rate": float(overall.get("snowie_error_rate", 0)),
-        "overall_rating": str(overall.get("overall_rating", "Нет данных")),
-    }
+        error_rate = 0
+        if chequer.get("error_rate_memg_points") is not None:
+            error_rate = format_value(chequer.get("error_rate_memg_points"), True)
+        elif chequer.get("error_rate_memg_mwc_points") is not None:
+            error_rate = format_value(chequer.get("error_rate_memg_mwc_points"), True)
 
+        return {
+            # Chequerplay data
+            "moves_marked_bad": int(chequer.get("moves_marked_bad", 0)),
+            "moves_marked_very_bad": int(chequer.get("moves_marked_very_bad", 0)),
+            "error_rate_chequer": float(error_rate),
+            "chequerplay_rating": str(chequer.get("chequerplay_rating", "Нет данных")),
+            # Luck data
+            "rolls_marked_very_lucky": int(luck.get("rolls_marked_very_lucky", 0)),
+            "rolls_marked_lucky": int(luck.get("rolls_marked_lucky", 0)),
+            "rolls_marked_unlucky": int(luck.get("rolls_marked_unlucky", 0)),
+            "rolls_marked_very_unlucky": int(luck.get("rolls_marked_very_unlucky", 0)),
+            "rolls_rate_chequer": float(luck_rate),
+            "luck_rating": str(luck.get("luck_rating", "Нет данных")),
+            # Cube data
+            "missed_doubles_below_cp": int(cube.get("missed_doubles_below_cp", 0)),
+            "missed_doubles_above_cp": int(cube.get("missed_doubles_above_cp", 0)),
+            "wrong_doubles_below_sp": int(cube.get("wrong_doubles_below_sp", 0)),
+            "wrong_doubles_above_tg": int(cube.get("wrong_doubles_above_tg", 0)),
+            "wrong_takes": int(cube.get("wrong_takes", 0)),
+            "wrong_passes": int(cube.get("wrong_passes", 0)),
+            "cube_error_rate": float(cube.get("error_rate", 0)),
+            "cube_decision_rating": str(cube.get("cube_decision_rating", "Нет данных")),
+            # Overall data
+            "snowie_error_rate": float(overall.get("snowie_error_rate", 0)),
+            "overall_rating": str(overall.get("overall_rating", "Нет данных")),
+        }
+
+    if selected_player:
+        return extract(selected_player)
+    else:
+        players = list(analysis_data.get("chequerplay", {}).keys())
+        return {player: extract(player) for player in players}
 
 
 def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str:
     """
     Форматирует результаты анализа для двух игроков в виде ASCII-таблиц для вывода в Telegram,
-    с ограничением длины строк, одним числом после запятой для float, и сокращением рейтингов.
-    Если ключа нет в словаре, возвращает исходное значение.
+    используя уже отформатированный словарь из get_analysis_data.
     """
     try:
         logger.info(analysis_data)
-        player_names = list(analysis_data.get("chequerplay", {}).keys())
+        player_names = list(analysis_data.keys())
         if len(player_names) != 2:
             raise ValueError("No data found for two players")
 
         player1_name, player2_name = player_names
-        p1 = analysis_data.get("chequerplay", {}).get(player1_name, {})
-        p2 = analysis_data.get("chequerplay", {}).get(player2_name, {})
-        c1 = analysis_data.get("cube", {}).get(player1_name, {})
-        c2 = analysis_data.get("cube", {}).get(player2_name, {})
-        l1 = analysis_data.get("luck", {}).get(player1_name, {})
-        l2 = analysis_data.get("luck", {}).get(player2_name, {})
-        o1 = analysis_data.get("overall", {}).get(player1_name, {})
-        o2 = analysis_data.get("overall", {}).get(player2_name, {})
+        p1 = analysis_data[player1_name]
+        p2 = analysis_data[player2_name]
         max_length = 10
 
         # Словарь для сокращения рейтингов
@@ -261,10 +270,9 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
             "Master": "Mastr",
             "Professional": "Pro",
             "Grandmaster": "GrandMstr",
-            "No data": "N/A"
+            "No data": "N/A",
         }
 
-        # Форматирование значений с ограничением длины и одним числом после запятой
         def format_value(val, is_float=False, max_length=max_length):
             if val is None or val == "No data":
                 return "N/A".ljust(max_length)[:max_length]
@@ -273,25 +281,14 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
                 try:
                     num = float(cleaned_val)
                     formatted = f"{num:.1f}"
-                    # Добавляем + для положительных значений
                     if num > 0:
                         formatted = f"+{formatted}"
                     return (formatted + " " * max_length)[:max_length]
                 except ValueError:
                     return cleaned_val.ljust(max_length)[:max_length]
-            # Применяем сокращение рейтингов, если это не float, иначе возвращаем исходное значение
-            return rating_shortcuts.get(cleaned_val, cleaned_val).ljust(max_length)[:max_length]
-
-        error_rate1 = 0
-        error_rate2 = 0
-        if p1.get("error_rate_memg_points") is not None:
-            error_rate1 = format_value(p1.get("error_rate_memg_points"), True)
-        elif p1.get("error_rate_memg_mwc_points") is not None:
-            error_rate1 = format_value(p1.get("error_rate_memg_mwc_points"), True)
-        if p2.get("error_rate_memg_points") is not None:
-            error_rate2 = format_value(p2.get("error_rate_memg_points"), True)
-        elif p2.get("error_rate_memg_mwc_points") is not None:
-            error_rate2 = format_value(p2.get("error_rate_memg_mwc_points"), True)
+            return rating_shortcuts.get(cleaned_val, cleaned_val).ljust(max_length)[
+                :max_length
+            ]
 
         # Таблица для Chequerplay
         chequerplay_table = pt.PrettyTable()
@@ -299,21 +296,34 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
         chequerplay_table.max_width["Param"] = 15
         chequerplay_table.max_width[player1_name] = 15
         chequerplay_table.max_width[player2_name] = 15
-        chequerplay_table.add_row([i18n.analysis.chequerplay.bad_move(), format_value(p1.get("moves_marked_bad", 0)), format_value(p2.get("moves_marked_bad", 0))])
-        chequerplay_table.add_row([i18n.analysis.chequerplay.bad_plus_move(), format_value(p1.get("moves_marked_very_bad", 0)), format_value(p2.get("moves_marked_very_bad", 0))])
-        chequerplay_table.add_row([i18n.analysis.chequerplay.error_rate(), error_rate1, error_rate2])
-        chequerplay_table.add_row([i18n.analysis.chequerplay.rating(), format_value(p1.get("chequerplay_rating", "No data")), format_value(p2.get("chequerplay_rating", "No data"))])
-
-        luck_rate1 = 0
-        luck_rate2 = 0
-        if l1.get("luck_rate_memg_points") is not None:
-            luck_rate1 = format_value(l1.get("luck_rate_memg_points"), True)
-        elif l1.get("luck_rate_memg_mwc_points") is not None:
-            luck_rate1 = format_value(l1.get("luck_rate_memg_mwc_points"), True)
-        if l2.get("luck_rate_memg_mwc_points") is not None:
-            luck_rate2 = format_value(l2.get("luck_rate_memg_mwc_points"), True)
-        elif l2.get("luck_rate_memg_points") is not None:
-            luck_rate2 = format_value(l2.get("luck_rate_memg_points"), True)
+        chequerplay_table.add_row(
+            [
+                i18n.analysis.chequerplay.bad_move(),
+                format_value(p1["moves_marked_bad"]),
+                format_value(p2["moves_marked_bad"]),
+            ]
+        )
+        chequerplay_table.add_row(
+            [
+                i18n.analysis.chequerplay.bad_plus_move(),
+                format_value(p1["moves_marked_very_bad"]),
+                format_value(p2["moves_marked_very_bad"]),
+            ]
+        )
+        chequerplay_table.add_row(
+            [
+                i18n.analysis.chequerplay.error_rate(),
+                format_value(p1["error_rate_chequer"], True),
+                format_value(p2["error_rate_chequer"], True),
+            ]
+        )
+        chequerplay_table.add_row(
+            [
+                i18n.analysis.chequerplay.rating(),
+                format_value(p1["chequerplay_rating"]),
+                format_value(p2["chequerplay_rating"]),
+            ]
+        )
 
         # Таблица для Luck
         luck_table = pt.PrettyTable()
@@ -321,20 +331,111 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
         luck_table.max_width[i18n.analysis.param()] = 15
         luck_table.max_width[player1_name] = 15
         luck_table.max_width[player2_name] = 15
-        luck_table.add_row([i18n.analysis.luck.luck_plus_move(), format_value(l1.get("rolls_marked_very_lucky", 0)), format_value(l2.get("rolls_marked_very_lucky", 0))])
-        luck_table.add_row([i18n.analysis.luck.luck_move(), format_value(l1.get("rolls_marked_lucky", 0)), format_value(l2.get("rolls_marked_lucky", 0))])
-        luck_table.add_row([i18n.analysis.luck.unluck_plus_move(), format_value(l1.get("rolls_marked_very_unlucky", 0)), format_value(l2.get("rolls_marked_very_unlucky", 0))])
-        luck_table.add_row([i18n.analysis.luck.unluck_move(), format_value(l1.get("rolls_marked_unlucky", 0)), format_value(l2.get("rolls_marked_unlucky", 0))])
-        luck_table.add_row([i18n.analysis.luck.luck_rate(), luck_rate1, luck_rate2])
-        luck_table.add_row([i18n.analysis.luck.rating(), format_value(l1.get("luck_rating", "No data")), format_value(l2.get("luck_rating", "No data"))])
+        luck_table.add_row(
+            [
+                i18n.analysis.luck.luck_plus_move(),
+                format_value(p1["rolls_marked_very_lucky"]),
+                format_value(p2["rolls_marked_very_lucky"]),
+            ]
+        )
+        luck_table.add_row(
+            [
+                i18n.analysis.luck.luck_move(),
+                format_value(p1["rolls_marked_lucky"]),
+                format_value(p2["rolls_marked_lucky"]),
+            ]
+        )
+        luck_table.add_row(
+            [
+                i18n.analysis.luck.unluck_plus_move(),
+                format_value(p1["rolls_marked_very_unlucky"]),
+                format_value(p2["rolls_marked_very_unlucky"]),
+            ]
+        )
+        luck_table.add_row(
+            [
+                i18n.analysis.luck.unluck_move(),
+                format_value(p1["rolls_marked_unlucky"]),
+                format_value(p2["rolls_marked_unlucky"]),
+            ]
+        )
+        luck_table.add_row(
+            [
+                i18n.analysis.luck.luck_rate(),
+                format_value(p1["rolls_rate_chequer"], True),
+                format_value(p2["rolls_rate_chequer"], True),
+            ]
+        )
+        luck_table.add_row(
+            [
+                i18n.analysis.luck.rating(),
+                format_value(p1["luck_rating"]),
+                format_value(p2["luck_rating"]),
+            ]
+        )
 
-        # Таблица для Cube
+        # Таблица для Cube (добавьте остальные параметры по аналогии)
         cube_table = pt.PrettyTable()
         cube_table.field_names = [i18n.analysis.param(), player1_name, player2_name]
         cube_table.max_width[i18n.analysis.param()] = 15
         cube_table.max_width[player1_name] = 15
         cube_table.max_width[player2_name] = 15
-        cube_table.add_row([i18n.analysis.cube.rating(), format_value(c1.get("cube_decision_rating", "No data")), format_value(c2.get("cube_decision_rating", "No data"))])
+        cube_table.add_row(
+            [
+                i18n.analysis.cube.missed_doubles_below_cp(),
+                format_value(p1["missed_doubles_below_cp"]),
+                format_value(p2["missed_doubles_below_cp"]),
+            ]
+        )
+        cube_table.add_row(
+            [
+                i18n.analysis.cube.missed_doubles_above_cp(),
+                format_value(p1["missed_doubles_above_cp"]),
+                format_value(p2["missed_doubles_above_cp"]),
+            ]
+        )
+        cube_table.add_row(
+            [
+                i18n.analysis.cube.wrong_doubles_below_sp(),
+                format_value(p1["wrong_doubles_below_sp"]),
+                format_value(p2["wrong_doubles_below_sp"]),
+            ]
+        )
+        cube_table.add_row(
+            [
+                i18n.analysis.cube.wrong_doubles_above_tg(),
+                format_value(p1["wrong_doubles_above_tg"]),
+                format_value(p2["wrong_doubles_above_tg"]),
+            ]
+        )
+        cube_table.add_row(
+            [
+                i18n.analysis.cube.wrong_takes(),
+                format_value(p1["wrong_takes"]),
+                format_value(p2["wrong_takes"]),
+            ]
+        )
+        cube_table.add_row(
+            [
+                i18n.analysis.cube.wrong_passes(),
+                format_value(p1["wrong_passes"]),
+                format_value(p2["wrong_passes"]),
+            ]
+        )
+        cube_table.add_row(
+            [
+                i18n.analysis.cube.error_rate(),
+                format_value(p1["cube_error_rate"], True),
+                format_value(p2["cube_error_rate"], True),
+            ]
+        )
+        cube_table.add_row(
+            [
+                i18n.analysis.cube.rating(),
+                format_value(p1["cube_decision_rating"]),
+                format_value(p2["cube_decision_rating"]),
+            ]
+        )
 
         # Таблица для Overall
         overall_table = pt.PrettyTable()
@@ -342,8 +443,20 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
         overall_table.max_width[i18n.analysis.param()] = 15
         overall_table.max_width[player1_name] = 15
         overall_table.max_width[player2_name] = 15
-        overall_table.add_row([i18n.analysis.overall.error_rate(), format_value(o1.get("snowie_error_rate", 0), True), format_value(o2.get("snowie_error_rate", 0), True)])
-        overall_table.add_row([i18n.analysis.overall.rating(), format_value(o1.get("overall_rating", "No data")), format_value(o2.get("overall_rating", "No data"))])
+        overall_table.add_row(
+            [
+                i18n.analysis.overall.error_rate(),
+                format_value(p1["snowie_error_rate"], True),
+                format_value(p2["snowie_error_rate"], True),
+            ]
+        )
+        overall_table.add_row(
+            [
+                i18n.analysis.overall.rating(),
+                format_value(p1["overall_rating"]),
+                format_value(p2["overall_rating"]),
+            ]
+        )
 
         # Формирование финального сообщения
         result = (
@@ -363,6 +476,7 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
     except Exception as e:
         logger.error(f"Ошибка при форматировании анализа: {e}")
         return i18n.analysis.error_formatting()
+
 
 def parse_eg_value(value: str | None, as_int: bool = True) -> int | float | str:
     """
