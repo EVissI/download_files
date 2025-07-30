@@ -52,7 +52,7 @@ class UserProfile:
 ├ 📊 Games available for analysis: &lt;b&gt;{ $analiz_balance }&lt;/b&gt;
 └ 🌐 Language: &lt;b&gt;{ $lang_code }&lt;/b&gt;"""]: ...
     @staticmethod
-    def detailed_statistics(*, detailed_count: PossibleValue, detailed_rank_chequer: PossibleValue, detailed_rank_overall: PossibleValue, error_rate_chequer: PossibleValue, player_username: PossibleValue, rolls_marked_lucky: PossibleValue, rolls_marked_unlucky: PossibleValue, rolls_marked_very_lucky: PossibleValue, rolls_marked_very_unlucky: PossibleValue, snowie_error_rate: PossibleValue) -> Literal["""🎯 Gnu( { $detailed_count } games, Nickname: { $player_username })
+    def detailed_statistics(*, cube_error_rate: PossibleValue, detailed_count: PossibleValue, detailed_rank_chequer: PossibleValue, detailed_rank_cube: PossibleValue, detailed_rank_overall: PossibleValue, error_rate_chequer: PossibleValue, missed_doubles_above_cp: PossibleValue, missed_doubles_below_cp: PossibleValue, player_username: PossibleValue, rolls_marked_lucky: PossibleValue, rolls_marked_unlucky: PossibleValue, rolls_marked_very_lucky: PossibleValue, rolls_marked_very_unlucky: PossibleValue, snowie_error_rate: PossibleValue, wrong_doubles_above_tg: PossibleValue, wrong_doubles_below_sp: PossibleValue, wrong_passes: PossibleValue, wrong_takes: PossibleValue) -> Literal["""🎯 Gnu( { $detailed_count } games, Nickname: { $player_username })
 Playing checkers:
 ├ Error rate: { $error_rate_chequer }
 └ Rating: { $detailed_rank_chequer }
@@ -61,6 +61,15 @@ Luck:
 ├ Lucky: { $rolls_marked_lucky }
 ├ Unlucky: { $rolls_marked_unlucky }
 └ Very Unlucky: { $rolls_marked_very_unlucky }
+Cube decisions:
+├ Missed doubles below CP: { $missed_doubles_below_cp }
+├ Missed doubles above CP: { $missed_doubles_above_cp }
+├ Wrong doubles below SP: { $wrong_doubles_below_sp }
+├ Wrong doubles above TG: { $wrong_doubles_above_tg }
+├ Wrong takes: { $wrong_takes }
+├ Wrong passes: { $wrong_passes }
+├ Error rate: { $cube_error_rate }
+└ Cube rating: { $detailed_rank_cube }
 Overall Stats:
 ├ Error Rate: { $snowie_error_rate }
 └ Your Rank: { $detailed_rank_overall }"""]: ...

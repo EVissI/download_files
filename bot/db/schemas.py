@@ -96,3 +96,11 @@ class SAnalizePayment(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SUserAnalizePayment(BaseModel):
+    user_id: int | None = None
+    analize_payment_id: int | None = None
+    is_active: bool | None = None
+
+    class Config:
+        from_attributes = True

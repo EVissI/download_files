@@ -22,10 +22,10 @@ user-profile-inline_button-change_language = Изменить язык
 user-profile-inline_button-payment = Купить автоанализы
 user-profile-change_language-confirm = Язык бота успешно изменён!
 
-user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count -> 
-    [one] 1 игра 
-    [few] { $detailed_count } игры 
-    *[other] { $detailed_count } игр 
+user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count ->
+    [one] 1 игра
+    [few] { $detailed_count } игры
+    *[other] { $detailed_count } игр
     }, Никнейм: { $player_username })
     Игра в шашки:
     ├ Ошибка: { $error_rate_chequer }
@@ -35,6 +35,15 @@ user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count ->
     ├ Удачно: { $rolls_marked_lucky }
     ├ Неудачно: { $rolls_marked_unlucky }
     └ Очень неудачно: { $rolls_marked_very_unlucky }
+    Игра кубом:
+    ├ Пропущенный куб по ДП: { $missed_doubles_below_cp }
+    ├ Пропущенный куб по ТГ: { $missed_doubles_above_cp }
+    ├ Ошибочный куб по ДП: { $wrong_doubles_below_sp }
+    ├ Ошибочный куб по ТГ: { $wrong_doubles_above_tg }
+    ├ Ошибочно принято кубов: { $wrong_takes }
+    ├ Ошибочных пассов: { $wrong_passes }
+    ├ Оценка ошибок: { $cube_error_rate }
+    └ Оценка решений по кубу: { $detailed_rank_cube }
     Общая статистика:
     ├ Ошибка: { $snowie_error_rate }
     └ Ваш ранг: { $detailed_rank_overall }
