@@ -100,3 +100,4 @@ user-profile-payment_not_found = ❌ Package not found. Please select another on
 user-profile-payment_invalid_payload = ❌ Invalid payment. Please try again.
 
 user-profile-payment_text = Select a package to buy:
+user-profile-expire_notice = ⏳ { $amount } analyses from { $source } have expired.

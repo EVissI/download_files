@@ -100,3 +100,5 @@ user-profile-payment_error = ❌ Произошла ошибка при обра
 user-profile-payment_not_found = ❌ Пакет не найден. Попробуйте выбрать другой.
 user-profile-payment_invalid_payload = ❌ Некорректный платеж. Попробуйте ещё раз.
 user-profile-payment_text = Выберите пакет для покупки:
+
+user-profile-expire_notice = ⏳ { $amount } анализов по { $source } сгорели.
