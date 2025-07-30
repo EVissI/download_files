@@ -345,11 +345,9 @@ class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
             if not payment:
                 return False
             payment.is_active = False
-            await self._session.commit()
             return True
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при деактивации пакета услуг {payment_id}: {e}")
-            await self._session.rollback()
             return False
 
 

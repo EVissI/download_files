@@ -63,7 +63,9 @@ async def handle_delete_payment_select(
             f"Пакет '{payment_package.name}' успешно деактивирован.",
             reply_markup=PaymentKeyboard.build(),
         )
+        await session_without_commit.commit()
     else:
         await callback.message.answer(
             "Ошибка при деактивации пакета.", reply_markup=PaymentKeyboard.build()
         )
+        await session_without_commit.rollback()
