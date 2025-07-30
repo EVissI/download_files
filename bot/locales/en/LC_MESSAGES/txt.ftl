@@ -107,3 +107,12 @@ auto-analyze-no_thanks = ❌ No, thanks
 auto-analyze-ask_pdf = Would you like to get the analysis as a PDF?
 auto-analyze-pdf_ready = Your analysis in PDF format:
 auto-analyze-no_pdf = Okay, PDF will not be sent. Thank you for using the bot!
+
+analysis-cube-missed_doubles_below_cp = Missed doubles below CP
+analysis-cube-missed_doubles_above_cp = Missed doubles above CP
+analysis-cube-wrong_doubles_below_sp = Wrong doubles below SP
+analysis-cube-wrong_doubles_above_tg = Wrong doubles above TG
+analysis-cube-wrong_takes = Wrong takes
+analysis-cube-wrong_passes = Wrong passes
+analysis-cube-error_rate = Error rate
+analysis-cube-rating = Cube decision rating

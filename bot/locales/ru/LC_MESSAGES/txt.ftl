@@ -108,3 +108,12 @@ auto-analyze-no_thanks = ❌ Нет, спасибо
 auto-analyze-ask_pdf = Хотите ли получить анализ в формате PDF?
 auto-analyze-pdf_ready = Ваш анализ в формате PDF:
 auto-analyze-no_pdf = Хорошо, PDF не будет отправлен. Спасибо за использование бота!
+
+analysis-cube-missed_doubles_below_cp = Пропущенный куб по ДП
+analysis-cube-missed_doubles_above_cp = Пропущенный куб по ТГ
+analysis-cube-wrong_doubles_below_sp = Ошибочный куб по ДП
+analysis-cube-wrong_doubles_above_tg = Ошибочный куб по ТГ
+analysis-cube-wrong_takes = Ошибочно принято кубов
+analysis-cube-wrong_passes = Ошибочных пассов
+analysis-cube-error_rate = Оценка ошибок
+analysis-cube-rating = Оценка решений по кубу
