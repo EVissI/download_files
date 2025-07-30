@@ -20,6 +20,8 @@
     volumes:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
+    sysctls:
+      - vm.overcommit_memory=1
 
   db:
     image: postgres
