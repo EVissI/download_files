@@ -102,7 +102,7 @@ async def handle_mat_file(
         loop = asyncio.get_running_loop()
         analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path)
         analysis_data = await loop.run_in_executor(None, json.loads, analysis_result)
-        await redis_client.set(f"analysis_data:{user_info.id}", json.dumps(analysis_data), expire=3600)
+        await redis_client.set(f"analysis_data:{user_info.id}", json.dumps(analysis_data), expire=1800)
         player_names = list(analysis_data["chequerplay"].keys())
         if len(player_names) != 2:
             raise ValueError("Incorrect number of players in analysis")
