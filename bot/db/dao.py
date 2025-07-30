@@ -1,7 +1,15 @@
 ﻿from loguru import logger
 import pytz
 from bot.db.base import BaseDAO
-from bot.db.models import User, Analysis, DetailedAnalysis, Promocode, UserAnalizePayment, UserPromocode, AnalizePayment
+from bot.db.models import (
+    User,
+    Analysis,
+    DetailedAnalysis,
+    Promocode,
+    UserAnalizePayment,
+    UserPromocode,
+    AnalizePayment,
+)
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
@@ -30,9 +38,12 @@ class UserDAO(BaseDAO[User]):
                 return True
             return False  # Баланс уже 0
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при уменьшении analiz_balance для пользователя {user_id}: {e}")
+            logger.error(
+                f"Ошибка при уменьшении analiz_balance для пользователя {user_id}: {e}"
+            )
             await self._session.rollback()
             return False
+
 
 class AnalisisDAO(BaseDAO[Analysis]):
     model = Analysis
@@ -75,20 +86,7 @@ class AnalisisDAO(BaseDAO[Analysis]):
 
 class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
     model = DetailedAnalysis
-    async def get_all_unique_player_names(self) -> list[str]:
-        """
-        Получает список всех уникальных никнеймов игроков (player_name) без повторений.
-        """
-        try:
-            query = select(self.model.player_name).distinct()
-            result = await self._session.execute(query)
-            names = [row[0] for row in result.fetchall() if row[0]]
-            logger.info(f"Найдено {len(names)} уникальных никнеймов игроков")
-            return names
-        except SQLAlchemyError as e:
-            logger.error(f"Ошибка при получении уникальных никнеймов игроков: {e}")
-            raise
-        
+
     async def get_average_analysis_by_user(self, user_id: int) -> dict:
         try:
             logger.info(
@@ -113,6 +111,22 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
                     "avg_rolls_marked_very_unlucky"
                 ),
                 func.avg(self.model.rolls_rate_chequer).label("avg_rolls_rate_chequer"),
+                # Cube averages (новые поля)
+                func.avg(self.model.missed_doubles_below_cp).label(
+                    "avg_missed_doubles_below_cp"
+                ),
+                func.avg(self.model.missed_doubles_above_cp).label(
+                    "avg_missed_doubles_above_cp"
+                ),
+                func.avg(self.model.wrong_doubles_below_sp).label(
+                    "avg_wrong_doubles_below_sp"
+                ),
+                func.avg(self.model.wrong_doubles_above_tg).label(
+                    "avg_wrong_doubles_above_tg"
+                ),
+                func.avg(self.model.wrong_takes).label("avg_wrong_takes"),
+                func.avg(self.model.wrong_passes).label("avg_wrong_passes"),
+                func.avg(self.model.cube_error_rate).label("avg_cube_error_rate"),
                 # Overall averages
                 func.avg(self.model.snowie_error_rate).label("avg_snowie_error_rate"),
             ).filter(self.model.user_id == user_id)
@@ -124,18 +138,38 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
                 "moves_marked_bad": float(averages.avg_moves_marked_bad or 0),
                 "moves_marked_very_bad": float(averages.avg_moves_marked_very_bad or 0),
                 "error_rate_chequer": float(averages.avg_error_rate_chequer or 0),
-                "rolls_marked_very_lucky": float(averages.avg_rolls_marked_very_lucky or 0),
+                "rolls_marked_very_lucky": float(
+                    averages.avg_rolls_marked_very_lucky or 0
+                ),
                 "rolls_marked_lucky": float(averages.avg_rolls_marked_lucky or 0),
                 "rolls_marked_unlucky": float(averages.avg_rolls_marked_unlucky or 0),
-                "rolls_marked_very_unlucky": float(averages.avg_rolls_marked_very_unlucky or 0),
+                "rolls_marked_very_unlucky": float(
+                    averages.avg_rolls_marked_very_unlucky or 0
+                ),
                 "rolls_rate_chequer": float(averages.avg_rolls_rate_chequer or 0),
+                # Новые cube поля
+                "missed_doubles_below_cp": float(
+                    averages.avg_missed_doubles_below_cp or 0
+                ),
+                "missed_doubles_above_cp": float(
+                    averages.avg_missed_doubles_above_cp or 0
+                ),
+                "wrong_doubles_below_sp": float(
+                    averages.avg_wrong_doubles_below_sp or 0
+                ),
+                "wrong_doubles_above_tg": float(
+                    averages.avg_wrong_doubles_above_tg or 0
+                ),
+                "wrong_takes": float(averages.avg_wrong_takes or 0),
+                "wrong_passes": float(averages.avg_wrong_passes or 0),
+                "cube_error_rate": float(averages.avg_cube_error_rate or 0),
                 "snowie_error_rate": float(averages.avg_snowie_error_rate or 0),
             }
 
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при вычислении средних значений: {e}")
             raise
-    
+
     async def get_all_detailed_analyzes(
         self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
     ) -> List[DetailedAnalysis]:
@@ -146,7 +180,9 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
             query = select(self.model)
             if start_date or end_date:
                 if start_date and end_date:
-                    query = query.where(self.model.created_at.between(start_date, end_date))
+                    query = query.where(
+                        self.model.created_at.between(start_date, end_date)
+                    )
                 elif start_date:
                     query = query.where(self.model.created_at >= start_date)
                 else:
@@ -181,10 +217,14 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
             query = select(self.model).where(*conditions)
             result = await self._session.execute(query)
             analyses = result.scalars().all()
-            logger.info(f"Загружено {len(analyses)} записей детального анализа для игрока {player_name}")
+            logger.info(
+                f"Загружено {len(analyses)} записей детального анализа для игрока {player_name}"
+            )
             return analyses
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при загрузке записей детального анализа для игрока {player_name}: {e}")
+            logger.error(
+                f"Ошибка при загрузке записей детального анализа для игрока {player_name}: {e}"
+            )
             raise
 
 
@@ -217,7 +257,7 @@ class PromoCodeDAO(BaseDAO[Promocode]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке активных промокодов: {e}")
             raise
-    
+
     async def validate_promo_code(self, code: str, user_id: int) -> bool:
         """
         Проверяет, можно ли активировать промокод для пользователя.
@@ -234,7 +274,7 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 
             query = select(UserPromocode).where(
                 UserPromocode.user_id == user_id,
-                UserPromocode.promocode_id == promocode.id
+                UserPromocode.promocode_id == promocode.id,
             )
             result = await self._session.execute(query)
             user_promo = result.scalar_one_or_none()
@@ -244,7 +284,7 @@ class PromoCodeDAO(BaseDAO[Promocode]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при валидации промокода '{code}': {e}")
             return False
-    
+
     async def activate_promo_code(self, code: str, user_id: int) -> bool:
         """
         Активирует промокод для пользователя (добавляет запись в user_promocode, увеличивает activate_count и увеличивает analiz_balance).
@@ -277,7 +317,8 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             logger.error(f"Ошибка при активации промокода '{code}': {e}")
             await self._session.rollback()
             return False
-        
+
+
 class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
     model = AnalizePayment
 
@@ -294,6 +335,7 @@ class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке пакетов услуг: {e}")
             raise
+
     async def deactivate(self, payment_id: int) -> bool:
         """
         Деактивирует пакет услуг (is_active = False) по id.
@@ -309,6 +351,7 @@ class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
             logger.error(f"Ошибка при деактивации пакета услуг {payment_id}: {e}")
             await self._session.rollback()
             return False
+
 
 class UserPromocodeDAO(BaseDAO[UserPromocode]):
     model = UserPromocode
@@ -354,7 +397,9 @@ class UserPromocodeDAO(BaseDAO[UserPromocode]):
             result = await self._session.execute(query)
             return result.scalars().all()
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при получении UserPromocode для пользователя {user_id}: {e}")
+            logger.error(
+                f"Ошибка при получении UserPromocode для пользователя {user_id}: {e}"
+            )
             raise
 
 
@@ -402,5 +447,7 @@ class UserAnalizePaymentDAO(BaseDAO[UserAnalizePayment]):
             result = await self._session.execute(query)
             return result.scalars().all()
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при получении UserAnalizePayment для пользователя {user_id}: {e}")
+            logger.error(
+                f"Ошибка при получении UserAnalizePayment для пользователя {user_id}: {e}"
+            )
             raise
