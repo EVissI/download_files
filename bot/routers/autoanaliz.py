@@ -232,6 +232,7 @@ async def handle_player_selection(
         await session_without_commit.commit()
 
     except Exception as e:
+        await session_without_commit.rollback()
         logger.error(f"Ошибка при сохранении выбора игрока: {e}")
         await callback.message.answer(i18n.auto.analyze.error.save())
 
