@@ -251,18 +251,22 @@ async def handle_download_pdf(
         data = await state.get_data()
         analysis_data = data.get("analysis_data")
         if not analysis_data:
-            await callback.answer("Нет данных для формирования PDF.", show_alert=True)
+            await callback.message.answer("Нет данных для формирования PDF.")
             return
         html_text = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
+        logger.info(html_text)
         pdf_bytes = html_to_pdf_bytes(html_text)
+        if not pdf_bytes:
+            await callback.message.answer("Ошибка при генерации PDF.")
+            return
         await callback.message.answer_document(
             document=BufferedInputFile(
                 pdf_bytes,
                 filename="analize.pdf"
             ),
             caption=i18n.auto.analyze.pdf_ready(),
-            reply_markup=MainKeyboard.build(role=user_info.role, i18n=i18n)
+            reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
     else:
-        await callback.message.answer(i18n.auto.analyze.no_pdf(), reply_markup=MainKeyboard.build(role=user_info.role, i18n=i18n))
+        await callback.message.answer(i18n.auto.analyze.no_pdf(), reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n))
     await state.clear()
