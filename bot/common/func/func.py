@@ -231,7 +231,7 @@ def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
             "overall_rating": str(overall.get("overall_rating", "Нет данных")),
         }
 
-    if selected_player:
+    if selected_player is not None:
         return extract(selected_player)
     else:
         players = list(analysis_data.get("chequerplay", {}).keys())
