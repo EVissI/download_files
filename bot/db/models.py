@@ -139,6 +139,7 @@ class UserAnalizePayment(Base):
     analize_payment_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("analize_payments.id"), nullable=False
     )
+    tranzaction_id:Mapped[str]
     current_analize_balance: Mapped[int]
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 

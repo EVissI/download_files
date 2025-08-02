@@ -86,7 +86,8 @@ async def process_successful_payment(message: Message, i18n: TranslatorRunner, s
         user_payment = UserAnalizePayment(
             user_id=message.from_user.id,
             analize_payment_id=payment_package.id,
-            current_analize_balance=payment_package.amount
+            current_analize_balance=payment_package.amount,
+            tranzaction_id=payment.provider_payment_charge_id
         )
         session_without_commit.add(user_payment)
 

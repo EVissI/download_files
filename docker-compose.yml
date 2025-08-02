@@ -19,7 +19,17 @@
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: ["redis-server", "--appendonly", "yes"]
+    command: [
+      "redis-server",
+      "--appendonly", "yes",
+      "--appendfsync", "everysec",
+      "--auto-aof-rewrite-percentage", "100",
+      "--auto-aof-rewrite-min-size", "64mb",
+      "--maxclients", "100",  # Ограничение подключений
+      "--timeout", "300",    # Таймаут для неактивных клиентов
+      "--maxmemory", "128mb",  # Ограничение памяти
+      "--maxmemory-policy", "allkeys-lru"  # Удаление наименее используемых ключей
+    ]
   db:
     image: postgres
     restart: always
