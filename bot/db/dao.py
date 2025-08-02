@@ -10,7 +10,7 @@ from bot.db.models import (
     UserPromocode,
     AnalizePayment,
 )
-from sqlalchemy import func, select
+from sqlalchemy import func, literal, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -80,26 +80,30 @@ class UserDAO(BaseDAO[User]):
         try:
             # Find the oldest active record (UserPromocode or UserAnalizePayment)
             promo_query = select(
-                UserPromocode,
-                UserPromocode.created_at.label('created_at')
+                UserPromocode.id,
+                UserPromocode.current_analize_balance,
+                UserPromocode.created_at,
+                literal("UserPromocode").label("record_type")
             ).where(
                 UserPromocode.user_id == user_id,
                 UserPromocode.is_active == True,
                 UserPromocode.current_analize_balance > 0
             )
-            
+
             payment_query = select(
-                UserAnalizePayment,
-                UserAnalizePayment.created_at.label('created_at')
+                UserAnalizePayment.id,
+                UserAnalizePayment.current_analize_balance,
+                UserAnalizePayment.created_at,
+                literal("UserAnalizePayment").label("record_type")
             ).where(
                 UserAnalizePayment.user_id == user_id,
                 UserAnalizePayment.is_active == True,
                 UserAnalizePayment.current_analize_balance > 0
             )
 
-            # Combine queries using UNION
-            union_query = promo_query.union(payment_query).order_by('created_at')
-            
+            # Combine queries using UNION and order by created_at
+            union_query = promo_query.union(payment_query).order_by(UserPromocode.created_at.asc())
+
             result = await self._session.execute(union_query)
             oldest_record = result.first()
 
@@ -107,20 +111,31 @@ class UserDAO(BaseDAO[User]):
                 logger.info(f"No active records with balance > 0 for user {user_id}")
                 return False
 
-            record = oldest_record[0]  # Get the actual record (UserPromocode or UserAnalizePayment)
-            
+            record_id, balance, created_at, record_type = oldest_record
+
+            # Fetch the actual record based on type
+            if record_type == "UserPromocode":
+                record = await self._session.get(UserPromocode, record_id)
+            else:  # UserAnalizePayment
+                record = await self._session.get(UserAnalizePayment, record_id)
+
+            if not record:
+                logger.error(f"Record {record_type} ID {record_id} not found for user {user_id}")
+                return False
+
             # Decrease balance
             record.current_analize_balance -= 1
             if record.current_analize_balance == 0:
                 record.is_active = False
-            
+
             await self._session.commit()
-            logger.info(f"Decreased balance for user {user_id} from {record.__class__.__name__}")
+            logger.info(f"Decreased balance for user {user_id} from {record_type} ID {record_id}")
             return True
         except SQLAlchemyError as e:
             logger.error(f"Error decreasing analiz_balance for user {user_id}: {e}")
             await self._session.rollback()
             return False
+
         
     async def check_expired_records(self, user_id: int) -> bool:
         """
