@@ -24,7 +24,6 @@ class User(Base):
     role: Mapped["Role"] = mapped_column(
         String(5), default=Role.USER.value, nullable=False
     )
-    analiz_balance: Mapped[Optional[int]] = mapped_column(Integer, default=0)
     user_game_analisis: Mapped[list["Analysis"]] = relationship(
         "Analysis", back_populates="user"
     )
@@ -109,7 +108,7 @@ class Promocode(Base):
     analiz_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     max_usage: Mapped[Optional[int]] = mapped_column(Integer, default=None)
-    activate_count: Mapped[int] = mapped_column(Integer, default=None)
+    activate_count: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
 
     users: Mapped[list["UserPromocode"]] = relationship(
@@ -124,6 +123,7 @@ class UserPromocode(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
     promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("promocode.id"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    current_analize_balance: Mapped[Optional[int]]
 
     user: Mapped["User"] = relationship("User", back_populates="used_promocodes")
     promocode: Mapped["Promocode"] = relationship("Promocode", back_populates="users")
@@ -139,6 +139,7 @@ class UserAnalizePayment(Base):
     analize_payment_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("analize_payments.id"), nullable=False
     )
+    current_analize_balance: Mapped[int]
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     user: Mapped["User"] = relationship("User", back_populates="analize_payments_assoc")
