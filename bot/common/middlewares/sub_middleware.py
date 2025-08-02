@@ -23,11 +23,12 @@ class SubscriptionMiddleware(BaseMiddleware):
         session = data.get("session_without_commit")
         i18n: TranslatorRunner = data.get("i18n", None)
         user_id = event.from_user.id
-
-        user = await UserDAO(session).find_one_or_none_by_id(user_id)
-        if user.analiz_balance is None:
+        dao = UserDAO(session)
+        user = await dao.find_one_or_none_by_id(user_id)
+        balance = await dao.get_total_analiz_balance(user_id)
+        if balance is None:
             return await handler(event, data)
-        if not user or user.analiz_balance == 0:
+        if not user or balance == 0:
             await event.answer(i18n.user.static.has_no_sub(), reply_markup=get_activate_promo_keyboard(i18n))
             return
         return await handler(event, data)
