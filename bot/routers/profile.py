@@ -31,7 +31,7 @@ profile_router = Router()
 )
 async def profile_command(message: Message, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession):
     balance = await UserDAO(session_without_commit).get_total_analiz_balance(user_info.id)
-    await message.edit_text(
+    await message.answer(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=balance if balance is not None else '∞',
