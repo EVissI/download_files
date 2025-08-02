@@ -44,7 +44,6 @@ async def handle_payment_select(callback: CallbackQuery, callback_data: AnalizeP
     # Validate payment price
     if not isinstance(payment.price, (int, float)) or payment.price <= 0:
         logger.error(f"Invalid payment price for payment ID {payment.id}: {payment.price}")
-        await callback.answer(i18n.user.profile.payment_invalid_price(), show_alert=True)
         return
     
     amount = int(payment.price * 100)  # Convert to kopecks and ensure integer
