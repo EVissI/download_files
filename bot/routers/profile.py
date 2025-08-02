@@ -29,15 +29,17 @@ profile_router = Router()
     F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-user-reply-profile")),
     UserInfo(),
 )
-async def profile_command(message: Message, user_info: User, i18n: TranslatorRunner):
-    await message.answer(
+async def profile_command(message: Message, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession):
+    balance = await UserDAO(session_without_commit).get_total_analiz_balance(user_info.id)
+    await message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
-            analiz_balance=user_info.analiz_balance if user_info.analiz_balance is not None else '∞',
+            analiz_balance=balance if balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
     )
+
 
 
 @profile_router.callback_query(
@@ -56,16 +58,18 @@ async def change_language_callback(
     ProfileChangeLanguageCallback.filter(F.action == "back"), UserInfo()
 )
 async def change_language_back_callback(
-    callback: CallbackQuery, user_info: User, i18n: TranslatorRunner
+    callback: CallbackQuery, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession
 ):
+    balance = await UserDAO(session_without_commit).get_total_analiz_balance(user_info.id)
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
-            analiz_balance=user_info.analiz_balance if user_info.analiz_balance is not None else '∞',
+            analiz_balance=balance if balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
     )
+
 
 
 @profile_router.callback_query(

@@ -21,11 +21,34 @@ from typing import Optional, List
 class UserDAO(BaseDAO[User]):
     model = User
 
-    async def get_total_analiz_balance(self, user_id: int) -> int:
+    async def get_total_analiz_balance(self, user_id: int) -> Optional[int]:
         """
         Calculates the total analiz_balance for a user from active UserPromocode and UserAnalizePayment records.
+        Returns None if any active record has a None balance (indicating unlimited balance).
         """
         try:
+            # Check for any None balance in active UserPromocode
+            promo_none_query = select(UserPromocode).where(
+                UserPromocode.user_id == user_id,
+                UserPromocode.is_active == True,
+                UserPromocode.current_analize_balance.is_(None)
+            )
+            promo_none_result = await self._session.execute(promo_none_query)
+            if promo_none_result.scalar_one_or_none():
+                logger.info(f"User {user_id} has unlimited balance due to None in UserPromocode")
+                return None
+
+            # Check for any None balance in active UserAnalizePayment
+            payment_none_query = select(UserAnalizePayment).where(
+                UserAnalizePayment.user_id == user_id,
+                UserAnalizePayment.is_active == True,
+                UserAnalizePayment.current_analize_balance.is_(None)
+            )
+            payment_none_result = await self._session.execute(payment_none_query)
+            if payment_none_result.scalar_one_or_none():
+                logger.info(f"User {user_id} has unlimited balance due to None in UserAnalizePayment")
+                return None
+
             # Get sum of balances from active UserPromocode
             promo_query = select(func.sum(UserPromocode.current_analize_balance)).where(
                 UserPromocode.user_id == user_id,
