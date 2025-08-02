@@ -11,7 +11,7 @@ from bot.common.kbds.inline.profile import (
     get_profile_kb,
 )
 from bot.common.kbds.markup.main_kb import MainKeyboard
-from bot.db.dao import UserDAO
+from bot.db.dao import UserDAO, UserPromocodeDAO
 from bot.db.models import User
 from bot.db.schemas import SUser
 from bot.config import translator_hub
@@ -94,8 +94,9 @@ async def change_language_callback(
 
 @profile_router.callback_query(BackCallback.filter(F.context == "profile"), UserInfo())
 async def back_to_profile(
-    callback: CallbackQuery, user_info: User, i18n: TranslatorRunner
+    callback: CallbackQuery, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession
 ):
+    balance = await UserDAO(session_without_commit).get_total_analiz_balance(user_info.id)
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',

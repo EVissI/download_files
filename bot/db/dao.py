@@ -21,29 +21,83 @@ from typing import Optional, List
 class UserDAO(BaseDAO[User]):
     model = User
 
-    async def decrease_analiz_balance(self, user_id: int) -> bool:
+    async def get_total_analiz_balance(self, user_id: int) -> int:
         """
-        Уменьшает analiz_balance пользователя на 1, если баланс больше 0.
-        Если баланс None (безлимит), ничего не делает.
+        Calculates the total analiz_balance for a user from active UserPromocode and UserAnalizePayment records.
         """
         try:
-            user = await self._session.get(User, user_id)
-            if not user:
-                return False
-            if user.analiz_balance is None:
-                return True  # Безлимит, не уменьшаем
-            if user.analiz_balance > 0:
-                user.analiz_balance -= 1
-                await self._session.commit()
-                return True
-            return False  # Баланс уже 0
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Ошибка при уменьшении analiz_balance для пользователя {user_id}: {e}"
+            # Get sum of balances from active UserPromocode
+            promo_query = select(func.sum(UserPromocode.current_analize_balance)).where(
+                UserPromocode.user_id == user_id,
+                UserPromocode.is_active == True
             )
+            promo_result = await self._session.execute(promo_query)
+            promo_balance = promo_result.scalar() or 0
+
+            # Get sum of balances from active UserAnalizePayment
+            payment_query = select(func.sum(UserAnalizePayment.current_analize_balance)).where(
+                UserAnalizePayment.user_id == user_id,
+                UserAnalizePayment.is_active == True
+            )
+            payment_result = await self._session.execute(payment_query)
+            payment_balance = payment_result.scalar() or 0
+
+            total_balance = promo_balance + payment_balance
+            logger.info(f"Total analiz_balance for user {user_id}: {total_balance}")
+            return total_balance
+        except SQLAlchemyError as e:
+            logger.error(f"Error calculating total analiz_balance for user {user_id}: {e}")
+            raise
+
+    async def decrease_analiz_balance(self, user_id: int) -> bool:
+        """
+        Decreases analiz_balance by 1 from the oldest active UserPromocode or UserAnalizePayment.
+        Returns True if balance was decreased successfully, False otherwise.
+        """
+        try:
+            # Find the oldest active record (UserPromocode or UserAnalizePayment)
+            promo_query = select(
+                UserPromocode,
+                UserPromocode.created_at.label('created_at')
+            ).where(
+                UserPromocode.user_id == user_id,
+                UserPromocode.is_active == True,
+                UserPromocode.current_analize_balance > 0
+            )
+            
+            payment_query = select(
+                UserAnalizePayment,
+                UserAnalizePayment.created_at.label('created_at')
+            ).where(
+                UserAnalizePayment.user_id == user_id,
+                UserAnalizePayment.is_active == True,
+                UserAnalizePayment.current_analize_balance > 0
+            )
+
+            # Combine queries using UNION
+            union_query = promo_query.union(payment_query).order_by('created_at')
+            
+            result = await self._session.execute(union_query)
+            oldest_record = result.first()
+
+            if not oldest_record:
+                logger.info(f"No active records with balance > 0 for user {user_id}")
+                return False
+
+            record = oldest_record[0]  # Get the actual record (UserPromocode or UserAnalizePayment)
+            
+            # Decrease balance
+            record.current_analize_balance -= 1
+            if record.current_analize_balance == 0:
+                record.is_active = False
+            
+            await self._session.commit()
+            logger.info(f"Decreased balance for user {user_id} from {record.__class__.__name__}")
+            return True
+        except SQLAlchemyError as e:
+            logger.error(f"Error decreasing analiz_balance for user {user_id}: {e}")
             await self._session.rollback()
             return False
-
 
 class AnalisisDAO(BaseDAO[Analysis]):
     model = Analysis
@@ -299,17 +353,12 @@ class PromoCodeDAO(BaseDAO[Promocode]):
                 return False  # Не создавать нового пользователя
 
             # Добавляем запись о том, что пользователь активировал промокод
-            user_promo = UserPromocode(user_id=user_id, promocode_id=promocode.id)
+            user_promo = UserPromocode(user_id=user_id, promocode_id=promocode.id, current_analize_balance=promocode.analiz_count)
             self._session.add(user_promo)
 
             # Увеличиваем счетчик активаций
             promocode.activate_count = (promocode.activate_count or 0) + 1
 
-            # Логика увеличения analiz_balance
-            if promocode.analiz_count is None:
-                user.analiz_balance = None
-            else:
-                user.analiz_balance += promocode.analiz_count
 
             await self._session.commit()
             return True
