@@ -19,10 +19,17 @@
       - "6379:6379"
     command:
       - redis-server
-      - --appendonly
-      - "no"
-      - --save
-      - ""
+      - --appendonly no
+      - --save ""
+      - --maxmemory 128mb
+      - --bind 127.0.0.1
+      - --maxmemory-policy allkeys-lru
+      - --activedefrag yes
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'  # Ограничение до 0.5 CPU
+          memory: 256M
   db:
     image: postgres
     restart: always

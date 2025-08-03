@@ -72,11 +72,11 @@ async def handle_payment_select(callback: CallbackQuery, callback_data: AnalizeP
                 "value": str(payment.price),
                 "currency": "RUB"
             },
-            "vat_code": "1",  # 0 для самозанятых без НДС
+            "vat_code": "1",  
             "payment_mode": "full_payment",
-            "payment_subject": "commodity"  # Услуга для самозанятых
+            "payment_subject": "commodity"  
         }],
-        "tax_system_code": 1,  # 6 - УСН (для самозанятых)
+        "tax_system_code": 1,  
     }
     provider_data = json.dumps({"receipt": receipt})
 
