@@ -26,7 +26,7 @@ class ContactInfoMiddleware(BaseMiddleware):
         user_id = event.from_user.id
         dao = UserDAO(session)
         user = await dao.find_one_or_none_by_id(user_id)
-
+        await event.answer()
         if not user:
             return await handler(event, data)
 
