@@ -50,8 +50,7 @@ async def main():
     await redis_client.connect()
     storage = RedisStorage(
         redis_client.redis,
-        key_builder=DefaultKeyBuilder(with_bot_id=True, with_destiny=True),
-        state_ttl=2000, data_ttl=2000
+        key_builder=DefaultKeyBuilder(with_bot_id=True, with_destiny=True)
     )
     dp = Dispatcher(storage=storage)
     dp.startup.register(start_bot)
