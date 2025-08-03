@@ -4,6 +4,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.common.kbds.inline.paginate import AnalizePaymentCallback, get_analize_payments_kb
 from bot.common.kbds.inline.profile import ProfileCallback
+from bot.common.middlewares.contact_info import ContactInfoMiddleware
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 payment_router = Router()
+payment_router.message.register(ContactInfoMiddleware())
+payment_router.callback_query.register(ContactInfoMiddleware())
 
 @payment_router.callback_query(ProfileCallback.filter(F.action == "payment"))
 async def handle_payment(callback: CallbackQuery, i18n: TranslatorRunner, session_without_commit: AsyncSession):
@@ -49,6 +52,34 @@ async def handle_payment_select(callback: CallbackQuery, callback_data: AnalizeP
     amount = int(payment.price * 100)  # Convert to kopecks and ensure integer
     logger.debug(f"Sending invoice for payment ID {payment.id}, price: {payment.price} RUB, amount: {amount} kopecks")
 
+    # Получаем данные пользователя из БД
+    user_dao = UserDAO(session_without_commit)
+    user = await user_dao.find_one_or_none_by_id(callback.from_user.id)
+    if not user or not user.phone_number or not user.email:
+        await callback.answer(i18n.user.profile.missing_contact_info(), show_alert=True)
+        return
+
+    # Подготовка данных для чека
+    receipt = {
+        "customer": {
+            "phone": user.phone_number,
+            "email": user.email,
+        },
+        "items": [{
+            "description": payment.name,
+            "quantity": 1.0,
+            "amount": {
+                "value": str(payment.price),
+                "currency": "RUB"
+            },
+            "vat_code": "1",  # 0 для самозанятых без НДС
+            "payment_mode": "full_payment",
+            "payment_subject": "commodity"  # Услуга для самозанятых
+        }],
+        "tax_system_code": 1,  # 6 - УСН (для самозанятых)
+    }
+    provider_data = {"receipt": receipt}
+
     await callback.message.delete()
     await callback.bot.send_invoice(
         chat_id=callback.from_user.id,
@@ -58,8 +89,8 @@ async def handle_payment_select(callback: CallbackQuery, callback_data: AnalizeP
         provider_token=settings.YO_KASSA_TEL_API_KEY,
         currency="RUB",
         prices=[{"label": "Руб", "amount": amount}],
+        provider_data=provider_data  # Передаем данные чека
     )
-
 @payment_router.pre_checkout_query()
 async def process_pre_check_out_query(
     pre_checkout_query: PreCheckoutQuery
@@ -90,7 +121,7 @@ async def process_successful_payment(message: Message, i18n: TranslatorRunner, s
             tranzaction_id=payment.provider_payment_charge_id
         )
         session_without_commit.add(user_payment)
-
+        logger.info(f"Получен платеж от {message.from_user.id}")
         await message.answer(
             i18n.user.profile.payment_success(
                 amount=payment_package.amount,

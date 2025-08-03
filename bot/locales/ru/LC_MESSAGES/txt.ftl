@@ -126,3 +126,12 @@ analysis-cube-wrong_takes = Ошибочно принято кубов
 analysis-cube-wrong_passes = Ошибочных пассов
 analysis-cube-error_rate = Оценка ошибок
 analysis-cube-rating = Оценка решений по кубу
+
+user-static-share_phone = Поделиться телефоном
+user-static-missing_contact_info = Пожалуйста, поделитесь своей контактной информацией для продолжения оплаты.
+user-static-share_email = Поделиться email
+user-static-contact_info_shared = Контактная информация успешно отправлена! Можете продолжать оплату.
+user-static-invalid_email_format = Неверный формат email. Пожалуйста, введите корректный адрес электронной почты.
+
+user-static-phone_request_sent = Пожалуйста, поделитесь своим номером телефона.
+user-static-enter_email = Пожалуйста, введите свой email адрес, куда будем отправлять чеки об оплате.

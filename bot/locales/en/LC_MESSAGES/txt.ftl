@@ -46,7 +46,7 @@ user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count ->
     Overall Stats:
     ├ Error Rate: { $snowie_error_rate }
     └ Your Rank: { $detailed_rank_overall }
-    
+
 user-profile-no_detailed_statistics = No detailed statistics available. Please play more games to generate detailed stats. 
 user-profile-error_retrieving_statistics = There was an error retrieving your statistics.
 
@@ -127,3 +127,11 @@ analysis-cube-wrong_passes = Wrong passes
 analysis-cube-error_rate = Error rate
 analysis-cube-rating = Cube decision rating
 
+user-static-share_phone = Share phone
+user-static-missing_contact_info = Please share your contact information to continue payment.
+user-static-share_email = Share email
+user-static-contact_info_shared = Contact information shared successfully!
+
+user-static-invalid_email_format = Invalid email format. Please enter a valid email address.
+user-static-phone_request_sent = Phone request sent. Please share your phone number.
+user-static-enter_email = Email request sent. Please enter your email address.
