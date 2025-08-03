@@ -28,7 +28,7 @@ async def build_contact_info_keyboard(
                 text=i18n.user.static.share_phone(),
                 callback_data=f"contact:phone:{user_id}",
             ))
-        if user and user.email:
+        if user and not user.email:
             builder.add(InlineKeyboardButton(
                 text=i18n.user.static.share_email(),
                 callback_data=f"contact:email:{user_id}"
