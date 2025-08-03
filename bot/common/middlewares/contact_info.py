@@ -39,7 +39,7 @@ class ContactInfoMiddleware(BaseMiddleware):
                 user_id,
                 i18n
             )
-            await event.answer(
+            await event.message.answer(
                 i18n.user.static.missing_contact_info(),
                 reply_markup=keyboard
             )
