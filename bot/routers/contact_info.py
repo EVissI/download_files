@@ -77,7 +77,7 @@ async def handle_phone_share(
     if contact is None:
         await message.answer(
             i18n.user.static.missing_contact_info(),
-            reply_markup=build_contact_info_keyboard(
+            reply_markup=await build_contact_info_keyboard(
                 session=session_without_commit,
                 user_id=user_info.id,
                 i18n=i18n
@@ -90,7 +90,7 @@ async def handle_phone_share(
     if not user.email:
         await message.answer(
             i18n.user.static.missing_contact_info(),
-            reply_markup=build_contact_info_keyboard(
+            reply_markup=await build_contact_info_keyboard(
                 session=session_without_commit,
                 user_id=user_info.id,
                 i18n=i18n
@@ -127,7 +127,7 @@ async def handle_email_share(
     if not user.phone_number:
         await message.answer(
             i18n.user.static.missing_contact_info(),
-            reply_markup=build_contact_info_keyboard(
+            reply_markup=await build_contact_info_keyboard(
                 session=session_without_commit,
                 user_id=user_info.id,
                 i18n=i18n
