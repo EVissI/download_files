@@ -1,4 +1,5 @@
-﻿from aiogram import Router, F
+﻿import json
+from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, PreCheckoutQuery
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,7 +78,7 @@ async def handle_payment_select(callback: CallbackQuery, callback_data: AnalizeP
         }],
         "tax_system_code": 1,  # 6 - УСН (для самозанятых)
     }
-    provider_data = {"receipt": receipt}
+    provider_data = json.dumps({"receipt": receipt})
 
     await callback.message.delete()
     await callback.bot.send_invoice(
