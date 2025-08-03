@@ -38,7 +38,7 @@ async def handle_contact_action(
     action = callback_data.action
 
     if action == "phone":
-        await callback.answer(i18n.user.static.phone_request_sent(), reply_markup=get_contatct_request(i18n))
+        await callback.message.answer(i18n.user.static.phone_request_sent(), reply_markup=get_contatct_request(i18n))
         state.set_state(ShareContactDialog.phone)
     elif action == "email":
         await callback.message.answer(i18n.user.static.enter_email(),reply_markup=get_cancel_kb(i18n))
