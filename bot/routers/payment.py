@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 payment_router = Router()
-payment_router.callback_query.register(ContactInfoMiddleware())
+payment_router.callback_query.middleware.register(ContactInfoMiddleware())
 
 @payment_router.callback_query(ProfileCallback.filter(F.action == "payment"))
 async def handle_payment(callback: CallbackQuery, i18n: TranslatorRunner, session_without_commit: AsyncSession):
