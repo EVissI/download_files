@@ -1,7 +1,5 @@
-﻿from datetime import datetime, timezone
-from typing import Callable, Dict, Any, Awaitable
-from aiogram import BaseMiddleware
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+﻿from aiogram.filters.callback_data import CallbackData
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from bot.db.dao import UserDAO
 from loguru import logger
@@ -12,6 +10,10 @@ from bot.db.models import User
 
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
+
+class ContactInfoCallback(CallbackData, prefix="general_unloading"):
+    action: str
+    user_id: int
 
 async def build_contact_info_keyboard(
         session,
@@ -26,12 +28,12 @@ async def build_contact_info_keyboard(
         if user and not user.phone_number:
             builder.add(InlineKeyboardButton(
                 text=i18n.user.static.share_phone(),
-                callback_data=f"contact:phone:{user_id}",
+                callback_data=ContactInfoCallback(action="phone", user_id=user_id).pack()
             ))
         if user and not user.email:
             builder.add(InlineKeyboardButton(
                 text=i18n.user.static.share_email(),
-                callback_data=f"contact:email:{user_id}"
+                callback_data=ContactInfoCallback(action="email", user_id=user_id).pack()
             ))
 
         builder.adjust(1)

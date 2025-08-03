@@ -7,7 +7,7 @@ from aiogram.filters import StateFilter
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.validators import EmailValidator
-from bot.common.kbds.inline.contact_info import build_contact_info_keyboard
+from bot.common.kbds.inline.contact_info import ContactInfoCallback, build_contact_info_keyboard
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.kbds.markup.request_phone import get_contatct_request
@@ -27,15 +27,15 @@ class ShareContactDialog(StatesGroup):
 
 contact_router = Router()
 
-@contact_router.callback_query(F.data.startswith("contact:"))
+@contact_router.callback_query(ContactInfoCallback.filter())
 async def handle_contact_action(
     callback: CallbackQuery,
-    callback_data: str,
+    callback_data: ContactInfoCallback,
     state: FSMContext,
     i18n: TranslatorRunner
 ):
 
-    action = callback_data.split(":")[1]
+    action = callback_data.action
 
     if action == "phone":
         await callback.answer(i18n.user.static.phone_request_sent(), reply_markup=get_contatct_request(i18n))
