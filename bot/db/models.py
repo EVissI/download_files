@@ -21,6 +21,8 @@ class User(Base):
     lang_code: Mapped[str | None] = mapped_column(
         String(3), nullable=True, default="en"
     )
+    phone_number:Mapped[str | None]
+    email:Mapped[str | None]
     role: Mapped["Role"] = mapped_column(
         String(5), default=Role.USER.value, nullable=False
     )
