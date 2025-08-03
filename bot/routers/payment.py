@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 payment_router = Router()
-payment_router.message.register(ContactInfoMiddleware())
 payment_router.callback_query.register(ContactInfoMiddleware())
 
 @payment_router.callback_query(ProfileCallback.filter(F.action == "payment"))
