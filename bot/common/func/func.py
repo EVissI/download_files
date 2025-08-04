@@ -186,7 +186,7 @@ def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
     Если передан selected_player — возвращает словарь только по нему.
     Если не передан — возвращает словарь по всем игрокам (ключи — имена игроков).
     """
-
+    logger.info(analysis_data)
     def extract(player):
         chequer = analysis_data.get("chequerplay", {}).get(player, {})
         luck = analysis_data.get("luck", {}).get(player, {})
