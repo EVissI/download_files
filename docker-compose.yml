@@ -22,7 +22,6 @@
       - --appendonly no
       - --save ""
       - --maxmemory 128mb
-      - --bind 127.0.0.1
       - --maxmemory-policy allkeys-lru
       - --activedefrag yes
     deploy:

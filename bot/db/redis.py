@@ -4,7 +4,7 @@ from typing import Optional, List, Tuple
 from loguru import logger
 
 class RedisClient:
-    def __init__(self, url: str = "redis://localhost:6379/0"):
+    def __init__(self, url: str = "redis://redis:6379/0"):
         self.url = url
         self.pool: Optional[ConnectionPool] = None
         self.redis: Optional[redis.Redis] = None
