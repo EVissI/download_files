@@ -114,7 +114,8 @@ async def handle_mat_file(
         current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
         new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
         new_file_path = os.path.join(files_dir, new_file_name)
-        await redis_client.set(f"file_name:{user_info.id}", new_file_name, expire=3600)
+        file_name_to_pdf = f"{player_names[0]}-{player_names[1](current_date)}.pdf"
+        await redis_client.set(f"file_name:{user_info.id}", file_name_to_pdf, expire=3600)
         # Переименовываем файл
         os.rename(file_path, new_file_path)
         try:
