@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     REDIS_USER: str = 'default'  
     REDIS_PASSWORD: str
+    REDIS_USER_PASSWORD:str
     REDIS_HOST: str = 'redis'    
     REDIS_PORT: int = 6380       
     REDIS_DB: int = 0
