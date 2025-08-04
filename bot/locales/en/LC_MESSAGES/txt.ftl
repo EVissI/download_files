@@ -88,13 +88,13 @@ waiting-think3 = Think...
 
 user-static-has_no_sub = You have no active subscription. Please activate a subscription to continue.
 
-user-inline-activate_promo = Activate promocode
-user-inline-take_promo = Take promocode
+user-inline-activate_promo = Activate promo code
+user-inline-take_promo = Take promo code
 
-user-static-input_promo = Please enter the promocode to activate
+user-static-input_promo = Please enter the promo code to activate
 user-static-promo_activated = Promocode activated successfully!
-user-static-invalid_promo = Invalid promocode. Please check and try again.
-user-static-error_processing_promo = An error occurred while processing the promocode. Please try again
+user-static-invalid_promo = Invalid promo code. Please check and try again.
+user-static-error_processing_promo = An error occurred while processing the promo code. Please try again
 
 user-rank-superchamp = 🏆 World Champion
 user-rank-champ = 🥇 World Class

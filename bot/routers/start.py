@@ -50,7 +50,7 @@ async def start_command(message: Message, session_with_commit: AsyncSession):
             i18n.user.static.hello(),reply_markup=MainKeyboard.build(user_info.role, i18n)
         )
         await message.answer(
-            '🎁 You have access to the promo code <code>NEW</code>!\nYou can activate it in <b>Profile</b> → <b>Activate Promo Code.</b>'
+            '🎁 You have access to the promo code <code>NEW</code>!\nYou can activate it in <b>Profile</b> → <b>Activate promo code.</b>'
         )
         return
     i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
