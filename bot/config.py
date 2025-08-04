@@ -18,11 +18,14 @@ class Settings(BaseSettings):
     ROOT_ADMIN_IDS: List[int]
     YA_API_TOKEN: str
     YO_KASSA_TEL_API_KEY: str
+    
     POSTGRES_USER:str
     POSTGRES_PASSWORD:str
     POSTGRES_DB: str = 'backgammon'
 
-    DB_URL=f'postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@db:5432/{POSTGRES_DB}'
+    @property
+    def DB_URL(self):
+        return f'postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@db:5432/{self.POSTGRES_DB}'
 
     model_config = SettingsConfigDict(env_file=f"{BASE_DIR}/.env")
 
