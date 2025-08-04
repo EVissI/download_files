@@ -255,6 +255,7 @@ async def handle_download_pdf(
         key = f"analysis_data:{user_info.id}"
         file_name_key = f"file_name:{user_info.id}"
         file_name = await redis_client.get(file_name_key)
+        file_name = file_name.replace('.mat', '.pdf') if file_name else 'analysis.pdf'
         analysis_data_json = await redis_client.get(key)
         if not analysis_data_json:
             await callback.message.answer("Нет данных для формирования PDF.")
