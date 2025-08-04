@@ -19,9 +19,9 @@
         - REDIS_USER=${REDIS_USER}
         - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
       ports:
-        - "6380:6379"  # Изменен порт для уникальности
+        - "6380:6379"  
       volumes:
-        - ./redisdata:/data  # Монтирование данных
+        - ./redisdata:/data 
       deploy:
         resources:
           limits:
@@ -49,7 +49,7 @@
       restart: unless-stopped
       tty: true
       stdin_open: true
-      
+
   db:
       image: postgres
       restart: always
@@ -61,6 +61,4 @@
         - pgdata:/var/lib/postgresql/data
 
 volumes:
-  redis_data:
   pgdata:
-  files_data:
