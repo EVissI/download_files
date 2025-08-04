@@ -9,7 +9,7 @@ def convert_newlines_to_br(text: str) -> str:
 def emoji_to_codepoint(emoji: str) -> str:
     return '-'.join(f"{ord(char):x}" for char in emoji)
 
-def replace_emoji_with_twemoji_svg(text: str, size: int = 20) -> str:
+def replace_emoji_with_twemoji_svg(text: str, size: int = 1) -> str:
     emoji_pattern = re.compile(
         r"([\U0001F600-\U0001F64F"  # emoticons
         r"\U0001F300-\U0001F5FF"  # symbols & pictographs
