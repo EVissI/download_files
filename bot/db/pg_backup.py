@@ -6,41 +6,43 @@ from loguru import logger
 import yadisk
 from bot.config import settings
 from yadisk.exceptions import YaDiskError
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+
 
 def new_client():
     return yadisk.AsyncClient(token=settings.YA_API_TOKEN)
 
+
 async def upload_to_yandex_disk(file_path: str, file_name: str, max_retries: int = 3, retry_delay: int = 2):
     client = new_client()
-    # Формируем путь: /PG_backups/dd.mm.yy_HH.MM.SS_db_backup.sql
     remote_path = f"/PG_backups/{file_name}"
 
     async with client:
-        # Создаём корневую папку, если нет
         try:
             contents = [i async for i in client.listdir("/")]
             if not any(item["name"] == "PG_backups" for item in contents):
                 await client.mkdir("/PG_backups")
-                logger.info("Создано: /PG_backups")
+                logger.info("Создана папка: /PG_backups")
         except YaDiskError as e:
-            logger.error(f"Ошибка при проверке /PG_backups: {e}")
+            logger.error(f"Ошибка при проверке папки: {e}")
             raise
 
-        # Загружаем файл
         for attempt in range(max_retries):
             try:
                 await client.upload(file_path, remote_path, overwrite=True)
-                logger.info(f"Файл {file_path} успешно сохранён в {remote_path} ✅")
+                logger.info(f"Файл успешно загружен в {remote_path} ✅")
                 break
             except YaDiskError as e:
                 if attempt == max_retries - 1:
-                    logger.error(f"Ошибка при загрузке после {max_retries} попыток: {e} ❌")
+                    logger.error(f"Ошибка загрузки после {max_retries} попыток: {e} ❌")
                     raise
-                logger.warning(f"Попытка {attempt + 1}/{max_retries} не удалась: {e}. Повтор через {retry_delay} сек...")
+                logger.warning(f"Попытка {attempt + 1}/{max_retries} не удалась: {e}")
                 await asyncio.sleep(retry_delay)
             except Exception as e:
-                logger.error(f"Неожиданная ошибка при загрузке: {e} ❌")
+                logger.error(f"Неожиданная ошибка загрузки: {e}")
                 raise
+
 
 async def backup_postgres_to_yandex_disk():
     timestamp = datetime.now().strftime("%d.%m.%y_%H.%M.%S")
@@ -48,11 +50,10 @@ async def backup_postgres_to_yandex_disk():
     temp_file_path = f"/tmp/{backup_name}"
 
     try:
-        logger.info(f"Создаю SQL-дамп PostgreSQL: {backup_name}")
-
+        logger.info(f"Создаю SQL-дамп: {backup_name}")
         cmd = [
             "pg_dump",
-            "-h", 'db',
+            "-h", "db",
             "-U", settings.POSTGRES_USER,
             "-d", settings.POSTGRES_DB,
             "-f", temp_file_path
@@ -67,16 +68,25 @@ async def backup_postgres_to_yandex_disk():
             raise Exception("Не удалось создать дамп")
 
         await upload_to_yandex_disk(temp_file_path, backup_name)
+
     finally:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
+
 async def main():
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(backup_postgres_to_yandex_disk, CronTrigger(hour=0, minute=0))  
+    scheduler.start()
+
+    logger.info("Планировщик запущен. Резервное копирование будет выполняться каждый день в 00:00.")
+    
     try:
-        await backup_postgres_to_yandex_disk()
-    except Exception as e:
-        logger.error(f"Ошибка в main: {e}")
-        raise
+        while True:
+            await asyncio.sleep(3600) 
+    except (KeyboardInterrupt, SystemExit):
+        scheduler.shutdown()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
