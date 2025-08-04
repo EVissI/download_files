@@ -210,7 +210,7 @@ def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
                 "_emg_mwc_points",
                 "_emg_points",
                 "_mwc_points",
-                "_memg_points"
+                "_memg_points",
                 "_memg_mwc_points",
                 "_memg",
                 "_memg_mwc",
@@ -219,19 +219,31 @@ def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
                 "_emg",
                 "_mwc",
                 "_points",
-                "",  
+                "",
             ]
             for suffix in suffixes:
                 val = cube.get(f"{name}{suffix}")
                 if val is not None:
                     try:
-                        return int(val)
-                    except ValueError:
-                        try:
-                            logger.info(f'{name} Parsing value: {val}')
-                            return float(val)
-                        except ValueError:
+                        # Пробуем определить тип данных
+                        if isinstance(val, (int, float)):
+                            return val  # Возвращаем как есть, если уже число
+                        elif isinstance(val, str):
+                            # Пробуем преобразовать строку в число
+                            if val.isdigit():
+                                return int(val)  # Целое число
+                            try:
+                                return float(val)  # Число с плавающей точкой
+                            except ValueError:
+                                logger.warning(f"Value {val} for {name}{suffix} is a string but not a number, returning as is")
+                                return val  # Возвращаем строку, если не число
+                        else:
+                            logger.warning(f"Unexpected type for {name}{suffix}={val}, returning 0")
                             return 0
+                    except Exception as e:
+                        logger.warning(f"Error processing {name}{suffix}={val}: {e}, returning 0")
+                        return 0
+            logger.warning(f"No valid value found for {name} with any suffix, returning 0")
             return 0
         
         return {
