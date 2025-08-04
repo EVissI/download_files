@@ -9,8 +9,8 @@ RUN apt update && apt install -y \
     tesseract-ocr-eng \
     poppler-utils \
     ghostscript \
-    && rm -rf /var/lib/apt/lists/*\
-    postgresql-client
+    postgresql-client\
+    && rm -rf /var/lib/apt/lists/*
 
 RUN ln -s /usr/games/gnubg /usr/bin/gnubg
 WORKDIR /app
