@@ -114,7 +114,7 @@ async def handle_mat_file(
         current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
         new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
         new_file_path = os.path.join(files_dir, new_file_name)
-
+        await redis_client.set(f"file_name:{user_info.id}", new_file_name, expire=3600)
         # Переименовываем файл
         os.rename(file_path, new_file_path)
         try:
@@ -253,6 +253,8 @@ async def handle_download_pdf(
     await callback.message.delete()
     if callback_data.action == "yes":
         key = f"analysis_data:{user_info.id}"
+        file_name_key = f"file_name:{user_info.id}"
+        file_name = await redis_client.get(file_name_key)
         analysis_data_json = await redis_client.get(key)
         if not analysis_data_json:
             await callback.message.answer("Нет данных для формирования PDF.")
@@ -266,7 +268,7 @@ async def handle_download_pdf(
         await callback.message.answer_document(
             document=BufferedInputFile(
                 pdf_bytes,
-                filename="analize.pdf"
+                filename=file_name
             ),
             caption=i18n.auto.analyze.pdf_ready(),
 
