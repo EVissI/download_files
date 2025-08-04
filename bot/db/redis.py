@@ -2,9 +2,10 @@
 from redis.asyncio.connection import ConnectionPool
 from typing import Optional, List, Tuple
 from loguru import logger
+from bot.config import settings  
 
 class RedisClient:
-    def __init__(self, url: str = "redis://redis:6379/0"):
+    def __init__(self, url: str = settings.REDIS_URL):  
         self.url = url
         self.pool: Optional[ConnectionPool] = None
         self.redis: Optional[redis.Redis] = None
@@ -14,7 +15,11 @@ class RedisClient:
         """Ensures Redis connection is established using a connection pool"""
         if not self._connected:
             try:
-                self.pool = ConnectionPool.from_url(self.url, decode_responses=True, max_connections=10)
+                self.pool = ConnectionPool.from_url(
+                    self.url,
+                    decode_responses=True,
+                    max_connections=10
+                )
                 self.redis = redis.Redis(connection_pool=self.pool)
                 self._connected = True
                 logger.info("Successfully connected to Redis with connection pool")
