@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from bot.common.middlewares.database_middleware import DatabaseMiddlewareWithCommit, DatabaseMiddlewareWithoutCommit
 from bot.common.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.common.tasks.deactivate import expire_analiz_balances
+from bot.common.tasks.gift import check_and_notify_gift
 from bot.routers.setup import setup_router
 from bot.config import settings, setup_logger
 from bot.db.redis import redis_client
@@ -23,6 +24,7 @@ async def set_commands():
 def setup_expire_scheduler():
     scheduler = AsyncIOScheduler()
     scheduler.add_job(expire_analiz_balances, "interval", hours=1)
+    scheduler.add_job(check_and_notify_gift, "interval", hours=12)
     scheduler.start()
 
 async def start_bot():

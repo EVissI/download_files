@@ -135,3 +135,7 @@ user-static-contact_info_shared = Contact information shared successfully!
 user-static-invalid_email_format = Invalid email format. Please enter a valid email address.
 user-static-phone_request_sent = Phone request sent. Please share your phone number.
 user-static-enter_email = Email request sent. Please enter your email address.
+
+user-static-gift = 🎁 You have a gift!
+    You have access to the promo code <code>NEW</code>!
+    You can activate it in <b>Profile</b> → <b>Activate promo code.</b>
