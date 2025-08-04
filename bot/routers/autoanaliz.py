@@ -88,7 +88,7 @@ async def handle_mat_file(
     try:
         waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
         file = message.document
-        if not file.file_name.endswith(".mat"):
+        if not file.file_name.endswith((".mat",'.txt')):
             return await message.answer(i18n.auto.analyze.invalid())
 
         # Создаем директорию если её нет
@@ -96,6 +96,7 @@ async def handle_mat_file(
         os.makedirs(files_dir, exist_ok=True)
         await waiting_manager.start()
         file_name = file.file_name.replace(" ", "")
+        file_name = file.file_name.replace('.txt', '.mat')
         file_path = os.path.join(files_dir, file_name)
 
         await message.bot.download(file.file_id, destination=file_path)
