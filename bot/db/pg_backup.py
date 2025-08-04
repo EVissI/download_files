@@ -58,7 +58,7 @@ async def backup_postgres_to_yandex_disk():
             "-f", temp_file_path
         ]
         env = os.environ.copy()
-        env["PGPASSWORD"] = settings.PG_PASSWORD
+        env["PGPASSWORD"] = settings.POSTGRES_PASSWORD
 
         process = subprocess.run(cmd, env=env, capture_output=True, text=True)
 
