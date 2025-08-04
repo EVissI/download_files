@@ -9,24 +9,24 @@ def convert_newlines_to_br(text: str) -> str:
 def emoji_to_codepoint(emoji: str) -> str:
     return '-'.join(f"{ord(char):x}" for char in emoji)
 
-def replace_emoji_with_twemoji_svg(text: str, size: int = 1) -> str:
+def replace_emoji_with_twemoji_svg(text: str) -> str:
     emoji_pattern = re.compile(
-        r"([\U0001F600-\U0001F64F"  # emoticons
-        r"\U0001F300-\U0001F5FF"  # symbols & pictographs
-        r"\U0001F680-\U0001F6FF"  # transport & map symbols
-        r"\U0001F1E0-\U0001F1FF"  # flags
-        r"\U00002700-\U000027BF"  # Dingbats
-        r"\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
-        r"\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
-        r"\U00002600-\U000026FF"  # Misc symbols
+        r"([\U0001F600-\U0001F64F"
+        r"\U0001F300-\U0001F5FF"
+        r"\U0001F680-\U0001F6FF"
+        r"\U0001F1E0-\U0001F1FF"
+        r"\U00002700-\U000027BF"
+        r"\U0001F900-\U0001F9FF"
+        r"\U0001FA70-\U0001FAFF"
+        r"\U00002600-\U000026FF"
         r"]+)"
     )
 
     def repl(match):
         emoji = match.group(0)
-        code = emoji_to_codepoint(emoji)
+        code = '-'.join(f"{ord(c):x}" for c in emoji)
         url = f"https://twemoji.maxcdn.com/v/latest/svg/{code}.svg"
-        return f"<img src='{url}' width='{size}' height='{size}' style='vertical-align:middle;'>"
+        return f"<img src='{url}' class='emoji'>"
 
     return emoji_pattern.sub(repl, text)
 
@@ -37,9 +37,9 @@ def html_to_pdf_bytes(html_text: str) -> bytes:
         "<head>"
         "<meta charset='UTF-8'>"
         "<style>"
-        "img { display: inline; }"
         "body { font-family: 'Noto Sans', sans-serif; }"
         "pre { white-space: pre-wrap; word-wrap: break-word; }"
+        "img.emoji { width: 1em; height: 1em; vertical-align: left; display: inline-block; }"
         "</style>"
         "</head>"
         "<body>"
