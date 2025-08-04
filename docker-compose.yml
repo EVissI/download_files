@@ -19,7 +19,7 @@
         - REDIS_USER=${REDIS_USER}
         - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
       ports:
-        - "6380:6379"  
+        - "6379:6379"  
       volumes:
         - ./redisdata:/data 
       deploy:

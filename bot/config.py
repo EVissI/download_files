@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: str
     REDIS_USER_PASSWORD:str
     REDIS_HOST: str = 'redis'    
-    REDIS_PORT: int = 6380       
+    REDIS_PORT: int = 6379       
     REDIS_DB: int = 0
 
     @property
