@@ -228,6 +228,7 @@ def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
                         return int(val)
                     except ValueError:
                         try:
+                            logger.info(f'{name} Parsing value: {val}')
                             return float(val)
                         except ValueError:
                             return 0
