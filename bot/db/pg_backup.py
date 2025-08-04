@@ -43,45 +43,33 @@ async def upload_to_yandex_disk(file_path: str, file_name: str, max_retries: int
                 raise
 
 async def backup_postgres_to_yandex_disk():
-    # Формируем имя файла: dd.mm.yy_HH.MM.SS_db_backup.sql
     timestamp = datetime.now().strftime("%d.%m.%y_%H.%M.%S")
     backup_name = f"{timestamp}_db_backup.sql"
     temp_file_path = f"/tmp/{backup_name}"
 
     try:
-        # Формируем команду pg_dump для подключения по сети
-        pg_dump_cmd = (
-            f"pg_dump -h db -U {settings.POSTGRES_USER} "
-            f"--format=plain --no-owner --no-privileges {settings.POSTGRES_DB} "
-            f"> {temp_file_path}"
-        )
+        logger.info(f"Создаю SQL-дамп PostgreSQL: {backup_name}")
 
-        # Устанавливаем переменную окружения для пароля
+        cmd = [
+            "pg_dump",
+            "-h", 'db',
+            "-U", settings.POSTGRES_USER,
+            "-d", settings.POSTGRES_DB,
+            "-f", temp_file_path
+        ]
         env = os.environ.copy()
-        env["PGPASSWORD"] = settings.POSTGRES_PASSWORD
+        env["PGPASSWORD"] = settings.PG_PASSWORD
 
-        # Выполняем pg_dump
-        logger.info(f"Создание бэкапа базы данных: {backup_name}")
-        subprocess.run(pg_dump_cmd, shell=True, check=True, env=env)
-        logger.info(f"Бэкап успешно создан: {temp_file_path}")
+        process = subprocess.run(cmd, env=env, capture_output=True, text=True)
 
-        # Загружаем на Яндекс.Диск
+        if process.returncode != 0:
+            logger.error(f"Ошибка pg_dump: {process.stderr}")
+            raise Exception("Не удалось создать дамп")
+
         await upload_to_yandex_disk(temp_file_path, backup_name)
-
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Ошибка при создании бэкапа: {e} ❌")
-        raise
-    except Exception as e:
-        logger.error(f"Неожиданная ошибка: {e} ❌")
-        raise
     finally:
-        # Удаляем временный файл
         if os.path.exists(temp_file_path):
-            try:
-                os.remove(temp_file_path)
-                logger.info(f"Временный файл {temp_file_path} удалён")
-            except OSError as e:
-                logger.error(f"Ошибка при удалении временного файла {temp_file_path}: {e}")
+            os.remove(temp_file_path)
 
 async def main():
     try:
