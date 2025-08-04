@@ -253,7 +253,7 @@ def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
             "wrong_doubles_above_tg": get_cube_param("wrong_doubles_above_tg"),
             "wrong_takes": get_cube_param("wrong_takes"),
             "wrong_passes": get_cube_param("wrong_passes"),
-            "cube_error_rate": float(cube.get("error_rate", 0)),
+            "cube_error_rate": get_cube_param("error_rate"),
             "cube_decision_rating": str(cube.get("cube_decision_rating", "Нет данных")),
             # Overall data
             "snowie_error_rate": float(overall.get("snowie_error_rate", 0)),
@@ -285,10 +285,10 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
 
         # Словарь для сокращения рейтингов
         rating_shortcuts = {
-            "Advanced": "Advancd",
+            "Advanced": "Advanced",
             "Supernatural": "Supernat",
             "Expert": "Expert",
-            "World class": "WorldCl",
+            "World class": "WorldClass",
             "None": "None",
             "Good dice, man!": "GoodDice",
             "Bad dice, man!": "BadDice",
@@ -296,7 +296,7 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
             "Beginner": "Beginner",
             "Intermediate": "Intermed",
             "Casual player": "Casual",
-            "Master": "Mastr",
+            "Master": "Mastrer",
             "Professional": "Pro",
             "Grandmaster": "GrandMstr",
             "No data": "N/A",
