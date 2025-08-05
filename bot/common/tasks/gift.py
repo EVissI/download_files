@@ -10,10 +10,10 @@ async def check_and_notify_gift():
     async with async_session_maker() as session:
         user_dao = UserDAO(session)
         user_promocode_dao = UserPromocodeDAO(session)
-        i18n = translator_hub.get_translator_by_locale(user.lang_code or 'en')
         users = await user_dao.find_all()
         for user in users:
             user_promocodes = await user_promocode_dao.get_all_by_user(user.id)
+            i18n = translator_hub.get_translator_by_locale(user.lang_code or 'en')
             if not user_promocodes:
                 text = i18n.user.static.gift()
                 await notify_user(user.id, text)
