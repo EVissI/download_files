@@ -9,6 +9,7 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest, Teleg
 from loguru import logger
 import asyncio
 
+from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.config import bot
 from bot.db.dao import UserDAO
@@ -254,3 +255,4 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
     
     await callback.message.answer(f"Рассылка завершена! Успешно: {successful}, Неудачно: {failed}")
     await state.clear()
+    await state.set_state(GeneralStates.admin_panel)
