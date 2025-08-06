@@ -102,12 +102,23 @@ async def broadcast_message(user_ids: list[int], text: str, media_id: str = None
 # Команда для старта рассылки
 @broadcast_router.message(F.text == AdminKeyboard.get_kb_text().get('notify'))
 async def start_broadcast(message: Message, state: FSMContext):
-    await message.answer("Введите текст для рассылки:")
+    sent_message = await message.answer("Введите текст для рассылки:")
+    await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_text)
 
 # Получение текста рассылки
 @broadcast_router.message(BroadcastStates.waiting_for_text)
 async def process_broadcast_text(message: Message, state: FSMContext):
+    user_data = await state.get_data()
+    sent_message_id = user_data.get("sent_message_id")
+    
+    # Удаление предыдущего сообщения
+    if sent_message_id:
+        try:
+            await bot.delete_message(chat_id=message.chat.id, message_id=sent_message_id)
+        except Exception as e:
+            logger.warning(f"Не удалось удалить сообщение {sent_message_id}: {e}")
+    
     await state.update_data(broadcast_text=message.text)
     
     # Создание инлайн-кнопки "Без медиа"
@@ -119,10 +130,11 @@ async def process_broadcast_text(message: Message, state: FSMContext):
         )
     )
     
-    await message.answer(
+    sent_message = await message.answer(
         "Отправьте медиа (фото или видео) или нажмите кнопку 'Без медиа':",
         reply_markup=builder.as_markup()
     )
+    await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_media)
 
 # Получение медиа или обработка кнопки "Без медиа"
@@ -130,6 +142,18 @@ async def process_broadcast_text(message: Message, state: FSMContext):
 @broadcast_router.callback_query(BroadcastStates.waiting_for_media, BroadcastCallback.filter(F.action == "no_media"))
 async def process_broadcast_media(event: Message | CallbackQuery, state: FSMContext):
     user_data = await state.get_data()
+    sent_message_id = user_data.get("sent_message_id")
+    
+    # Определение объекта сообщения
+    message = event if isinstance(event, Message) else event.message
+    
+    # Удаление предыдущего сообщения
+    if sent_message_id:
+        try:
+            await bot.delete_message(chat_id=message.chat.id, message_id=sent_message_id)
+        except Exception as e:
+            logger.warning(f"Не удалось удалить сообщение {sent_message_id}: {e}")
+    
     media_id = None
     media_type = None
     
@@ -142,13 +166,15 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
             media_type = "video"
             media_id = event.video.file_id
         else:
-            await event.answer("Пожалуйста, отправьте фото, видео или нажмите 'Без медиа'.")
+            sent_message = await message.answer("Пожалуйста, отправьте фото, видео или нажмите 'Без медиа'.")
+            await state.update_data(sent_message_id=sent_message.message_id)
             return
     elif isinstance(event, CallbackQuery):
         if event.data == BroadcastCallback(action="no_media").pack():
             pass  # Без медиа
         else:
-            await event.message.answer("Неверный коллбэк.")
+            sent_message = await message.answer("Неверный коллбэк.")
+            await state.update_data(sent_message_id=sent_message.message_id)
             return
     
     await state.update_data(media_id=media_id, media_type=media_type)
@@ -174,35 +200,44 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
     # Отправка превью
     if media_id and media_type:
         if media_type == "photo":
-            await event.message.answer_photo(
+            sent_message = await message.answer_photo(
                 photo=media_id,
                 caption=preview_text,
                 reply_markup=builder.as_markup()
             )
         elif media_type == "video":
-            await event.message.answer_video(
+            sent_message = await message.answer_video(
                 video=media_id,
                 caption=preview_text,
                 reply_markup=builder.as_markup()
             )
     else:
-        await event.message.answer(
+        sent_message = await message.answer(
             text=preview_text,
             reply_markup=builder.as_markup()
         )
     
+    await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_confirmation)
 
 # Обработка подтверждения через инлайн-кнопки
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter())
 async def process_broadcast_confirmation(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext, session_without_commit):
+    user_data = await state.get_data()
+    sent_message_id = user_data.get("sent_message_id")
+    
+    # Удаление сообщения с превью
+    if sent_message_id:
+        try:
+            await bot.delete_message(chat_id=callback.message.chat.id, message_id=sent_message_id)
+        except Exception as e:
+            logger.warning(f"Не удалось удалить сообщение {sent_message_id}: {e}")
+    
     if callback_data.action == "cancel":
         await callback.message.answer("Рассылка отменена.")
         await state.clear()
-        await callback.message.delete()
         return
     
-    user_data = await state.get_data()
     text = user_data["broadcast_text"]
     media_id = user_data.get("media_id")
     media_type = user_data.get("media_type")
@@ -219,4 +254,3 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
     
     await callback.message.answer(f"Рассылка завершена! Успешно: {successful}, Неудачно: {failed}")
     await state.clear()
-    await callback.message.delete()
