@@ -7,6 +7,7 @@ class AdminKeyboard:
         'excel':'Excel выгрузки',
         'promo':'Промокоды',
         'payment':'Пакеты услуг',
+        'notify':'Рассылка',
         'back':'Назад',
     }
 
