@@ -10,6 +10,7 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest, Teleg
 from loguru import logger
 import asyncio
 
+from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.config import bot
 from bot.db.dao import UserDAO
 
@@ -100,7 +101,7 @@ async def broadcast_message(user_ids: list[int], text: str, media_path: str = No
     return successful, failed
 
 # Команда для старта рассылки
-@broadcast_router.message(Command("broadcast"))
+@broadcast_router.message(AdminKeyboard.get_kb_text().get('notify'))
 async def start_broadcast(message: Message, state: FSMContext):   
     await message.answer("Введите текст для рассылки:")
     await state.set_state(BroadcastStates.waiting_for_text)
