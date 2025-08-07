@@ -69,7 +69,7 @@ async def handle_user_pagination(callback: CallbackQuery, callback_data: Paginat
                 for message in messages:
                     if messages[-1] == message:
                         await callback.message.answer(
-                            reply_markup=get_back_kb(i18n, "user_buyed_pacage_list"),
+                            text=message, reply_markup=get_back_kb(i18n, "user_buyed_pacage_list"),
                         )
                     else:
                         await callback.message.answer(message)
