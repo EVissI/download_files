@@ -14,25 +14,19 @@ from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.config import bot
 from bot.db.dao import UserDAO
-
 from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import translator_hub
-from typing import TYPE_CHECKING
-from fluentogram import TranslatorRunner
-
-if TYPE_CHECKING:
-    from locales.stub import TranslatorRunner
-
 
 # Инициализация роутера
 broadcast_router = Router()
 
-# CallbackData для обработки подтверждения и кнопки "Без медиа"
+# CallbackData для обработки подтверждения, выбора группы и кнопки "Без медиа"
 class BroadcastCallback(CallbackData, prefix="broadcast"):
-    action: str  # confirm, cancel или no_media
+    action: str  # confirm, cancel, no_media, all_users, with_purchases, without_purchases
 
 # Определение состояний для FSM
 class BroadcastStates(StatesGroup):
+    waiting_for_group = State()
     waiting_for_text = State()
     waiting_for_media = State()
     waiting_for_confirmation = State()
@@ -112,20 +106,61 @@ async def broadcast_message(user_ids: list[int], text: str, media_id: str = None
 
 # Команда для старта рассылки
 @broadcast_router.message(F.text == AdminKeyboard.get_kb_text().get('notify'))
-async def start_broadcast(message: Message, state: FSMContext, i18n):
-    sent_message = await message.answer("Введите текст для рассылки:",reply_markup=get_cancel_kb(i18n))
+async def start_broadcast(message: Message, state: FSMContext):
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        InlineKeyboardButton(
+            text="Все пользователи",
+            callback_data=BroadcastCallback(action="all_users").pack()
+        ),
+        InlineKeyboardButton(
+            text="С покупками или промокодами",
+            callback_data=BroadcastCallback(action="with_purchases").pack()
+        ),
+        InlineKeyboardButton(
+            text="Без покупок и промокодов",
+            callback_data=BroadcastCallback(action="without_purchases").pack()
+        )
+    )
+    builder.adjust(1)  # Одна кнопка в строке
+    sent_message = await message.answer(
+        "Выберите группу пользователей для рассылки:",
+        reply_markup=builder.as_markup()
+    )
+    await state.update_data(sent_message_id=sent_message.message_id)
+    await state.set_state(BroadcastStates.waiting_for_group)
+
+# Обработка выбора группы пользователей
+@broadcast_router.callback_query(StateFilter(BroadcastStates.waiting_for_group), BroadcastCallback.filter())
+async def process_broadcast_group(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext):
+    sent_message_id = (await state.get_data()).get("sent_message_id")
+    
+    # Удаление сообщения с выбором группы
+    if sent_message_id:
+        try:
+            await bot.delete_message(chat_id=callback.message.chat.id, message_id=sent_message_id)
+        except Exception as e:
+            logger.warning(f"Не удалось удалить сообщение {sent_message_id}: {e}")
+    
+    # Сохраняем выбранную группу
+    await state.update_data(group=callback_data.action)
+    
+    sent_message = await callback.message.answer(
+        "Введите текст для рассылки:",
+        reply_markup=get_cancel_kb()  # Без i18n, используем оригинальную функцию
+    )
     await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_text)
 
 @broadcast_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(BroadcastStates))
-async def cancel_broadcast(message: Message, state: FSMContext, i18n: TranslatorRunner):
+async def cancel_broadcast(message: Message, state: FSMContext):
     await state.clear()
     await state.set_state(GeneralStates.admin_panel)
     await message.answer(
-        message.text,
+        "Рассылка отменена.",
         reply_markup=AdminKeyboard.build()
     )
-# Получение текста рассылки
+
 @broadcast_router.message(F.text, StateFilter(BroadcastStates.waiting_for_text))
 async def process_broadcast_text(message: Message, state: FSMContext):
     user_data = await state.get_data()
@@ -150,7 +185,7 @@ async def process_broadcast_text(message: Message, state: FSMContext):
     )
     
     sent_message = await message.answer(
-        "Отправьте медиа (фото или видео) или нажмите кнопку 'Без медиа':",
+        "Отправьте фото или видео, или нажмите 'Без медиа':",
         reply_markup=builder.as_markup()
     )
     await state.update_data(sent_message_id=sent_message.message_id)
@@ -230,6 +265,11 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
                 caption=preview_text,
                 reply_markup=builder.as_markup()
             )
+        else:
+            sent_message = await message.answer(
+                text=preview_text,
+                reply_markup=builder.as_markup()
+            )
     else:
         sent_message = await message.answer(
             text=preview_text,
@@ -255,15 +295,29 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
     if callback_data.action == "cancel":
         await callback.message.answer("Рассылка отменена.")
         await state.clear()
+        await state.set_state(GeneralStates.admin_panel)
         return
     
     text = user_data["broadcast_text"]
     media_id = user_data.get("media_id")
     media_type = user_data.get("media_type")
+    group = user_data.get("group")
     
-    user_ids = [user.id for user in await UserDAO(session_without_commit).find_all()]
+    # Выборка пользователей в зависимости от группы
+    user_dao = UserDAO(session_without_commit)
+    if group == "all_users":
+        user_ids = [user.id for user in await user_dao.find_all()]
+    elif group == "with_purchases":
+        user_ids = [user.id for user in await user_dao.get_users_with_payments()]
+    elif group == "without_purchases":
+        user_ids = [user.id for user in await user_dao.get_users_without_payments()]
+    else:
+        await callback.message.answer("Выбрана неверная группа.")
+        await state.clear()
+        await state.set_state(GeneralStates.admin_panel)
+        return
     
-    await callback.message.answer("Начинаю рассылку...")
+    await callback.message.answer("Запуск рассылки...")
     successful, failed = await broadcast_message(
         user_ids=user_ids,
         text=text,

@@ -10,7 +10,7 @@ from bot.db.models import (
     UserPromocode,
     AnalizePayment,
 )
-from sqlalchemy import func, literal, select
+from sqlalchemy import func, literal, not_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -20,6 +20,60 @@ from typing import Optional, List
 
 class UserDAO(BaseDAO[User]):
     model = User
+
+    async def get_users_with_payments(self) -> list[User]:
+        """
+        Получить всех пользователей, у которых есть активные записи в UserAnalizePayment или UserPromocode,
+        с подгруженными объектами UserAnalizePayment, AnalizePayment и UserPromocode.
+        """
+        try:
+            query = (
+                select(self.model)
+                .outerjoin(self.model.analize_payments_assoc)
+                .outerjoin(self.model.used_promocodes)
+                .where(
+                    or_(
+                        UserAnalizePayment.is_active == True,
+                        UserPromocode.is_active == True
+                    )
+                )
+                .options(
+                    selectinload(self.model.analize_payments_assoc)
+                    .selectinload(self.model.analize_payments_assoc.property.mapper.class_.analize_payment),
+                    selectinload(self.model.used_promocodes)
+                )
+            )
+            result = await self._session.execute(query)
+            return result.scalars().unique().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении пользователей с платежами или промокодами: {e}")
+            raise
+
+    async def get_users_without_payments(self) -> list[User]:
+        """
+        Получить всех пользователей, у которых нет активных записей в UserAnalizePayment и UserPromocode.
+        """
+        try:
+            subquery = (
+                select(UserAnalizePayment.user_id)
+                .where(UserAnalizePayment.is_active == True)
+                .union(
+                    select(UserPromocode.user_id)
+                    .where(UserPromocode.is_active == True)
+                )
+                .distinct()
+            )
+            query = (
+                select(self.model)
+                .where(not_(self.model.id.in_(subquery)))
+            )
+            result = await self._session.execute(query)
+            return result.scalars().unique().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении пользователей без платежей и промокодов: {e}")
+            raise
+
+
     async def get_users_with_payments(self) -> list[User]:
         """
         Получить всех пользователей, у которых есть записи в UserAnalizePayment,
