@@ -9,12 +9,14 @@ from bot.common.kbds.markup.payment_kb import PaymentKeyboard
 from bot.routers.admin.payment.create import create_payment_router
 from bot.routers.admin.payment.delete import delete_payment_router
 from bot.routers.admin.payment.view import view_payment_router
+from bot.routers.admin.payment.view_buyers import view_buyers_router
 
 payment_setup_router = Router()
 payment_setup_router.include_routers(
     delete_payment_router,
     create_payment_router,
-    view_payment_router
+    view_payment_router,
+    view_buyers_router
 )
 @payment_setup_router.message(F.text == AdminKeyboard.get_kb_text()['payment'], StateFilter(GeneralStates.admin_panel))
 async def handle_payment(message: Message, state: FSMContext):
