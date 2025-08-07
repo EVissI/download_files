@@ -54,7 +54,7 @@ async def cancel_promo_activation(
     await state.clear()
     await message.answer(
         message.text,
-        reply_markup=MainKeyboard.build(role=user_info.role, i18n=i18n)
+        reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
     )
 
 @activate_promo_router.message(StateFilter(ActivatePromoState.promo_code), F.text, UserInfo())
