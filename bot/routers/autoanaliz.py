@@ -99,10 +99,15 @@ async def handle_mat_file(
         file_name = file.file_name.replace('.txt', '.mat')
         file_path = os.path.join(files_dir, file_name)
 
+        file_type = file.file_name.split('.')[-1]
+        if file_type not in ['mat', 'txt']:
+            await waiting_manager.stop()
+            return await message.answer(i18n.auto.analyze.invalid())
+
         await message.bot.download(file.file_id, destination=file_path)
 
         loop = asyncio.get_running_loop()
-        analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path)
+        analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
         analysis_data = await loop.run_in_executor(None, json.loads, analysis_result)
         await redis_client.set(f"analysis_data:{user_info.id}", json.dumps(analysis_data), expire=3600)
 

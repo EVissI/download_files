@@ -11,24 +11,31 @@ import subprocess
 from loguru import logger
 
 
-def analyze_mat_file(mat_file: str) -> str:
+def analyze_mat_file(file: str, type:str) -> str:
     try:
-        if not os.path.exists(mat_file):
-            logger.error(f".mat-файл не найден: {mat_file}")
-            raise FileNotFoundError(f".mat-файл не найден: {mat_file}")
+        if not os.path.exists(file):
+            logger.error(f".mat-файл не найден: {file}")
+            raise FileNotFoundError(f".mat-файл не найден: {file}")
 
         try:
             subprocess.run(["gnubg", "--version"], check=True, capture_output=True)
         except FileNotFoundError:
             logger.error("GNU Backgammon не установлен или не найден в PATH")
             raise FileNotFoundError("GNU Backgammon не установлен или не найден в PATH")
-
-        gnubg_commands = [
-            f"import mat {mat_file}",
-            "analyse match",
-            "show statistics match",
-            "exit",
-        ]
+        if type == "sgf":
+            gnubg_commands = [
+                f"load match {file}",
+                "analyse match",
+                "show statistics match",
+                "exit",
+            ]
+        elif type == "mat":
+            gnubg_commands = [
+                f"import mat {file}",
+                "analyse match",
+                "show statistics match",
+                "exit",
+            ]
 
         process = subprocess.Popen(
             ["gnubg", "-t"],
@@ -45,7 +52,7 @@ def analyze_mat_file(mat_file: str) -> str:
             logger.error(f"Ошибка выполнения gnubg: {stderr}")
             raise RuntimeError(f"Ошибка выполнения gnubg: {stderr}")
 
-        logger.info(f"Анализ матча завершён для файла: {mat_file}")
+        logger.info(f"Анализ матча завершён для файла: {file}")
 
         # Парсинг в JSON
         stats = {}
@@ -135,9 +142,9 @@ def analyze_mat_file(mat_file: str) -> str:
         raise
 
 if __name__ == "__main__":
-    mat_file = r"match-4b7472b6-c6da-487a-bacd-7666f20ed31a-protocol.mat"
+    file = r"bugemot.sgf"
     try:
-        result = analyze_mat_file(mat_file)
+        result = analyze_mat_file(file)
         print("Анализ:\n", result)
     except Exception as e:
         print("Ошибка:", e)

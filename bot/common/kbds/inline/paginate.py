@@ -3,6 +3,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup
 
 from bot.db.models import AnalizePayment
+from typing import List, Callable, Any
 
 
 class PlayerNameCallback(CallbackData, prefix="player_name_page"):
@@ -91,6 +92,78 @@ def get_analize_payments_kb(
         kb.button(text=text, callback_data=callback)
 
     rows = [1] * len(current_payments)
+    if nav_buttons:
+        rows.append(len(nav_buttons))
+
+    kb.adjust(*rows)
+    return kb.as_markup()
+
+
+class PaginatedCallback(CallbackData, prefix="paginated"):
+    item_id: int = 0
+    page: int = 0
+    action: str = "select"  # select, prev, next, back
+    context: str
+
+def get_paginated_keyboard(
+    items: List[Any],
+    context: str,
+    get_display_text: Callable[[Any], str],
+    get_item_id: Callable[[Any], int],
+    page: int = 0,
+    items_per_page: int = 5,
+) -> InlineKeyboardMarkup:
+    """
+    Создает инлайн-клавиатуру с пагинацией для списка объектов.
+    
+    Args:
+        items: Список объектов для отображения.
+        context: Контекст для коллбэка (например, для идентификации клавиатуры).
+        get_display_text: Функция, возвращающая отображаемый текст для объекта.
+        get_item_id: Функция, возвращающая ID объекта для коллбэка.
+        page: Текущая страница (по умолчанию 0).
+        items_per_page: Количество элементов на странице (по умолчанию 5).
+        lang: Язык для локализации (по умолчанию 'ru').
+    
+    Returns:
+        InlineKeyboardMarkup: Готовая клавиатура с кнопками и навигацией.
+    """
+    kb = InlineKeyboardBuilder()
+    start_idx = page * items_per_page
+    end_idx = start_idx + items_per_page
+    current_items = items[start_idx:end_idx]
+
+    # Добавление кнопок для элементов
+    for item in current_items:
+        display_text = get_display_text(item)
+        kb.button(
+            text=display_text,
+            callback_data=PaginatedCallback(
+                item_id=get_item_id(item),
+                page=page,
+                action="select",
+                context=context
+            ).pack()
+        )
+
+    # Навигационные кнопки
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append((
+            "←",
+            PaginatedCallback(item_id=0, page=page-1, action="prev", context=context).pack()
+        ))
+    if end_idx < len(items):
+        nav_buttons.append((
+            "→",
+            PaginatedCallback(item_id=0, page=page+1, action="next", context=context).pack()
+        ))
+
+    for text, callback in nav_buttons:
+        kb.button(text=text, callback_data=callback)
+
+    # Настройка раскладки
+    rows = [1] * len(current_items)
     if nav_buttons:
         rows.append(len(nav_buttons))
 

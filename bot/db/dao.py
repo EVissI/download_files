@@ -20,7 +20,27 @@ from typing import Optional, List
 
 class UserDAO(BaseDAO[User]):
     model = User
+    async def get_users_with_payments(self) -> list[User]:
+        """
+        Получить всех пользователей, у которых есть записи в UserAnalizePayment,
+        с подгруженными объектами UserAnalizePayment и AnalizePayment.
+        """
+        try:
+            query = (
+                select(self.model)
+                .join(self.model.analize_payments_assoc)
+                .options(
+                    selectinload(self.model.analize_payments_assoc)
+                    .selectinload(self.model.analize_payments_assoc.property.mapper.class_.analize_payment)
+                )
+            )
+            result = await self._session.execute(query)
+            return result.scalars().unique().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении пользователей с платежами: {e}")
+            raise
 
+        
     async def get_total_analiz_balance(self, user_id: int) -> Optional[int]:
         """
         Calculates the total analiz_balance for a user from active UserPromocode and UserAnalizePayment records.

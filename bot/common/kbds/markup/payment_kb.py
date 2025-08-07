@@ -7,6 +7,7 @@ class PaymentKeyboard:
         'create':'Cоздать пакет',
         'view':'Посмотреть пакеты',
         'delete':'Удалить пакет',
+        'view_buyers':'Посмотреть купивших пакеты',
         'back':'Назад',
     }
 
@@ -21,5 +22,5 @@ class PaymentKeyboard:
             kb.add(
                 KeyboardButton(text=text)
             )
-        kb.adjust(3,1)
+        kb.adjust(3,1,1)
         return kb.as_markup(resize_keyboard=True)
