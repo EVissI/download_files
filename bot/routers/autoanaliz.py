@@ -99,7 +99,8 @@ async def handle_mat_file(
         file_name = file.file_name.replace('.txt', '.mat')
         file_path = os.path.join(files_dir, file_name)
 
-        file_type = file_name('.')[-1]
+        file_type = file_name.split('.')[-1]
+
 
         await message.bot.download(file.file_id, destination=file_path)
 
