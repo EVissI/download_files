@@ -50,7 +50,7 @@ user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count ->
 user-profile-no_detailed_statistics = No detailed statistics available. Please play more games to generate detailed stats. 
 user-profile-error_retrieving_statistics = There was an error retrieving your statistics.
 
-auto-analyze-submit = Submit .mat file for automatic analysis 
+auto-analyze-submit = Submit file for automatic analysis(.mat, .sgf)
 auto-analyze-invalid = Invalide file type. 
 auto-analyze-complete = File analysis complete. Select which player you were: 
 auto-analyze-error-parse = An error occurred while parsing the file. 
