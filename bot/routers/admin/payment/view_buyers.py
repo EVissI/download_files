@@ -56,6 +56,7 @@ async def handle_user_pagination(callback: CallbackQuery, callback_data: Paginat
     try: 
 
         if callback_data.action == "select":
+            await callback.message.delete()
             user_id = callback_data.item_id
             user_dao = UserDAO(session_without_commit)
             user = await user_dao.find_one_or_none_by_id(user_id)
@@ -63,7 +64,7 @@ async def handle_user_pagination(callback: CallbackQuery, callback_data: Paginat
                 display_text = 'Пользователь: ' + get_user_display_text(user) + '\n'
                 buyed_pacage = await UserAnalizePaymentDAO(session_without_commit).get_all_by_user(user_id)
                 if buyed_pacage:
-                    display_text += f"\nКупленные пакеты: {'\n\n'.join([f'{p.analize_payment.name} за {p.analize_payment.price} RUB' for p in buyed_pacage])}"
+                    display_text += f"\nКупленные пакеты: {'\n\n'.join([f'{p.analize_payment.name} за {p.analize_payment.price} RUB - <code>{p.tranzaction_id}</code>' for p in buyed_pacage])}"
                 for message in split_message(msg=display_text, with_photo=False):
                     if message.index == len(split_message(msg=display_text, with_photo=False)):
                         await callback.message.answer(
