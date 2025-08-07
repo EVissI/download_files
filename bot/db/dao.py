@@ -34,19 +34,22 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     or_(
                         UserAnalizePayment.is_active == True,
-                        UserPromocode.is_active == True
+                        UserPromocode.is_active == True,
                     )
                 )
                 .options(
-                    selectinload(self.model.analize_payments_assoc)
-                    .selectinload(self.model.analize_payments_assoc.property.mapper.class_.analize_payment),
-                    selectinload(self.model.used_promocodes)
+                    selectinload(self.model.analize_payments_assoc).selectinload(
+                        self.model.analize_payments_assoc.property.mapper.class_.analize_payment
+                    ),
+                    selectinload(self.model.used_promocodes),
                 )
             )
             result = await self._session.execute(query)
             return result.scalars().unique().all()
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при получении пользователей с платежами или промокодами: {e}")
+            logger.error(
+                f"Ошибка при получении пользователей с платежами или промокодами: {e}"
+            )
             raise
 
     async def get_users_without_payments(self) -> list[User]:
@@ -58,20 +61,17 @@ class UserDAO(BaseDAO[User]):
                 select(UserAnalizePayment.user_id)
                 .where(UserAnalizePayment.is_active == True)
                 .union(
-                    select(UserPromocode.user_id)
-                    .where(UserPromocode.is_active == True)
+                    select(UserPromocode.user_id).where(UserPromocode.is_active == True)
                 )
             )
-            query = (
-                select(self.model)
-                .where(not_(self.model.id.in_(subquery)))
-            )
+            query = select(self.model).where(not_(self.model.id.in_(subquery)))
             result = await self._session.execute(query)
             return result.scalars().unique().all()
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при получении пользователей без платежей и промокодов: {e}")
+            logger.error(
+                f"Ошибка при получении пользователей без платежей и промокодов: {e}"
+            )
             raise
-
 
     async def get_users_with_payments(self) -> list[User]:
         """
@@ -83,8 +83,9 @@ class UserDAO(BaseDAO[User]):
                 select(self.model)
                 .join(self.model.analize_payments_assoc)
                 .options(
-                    selectinload(self.model.analize_payments_assoc)
-                    .selectinload(self.model.analize_payments_assoc.property.mapper.class_.analize_payment)
+                    selectinload(self.model.analize_payments_assoc).selectinload(
+                        self.model.analize_payments_assoc.property.mapper.class_.analize_payment
+                    )
                 )
             )
             result = await self._session.execute(query)
@@ -92,7 +93,6 @@ class UserDAO(BaseDAO[User]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при получении пользователей с платежами: {e}")
             raise
-
 
     async def get_total_analiz_balance(self, user_id: int) -> Optional[int]:
         """
@@ -104,36 +104,41 @@ class UserDAO(BaseDAO[User]):
             promo_none_query = select(UserPromocode).where(
                 UserPromocode.user_id == user_id,
                 UserPromocode.is_active == True,
-                UserPromocode.current_analize_balance.is_(None)
+                UserPromocode.current_analize_balance.is_(None),
             )
             promo_none_result = await self._session.execute(promo_none_query)
             if promo_none_result.scalar_one_or_none():
-                logger.info(f"User {user_id} has unlimited balance due to None in UserPromocode")
+                logger.info(
+                    f"User {user_id} has unlimited balance due to None in UserPromocode"
+                )
                 return None
 
             # Check for any None balance in active UserAnalizePayment
             payment_none_query = select(UserAnalizePayment).where(
                 UserAnalizePayment.user_id == user_id,
                 UserAnalizePayment.is_active == True,
-                UserAnalizePayment.current_analize_balance.is_(None)
+                UserAnalizePayment.current_analize_balance.is_(None),
             )
             payment_none_result = await self._session.execute(payment_none_query)
             if payment_none_result.scalar_one_or_none():
-                logger.info(f"User {user_id} has unlimited balance due to None in UserAnalizePayment")
+                logger.info(
+                    f"User {user_id} has unlimited balance due to None in UserAnalizePayment"
+                )
                 return None
 
             # Get sum of balances from active UserPromocode
             promo_query = select(func.sum(UserPromocode.current_analize_balance)).where(
-                UserPromocode.user_id == user_id,
-                UserPromocode.is_active == True
+                UserPromocode.user_id == user_id, UserPromocode.is_active == True
             )
             promo_result = await self._session.execute(promo_query)
             promo_balance = promo_result.scalar() or 0
 
             # Get sum of balances from active UserAnalizePayment
-            payment_query = select(func.sum(UserAnalizePayment.current_analize_balance)).where(
+            payment_query = select(
+                func.sum(UserAnalizePayment.current_analize_balance)
+            ).where(
                 UserAnalizePayment.user_id == user_id,
-                UserAnalizePayment.is_active == True
+                UserAnalizePayment.is_active == True,
             )
             payment_result = await self._session.execute(payment_query)
             payment_balance = payment_result.scalar() or 0
@@ -142,7 +147,9 @@ class UserDAO(BaseDAO[User]):
             logger.info(f"Total analiz_balance for user {user_id}: {total_balance}")
             return total_balance
         except SQLAlchemyError as e:
-            logger.error(f"Error calculating total analiz_balance for user {user_id}: {e}")
+            logger.error(
+                f"Error calculating total analiz_balance for user {user_id}: {e}"
+            )
             raise
 
     async def decrease_analiz_balance(self, user_id: int) -> bool:
@@ -156,26 +163,28 @@ class UserDAO(BaseDAO[User]):
                 UserPromocode.id,
                 UserPromocode.current_analize_balance,
                 UserPromocode.created_at,
-                literal("UserPromocode").label("record_type")
+                literal("UserPromocode").label("record_type"),
             ).where(
                 UserPromocode.user_id == user_id,
                 UserPromocode.is_active == True,
-                UserPromocode.current_analize_balance > 0
+                UserPromocode.current_analize_balance > 0,
             )
 
             payment_query = select(
                 UserAnalizePayment.id,
                 UserAnalizePayment.current_analize_balance,
                 UserAnalizePayment.created_at,
-                literal("UserAnalizePayment").label("record_type")
+                literal("UserAnalizePayment").label("record_type"),
             ).where(
                 UserAnalizePayment.user_id == user_id,
                 UserAnalizePayment.is_active == True,
-                UserAnalizePayment.current_analize_balance > 0
+                UserAnalizePayment.current_analize_balance > 0,
             )
 
             # Combine queries using UNION and order by created_at
-            union_query = promo_query.union(payment_query).order_by(UserPromocode.created_at.asc())
+            union_query = promo_query.union(payment_query).order_by(
+                UserPromocode.created_at.asc()
+            )
 
             result = await self._session.execute(union_query)
             oldest_record = result.first()
@@ -193,7 +202,9 @@ class UserDAO(BaseDAO[User]):
                 record = await self._session.get(UserAnalizePayment, record_id)
 
             if not record:
-                logger.error(f"Record {record_type} ID {record_id} not found for user {user_id}")
+                logger.error(
+                    f"Record {record_type} ID {record_id} not found for user {user_id}"
+                )
                 return False
 
             # Decrease balance
@@ -202,14 +213,15 @@ class UserDAO(BaseDAO[User]):
                 record.is_active = False
 
             await self._session.commit()
-            logger.info(f"Decreased balance for user {user_id} from {record_type} ID {record_id}")
+            logger.info(
+                f"Decreased balance for user {user_id} from {record_type} ID {record_id}"
+            )
             return True
         except SQLAlchemyError as e:
             logger.error(f"Error decreasing analiz_balance for user {user_id}: {e}")
             await self._session.rollback()
             return False
 
-        
     async def check_expired_records(self, user_id: int) -> bool:
         """
         Checks if any UserPromocode or UserAnalizePayment records for the user have expired based on duration_days.
@@ -221,48 +233,57 @@ class UserDAO(BaseDAO[User]):
             any_expired = False
 
             # Check UserPromocode records
-            promo_query = select(
-                UserPromocode,
-                Promocode.duration_days
-            ).join(
-                Promocode,
-                UserPromocode.promocode_id == Promocode.id
-            ).where(
-                UserPromocode.user_id == user_id,
-                UserPromocode.is_active == True,
-                Promocode.duration_days.isnot(None)
+            promo_query = (
+                select(UserPromocode, Promocode.duration_days)
+                .join(Promocode, UserPromocode.promocode_id == Promocode.id)
+                .where(
+                    UserPromocode.user_id == user_id,
+                    UserPromocode.is_active == True,
+                    Promocode.duration_days.isnot(None),
+                )
             )
             promo_result = await self._session.execute(promo_query)
             promo_records = promo_result.all()
 
             for user_promo, duration_days in promo_records:
                 expiration_date = user_promo.created_at + timedelta(days=duration_days)
+                if expiration_date.tzinfo is None:
+                    expiration_date = expiration_date.replace(tzinfo=timezone.utc)
                 if current_time > expiration_date:
                     user_promo.is_active = False
                     any_expired = True
-                    logger.info(f"Deactivated expired UserPromocode ID {user_promo.id} for user {user_id}")
+                    logger.info(
+                        f"Deactivated expired UserPromocode ID {user_promo.id} for user {user_id}"
+                    )
 
             # Check UserAnalizePayment records
-            payment_query = select(
-                UserAnalizePayment,
-                AnalizePayment.duration_days
-            ).join(
-                AnalizePayment,
-                UserAnalizePayment.analize_payment_id == AnalizePayment.id
-            ).where(
-                UserAnalizePayment.user_id == user_id,
-                UserAnalizePayment.is_active == True,
-                AnalizePayment.duration_days.isnot(None)
+            payment_query = (
+                select(UserAnalizePayment, AnalizePayment.duration_days)
+                .join(
+                    AnalizePayment,
+                    UserAnalizePayment.analize_payment_id == AnalizePayment.id,
+                )
+                .where(
+                    UserAnalizePayment.user_id == user_id,
+                    UserAnalizePayment.is_active == True,
+                    AnalizePayment.duration_days.isnot(None),
+                )
             )
             payment_result = await self._session.execute(payment_query)
             payment_records = payment_result.all()
 
             for user_payment, duration_days in payment_records:
-                expiration_date = user_payment.created_at + timedelta(days=duration_days)
+                expiration_date = user_payment.created_at + timedelta(
+                    days=duration_days
+                )
+                if expiration_date.tzinfo is None:
+                    expiration_date = expiration_date.replace(tzinfo=timezone.utc)
                 if current_time > expiration_date:
                     user_payment.is_active = False
                     any_expired = True
-                    logger.info(f"Deactivated expired UserAnalizePayment ID {user_payment.id} for user {user_id}")
+                    logger.info(
+                        f"Deactivated expired UserAnalizePayment ID {user_payment.id} for user {user_id}"
+                    )
 
             if any_expired:
                 await self._session.commit()
@@ -275,6 +296,7 @@ class UserDAO(BaseDAO[User]):
             logger.error(f"Error checking expired records for user {user_id}: {e}")
             await self._session.rollback()
             return False
+
 
 class AnalisisDAO(BaseDAO[Analysis]):
     model = Analysis
@@ -457,7 +479,7 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
                 f"Ошибка при загрузке записей детального анализа для игрока {player_name}: {e}"
             )
             raise
-    
+
     async def get_all_unique_player_names(
         self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
     ) -> List[str]:
@@ -475,7 +497,7 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
                     query = query.where(self.model.created_at >= start_date)
                 else:
                     query = query.where(self.model.created_at <= end_date)
-                    
+
             result = await self._session.execute(query)
             player_names = [row[0] for row in result.fetchall()]
             logger.info(f"Загружено {len(player_names)} уникальных имен игроков")
@@ -483,6 +505,7 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке уникальных имен игроков: {e}")
             raise
+
 
 class PromoCodeDAO(BaseDAO[Promocode]):
     model = Promocode
@@ -555,12 +578,15 @@ class PromoCodeDAO(BaseDAO[Promocode]):
                 return False  # Не создавать нового пользователя
 
             # Добавляем запись о том, что пользователь активировал промокод
-            user_promo = UserPromocode(user_id=user_id, promocode_id=promocode.id, current_analize_balance=promocode.analiz_count)
+            user_promo = UserPromocode(
+                user_id=user_id,
+                promocode_id=promocode.id,
+                current_analize_balance=promocode.analiz_count,
+            )
             self._session.add(user_promo)
 
             # Увеличиваем счетчик активаций
             promocode.activate_count = (promocode.activate_count or 0) + 1
-
 
             await self._session.commit()
             return True
