@@ -83,7 +83,6 @@ async def handle_user_pagination(callback: CallbackQuery, callback_data: Paginat
                 get_item_id=get_user_id,
                 page=callback_data.page,
                 items_per_page=5,
-                lang="ru"
             )
             await callback.message.edit_reply_markup(reply_markup=keyboard)
 
@@ -104,6 +103,5 @@ async def handle_back_to_user_list(callaback: CallbackQuery, session_without_com
         get_item_id=get_user_id,
         page=0,
         items_per_page=5,
-        lang="ru"
     )
     await callaback.message.answer("Список пользователей:", reply_markup=keyboard)

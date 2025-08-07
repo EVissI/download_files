@@ -317,7 +317,6 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
         await state.set_state(GeneralStates.admin_panel)
         return
     
-    await callback.message.answer("Запуск рассылки...")
     successful, failed = await broadcast_message(
         user_ids=user_ids,
         text=text,
