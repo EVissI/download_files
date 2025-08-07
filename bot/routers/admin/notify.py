@@ -117,7 +117,7 @@ async def start_broadcast(message: Message, state: FSMContext, i18n):
     await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_text)
 
-@broadcast_router.message(F.text == get_all_locales_for_key(translator_hub,'keyboard-reply-cancel'), StateFilter(BroadcastStates))
+@broadcast_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(BroadcastStates))
 async def cancel_broadcast(message: Message, state: FSMContext, i18n: TranslatorRunner):
     await state.clear()
     await state.set_state(GeneralStates.admin_panel)
