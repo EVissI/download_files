@@ -40,7 +40,7 @@ class UserDAO(BaseDAO[User]):
             logger.error(f"Ошибка при получении пользователей с платежами: {e}")
             raise
 
-        
+
     async def get_total_analiz_balance(self, user_id: int) -> Optional[int]:
         """
         Calculates the total analiz_balance for a user from active UserPromocode and UserAnalizePayment records.
@@ -404,7 +404,32 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
                 f"Ошибка при загрузке записей детального анализа для игрока {player_name}: {e}"
             )
             raise
-
+    
+    async def get_all_unique_player_names(
+        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
+    ) -> List[str]:
+        """
+        Получает все уникальные имена игроков из записей детального анализа с необязательной фильтрацией по дате.
+        """
+        try:
+            query = select(func.distinct(self.model.player_name))
+            if start_date or end_date:
+                if start_date and end_date:
+                    query = query.where(
+                        self.model.created_at.between(start_date, end_date)
+                    )
+                elif start_date:
+                    query = query.where(self.model.created_at >= start_date)
+                else:
+                    query = query.where(self.model.created_at <= end_date)
+                    
+            result = await self._session.execute(query)
+            player_names = [row[0] for row in result.fetchall()]
+            logger.info(f"Загружено {len(player_names)} уникальных имен игроков")
+            return player_names
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при загрузке уникальных имен игроков: {e}")
+            raise
 
 class PromoCodeDAO(BaseDAO[Promocode]):
     model = Promocode
