@@ -93,7 +93,8 @@ async def handle_user_pagination(callback: CallbackQuery, callback_data: Paginat
         await callback.message.answer("Произошла ошибка при обработке действия.")
 
 @view_buyers_router.message(BackCallback.filter(F.context == "user_buyed_pacage_list"))
-async def handle_back_to_user_list(message: Message, session_without_commit: AsyncSession):
+async def handle_back_to_user_list(callaback: CallbackQuery, session_without_commit: AsyncSession):
+    await callaback.message.edit_reply_markup(reply_markup=None)
     user_dao = UserDAO(session_without_commit)
     users = await user_dao.get_users_with_payments()
     keyboard = get_paginated_keyboard(
@@ -105,4 +106,4 @@ async def handle_back_to_user_list(message: Message, session_without_commit: Asy
         items_per_page=5,
         lang="ru"
     )
-    await message.answer("Список пользователей:", reply_markup=keyboard)
+    await callaback.message.answer("Список пользователей:", reply_markup=keyboard)
