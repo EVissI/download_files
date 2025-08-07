@@ -1,6 +1,6 @@
 ﻿from aiogram import Router, F, Bot
 from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -11,6 +11,7 @@ import asyncio
 
 from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
+from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.config import bot
 from bot.db.dao import UserDAO
 
@@ -102,13 +103,14 @@ async def broadcast_message(user_ids: list[int], text: str, media_id: str = None
 
 # Команда для старта рассылки
 @broadcast_router.message(F.text == AdminKeyboard.get_kb_text().get('notify'))
-async def start_broadcast(message: Message, state: FSMContext):
-    sent_message = await message.answer("Введите текст для рассылки:")
+async def start_broadcast(message: Message, state: FSMContext, i18n):
+    sent_message = await message.answer("Введите текст для рассылки:",reply_markup=get_cancel_kb(i18n))
     await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_text)
 
+@broadcast_router.message(F.text, StateFilter(BroadcastStates.waiting_for_text))
 # Получение текста рассылки
-@broadcast_router.message(BroadcastStates.waiting_for_text)
+@broadcast_router.message(F.txt, StateFilter(BroadcastStates.waiting_for_text))
 async def process_broadcast_text(message: Message, state: FSMContext):
     user_data = await state.get_data()
     sent_message_id = user_data.get("sent_message_id")
@@ -139,8 +141,8 @@ async def process_broadcast_text(message: Message, state: FSMContext):
     await state.set_state(BroadcastStates.waiting_for_media)
 
 # Получение медиа или обработка кнопки "Без медиа"
-@broadcast_router.message(BroadcastStates.waiting_for_media, F.photo | F.video)
-@broadcast_router.callback_query(BroadcastStates.waiting_for_media, BroadcastCallback.filter(F.action == "no_media"))
+@broadcast_router.message(StateFilter(BroadcastStates.waiting_for_media), F.photo | F.video)
+@broadcast_router.callback_query(StateFilter(BroadcastStates.waiting_for_media), BroadcastCallback.filter(F.action == "no_media"))
 async def process_broadcast_media(event: Message | CallbackQuery, state: FSMContext):
     user_data = await state.get_data()
     sent_message_id = user_data.get("sent_message_id")

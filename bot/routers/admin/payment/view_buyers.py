@@ -92,7 +92,7 @@ async def handle_user_pagination(callback: CallbackQuery, callback_data: Paginat
         logger.error(f"Ошибка при обработке коллбэка пагинации: {e}")
         await callback.message.answer("Произошла ошибка при обработке действия.")
 
-@view_buyers_router.message(BackCallback.filter(F.context == "user_buyed_pacage_list"))
+@view_buyers_router.callback_query(BackCallback.filter(F.context == "user_buyed_pacage_list"))
 async def handle_back_to_user_list(callaback: CallbackQuery, session_without_commit: AsyncSession):
     await callaback.message.edit_reply_markup(reply_markup=None)
     user_dao = UserDAO(session_without_commit)
