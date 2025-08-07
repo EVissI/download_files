@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+﻿from datetime import datetime, timedelta
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from aiogram.filters import StateFilter, Command
@@ -51,10 +51,14 @@ def get_detailed_user_unloading_kb() -> InlineKeyboardMarkup:
     """
     builder = InlineKeyboardBuilder()
     builder.button(
-        text="Выгрузка за месяц",
+        text="Выгрузка за все время",
         callback_data=DetailedUserUnloadingCallback(
             action="detailed_user_unloading"
         ).pack(),
+    )
+    builder.button(
+        text="Выгрузка за месяц",
+        callback_data=DetailedUserUnloadingCallback(action="uploading_by_month").pack(),
     )
     builder.button(
         text="Выгрузка по дате",
@@ -161,6 +165,35 @@ async def handle_detailed_user_unloading_callback(
                 reply_markup=get_cancel_kb(i18n),
             )
             await state.set_state(DetailedUserInputData.Date)
+        case "uploading_by_month":
+            # Выгрузка за текущий месяц
+            now = datetime.now()
+            start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            if now.month == 12:
+                end_date = start_date.replace(year=now.year + 1, month=1) - timedelta(microseconds=1)
+            else:
+                end_date = start_date.replace(month=now.month + 1) - timedelta(microseconds=1)
+
+            logger.info(f"Запрос данных игрока {player_name} за текущий месяц: {start_date} - {end_date}")
+
+            dao = DetailedAnalysisDAO(session_without_commit)
+            try:
+                excel_buffer = await generate_detailed_user_analysis_report(
+                    dao, player_name=player_name, start_date=start_date, end_date=end_date
+                )
+                await callback.message.answer_document(
+                    document=BufferedInputFile(
+                        excel_buffer.getvalue(),
+                        filename=f"{player_name}_detailed_statistics_{start_date.strftime('%Y%m')}.xlsx",
+                    ),
+                    caption=f"Детальный анализ игрока за {start_date.strftime('%m.%Y')}",
+                    reply_markup=ExcelKeyboard.build(),
+                )
+                await state.set_state(GeneralStates.excel_view)
+            except ValueError as e:
+                logger.error(f"Ошибка при генерации отчёта для {player_name}: {e}")
+                await callback.message.answer(str(e))
+            await state.set_state(GeneralStates.excel_view)
         case "detailed_user_unloading":
             dao = DetailedAnalysisDAO(session_without_commit)
             try:
@@ -172,7 +205,7 @@ async def handle_detailed_user_unloading_callback(
                         excel_buffer.getvalue(),
                         filename=f"{player_name}_detailed_statistics_{datetime.now().strftime('%Y%m%d')}.xlsx",
                     ),
-                    caption="Детальный анализ за последний месяц",
+                    caption="Детальный анализ за все время",
                     reply_markup=ExcelKeyboard.build(),
                 )
                 await state.set_state(GeneralStates.excel_view)
@@ -181,10 +214,16 @@ async def handle_detailed_user_unloading_callback(
                 await callback.message.answer(str(e))
             await state.set_state(GeneralStates.excel_view)
         case "back":
-            await state.set_state(GeneralStates.excel_view)
+            dao = DetailedAnalysisDAO(session_without_commit)
+            player_names = await dao.get_all_unique_player_names()
+            if not player_names:
+                await callback.message.answer("Нет доступных никнеймов игроков.")
+                return
             await callback.message.answer(
-                "Вы вернулись в главное меню.", reply_markup=ExcelKeyboard.build()
+                "Выберите никнейм игрока для выгрузки детального анализа:",
+                reply_markup=get_player_names_kb(player_names, page=0),
             )
+            await state.set_state(GeneralStates.excel_view)
 
 
 @detailed_user_unloading_router.message(F.text, StateFilter(DetailedUserInputData.Date))
