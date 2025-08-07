@@ -88,7 +88,7 @@ async def handle_mat_file(
     try:
         waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
         file = message.document
-        if not file.file_name.endswith((".mat",'.txt','.sgf','.sgg')):
+        if not file.file_name.endswith((".mat",'.txt','.sgf','.sgg','.bkg','.gam','.pos','.fibs','.tmg')):
             return await message.answer(i18n.auto.analyze.invalid())
 
         # Создаем директорию если её нет
