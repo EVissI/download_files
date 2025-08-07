@@ -67,7 +67,7 @@ async def handle_user_pagination(callback: CallbackQuery, callback_data: Paginat
                     display_text += f"\nКупленные пакеты: {'\n\n'.join([f'{p.analize_payment.name} за {p.analize_payment.price} RUB - <code>{p.tranzaction_id}</code>' for p in buyed_pacage])}"
                 messages = split_message(msg=display_text, with_photo=False)
                 for message in messages:
-                    if message[-1] == message:
+                    if messages[-1] == message:
                         await callback.message.answer(
                             reply_markup=get_back_kb(i18n, "user_buyed_pacage_list"),
                         )
