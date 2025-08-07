@@ -88,7 +88,7 @@ async def handle_mat_file(
     try:
         waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
         file = message.document
-        if not file.file_name.endswith((".mat",'.txt')):
+        if not file.file_name.endswith((".mat",'.txt','.sgf')):
             return await message.answer(i18n.auto.analyze.invalid())
 
         # Создаем директорию если её нет
@@ -100,9 +100,6 @@ async def handle_mat_file(
         file_path = os.path.join(files_dir, file_name)
 
         file_type = file.file_name.split('.')[-1]
-        if file_type not in ['mat', 'txt']:
-            await waiting_manager.stop()
-            return await message.answer(i18n.auto.analyze.invalid())
 
         await message.bot.download(file.file_id, destination=file_path)
 

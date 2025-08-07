@@ -52,7 +52,7 @@ user-profile-no_detailed_statistics = Подробная статистика о
 user-profile-error_retrieving_statistics = Произошла ошибка при получении ваших статистических данных.
 
 auto-analyze-submit = Отправьте .mat файл для автоматического анализа 
-auto-analyze-invalid = Пожалуйста, отправьте .mat файл. 
+auto-analyze-invalid = Неподерживаемый тип файла. 
 auto-analyze-complete = Анализ файла завершен. Выберите, кем вы были: 
 auto-analyze-error-parse = Произошла ошибка при разборе файла. 
 auto-analyze-error-save = Произошла ошибка при сохранении данных.

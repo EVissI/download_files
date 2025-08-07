@@ -51,7 +51,7 @@ user-profile-no_detailed_statistics = No detailed statistics available. Please p
 user-profile-error_retrieving_statistics = There was an error retrieving your statistics.
 
 auto-analyze-submit = Submit .mat file for automatic analysis 
-auto-analyze-invalid = Please send .mat file. 
+auto-analyze-invalid = Invalide file type. 
 auto-analyze-complete = File analysis complete. Select which player you were: 
 auto-analyze-error-parse = An error occurred while parsing the file. 
 auto-analyze-error-save = An error occurred while saving data.
