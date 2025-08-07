@@ -325,6 +325,6 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
         media_type=media_type
     )
     
-    await callback.message.answer(f"Рассылка завершена! Успешно: {successful}, Неудачно: {failed}")
+    await callback.message.answer(f"Рассылка завершена! Успешно: {successful}, Неудачно: {failed}", reply_markup=AdminKeyboard.build())
     await state.clear()
     await state.set_state(GeneralStates.admin_panel)
