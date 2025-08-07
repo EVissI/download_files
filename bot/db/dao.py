@@ -61,7 +61,6 @@ class UserDAO(BaseDAO[User]):
                     select(UserPromocode.user_id)
                     .where(UserPromocode.is_active == True)
                 )
-                .distinct()
             )
             query = (
                 select(self.model)
