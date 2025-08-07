@@ -15,6 +15,15 @@ from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.config import bot
 from bot.db.dao import UserDAO
 
+from bot.common.utils.i18n import get_all_locales_for_key
+from bot.config import translator_hub
+from typing import TYPE_CHECKING
+from fluentogram import TranslatorRunner
+
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
+
+
 # Инициализация роутера
 broadcast_router = Router()
 
@@ -108,9 +117,16 @@ async def start_broadcast(message: Message, state: FSMContext, i18n):
     await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_text)
 
-@broadcast_router.message(F.text, StateFilter(BroadcastStates.waiting_for_text))
+@broadcast_router.message(F.text == get_all_locales_for_key(translator_hub,'keyboard-reply-cancel'), StateFilter(BroadcastStates))
+async def cancel_broadcast(message: Message, state: FSMContext, i18n: TranslatorRunner):
+    await state.clear()
+    await state.set_state(GeneralStates.admin_panel)
+    await message.answer(
+        message.text,
+        reply_markup=AdminKeyboard.build()
+    )
 # Получение текста рассылки
-@broadcast_router.message(F.txt, StateFilter(BroadcastStates.waiting_for_text))
+@broadcast_router.message(F.text, StateFilter(BroadcastStates.waiting_for_text))
 async def process_broadcast_text(message: Message, state: FSMContext):
     user_data = await state.get_data()
     sent_message_id = user_data.get("sent_message_id")
