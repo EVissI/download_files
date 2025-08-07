@@ -31,7 +31,7 @@ view_buyers_router = Router()
 @view_buyers_router.message(F.text == PaymentKeyboard.get_kb_text()['view_buyers'])
 async def handle_view_buyers(message: Message,session_without_commit: AsyncSession):
     try:
-        users = UserDAO(session_without_commit).find_one_or_none_by_id(message.from_user.id)
+        users = await UserDAO(session_without_commit).find_one_or_none_by_id(message.from_user.id)
         if not users:
             await message.answer("Пользователи не найдены.")
             return
