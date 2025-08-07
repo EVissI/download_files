@@ -4,38 +4,73 @@ import subprocess
 import os
 from loguru import logger
 
-import json
-import re
-import os
-import subprocess
-from loguru import logger
 
+def analyze_mat_file(file: str, type: str = None) -> str:
+    """
+    Анализирует файл матча или позиции с помощью GNU Backgammon и возвращает статистику в формате JSON.
 
-def analyze_mat_file(file: str, type:str) -> str:
+    Args:
+        file: Путь к файлу матча или позиции.
+        type: Тип файла ('sgf', 'mat', 'sgg', 'bkg', 'gam', 'pos', 'fibs', 'tmg', 'empire', 'party').
+              Если None, для .gam файлов выполняется автоматическое определение.
+
+    Returns:
+        str: JSON-строка с результатами анализа.
+
+    Raises:
+        FileNotFoundError: Если файл или GNU Backgammon не найдены.
+        ValueError: Если указан неизвестный тип файла.
+        RuntimeError: Если произошла ошибка при выполнении GNU Backgammon.
+    """
     try:
         if not os.path.exists(file):
-            logger.error(f".mat-файл не найден: {file}")
-            raise FileNotFoundError(f".mat-файл не найден: {file}")
+            logger.error(f"Файл не найден: {file}")
+            raise FileNotFoundError(f"Файл не найден: {file}")
 
         try:
             subprocess.run(["gnubg", "--version"], check=True, capture_output=True)
         except FileNotFoundError:
             logger.error("GNU Backgammon не установлен или не найден в PATH")
             raise FileNotFoundError("GNU Backgammon не установлен или не найден в PATH")
-        if type == "sgf":
-            gnubg_commands = [
-                f"load match {file}",
-                "analyse match",
-                "show statistics match",
-                "exit",
-            ]
-        elif type == "mat":
-            gnubg_commands = [
-                f"import mat {file}",
-                "analyse match",
-                "show statistics match",
-                "exit",
-            ]
+
+        # Определение команды импорта
+        if type is None and file.endswith(".gam"):
+            # Попытка определить платформу для .gam файлов
+            with open(file, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read().lower()
+                if "gammonempire" in content:
+                    type = "empire"
+                elif "partygammon" in content:
+                    type = "party"
+                else:
+                    type = "gam"  # По умолчанию считаем Jellyfish
+
+        # Список команд для разных типов файлов
+        import_commands = {
+            "sgf": f"load match {file}",
+            "mat": f"import mat {file}",
+            "sgg": f"import sgg {file}",
+            "bkg": f"import bkg {file}",
+            "gam": f"import gam {file}",
+            "pos": f"import pos {file}",
+            "fibs": f"import oldmoves {file}",
+            "tmg": f"import tmg {file}",
+            "empire": f"import empire {file}",
+            "party": f"import party {file}",
+        }
+
+        if type not in import_commands:
+            logger.error(f"Неизвестный тип файла: {type}")
+            raise ValueError(f"Неизвестный тип файла: {type}")
+
+        # Попытка импорта для .gam файлов с разными командами, если первая не сработала
+        import_command = import_commands[type]
+        gnubg_commands = [
+            import_command,
+            "analyse match",
+            "show statistics match",
+            "exit",
+        ]
 
         process = subprocess.Popen(
             ["gnubg", "-t"],
@@ -48,13 +83,44 @@ def analyze_mat_file(file: str, type:str) -> str:
 
         stdout, stderr = process.communicate("\n".join(gnubg_commands))
         logger.debug(f"Вывод gnubg:\n{stdout}")
+
+        # Если импорт не удался для .gam, пробуем другие команды
+        if process.returncode != 0 and type in ("gam", "empire", "party"):
+            logger.warning(f"Не удалось импортировать .gam файл как {type}: {stderr}")
+            alternative_types = ["gam", "empire", "party"]
+            alternative_types.remove(type)  # Удаляем уже опробованный тип
+
+            for alt_type in alternative_types:
+                logger.info(f"Попытка импорта как {alt_type}")
+                gnubg_commands = [
+                    import_commands[alt_type],
+                    "analyse match",
+                    "show statistics match",
+                    "exit",
+                ]
+                process = subprocess.Popen(
+                    ["gnubg", "-t"],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding="utf-8",
+                )
+                stdout, stderr = process.communicate("\n".join(gnubg_commands))
+                if process.returncode == 0:
+                    logger.info(f"Успешный импорт как {alt_type}")
+                    break
+            else:
+                logger.error(f"Ошибка выполнения gnubg для всех типов .gam: {stderr}")
+                raise RuntimeError(f"Ошибка выполнения gnubg: {stderr}")
+
         if process.returncode != 0:
             logger.error(f"Ошибка выполнения gnubg: {stderr}")
             raise RuntimeError(f"Ошибка выполнения gnubg: {stderr}")
 
         logger.info(f"Анализ матча завершён для файла: {file}")
 
-        # Парсинг в JSON
+        # Парсинг вывода в JSON
         stats = {}
         current_section = None
         players = []
@@ -140,11 +206,3 @@ def analyze_mat_file(file: str, type:str) -> str:
     except Exception as e:
         logger.error(f"Ошибка при анализе матча: {e}")
         raise
-
-if __name__ == "__main__":
-    file = r"bugemot.sgf"
-    try:
-        result = analyze_mat_file(file)
-        print("Анализ:\n", result)
-    except Exception as e:
-        print("Ошибка:", e)

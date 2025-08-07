@@ -88,7 +88,7 @@ async def handle_mat_file(
     try:
         waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
         file = message.document
-        if not file.file_name.endswith((".mat",'.txt','.sgf')):
+        if not file.file_name.endswith((".mat",'.txt','.sgf','.sgg')):
             return await message.answer(i18n.auto.analyze.invalid())
 
         # Создаем директорию если её нет
@@ -258,7 +258,8 @@ async def handle_download_pdf(
         key = f"analysis_data:{user_info.id}"
         file_name_key = f"file_name:{user_info.id}"
         file_name = await redis_client.get(file_name_key)
-        file_name = file_name.replace('.mat', '.pdf') if file_name else 'analysis.pdf'
+        file_type = file_name.split('.')[-1] 
+        file_name = file_name.replace(file_type, 'pdf') if file_name else 'analysis.pdf'
         analysis_data_json = await redis_client.get(key)
         if not analysis_data_json:
             await callback.message.answer("Нет данных для формирования PDF.")
