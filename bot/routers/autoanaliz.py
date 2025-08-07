@@ -95,8 +95,7 @@ async def handle_mat_file(
         files_dir = os.path.join(os.getcwd(), "files")
         os.makedirs(files_dir, exist_ok=True)
         await waiting_manager.start()
-        file_name = file.file_name.replace(" ", "")
-        file_name = file.file_name.replace('.txt', '.mat')
+        file_name = file.file_name.replace(" ", "").replace('.txt', '.mat')
         file_path = os.path.join(files_dir, file_name)
 
         file_type = file_name.split('.')[-1]
