@@ -132,7 +132,7 @@ async def start_broadcast(message: Message, state: FSMContext):
 
 # Обработка выбора группы пользователей
 @broadcast_router.callback_query(StateFilter(BroadcastStates.waiting_for_group), BroadcastCallback.filter())
-async def process_broadcast_group(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext):
+async def process_broadcast_group(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext,i18n):
     sent_message_id = (await state.get_data()).get("sent_message_id")
     
     # Удаление сообщения с выбором группы
@@ -147,7 +147,7 @@ async def process_broadcast_group(callback: CallbackQuery, callback_data: Broadc
     
     sent_message = await callback.message.answer(
         "Введите текст для рассылки:",
-        reply_markup=get_cancel_kb()  # Без i18n, используем оригинальную функцию
+        reply_markup=get_cancel_kb(i18n)  # Без i18n, используем оригинальную функцию
     )
     await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_text)
