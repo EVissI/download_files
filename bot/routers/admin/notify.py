@@ -293,7 +293,7 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
             logger.warning(f"Не удалось удалить сообщение {sent_message_id}: {e}")
     
     if callback_data.action == "cancel":
-        await callback.message.answer("Рассылка отменена.")
+        await callback.message.answer("Рассылка отменена.", reply_markup=AdminKeyboard.build())
         await state.clear()
         await state.set_state(GeneralStates.admin_panel)
         return
