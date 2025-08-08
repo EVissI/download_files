@@ -26,7 +26,6 @@ class BroadcastCallback(CallbackData, prefix="broadcast"):
 
 # Определение состояний для FSM
 class BroadcastStates(StatesGroup):
-    waiting_for_group = State()
     waiting_for_text = State()
     waiting_for_media = State()
     waiting_for_confirmation = State()
@@ -128,10 +127,8 @@ async def start_broadcast(message: Message, state: FSMContext):
         reply_markup=builder.as_markup()
     )
     await state.update_data(sent_message_id=sent_message.message_id)
-    await state.set_state(BroadcastStates.waiting_for_group)
 
-# Обработка выбора группы пользователей
-@broadcast_router.callback_query(StateFilter(BroadcastStates.waiting_for_group), BroadcastCallback.filter())
+@broadcast_router.callback_query(BroadcastCallback.filter())
 async def process_broadcast_group(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext,i18n):
     sent_message_id = (await state.get_data()).get("sent_message_id")
     
