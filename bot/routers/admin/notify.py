@@ -277,7 +277,7 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
     await state.set_state(BroadcastStates.waiting_for_confirmation)
 
 # Обработка подтверждения через инлайн-кнопки
-@broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter())
+@broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action.in_(['confirm', 'cancel'])))
 async def process_broadcast_confirmation(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext, session_without_commit):
     user_data = await state.get_data()
     sent_message_id = user_data.get("sent_message_id")
