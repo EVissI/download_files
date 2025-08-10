@@ -128,7 +128,7 @@ async def start_broadcast(message: Message, state: FSMContext):
     )
     await state.update_data(sent_message_id=sent_message.message_id)
 
-@broadcast_router.callback_query(BroadcastCallback.filter())
+@broadcast_router.callback_query(BroadcastCallback.filter(F.action.in_(['all_users', 'with_purchases', 'without_purchases'])))
 async def process_broadcast_group(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext,i18n):
     sent_message_id = (await state.get_data()).get("sent_message_id")
     
