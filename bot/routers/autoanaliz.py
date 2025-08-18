@@ -28,7 +28,7 @@ from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, get_download
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
-from bot.db.models import User
+from bot.db.models import PromocodeServiceQuantity, User
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.db.schemas import SDetailedAnalysis, SUser
 from bot.db.redis import redis_client
@@ -124,7 +124,8 @@ async def handle_mat_file(
             asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
         except Exception as e:
             logger.error(f"Error saving file to Yandex Disk: {e}")
-
+        logger.info(user_info.player_username)
+        logger.info(player_names)
         if user_info.player_username and user_info.player_username in player_names:
             selected_player = user_info.player_username
             game_id = f"auto_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -142,7 +143,7 @@ async def handle_mat_file(
             await dao.add(SDetailedAnalysis(**player_data))
 
             user_dao = UserDAO(session_without_commit)
-            await user_dao.decrease_analiz_balance(user_info.id)
+            await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.ANALYSIS)
 
             formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
             await waiting_manager.stop()
@@ -224,7 +225,7 @@ async def handle_player_selection(
 
         await dao.add(SDetailedAnalysis(**player_data))
 
-        await user_dao.decrease_analiz_balance(user_info.id)
+        await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.ANALYSIS)
 
         formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 

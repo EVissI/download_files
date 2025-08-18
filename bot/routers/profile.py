@@ -12,7 +12,7 @@ from bot.common.kbds.inline.profile import (
 )
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import UserDAO, UserPromocodeDAO
-from bot.db.models import User
+from bot.db.models import PromocodeServiceQuantity, User
 from bot.db.schemas import SUser
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
@@ -30,11 +30,15 @@ profile_router = Router()
     UserInfo(),
 )
 async def profile_command(message: Message, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession):
-    balance = await UserDAO(session_without_commit).get_total_analiz_balance(user_info.id)
+    balance_dict = await UserDAO(session_without_commit).get_total_balance_dict(user_info.id)
+    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.value, '∞')
+    short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.value, '∞')
+
     await message.answer(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
-            analiz_balance=balance if balance is not None else '∞',
+            analiz_balance=analiz_balance if analiz_balance is not None else '∞',
+            short_board_balance=short_board_balance if short_board_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
@@ -60,11 +64,14 @@ async def change_language_callback(
 async def change_language_back_callback(
     callback: CallbackQuery, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession
 ):
-    balance = await UserDAO(session_without_commit).get_total_analiz_balance(user_info.id)
+    balance_dict = await UserDAO(session_without_commit).get_total_balance_dict(user_info.id)
+    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.value, '∞')
+    short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.value, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
-            analiz_balance=balance if balance is not None else '∞',
+            analiz_balance=analiz_balance if analiz_balance is not None else '∞',
+            short_board_balance=short_board_balance if short_board_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
@@ -100,11 +107,14 @@ async def change_language_callback(
 async def back_to_profile(
     callback: CallbackQuery, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession
 ):
-    balance = await UserDAO(session_without_commit).get_total_analiz_balance(user_info.id)
+    balance_dict = await UserDAO(session_without_commit).get_total_balance_dict(user_info.id)
+    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.value, '∞')
+    short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.value, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
-            analiz_balance=balance if balance is not None else '∞',
+            analiz_balance=analiz_balance if analiz_balance is not None else '∞',
+            short_board_balance=short_board_balance if short_board_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),

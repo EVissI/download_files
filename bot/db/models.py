@@ -21,8 +21,8 @@ class User(Base):
     lang_code: Mapped[str | None] = mapped_column(
         String(3), nullable=True, default="en"
     )
-    phone_number:Mapped[str | None]
-    email:Mapped[str | None]
+    phone_number: Mapped[str | None]
+    email: Mapped[str | None]
     role: Mapped["Role"] = mapped_column(
         String(5), default=Role.USER.value, nullable=False
     )
@@ -113,12 +113,15 @@ class Promocode(Base):
     duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
 
     services: Mapped[list["PromocodeServiceQuantity"]] = relationship(
-        "PromocodeServiceQuantity", back_populates="promocode", cascade="all, delete-orphan"
+        "PromocodeServiceQuantity",
+        back_populates="promocode",
+        cascade="all, delete-orphan",
     )
 
     users: Mapped[list["UserPromocode"]] = relationship(
         "UserPromocode", back_populates="promocode"
     )
+
 
 class PromocodeServiceQuantity(Base):
     __tablename__ = "promocode_service_quantities"
@@ -129,10 +132,15 @@ class PromocodeServiceQuantity(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("promocode.id"))
-    service_type: Mapped["ServiceType"] = mapped_column(Enum(ServiceType), nullable=False)
-    quantity: Mapped[int] = mapped_column(Integer, nullable=False) 
+    service_type: Mapped["ServiceType"] = mapped_column(
+        Enum(ServiceType), nullable=False
+    )
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    promocode: Mapped["Promocode"] = relationship("Promocode", back_populates="services")
+    promocode: Mapped["Promocode"] = relationship(
+        "Promocode", back_populates="services"
+    )
+
 
 class UserPromocode(Base):
     __tablename__ = "user_promocode"
@@ -143,42 +151,75 @@ class UserPromocode(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     remaining_services: Mapped[list["UserPromocodeService"]] = relationship(
-        "UserPromocodeService", back_populates="user_promocode", cascade="all, delete-orphan"
+        "UserPromocodeService",
+        back_populates="user_promocode",
+        cascade="all, delete-orphan",
     )
 
     user: Mapped["User"] = relationship("User", back_populates="used_promocodes")
     promocode: Mapped["Promocode"] = relationship("Promocode", back_populates="users")
 
+
 class UserPromocodeService(Base):
     __tablename__ = "user_promocode_services"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_promocode.id"))
+    user_promocode_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("user_promocode.id")
+    )
     service_type: Mapped[PromocodeServiceQuantity.ServiceType] = mapped_column(
         Enum(PromocodeServiceQuantity.ServiceType), nullable=False
     )
-    remaining_quantity: Mapped[int] = mapped_column(Integer, nullable=False)  
+    remaining_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    user_promocode: Mapped["UserPromocode"] = relationship("UserPromocode", back_populates="remaining_services")
+    user_promocode: Mapped["UserPromocode"] = relationship(
+        "UserPromocode", back_populates="remaining_services"
+    )
 
 
-class UserAnalizePayment(Base):
-    __tablename__ = "user_analize_payments"
+class AnalizePaymentServiceQuantity(Base):
+    """
+    Модель для хранения типов услуг и их количества, связанных с платежами.
+    """
+
+    __tablename__ = "analize_payment_service_quantities"
+
+    class ServiceType(enum.Enum):
+        ANALYSIS = "Автоанализ"
+        SHORT_BOARD = "Короткая доска"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id"), nullable=False
-    )
     analize_payment_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("analize_payments.id"), nullable=False
+        Integer, ForeignKey("analize_payments.id")
     )
-    tranzaction_id:Mapped[str]
-    current_analize_balance: Mapped[int]
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    service_type: Mapped["ServiceType"] = mapped_column(
+        Enum(ServiceType), nullable=False
+    )
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    user: Mapped["User"] = relationship("User", back_populates="analize_payments_assoc")
     analize_payment: Mapped["AnalizePayment"] = relationship(
-        "AnalizePayment", back_populates="users_assoc"
+        "AnalizePayment", back_populates="services"
+    )
+
+
+class UserAnalizePaymentService(Base):
+    """
+    Модель для отслеживания оставшегося баланса услуг для пользователя, связанных с платежами.
+    """
+
+    __tablename__ = "user_analize_payment_services"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_analize_payment_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("user_analize_payments.id")
+    )
+    service_type: Mapped[AnalizePaymentServiceQuantity.ServiceType] = mapped_column(
+        Enum(AnalizePaymentServiceQuantity.ServiceType), nullable=False
+    )
+    remaining_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    user_analize_payment: Mapped["UserAnalizePayment"] = relationship(
+        "UserAnalizePayment", back_populates="remaining_services"
     )
 
 
@@ -192,6 +233,36 @@ class AnalizePayment(Base):
     duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    services: Mapped[list["AnalizePaymentServiceQuantity"]] = relationship(
+        "AnalizePaymentServiceQuantity",
+        back_populates="analize_payment",
+        cascade="all, delete-orphan",
+    )
     users_assoc: Mapped[list["UserAnalizePayment"]] = relationship(
         "UserAnalizePayment", back_populates="analize_payment"
+    )
+
+
+class UserAnalizePayment(Base):
+    __tablename__ = "user_analize_payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=False
+    )
+    analize_payment_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("analize_payments.id"), nullable=False
+    )
+    tranzaction_id: Mapped[str]
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    remaining_services: Mapped[list["UserAnalizePaymentService"]] = relationship(
+        "UserAnalizePaymentService",
+        back_populates="user_analize_payment",
+        cascade="all, delete-orphan",
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="analize_payments_assoc")
+    analize_payment: Mapped["AnalizePayment"] = relationship(
+        "AnalizePayment", back_populates="users_assoc"
     )
