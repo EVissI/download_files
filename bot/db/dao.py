@@ -246,9 +246,10 @@ class UserDAO(BaseDAO[User]):
                     UserPromocodeService.remaining_quantity > 0,
                 )
                 .order_by(UserPromocode.created_at.asc())
+                .limit(1)  # Ограничиваем результат одной строкой
             )
             promo_service_result = await self._session.execute(promo_service_query)
-            promo_service = promo_service_result.scalar_one_or_none()
+            promo_service = promo_service_result.scalar()  # Используем scalar вместо scalar_one_or_none
 
             if promo_service:
                 # Decrease balance in UserPromocodeService
@@ -275,9 +276,10 @@ class UserDAO(BaseDAO[User]):
                     UserAnalizePaymentService.remaining_quantity > 0,
                 )
                 .order_by(UserAnalizePayment.created_at.asc())
+                .limit(1)  # Ограничиваем результат одной строкой
             )
             payment_service_result = await self._session.execute(payment_service_query)
-            payment_service = payment_service_result.scalar_one_or_none()
+            payment_service = payment_service_result.scalar()  # Используем scalar вместо scalar_one_or_none
 
             if payment_service:
                 # Decrease balance in UserAnalizePaymentService
