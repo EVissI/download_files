@@ -117,14 +117,14 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
-                    UserPromocodeService.service_type == service_type,
+                    UserPromocodeService.service_type == service_type,  # Передаём объект перечисления
                     UserPromocodeService.remaining_quantity.is_(None),
                 )
             )
             promo_service_none_result = await self._session.execute(promo_service_none_query)
             if promo_service_none_result.scalar_one_or_none():
                 logger.info(
-                    f"User {user_id} has unlimited balance for service '{service_type}' in UserPromocodeService"
+                    f"User {user_id} has unlimited balance for service '{service_type.value}' in UserPromocodeService"
                 )
                 return None
 
@@ -152,12 +152,11 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
-                    UserPromocodeService.service_type == service_type,
+                    UserPromocodeService.service_type == service_type,  # Передаём объект перечисления
                 )
             )
             promo_service_result = await self._session.execute(promo_service_query)
             promo_service_balance = promo_service_result.scalar() or 0
-
             # Get sum of balances from active UserAnalizePayment for the given service type
             payment_query = select(
                 func.sum(UserAnalizePayment.current_analize_balance)

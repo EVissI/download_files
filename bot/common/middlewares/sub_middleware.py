@@ -26,7 +26,7 @@ class AnalizeMiddleware(BaseMiddleware):
         user_id = event.from_user.id
         dao = UserDAO(session)
         user = await dao.find_one_or_none_by_id(user_id)
-        balance = await dao.get_total_analiz_balance(user_id, service_type=PromocodeServiceQuantity.ServiceType.ANALYSIS.value)
+        balance = await dao.get_total_analiz_balance(user_id, service_type=PromocodeServiceQuantity.ServiceType.ANALYSIS)
         if balance is None:
             return await handler(event, data)
         if not user or balance == 0:
@@ -46,7 +46,7 @@ class ShortBoardMiddleware(BaseMiddleware):
         user_id = event.from_user.id
         dao = UserDAO(session)
         user = await dao.find_one_or_none_by_id(user_id)
-        balance = await dao.get_total_analiz_balance(user_id, service_type=PromocodeServiceQuantity.ServiceType.SHORT_BOARD.value)
+        balance = await dao.get_total_analiz_balance(user_id, service_type=PromocodeServiceQuantity.ServiceType.SHORT_BOARD)
         if balance is None:
             return await handler(event, data)
         if not user or balance == 0:
