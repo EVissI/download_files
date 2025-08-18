@@ -124,7 +124,7 @@ class UserDAO(BaseDAO[User]):
             raise
 
     async def get_total_analiz_balance(
-        self, user_id: int, service_type: str
+    self, user_id: int, service_type: str
     ) -> Optional[int]:
         """
         Calculates the total balance for a specific service type for a user
@@ -142,7 +142,7 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
-                    UserPromocodeService.service_type == service_type,
+                    UserPromocodeService.service_type == service_type,  # Передаём строку
                     UserPromocodeService.remaining_quantity.is_(None),
                 )
             )
@@ -166,7 +166,7 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserAnalizePayment.user_id == user_id,
                     UserAnalizePayment.is_active == True,
-                    UserAnalizePaymentService.service_type == service_type,
+                    UserAnalizePaymentService.service_type == service_type,  # Передаём строку
                     UserAnalizePaymentService.remaining_quantity.is_(None),
                 )
             )
@@ -189,7 +189,7 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
-                    UserPromocodeService.service_type == service_type,
+                    UserPromocodeService.service_type == service_type,  # Передаём строку
                 )
             )
             promo_service_result = await self._session.execute(promo_service_query)
@@ -206,7 +206,7 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserAnalizePayment.user_id == user_id,
                     UserAnalizePayment.is_active == True,
-                    UserAnalizePaymentService.service_type == service_type,
+                    UserAnalizePaymentService.service_type == service_type,  # Передаём строку
                 )
             )
             payment_service_result = await self._session.execute(payment_service_query)
