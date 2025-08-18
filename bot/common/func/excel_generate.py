@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 
-
 async def generate_detailed_analysis_report(
     dao: DetailedAnalysisDAO,
     start_date: Optional[datetime] = None,
@@ -51,6 +50,13 @@ async def generate_detailed_analysis_report(
             "Очень неудачные броски",
             "Рейтинг удачи",
             "Рейтинг кубика",
+            "Пропущенные даблы ниже CP",
+            "Пропущенные даблы выше CP",
+            "Неправильные даблы ниже SP",
+            "Неправильные даблы выше TG",
+            "Неправильные взятия",
+            "Неправильные пасы",
+            "Ошибка куба",
             "Общая ошибка",
             "Общий рейтинг",
         ]
@@ -86,27 +92,41 @@ async def generate_detailed_analysis_report(
             )
             ws.cell(row=current_row, column=13).value = analysis.luck_rating
             ws.cell(row=current_row, column=14).value = analysis.cube_decision_rating
-            ws.cell(row=current_row, column=15).value = analysis.snowie_error_rate
-            ws.cell(row=current_row, column=16).value = analysis.overall_rating
+            ws.cell(row=current_row, column=15).value = analysis.missed_doubles_below_cp
+            ws.cell(row=current_row, column=16).value = analysis.missed_doubles_above_cp
+            ws.cell(row=current_row, column=17).value = analysis.wrong_doubles_below_sp
+            ws.cell(row=current_row, column=18).value = analysis.wrong_doubles_above_tg
+            ws.cell(row=current_row, column=19).value = analysis.wrong_takes
+            ws.cell(row=current_row, column=20).value = analysis.wrong_passes
+            ws.cell(row=current_row, column=21).value = analysis.cube_error_rate
+            ws.cell(row=current_row, column=22).value = analysis.snowie_error_rate
+            ws.cell(row=current_row, column=23).value = analysis.overall_rating
             current_row += 1
 
         column_widths = {
-            "A": 15,
-            "B": 15,
-            "C": 20,
-            "D": 20,
-            "E": 15,
-            "F": 15,
-            "G": 15,
-            "H": 20,
-            "I": 15,
-            "J": 15,
-            "K": 15,
-            "L": 15,
-            "M": 20,
-            "N": 20,
-            "O": 15,
-            "P": 20,
+            "A": 25,
+            "B": 25,
+            "C": 25,
+            "D": 25,
+            "E": 25,
+            "F": 25,
+            "G": 25,
+            "H": 25,
+            "I": 25,
+            "J": 25,
+            "K": 25,
+            "L": 25,
+            "M": 25,
+            "N": 25,
+            "O": 25,
+            "P": 25,
+            "Q": 25,
+            "R": 25,
+            "S": 25,
+            "T": 25,
+            "U": 25,
+            "V": 25,
+            "W": 25,
         }
 
         for col, width in column_widths.items():
@@ -132,15 +152,6 @@ async def generate_detailed_user_analysis_report(
 ) -> io.BytesIO:
     """
     Генерирует Excel отчет со статистикой детального анализа по player_name.
-
-    Args:
-        dao: DetailedAnalysisDAO instance
-        player_name: Игровое имя для фильтрации (обязательно)
-        start_date: Начальная дата для фильтрации
-        end_date: Конечная дата для фильтрации
-
-    Returns:
-        io.BytesIO: Excel файл в виде буфера байтов
     """
     wb = Workbook()
     ws = wb.active
@@ -169,6 +180,13 @@ async def generate_detailed_user_analysis_report(
         "Очень неудачные броски",
         "Рейтинг удачи",
         "Рейтинг кубика",
+        "Пропущенные даблы ниже CP",
+        "Пропущенные даблы выше CP",
+        "Неправильные даблы ниже SP",
+        "Неправильные даблы выше TG",
+        "Неправильные взятия",
+        "Неправильные пасы",
+        "Ошибка куба",
         "Общая ошибка",
         "Общий рейтинг",
     ]
@@ -180,7 +198,6 @@ async def generate_detailed_user_analysis_report(
         cell.fill = header_fill
         cell.alignment = center_align
 
-    # Получаем данные детального анализа по player_name
     try:
         if not player_name:
             raise ValueError("Не указано игровое имя (player_name)")
@@ -211,35 +228,46 @@ async def generate_detailed_user_analysis_report(
             )
             ws.cell(row=current_row, column=13).value = analysis.luck_rating
             ws.cell(row=current_row, column=14).value = analysis.cube_decision_rating
-            ws.cell(row=current_row, column=15).value = analysis.snowie_error_rate
-            ws.cell(row=current_row, column=16).value = analysis.overall_rating
-
+            ws.cell(row=current_row, column=15).value = analysis.missed_doubles_below_cp
+            ws.cell(row=current_row, column=16).value = analysis.missed_doubles_above_cp
+            ws.cell(row=current_row, column=17).value = analysis.wrong_doubles_below_sp
+            ws.cell(row=current_row, column=18).value = analysis.wrong_doubles_above_tg
+            ws.cell(row=current_row, column=19).value = analysis.wrong_takes
+            ws.cell(row=current_row, column=20).value = analysis.wrong_passes
+            ws.cell(row=current_row, column=21).value = analysis.cube_error_rate
+            ws.cell(row=current_row, column=22).value = analysis.snowie_error_rate
+            ws.cell(row=current_row, column=23).value = analysis.overall_rating
             current_row += 1
 
-        # Устанавливаем ширину столбцов
         column_widths = {
-            "A": 15,  # ID анализа
-            "B": 15,  # ID пользователя
-            "C": 20,  # Имя игрока
-            "D": 20,  # Дата анализа
-            "E": 15,  # Плохие ходы
-            "F": 15,  # Очень плохие ходы
-            "G": 15,  # Ошибка (Chequerplay)
-            "H": 20,  # Рейтинг Chequerplay
-            "I": 15,  # Очень удачные броски
-            "J": 15,  # Удачные броски
-            "K": 15,  # Неудачные броски
-            "L": 15,  # Очень неудачные броски
-            "M": 20,  # Рейтинг удачи
-            "N": 20,  # Рейтинг кубика
-            "O": 15,  # Общая ошибка
-            "P": 20,  # Общий рейтинг
+            "A": 25,
+            "B": 25,
+            "C": 25,
+            "D": 25,
+            "E": 25,
+            "F": 25,
+            "G": 25,
+            "H": 25,
+            "I": 25,
+            "J": 25,
+            "K": 25,
+            "L": 25,
+            "M": 25,
+            "N": 25,
+            "O": 25,
+            "P": 25,
+            "Q": 25,
+            "R": 25,
+            "S": 25,
+            "T": 25,
+            "U": 25,
+            "V": 25,
+            "W": 25,
         }
 
         for col, width in column_widths.items():
             ws.column_dimensions[col].width = width
 
-        # Сохраняем в буфер
         excel_buffer = io.BytesIO()
         wb.save(excel_buffer)
         excel_buffer.seek(0)
