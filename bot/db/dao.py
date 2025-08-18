@@ -116,15 +116,14 @@ class UserDAO(BaseDAO[User]):
             for service_type in service_types:
                 # Передаём объект перечисления, а не строку
                 balance = await self.get_total_analiz_balance(user_id, service_type)
-                balance_dict[service_type.value] = balance
+                balance_dict[service_type.name] = balance
 
             return balance_dict
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при получении общего баланса для пользователя {user_id}: {e}")
             raise
-
     async def get_total_analiz_balance(
-    self, user_id: int, service_type: str
+    self, user_id: int, service_type: PromocodeServiceQuantity.ServiceType
     ) -> Optional[int]:
         """
         Calculates the total balance for a specific service type for a user
@@ -132,6 +131,9 @@ class UserDAO(BaseDAO[User]):
         Returns None if any active record has a None balance (indicating unlimited balance).
         """
         try:
+            # Преобразуем объект перечисления в строку
+            service_type_value = service_type.name
+
             # Check for any None balance in active UserPromocodeService for the given service type
             promo_service_none_query = (
                 select(UserPromocodeService)
@@ -142,7 +144,7 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
-                    UserPromocodeService.service_type == service_type,  # Передаём строку
+                    UserPromocodeService.service_type == service_type_value,  # Передаём строку
                     UserPromocodeService.remaining_quantity.is_(None),
                 )
             )
@@ -151,7 +153,7 @@ class UserDAO(BaseDAO[User]):
             )
             if promo_service_none_result.scalar_one_or_none():
                 logger.info(
-                    f"User {user_id} has unlimited balance for service '{service_type}' in UserPromocodeService"
+                    f"User {user_id} has unlimited balance for service '{service_type_value}' in UserPromocodeService"
                 )
                 return None
 
@@ -166,7 +168,7 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserAnalizePayment.user_id == user_id,
                     UserAnalizePayment.is_active == True,
-                    UserAnalizePaymentService.service_type == service_type,  # Передаём строку
+                    UserAnalizePaymentService.service_type == service_type_value,  # Передаём строку
                     UserAnalizePaymentService.remaining_quantity.is_(None),
                 )
             )
@@ -175,7 +177,7 @@ class UserDAO(BaseDAO[User]):
             )
             if payment_service_none_result.scalar_one_or_none():
                 logger.info(
-                    f"User {user_id} has unlimited balance for service '{service_type}' in UserAnalizePaymentService"
+                    f"User {user_id} has unlimited balance for service '{service_type_value}' in UserAnalizePaymentService"
                 )
                 return None
 
@@ -189,7 +191,7 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
-                    UserPromocodeService.service_type == service_type,  # Передаём строку
+                    UserPromocodeService.service_type == service_type_value,  # Передаём строку
                 )
             )
             promo_service_result = await self._session.execute(promo_service_query)
@@ -206,7 +208,7 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserAnalizePayment.user_id == user_id,
                     UserAnalizePayment.is_active == True,
-                    UserAnalizePaymentService.service_type == service_type,  # Передаём строку
+                    UserAnalizePaymentService.service_type == service_type_value,  # Передаём строку
                 )
             )
             payment_service_result = await self._session.execute(payment_service_query)
@@ -215,12 +217,12 @@ class UserDAO(BaseDAO[User]):
             # Calculate total balance
             total_balance = promo_service_balance + payment_service_balance
             logger.info(
-                f"Total balance for service '{service_type}' for user {user_id}: {total_balance}"
+                f"Total balance for service '{service_type_value}' for user {user_id}: {total_balance}"
             )
             return total_balance
         except SQLAlchemyError as e:
             logger.error(
-                f"Error calculating total balance for service '{service_type}' for user {user_id}: {e}"
+                f"Error calculating total balance for service '{service_type.name}' for user {user_id}: {e}"
             )
             raise
 
