@@ -184,7 +184,7 @@ class AnalizePaymentServiceQuantity(Base):
 
     __tablename__ = "analize_payment_service_quantities"
 
-    class ServiceType(enum.Enum):
+    class PaymentServiceType(enum.Enum):
         ANALYSIS = "Автоанализ"
         SHORT_BOARD = "Короткая доска"
 
@@ -192,8 +192,8 @@ class AnalizePaymentServiceQuantity(Base):
     analize_payment_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("analize_payments.id")
     )
-    service_type: Mapped["ServiceType"] = mapped_column(
-        Enum(ServiceType), nullable=False
+    service_type: Mapped["PaymentServiceType"] = mapped_column(
+        Enum(PaymentServiceType), nullable=False
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 
@@ -213,8 +213,8 @@ class UserAnalizePaymentService(Base):
     user_analize_payment_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("user_analize_payments.id")
     )
-    service_type: Mapped[AnalizePaymentServiceQuantity.ServiceType] = mapped_column(
-        Enum(AnalizePaymentServiceQuantity.ServiceType), nullable=False
+    service_type: Mapped[AnalizePaymentServiceQuantity.PaymentServiceType] = mapped_column(
+        Enum(AnalizePaymentServiceQuantity.PaymentServiceType), nullable=False
     )
     remaining_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 
