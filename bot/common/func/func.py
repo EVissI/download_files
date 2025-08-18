@@ -607,3 +607,4 @@ def split_message(msg: str, *, with_photo: bool) -> list[str]:
         msg = msg[max_msg_length:]
 
     return parts
+

@@ -4,9 +4,9 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 class PromoKeyboard:
     promo_text_kb = {
-        'create_promo':'Cоздать промокод',
-        'view_promo':'Просмотр промокодов',
-        'deactivate_promo':'Деактивировать промокод',
+        'create_promo':'Cоздать',
+        'view_promo':'Просмотр',
+        'deactivate_promo':'Деактивировать',
         'back':'Назад',
     }
 

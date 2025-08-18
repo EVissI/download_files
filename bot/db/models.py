@@ -127,8 +127,8 @@ class PromocodeServiceQuantity(Base):
     __tablename__ = "promocode_service_quantities"
 
     class ServiceType(enum.Enum):
-        ANALYSIS = "Автоанализ"
-        SHORT_BOARD = "Короткая доска"
+        ANALYSIS = "Матч"
+        SHORT_BOARD = "Moneygame"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("promocode.id"))
@@ -185,8 +185,8 @@ class AnalizePaymentServiceQuantity(Base):
     __tablename__ = "analize_payment_service_quantities"
 
     class PaymentServiceType(enum.Enum):
-        ANALYSIS = "Автоанализ"
-        SHORT_BOARD = "Короткая доска"
+        ANALYSIS = "Матч"
+        SHORT_BOARD = "Moneygame"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     analize_payment_id: Mapped[int] = mapped_column(

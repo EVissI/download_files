@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import io
+import re
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -37,6 +38,7 @@ from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
+from bot.config import settings
 
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -101,6 +103,20 @@ async def handle_mat_file(
         file_type = file_name.split('.')[-1]
 
         await message.bot.download(file.file_id, destination=file_path)
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            file_content = f.read()
+
+        # Ищем строку, заканчивающуюся на "point match", и извлекаем число
+        match = re.search(r"^(\d+).*point match$", file_content, re.MULTILINE)
+        if match:
+            point_match_value = int(match.group(1))
+            # Сохраняем число в стейт
+            await state.update_data(point_match=point_match_value)
+            logger.info(f"Извлечено значение point match: {point_match_value}")
+        else:
+            logger.warning("Строка, заканчивающаяся на 'point match', не найдена.")
+            await state.update_data(point_match=None)
 
         loop = asyncio.get_running_loop()
         analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
@@ -230,6 +246,23 @@ async def handle_player_selection(
         formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
         await callback.message.delete()
+        duration = data.get('point_match_value')
+        if duration is not None or duration != 0:
+            try:
+                formated_data = get_analysis_data(analysis_data)
+                player_names = list(formated_data)
+                player1_name, player2_name = player_names
+                p1 = analysis_data[player1_name]
+                p2 = analysis_data[player2_name]
+                current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+                callback.message.bot.send_message(
+                    settings.CHAT_GROUP_ID,
+                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} {p1['snowie_error_rate']} - {player2_name} {p2['snowie_error_rate']}\n\n",
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при отправке сообщения в группу: {e}")
         await callback.message.answer(
             f"{formatted_analysis}\n\n",
             parse_mode="HTML",
@@ -245,6 +278,8 @@ async def handle_player_selection(
         await session_without_commit.rollback()
         logger.error(f"Ошибка при сохранении выбора игрока: {e}")
         await callback.message.answer(i18n.auto.analyze.error.save())
+
+
 
 @auto_analyze_router.callback_query(DownloadPDFCallback.filter(), UserInfo())
 async def handle_download_pdf(
