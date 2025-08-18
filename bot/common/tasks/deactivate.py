@@ -49,16 +49,15 @@ async def _expire_analiz_balances_with_session(session: AsyncSession) -> None:
 
         # Проверяем истекшие записи для каждого пользователя
         for user_id in user_ids:
-            # Проверяем и деактивируем истекшие записи
             any_expired = await user_dao.check_expired_records(user_id)
             if any_expired:
-                # Загружаем пользователя для отправки уведомления
                 user = await user_dao.find_one_or_none_by_id(user_id)
                 if user:
                     lang = user.lang_code or "ru"
                     i18n = translator_hub.get_translator_by_locale(lang)
-                    # Получаем текущий баланс для сообщения
                     total_balance = await user_dao.get_total_analiz_balance(user_id)
+                    if total_balance is None or total_balance == 0:
+                        continue # Пропускаем, если нет баланса
                     balance_text = (
                         "неограниченный"
                         if total_balance is None

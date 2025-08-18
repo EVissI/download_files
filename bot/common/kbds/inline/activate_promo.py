@@ -21,3 +21,11 @@ def get_activate_promo_keyboard(i18n:TranslatorRunner) -> InlineKeyboardMarkup:
         url="https://t.me/Matchbg",
     )
     return builder.as_markup()
+
+def get_activate_promo_without_link_keyboard(i18n:TranslatorRunner) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text=i18n.user.inline.activate_promo(),
+        callback_data=PromoCallback(action='activate').pack(),
+    )
+    return builder.as_markup()
