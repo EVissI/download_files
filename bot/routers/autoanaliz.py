@@ -162,6 +162,23 @@ async def handle_mat_file(
             await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.ANALYSIS)
 
             formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
+            duration = point_match_value
+            if duration is not None or duration != 0:
+                try:
+                    formated_data = get_analysis_data(analysis_data)
+                    player_names = list(formated_data)
+                    player1_name, player2_name = player_names
+                    p1 = analysis_data[player1_name]
+                    p2 = analysis_data[player2_name]
+                    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                    message.bot.send_message(
+                        settings.CHAT_GROUP_ID,
+                        f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} {p1['snowie_error_rate']} - {player2_name} {p2['snowie_error_rate']} Длительность: {duration} игр\n\n",
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    logger.error(f"Ошибка при отправке сообщения в группу: {e}")
             await waiting_manager.stop()
             await message.answer(
                 f"{formatted_analysis}\n\n",
@@ -246,7 +263,7 @@ async def handle_player_selection(
         formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
         await callback.message.delete()
-        duration = data.get('point_match_value')
+        duration = data.get('point_match')
         if duration is not None or duration != 0:
             try:
                 formated_data = get_analysis_data(analysis_data)
@@ -258,7 +275,7 @@ async def handle_player_selection(
             
                 callback.message.bot.send_message(
                     settings.CHAT_GROUP_ID,
-                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} {p1['snowie_error_rate']} - {player2_name} {p2['snowie_error_rate']}\n\n",
+                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} {p1['snowie_error_rate']} - {player2_name} {p2['snowie_error_rate']} Длительность: {duration} игр\n\n",
                     parse_mode="HTML"
                 )
             except Exception as e:
