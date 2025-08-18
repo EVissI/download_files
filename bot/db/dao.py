@@ -113,7 +113,8 @@ class UserDAO(BaseDAO[User]):
             ]
 
             for service_type in service_types:
-                balance = await self.get_total_analiz_balance(user_id, service_type.value)
+                # Передаём объект перечисления, а не строку
+                balance = await self.get_total_analiz_balance(user_id, service_type)
                 balance_dict[service_type.value] = balance
 
             return balance_dict
