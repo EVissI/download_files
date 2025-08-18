@@ -31,8 +31,8 @@ profile_router = Router()
 )
 async def profile_command(message: Message, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession):
     balance_dict = await UserDAO(session_without_commit).get_total_balance_dict(user_info.id)
-    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.value, '∞')
-    short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.value, '∞')
+    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.name, '∞')
+    short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.name, '∞')
 
     await message.answer(
         i18n.user.profile.text(
@@ -65,8 +65,8 @@ async def change_language_back_callback(
     callback: CallbackQuery, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession
 ):
     balance_dict = await UserDAO(session_without_commit).get_total_balance_dict(user_info.id)
-    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.value, '∞')
-    short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.value, '∞')
+    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.name, '∞')
+    short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.name, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
@@ -108,8 +108,8 @@ async def back_to_profile(
     callback: CallbackQuery, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession
 ):
     balance_dict = await UserDAO(session_without_commit).get_total_balance_dict(user_info.id)
-    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.value, '∞')
-    short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.value, '∞')
+    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.name, '∞')
+    short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.name, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
