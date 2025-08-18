@@ -56,18 +56,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  db_backup:
-    build: .
-    command: /bin/sh -c "python -m bot.db.pg_backup"
-    container_name: db_backup
-    volumes:
-      - ./bot:/app/bot
-      - ./log:/app/log
-    env_file:
-      - .env
-    depends_on:
-      - db
-    restart: unless-stopped
 
 volumes:
   pgdata:

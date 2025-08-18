@@ -100,129 +100,146 @@ class UserDAO(BaseDAO[User]):
             logger.error(f"Ошибка при получении пользователей с платежами: {e}")
             raise
 
-    async def get_total_analiz_balance(self, user_id: int) -> Optional[int]:
+    async def get_total_analiz_balance(self, user_id: int, service_type: str) -> Optional[int]:
         """
-        Calculates the total analiz_balance for a user from active UserPromocode and UserAnalizePayment records.
+        Calculates the total balance for a specific service type for a user
+        from active UserPromocodeService and UserAnalizePayment records.
         Returns None if any active record has a None balance (indicating unlimited balance).
         """
         try:
-            # Check for any None balance in active UserPromocode
-            promo_none_query = select(UserPromocode).where(
-                UserPromocode.user_id == user_id,
-                UserPromocode.is_active == True,
-                UserPromocode.current_analize_balance.is_(None),
+            # Check for any None balance in active UserPromocodeService for the given service type
+            promo_service_none_query = (
+                select(UserPromocodeService)
+                .join(
+                    UserPromocode,
+                    UserPromocode.id == UserPromocodeService.user_promocode_id,
+                )
+                .where(
+                    UserPromocode.user_id == user_id,
+                    UserPromocode.is_active == True,
+                    UserPromocodeService.service_type == service_type,
+                    UserPromocodeService.remaining_quantity.is_(None),
+                )
             )
-            promo_none_result = await self._session.execute(promo_none_query)
-            if promo_none_result.scalar_one_or_none():
+            promo_service_none_result = await self._session.execute(promo_service_none_query)
+            if promo_service_none_result.scalar_one_or_none():
                 logger.info(
-                    f"User {user_id} has unlimited balance due to None in UserPromocode"
+                    f"User {user_id} has unlimited balance for service '{service_type}' in UserPromocodeService"
                 )
                 return None
 
-            # Check for any None balance in active UserAnalizePayment
+            # Check for any None balance in active UserAnalizePayment for the given service type
             payment_none_query = select(UserAnalizePayment).where(
                 UserAnalizePayment.user_id == user_id,
                 UserAnalizePayment.is_active == True,
+                UserAnalizePayment.service_type == service_type,
                 UserAnalizePayment.current_analize_balance.is_(None),
             )
             payment_none_result = await self._session.execute(payment_none_query)
             if payment_none_result.scalar_one_or_none():
                 logger.info(
-                    f"User {user_id} has unlimited balance due to None in UserAnalizePayment"
+                    f"User {user_id} has unlimited balance for service '{service_type}' in UserAnalizePayment"
                 )
                 return None
 
-            # Get sum of balances from active UserPromocode
-            promo_query = select(func.sum(UserPromocode.current_analize_balance)).where(
-                UserPromocode.user_id == user_id, UserPromocode.is_active == True
+            # Get sum of balances from active UserPromocodeService for the given service type
+            promo_service_query = (
+                select(func.sum(UserPromocodeService.remaining_quantity))
+                .join(
+                    UserPromocode,
+                    UserPromocode.id == UserPromocodeService.user_promocode_id,
+                )
+                .where(
+                    UserPromocode.user_id == user_id,
+                    UserPromocode.is_active == True,
+                    UserPromocodeService.service_type == service_type,
+                )
             )
-            promo_result = await self._session.execute(promo_query)
-            promo_balance = promo_result.scalar() or 0
+            promo_service_result = await self._session.execute(promo_service_query)
+            promo_service_balance = promo_service_result.scalar() or 0
 
-            # Get sum of balances from active UserAnalizePayment
+            # Get sum of balances from active UserAnalizePayment for the given service type
             payment_query = select(
                 func.sum(UserAnalizePayment.current_analize_balance)
             ).where(
                 UserAnalizePayment.user_id == user_id,
                 UserAnalizePayment.is_active == True,
+                UserAnalizePayment.service_type == service_type,
             )
             payment_result = await self._session.execute(payment_query)
             payment_balance = payment_result.scalar() or 0
 
-            total_balance = promo_balance + payment_balance
-            logger.info(f"Total analiz_balance for user {user_id}: {total_balance}")
+            # Calculate total balance
+            total_balance = promo_service_balance + payment_balance
+            logger.info(f"Total balance for service '{service_type}' for user {user_id}: {total_balance}")
             return total_balance
         except SQLAlchemyError as e:
             logger.error(
-                f"Error calculating total analiz_balance for user {user_id}: {e}"
+                f"Error calculating total balance for service '{service_type}' for user {user_id}: {e}"
             )
             raise
 
     async def decrease_analiz_balance(self, user_id: int) -> bool:
         """
-        Decreases analiz_balance by 1 from the oldest active UserPromocode or UserAnalizePayment.
+        Decreases analiz_balance by 1 from the oldest active UserPromocodeService or UserAnalizePayment.
         Returns True if balance was decreased successfully, False otherwise.
         """
         try:
-            # Find the oldest active record (UserPromocode or UserAnalizePayment)
-            promo_query = select(
-                UserPromocode.id,
-                UserPromocode.current_analize_balance,
-                UserPromocode.created_at,
-                literal("UserPromocode").label("record_type"),
-            ).where(
-                UserPromocode.user_id == user_id,
-                UserPromocode.is_active == True,
-                UserPromocode.current_analize_balance > 0,
-            )
-
-            payment_query = select(
-                UserAnalizePayment.id,
-                UserAnalizePayment.current_analize_balance,
-                UserAnalizePayment.created_at,
-                literal("UserAnalizePayment").label("record_type"),
-            ).where(
-                UserAnalizePayment.user_id == user_id,
-                UserAnalizePayment.is_active == True,
-                UserAnalizePayment.current_analize_balance > 0,
-            )
-
-            # Combine queries using UNION and order by created_at
-            union_query = promo_query.union(payment_query).order_by(
-                UserPromocode.created_at.asc()
-            )
-
-            result = await self._session.execute(union_query)
-            oldest_record = result.first()
-
-            if not oldest_record:
-                logger.info(f"No active records with balance > 0 for user {user_id}")
-                return False
-
-            record_id, balance, created_at, record_type = oldest_record
-
-            # Fetch the actual record based on type
-            if record_type == "UserPromocode":
-                record = await self._session.get(UserPromocode, record_id)
-            else:  # UserAnalizePayment
-                record = await self._session.get(UserAnalizePayment, record_id)
-
-            if not record:
-                logger.error(
-                    f"Record {record_type} ID {record_id} not found for user {user_id}"
+            # Find the oldest active UserPromocodeService with remaining_quantity > 0
+            promo_service_query = (
+                select(UserPromocodeService)
+                .join(
+                    UserPromocode,
+                    UserPromocode.id == UserPromocodeService.user_promocode_id,
                 )
-                return False
-
-            # Decrease balance
-            record.current_analize_balance -= 1
-            if record.current_analize_balance == 0:
-                record.is_active = False
-
-            await self._session.commit()
-            logger.info(
-                f"Decreased balance for user {user_id} from {record_type} ID {record_id}"
+                .where(
+                    UserPromocode.user_id == user_id,
+                    UserPromocode.is_active == True,
+                    UserPromocodeService.remaining_quantity > 0,
+                )
+                .order_by(UserPromocode.created_at.asc())
             )
-            return True
+            promo_service_result = await self._session.execute(promo_service_query)
+            promo_service = promo_service_result.scalar_one_or_none()
+
+            if promo_service:
+                # Decrease balance in UserPromocodeService
+                promo_service.remaining_quantity -= 1
+                if promo_service.remaining_quantity == 0:
+                    promo_service.is_active = False
+                await self._session.commit()
+                logger.info(
+                    f"Decreased balance for user {user_id} from UserPromocodeService ID {promo_service.id}"
+                )
+                return True
+
+            # Find the oldest active UserAnalizePayment with current_analize_balance > 0
+            payment_query = (
+                select(UserAnalizePayment)
+                .where(
+                    UserAnalizePayment.user_id == user_id,
+                    UserAnalizePayment.is_active == True,
+                    UserAnalizePayment.current_analize_balance > 0,
+                )
+                .order_by(UserAnalizePayment.created_at.asc())
+            )
+            payment_result = await self._session.execute(payment_query)
+            payment = payment_result.scalar_one_or_none()
+
+            if payment:
+                # Decrease balance in UserAnalizePayment
+                payment.current_analize_balance -= 1
+                if payment.current_analize_balance == 0:
+                    payment.is_active = False
+                await self._session.commit()
+                logger.info(
+                    f"Decreased balance for user {user_id} from UserAnalizePayment ID {payment.id}"
+                )
+                return True
+
+            # No active records with balance > 0
+            logger.info(f"No active records with balance > 0 for user {user_id}")
+            return False
         except SQLAlchemyError as e:
             logger.error(f"Error decreasing analiz_balance for user {user_id}: {e}")
             await self._session.rollback()
