@@ -299,7 +299,7 @@ class UserDAO(BaseDAO[User]):
             logger.error(f"Error decreasing analiz_balance for user {user_id}: {e}")
             await self._session.rollback()
             return False
-        
+            
     async def check_expired_records(self, user_id: int) -> bool:
         """
         Checks if any UserPromocode or UserAnalizePayment records for the user have expired based on duration_days.
