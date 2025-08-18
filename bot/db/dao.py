@@ -256,7 +256,6 @@ class UserDAO(BaseDAO[User]):
                 promo_service.remaining_quantity -= 1
                 if promo_service.remaining_quantity == 0:
                     promo_service.is_active = False
-                await self._session.commit()
                 logger.info(
                     f"Decreased balance for user {user_id} from UserPromocodeService ID {promo_service.id}"
                 )
@@ -286,7 +285,6 @@ class UserDAO(BaseDAO[User]):
                 payment_service.remaining_quantity -= 1
                 if payment_service.remaining_quantity == 0:
                     payment_service.is_active = False
-                await self._session.commit()
                 logger.info(
                     f"Decreased balance for user {user_id} from UserAnalizePaymentService ID {payment_service.id}"
                 )
