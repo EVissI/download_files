@@ -132,7 +132,6 @@ class UserDAO(BaseDAO[User]):
             payment_none_query = select(UserAnalizePayment).where(
                 UserAnalizePayment.user_id == user_id,
                 UserAnalizePayment.is_active == True,
-                UserAnalizePayment.service_type == service_type,
                 UserAnalizePayment.current_analize_balance.is_(None),
             )
             payment_none_result = await self._session.execute(payment_none_query)
@@ -163,7 +162,6 @@ class UserDAO(BaseDAO[User]):
             ).where(
                 UserAnalizePayment.user_id == user_id,
                 UserAnalizePayment.is_active == True,
-                UserAnalizePayment.service_type == service_type,
             )
             payment_result = await self._session.execute(payment_query)
             payment_balance = payment_result.scalar() or 0
