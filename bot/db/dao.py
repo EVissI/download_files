@@ -592,13 +592,15 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 
     async def activate_promo_code(self, code: str, user_id: int) -> bool:
         """
-        Активирует промокод для пользователя (добавляет запись в user_promocode, увеличивает activate_count и увеличивает analiz_balance).
+        Активирует промокод для пользователя (добавляет запись в user_promocode, увеличивает activate_count и создает записи в user_promocode_service).
         """
         try:
+            # Находим промокод по коду
             promocode = await self.find_by_code(code)
             if not promocode:
                 return False
 
+            # Проверяем, существует ли пользователь
             user = await self._session.get(User, user_id)
             if not user:
                 return False  # Не создавать нового пользователя
@@ -607,13 +609,22 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             user_promo = UserPromocode(
                 user_id=user_id,
                 promocode_id=promocode.id,
-                current_analize_balance=promocode.analiz_count,
             )
             self._session.add(user_promo)
 
-            # Увеличиваем счетчик активаций
+            # Создаём записи в UserPromocodeService для каждой услуги, связанной с промокодом
+            for service in promocode.services:
+                user_promo_service = UserPromocodeService(
+                    user_promocode=user_promo,
+                    service_type=service.service_type,
+                    remaining_quantity=service.quantity,
+                )
+                self._session.add(user_promo_service)
+
+            # Увеличиваем счётчик активаций промокода
             promocode.activate_count = (promocode.activate_count or 0) + 1
 
+            # Сохраняем изменения
             await self._session.commit()
             return True
         except SQLAlchemyError as e:
