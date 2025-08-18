@@ -100,6 +100,7 @@ class UserDAO(BaseDAO[User]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при получении пользователей с платежами: {e}")
             raise
+        
     async def get_total_balance_dict(self, user_id: int) -> dict[str, Optional[int]]:
         """
         Возвращает общий баланс для всех типов услуг в формате словаря.
