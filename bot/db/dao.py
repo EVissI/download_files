@@ -595,8 +595,15 @@ class PromoCodeDAO(BaseDAO[Promocode]):
         Активирует промокод для пользователя (добавляет запись в user_promocode, увеличивает activate_count и создает записи в user_promocode_service).
         """
         try:
-            # Находим промокод по коду
-            promocode = await self.find_by_code(code)
+            # Находим промокод по коду с явной загрузкой связанных данных
+            query = (
+                select(Promocode)
+                .where(Promocode.code == code)
+                .options(selectinload(Promocode.services))  # Явная загрузка связанных услуг
+            )
+            result = await self._session.execute(query)
+            promocode = result.scalar_one_or_none()
+
             if not promocode:
                 return False
 
