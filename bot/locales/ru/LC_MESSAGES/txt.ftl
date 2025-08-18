@@ -3,7 +3,9 @@ user-static-hello = Привет! Я бот для анализа. Я могу �
 
 keyboard-user-reply-autoanalyze = 🔮 Автоанализ
 keyboard-user-reply-profile = 🧍‍♂️ Профиль
+keyboard-user-reply-short_board_view = 📊 Короткая доска
 keyboard-admin-reply-admin_panel = Админпанель
+
 
 keyboard-reply-cancel = Отмена
 keyboard-reply-back = Назад

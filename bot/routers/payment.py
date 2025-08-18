@@ -91,6 +91,8 @@ async def handle_payment_select(callback: CallbackQuery, callback_data: AnalizeP
         prices=[{"label": "Руб", "amount": amount}],
         provider_data=provider_data  # Передаем данные чека
     )
+
+    
 @payment_router.pre_checkout_query()
 async def process_pre_check_out_query(
     pre_checkout_query: PreCheckoutQuery

@@ -270,7 +270,7 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
     else:
         sent_message = await message.answer(
             text=preview_text,
-            reply_markup=builder.as_markup()
+        reply_markup=builder.as_markup()
         )
     
     await state.update_data(sent_message_id=sent_message.message_id)

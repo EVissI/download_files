@@ -1,0 +1,936 @@
+nohup: ignoring input
+
+> mini_app@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.4.4 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://5.35.126.186:3000
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 2.1s
+ ○ Compiling /api/bot ...
+ ✓ Compiled /api/bot in 4.7s
+ POST /api/bot 200 in 5289ms
+ POST /api/bot 200 in 154ms
+ 1 --> Line: 52||route.ts
+ buttons[0][0].web_app.url:  https://backgammon-bot.duckdns.org/?game=4584ae73-0160-40a4-b47c-5bf48f402617&chat_id=826161194
+ POST /api/bot 200 in 534ms
+ 1 --> Line: 52||route.ts
+ buttons[0][0].web_app.url:  https://backgammon-bot.duckdns.org/?game=46817bfb-d5bd-4dc6-8280-98b7d417c905&chat_id=826161194
+ POST /api/bot 200 in 350ms
+ POST /api/bot 200 in 103ms
+ POST /api/bot 200 in 95ms
+ POST /api/bot 200 in 139ms
+ POST /api/bot 200 in 112ms
+ POST /api/bot 200 in 105ms
+ POST /api/bot 200 in 104ms
+ POST /api/bot 200 in 146ms
+ POST /api/bot 200 in 124ms
+ ○ Compiling / ...
+ ✓ Compiled / in 9.9s
+ GET / 200 in 10249ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 2538ms
+ ⚠ Cross origin request detected from backgammon-bot.duckdns.org to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /favicon.ico ...
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 1402ms
+ ✓ Compiled /favicon.ico in 1426ms
+ GET /json/null/games.json 404 in 1595ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 148ms
+ GET /favicon.ico 200 in 237ms
+ GET /favicon.png 404 in 78ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 251ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 117ms
+ GET /json/null/games.json 404 in 89ms
+ GET /favicon.ico 200 in 248ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 230ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 159ms
+ GET /json/null/games.json 404 in 154ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 284ms
+ POST /api/bot 200 in 253ms
+ 1 --> Line: 52||route.ts
+ buttons[0][0].web_app.url:  https://backgammon-bot.duckdns.org/?game=b6e06b08-596a-4cf2-a61c-3726cb81c713&chat_id=826161194
+ POST /api/bot 200 in 521ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET /?game=b6e06b08-596a-4cf2-a61c-3726cb81c713&chat_id=826161194 200 in 82ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 237ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 245ms
+ GET /dispatch.asp 404 in 90ms
+ GET /ab2g 404 in 85ms
+ GET /ab2h 404 in 82ms
+ GET /alive.php 404 in 81ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 116ms
+ GET /teorema505?t=1 404 in 83ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 99ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 112ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 107ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 146ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 81ms
+ GET /json/null/games.json 404 in 100ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 259ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 110ms
+ GET /json/null/games.json 404 in 73ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 255ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 67ms
+ GET /json/null/games.json 404 in 82ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 253ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET /?game=b6e06b08-596a-4cf2-a61c-3726cb81c713&chat_id=826161194 200 in 140ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 241ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 232ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 252ms
+ GET /owa/auth/logon.aspx 404 in 94ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ HEAD / 200 in 82ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 82ms
+ GET /.env 404 in 91ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 97ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 185ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 232ms
+ GET /favicon.ico 200 in 227ms
+ GET /sitemap.xml 404 in 100ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 91ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 117ms
+ GET /favicon.ico 200 in 232ms
+ GET /favicon.png 404 in 58ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 226ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 79ms
+ GET /json/null/games.json 404 in 87ms
+ GET /favicon.ico 200 in 231ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 224ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 102ms
+ GET /js/lkk_ch.js 404 in 99ms
+ GET /js/twint_ch.js 404 in 69ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 239ms
+ GET /owa/auth/x.js 404 in 133ms
+ GET /.env 404 in 161ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ POST / 200 in 158ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 114ms
+ GET /.env.local 404 in 102ms
+ GET /dispatch.asp 404 in 95ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 201ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 134ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 235ms
+ GET /developmentserver/metadatauploader 404 in 81ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 107ms
+ GET /js/twint_ch.js 404 in 83ms
+ GET /js/lkk_ch.js 404 in 62ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 222ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 123ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 78ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 94ms
+ GET /favicon.ico 200 in 226ms
+ GET /favicon.png 404 in 194ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 232ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 81ms
+ GET /json/null/games.json 404 in 69ms
+ GET /favicon.ico 200 in 232ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 234ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 131ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 119ms
+ GET /.env 404 in 92ms
+ GET /api/.env 404 in 77ms
+ GET /backend/.env 404 in 66ms
+ GET /admin/.env 404 in 129ms
+ GET /.env.example 404 in 79ms
+ GET /app_dev.php/_profiler/phpinfo 404 in 60ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET /?phpinfo=-1 200 in 64ms
+ GET /data/.env 404 in 95ms
+ GET /www/.env 404 in 93ms
+ GET /developer/.env 404 in 53ms
+ GET /home/.env 404 in 53ms
+ GET /media/.env 404 in 48ms
+ GET /docs/.env 404 in 62ms
+ GET /old/.env 404 in 58ms
+ GET /.env.local 404 in 65ms
+ GET /cms/.env 404 in 58ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 105ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET /?XDEBUG_SESSION_START=phpstorm 200 in 71ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 113ms
+ GET /favicon.ico 200 in 243ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 110ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 87ms
+ GET /favicon.ico 200 in 234ms
+ GET /.git/config 404 in 100ms
+ GET /favicon.ico 200 in 230ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 89ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 79ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 98ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 282ms
+ GET /actuator/gateway/routes 404 in 183ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 94ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 100ms
+ GET /.git/config 404 in 111ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 113ms
+ POST /api/bot 200 in 278ms
+ 1 --> Line: 52||route.ts
+ buttons[0][0].web_app.url:  https://backgammon-bot.duckdns.org/?game=4d451bff-b663-4bed-a858-af6eaad50ed7&chat_id=826161194
+ POST /api/bot 200 in 570ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET /?game=4d451bff-b663-4bed-a858-af6eaad50ed7&chat_id=826161194 200 in 95ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 250ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 259ms
+ POST /api/bot 200 in 281ms
+ 1 --> Line: 52||route.ts
+ buttons[0][0].web_app.url:  https://backgammon-bot.duckdns.org/?game=1ba2df0c-bcb0-4fcf-ba6c-b869c171ef98&chat_id=826161194
+ POST /api/bot 200 in 545ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET /?game=1ba2df0c-bcb0-4fcf-ba6c-b869c171ef98&chat_id=826161194 200 in 80ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 247ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 225ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 112ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 237ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 114ms
+ GET /favicon.ico 200 in 228ms
+ GET /favicon.png 404 in 82ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 226ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 125ms
+ GET /json/null/games.json 404 in 68ms
+ GET /favicon.ico 200 in 225ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 228ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 97ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 234ms
+ GET /favicon.ico 200 in 233ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 232ms
+ GET /favicon.ico 200 in 250ms
+ GET /security.txt 404 in 72ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 90ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 112ms
+ GET /favicon.ico 200 in 237ms
+ GET /database_backup.sql 404 in 2509ms
+ GET /.aws/credentials 404 in 2539ms
+ GET /server.key 404 in 2643ms
+ GET /wp-config.php 404 in 2694ms
+ GET /config.php 404 in 2770ms
+ GET /feed 404 in 2813ms
+ GET /user_secrets.yml 404 in 2840ms
+ GET /secrets.json 404 in 2846ms
+ GET /database.sql 404 in 2873ms
+ GET /backup.sql 404 in 2881ms
+ GET /.ssh/id_ed25519 404 in 2880ms
+ GET /.env 404 in 2896ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET /phpinfo.php 404 in 2902ms
+ GET /.git/HEAD 404 in 2909ms
+ GET /.ssh/id_rsa 404 in 2905ms
+ GET /api/.env 404 in 2917ms
+ GET /config/production.json 404 in 2920ms
+ GET /server-status 404 in 2915ms
+ GET /config.yml 404 in 2914ms
+ GET /wp-admin/setup-config.php 404 in 2907ms
+ GET /settings.py 404 in 2897ms
+ GET /.env.production 404 in 2894ms
+ GET /etc/ssl/private/server.key 404 in 2889ms
+ GET /config.yaml 404 in 2884ms
+ GET /config.json 404 in 2882ms
+ GET /dump.sql 404 in 2878ms
+ GET /docker-compose.yml 404 in 2866ms
+ GET /config.xml 404 in 2861ms
+ GET /web.config 404 in 2856ms
+ GET /.vscode/sftp.json 404 in 2820ms
+ GET /cloud-config.yml 404 in 2775ms
+ GET /.svn/wc.db 404 in 2720ms
+ GET /backup.zip 404 in 2694ms
+ GET /backup.tar.gz 404 in 2691ms
+ GET /_vti_pvt/service.pwd 404 in 2691ms
+ GET /db/schema.rb 404 in 2688ms
+ GET / 200 in 2687ms
+ GET /.ssh/id_ecdsa 404 in 2680ms
+ POST /hello.world?%ADd+allow_url_include%3d1+%ADd+auto_prepend_file%3dphp://input 404 in 148ms
+ OPTIONS / 400 in 56ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 176ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 253ms
+ POST /hello.world?%ADd+allow_url_include%3d1+%ADd+auto_prepend_file%3dphp://input 404 in 78ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 115ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 69ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 111ms
+ GET /favicon.ico 200 in 262ms
+ GET /restore.php 404 in 95ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 161ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 180ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 109ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 70ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 62ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 237ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 90ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 126ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 229ms
+ GET /favicon.ico 200 in 229ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 92ms
+ GET /js/twint_ch.js 404 in 81ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 226ms
+ GET /js/lkk_ch.js 404 in 181ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 86ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 258ms
+ GET /favicon.ico 200 in 242ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 109ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 95ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 105ms
+ GET /favicon.ico 200 in 227ms
+ GET /favicon.png 404 in 61ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 229ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 93ms
+ GET /json/null/games.json 404 in 94ms
+ GET /favicon.ico 200 in 226ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 233ms
+ GET /owa/auth/logon.aspx 404 in 96ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 178ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 235ms
+ GET /favicon.ico 200 in 225ms
+ GET /.well-known/security.txt 404 in 95ms
+ GET /dispatch.asp 404 in 62ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 98ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 97ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 71ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 84ms
+ GET /favicon.ico 200 in 227ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 107ms
+ GET /.env 404 in 143ms
+ GET /phpinfo 404 in 89ms
+ GET /phpinfo.php 404 in 59ms
+ GET /portal/.env 404 in 78ms
+ GET /env/.env 404 in 48ms
+ GET /api/.env 404 in 44ms
+ GET /app/.env 404 in 62ms
+ GET /dev/.env 404 in 65ms
+ GET /new/.env 404 in 54ms
+ GET /new/.env.local 404 in 55ms
+ GET /new/.env.production 404 in 60ms
+ GET /new/.env.staging 404 in 91ms
+ GET /_phpinfo.php 404 in 55ms
+ GET /_profiler/phpinfo 404 in 73ms
+ GET /_profiler/phpinfo/info.php 404 in 61ms
+ GET /_profiler/phpinfo/phpinfo.php 404 in 69ms
+ GET /wp-config 404 in 72ms
+ GET /aws-secret.yaml 404 in 75ms
+ GET /awstats/.env 404 in 65ms
+ GET /conf/.env 404 in 69ms
+ GET /cron/.env 404 in 53ms
+ GET /www/.env 404 in 58ms
+ GET /docker/.env 404 in 67ms
+ GET /docker/app/.env 404 in 97ms
+ GET /env.backup 404 in 81ms
+ GET /xampp/phpinfo.php 404 in 60ms
+ GET /lara/info.php 404 in 88ms
+ GET /lara/phpinfo.php 404 in 71ms
+ GET /laravel/info.php 404 in 111ms
+ GET /.vscode/.env 404 in 119ms
+ GET /js/.env 404 in 98ms
+ GET /laravel/.env 404 in 62ms
+ GET /laravel/core/.env 404 in 73ms
+ GET /mail/.env 404 in 54ms
+ GET /mailer/.env 404 in 61ms
+ GET /nginx/.env 404 in 173ms
+ GET /public/.env 404 in 104ms
+ GET /site/.env 404 in 80ms
+ GET /xampp/.env 404 in 63ms
+ GET /main/.env 404 in 53ms
+ GET /node_modules/.env 404 in 139ms
+ GET /kyc/.env 404 in 65ms
+ GET /admin/.env 404 in 70ms
+ GET /prod/.env 404 in 60ms
+ GET /.env.bak 404 in 51ms
+ GET /api/shared/config/config.env 404 in 58ms
+ GET /api/shared/config.env 404 in 55ms
+ GET /config.env 404 in 50ms
+ GET /website/.env 404 in 61ms
+ GET /development/.env 404 in 61ms
+ GET /backend/.env 404 in 69ms
+ GET /api/shared/config/.env 404 in 50ms
+ GET /api/shared/.env 404 in 69ms
+ GET /api/config.env 404 in 96ms
+ GET /service/email_service.py 404 in 61ms
+ GET /node/.env_example 404 in 69ms
+ GET /.env.production.local 404 in 52ms
+ GET /.env.local 404 in 53ms
+ GET /.env.example 404 in 60ms
+ GET /.env.stage 404 in 58ms
+ GET /server/config/database.js 404 in 50ms
+ GET /.env.old 404 in 54ms
+ GET /.env_sample 404 in 53ms
+ GET /scripts/nodemailer.js 404 in 69ms
+ GET /.env.prod 404 in 71ms
+ GET /crm/.env 404 in 61ms
+ GET /local/.env 404 in 69ms
+ GET /core/.env 404 in 57ms
+ GET /apps/.env 404 in 62ms
+ GET /application/.env 404 in 61ms
+ GET /web/.env 404 in 54ms
+ GET /.aws/credentials 404 in 63ms
+ GET /wp-config.php.bak 404 in 78ms
+ GET /info.php 404 in 51ms
+ GET /dashboard/phpinfo.php 404 in 61ms
+ GET /static/js/main.141b0494.js 404 in 112ms
+ GET /static/js/2.ca066a4b.chunk.js 404 in 53ms
+ GET /static/js/main.e85f7a37.js 404 in 68ms
+ GET /admin/server_info.php 404 in 45ms
+ GET /server_info.php 404 in 73ms
+ GET /app_dev.php/_profiler/phpinfo 404 in 71ms
+ GET /test.php 404 in 83ms
+ GET /server-info 404 in 70ms
+ GET /server-info.php 404 in 166ms
+ GET /secured/phpinfo.php 404 in 61ms
+ GET /config.js 404 in 51ms
+ GET /server.js 404 in 45ms
+ GET /appsettings.json 404 in 55ms
+ GET /shared/config/config.js 404 in 47ms
+ GET /config/aws.yml 404 in 53ms
+ GET /settings.py 404 in 50ms
+ GET /config.json 404 in 72ms
+ GET /main.js 404 in 58ms
+ GET /config/constants.js 404 in 92ms
+ GET /application.properties 404 in 70ms
+ GET /public/js/main.js 404 in 54ms
+ GET /js/main.js 404 in 65ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET /?phpinfo=1 200 in 82ms
+ GET /storage/logs/laravel.log 404 in 63ms
+ GET /swagger.json 404 in 85ms
+ GET /swagger.js 404 in 64ms
+ GET /gatsby-config.js 404 in 61ms
+ GET /backend/config/default.yml 404 in 86ms
+ GET /app.py 404 in 122ms
+ GET /admin/controllers/merchant.js 404 in 128ms
+ GET /admin/controllers/partner.js 404 in 71ms
+ GET /api/config.js 404 in 64ms
+ GET /api/objects/codes.php.save 404 in 60ms
+ GET /apis/config/config.js 404 in 52ms
+ GET /apis/controllers/users.js 404 in 57ms
+ GET /app.js 404 in 49ms
+ GET /backend/config/development.yml 404 in 68ms
+ GET /cloud/Scraper.js 404 in 84ms
+ GET /config/application.yml 404 in 60ms
+ GET /config/storage.yml 404 in 68ms
+ GET /configs/routes-4aug.js 404 in 66ms
+ GET /configs/routes.js 404 in 62ms
+ GET /configs/s3_config.json 404 in 66ms
+ GET /controller/admin/post.js 404 in 55ms
+ GET /controller/api/post.js 404 in 59ms
+ GET /controllers/settings.js 404 in 59ms
+ GET /getcpuutil.php-bakworking 404 in 52ms
+ GET /helper.js 404 in 84ms
+ GET /helper/EmailHelper.js 404 in 62ms
+ GET /index.js 404 in 80ms
+ GET /index.html 404 in 62ms
+ GET /my_env/chakaash.py 404 in 114ms
+ GET /my_env/newsletter.py 404 in 68ms
+ GET /my_env/palash.py 404 in 57ms
+ GET /mytest/astech_robot.js 404 in 76ms
+ GET /partner/config/config.js 404 in 71ms
+ GET /config/settings.json 404 in 50ms
+ GET /config/settings.local 404 in 63ms
+ GET /.circleci/configs/development.yml 404 in 66ms
+ GET /config/settings.prod 404 in 143ms
+ GET /app/config/parameters.yml 404 in 67ms
+ GET /config/parameters.yml 404 in 55ms
+ GET /user/config/config.js 404 in 57ms
+ GET /user/controllers/index.js 404 in 55ms
+ GET /.AWS_/credentials 404 in 71ms
+ GET /config/local.yml 404 in 68ms
+ GET /backend/config/settings.yml 404 in 59ms
+ GET /api/config/config.yml 404 in 53ms
+ GET /admin/config 404 in 64ms
+ GET /appsettings.json 404 in 54ms
+ GET /.travis.yml 404 in 67ms
+ GET /aws.yml 404 in 47ms
+ GET /sms.py 404 in 89ms
+ GET /config/config.json 404 in 56ms
+ GET /main.yml 404 in 50ms
+ GET /helpers/utility.js 404 in 73ms
+ GET /server/s3.js 404 in 49ms
+ GET /s3.js 404 in 48ms
+ GET /debug/default/view 404 in 51ms
+ GET /aws/credentials 404 in 51ms
+ GET /.aws/config 404 in 47ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 147ms
+ 1 --> Line: 12||Games.tsx
+ currentGameIndex:  0
+ 2 --> Line: 16||Games.tsx
+ games:  null
+ 3 --> Line: 16||Games.tsx
+ game:  undefined
+ GET / 200 in 126ms
+ GET /favicon.ico 200 in 282ms
+ GET /favicon.ico 200 in 239ms
+ GET /dispatch.asp 404 in 104ms
