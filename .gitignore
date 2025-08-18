@@ -18,4 +18,4 @@ __pycache__/
 .idea/
 **/.idea/
 
-redisdata
+redisdata/

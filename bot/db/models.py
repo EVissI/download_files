@@ -107,16 +107,32 @@ class Promocode(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    analiz_count: Mapped[Optional[int]] 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     max_usage: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     activate_count: Mapped[Optional[int]] = mapped_column(Integer, default=None)
     duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
 
+    services: Mapped[list["PromocodeServiceQuantity"]] = relationship(
+        "PromocodeServiceQuantity", back_populates="promocode", cascade="all, delete-orphan"
+    )
+
     users: Mapped[list["UserPromocode"]] = relationship(
         "UserPromocode", back_populates="promocode"
     )
 
+class PromocodeServiceQuantity(Base):
+    __tablename__ = "promocode_service_quantities"
+
+    class ServiceType(enum.Enum):
+        ANALYSIS = "Автоанализ"
+        SHORT_BOARD = "Короткая доска"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("promocode.id"))
+    service_type: Mapped["ServiceType"] = mapped_column(Enum(ServiceType), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False) 
+
+    promocode: Mapped["Promocode"] = relationship("Promocode", back_populates="services")
 
 class UserPromocode(Base):
     __tablename__ = "user_promocode"
@@ -125,10 +141,25 @@ class UserPromocode(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
     promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("promocode.id"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    current_analize_balance: Mapped[Optional[int]]
+
+    remaining_services: Mapped[list["UserPromocodeService"]] = relationship(
+        "UserPromocodeService", back_populates="user_promocode", cascade="all, delete-orphan"
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="used_promocodes")
     promocode: Mapped["Promocode"] = relationship("Promocode", back_populates="users")
+
+class UserPromocodeService(Base):
+    __tablename__ = "user_promocode_services"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_promocode.id"))
+    service_type: Mapped[PromocodeServiceQuantity.ServiceType] = mapped_column(
+        Enum(PromocodeServiceQuantity.ServiceType), nullable=False
+    )
+    remaining_quantity: Mapped[int] = mapped_column(Integer, nullable=False)  
+
+    user_promocode: Mapped["UserPromocode"] = relationship("UserPromocode", back_populates="remaining_services")
 
 
 class UserAnalizePayment(Base):

@@ -9,6 +9,8 @@ from bot.db.models import (
     UserAnalizePayment,
     UserPromocode,
     AnalizePayment,
+    UserPromocodeService,
+    PromocodeServiceQuantity,
 )
 from sqlalchemy import func, literal, not_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,6 +18,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
+
+
+class PromocodeServiceQuantityDAO(BaseDAO[PromocodeServiceQuantity]):
+    model = PromocodeServiceQuantity
 
 
 class UserDAO(BaseDAO[User]):
@@ -525,10 +531,16 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 
     async def get_active_promo_codes(self) -> List[Promocode]:
         """
-        Получает все активные промокоды.
+        Получает все активные промокоды с подгруженными услугами.
         """
         try:
-            query = select(self.model).where(self.model.is_active == True)
+            query = (
+                select(self.model)
+                .where(self.model.is_active == True)
+                .options(
+                    selectinload(self.model.services)
+                )  # Явная загрузка связанных данных
+            )
             result = await self._session.execute(query)
             promo_codes = result.scalars().all()
             logger.info(f"Загружено {len(promo_codes)} активных промокодов")

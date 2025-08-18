@@ -1,5 +1,6 @@
 ﻿from aiogram import Router,F
 from aiogram.types import Message
+from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.common.kbds.markup.main_kb import MainKeyboard
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 start_router = Router()
 
 @start_router.message(CommandStart())
-async def start_command(message: Message, session_with_commit: AsyncSession):
+async def start_command(message: Message,state:FSMContext, session_with_commit: AsyncSession):
     user_data = message.from_user
     user_id = user_data.id
     user_info:User = await UserDAO(session_with_commit).find_one_or_none_by_id(user_id)
@@ -30,7 +31,7 @@ async def start_command(message: Message, session_with_commit: AsyncSession):
         await message.answer(
             i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_info.role, i18n)
         )
-        
+        await state.clear()
         return
     if user_info is None:
         role = User.Role.USER.value
@@ -52,6 +53,7 @@ async def start_command(message: Message, session_with_commit: AsyncSession):
         await message.answer(
             i18n.user.static.gift()
         )
+        await state.clear()
         return
     i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
         user_info.lang_code if user_info.lang_code else 'en'
@@ -59,3 +61,4 @@ async def start_command(message: Message, session_with_commit: AsyncSession):
     await message.answer(
         i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_info.role, i18n)
     )
+    await state.clear()

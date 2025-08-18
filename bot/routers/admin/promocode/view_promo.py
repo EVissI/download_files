@@ -21,9 +21,17 @@ async def view_active_promos(message: Message, session_without_commit):
         await message.answer("Нет активных промокодов.")
         return
     for promo in promo_codes:
+        # Формируем список услуг и их количества
+        services_text = "\n".join(
+            [
+                f"- {service.service_type.value}: <b>{service.quantity}</b>"
+                for service in promo.services
+            ]
+        )
+
         text = (
             f"Код: <code>{promo.code}</code>\n"
-            f"Дает игр проанализировать: <b>{promo.analiz_count if promo.analiz_count is not None else '∞'}</b>\n"
+            f"Услуги:\n{services_text}\n"
             f"Максимум использований: <b>{promo.max_usage if promo.max_usage is not None else '∞'}</b>\n"
             f"Срок действия: <b>{promo.duration_days if promo.duration_days is not None else '∞'}</b> дней\n"
             f"Активировано: <b>{promo.activate_count or 0}</b>\n"

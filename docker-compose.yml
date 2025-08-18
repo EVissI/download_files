@@ -9,6 +9,7 @@ services:
       - ./log:/app/log
       - ./files:/app/files
       - ./front/public/json:/app/front/public/json
+      - ./bot/migration/versions:/app/bot/migration/versions
     env_file:
       - .env
     restart: unless-stopped

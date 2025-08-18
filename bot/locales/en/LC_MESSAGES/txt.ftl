@@ -4,7 +4,7 @@ user-static-hello = Hello! I'm an analysis bot.I can help you analyze your backg
 keyboard-user-reply-autoanalyze = 🔮 Autoanalyze
 keyboard-user-reply-profile = 🧍‍♂️ Profile
 keyboard-admin-reply-admin_panel = Admin Panel
-keyboard-user-reply-short_board_view = 📊 Short Board View
+keyboard-user-reply-short_board_view = 📊 Moneygame
 keyboard-reply-cancel = Cancel
 keyboard-reply-back = Back
 

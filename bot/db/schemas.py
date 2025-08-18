@@ -1,4 +1,5 @@
 ﻿from pydantic import BaseModel
+from typing import List
 
 
 class SUser(BaseModel):
@@ -66,13 +67,22 @@ class SDetailedAnalysis(BaseModel):
         from_attributes = True
 
 
+class SPromocodeServiceQuantity(BaseModel):
+    promocode_id: int  # ID промокода
+    service_type: str  # Тип услуги (например, "ANALYSIS" или "SHORT_BOARD")
+    quantity: int  # Количество услуг
+
+    class Config:
+        from_attributes = True
+
+
 class SPromocode(BaseModel):
     code: str | None = None
-    analiz_count: int | None = None
     is_active: bool | None = None
     max_usage: int | None = None
     activate_count: int | None = None
     duration_days: int | None = None
+
 
     class Config:
         from_attributes = True
@@ -96,6 +106,7 @@ class SAnalizePayment(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class SUserAnalizePayment(BaseModel):
     user_id: int | None = None
