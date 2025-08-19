@@ -100,7 +100,6 @@ class SAnalizePayment(BaseModel):
     id: int | None = None
     name: str | None = None
     price: int | None = None
-    amount: int | None = None
     duration_days: int | None = None
     is_active: bool | None = None
 
