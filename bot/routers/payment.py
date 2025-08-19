@@ -69,9 +69,9 @@ async def handle_payment_select(
     i18n: TranslatorRunner,
     session_without_commit: AsyncSession,
 ):
-    payment = await AnalizePaymentDAO(session_without_commit).find_one_or_none_by_id_with_services(
-        callback_data.payment_id
-    )
+    payment = await AnalizePaymentDAO(
+        session_without_commit
+    ).find_one_or_none_by_id_with_services(callback_data.payment_id)
     if not payment:
         await callback.answer(i18n.user.profile.payment_not_found(), show_alert=True)
         return
@@ -113,7 +113,10 @@ async def handle_payment_select(
             {
                 "description": f"{service.service_type.value} ({service.quantity if service.quantity is not None else '∞'})",
                 "quantity": 1.0,
-                "amount": {"value": str(amount), "currency": "RUB"},
+                "amount": {
+                    "value": str(payment.price),
+                    "currency": "RUB",
+                },  # Убедитесь, что сумма совпадает с prices
                 "vat_code": "1",
                 "payment_mode": "full_payment",
                 "payment_subject": "commodity",
@@ -125,7 +128,6 @@ async def handle_payment_select(
     provider_data = json.dumps({"receipt": receipt})
 
     # Отправляем счет
-    await callback.message.delete()
     await callback.bot.send_invoice(
         chat_id=callback.from_user.id,
         title=payment.name,
@@ -133,7 +135,9 @@ async def handle_payment_select(
         payload=f"autoanalyze_{payment.id}",
         provider_token=settings.YO_KASSA_TEL_API_KEY,
         currency="RUB",
-        prices=[{"label": "Руб", "amount": amount}],
+        prices=[
+            {"label": "Руб", "amount": int(payment.price * 100)}
+        ],  # Сумма в копейках
         provider_data=provider_data,  # Передаем данные чека
     )
 
