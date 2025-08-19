@@ -146,7 +146,7 @@ async def get_service_quantity(message: Message, state: FSMContext):
     if not remaining_services:  # Если все типы уже добавлены
         await state.set_state(PromoCreateStates.waiting_for_max_usage)
         await message.answer(
-            "Все типы сервисов уже добавлены. Введите максимальное количество использований промокода (или 0 для неограниченного):"
+            "Все сервисы уже добавлены. Введите максимальное количество использований промокода (или 0 для неограниченного):"
         )
         return
 
@@ -162,7 +162,7 @@ async def get_service_quantity(message: Message, state: FSMContext):
         ]
     )
 
-    await message.answer("Хотите добавить ещё одну сервис?", reply_markup=keyboard)
+    await message.answer("Хотите добавить ещё один сервис?", reply_markup=keyboard)
 
 
 @promo_create_router.callback_query(
@@ -259,10 +259,9 @@ async def get_duration_days(
     for service in service_objects:
         services_objects.append(await service_dao.add(service))
 
-    # Формирование текста для подтверждения
     services_text = ", ".join(
         [
-            f"{service.service_type.value} ({service.quantity})"
+            f"{PromocodeServiceQuantity.ServiceType[service.service_type].value} ({service.quantity})"
             for service in services_objects
         ]
     )
