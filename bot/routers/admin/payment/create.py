@@ -56,6 +56,7 @@ async def start_create_payment(
 async def cancel_create_payment(
     message: Message, state: FSMContext, i18n: TranslatorRunner
 ):
+    await state.clear()
     await state.set_state(GeneralStates.payment_view)
     await message.answer(
         message.text, reply_markup=PaymentKeyboard.build(), parse_mode="HTML"

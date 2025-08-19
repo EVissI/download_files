@@ -271,4 +271,5 @@ async def get_duration_days(
         reply_markup=PromoKeyboard.build(),
     )
     await session_without_commit.commit()
+    await state.clear()
     await state.set_state(GeneralStates.promo_view)
