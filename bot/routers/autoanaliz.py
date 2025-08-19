@@ -175,8 +175,8 @@ async def handle_mat_file(
                     formated_data = get_analysis_data(analysis_data)
                     player_names = list(formated_data)
                     player1_name, player2_name = player_names
-                    p1 = analysis_data[player1_name]
-                    p2 = analysis_data[player2_name]
+                    p1 = formated_data.get(player1_name)
+                    p2 = formated_data.get(player2_name)
                     logger.info(f"Player 1: {player1_name}, Error Rate: {p1['snowie_error_rate']}")
                     logger.info(f"Player 2: {player2_name}, Error Rate: {p2['snowie_error_rate']}")
                     logger.info(f"Duration: {duration} games")
