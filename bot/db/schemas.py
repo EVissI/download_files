@@ -101,7 +101,7 @@ class SAnalizePaymentServiceQuantity(BaseModel):
     quantity: int | None  # Количество услуг
     class Config:
         from_attributes = True
-        
+
 class SAnalizePayment(BaseModel):
     id: int | None = None
     name: str | None = None

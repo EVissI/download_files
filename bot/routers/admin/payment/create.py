@@ -15,7 +15,7 @@ from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 from bot.common.utils.i18n import get_all_locales_for_key
-from bot.db.dao import AnalizePaymentDAO, PromocodeServiceQuantityDAO
+from bot.db.dao import AnalizePaymentDAO, AnalizePaymentServiceQuantityDAO, PromocodeServiceQuantityDAO
 from bot.db.schemas import SAnalizePayment, SAnalizePaymentServiceQuantity
 from bot.db.models import AnalizePaymentServiceQuantity
 
@@ -231,7 +231,7 @@ async def get_duration_days(
 
     # Сохранение в базе данных
     payment_dao = AnalizePaymentDAO(session_with_commit)
-    service_dao = PromocodeServiceQuantityDAO(session_with_commit)
+    service_dao = AnalizePaymentServiceQuantityDAO(session_with_commit)
     payment = await payment_dao.add(payment_data)
     service_objects = [
         SAnalizePaymentServiceQuantity(

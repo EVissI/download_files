@@ -11,6 +11,7 @@ from bot.db.models import (
     UserPromocode,
     AnalizePayment,
     UserPromocodeService,
+    AnalizePaymentServiceQuantity,
     PromocodeServiceQuantity,
 )
 from sqlalchemy import func, literal, not_, or_, select
@@ -20,6 +21,8 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
+class AnalizePaymentServiceQuantityDAO(BaseDAO[AnalizePaymentServiceQuantity]):
+    model = AnalizePaymentServiceQuantity
 
 class PromocodeServiceQuantityDAO(BaseDAO[PromocodeServiceQuantity]):
     model = PromocodeServiceQuantity
