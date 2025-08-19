@@ -21,8 +21,10 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
+
 class AnalizePaymentServiceQuantityDAO(BaseDAO[AnalizePaymentServiceQuantity]):
     model = AnalizePaymentServiceQuantity
+
 
 class PromocodeServiceQuantityDAO(BaseDAO[PromocodeServiceQuantity]):
     model = PromocodeServiceQuantity
@@ -103,7 +105,7 @@ class UserDAO(BaseDAO[User]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при получении пользователей с платежами: {e}")
             raise
-        
+
     async def get_total_balance_dict(self, user_id: int) -> dict[str, Optional[int]]:
         """
         Возвращает общий баланс для всех типов услуг в формате словаря.
@@ -124,10 +126,13 @@ class UserDAO(BaseDAO[User]):
 
             return balance_dict
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при получении общего баланса для пользователя {user_id}: {e}")
+            logger.error(
+                f"Ошибка при получении общего баланса для пользователя {user_id}: {e}"
+            )
             raise
+
     async def get_total_analiz_balance(
-    self, user_id: int, service_type: PromocodeServiceQuantity.ServiceType
+        self, user_id: int, service_type: PromocodeServiceQuantity.ServiceType
     ) -> Optional[int]:
         """
         Calculates the total balance for a specific service type for a user
@@ -135,8 +140,8 @@ class UserDAO(BaseDAO[User]):
         Returns None if any active record has a None balance (indicating unlimited balance).
         """
         try:
-            # Преобразуем объект перечисления в строку
-            service_type_value = service_type.name
+            # Преобразуем объект перечисления в значение для ENUM
+            service_type_value = service_type.value
 
             # Check for any None balance in active UserPromocodeService for the given service type
             promo_service_none_query = (
@@ -148,7 +153,8 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
-                    UserPromocodeService.service_type == service_type_value,  # Передаём строку
+                    UserPromocodeService.service_type
+                    == service_type_value,  # Передаем значение ENUM
                     UserPromocodeService.remaining_quantity.is_(None),
                 )
             )
@@ -172,7 +178,8 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserAnalizePayment.user_id == user_id,
                     UserAnalizePayment.is_active == True,
-                    UserAnalizePaymentService.service_type == service_type_value,  # Передаём строку
+                    UserAnalizePaymentService.service_type
+                    == service_type_value,  # Передаем значение ENUM
                     UserAnalizePaymentService.remaining_quantity.is_(None),
                 )
             )
@@ -195,7 +202,8 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
-                    UserPromocodeService.service_type == service_type_value,  # Передаём строку
+                    UserPromocodeService.service_type
+                    == service_type_value,  # Передаем значение ENUM
                 )
             )
             promo_service_result = await self._session.execute(promo_service_query)
@@ -212,7 +220,8 @@ class UserDAO(BaseDAO[User]):
                 .where(
                     UserAnalizePayment.user_id == user_id,
                     UserAnalizePayment.is_active == True,
-                    UserAnalizePaymentService.service_type == service_type_value,  # Передаём строку
+                    UserAnalizePaymentService.service_type
+                    == service_type_value,  # Передаем значение ENUM
                 )
             )
             payment_service_result = await self._session.execute(payment_service_query)
@@ -253,7 +262,9 @@ class UserDAO(BaseDAO[User]):
                 .limit(1)  # Ограничиваем результат одной строкой
             )
             promo_service_result = await self._session.execute(promo_service_query)
-            promo_service = promo_service_result.scalar()  # Используем scalar вместо scalar_one_or_none
+            promo_service = (
+                promo_service_result.scalar()
+            )  # Используем scalar вместо scalar_one_or_none
 
             if promo_service:
                 # Decrease balance in UserPromocodeService
@@ -270,7 +281,8 @@ class UserDAO(BaseDAO[User]):
                 select(UserAnalizePaymentService)
                 .join(
                     UserAnalizePayment,
-                    UserAnalizePayment.id == UserAnalizePaymentService.user_analize_payment_id,
+                    UserAnalizePayment.id
+                    == UserAnalizePaymentService.user_analize_payment_id,
                 )
                 .where(
                     UserAnalizePayment.user_id == user_id,
@@ -282,7 +294,9 @@ class UserDAO(BaseDAO[User]):
                 .limit(1)  # Ограничиваем результат одной строкой
             )
             payment_service_result = await self._session.execute(payment_service_query)
-            payment_service = payment_service_result.scalar()  # Используем scalar вместо scalar_one_or_none
+            payment_service = (
+                payment_service_result.scalar()
+            )  # Используем scalar вместо scalar_one_or_none
 
             if payment_service:
                 # Decrease balance in UserAnalizePaymentService
@@ -301,7 +315,7 @@ class UserDAO(BaseDAO[User]):
             logger.error(f"Error decreasing analiz_balance for user {user_id}: {e}")
             await self._session.rollback()
             return False
-            
+
     async def check_expired_records(self, user_id: int) -> bool:
         """
         Checks if any UserPromocode or UserAnalizePayment records for the user have expired based on duration_days.
@@ -705,7 +719,9 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
     model = AnalizePayment
 
-    async def find_one_or_none_by_id_with_services(self, payment_id: int) -> Optional[AnalizePayment]:
+    async def find_one_or_none_by_id_with_services(
+        self, payment_id: int
+    ) -> Optional[AnalizePayment]:
         """
         Находит пакет услуг по ID с подгруженными связанными сервисами.
         """
@@ -714,13 +730,17 @@ class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
                 select(self.model)
                 .where(self.model.id == payment_id)
                 .options(
-                    selectinload(self.model.services)  # Явная загрузка связанных сервисов
+                    selectinload(
+                        self.model.services
+                    )  # Явная загрузка связанных сервисов
                 )
             )
             result = await self._session.execute(query)
             payment = result.scalars().one_or_none()
             if payment:
-                logger.info(f"Загружен пакет услуг с ID {payment_id} и {len(payment.services)} связанными сервисами")
+                logger.info(
+                    f"Загружен пакет услуг с ID {payment_id} и {len(payment.services)} связанными сервисами"
+                )
             else:
                 logger.warning(f"Пакет услуг с ID {payment_id} не найден")
             return payment
@@ -747,6 +767,7 @@ class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке активных пакетов услуг: {e}")
             raise
+
     async def get_all_payments(self) -> List[AnalizePayment]:
         """
         Получает все доступные пакеты услуг.
