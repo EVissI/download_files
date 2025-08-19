@@ -29,7 +29,7 @@ from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, get_download
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
-from bot.db.models import PromocodeServiceQuantity, User
+from bot.db.models import PromocodeServiceQuantity, ServiceType, User
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.db.schemas import SDetailedAnalysis, SUser
 from bot.db.redis import redis_client
@@ -167,9 +167,9 @@ async def handle_mat_file(
 
             user_dao = UserDAO(session_without_commit)
             if duration is None or duration == 0:
-                await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.MONEYGAME)
+                await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MONEYGAME)
             else:
-                await user_dao.decrease_match_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.MATCH)
+                await user_dao.decrease_match_balance(user_info.id, service_type=ServiceType.MATCH)
             formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
             if duration is not None or duration != 0:
@@ -276,9 +276,9 @@ async def handle_player_selection(
         await dao.add(SDetailedAnalysis(**player_data))
         
         if duration is None or duration == 0:
-            await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.MONEYGAME)
+            await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MONEYGAME)
         else:
-            await user_dao.decrease_match_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.MATCH)
+            await user_dao.decrease_match_balance(user_info.id, service_type=ServiceType.MATCH)
 
         formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 

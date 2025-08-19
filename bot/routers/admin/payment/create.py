@@ -17,7 +17,7 @@ from fluentogram import TranslatorRunner
 from bot.common.utils.i18n import get_all_locales_for_key
 from bot.db.dao import AnalizePaymentDAO, AnalizePaymentServiceQuantityDAO, PromocodeServiceQuantityDAO
 from bot.db.schemas import SAnalizePayment, SAnalizePaymentServiceQuantity
-from bot.db.models import AnalizePaymentServiceQuantity
+from bot.db.models import AnalizePaymentServiceQuantity, ServiceType
 
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -78,7 +78,7 @@ async def get_package_name(message: Message, state: FSMContext):
                     callback_data=f"service_type:{service_type.name}",
                 )
             ]
-            for service_type in AnalizePaymentServiceQuantity.PaymentServiceType
+            for service_type in ServiceType
         ]
     )
 
@@ -94,7 +94,7 @@ async def get_package_name(message: Message, state: FSMContext):
 )
 async def select_service_type(callback: CallbackQuery, state: FSMContext):
     service_type_name = callback.data.split(":")[1]  # Получаем имя (например, ANALYSIS)
-    service_type = AnalizePaymentServiceQuantity.PaymentServiceType[
+    service_type = ServiceType[
         service_type_name
     ]  # Преобразуем в перечисление
 
@@ -133,7 +133,7 @@ async def get_service_quantity(message: Message, state: FSMContext):
 
     remaining_services = [
         service_type
-        for service_type in AnalizePaymentServiceQuantity.PaymentServiceType
+        for service_type in ServiceType
         if service_type.name not in existing_services
     ]
 
@@ -182,7 +182,7 @@ async def add_more_services(callback: CallbackQuery, state: FSMContext):
                         callback_data=f"service_type:{service_type.name}",
                     )
                 ]
-                for service_type in AnalizePaymentServiceQuantity.PaymentServiceType
+                for service_type in ServiceType
                 if service_type.name
                 not in existing_services  # Исключаем уже добавленные типы
             ]
@@ -246,7 +246,7 @@ async def get_duration_days(
 
     services_text = ", ".join(
         [
-            f"{AnalizePaymentServiceQuantity.PaymentServiceType[service.service_type].value} ({service.quantity})"
+            f"{ServiceType[service.service_type].value} ({service.quantity})"
             for service in service_objects
         ]
     )

@@ -122,14 +122,13 @@ class Promocode(Base):
         "UserPromocode", back_populates="promocode"
     )
 
-
-class PromocodeServiceQuantity(Base):
-    __tablename__ = "promocode_service_quantities"
-
-    class ServiceType(enum.Enum):
+class ServiceType(enum.Enum):
         MATCH = "Матч"
         MONEYGAME = "Moneygame"
         SHORT_BOARD = "Плеер"
+
+class PromocodeServiceQuantity(Base):
+    __tablename__ = "promocode_service_quantities"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("promocode.id"))
@@ -168,8 +167,8 @@ class UserPromocodeService(Base):
     user_promocode_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("user_promocode.id")
     )
-    service_type: Mapped[PromocodeServiceQuantity.ServiceType] = mapped_column(
-        Enum(PromocodeServiceQuantity.ServiceType), nullable=False
+    service_type: Mapped[ServiceType] = mapped_column(
+        Enum(ServiceType), nullable=False
     )
     remaining_quantity: Mapped[int|None] = mapped_column(Integer, nullable=True)
 
@@ -185,17 +184,14 @@ class AnalizePaymentServiceQuantity(Base):
 
     __tablename__ = "analize_payment_service_quantities"
 
-    class PaymentServiceType(enum.Enum):
-        MATCH = "Матч"
-        MONEYGAME = "Moneygame"
-        SHORT_BOARD = "Плеер"
+
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     analize_payment_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("analize_payments.id")
     )
-    service_type: Mapped["PaymentServiceType"] = mapped_column(
-        Enum(PaymentServiceType), nullable=False
+    service_type: Mapped["ServiceType"] = mapped_column(
+        Enum(ServiceType), nullable=False
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 
@@ -215,8 +211,8 @@ class UserAnalizePaymentService(Base):
     user_analize_payment_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("user_analize_payments.id")
     )
-    service_type: Mapped[AnalizePaymentServiceQuantity.PaymentServiceType] = mapped_column(
-        Enum(AnalizePaymentServiceQuantity.PaymentServiceType), nullable=False
+    service_type: Mapped[ServiceType] = mapped_column(
+        Enum(ServiceType), nullable=False
     )
     remaining_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 

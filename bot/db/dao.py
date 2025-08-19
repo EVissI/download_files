@@ -2,6 +2,7 @@
 import pytz
 from bot.db.base import BaseDAO
 from bot.db.models import (
+    ServiceType,
     User,
     Analysis,
     DetailedAnalysis,
@@ -114,9 +115,9 @@ class UserDAO(BaseDAO[User]):
         try:
             balance_dict = {}
             service_types = [
-                PromocodeServiceQuantity.ServiceType.MATCH,
-                PromocodeServiceQuantity.ServiceType.MONEYGAME,
-                PromocodeServiceQuantity.ServiceType.SHORT_BOARD,
+                ServiceType.MATCH,
+                ServiceType.MONEYGAME,
+                ServiceType.SHORT_BOARD,
             ]
 
             for service_type in service_types:
@@ -132,7 +133,7 @@ class UserDAO(BaseDAO[User]):
             raise
 
     async def get_total_analiz_balance(
-        self, user_id: int, service_type: PromocodeServiceQuantity.ServiceType
+        self, user_id: int, service_type: ServiceType
     ) -> Optional[int]:
         """
         Calculates the total balance for a specific service type for a user

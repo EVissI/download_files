@@ -16,7 +16,7 @@ from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.promo_code import PromoKeyboard
 from bot.db.dao import PromoCodeDAO, PromocodeServiceQuantityDAO
-from bot.db.models import Promocode, PromocodeServiceQuantity
+from bot.db.models import Promocode, PromocodeServiceQuantity, ServiceType
 from bot.db.schemas import SPromocode, SPromocodeServiceQuantity
 
 from bot.common.utils.i18n import get_all_locales_for_key
@@ -85,7 +85,7 @@ async def get_code(message: Message, state: FSMContext):
                     callback_data=f"service_type:{service_type.name}",
                 )
             ]
-            for service_type in PromocodeServiceQuantity.ServiceType
+            for service_type in ServiceType
         ]
     )
 
@@ -101,7 +101,7 @@ async def get_code(message: Message, state: FSMContext):
 )
 async def select_service_type(callback: CallbackQuery, state: FSMContext):
     service_type_name = callback.data.split(":")[1]  # Получаем имя (например, ANALYSIS)
-    service_type = PromocodeServiceQuantity.ServiceType[
+    service_type = ServiceType[
         service_type_name
     ]  # Преобразуем в перечисление
 
@@ -139,7 +139,7 @@ async def get_service_quantity(message: Message, state: FSMContext):
 
     remaining_services = [
         service_type
-        for service_type in PromocodeServiceQuantity.ServiceType
+        for service_type in ServiceType
         if service_type.name not in existing_services
     ]
     logger.info(f"Remaining services: {remaining_services}")
@@ -190,7 +190,7 @@ async def add_more_services(callback: CallbackQuery, state: FSMContext):
                         callback_data=f"service_type:{service_type.name}",
                     )
                 ]
-                for service_type in PromocodeServiceQuantity.ServiceType
+                for service_type in ServiceType
                 if service_type.name
                 not in existing_services  # Исключаем уже добавленные типы
             ]
@@ -261,7 +261,7 @@ async def get_duration_days(
 
     services_text = ", ".join(
         [
-            f"{PromocodeServiceQuantity.ServiceType[service.service_type].value} ({service.quantity})"
+            f"{ServiceType[service.service_type].value} ({service.quantity})"
             for service in services_objects
         ]
     )

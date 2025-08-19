@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from bot.config import settings
 from bot.db.database import Base
-from bot.db.models import User, Analysis
+from bot.db.models import User, Analysis,AnalizePayment,AnalizePaymentServiceQuantity,DetailedAnalysis,\
+PromocodeServiceQuantity,UserAnalizePayment,UserAnalizePaymentService,UserPromocodeService,UserPromocode,Promocode
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DB_URL)
