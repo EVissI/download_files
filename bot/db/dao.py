@@ -141,7 +141,7 @@ class UserDAO(BaseDAO[User]):
         """
         try:
             # Преобразуем объект перечисления в значение для ENUM
-            service_type_value = service_type.value
+            service_type_value = service_type.name
 
             # Check for any None balance in active UserPromocodeService for the given service type
             promo_service_none_query = (
