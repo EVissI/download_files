@@ -170,7 +170,7 @@ class UserPromocodeService(Base):
     service_type: Mapped[PromocodeServiceQuantity.ServiceType] = mapped_column(
         Enum(PromocodeServiceQuantity.ServiceType), nullable=False
     )
-    remaining_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    remaining_quantity: Mapped[int|None] = mapped_column(Integer, nullable=True)
 
     user_promocode: Mapped["UserPromocode"] = relationship(
         "UserPromocode", back_populates="remaining_services"

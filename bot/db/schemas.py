@@ -70,7 +70,7 @@ class SDetailedAnalysis(BaseModel):
 class SPromocodeServiceQuantity(BaseModel):
     promocode_id: int  # ID промокода
     service_type: str  # Тип услуги (например, "ANALYSIS" или "SHORT_BOARD")
-    quantity: int  # Количество услуг
+    quantity: int | None  # Количество услуг
 
     class Config:
         from_attributes = True

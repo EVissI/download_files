@@ -24,7 +24,7 @@ async def view_active_promos(message: Message, session_without_commit):
         # Формируем список услуг и их количества
         services_text = "\n".join(
             [
-                f"- {service.service_type.value}: <b>{service.quantity}</b>"
+                f"- {service.service_type.value}: <b>{service.quantity if service.quantity is not None else '∞'}</b>"
                 for service in promo.services
             ]
         )
