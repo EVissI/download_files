@@ -90,7 +90,7 @@ async def get_code(message: Message, state: FSMContext):
     )
 
     await message.answer(
-        "Выберите тип услуги для промокода:",
+        "Выберите тип сервиса для промокода:",
         reply_markup=keyboard,
     )
 
@@ -115,7 +115,7 @@ async def select_service_type(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(PromoCreateStates.waiting_for_service_quantity)
     await callback.message.answer(
-        f"Введите количество для услуги {service_type.value}:"
+        f"Введите число игр для <b>{service_type.value}</b>:"
     )
     await callback.answer()
 
@@ -146,7 +146,7 @@ async def get_service_quantity(message: Message, state: FSMContext):
     if not remaining_services:  # Если все типы уже добавлены
         await state.set_state(PromoCreateStates.waiting_for_max_usage)
         await message.answer(
-            "Все типы услуг уже добавлены. Введите максимальное количество использований промокода (или 0 для неограниченного):"
+            "Все типы сервисов уже добавлены. Введите максимальное количество использований промокода (или 0 для неограниченного):"
         )
         return
 
@@ -162,7 +162,7 @@ async def get_service_quantity(message: Message, state: FSMContext):
         ]
     )
 
-    await message.answer("Хотите добавить ещё одну услугу?", reply_markup=keyboard)
+    await message.answer("Хотите добавить ещё одну сервис?", reply_markup=keyboard)
 
 
 @promo_create_router.callback_query(
@@ -197,7 +197,7 @@ async def add_more_services(callback: CallbackQuery, state: FSMContext):
         )
 
         await callback.message.answer(
-            "Выберите тип следующей услуги:",
+            "Выберите тип следующей сервиса:",
             reply_markup=keyboard,
         )
     else:
@@ -255,19 +255,19 @@ async def get_duration_days(
         )
         for service in services
     ]
-    services_objects = []
+    services_objects:list[PromocodeServiceQuantity] = []
     for service in service_objects:
         services_objects.append(await service_dao.add(service))
 
     # Формирование текста для подтверждения
     services_text = ", ".join(
         [
-            f"{service.service_type} ({service.quantity})"
+            f"{service.service_type.value} ({service.quantity})"
             for service in services_objects
         ]
     )
     await message.answer(
-        f"Промокод <b>{promo_data.code}</b> создан с услугами: {services_text}!",
+        f"Промокод <b>{promo_data.code}</b> создан с сервисами: {services_text}!",
         parse_mode="HTML",
         reply_markup=PromoKeyboard.build(),
     )

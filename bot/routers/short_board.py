@@ -47,7 +47,7 @@ async def short_board_command(
     i18n: TranslatorRunner,
     session_without_commit: AsyncSession,
 ):
-    await message.answer("Отправь файл с логами/игрой (мат/файл) для обработки.")
+    await message.answer("Отправь файл с игрой для обработки.")
     await state.set_state(ShortBoardDialog.file)
 
 
