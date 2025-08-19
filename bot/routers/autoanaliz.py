@@ -108,6 +108,7 @@ async def handle_mat_file(
 
         loop = asyncio.get_running_loop()
         duration, analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
+        await state.update_data(duration=duration)
         analysis_data = await loop.run_in_executor(None, json.loads, analysis_result)
         await redis_client.set(f"analysis_data:{user_info.id}", json.dumps(analysis_data), expire=3600)
 
@@ -220,7 +221,7 @@ async def handle_player_selection(
     try:
         data = await state.get_data()
         try:
-            duration = int(data.get('point_match'))
+            duration = int(data.get('duration'))
         except Exception as e:
             logger.error(f"Ошибка при получении значения point match: {e}")
             duration = None
