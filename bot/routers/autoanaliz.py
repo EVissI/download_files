@@ -169,7 +169,7 @@ async def handle_mat_file(
             if duration is None or duration == 0:
                 await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MONEYGAME)
             else:
-                await user_dao.decrease_match_balance(user_info.id, service_type=ServiceType.MATCH)
+                await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MATCH)
             formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
             if duration is not None or duration != 0:
@@ -278,7 +278,7 @@ async def handle_player_selection(
         if duration is None or duration == 0:
             await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MONEYGAME)
         else:
-            await user_dao.decrease_match_balance(user_info.id, service_type=ServiceType.MATCH)
+            await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MATCH)
 
         formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
