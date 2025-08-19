@@ -128,12 +128,16 @@ def analyze_mat_file(file: str, type: str = None) -> str:
 
         # Извлечение имен игроков из строк X: и O:
         for line in lines:
-            if line.startswith("X:"):
-                x_player = line.split(":", 1)[1].strip()
-                players.append(x_player)
-            elif line.startswith("O:"):
-                o_player = line.split(":", 1)[1].strip()
-                players.append(o_player)
+            if "X:" in line:
+                match = re.search(r"X:\s*([^\(]+)", line)
+                if match:
+                    x_player = match.group(1).strip()
+                    players.append(x_player)
+            if "O:" in line:
+                match = re.search(r"O:\s*([^\(]+)", line)
+                if match:
+                    o_player = match.group(1).strip()
+                    players.append(o_player)
 
         # Убедимся, что извлечены оба игрока
         if len(players) != 2:
