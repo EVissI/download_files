@@ -135,7 +135,7 @@ class PromocodeServiceQuantity(Base):
     service_type: Mapped["ServiceType"] = mapped_column(
         Enum(ServiceType), nullable=False
     )
-    quantity: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
+    quantity: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     promocode: Mapped["Promocode"] = relationship(
         "Promocode", back_populates="services"
