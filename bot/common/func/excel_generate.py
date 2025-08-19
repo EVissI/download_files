@@ -67,7 +67,7 @@ async def generate_detailed_analysis_report(
             cell.value = header
             cell.font = header_font
             cell.fill = header_fill
-            cell.alignment = center_align
+            cell.alignment = left_align
 
         analyses = await dao.get_all_detailed_analyzes(start_date, end_date)
         current_row = 2
@@ -203,7 +203,7 @@ async def generate_detailed_user_analysis_report(
         cell.value = header
         cell.font = header_font
         cell.fill = header_fill
-        cell.alignment = center_align
+        cell.alignment = left_align
 
     try:
         if not player_name:
@@ -247,7 +247,7 @@ async def generate_detailed_user_analysis_report(
 
             for col in range(1, 24):
                 ws.cell(row=current_row, column=col).alignment = left_align
-                
+
             current_row += 1
 
         column_widths = {
