@@ -162,7 +162,11 @@ async def handle_mat_file(
             await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.ANALYSIS)
 
             formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
-            duration = point_match_value
+            try:
+                duration = int(point_match_value)
+            except Exception as e:
+                logger.error(f"Ошибка при получении значения point match: {e}")
+                duration = None
             if duration is not None or duration != 0:
                 try:
                     formated_data = get_analysis_data(analysis_data)
@@ -263,7 +267,10 @@ async def handle_player_selection(
         formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
         await callback.message.delete()
-        duration = data.get('point_match')
+        try:
+            duration = int(data.get('point_match'))
+        except Exception as e:
+            logger.error(f"Ошибка при получении значения point match: {e}")
         if duration is not None or duration != 0:
             try:
                 formated_data = get_analysis_data(analysis_data)

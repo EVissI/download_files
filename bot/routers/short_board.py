@@ -22,6 +22,7 @@ from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 from bot.config import settings
+from bot.db.dao import UserDAO
 from bot.db.models import User
 from bot.config import bot
 from front.src.lib.game_parser import parse_file
@@ -51,7 +52,7 @@ async def short_board_command(
 
 
 @short_board_router.message(F.document, StateFilter(ShortBoardDialog.file))
-async def handle_document(message: Message, state: FSMContext):
+async def handle_document(message: Message, state: FSMContext,session_without_commit: AsyncSession):
     try:
         file = message.document
         chat_id = message.chat.id
@@ -92,6 +93,11 @@ async def handle_document(message: Message, state: FSMContext):
             "Готово! Нажми кнопку ниже, чтобы открыть игру и просмотреть ходы.",
             reply_markup=keyboard,
         )
+        await UserDAO(session_without_commit).decrease_analiz_balance(
+            user_id=message.from_user.id,
+            service_type="SHORT_BOARD"
+        )
+        logger.info(f"Пользователь {message.from_user.id} использовал Short Board")
     except Exception as e:
         logger.error(f"Ошибка при обработке файла: {e}")
         await bot.send_message(
