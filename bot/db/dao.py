@@ -701,6 +701,25 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
     model = AnalizePayment
 
+    async def get_active_payments(self) -> List[AnalizePayment]:
+        """
+        Получает все активные пакеты услуг с подгруженными связанными услугами.
+        """
+        try:
+            query = (
+                select(self.model)
+                .where(self.model.is_active == True)
+                .options(
+                    selectinload(self.model.services)  # Явная загрузка связанных услуг
+                )
+            )
+            result = await self._session.execute(query)
+            payments = result.scalars().all()
+            logger.info(f"Загружено {len(payments)} активных пакетов услуг")
+            return payments
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при загрузке активных пакетов услуг: {e}")
+            raise
     async def get_all_payments(self) -> List[AnalizePayment]:
         """
         Получает все доступные пакеты услуг.
