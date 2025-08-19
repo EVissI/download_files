@@ -256,4 +256,5 @@ async def get_duration_days(
         reply_markup=PaymentKeyboard.build(),
     )
     await session_with_commit.commit()
+    await state.clear()
     await state.set_state(GeneralStates.payment_view)
