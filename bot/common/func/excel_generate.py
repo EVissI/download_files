@@ -33,6 +33,7 @@ async def generate_detailed_analysis_report(
             start_color="CCCCCC", end_color="CCCCCC", fill_type="solid"
         )
         center_align = Alignment(horizontal="center")
+        left_align = Alignment(horizontal="left")  # Выравнивание по левому краю
 
         # Заголовки
         headers = [
@@ -101,6 +102,11 @@ async def generate_detailed_analysis_report(
             ws.cell(row=current_row, column=21).value = analysis.cube_error_rate
             ws.cell(row=current_row, column=22).value = analysis.snowie_error_rate
             ws.cell(row=current_row, column=23).value = analysis.overall_rating
+
+            # Устанавливаем выравнивание по левому краю для всех ячеек строки
+            for col in range(1, 24):
+                ws.cell(row=current_row, column=col).alignment = left_align
+
             current_row += 1
 
         column_widths = {
@@ -163,6 +169,7 @@ async def generate_detailed_user_analysis_report(
         start_color="CCCCCC", end_color="CCCCCC", fill_type="solid"
     )
     center_align = Alignment(horizontal="center")
+    left_align = Alignment(horizontal="left") 
 
     # Заголовки
     headers = [
@@ -237,6 +244,10 @@ async def generate_detailed_user_analysis_report(
             ws.cell(row=current_row, column=21).value = analysis.cube_error_rate
             ws.cell(row=current_row, column=22).value = analysis.snowie_error_rate
             ws.cell(row=current_row, column=23).value = analysis.overall_rating
+
+            for col in range(1, 24):
+                ws.cell(row=current_row, column=col).alignment = left_align
+                
             current_row += 1
 
         column_widths = {
