@@ -17,8 +17,8 @@ user-profile-change_language_text = Выберите язык для бота:
 user-profile-text = 
     🧍‍♂️ <b>Профиль</b>
     ├ 🎲 Никнейм: <code>{ $player_username }</code>
-    ├ 🔮 Автоанализы: <b>{ $analiz_balance }</b>
-    ├ 📊 Короткая доска: <b>{ $short_board_balance }</b>
+    ├ 🔮 Матчи: <b>{ $analiz_balance }</b>
+    ├ 📊 Манигеймы: <b>{ $short_board_balance }</b>
     └ 🌐 Язык: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = Моя статистика
 user-profile-inline_button-change_language = Изменить язык

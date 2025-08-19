@@ -79,7 +79,7 @@ async def handle_payment_select(
     # Формируем список услуг для отображения
     services_text = "\n".join(
         [
-            f"- {service.service_type.value}: <b>{service.quantity if service.quantity is not None else '∞'}</b>"
+            f"- {service.service_type.value}: {service.quantity if service.quantity is not None else '∞'}"
             for service in payment.services
         ]
     )
@@ -113,7 +113,7 @@ async def handle_payment_select(
             {
                 "description": f"{service.service_type.value} ({service.quantity if service.quantity is not None else '∞'})",
                 "quantity": 1.0,
-                "amount": {"value": str(payment.price), "currency": "RUB"},
+                "amount": {"value": str(amount), "currency": "RUB"},
                 "vat_code": "1",
                 "payment_mode": "full_payment",
                 "payment_subject": "commodity",

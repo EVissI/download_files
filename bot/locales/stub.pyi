@@ -67,8 +67,8 @@ class UserProfile:
     @staticmethod
     def text(*, analiz_balance: PossibleValue, lang_code: PossibleValue, player_username: PossibleValue, short_board_balance: PossibleValue) -> Literal["""🧍‍♂️ &lt;b&gt;Profile&lt;/b&gt;
 ├ 🎲 Nickname: &lt;code&gt;{ $player_username }&lt;/code&gt;
-├ 🔮 Autoanalyzes: &lt;b&gt;{ $analiz_balance }&lt;/b&gt;
-├ 📊 Moneygame: &lt;b&gt;{ $short_board_balance }&lt;/b&gt;
+├ 🔮 Matches: &lt;b&gt;{ $analiz_balance }&lt;/b&gt;
+├ 📊 Moneygames: &lt;b&gt;{ $short_board_balance }&lt;/b&gt;
 └ 🌐 Language: &lt;b&gt;{ $lang_code }&lt;/b&gt;"""]: ...
     @staticmethod
     def detailed_statistics(*, cube_error_rate: PossibleValue, detailed_count: PossibleValue, detailed_rank_chequer: PossibleValue, detailed_rank_cube: PossibleValue, detailed_rank_overall: PossibleValue, error_rate_chequer: PossibleValue, missed_doubles_above_cp: PossibleValue, missed_doubles_below_cp: PossibleValue, player_username: PossibleValue, rolls_marked_lucky: PossibleValue, rolls_marked_unlucky: PossibleValue, rolls_marked_very_lucky: PossibleValue, rolls_marked_very_unlucky: PossibleValue, snowie_error_rate: PossibleValue, wrong_doubles_above_tg: PossibleValue, wrong_doubles_below_sp: PossibleValue, wrong_passes: PossibleValue, wrong_takes: PossibleValue) -> Literal["""🎯 Gnu( { $detailed_count } games, Nickname: { $player_username })
