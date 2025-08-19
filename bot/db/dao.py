@@ -704,6 +704,29 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 class AnalizePaymentDAO(BaseDAO[AnalizePayment]):
     model = AnalizePayment
 
+    async def find_one_or_none_by_id_with_services(self, payment_id: int) -> Optional[AnalizePayment]:
+        """
+        Находит пакет услуг по ID с подгруженными связанными сервисами.
+        """
+        try:
+            query = (
+                select(self.model)
+                .where(self.model.id == payment_id)
+                .options(
+                    selectinload(self.model.services)  # Явная загрузка связанных сервисов
+                )
+            )
+            result = await self._session.execute(query)
+            payment = result.scalars().one_or_none()
+            if payment:
+                logger.info(f"Загружен пакет услуг с ID {payment_id} и {len(payment.services)} связанными сервисами")
+            else:
+                logger.warning(f"Пакет услуг с ID {payment_id} не найден")
+            return payment
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при загрузке пакета услуг с ID {payment_id}: {e}")
+            raise
+
     async def get_active_payments(self) -> List[AnalizePayment]:
         """
         Получает все активные пакеты услуг с подгруженными связанными услугами.

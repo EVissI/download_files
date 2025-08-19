@@ -69,7 +69,7 @@ async def handle_payment_select(
     i18n: TranslatorRunner,
     session_without_commit: AsyncSession,
 ):
-    payment = await AnalizePaymentDAO(session_without_commit).find_one_or_none_by_id(
+    payment = await AnalizePaymentDAO(session_without_commit).find_one_or_none_by_id_with_services(
         callback_data.payment_id
     )
     if not payment:
