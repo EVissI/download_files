@@ -104,28 +104,28 @@ async def handle_payment_select(
         return
 
     # # Подготовка данных для чека
-    # receipt = {
-    #     "customer": {
-    #         "phone": user.phone_number,
-    #         "email": user.email,
-    #     },
-    #     "items": [
-    #         {
-    #             "description": f"{service.service_type.value} ({service.quantity if service.quantity is not None else '∞'})",
-    #             "quantity": 1.0,
-    #             "amount": {
-    #                 "value": str(payment.price),
-    #                 "currency": "RUB",
-    #             },  # Убедитесь, что сумма совпадает с prices
-    #             "vat_code": "1",
-    #             "payment_mode": "full_payment",
-    #             "payment_subject": "commodity",
-    #         }
-    #         for service in payment.services
-    #     ],
-    #     "tax_system_code": 1,
-    # }
-    # provider_data = json.dumps({"receipt": receipt})
+    receipt = {
+        "customer": {
+            "phone": user.phone_number,
+            "email": user.email,
+        },
+        "items": [
+            {
+                "description": f"{service.service_type.value} ({service.quantity if service.quantity is not None else '∞'})",
+                "quantity": 1.0,
+                "amount": {
+                    "value": str(payment.price),
+                    "currency": "RUB",
+                },  # Убедитесь, что сумма совпадает с prices
+                "vat_code": "1",
+                "payment_mode": "full_payment",
+                "payment_subject": "commodity",
+            }
+            for service in payment.services
+        ],
+        "tax_system_code": 1,
+    }
+    provider_data = json.dumps({"receipt": receipt})
 
     # Отправляем счет
     await callback.bot.send_invoice(
@@ -138,7 +138,7 @@ async def handle_payment_select(
         prices=[
             {"label": "Руб", "amount": int(payment.price * 100)}
         ],  # Сумма в копейках
-        # provider_data=provider_data,  # Передаем данные чека
+        provider_data=provider_data,  # Передаем данные чека
     )
 
 
