@@ -122,10 +122,12 @@ class Promocode(Base):
         "UserPromocode", back_populates="promocode"
     )
 
-class ServiceType(enum.Enum):
+class ServiceType(str, enum.Enum):
         MATCH = "Матч"
         MONEYGAME = "Moneygame"
         SHORT_BOARD = "Плеер"
+
+service_type_enum = Enum(ServiceType, name="servicetype", metadata=Base.metadata)
 
 class PromocodeServiceQuantity(Base):
     __tablename__ = "promocode_service_quantities"
@@ -133,7 +135,7 @@ class PromocodeServiceQuantity(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("promocode.id"))
     service_type: Mapped["ServiceType"] = mapped_column(
-        Enum(ServiceType), nullable=False
+        Enum(ServiceType, name="servicetype"), nullable=False
     )
     quantity: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
@@ -212,7 +214,7 @@ class UserAnalizePaymentService(Base):
         Integer, ForeignKey("user_analize_payments.id")
     )
     service_type: Mapped[ServiceType] = mapped_column(
-        Enum(ServiceType), nullable=False
+        Enum(ServiceType, name="servicetype"), nullable=False
     )
     remaining_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 

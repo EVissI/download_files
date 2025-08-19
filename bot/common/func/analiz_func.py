@@ -5,53 +5,6 @@ import os
 from loguru import logger
 
 
-def parse_gnubg_output(output: str) -> dict:
-    """
-    Парсит вывод GNU Backgammon для извлечения никнеймов и другой информации.
-
-    Args:
-        output: Текстовый вывод GNU Backgammon.
-
-    Returns:
-        dict: Словарь с никнеймами и другой информацией.
-    """
-    try:
-        lines = [line.strip() for line in output.split("\n") if line.strip()]
-        result = {}
-
-        # Извлечение никнеймов рядом с доской
-        board_nicknames = {}
-        for line in lines:
-            if line.startswith("O:"):
-                board_nicknames["O"] = line.split(":")[1].strip().split("(")[0].strip()
-            elif line.startswith("X:"):
-                board_nicknames["X"] = line.split(":")[1].strip().split("(")[0].strip()
-
-        # Извлечение никнеймов из строки "Player"
-        player_line = next((line for line in lines if line.startswith("Player")), None)
-        if player_line:
-            player_nicknames = [
-                nickname.strip()
-                for nickname in re.split(r"\s{2,}", player_line)
-                if nickname.strip()
-            ]
-            player_nicknames = player_nicknames[1:]  # Удаляем "Player"
-
-        # Сравнение никнеймов
-        for key, board_nickname in board_nicknames.items():
-            matched_nickname = next(
-                (name for name in player_nicknames if name.startswith(board_nickname)),
-                board_nickname,
-            )
-            result[key] = matched_nickname
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Ошибка при парсинге вывода GNU Backgammon: {e}")
-        raise
-
-
 def analyze_mat_file(file: str, type: str = None) -> str:
     """
     Анализирует файл матча или позиции с помощью GNU Backgammon и возвращает статистику в формате JSON.
@@ -167,14 +120,27 @@ def analyze_mat_file(file: str, type: str = None) -> str:
 
         logger.info(f"Анализ матча завершён для файла: {file}")
 
-        # Используем parse_gnubg_output для извлечения никнеймов
-        nicknames = parse_gnubg_output(stdout)
-        logger.info(f"Извлечённые никнеймы: {nicknames}")
-
         # Парсинг вывода в JSON
         stats = {}
         current_section = None
+        players = []
         lines = [line.strip() for line in stdout.split("\n") if line.strip()]
+
+        # Извлечение имен игроков из строк X: и O:
+        for line in lines:
+            if line.startswith("X:"):
+                x_player = line.split(":", 1)[1].strip()
+                players.append(x_player)
+            elif line.startswith("O:"):
+                o_player = line.split(":", 1)[1].strip()
+                players.append(o_player)
+
+        # Убедимся, что извлечены оба игрока
+        if len(players) != 2:
+            logger.error(
+                "Не удалось извлечь никнеймы игроков из вывода GNU Backgammon."
+            )
+            raise RuntimeError("Ошибка извлечения никнеймов игроков.")
 
         for line in lines:
             if any(
@@ -187,7 +153,7 @@ def analyze_mat_file(file: str, type: str = None) -> str:
                 ]
             ):
                 current_section = line.lower().replace(" statistics", "")
-                stats[current_section] = {player: {} for player in nicknames.values()}
+                stats[current_section] = {player: {} for player in players}
             elif current_section and not line.startswith("|") and len(line.strip()) > 0:
                 parts = [
                     p.strip() for p in re.split(r"\s{2,}", line.strip()) if p.strip()
@@ -209,9 +175,9 @@ def analyze_mat_file(file: str, type: str = None) -> str:
 
                     is_rating = "rating" in key
 
-                    if len(parts) - 1 == len(nicknames):
+                    if len(parts) - 1 == len(players):
                         # Строки с одним значением на игрока
-                        for i, player in enumerate(nicknames.values()):
+                        for i, player in enumerate(players):
                             value = parts[i + 1].strip()
                             if is_rating:
                                 stats[current_section][player][key] = value
@@ -228,9 +194,9 @@ def analyze_mat_file(file: str, type: str = None) -> str:
                                     )
                                 elif not main_match:
                                     stats[current_section][player][key] = "0"
-                    elif len(parts) - 1 == 2 * len(nicknames):
+                    elif len(parts) - 1 == 2 * len(players):
                         # Строки с двумя частями на игрока (main + extra)
-                        for i, player in enumerate(nicknames.values()):
+                        for i, player in enumerate(players):
                             main_part = parts[1 + 2 * i].strip()
                             extra_part = (
                                 parts[2 + 2 * i].strip()
@@ -254,7 +220,7 @@ def analyze_mat_file(file: str, type: str = None) -> str:
                         logger.warning(f"Неизвестный формат строки: {line}")
 
         # Проверяем и исправляем значения Snowie error rate
-        for player in nicknames.values():
+        for player in players:
             if (
                 "overall" in stats
                 and "snowie_error_rate" not in stats["overall"][player]
