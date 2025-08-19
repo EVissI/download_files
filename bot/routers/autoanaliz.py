@@ -182,7 +182,7 @@ async def handle_mat_file(
                     logger.info(f"Duration: {duration} games")
                     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
-                    message.bot.send_message(
+                    await message.bot.send_message(
                         settings.CHAT_GROUP_ID,
                         f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} {p1['snowie_error_rate']} - {player2_name} {p2['snowie_error_rate']} Длительность: {duration} игр\n\n",
                         parse_mode="HTML"
@@ -282,11 +282,11 @@ async def handle_player_selection(
                 formated_data = get_analysis_data(analysis_data)
                 player_names = list(formated_data)
                 player1_name, player2_name = player_names
-                p1 = analysis_data[player1_name]
-                p2 = analysis_data[player2_name]
+                p1 = formated_data.get(player1_name)
+                p2 = formated_data.get(player2_name)
                 current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
-                callback.message.bot.send_message(
+                await callback.message.bot.send_message(
                     settings.CHAT_GROUP_ID,
                     f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} {p1['snowie_error_rate']} - {player2_name} {p2['snowie_error_rate']} Длительность: {duration} игр\n\n",
                     parse_mode="HTML"
