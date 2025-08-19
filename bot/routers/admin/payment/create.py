@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 from bot.common.utils.i18n import get_all_locales_for_key
 from bot.db.dao import AnalizePaymentDAO, PromocodeServiceQuantityDAO
-from bot.db.schemas import SAnalizePayment
+from bot.db.schemas import SAnalizePayment, SAnalizePaymentServiceQuantity
 from bot.db.models import AnalizePaymentServiceQuantity
 
 if TYPE_CHECKING:
@@ -234,7 +234,7 @@ async def get_duration_days(
     service_dao = PromocodeServiceQuantityDAO(session_with_commit)
     payment = await payment_dao.add(payment_data)
     service_objects = [
-        AnalizePaymentServiceQuantity(
+        SAnalizePaymentServiceQuantity(
             analize_payment_id=payment.id,
             service_type=service["service_type"],
             quantity=service["quantity"],

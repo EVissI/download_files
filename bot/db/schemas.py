@@ -95,7 +95,13 @@ class SUserPromocode(BaseModel):
     class Config:
         from_attributes = True
 
-
+class SAnalizePaymentServiceQuantity(BaseModel):
+    analize_payment_id: int  # ID платежа
+    service_type: str  # Тип услуги (например, "ANALYSIS" или "SHORT_BOARD")
+    quantity: int | None  # Количество услуг
+    class Config:
+        from_attributes = True
+        
 class SAnalizePayment(BaseModel):
     id: int | None = None
     name: str | None = None
