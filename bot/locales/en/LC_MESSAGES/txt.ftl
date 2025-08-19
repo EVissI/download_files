@@ -15,8 +15,9 @@ user-profile-change_language_text = Select a language for the bot:
 user-profile-text = 
     🧍‍♂️ <b>Profile</b>
     ├ 🎲 Nickname: <code>{ $player_username }</code>
-    ├ 🔮 Matches: <b>{ $analiz_balance }</b>
-    ├ 📊 Moneygames: <b>{ $short_board_balance }</b>
+    ├ 🔮 Matches: <b>{ $match_balance }</b>
+    ├ 📊 Moneygames: <b>{ $analiz_balance }</b>
+    ├ 💎 Pleer <b>{ $short_board_balance }</b>
     └ 🌐 Language: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = My Statistics
 user-profile-inline_button-change_language = Change Language

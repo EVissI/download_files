@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 
-class AnalizeMiddleware(BaseMiddleware):
+class MatchMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[Message | CallbackQuery, Dict[str, Any]], Awaitable[Any]],
@@ -26,7 +26,27 @@ class AnalizeMiddleware(BaseMiddleware):
         user_id = event.from_user.id
         dao = UserDAO(session)
         user = await dao.find_one_or_none_by_id(user_id)
-        balance = await dao.get_total_analiz_balance(user_id, service_type=PromocodeServiceQuantity.ServiceType.ANALYSIS)
+        balance = await dao.get_total_analiz_balance(user_id, service_type=PromocodeServiceQuantity.ServiceType.MATCH)
+        if balance is None:
+            return await handler(event, data)
+        if not user or balance == 0:
+            await event.answer(i18n.user.static.has_no_sub(), reply_markup=get_activate_promo_keyboard(i18n))
+            return
+        return await handler(event, data)
+
+class AnalizMiddleware(BaseMiddleware):
+    async def __call__(
+        self,
+        handler: Callable[[Message | CallbackQuery, Dict[str, Any]], Awaitable[Any]],
+        event: Message | CallbackQuery,
+        data: Dict[str, Any]
+    ) -> Any:
+        session = data.get("session_without_commit")
+        i18n: TranslatorRunner = data.get("i18n", None)
+        user_id = event.from_user.id
+        dao = UserDAO(session)
+        user = await dao.find_one_or_none_by_id(user_id)
+        balance = await dao.get_total_analiz_balance(user_id, service_type=PromocodeServiceQuantity.ServiceType.MONEYGAME)
         if balance is None:
             return await handler(event, data)
         if not user or balance == 0:

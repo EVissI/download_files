@@ -31,13 +31,15 @@ profile_router = Router()
 )
 async def profile_command(message: Message, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession):
     balance_dict = await UserDAO(session_without_commit).get_total_balance_dict(user_info.id)
-    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.name, '∞')
+    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.MONEYGAME.name, '∞')
+    match_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.MATCH.name, '∞')
     short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.name, '∞')
 
     await message.answer(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=analiz_balance if analiz_balance is not None else '∞',
+            match_balance=match_balance if match_balance is not None else '∞',
             short_board_balance=short_board_balance if short_board_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
@@ -65,12 +67,14 @@ async def change_language_back_callback(
     callback: CallbackQuery, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession
 ):
     balance_dict = await UserDAO(session_without_commit).get_total_balance_dict(user_info.id)
-    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.name, '∞')
+    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.MONEYGAME.name, '∞')
+    match_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.MATCH.name, '∞')
     short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.name, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=analiz_balance if analiz_balance is not None else '∞',
+            match_balance=match_balance if match_balance is not None else '∞',
             short_board_balance=short_board_balance if short_board_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
@@ -108,12 +112,14 @@ async def back_to_profile(
     callback: CallbackQuery, user_info: User, i18n: TranslatorRunner, session_without_commit: AsyncSession
 ):
     balance_dict = await UserDAO(session_without_commit).get_total_balance_dict(user_info.id)
-    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.ANALYSIS.name, '∞')
+    analiz_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.MONEYGAME.name, '∞')
+    match_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.MATCH.name, '∞')
     short_board_balance = balance_dict.get(PromocodeServiceQuantity.ServiceType.SHORT_BOARD.name, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=analiz_balance if analiz_balance is not None else '∞',
+            match_balance=match_balance if match_balance is not None else '∞',
             short_board_balance=short_board_balance if short_board_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),

@@ -2,7 +2,8 @@
 services:
   backgammon-bot:
     build: .
-    command: /bin/sh -c "alembic upgrade head && python -m bot.init"
+    # command: /bin/sh -c "alembic upgrade head && python -m bot.init"
+    command: /bin/sh -c "python -m bot.common.func.analiz_func"
     container_name: backgammon_bot
     volumes:
       - ./bot:/app/bot

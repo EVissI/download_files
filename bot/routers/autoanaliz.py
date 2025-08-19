@@ -118,7 +118,12 @@ async def handle_mat_file(
         else:
             logger.warning("Строка, заканчивающаяся на 'point match', не найдена.")
             await state.update_data(point_match=None)
-
+        try:
+            duration = int(point_match_value)
+            logger.info(duration)
+        except Exception as e:
+            logger.error(f"Ошибка при получении значения point match: {e}")
+            duration = None
 
         loop = asyncio.get_running_loop()
         analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
@@ -161,15 +166,12 @@ async def handle_mat_file(
             await dao.add(SDetailedAnalysis(**player_data))
 
             user_dao = UserDAO(session_without_commit)
-            await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.ANALYSIS)
-
+            if duration is None or duration == 0:
+                await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.MONEYGAME)
+            else:
+                await user_dao.decrease_match_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.MATCH)
             formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
-            try:
-                duration = int(point_match_value)
-                logger.info(duration)
-            except Exception as e:
-                logger.error(f"Ошибка при получении значения point match: {e}")
-                duration = None
+
             if duration is not None or duration != 0:
                 try:
                     formated_data = get_analysis_data(analysis_data)
@@ -236,6 +238,11 @@ async def handle_player_selection(
 ):
     try:
         data = await state.get_data()
+        try:
+            duration = int(data.get('point_match'))
+        except Exception as e:
+            logger.error(f"Ошибка при получении значения point match: {e}")
+            duration = None
         analysis_data = data["analysis_data"]
         file_name = data["file_name"]
         file_path = data["file_path"]
@@ -267,16 +274,15 @@ async def handle_player_selection(
         }
 
         await dao.add(SDetailedAnalysis(**player_data))
-
-        await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.ANALYSIS)
+        
+        if duration is None or duration == 0:
+            await user_dao.decrease_analiz_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.MONEYGAME)
+        else:
+            await user_dao.decrease_match_balance(user_info.id, service_type=PromocodeServiceQuantity.ServiceType.MATCH)
 
         formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
         await callback.message.delete()
-        try:
-            duration = int(data.get('point_match'))
-        except Exception as e:
-            logger.error(f"Ошибка при получении значения point match: {e}")
         if duration is not None or duration != 0:
             try:
                 formated_data = get_analysis_data(analysis_data)

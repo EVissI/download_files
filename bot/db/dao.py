@@ -112,7 +112,8 @@ class UserDAO(BaseDAO[User]):
         try:
             balance_dict = {}
             service_types = [
-                PromocodeServiceQuantity.ServiceType.ANALYSIS,
+                PromocodeServiceQuantity.ServiceType.MATCH,
+                PromocodeServiceQuantity.ServiceType.MONEYGAME,
                 PromocodeServiceQuantity.ServiceType.SHORT_BOARD,
             ]
 
