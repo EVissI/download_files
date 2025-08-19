@@ -51,23 +51,22 @@ async def generate_detailed_analysis_report(
             "Очень неудачные броски",
             "Рейтинг удачи",
             "Рейтинг кубика",
-            "Пропущенные даблы ниже CP",
-            "Пропущенные даблы выше CP",
-            "Неправильные даблы ниже SP",
-            "Неправильные даблы выше TG",
+            "Пропущенный куб по ДП",
+            "Пропущенный куб по ТГ",
+            "Ошибочный куб по ДП",
+            "Ошибочный куб по ТГ",
             "Ошибки взятия",
             "Неправильные пасы",
             "Ошибки куба",
             "Рейтинг ошибок",
             "Общий рейтинг",
         ]
-
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col)
             cell.value = header
             cell.font = header_font
             cell.fill = header_fill
-            cell.alignment = left_align
+            cell.alignment = center_align
 
         analyses = await dao.get_all_detailed_analyzes(start_date, end_date)
         current_row = 2
@@ -105,7 +104,7 @@ async def generate_detailed_analysis_report(
 
             # Устанавливаем выравнивание по левому краю для всех ячеек строки
             for col in range(1, 24):
-                ws.cell(row=current_row, column=col).alignment = left_align
+                ws.cell(row=current_row, column=col).alignment = center_align
 
             current_row += 1
 
@@ -187,10 +186,10 @@ async def generate_detailed_user_analysis_report(
         "Очень неудачные броски",
         "Рейтинг удачи",
         "Рейтинг кубика",
-        "Пропущенные даблы ниже CP",
-        "Пропущенные даблы выше CP",
-        "Неправильные даблы ниже SP",
-        "Неправильные даблы выше TG",
+        "Пропущенный куб по ДП",
+        "Пропущенный куб по ТГ",
+        "Ошибочный куб по ДП",
+        "Ошибочный куб по ТГ",
         "Ошибки взятия",
         "Неправильные пасы",
         "Ошибки куба",
@@ -203,7 +202,7 @@ async def generate_detailed_user_analysis_report(
         cell.value = header
         cell.font = header_font
         cell.fill = header_fill
-        cell.alignment = left_align
+        cell.alignment = center_align
 
     try:
         if not player_name:
@@ -246,8 +245,7 @@ async def generate_detailed_user_analysis_report(
             ws.cell(row=current_row, column=23).value = analysis.overall_rating
 
             for col in range(1, 24):
-                ws.cell(row=current_row, column=col).alignment = left_align
-
+                ws.cell(row=current_row, column=col).alignment = center_align
             current_row += 1
 
         column_widths = {
