@@ -167,7 +167,7 @@ async def process_successful_payment(
         # Получаем пакет
         payment_package = await AnalizePaymentDAO(
             session_without_commit
-        ).find_one_or_none_by_id(payment_id)
+        ).find_one_or_none_by_id_with_services(payment_id)
         if not payment_package:
             await message.answer(
                 i18n.user.profile.payment_not_found(), reply_markup=None
