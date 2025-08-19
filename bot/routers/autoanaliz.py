@@ -168,7 +168,7 @@ async def handle_mat_file(
                 
                     await message.bot.send_message(
                         settings.CHAT_GROUP_ID,
-                        f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration} игр\n\n",
+                        f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
                         parse_mode="HTML"
                     )
                 except Exception as e:
@@ -276,7 +276,7 @@ async def handle_player_selection(
             
                 await callback.message.bot.send_message(
                     settings.CHAT_GROUP_ID,
-                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration} игр\n\n",
+                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
                     parse_mode="HTML"
                 )
             except Exception as e:
