@@ -109,7 +109,9 @@ async def handle_mat_file(
 
         # Ищем строку, заканчивающуюся на "point match", и извлекаем число
         match = re.search(r"^(\d+).*point match$", file_content, re.MULTILINE)
+        point_match_value = None
         if match:
+            logger.info(match)
             point_match_value = int(match.group(1))
             # Сохраняем число в стейт
             await state.update_data(point_match=point_match_value)
@@ -164,6 +166,7 @@ async def handle_mat_file(
             formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
             try:
                 duration = int(point_match_value)
+                logger.info(duration)
             except Exception as e:
                 logger.error(f"Ошибка при получении значения point match: {e}")
                 duration = None
@@ -174,6 +177,9 @@ async def handle_mat_file(
                     player1_name, player2_name = player_names
                     p1 = analysis_data[player1_name]
                     p2 = analysis_data[player2_name]
+                    logger.info(f"Player 1: {player1_name}, Error Rate: {p1['snowie_error_rate']}")
+                    logger.info(f"Player 2: {player2_name}, Error Rate: {p2['snowie_error_rate']}")
+                    logger.info(f"Duration: {duration} games")
                     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
                     message.bot.send_message(
