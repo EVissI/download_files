@@ -5,22 +5,13 @@ import os
 from loguru import logger
 
 
-def analyze_mat_file(file: str, type: str = None) -> str:
+def analyze_mat_file(file: str, type: str = None) -> tuple:
     """
-    Анализирует файл матча или позиции с помощью GNU Backgammon и возвращает статистику в формате JSON.
-
-    Args:
-        file: Путь к файлу матча или позиции.
-        type: Тип файла ('sgf', 'mat', 'sgg', 'bkg', 'gam', 'pos', 'fibs', 'tmg', 'empire', 'party').
-              Если None, для .gam файлов выполняется автоматическое определение.
+    Анализирует файл матча или позиции с помощью GNU Backgammon и возвращает статистику в формате JSON,
+    а также значение points match.
 
     Returns:
-        str: JSON-строка с результатами анализа.
-
-    Raises:
-        FileNotFoundError: Если файл или GNU Backgammon не найдены.
-        ValueError: Если указан неизвестный тип файла.
-        RuntimeError: Если произошла ошибка при выполнении GNU Backgammon.
+        tuple: (points_match_value, json_string)
     """
     try:
         if not os.path.exists(file):
@@ -120,11 +111,18 @@ def analyze_mat_file(file: str, type: str = None) -> str:
 
         logger.info(f"Анализ матча завершён для файла: {file}")
 
-        # Парсинг вывода в JSON
         stats = {}
         current_section = None
         players = []
+        points_match_value = 0  # Значение по умолчанию
         lines = [line.strip() for line in stdout.split("\n") if line.strip()]
+
+        # Извлечение значения points match
+        for line in lines:
+            match = re.search(r"(\d+)\s+points match", line)
+            if match:
+                points_match_value = int(match.group(1))
+                break  # Прекращаем поиск, если нашли значение
 
         # Извлечение имен игроков из строк X: и O:
         for line in lines:
@@ -133,7 +131,7 @@ def analyze_mat_file(file: str, type: str = None) -> str:
                 if match:
                     x_player = match.group(1).strip()
                     players.append(x_player)
-            if "O:" in line:
+            elif "O:" in line:
                 match = re.search(r"O:\s*([^\(]+)", line)
                 if match:
                     o_player = match.group(1).strip()
@@ -231,7 +229,7 @@ def analyze_mat_file(file: str, type: str = None) -> str:
             ):
                 stats["overall"][player]["snowie_error_rate"] = "0"
 
-        return json.dumps(stats, ensure_ascii=False)
+        return points_match_value, json.dumps(stats, ensure_ascii=False)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе матча: {e}")

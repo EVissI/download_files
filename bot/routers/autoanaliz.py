@@ -104,29 +104,10 @@ async def handle_mat_file(
 
         await message.bot.download(file.file_id, destination=file_path)
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            file_content = f.read()
 
-        # Ищем строку, заканчивающуюся на "point match", и извлекаем число
-        match = re.search(r"^\s*(\d+)\s+point match", file_content, re.IGNORECASE | re.MULTILINE)
-        point_match_value = None
-        if match:
-            point_match_value = int(match.group(1))
-            # Сохраняем число в стейт
-            await state.update_data(point_match=point_match_value)
-            logger.info(f"Извлечено значение point match: {point_match_value}")
-        else:
-            logger.warning("Строка, заканчивающаяся на 'point match', не найдена.")
-            await state.update_data(point_match=None)
-        try:
-            duration = int(point_match_value)
-            logger.info(duration)
-        except Exception as e:
-            logger.error(f"Ошибка при получении значения point match: {e}")
-            duration = None
 
         loop = asyncio.get_running_loop()
-        analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
+        duration, analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
         analysis_data = await loop.run_in_executor(None, json.loads, analysis_result)
         await redis_client.set(f"analysis_data:{user_info.id}", json.dumps(analysis_data), expire=3600)
 
