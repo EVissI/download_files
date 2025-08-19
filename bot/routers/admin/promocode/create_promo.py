@@ -251,7 +251,7 @@ async def get_duration_days(
         SPromocodeServiceQuantity(
             promocode_id=promo.id,
             service_type=service["service_type"],
-            quantity=service["quantity"],
+            quantity=service["quantity"] if service["quantity"] > 0 else None,
         )
         for service in services
     ]
