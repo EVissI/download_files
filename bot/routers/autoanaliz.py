@@ -108,10 +108,9 @@ async def handle_mat_file(
             file_content = f.read()
 
         # Ищем строку, заканчивающуюся на "point match", и извлекаем число
-        match = re.search(r"^(\d+).*point match$", file_content, re.MULTILINE)
+        match = re.search(r"^\s*(\d+)\s+point match", file_content, re.IGNORECASE | re.MULTILINE)
         point_match_value = None
         if match:
-            logger.info(match)
             point_match_value = int(match.group(1))
             # Сохраняем число в стейт
             await state.update_data(point_match=point_match_value)
@@ -119,6 +118,7 @@ async def handle_mat_file(
         else:
             logger.warning("Строка, заканчивающаяся на 'point match', не найдена.")
             await state.update_data(point_match=None)
+
 
         loop = asyncio.get_running_loop()
         analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
