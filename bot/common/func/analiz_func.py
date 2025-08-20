@@ -26,7 +26,6 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
 
         # Определение команды импорта
         if type is None and file.endswith(".gam"):
-            # Попытка определить платформу для .gam файлов
             with open(file, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read().lower()
                 if "gammonempire" in content:
@@ -34,9 +33,8 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
                 elif "partygammon" in content:
                     type = "party"
                 else:
-                    type = "gam"  # По умолчанию считаем Jellyfish
+                    type = "gam"
 
-        # Список команд для разных типов файлов
         import_commands = {
             "sgf": f"load match {file}",
             "mat": f"import mat {file}",
@@ -54,7 +52,6 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
             logger.error(f"Неизвестный тип файла: {type}")
             raise ValueError(f"Неизвестный тип файла: {type}")
 
-        # Попытка импорта для .gam файлов с разными командами, если первая не сработала
         import_command = import_commands[type]
         gnubg_commands = [
             import_command,
@@ -114,7 +111,7 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
         stats = {}
         current_section = None
         players = []
-        points_match_value = 0  # Значение по умолчанию
+        points_match_value = 0
         lines = [line.strip() for line in stdout.split("\n") if line.strip()]
 
         # Извлечение значения points match
@@ -122,26 +119,30 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
             match = re.search(r"(\d+)\s+points match", line)
             if match:
                 points_match_value = int(match.group(1))
-                break  # Прекращаем поиск, если нашли значение
+                break
 
-        # Извлечение имен игроков из строк X: и O:
-        for line in lines:
-            if "X:" in line:
-                match = re.search(r"X:\s*([^\(]+)", line)
-                if match:
-                    x_player = match.group(1).strip()
-                    players.append(x_player)
-            elif "O:" in line:
-                match = re.search(r"O:\s*([^\(]+)", line)
-                if match:
-                    o_player = match.group(1).strip()
-                    players.append(o_player)
+        # Извлечение строк X:, O:, и Player
+        x_line = next((line for line in lines if "X:" in line), None)
+        o_line = next((line for line in lines if "O:" in line), None)
+        player_line = next((line for line in lines if line.startswith("Player")), None)
 
-        # Убедимся, что извлечены оба игрока
-        if len(players) != 2:
-            logger.error(
-                "Не удалось извлечь никнеймы игроков из вывода GNU Backgammon."
-            )
+        if not x_line or not o_line or not player_line:
+            logger.error("Не удалось найти строки X:, O:, или Player.")
+            raise RuntimeError("Ошибка извлечения строк X:, O:, или Player.")
+
+        # Извлечение первого ника (X:)
+        x_words = set(re.findall(r"\w+", x_line))
+        player_words = set(re.findall(r"\w+", player_line))
+        first_nick = " ".join(x_words & player_words)
+
+        # Извлечение второго ника (O:)
+        o_words = set(re.findall(r"\w+", o_line))
+        second_nick = " ".join(o_words & player_words)
+
+        players = [first_nick, second_nick]
+
+        if len(players) != 2 or not all(players):
+            logger.error("Не удалось извлечь никнеймы игроков.")
             raise RuntimeError("Ошибка извлечения никнеймов игроков.")
 
         for line in lines:
@@ -171,14 +172,12 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
                         .replace(".", "")
                     )
 
-                    # Добавляем '_points' к ключам с EMG, если еще не добавлен
                     if "emg" in key and not key.endswith("_points"):
                         key = f"{key}_points"
 
                     is_rating = "rating" in key
 
                     if len(parts) - 1 == len(players):
-                        # Строки с одним значением на игрока
                         for i, player in enumerate(players):
                             value = parts[i + 1].strip()
                             if is_rating:
@@ -197,7 +196,6 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
                                 elif not main_match:
                                     stats[current_section][player][key] = "0"
                     elif len(parts) - 1 == 2 * len(players):
-                        # Строки с двумя частями на игрока (main + extra)
                         for i, player in enumerate(players):
                             main_part = parts[1 + 2 * i].strip()
                             extra_part = (
@@ -221,7 +219,6 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
                     else:
                         logger.warning(f"Неизвестный формат строки: {line}")
 
-        # Проверяем и исправляем значения Snowie error rate
         for player in players:
             if (
                 "overall" in stats
