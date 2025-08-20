@@ -71,8 +71,15 @@ async def cancel_create_promo(
 
 
 @promo_create_router.message(StateFilter(PromoCreateStates.waiting_for_code))
-async def get_code(message: Message, state: FSMContext):
+async def get_code(message: Message, state: FSMContext, session_without_commit):
     await state.update_data(code=message.text.strip())
+    promo_dao = PromoCodeDAO(session_without_commit)
+    existing_promo = await promo_dao.find_by_code(message.text.strip())
+    if existing_promo:
+        await message.answer(
+            "Промокод с таким названием уже существует. Пожалуйста, выберите другое название."
+        )
+        return
     await state.set_state(PromoCreateStates.waiting_for_service_type)
 
     # Генерация инлайн-кнопок для выбора типа услуги
