@@ -154,7 +154,7 @@ async def handle_mat_file(
                 await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MATCH)
             formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
-            if duration is not None or duration != 0:
+            if duration is not None and duration != 0:
                 try:
                     formated_data = get_analysis_data(analysis_data)
                     player_names = list(formated_data)
@@ -265,7 +265,7 @@ async def handle_player_selection(
         formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
 
         await callback.message.delete()
-        if duration is not None or duration != 0:
+        if duration is not None and duration != 0:
             try:
                 formated_data = get_analysis_data(analysis_data)
                 player_names = list(formated_data)
