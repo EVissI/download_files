@@ -130,14 +130,18 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
             logger.error("Не удалось найти строки X:, O:, или Player.")
             raise RuntimeError("Ошибка извлечения строк X:, O:, или Player.")
 
-        # Извлечение первого ника (X:)
-        x_words = set(re.findall(r"\w+", x_line))
-        player_words = set(re.findall(r"\w+", player_line))
-        first_nick = " ".join(x_words & player_words)
+        # Извлечение слов из строк X:, O:, и Player
+        x_words = re.findall(r"\w+", x_line)
+        o_words = re.findall(r"\w+", o_line)
+        player_words = re.findall(r"\w+", player_line)
 
-        # Извлечение второго ника (O:)
-        o_words = set(re.findall(r"\w+", o_line))
-        second_nick = " ".join(o_words & player_words)
+        # Определение первого и второго ника на основе позиции в player_line
+        first_nick = next((word for word in player_words if word in x_words), None)
+        second_nick = next((word for word in player_words if word in o_words), None)
+
+        if not first_nick or not second_nick:
+            logger.error("Не удалось извлечь никнеймы игроков.")
+            raise RuntimeError("Ошибка извлечения никнеймов игроков.")
 
         players = [first_nick, second_nick]
 
