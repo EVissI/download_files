@@ -90,7 +90,7 @@ async def handle_batch_type_selection(
 
 @batch_auto_analyze_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "auto-batch-stop")), StateFilter(BatchAnalyzeDialog.uploading_sequential), UserInfo())
 async def handle_batch_stop(
-    message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User
+    message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User, session_without_commit: AsyncSession
 ):
     data = await state.get_data()
     file_paths = data.get("file_paths", [])
@@ -100,7 +100,7 @@ async def handle_batch_stop(
         await message.delete()
         return
     await message.delete()
-    await process_batch_files(message, state, user_info, i18n, file_paths)
+    await process_batch_files(message, state, user_info, i18n, file_paths, session_without_commit)
 
 
 @batch_auto_analyze_router.message(
