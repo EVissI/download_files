@@ -153,6 +153,7 @@ async def handle_zip_file(
     state: FSMContext,
     i18n: TranslatorRunner,
     user_info: User,
+    session_without_commit: AsyncSession
 ):
     file = message.document
     if not file.file_name.endswith(".zip"):
@@ -173,7 +174,7 @@ async def handle_zip_file(
             await state.clear()
             return await message.answer(i18n.auto.batch.no_valid_files(), reply_markup=MainKeyboard.build(user_info.role, i18n))
         
-        await process_batch_files(message, state, user_info, i18n, file_paths)
+        await process_batch_files(message, state, user_info, i18n, file_paths, session_without_commit)
 
 
 async def process_batch_files(
@@ -182,7 +183,7 @@ async def process_batch_files(
     user_info: User,
     i18n: TranslatorRunner,
     file_paths: list,
-    session_without_commit: AsyncSession = None,  # Assume session is passed or handled
+    session_without_commit: AsyncSession 
 ):    
     all_analysis_datas = []
     successful_count = 0
@@ -219,7 +220,7 @@ async def process_batch_files(
             selected_player = user_info.player_username
             await process_single_analysis(
                 message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
-                selected_player, duration, session_without_commit
+                selected_player, session=session_without_commit
             )
             all_analysis_datas.append(analysis_data)
             successful_count += 1
@@ -260,8 +261,7 @@ async def process_single_analysis(
     file_name: str,
     file_path: str,
     selected_player: str,
-    duration: int,
-    session_without_commit: AsyncSession
+    session: AsyncSession
 ):
     game_id = f"batch_auto_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     player_data = {
@@ -273,7 +273,7 @@ async def process_single_analysis(
         **get_analysis_data(analysis_data, selected_player),
     }
     
-    dao = DetailedAnalysisDAO(session_without_commit)
+    dao = DetailedAnalysisDAO(session)
     await dao.add(SDetailedAnalysis(**player_data))
     
     formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
