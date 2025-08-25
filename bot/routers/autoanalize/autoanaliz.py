@@ -1,9 +1,5 @@
-﻿﻿
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+﻿﻿import asyncio
 from datetime import datetime
-import io
-import re
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -21,7 +17,6 @@ from bot.common.filters.user_info import UserInfo
 from bot.common.func.func import (
     format_detailed_analysis,
     get_analysis_data,
-    get_user_file_name,
 )
 from bot.common.func.generate_pdf import html_to_pdf_bytes
 from bot.common.func.waiting_message import WaitingMessageManager
