@@ -153,3 +153,17 @@ auto-analyze-wrong_type_match = Этот файл является матчем,
 auto-analyze-wrong_type_moneygame = Этот файл является манигеймом, но вы выбрали матч. Пожалуйста, выберите правильный тип анализа.
 auto-analyze-not_ebought_balance = Недостаточно баланса для этого сервиса, активируйте промокод или купите баланс в профиле 
 auto-analyze-select_autoanalyze_type = Пожалуйста, выберите тип автоанализа:
+auto-batch-choose_type = Пожалуйста, выберите метод загрузки для пакетного анализа: auto-batch-sequential = Загружать по одному 
+auto-batch-zip = Загрузить ZIP-архив 
+auto-batch-submit_sequential = Загружайте файлы матчей по одному. Нажмите "Прекратить загрузку" когда закончите. 
+auto-batch-stop = Прекратить загрузку 
+auto-batch-submit_zip = Пожалуйста, загрузите ZIP-архив с файлами матчей. 
+auto-batch-invalid_zip = Некорректный файл; пожалуйста, загрузите ZIP-архив. 
+auto-batch-added = Файл добавлен. Текущая очередь: { $count } 
+auto-batch-no_files = Ни одного файла не загружено. Возврат в главное меню. 
+auto-batch-no_valid_files = Нет валидных файлов матчей в ZIP. 
+auto-batch-progress = Анализ { $current } / { $total } 
+auto-batch-summary = Средние результаты из { $count } матчей: 
+auto-batch-no_matches = Не найдено файлов матчей; анализ не выполнен. 
+auto-batch-wrong_file = Пропущено: Не файл матча. 
+auto-batch-no_data_pdf = Нет данных пакетного анализа для создания PDF.
