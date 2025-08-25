@@ -275,9 +275,10 @@ async def process_single_analysis(
     }
 
     data = await state.get_data()
-    pr_values = data.get("pr_values", [])
-    player_metrics = get_analysis_data(analysis_data, selected_player)
-    pr_values.append(player_metrics["snowie_error_rate"])
+    pr_values = data.get("pr_values", {})
+    players_metrics = get_analysis_data(analysis_data)
+    for player in players_metrics.keys():
+        pr_values.setdefault(player, []).append(players_metrics[player].get("pr", 0))
     await state.update_data(pr_values=pr_values)
 
     dao = DetailedAnalysisDAO(session)
@@ -435,21 +436,22 @@ async def finalize_batch(
         # Calculate and send averages
         data = await state.get_data()
         pr_values = data.get("pr_values", [])
-        average_pr = calculate_average_analysis(pr_values)
-        pr_list = ", ".join([f"{pr:.2f}" for pr in pr_values])
-        ru_i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
-            'ru'
-        )
-        await message.bot.send_message(
-            settings.CHAT_GROUP_ID,
-            ru_i18n.auto.batch.summary_pr(player=user_info.player_username, pr_list=pr_list, average_pr=f"{average_pr:.2f}"),
-            parse_mode="HTML"
-        )
-        await message.answer(
-            i18n.auto.batch.summary_pr(player=user_info.player_username, pr_list=pr_list, average_pr=f"{average_pr:.2f}"),
-            parse_mode="HTML",
-            reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
-        )
+        for player, pr in pr_values.items():
+            average_pr = calculate_average_analysis(pr)
+            pr_list = ", ".join([f"{pr:.2f}" for pr in pr])
+            ru_i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
+                'ru'
+            )
+            await message.bot.send_message(
+                settings.CHAT_GROUP_ID,
+                ru_i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}"),
+                parse_mode="HTML"
+            )
+            await message.answer(
+                i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}"),
+                parse_mode="HTML",
+                reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
+            )
     else:
         await message.answer(i18n.auto.batch.no_matches(), reply_markup=MainKeyboard.build(user_info.role, i18n))
     
