@@ -169,3 +169,4 @@ auto-batch-wrong_file = Пропущено: Не файл матча.
 auto-batch-no_data_pdf = Нет данных пакетного анализа для создания PDF.
 auto-analyze-batch_type = Пакетный анализ
 auto-analyze-single_match = Отдельный матч
+user-static-select_autoanalyze_type = Пожалуйста, выберите тип автоанализа:

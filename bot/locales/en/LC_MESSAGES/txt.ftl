@@ -168,3 +168,4 @@ auto-batch-wrong_file = Skipped: Not a match file.
 auto-batch-no_data_pdf = No batch analysis data available for PDF generation.
 auto-analyze-batch_type = Batch Analyze
 auto-analyze-single_match = Single Match Analysis
+user-static-select_autoanalyze_type = Please select the type of auto analysis:

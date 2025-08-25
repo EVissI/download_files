@@ -45,6 +45,8 @@ class UserStatic:
     def gift() -> Literal["""🎁 You have a gift!
 You have access to the promo code &lt;code&gt;NEW&lt;/code&gt;!
 You can activate it in &lt;b&gt;Profile&lt;/b&gt; → &lt;b&gt;Activate promo code.&lt;/b&gt;"""]: ...
+    @staticmethod
+    def select_autoanalyze_type() -> Literal["""Please select the type of auto analysis:"""]: ...
 
 class UserProfileInlineButton:
     @staticmethod
