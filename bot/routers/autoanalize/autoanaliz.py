@@ -52,6 +52,7 @@ class AutoAnalyzeDialog(StatesGroup):
 async def start_auto_analyze(
     callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner
 ):
+    await callback.message.delete()
     keyboard = InlineKeyboardBuilder()
     keyboard.button(
         text=i18n.auto.analyze.moneygame(), callback_data="auto_type:moneygame"
