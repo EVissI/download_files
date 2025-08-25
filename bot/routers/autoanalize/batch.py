@@ -142,7 +142,6 @@ async def handle_sequential_file(
     file_paths = data.get("file_paths", [])
     file_paths.append(file_path)
     await state.update_data(file_paths=file_paths)
-    
     await message.answer(i18n.auto.batch.added(count = len(file_paths)))
 
 
@@ -170,11 +169,12 @@ async def handle_zip_file(
                 if member.endswith(('.mat', '.txt', '.sgf', '.sgg', '.bkg', '.gam', '.pos', '.fibs', '.tmg')):
                     extracted_path = zipf.extract(member, tmpdir)
                     file_paths.append(extracted_path)
+
         
         if not file_paths:
             await state.clear()
             return await message.answer(i18n.auto.batch.no_valid_files(), reply_markup=MainKeyboard.build(user_info.role, i18n))
-        
+        await state.update_data(file_paths=file_paths)
         await process_batch_files(message, state, user_info, i18n, file_paths, session_without_commit)
 
 
@@ -330,7 +330,7 @@ async def handle_batch_player_selection(
         
         # Update state for next file
         file_paths = data.get("file_paths", [])[current_file_idx:]  # Remaining files
-        logger.info(file_paths)
+        logger.info("FILE_PATHS: " + file_paths)
         await state.update_data(
             file_paths=file_paths,
             all_analysis_datas=all_analysis_datas,
