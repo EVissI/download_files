@@ -66,6 +66,7 @@ async def start_auto_analyze(
 async def handle_type_selection(
     callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner, user_info: User, session_without_commit: AsyncSession
 ):
+    await callback.message.delete()
     analysis_type = callback.data.split(":")[1]
     await state.set_state(AutoAnalyzeDialog.file)
     await state.update_data(analysis_type=analysis_type)
