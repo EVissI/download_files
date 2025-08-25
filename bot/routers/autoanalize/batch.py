@@ -320,9 +320,9 @@ async def handle_batch_player_selection(
         # Process the current analysis
         duration = int(data.get("duration", 0))  # Assuming duration was stored
         await process_single_analysis(
-            callback.message, state, user_info, i18n, analysis_data, file_name, file_path,
-            selected_player, duration, session_without_commit
-        )
+                callback.message, state, user_info, i18n, analysis_data, file_name, file_path,
+                selected_player, session=session_without_commit
+            )
         
         all_analysis_datas.append(analysis_data)
         successful_count += 1
@@ -366,7 +366,7 @@ async def handle_batch_player_selection(
             current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
             new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
             new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
-            os.rename(file_path, new_file_path)
+            shutil.move(file_path, new_file_path)
             
             try:
                 asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
@@ -376,8 +376,8 @@ async def handle_batch_player_selection(
             if user_info.player_username and user_info.player_username in player_names:
                 selected_player = user_info.player_username
                 await process_single_analysis(
-                    callback.message, state, user_info, i18n, analysis_data, file_name, file_path,
-                    selected_player, duration, session_without_commit
+                    callback.message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
+                    selected_player, session=session_without_commit
                 )
                 all_analysis_datas.append(analysis_data)
                 successful_count += 1
