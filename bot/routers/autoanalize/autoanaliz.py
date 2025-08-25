@@ -1,4 +1,4 @@
-﻿import asyncio
+﻿﻿import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import io
@@ -58,8 +58,27 @@ class AutoAnalyzeDialog(StatesGroup):
 async def start_auto_analyze(
     message: Message, state: FSMContext, i18n: TranslatorRunner
 ):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text=i18n.auto.analyze.moneygame(), callback_data="auto_type:moneygame")
+    keyboard.button(text=i18n.auto.analyze.games_match(), callback_data="auto_type:match")
+    keyboard.adjust(1)
+    await message.answer(i18n.auto.analyze.choose_type(), reply_markup=keyboard.as_markup())
+
+
+@auto_analyze_router.callback_query(F.data.startswith("auto_type:"))
+async def handle_type_selection(
+    callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner
+):
+    analysis_type = callback.data.split(":")[1]
     await state.set_state(AutoAnalyzeDialog.file)
-    await message.answer(i18n.auto.analyze.submit(), reply_markup=get_cancel_kb(i18n))
+    await state.update_data(analysis_type=analysis_type)
+    if analysis_type == "moneygame":
+        text = i18n.auto.analyze.submit_moneygame()
+    else:   
+        text = i18n.auto.analyze.submit_match()
+    await callback.message.answer(text, reply_markup=get_cancel_kb(i18n))
+    await callback.answer()
+    await callback.message.delete()
 
 
 @auto_analyze_router.message(
@@ -116,6 +135,19 @@ async def handle_mat_file(
         if len(player_names) != 2:
             raise ValueError("Incorrect number of players in analysis")
 
+        data = await state.get_data()
+        analysis_type = data.get("analysis_type")
+        if analysis_type == "moneygame" and (duration is not None and duration != 0):
+            await waiting_manager.stop()
+            await state.clear()
+            return await message.answer(i18n.auto.analyze.wrong_type_match(),
+                                        reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n))
+        if analysis_type == "match" and (duration is None or duration == 0):
+            await waiting_manager.stop()
+            await state.clear()
+            return await message.answer(i18n.auto.analyze.wrong_type_moneygame(), 
+                                        reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n))
+
         # Генерируем новое имя файла
         moscow_tz = pytz.timezone("Europe/Moscow")
         current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
@@ -146,14 +178,12 @@ async def handle_mat_file(
 
             dao = DetailedAnalysisDAO(session_without_commit)
             await dao.add(SDetailedAnalysis(**player_data))
-
             user_dao = UserDAO(session_without_commit)
             if duration is None or duration == 0:
                 await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MONEYGAME)
             else:
                 await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MATCH)
             formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
-
             if duration is not None and duration != 0:
                 try:
                     formated_data = get_analysis_data(analysis_data)
@@ -161,9 +191,6 @@ async def handle_mat_file(
                     player1_name, player2_name = player_names
                     p1 = formated_data.get(player1_name)
                     p2 = formated_data.get(player2_name)
-                    logger.info(f"Player 1: {player1_name}, Error Rate: {p1['snowie_error_rate']}")
-                    logger.info(f"Player 2: {player2_name}, Error Rate: {p2['snowie_error_rate']}")
-                    logger.info(f"Duration: {duration} games")
                     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
                     await message.bot.send_message(

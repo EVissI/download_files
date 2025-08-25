@@ -141,3 +141,11 @@ user-static-enter_email = Email request sent. Please enter your email address.
 user-static-gift = 🎁 You have a gift!
     You have access to the promo code <code>NEW</code>!
     You can activate it in <b>Profile</b> → <b>Activate promo code.</b>
+
+auto-analyze-choose_type = Please select the type of analysis: 
+auto-analyze-moneygame = Moneygame 
+auto-analyze-games_match = Match 
+auto-analyze-submit_moneygame = Please submit a Moneygame file for analysis. 
+auto-analyze-submit_match = Please submit a Match file for analysis. 
+auto-analyze-wrong_type_match = This file is a Match, but you selected Moneygame. Please select the correct analysis type. 
+auto-analyze-wrong_type_moneygame = This file is a Moneygame, but you selected Match. Please select the correct analysis type.
