@@ -7,7 +7,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile
 import pytz
@@ -61,6 +61,7 @@ class BatchAnalyzeDialog(StatesGroup):
 async def start_batch_auto_analyze(
     callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner
 ):
+    await callback.message.delete()
     await state.set_state(BatchAnalyzeDialog.choose_type)
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text=i18n.auto.batch.sequential(), callback_data="batch_type:sequential")
@@ -77,8 +78,8 @@ async def handle_batch_type_selection(
     if batch_type == "sequential":
         await state.set_state(BatchAnalyzeDialog.uploading_sequential)
         await state.update_data(file_paths=[])
-        keyboard = InlineKeyboardBuilder()
-        keyboard.button(text=i18n.auto.batch.stop(), callback_data="batch_stop")
+        keyboard = ReplyKeyboardBuilder()
+        keyboard.button(text=i18n.auto.batch.stop())
         await callback.message.answer(i18n.auto.batch.submit_sequential(), reply_markup=keyboard.as_markup())
     else:  # zip
         await state.set_state(BatchAnalyzeDialog.uploading_zip)
@@ -87,19 +88,19 @@ async def handle_batch_type_selection(
     await callback.message.delete()
 
 
-@batch_auto_analyze_router.callback_query(F.data == "batch_stop", StateFilter(BatchAnalyzeDialog.uploading_sequential), UserInfo())
+@batch_auto_analyze_router.callback_query(F.text.in_(get_all_locales_for_key(translator_hub, "auto-batch-submit_sequential")), StateFilter(BatchAnalyzeDialog.uploading_sequential), UserInfo())
 async def handle_batch_stop(
-    callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner, user_info: User
+    message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User
 ):
     data = await state.get_data()
     file_paths = data.get("file_paths", [])
     if not file_paths:
         await state.clear()
-        await callback.message.answer(i18n.auto.batch.no_files(), reply_markup=MainKeyboard.build(user_info.role, i18n))
-        await callback.message.delete()
+        await message.answer(i18n.auto.batch.no_files(), reply_markup=MainKeyboard.build(user_info.role, i18n))
+        await message.delete()
         return
-    await callback.message.delete()
-    await process_batch_files(callback.message, state, user_info, i18n, file_paths)
+    await message.delete()
+    await process_batch_files(message, state, user_info, i18n, file_paths)
 
 
 @batch_auto_analyze_router.message(
