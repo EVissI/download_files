@@ -1,4 +1,5 @@
 ﻿import asyncio
+import shutil
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import io
@@ -208,7 +209,7 @@ async def process_batch_files(
         current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
         new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
         new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
-        os.rename(file_path, new_file_path)
+        shutil.move(file_path, new_file_path)
         
         try:
             asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
