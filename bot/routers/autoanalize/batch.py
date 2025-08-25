@@ -247,7 +247,7 @@ async def process_batch_files(
             )
             await state.set_state(BatchAnalyzeDialog.select_player)
             return  # Wait for player selection before continuing
-    
+    await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
     # If no player selection is needed, finalize batch
     await finalize_batch(message, state, user_info, i18n, all_analysis_datas, successful_count, progress_message, session_without_commit)
 
@@ -263,6 +263,8 @@ async def process_single_analysis(
     selected_player: str,
     session: AsyncSession
 ):
+    waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
+    await waiting_manager.start()
     game_id = f"batch_auto_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     player_data = {
         "user_id": message.from_user.id,
@@ -282,6 +284,7 @@ async def process_single_analysis(
         parse_mode="HTML",
         reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
     )
+    await waiting_manager.stop()
     
 
 @batch_auto_analyze_router.callback_query(F.data.startswith("batch_player:"), StateFilter(BatchAnalyzeDialog.select_player), UserInfo())
@@ -425,9 +428,6 @@ async def finalize_batch(
         chat_id=message.chat.id,
         message_id=progress_message_id
     )
-    
-    waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
-    await waiting_manager.stop()
     
     if successful_count > 0:
         # Deduct balance once
