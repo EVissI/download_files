@@ -433,7 +433,7 @@ async def finalize_batch(
         average_analysis = calculate_average_analysis(all_analysis_datas)
         formatted_average = format_detailed_analysis(average_analysis, i18n)  # Assume format_detailed_analysis can handle averages
         await message.answer(
-            i18n.auto.batch.summary(successful_count) + f"\n\n{formatted_average}",
+            i18n.auto.batch.summary(count = successful_count) + f"\n\n{formatted_average}",
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
