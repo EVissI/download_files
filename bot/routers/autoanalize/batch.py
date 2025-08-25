@@ -266,7 +266,7 @@ async def process_single_analysis(
 ):
     game_id = f"batch_auto_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     player_data = {
-        "user_id": message.from_user.id,
+        "user_id": user_info.id,
         "player_name": selected_player,
         "file_name": file_name,
         "file_path": file_path,
