@@ -88,7 +88,7 @@ async def handle_batch_type_selection(
     await callback.message.delete()
 
 
-@batch_auto_analyze_router.callback_query(F.text.in_(get_all_locales_for_key(translator_hub, "auto-batch-submit_sequential")), StateFilter(BatchAnalyzeDialog.uploading_sequential), UserInfo())
+@batch_auto_analyze_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "auto-batch-stop")), StateFilter(BatchAnalyzeDialog.uploading_sequential), UserInfo())
 async def handle_batch_stop(
     message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User
 ):
