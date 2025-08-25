@@ -55,7 +55,7 @@ class BatchAnalyzeDialog(StatesGroup):
     select_player = State()
 
 
-@batch_auto_analyze_router.message(
+@batch_auto_analyze_router.callback_query(
     F.data == "autoanalyze_batch", UserInfo()
 )
 async def start_batch_auto_analyze(
