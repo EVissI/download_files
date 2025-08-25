@@ -376,8 +376,8 @@ async def handle_batch_player_selection(
             if user_info.player_username and user_info.player_username in player_names:
                 selected_player = user_info.player_username
                 await process_single_analysis(
-                    callback.message, state, user_info, i18n, analysis_data, new_file_name,
-                    new_file_path, selected_player, duration, session_without_commit
+                    callback.message, state, user_info, i18n, analysis_data, file_name, file_path,
+                    selected_player, duration, session_without_commit
                 )
                 all_analysis_datas.append(analysis_data)
                 successful_count += 1
