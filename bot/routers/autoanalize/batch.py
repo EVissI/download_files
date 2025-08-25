@@ -439,6 +439,14 @@ async def finalize_batch(
         pr_values = data.get("pr_values", [])
         average_pr = calculate_average_analysis(pr_values)
         pr_list = ", ".join([f"{pr:.2f}" for pr in pr_values])
+        ru_i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
+            'ru'
+        )
+        await message.bot.send_message(
+            settings.CHAT_GROUP_ID,
+            ru_i18n.auto.batch.summary_pr(player=user_info.player_username, pr_list=pr_list, average_pr=f"{average_pr:.2f}"),
+            parse_mode="HTML"
+        )
         await message.answer(
             i18n.auto.batch.summary_pr(player=user_info.player_username, pr_list=pr_list, average_pr=f"{average_pr:.2f}"),
             parse_mode="HTML",
