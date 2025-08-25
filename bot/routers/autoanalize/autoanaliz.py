@@ -25,6 +25,7 @@ from bot.common.func.func import (
 from bot.common.func.generate_pdf import html_to_pdf_bytes
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
+from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
@@ -65,20 +66,29 @@ async def start_auto_analyze(
     await message.answer(i18n.auto.analyze.choose_type(), reply_markup=keyboard.as_markup())
 
 
-@auto_analyze_router.callback_query(F.data.startswith("auto_type:"))
+@auto_analyze_router.callback_query(F.data.startswith("auto_type:"), UserInfo())
 async def handle_type_selection(
-    callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner
+    callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner, user_info: User, session_without_commit: AsyncSession
 ):
     analysis_type = callback.data.split(":")[1]
     await state.set_state(AutoAnalyzeDialog.file)
     await state.update_data(analysis_type=analysis_type)
-    if analysis_type == "moneygame":
+    dao = UserDAO(session_without_commit)
+    if analysis_type == "moneygame": 
+        balance = await dao.get_total_analiz_balance(user_info.id, service_type=ServiceType.MONEYGAME)
         text = i18n.auto.analyze.submit_moneygame()
-    else:   
+    if analysis_type == "match":   
+        balance = await dao.get_total_analiz_balance(user_info.id, service_type=ServiceType.MATCH)
         text = i18n.auto.analyze.submit_match()
-    await callback.message.answer(text, reply_markup=get_cancel_kb(i18n))
-    await callback.answer()
-    await callback.message.delete()
+    if balance > 0:
+        await callback.message.answer(text, reply_markup=get_cancel_kb(i18n))
+        await callback.answer()
+        await callback.message.delete()
+    if balance == 0:
+        await callback.message.answer(i18n.auto.analyze.not_ebought_balance(), 
+                                      reply_markup=get_activate_promo_keyboard(i18n))
+        await state.clear()
+    
 
 
 @auto_analyze_router.message(

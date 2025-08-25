@@ -11,7 +11,6 @@ from bot.routers.contact_info import contact_router
 from bot.routers.short_board import short_board_router
 setup_router = Router()
 
-auto_analyze_router.message.middleware(AnalizMiddleware())
 short_board_router.message.middleware(ShortBoardMiddleware())
 
 setup_router.include_routers(
@@ -23,5 +22,5 @@ setup_router.include_routers(
     activate_promo_router,
     payment_router,
     contact_router,
-    short_board_router,
+    # short_board_router,
 )
