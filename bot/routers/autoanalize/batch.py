@@ -80,7 +80,7 @@ async def handle_batch_type_selection(
         await state.update_data(file_paths=[])
         keyboard = ReplyKeyboardBuilder()
         keyboard.button(text=i18n.auto.batch.stop())
-        await callback.message.answer(i18n.auto.batch.submit_sequential(), reply_markup=keyboard.as_markup())
+        await callback.message.answer(i18n.auto.batch.submit_sequential(), reply_markup=keyboard.as_markup(resize_keyboard=True))
     else:  # zip
         await state.set_state(BatchAnalyzeDialog.uploading_zip)
         await callback.message.answer(i18n.auto.batch.submit_zip(), reply_markup=get_cancel_kb(i18n))
@@ -142,7 +142,7 @@ async def handle_sequential_file(
     file_paths.append(file_path)
     await state.update_data(file_paths=file_paths)
     
-    await message.answer(i18n.auto.batch.added(len(file_paths)))
+    await message.answer(i18n.auto.batch.added(count = len(file_paths)))
 
 
 @batch_auto_analyze_router.message(
@@ -187,15 +187,11 @@ async def process_batch_files(
     all_analysis_datas = []
     successful_count = 0
     total = len(file_paths)
-    progress_message = await message.answer(i18n.auto.batch.progress(0, total))
+    progress_message = await message.answer(i18n.auto.batch.progress(current = 0, total = total))
     
     for idx, file_path in enumerate(file_paths, 1):
-        await message.bot.edit_message_text(
-            chat_id=message.chat.id,
-            message_id=progress_message.message_id,
-            text=i18n.auto.batch.progress(idx, total)
-        )
-        
+        await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
+        progress_message = await message.answer(i18n.auto.batch.progress(current = idx, total = total))
         file_type = os.path.splitext(file_path)[1][1:]
         loop = asyncio.get_running_loop()
         duration, analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
