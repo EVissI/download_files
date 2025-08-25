@@ -170,3 +170,4 @@ auto-batch-no_data_pdf = Нет данных пакетного анализа �
 auto-analyze-batch_type = Пакетный анализ
 auto-analyze-single_match = Отдельный матч
 user-static-select_autoanalyze_type = Пожалуйста, выберите тип автоанализа:
+auto-batch-summary_pr = Средний PR: { $average_pr } для { $player }: ({ $pr_list })

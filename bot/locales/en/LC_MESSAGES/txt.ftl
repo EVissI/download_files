@@ -169,3 +169,4 @@ auto-batch-no_data_pdf = No batch analysis data available for PDF generation.
 auto-analyze-batch_type = Batch Analyze
 auto-analyze-single_match = Single Match Analysis
 user-static-select_autoanalyze_type = Please select the type of auto analysis:
+auto-batch-summary_pr = PR for { $player }: ({ $pr_list }) - average { $average_pr } 

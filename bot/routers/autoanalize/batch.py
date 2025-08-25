@@ -408,7 +408,7 @@ async def handle_batch_player_selection(
         # If no more files, finalize
         await finalize_batch(
             callback.message, state, user_info, i18n, all_analysis_datas,
-            successful_count, progress_message_id, session_without_commit
+            successful_count, session_without_commit
         )
     
     except Exception as e:
@@ -454,6 +454,7 @@ def calculate_average_analysis(pr_values: list) -> float:
     if not pr_values:
         return 0.0
     return sum(pr_values) / len(pr_values)
+
 @batch_auto_analyze_router.callback_query(DownloadPDFCallback.filter(), UserInfo())
 async def handle_download_pdf(
     callback: CallbackQuery,
