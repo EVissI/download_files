@@ -1,4 +1,4 @@
-﻿﻿import asyncio
+﻿import asyncio
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
@@ -93,7 +93,6 @@ async def handle_type_selection(
     if balance > 0:
         await callback.message.answer(text, reply_markup=get_cancel_kb(i18n))
         await callback.answer()
-        await callback.message.delete()
     if balance == 0:
         await callback.message.answer(
             i18n.auto.analyze.not_ebought_balance(),
@@ -135,7 +134,7 @@ async def handle_mat_file(
         ):
             return await message.answer(i18n.auto.analyze.invalid())
 
-        # Создаем директорию если её нет
+        # Создаем директорию еѝли её нет
         files_dir = os.path.join(os.getcwd(), "files")
         os.makedirs(files_dir, exist_ok=True)
         await waiting_manager.start()
@@ -177,7 +176,7 @@ async def handle_mat_file(
                 reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
             )
 
-        # Генерируем новое имя файла
+        # Генерируем новое имѝ файла
         moscow_tz = pytz.timezone("Europe/Moscow")
         current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
         new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
@@ -232,11 +231,11 @@ async def handle_mat_file(
 
                     await message.bot.send_message(
                         settings.CHAT_GROUP_ID,
-                        f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                        f"<b>Нвтоматичеѝкий анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
                         parse_mode="HTML",
                     )
                 except Exception as e:
-                    logger.error(f"Ошибка при отправке сообщения в группу: {e}")
+                    logger.error(f"Ошибка при отправке ѝообщениѝ в группу: {e}")
             await waiting_manager.stop()
             await message.answer(
                 f"{formatted_analysis}\n\n",
@@ -268,7 +267,7 @@ async def handle_mat_file(
 
     except Exception as e:
         await session_without_commit.rollback()
-        logger.error(f"Ошибка при автоматическом анализе файла: {e}")
+        logger.error(f"Ошибка при автоматичеѝком анализе файла: {e}")
         await message.answer(i18n.auto.analyze.error.parse())
         await waiting_manager.stop()
 
@@ -286,7 +285,7 @@ async def handle_player_selection(
         try:
             duration = int(data.get("duration"))
         except Exception as e:
-            logger.error(f"Ошибка при получении значения point match: {e}")
+            logger.error(f"Ошибка при получении значениѝ point match: {e}")
             duration = None
         analysis_data = data["analysis_data"]
         file_name = data["file_name"]
@@ -345,11 +344,11 @@ async def handle_player_selection(
 
                 await callback.message.bot.send_message(
                     settings.CHAT_GROUP_ID,
-                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                    f"<b>Нвтоматичеѝкий анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
                     parse_mode="HTML",
                 )
             except Exception as e:
-                logger.error(f"Ошибка при отправке сообщения в группу: {e}")
+                logger.error(f"Ошибка при отправке ѝообщениѝ в группу: {e}")
         await callback.message.answer(
             f"{formatted_analysis}\n\n",
             parse_mode="HTML",
@@ -362,7 +361,7 @@ async def handle_player_selection(
 
     except Exception as e:
         await session_without_commit.rollback()
-        logger.error(f"Ошибка при сохранении выбора игрока: {e}")
+        logger.error(f"Ошибка при ѝохранении выбора игрока: {e}")
         await callback.message.answer(i18n.auto.analyze.error.save())
 
 
@@ -383,7 +382,7 @@ async def handle_download_pdf(
         file_name = file_name.replace(file_type, "pdf") if file_name else "analysis.pdf"
         analysis_data_json = await redis_client.get(key)
         if not analysis_data_json:
-            await callback.message.answer("Нет данных для формирования PDF.")
+            await callback.message.answer("Нет данных длѝ формированиѝ PDF.")
             return
         analysis_data = json.loads(analysis_data_json)
         html_text = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
