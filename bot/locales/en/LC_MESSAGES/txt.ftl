@@ -166,3 +166,5 @@ auto-batch-summary = Average results from { $count } matches:
 auto-batch-no_matches = No match files found; no analyses performed. 
 auto-batch-wrong_file = Skipped: Not a match file. 
 auto-batch-no_data_pdf = No batch analysis data available for PDF generation.
+auto-analyze-batch_type = Batch Analyze
+auto-analyze-single_match = Single Match Analysis
