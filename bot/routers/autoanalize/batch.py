@@ -314,6 +314,7 @@ async def handle_batch_player_selection(
         # Update user player_username if needed
         user_dao = UserDAO(session_without_commit)
         if not user_info.player_username or user_info.player_username != selected_player:
+            user_info.player_username = selected_player
             await user_dao.update(user_info.id, {"player_username": selected_player})
             logger.info(f"Updated player_username for user {user_info.id} to {selected_player}")
         
@@ -329,6 +330,7 @@ async def handle_batch_player_selection(
         
         # Update state for next file
         file_paths = data.get("file_paths", [])[current_file_idx:]  # Remaining files
+        logger.info(file_paths)
         await state.update_data(
             file_paths=file_paths,
             all_analysis_datas=all_analysis_datas,
@@ -460,49 +462,49 @@ def calculate_average_analysis(pr_values: list) -> float:
         return 0.0
     return sum(pr_values) / len(pr_values)
 
-@batch_auto_analyze_router.callback_query(DownloadPDFCallback.filter(), UserInfo())
-async def handle_download_pdf(
-    callback: CallbackQuery,
-    callback_data: DownloadPDFCallback,
-    user_info: User,
-    state: FSMContext,
-    i18n: TranslatorRunner,
-):
-    await callback.message.delete()
-    if callback_data.action == "yes":
-        key = f"batch_analysis_data:{user_info.id}"
-        file_name_key = f"file_name:{user_info.id}"
-        file_name = await redis_client.get(file_name_key)
-        file_type = file_name.split('.')[-1] if file_name else 'pdf'
-        file_name = file_name.replace(file_type, 'pdf') if file_name else 'batch_analysis.pdf'
-        analysis_data_json = await redis_client.get(key)
-        if not analysis_data_json:
-            await callback.message.answer(i18n.auto.batch.no_data_pdf())
-            return
-        analysis_data = json.loads(analysis_data_json)
-        # Use format_detailed_analysis for PDF
-        average_analysis = {}
-        for data in analysis_data:
-            player_data = get_analysis_data(data, user_info.player_username)
-            if player_data:
-                average_analysis[user_info.player_username] = player_data
-                # Add opponent for PDF (take first other player)
-                other_players = [p for p in get_analysis_data(data).keys() if p != user_info.player_username]
-                if other_players:
-                    average_analysis[other_players[0]] = get_analysis_data(data, other_players[0])
-                break  # Use first match for PDF structure
-        html_text = format_detailed_analysis(average_analysis, i18n)
-        pdf_bytes = html_to_pdf_bytes(html_text)
-        if not pdf_bytes:
-            await callback.message.answer(i18n.auto.analyze.error.pdf())
-            return
-        await callback.message.answer_document(
-            document=BufferedInputFile(
-                pdf_bytes,
-                filename=file_name
-            ),
-            caption=i18n.auto.analyze.pdf_ready(),
-        )
-        await redis_client.delete(key)
-    else:
-        await callback.message.answer(i18n.auto.analyze.no_pdf())
+# @batch_auto_analyze_router.callback_query(DownloadPDFCallback.filter(), UserInfo())
+# async def handle_download_pdf(
+#     callback: CallbackQuery,
+#     callback_data: DownloadPDFCallback,
+#     user_info: User,
+#     state: FSMContext,
+#     i18n: TranslatorRunner,
+# ):
+#     await callback.message.delete()
+#     if callback_data.action == "yes":
+#         key = f"batch_analysis_data:{user_info.id}"
+#         file_name_key = f"file_name:{user_info.id}"
+#         file_name = await redis_client.get(file_name_key)
+#         file_type = file_name.split('.')[-1] if file_name else 'pdf'
+#         file_name = file_name.replace(file_type, 'pdf') if file_name else 'batch_analysis.pdf'
+#         analysis_data_json = await redis_client.get(key)
+#         if not analysis_data_json:
+#             await callback.message.answer(i18n.auto.batch.no_data_pdf())
+#             return
+#         analysis_data = json.loads(analysis_data_json)
+#         # Use format_detailed_analysis for PDF
+#         average_analysis = {}
+#         for data in analysis_data:
+#             player_data = get_analysis_data(data, user_info.player_username)
+#             if player_data:
+#                 average_analysis[user_info.player_username] = player_data
+#                 # Add opponent for PDF (take first other player)
+#                 other_players = [p for p in get_analysis_data(data).keys() if p != user_info.player_username]
+#                 if other_players:
+#                     average_analysis[other_players[0]] = get_analysis_data(data, other_players[0])
+#                 break  # Use first match for PDF structure
+#         html_text = format_detailed_analysis(average_analysis, i18n)
+#         pdf_bytes = html_to_pdf_bytes(html_text)
+#         if not pdf_bytes:
+#             await callback.message.answer(i18n.auto.analyze.error.pdf())
+#             return
+#         await callback.message.answer_document(
+#             document=BufferedInputFile(
+#                 pdf_bytes,
+#                 filename=file_name
+#             ),
+#             caption=i18n.auto.analyze.pdf_ready(),
+#         )
+#         await redis_client.delete(key)
+#     else:
+#         await callback.message.answer(i18n.auto.analyze.no_pdf())
