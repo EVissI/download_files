@@ -20,7 +20,6 @@ import tempfile
 
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.func import (
-    calculate_average_analysis,
     format_detailed_analysis,
     get_analysis_data,
     get_user_file_name,
@@ -262,7 +261,7 @@ async def process_single_analysis(
     file_name: str,
     file_path: str,
     selected_player: str,
-    session: AsyncSession
+    session: AsyncSession,
 ):
     game_id = f"batch_auto_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     player_data = {
@@ -273,7 +272,13 @@ async def process_single_analysis(
         "game_id": game_id,
         **get_analysis_data(analysis_data, selected_player),
     }
-    
+
+    data = await state.get_data()
+    pr_values = data.get("pr_values", [])
+    player_metrics = get_analysis_data(analysis_data, selected_player)
+    pr_values.append(player_metrics["snowie_error_rate"])
+    await state.update_data(pr_values=pr_values)
+
     dao = DetailedAnalysisDAO(session)
     await dao.add(SDetailedAnalysis(**player_data))
     
@@ -419,9 +424,8 @@ async def finalize_batch(
     i18n: TranslatorRunner,
     all_analysis_datas: list,
     successful_count: int,
-    progress_message_id: int,
     session_without_commit: AsyncSession
-):  
+):
     if successful_count > 0:
         # Deduct balance once
         user_dao = UserDAO(session_without_commit)
@@ -431,10 +435,12 @@ async def finalize_batch(
         await redis_client.set(f"batch_analysis_data:{user_info.id}", json.dumps(all_analysis_datas), expire=3600)
         
         # Calculate and send averages
-        average_analysis = calculate_average_analysis(all_analysis_datas)
-        formatted_average = format_detailed_analysis(average_analysis, i18n)  # Assume format_detailed_analysis can handle averages
+        data = await state.get_data()
+        pr_values = data.get("pr_values", [])
+        average_pr = calculate_average_analysis(pr_values)
+        pr_list = ", ".join([f"{pr:.2f}" for pr in pr_values])
         await message.answer(
-            i18n.auto.batch.summary(count = successful_count) + f"\n\n{formatted_average}",
+            i18n.auto.batch.summary_pr(player=user_info.player_username, pr_list=pr_list, average_pr=f"{average_pr:.2f}"),
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
@@ -444,7 +450,10 @@ async def finalize_batch(
     await session_without_commit.commit()
     await state.clear()
 
-
+def calculate_average_analysis(pr_values: list) -> float:
+    if not pr_values:
+        return 0.0
+    return sum(pr_values) / len(pr_values)
 @batch_auto_analyze_router.callback_query(DownloadPDFCallback.filter(), UserInfo())
 async def handle_download_pdf(
     callback: CallbackQuery,
@@ -465,7 +474,17 @@ async def handle_download_pdf(
             await callback.message.answer(i18n.auto.batch.no_data_pdf())
             return
         analysis_data = json.loads(analysis_data_json)
-        average_analysis = calculate_average_analysis(analysis_data)  
+        # Use format_detailed_analysis for PDF
+        average_analysis = {}
+        for data in analysis_data:
+            player_data = get_analysis_data(data, user_info.player_username)
+            if player_data:
+                average_analysis[user_info.player_username] = player_data
+                # Add opponent for PDF (take first other player)
+                other_players = [p for p in get_analysis_data(data).keys() if p != user_info.player_username]
+                if other_players:
+                    average_analysis[other_players[0]] = get_analysis_data(data, other_players[0])
+                break  # Use first match for PDF structure
         html_text = format_detailed_analysis(average_analysis, i18n)
         pdf_bytes = html_to_pdf_bytes(html_text)
         if not pdf_bytes:
