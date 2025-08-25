@@ -20,6 +20,7 @@ import tempfile
 
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.func import (
+    calculate_average_analysis,
     format_detailed_analysis,
     get_analysis_data,
     get_user_file_name,
@@ -442,25 +443,6 @@ async def finalize_batch(
     
     await session_without_commit.commit()
     await state.clear()
-
-
-def calculate_average_analysis(all_datas: list) -> dict:
-    if not all_datas:
-        return {}
-    
-    total = len(all_datas)
-    agg = {}
-    for data in all_datas:
-        formatted = get_analysis_data(data)
-        for key, value in formatted.items():
-            if isinstance(value, (int, float)):
-                agg[key] = agg.get(key, 0) + value
-    
-    for key in agg:
-        if isinstance(agg[key], (int, float)):
-            agg[key] /= total
-    
-    return agg
 
 
 @batch_auto_analyze_router.callback_query(DownloadPDFCallback.filter(), UserInfo())
