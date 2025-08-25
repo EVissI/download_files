@@ -2,7 +2,7 @@
 from bot.common.middlewares.sub_middleware import AnalizMiddleware,ShortBoardMiddleware
 from bot.routers.start import start_router
 from bot.routers.stat import stat_router
-from bot.routers.autoanalize.autoanaliz import auto_analyze_router
+from bot.routers.autoanalize.setup import setup_autoanalize_router
 from bot.routers.profile import profile_router
 from bot.routers.admin.setup import admin_setup_router
 from bot.routers.activate_promo import activate_promo_router
@@ -16,7 +16,7 @@ short_board_router.message.middleware(ShortBoardMiddleware())
 setup_router.include_routers(
     start_router,
     stat_router,
-    auto_analyze_router,
+    setup_autoanalize_router,
     profile_router,
     admin_setup_router,
     activate_promo_router,
