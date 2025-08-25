@@ -337,9 +337,6 @@ async def handle_batch_player_selection(
         
         # Continue processing remaining files
         await callback.message.delete()
-        waiting_manager = WaitingMessageManager(callback.message.chat.id, callback.message.bot, i18n)
-        await waiting_manager.start()
-        
         for idx, file_path in enumerate(file_paths, current_file_idx + 1):
             await callback.message.bot.edit_message_text(
                 chat_id=callback.message.chat.id,
@@ -403,7 +400,6 @@ async def handle_batch_player_selection(
                     reply_markup=keyboard.as_markup(),
                 )
                 await state.set_state(BatchAnalyzeDialog.select_player)
-                await waiting_manager.stop()
                 return
         
         # If no more files, finalize
