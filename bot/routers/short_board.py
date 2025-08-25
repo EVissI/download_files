@@ -25,7 +25,7 @@ from bot.config import settings
 from bot.db.dao import UserDAO
 from bot.db.models import User
 from bot.config import bot
-from front.src.lib.game_parser import parse_file
+from bot.common.func.game_parser import parse_file
 
 
 class ShortBoardDialog(StatesGroup):
