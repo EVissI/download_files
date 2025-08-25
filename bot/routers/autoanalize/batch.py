@@ -263,8 +263,6 @@ async def process_single_analysis(
     selected_player: str,
     session: AsyncSession
 ):
-    waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
-    await waiting_manager.start()
     game_id = f"batch_auto_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     player_data = {
         "user_id": message.from_user.id,
@@ -284,7 +282,6 @@ async def process_single_analysis(
         parse_mode="HTML",
         reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
     )
-    await waiting_manager.stop()
     
 
 @batch_auto_analyze_router.callback_query(F.data.startswith("batch_player:"), StateFilter(BatchAnalyzeDialog.select_player), UserInfo())
