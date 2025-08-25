@@ -423,12 +423,7 @@ async def finalize_batch(
     successful_count: int,
     progress_message_id: int,
     session_without_commit: AsyncSession
-):
-    await message.bot.delete_message(
-        chat_id=message.chat.id,
-        message_id=progress_message_id
-    )
-    
+):  
     if successful_count > 0:
         # Deduct balance once
         user_dao = UserDAO(session_without_commit)
