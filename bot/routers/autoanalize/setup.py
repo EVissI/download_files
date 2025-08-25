@@ -35,4 +35,4 @@ async def autoanalyze_command(
         text=i18n.auto.analyze.single_match(), callback_data="autoanalyze_single"
     )
     keyboard.adjust(1)
-    await message.answer(i18n.user.static.select_autoanalyze_type())
+    await message.answer(i18n.user.static.select_autoanalyze_type(), reply_markup=keyboard.as_markup())
