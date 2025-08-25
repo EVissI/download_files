@@ -18,7 +18,15 @@ from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.excel_view import ExcelKeyboard
 from bot.common.texts import get_text
 from bot.db.dao import DetailedAnalysisDAO
+from bot.db.dao import DetailedAnalysisDAO, UserDAO
+from bot.db.models import DetailedAnalysis
 
+from typing import TYPE_CHECKING
+from fluentogram import TranslatorRunner
+from bot.common.utils.i18n import get_all_locales_for_key
+from bot.config import translator_hub
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
 detailed_user_unloading_router = Router()
 
 
@@ -127,7 +135,7 @@ async def handle_player_name_pagination(
 
 
 @detailed_user_unloading_router.message(
-    F.text == get_text("cancel"), StateFilter(DetailedUserInputData)
+   F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(DetailedUserInputData)
 )
 async def cancel_detailed_user_unloading(
     message: Message,
@@ -149,6 +157,7 @@ async def handle_detailed_user_unloading_callback(
     callback_data: DetailedUserUnloadingCallback,
     state: FSMContext,
     session_without_commit: AsyncSession,
+    i18n
 ):
     await callback.message.delete()
     user_data = await state.get_data()
@@ -202,7 +211,7 @@ async def handle_detailed_user_unloading_callback(
         case "custom":
             await callback.message.answer(
                 "Введите диапазон дат в формате ДД.ММ.ГГГГ-ДД.ММ.ГГГГ",
-                reply_markup=get_cancel_kb(),
+                reply_markup=get_cancel_kb(i18n),
             )
             await state.set_state(DetailedUserInputData.Date)
             return
