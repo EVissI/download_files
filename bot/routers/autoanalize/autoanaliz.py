@@ -89,7 +89,7 @@ async def handle_type_selection(
             user_info.id, service_type=ServiceType.MATCH
         )
         text = i18n.auto.analyze.submit_match()
-    if balance > 0:
+    if balance is None or balance > 0:
         await callback.message.answer(text, reply_markup=get_cancel_kb(i18n))
         await callback.answer()
     if balance == 0:
