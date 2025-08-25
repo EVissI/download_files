@@ -342,7 +342,7 @@ async def handle_batch_player_selection(
             await callback.message.bot.edit_message_text(
                 chat_id=callback.message.chat.id,
                 message_id=progress_message_id,
-                text=i18n.auto.batch.progress(idx, total_files)
+                text=i18n.auto.batch.progress(current=idx, total=total_files)
             )
             
             file_type = os.path.splitext(file_path)[1][1:]
