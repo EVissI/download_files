@@ -330,7 +330,6 @@ async def handle_batch_player_selection(
         
         # Update state for next file
         file_paths = data.get("file_paths", [])[current_file_idx:]  # Remaining files
-        logger.info("FILE_PATHS: " + file_paths)
         await state.update_data(
             file_paths=file_paths,
             all_analysis_datas=all_analysis_datas,
