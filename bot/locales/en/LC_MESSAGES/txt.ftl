@@ -150,3 +150,4 @@ auto-analyze-submit_match = Please submit a Match file for analysis.
 auto-analyze-wrong_type_match = This file is a Match, but you selected Moneygame. Please select the correct analysis type. 
 auto-analyze-wrong_type_moneygame = This file is a Moneygame, but you selected Match. Please select the correct analysis type.
 auto-analyze-not_ebought_balance = Not enough balance for this service, activate promo code or buy balance in profile
+auto-analyze-select_autoanalyze_type = Please select the type of auto analysis:

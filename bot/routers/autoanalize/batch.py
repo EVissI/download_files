@@ -56,19 +56,17 @@ class BatchAnalyzeDialog(StatesGroup):
 
 
 @batch_auto_analyze_router.message(
-    F.text.in_(
-        get_all_locales_for_key(translator_hub, "keyboard-user-reply-batch-autoanalyze")
-    )
+    F.data == "autoanalyze_batch", UserInfo()
 )
 async def start_batch_auto_analyze(
-    message: Message, state: FSMContext, i18n: TranslatorRunner
+    callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner
 ):
     await state.set_state(BatchAnalyzeDialog.choose_type)
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text=i18n.auto.batch.sequential(), callback_data="batch_type:sequential")
     keyboard.button(text=i18n.auto.batch.zip(), callback_data="batch_type:zip")
     keyboard.adjust(1)
-    await message.answer(i18n.auto.batch.choose_type(), reply_markup=keyboard.as_markup())
+    await callback.message.answer(i18n.auto.batch.choose_type(), reply_markup=keyboard.as_markup())
 
 
 @batch_auto_analyze_router.callback_query(F.data.startswith("batch_type:"), StateFilter(BatchAnalyzeDialog.choose_type))

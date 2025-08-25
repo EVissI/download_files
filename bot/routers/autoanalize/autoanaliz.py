@@ -46,13 +46,11 @@ class AutoAnalyzeDialog(StatesGroup):
     file = State()
 
 
-@auto_analyze_router.message(
-    F.text.in_(
-        get_all_locales_for_key(translator_hub, "keyboard-user-reply-autoanalyze")
-    )
+@auto_analyze_router.callback_query(
+    F.data == "autoanalyze_single", UserInfo()
 )
 async def start_auto_analyze(
-    message: Message, state: FSMContext, i18n: TranslatorRunner
+    callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner
 ):
     keyboard = InlineKeyboardBuilder()
     keyboard.button(
@@ -62,7 +60,7 @@ async def start_auto_analyze(
         text=i18n.auto.analyze.games_match(), callback_data="auto_type:match"
     )
     keyboard.adjust(1)
-    await message.answer(
+    await callback.message.answer(
         i18n.auto.analyze.choose_type(), reply_markup=keyboard.as_markup()
     )
 
