@@ -249,7 +249,7 @@ async def process_batch_files(
             return  # Wait for player selection before continuing
     await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
     # If no player selection is needed, finalize batch
-    await finalize_batch(message, state, user_info, i18n, all_analysis_datas, successful_count, progress_message, session_without_commit)
+    await finalize_batch(message, state, user_info, i18n, all_analysis_datas, successful_count, session_without_commit)
 
 
 async def process_single_analysis(
