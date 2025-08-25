@@ -424,7 +424,7 @@ async def finalize_batch(
     if successful_count > 0:
         # Deduct balance once
         user_dao = UserDAO(session_without_commit)
-        await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MATCH, amount=successful_count)
+        await user_dao.decrease_analiz_balance(user_info.id, service_type=ServiceType.MATCH)
         
         # Store in Redis
         await redis_client.set(f"batch_analysis_data:{user_info.id}", json.dumps(all_analysis_datas), expire=3600)
