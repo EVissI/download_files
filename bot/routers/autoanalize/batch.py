@@ -340,21 +340,12 @@ async def handle_batch_player_selection(
         
         # Continue processing remaining files
         await callback.message.delete()
-        for idx, file_path in enumerate(file_paths, current_file_idx + 1):
-            await callback.message.bot.edit_message_text(
-                chat_id=callback.message.chat.id,
-                message_id=progress_message_id,
-                text=i18n.auto.batch.progress(current=idx, total=total_files)
-            )
-            
+        for idx, file_path in enumerate(file_paths, 1):
+            await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
+            progress_message = await callback.message.answer(i18n.auto.batch.progress(current = idx, total = total_files))
             file_type = os.path.splitext(file_path)[1][1:]
             loop = asyncio.get_running_loop()
             duration, analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
-            
-            if duration is None or duration == 0:
-                logger.warning(f"Skipping non-match file: {file_path}")
-                await callback.message.answer(i18n.auto.batch.wrong_file())
-                continue
             
             analysis_data = json.loads(analysis_result)
             player_names = list(analysis_data["chequerplay"].keys())
@@ -362,6 +353,7 @@ async def handle_batch_player_selection(
                 logger.warning(f"Invalid number of players in file: {file_path}")
                 continue
             
+            # Store analysis data temporarily
             moscow_tz = pytz.timezone("Europe/Moscow")
             current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
             new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.{file_type}"
@@ -374,6 +366,7 @@ async def handle_batch_player_selection(
             except Exception as e:
                 logger.error(f"Error saving file to Yandex Disk: {e}")
             
+            # Check if user is one of the players
             if user_info.player_username and user_info.player_username in player_names:
                 selected_player = user_info.player_username
                 await process_single_analysis(
@@ -383,6 +376,7 @@ async def handle_batch_player_selection(
                 all_analysis_datas.append(analysis_data)
                 successful_count += 1
             else:
+                # Prompt for player selection
                 await state.update_data(
                     current_file_idx=idx,
                     total_files=total_files,
@@ -392,8 +386,7 @@ async def handle_batch_player_selection(
                     player_names=player_names,
                     all_analysis_datas=all_analysis_datas,
                     successful_count=successful_count,
-                    progress_message_id=progress_message_id,
-                    duration=duration
+                    progress_message_id=progress_message.message_id
                 )
                 keyboard = InlineKeyboardBuilder()
                 for player in player_names:
