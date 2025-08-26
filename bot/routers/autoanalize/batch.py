@@ -197,8 +197,9 @@ async def process_batch_files(
     successful_count = 0
     total = len(file_paths)
     progress_message = await message.answer(i18n.auto.batch.progress(current = 0, total = total))
-    
-    for idx, file_path in enumerate(file_paths, 1):
+    data = await state.get_data()
+    current_file_idx = data.get('current_file_idx', 1)
+    for idx, file_path in enumerate(file_paths, current_file_idx):
         await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
         progress_message = await message.answer(i18n.auto.batch.progress(current = idx, total = total))
         file_type = os.path.splitext(file_path)[1][1:]
@@ -217,8 +218,6 @@ async def process_batch_files(
         new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.{file_type}"
         new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
         shutil.move(file_path, new_file_path)
-        file_paths[idx - 1] = new_file_path  # Update to new path
-        await state.update_data(file_paths=file_paths)
         try:
             asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
         except Exception as e:
@@ -327,8 +326,7 @@ async def handle_batch_player_selection(
             await user_dao.update(user_info.id, {"player_username": selected_player})
             logger.info(f"Updated player_username for user {user_info.id} to {selected_player}")
         
-        # Process the current analysis
-        duration = int(data.get("duration", 0))  # Assuming duration was stored
+
         await process_single_analysis(
                 callback.message, state, user_info, i18n, analysis_data, file_name, file_path,
                 selected_player, session=session_without_commit
@@ -346,10 +344,12 @@ async def handle_batch_player_selection(
             successful_count=successful_count
         )
         
-        # Continue processing remaining files
         await callback.message.delete()
+
+        await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message_id)
+        progress_message = await callback.message.answer(i18n.auto.batch.progress(current = current_file_idx, total = total_files))
         for idx, file_path in enumerate(file_paths, current_file_idx):
-            await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message_id)
+            await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
             progress_message = await callback.message.answer(i18n.auto.batch.progress(current = idx, total = total_files))
             file_type = os.path.splitext(file_path)[1][1:]
             loop = asyncio.get_running_loop()
@@ -367,14 +367,13 @@ async def handle_batch_player_selection(
             new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.{file_type}"
             new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
             shutil.move(file_path, new_file_path)
-            file_paths[idx - 1] = new_file_path  # Update to new path
-            await state.update_data(file_paths=file_paths)
             try:
                 asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
             except Exception as e:
                 logger.error(f"Error saving file to Yandex Disk: {e}")
             
-            # Check if user is one of the players
+
+
             if user_info.player_username and user_info.player_username in player_names:
                 selected_player = user_info.player_username
                 await process_single_analysis(
@@ -384,7 +383,6 @@ async def handle_batch_player_selection(
                 all_analysis_datas.append(analysis_data)
                 successful_count += 1
             else:
-                # Prompt for player selection
                 await state.update_data(
                     current_file_idx=idx,
                     total_files=total_files,
@@ -399,6 +397,7 @@ async def handle_batch_player_selection(
                 keyboard = InlineKeyboardBuilder()
                 for player in player_names:
                     keyboard.button(text=player, callback_data=f"batch_player:{player}")
+
                 keyboard.adjust(1)
                 await callback.message.answer(
                     i18n.auto.analyze.complete(),
