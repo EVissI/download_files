@@ -495,7 +495,7 @@ async def handle_download_pdf(
             html_text += format_detailed_analysis(data, i18n)
         pdf_bytes = html_to_pdf_bytes(html_text)
         if not pdf_bytes:
-            await callback.message.answer(i18n.auto.analyze.error.pdf())
+            await callback.message.answer(i18n.auto.analyze.error.parse())
             return
         await callback.message.answer_document(
             document=BufferedInputFile(
