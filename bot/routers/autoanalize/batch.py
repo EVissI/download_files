@@ -159,23 +159,30 @@ async def handle_zip_file(
     if not file.file_name.endswith(".zip"):
         return await message.answer(i18n.auto.batch.invalid_zip())
     
-    with tempfile.TemporaryDirectory() as tmpdir:
-        zip_path = os.path.join(tmpdir, file.file_name)
-        await message.bot.download(file.file_id, destination=zip_path)
-        
-        file_paths = []
-        with zipfile.ZipFile(zip_path, 'r') as zipf:
-            for member in zipf.namelist():
-                if member.endswith(('.mat', '.txt', '.sgf', '.sgg', '.bkg', '.gam', '.pos', '.fibs', '.tmg')):
-                    extracted_path = zipf.extract(member, tmpdir)
-                    file_paths.append(extracted_path)
-
-        
-        if not file_paths:
-            await state.clear()
-            return await message.answer(i18n.auto.batch.no_valid_files(), reply_markup=MainKeyboard.build(user_info.role, i18n))
-        await state.update_data(file_paths=file_paths)
-        await process_batch_files(message, state, user_info, i18n, file_paths, session_without_commit)
+    files_dir = os.path.join(os.getcwd(), "files")
+    os.makedirs(files_dir, exist_ok=True)
+    zip_path = os.path.join(files_dir, file.file_name.replace(" ", ""))
+    await message.bot.download(file.file_id, destination=zip_path)
+    
+    file_paths = []
+    with zipfile.ZipFile(zip_path, 'r') as zipf:
+        for member in zipf.namelist():
+            if member.endswith(('.mat', '.txt', '.sgf', '.sgg', '.bkg', '.gam', '.pos', '.fibs', '.tmg')):
+                extracted_path = zipf.extract(member, files_dir)
+                file_paths.append(extracted_path)
+    
+    # Remove the ZIP file after extraction
+    try:
+        os.remove(zip_path)
+    except Exception as e:
+        logger.warning(f"Failed to remove ZIP file {zip_path}: {e}")
+    
+    if not file_paths:
+        await state.clear()
+        return await message.answer(i18n.auto.batch.no_valid_files(), reply_markup=MainKeyboard.build(user_info.role, i18n))
+    
+    await state.update_data(file_paths=file_paths)
+    await process_batch_files(message, state, user_info, i18n, file_paths, session_without_commit)
 
 
 async def process_batch_files(
