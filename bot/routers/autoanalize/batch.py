@@ -292,14 +292,27 @@ async def process_single_analysis(
         **get_analysis_data(analysis_data, selected_player),
     }
     user_dao = UserDAO(session)
+    players_metrics = get_analysis_data(analysis_data)
     if duration > 0:
         descrease_result = await user_dao.decrease_analiz_balance(user_info.id, ServiceType.MATCH)
+        try:
+            player_names = list(players_metrics)
+            player1_name, player2_name = player_names
+            p1 = players_metrics.get(player1_name)
+            p2 = players_metrics.get(player2_name)
+            current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            await message.bot.send_message(
+                        settings.CHAT_GROUP_ID,
+                        f"<b>Автоматичеѝкий анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                        parse_mode="HTML",
+                    )
+        except Exception as e:
+            logger.error(f"Error sending message to group: {e}")
     if duration == 0:
         descrease_result = await user_dao.decrease_analiz_balance(user_info.id, ServiceType.MONEYGAME)
     if descrease_result:
         data = await state.get_data()
         pr_values = data.get("pr_values", {})
-        players_metrics = get_analysis_data(analysis_data)
         for player in players_metrics.keys():
             pr_values.setdefault(player, []).append(players_metrics[player].get("snowie_error_rate", 0))
         await state.update_data(pr_values=pr_values)
