@@ -293,9 +293,9 @@ async def process_single_analysis(
     }
     user_dao = UserDAO(session)
     if duration > 0:
-        descrease_result = await user_dao.decrease_analiz_balance(user_info.id, duration, ServiceType.MATCH)
+        descrease_result = await user_dao.decrease_analiz_balance(user_info.id, ServiceType.MATCH)
     if duration == 0:
-        descrease_result = await user_dao.decrease_analiz_balance(user_info.id, duration, ServiceType.MONEYGAME)
+        descrease_result = await user_dao.decrease_analiz_balance(user_info.id, ServiceType.MONEYGAME)
     if descrease_result:
         data = await state.get_data()
         pr_values = data.get("pr_values", {})
