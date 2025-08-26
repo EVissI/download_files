@@ -367,8 +367,8 @@ async def handle_batch_player_selection(
         
         await callback.message.delete()
 
-        await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message_id)
         if process_result:
+            await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message_id)
             progress_message = await callback.message.answer(i18n.auto.batch.progress(current = current_file_idx, total = total_files))
             for idx, file_path in enumerate(file_paths, current_file_idx + 1):
                 await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
