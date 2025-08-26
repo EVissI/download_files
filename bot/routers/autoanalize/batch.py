@@ -308,7 +308,7 @@ async def process_single_analysis(
                     )
         except Exception as e:
             logger.error(f"Error sending message to group: {e}")
-    if duration == 0:
+    if duration == 0 :
         descrease_result = await user_dao.decrease_analiz_balance(user_info.id, ServiceType.MONEYGAME)
     if descrease_result:
         data = await state.get_data()

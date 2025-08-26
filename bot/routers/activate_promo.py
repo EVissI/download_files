@@ -13,7 +13,7 @@ from bot.db.dao import PromoCodeDAO
 from bot.common.kbds.inline.activate_promo import PromoCallback
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.utils.i18n import get_all_locales_for_key
-from bot.config import translator_hub
+from bot.config import translator_hub, settings
 from bot.db.models import User
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -79,6 +79,15 @@ async def handle_promo_code_input(
             is_activate = await promo_dao.activate_promo_code(promo_code, user_id)
             if is_activate:
                 text = i18n.user.static.promo_activated()
+                try:
+                    link = f'@{user_info.username}' if user_info.username else f"t.me/{user_info.id}"
+                    await message.bot.send_message(
+                        settings.CHAT_GROUP_ID,
+                        f"<b>Пользователь: {user_info.first_name} ({link})\nПромокод: {promo_code}\n\n</b>",
+                        parse_mode="HTML",
+                    )
+                except Exception as e:
+                    logger.error(f"Error sending promo activation message to group: {e}")
             else:
                 text = i18n.user.static.invalid_promo()
         else:
