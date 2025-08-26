@@ -80,7 +80,7 @@ async def handle_promo_code_input(
             if is_activate:
                 text = i18n.user.static.promo_activated()
                 try:
-                    link = f'@{user_info.username}' if user_info.username else f"t.me/{user_info.id}"
+                    link = f'@{user_info.username}' if user_info.username else f"tg://user?id={user_info.id}"
                     await message.bot.send_message(
                         settings.CHAT_GROUP_ID,
                         f"<b>Пользователь: {user_info.first_name} ({link})\nПромокод: {promo_code}\n\n</b>",
