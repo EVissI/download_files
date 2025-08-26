@@ -234,7 +234,7 @@ async def handle_mat_file(
                         parse_mode="HTML",
                     )
                 except Exception as e:
-                    logger.error(f"Ошибка при отправке ѝообщениѝ в группу: {e}")
+                    logger.error(f"Ошибка при отправке Cообщениѝ в группу: {e}")
             await waiting_manager.stop()
             await message.answer(
                 f"{formatted_analysis}\n\n",
@@ -343,11 +343,11 @@ async def handle_player_selection(
 
                 await callback.message.bot.send_message(
                     settings.CHAT_GROUP_ID,
-                    f"<b>Нвтоматичеѝкий анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                    f"<b>Автоматичеѝкий анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
                     parse_mode="HTML",
                 )
             except Exception as e:
-                logger.error(f"Ошибка при отправке ѝообщениѝ в группу: {e}")
+                logger.error(f"Ошибка при отправке Сообщениѝ в группу: {e}")
         await callback.message.answer(
             f"{formatted_analysis}\n\n",
             parse_mode="HTML",
