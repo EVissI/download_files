@@ -169,6 +169,6 @@ auto-batch-no_matches = Не найдено файлов матчей; анал�
 auto-batch-wrong_file = Пропущено: Не файл матча. 
 auto-batch-no_data_pdf = Нет данных пакетного анализа для создания PDF.
 auto-analyze-batch_type = Пакетный анализ
-auto-analyze-single_match = Отдельный матч
+auto-analyze-single_match = Одна игра
 user-static-select_autoanalyze_type = Пожалуйста, выберите тип автоанализа:
 auto-batch-summary_pr = Средний PR: { $average_pr } для { $player }: ({ $pr_list })
