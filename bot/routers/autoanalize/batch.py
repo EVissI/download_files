@@ -207,10 +207,10 @@ async def process_batch_files(
         # Store analysis data temporarily
         moscow_tz = pytz.timezone("Europe/Moscow")
         current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
-        new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
+        new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.{file_type}"
         new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
         shutil.move(file_path, new_file_path)
-        
+        file_path = new_file_path
         try:
             asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
         except Exception as e:
@@ -366,7 +366,7 @@ async def handle_batch_player_selection(
             new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.{file_type}"
             new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
             shutil.move(file_path, new_file_path)
-            
+            file_path = new_file_path
             try:
                 asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
             except Exception as e:
