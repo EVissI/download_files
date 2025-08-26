@@ -261,9 +261,17 @@ class AutoBatch:
     @staticmethod
     def summary_pr(*, average_pr: PossibleValue, player: PossibleValue, pr_list: PossibleValue) -> Literal["""PR for { $player }: ({ $pr_list }) - average { $average_pr }"""]: ...
 
+class AutoAnalizeError:
+    @staticmethod
+    def balance() -> Literal["""Not enough balance for full analysis. Please activate promo code or buy balance in profile."""]: ...
+
+class AutoAnalize:
+    error: AutoAnalizeError
+
 class Auto:
     analyze: AutoAnalyze
     batch: AutoBatch
+    analize: AutoAnalize
 
 class AnalysisLuck:
     @staticmethod
