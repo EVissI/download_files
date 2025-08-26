@@ -406,7 +406,7 @@ async def handle_batch_player_selection(
                 await state.set_state(BatchAnalyzeDialog.select_player)
                 return
         
-        await callback.message.bot.delete_message(chat_id=callback.chat.id, message_id=progress_message.message_id)
+        await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
         await finalize_batch(
             callback.message, state, user_info, i18n, all_analysis_datas,
             successful_count, session_without_commit
