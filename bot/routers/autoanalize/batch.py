@@ -210,7 +210,8 @@ async def process_batch_files(
         new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.{file_type}"
         new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
         shutil.move(file_path, new_file_path)
-        file_path = new_file_path
+        file_paths[idx - 1] = new_file_path  # Update to new path
+        await state.update_data(file_paths=file_paths)
         try:
             asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
         except Exception as e:
@@ -366,7 +367,8 @@ async def handle_batch_player_selection(
             new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.{file_type}"
             new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
             shutil.move(file_path, new_file_path)
-            file_path = new_file_path
+            file_paths[idx - 1] = new_file_path  # Update to new path
+            await state.update_data(file_paths=file_paths)
             try:
                 asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
             except Exception as e:
