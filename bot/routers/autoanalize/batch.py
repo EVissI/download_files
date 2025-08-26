@@ -454,6 +454,9 @@ async def finalize_batch(
                 parse_mode="HTML",
                 reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
             )
+        await message.answer(
+            i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'batch')
+        )
     else:
         await message.answer(i18n.auto.batch.no_matches(), reply_markup=MainKeyboard.build(user_info.role, i18n))
     
@@ -465,49 +468,42 @@ def calculate_average_analysis(pr_values: list) -> float:
         return 0.0
     return sum(pr_values) / len(pr_values)
 
-# @batch_auto_analyze_router.callback_query(DownloadPDFCallback.filter(), UserInfo())
-# async def handle_download_pdf(
-#     callback: CallbackQuery,
-#     callback_data: DownloadPDFCallback,
-#     user_info: User,
-#     state: FSMContext,
-#     i18n: TranslatorRunner,
-# ):
-#     await callback.message.delete()
-#     if callback_data.action == "yes":
-#         key = f"batch_analysis_data:{user_info.id}"
-#         file_name_key = f"file_name:{user_info.id}"
-#         file_name = await redis_client.get(file_name_key)
-#         file_type = file_name.split('.')[-1] if file_name else 'pdf'
-#         file_name = file_name.replace(file_type, 'pdf') if file_name else 'batch_analysis.pdf'
-#         analysis_data_json = await redis_client.get(key)
-#         if not analysis_data_json:
-#             await callback.message.answer(i18n.auto.batch.no_data_pdf())
-#             return
-#         analysis_data = json.loads(analysis_data_json)
-#         # Use format_detailed_analysis for PDF
-#         average_analysis = {}
-#         for data in analysis_data:
-#             player_data = get_analysis_data(data, user_info.player_username)
-#             if player_data:
-#                 average_analysis[user_info.player_username] = player_data
-#                 # Add opponent for PDF (take first other player)
-#                 other_players = [p for p in get_analysis_data(data).keys() if p != user_info.player_username]
-#                 if other_players:
-#                     average_analysis[other_players[0]] = get_analysis_data(data, other_players[0])
-#                 break  # Use first match for PDF structure
-#         html_text = format_detailed_analysis(average_analysis, i18n)
-#         pdf_bytes = html_to_pdf_bytes(html_text)
-#         if not pdf_bytes:
-#             await callback.message.answer(i18n.auto.analyze.error.pdf())
-#             return
-#         await callback.message.answer_document(
-#             document=BufferedInputFile(
-#                 pdf_bytes,
-#                 filename=file_name
-#             ),
-#             caption=i18n.auto.analyze.pdf_ready(),
-#         )
-#         await redis_client.delete(key)
-#     else:
-#         await callback.message.answer(i18n.auto.analyze.no_pdf())
+@batch_auto_analyze_router.callback_query(DownloadPDFCallback.filter(F.context == 'batch'), UserInfo())
+async def handle_download_pdf(
+    callback: CallbackQuery,
+    callback_data: DownloadPDFCallback,
+    user_info: User,
+    state: FSMContext,
+    i18n: TranslatorRunner,
+):
+    await callback.message.delete()
+    if callback_data.action == "yes":
+        key = f"batch_analysis_data:{user_info.id}"
+        file_name_key = f"file_name:{user_info.id}"
+        file_name = await redis_client.get(file_name_key)
+        file_type = file_name.split('.')[-1] if file_name else 'pdf'
+        file_name = file_name.replace(file_type, 'pdf') if file_name else 'batch_analysis.pdf'
+        analysis_data_json = await redis_client.get(key)
+        if not analysis_data_json:
+            await callback.message.answer(i18n.auto.batch.no_data_pdf())
+            return
+        analysis_data = json.loads(analysis_data_json)
+        # Use format_detailed_analysis for PDF
+        average_analysis = {}
+        html_text = ''
+        for data in analysis_data:            
+            html_text += format_detailed_analysis(data, i18n)
+        pdf_bytes = html_to_pdf_bytes(html_text)
+        if not pdf_bytes:
+            await callback.message.answer(i18n.auto.analyze.error.pdf())
+            return
+        await callback.message.answer_document(
+            document=BufferedInputFile(
+                pdf_bytes,
+                filename=file_name
+            ),
+            caption=i18n.auto.analyze.pdf_ready(),
+        )
+        await redis_client.delete(key)
+    else:
+        await callback.message.answer(i18n.auto.analyze.no_pdf())

@@ -242,7 +242,7 @@ async def handle_mat_file(
                 reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
             )
             await message.answer(
-                i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n)
+                i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'solo')
             )
             await session_without_commit.commit()
 
@@ -354,7 +354,7 @@ async def handle_player_selection(
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
         )
         await callback.message.answer(
-            i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n)
+            i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'solo')
         )
         await session_without_commit.commit()
 
@@ -364,7 +364,7 @@ async def handle_player_selection(
         await callback.message.answer(i18n.auto.analyze.error.save())
 
 
-@auto_analyze_router.callback_query(DownloadPDFCallback.filter(), UserInfo())
+@auto_analyze_router.callback_query(DownloadPDFCallback.filter(F.context == 'solo'), UserInfo())
 async def handle_download_pdf(
     callback: CallbackQuery,
     callback_data: DownloadPDFCallback,
