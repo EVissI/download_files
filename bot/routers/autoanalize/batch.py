@@ -285,7 +285,7 @@ async def process_single_analysis(
     pr_values = data.get("pr_values", {})
     players_metrics = get_analysis_data(analysis_data)
     for player in players_metrics.keys():
-        pr_values.setdefault(player, []).append(players_metrics[player].get("pr", 0))
+        pr_values.setdefault(player, []).append(players_metrics[player].get("snowie_error_rate", 0))
     await state.update_data(pr_values=pr_values)
 
     dao = DetailedAnalysisDAO(session)
@@ -336,7 +336,7 @@ async def handle_batch_player_selection(
         successful_count += 1
         
         # Update state for next file
-        file_paths = data.get("file_paths", [])[current_file_idx:]  # Remaining files
+        file_paths = data.get("file_paths", [])[1:]  # Remaining files
         logger.info("FILE PATHS AFTER SELECTION: " + str(file_paths))
         await state.update_data(
             file_paths=file_paths,
@@ -348,7 +348,7 @@ async def handle_batch_player_selection(
 
         await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message_id)
         progress_message = await callback.message.answer(i18n.auto.batch.progress(current = current_file_idx, total = total_files))
-        for idx, file_path in enumerate(file_paths, current_file_idx):
+        for idx, file_path in enumerate(file_paths, current_file_idx + 1):
             await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
             progress_message = await callback.message.answer(i18n.auto.batch.progress(current = idx, total = total_files))
             file_type = os.path.splitext(file_path)[1][1:]
