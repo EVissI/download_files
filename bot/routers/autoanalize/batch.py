@@ -232,6 +232,8 @@ async def process_batch_files(
         
         # Check if user is one of the players
         if user_info.player_username and user_info.player_username in player_names:
+            file_paths = file_paths[1:] 
+            await state.update_data(file_paths=file_paths)
             selected_player = user_info.player_username
             process_result = await process_single_analysis(
                 message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
@@ -373,6 +375,7 @@ async def handle_batch_player_selection(
         
         # Update state for next file
         file_paths = data.get("file_paths", [])[1:]  # Remaining files
+        await state.update_data(file_paths=file_paths)
         logger.info("FILE PATHS AFTER SELECTION: " + str(file_paths))
         await state.update_data(
             file_paths=file_paths,
@@ -415,6 +418,8 @@ async def handle_batch_player_selection(
 
 
                 if user_info.player_username and user_info.player_username in player_names:
+                    file_paths = file_paths[1:] 
+                    await state.update_data(file_paths=file_paths)
                     selected_player = user_info.player_username
                     process_result = await process_single_analysis(
                         callback.message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
