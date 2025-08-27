@@ -568,7 +568,7 @@ async def handle_download_pdf(
         analysis_data = json.loads(analysis_data_json)
         html_text = ''
         for data in analysis_data:            
-            html_text += format_detailed_analysis(get_analysis_data(data), i18n) + "\n_______________________________________________________________\n"
+            html_text += format_detailed_analysis(get_analysis_data(data), i18n) + "\n🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲🎲\n"
         pdf_bytes = html_to_pdf_bytes(html_text)
         if not pdf_bytes:
             await callback.message.answer(i18n.auto.analyze.error.parse())
