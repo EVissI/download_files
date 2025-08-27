@@ -243,10 +243,10 @@ class UserDAO(BaseDAO[User]):
     async def decrease_analiz_balance(self, user_id: int, service_type: str) -> bool:
         """
         Decreases analiz_balance by 1 from the oldest active UserPromocodeService or UserAnalizePaymentService.
-        Returns True if balance was decreased successfully, False otherwise.
+        Returns True if balance was decreased successfully or if remaining_quantity is None, False otherwise.
         """
         try:
-            # Find the oldest active UserPromocodeService with remaining_quantity > 0
+            # Find the oldest active UserPromocodeService with remaining_quantity > 0 or NULL
             promo_service_query = (
                 select(UserPromocodeService)
                 .join(
@@ -257,15 +257,13 @@ class UserDAO(BaseDAO[User]):
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
                     UserPromocodeService.service_type == service_type,
-                    UserPromocodeService.remaining_quantity > 0,
+                    (UserPromocodeService.remaining_quantity > 0) | (UserPromocodeService.remaining_quantity.is_(None)),
                 )
                 .order_by(UserPromocode.created_at.asc())
-                .limit(1)  # Ограничиваем результат одной строкой
+                .limit(1)
             )
             promo_service_result = await self._session.execute(promo_service_query)
-            promo_service = (
-                promo_service_result.scalar()
-            )  # Используем scalar вместо scalar_one_or_none
+            promo_service = promo_service_result.scalar()
 
             if promo_service:
                 if promo_service.remaining_quantity is None:
@@ -273,7 +271,7 @@ class UserDAO(BaseDAO[User]):
                         f"Found UserPromocodeService ID {promo_service.id} with NULL remaining_quantity for user {user_id}"
                     )
                     return True
-                # Decrease balance in UserPromocodeService
+                # Decrease balance if remaining_quantity > 0
                 promo_service.remaining_quantity -= 1
                 if promo_service.remaining_quantity == 0:
                     promo_service.is_active = False
@@ -282,27 +280,24 @@ class UserDAO(BaseDAO[User]):
                 )
                 return True
 
-            # Find the oldest active UserAnalizePaymentService with remaining_quantity > 0
+            # Find the oldest active UserAnalizePaymentService with remaining_quantity > 0 or NULL
             payment_service_query = (
                 select(UserAnalizePaymentService)
                 .join(
                     UserAnalizePayment,
-                    UserAnalizePayment.id
-                    == UserAnalizePaymentService.user_analize_payment_id,
+                    UserAnalizePayment.id == UserAnalizePaymentService.user_analize_payment_id,
                 )
                 .where(
                     UserAnalizePayment.user_id == user_id,
                     UserAnalizePayment.is_active == True,
                     UserAnalizePaymentService.service_type == service_type,
-                    UserAnalizePaymentService.remaining_quantity > 0,
+                    (UserAnalizePaymentService.remaining_quantity > 0) | (UserAnalizePaymentService.remaining_quantity.is_(None)),
                 )
                 .order_by(UserAnalizePayment.created_at.asc())
-                .limit(1)  # Ограничиваем результат одной строкой
+                .limit(1)
             )
             payment_service_result = await self._session.execute(payment_service_query)
-            payment_service = (
-                payment_service_result.scalar()
-            )  # Используем scalar вместо scalar_one_or_none
+            payment_service = payment_service_result.scalar()
 
             if payment_service:
                 if payment_service.remaining_quantity is None:
@@ -310,6 +305,7 @@ class UserDAO(BaseDAO[User]):
                         f"Found UserAnalizePaymentService ID {payment_service.id} with NULL remaining_quantity for user {user_id}"
                     )
                     return True
+                # Decrease balance if remaining_quantity > 0
                 payment_service.remaining_quantity -= 1
                 if payment_service.remaining_quantity == 0:
                     payment_service.is_active = False
@@ -318,14 +314,14 @@ class UserDAO(BaseDAO[User]):
                 )
                 return True
 
-            # No active records with balance > 0
-            logger.info(f"No active records with balance > 0 for user {user_id}")
+            # No active records with balance > 0 or NULL
+            logger.info(f"No active records with balance > 0 or NULL for user {user_id}")
             return False
         except SQLAlchemyError as e:
             logger.error(f"Error decreasing analiz_balance for user {user_id}: {e}")
             await self._session.rollback()
             return False
-
+    
     async def check_expired_records(self, user_id: int) -> bool:
         """
         Checks if any UserPromocode or UserAnalizePayment records for the user have expired based on duration_days.
