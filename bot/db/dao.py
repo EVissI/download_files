@@ -322,15 +322,15 @@ class UserDAO(BaseDAO[User]):
             await self._session.rollback()
             return False
     
-    async def check_expired_records(self, user_id: int) -> bool:
+    async def check_expired_records(self, user_id: int) -> list[dict]:
         """
         Checks if any UserPromocode or UserAnalizePayment records for the user have expired based on duration_days.
         Marks expired records as inactive (is_active = False).
-        Returns True if any records were marked as expired, False otherwise.
+        Returns a list of dictionaries containing details of expired records.
         """
         try:
             current_time = datetime.now(timezone.utc)
-            any_expired = False
+            expired_records = []
 
             # Check UserPromocode records
             promo_query = (
@@ -346,13 +346,16 @@ class UserDAO(BaseDAO[User]):
             promo_records = promo_result.all()
 
             for user_promo, duration_days in promo_records:
-                
                 expiration_date = user_promo.created_at + timedelta(days=duration_days)
                 if expiration_date.tzinfo is None:
                     expiration_date = expiration_date.replace(tzinfo=timezone.utc)
                 if current_time > expiration_date:
                     user_promo.is_active = False
-                    any_expired = True
+                    expired_records.append({
+                        "type": "UserPromocode",
+                        "id": user_promo.id,
+                        "expiration_date": expiration_date.isoformat(),
+                    })
                     logger.info(
                         f"Deactivated expired UserPromocode ID {user_promo.id} for user {user_id}"
                     )
@@ -374,29 +377,31 @@ class UserDAO(BaseDAO[User]):
             payment_records = payment_result.all()
 
             for user_payment, duration_days in payment_records:
-                expiration_date = user_payment.created_at + timedelta(
-                    days=duration_days
-                )
+                expiration_date = user_payment.created_at + timedelta(days=duration_days)
                 if expiration_date.tzinfo is None:
                     expiration_date = expiration_date.replace(tzinfo=timezone.utc)
                 if current_time > expiration_date:
                     user_payment.is_active = False
-                    any_expired = True
+                    expired_records.append({
+                        "type": "UserAnalizePayment",
+                        "id": user_payment.id,
+                        "expiration_date": expiration_date.isoformat(),
+                    })
                     logger.info(
                         f"Deactivated expired UserAnalizePayment ID {user_payment.id} for user {user_id}"
                     )
 
-            if any_expired:
+            if expired_records:
                 await self._session.commit()
-                logger.info(f"Expired records updated for user {user_id}")
+                logger.info(f"Expired records updated for user {user_id}: {len(expired_records)} records")
             else:
                 logger.info(f"No expired records found for user {user_id}")
 
-            return any_expired
+            return expired_records
         except SQLAlchemyError as e:
             logger.error(f"Error checking expired records for user {user_id}: {e}")
             await self._session.rollback()
-            return False
+            return []
 
 
 class AnalisisDAO(BaseDAO[Analysis]):

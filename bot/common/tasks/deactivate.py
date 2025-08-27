@@ -49,20 +49,25 @@ async def _expire_analiz_balances_with_session(session: AsyncSession) -> None:
 
         # Проверяем истекшие записи для каждого пользователя
         for user_id in user_ids:
-            any_expired = await user_dao.check_expired_records(user_id)
-            if any_expired:
+            expired_records = await user_dao.check_expired_records(user_id)
+            if expired_records:
                 user = await user_dao.find_one_or_none_by_id(user_id)
                 if user:
                     lang = user.lang_code or "ru"
                     i18n = translator_hub.get_translator_by_locale(lang)
-                    total_balance = await user_dao.get_total_analiz_balance(user_id)
-                    if total_balance is None or total_balance == 0:
-                        continue # Пропускаем, если нет баланса
-                    balance_text = (
-                        "неограниченный"
-                        if total_balance is None
-                        else str(total_balance)
-                    )
+                    for record in expired_records:
+                        if isinstance(record, UserPromocodeDAO.model):
+                            balance_text = (
+                                "неограниченный"
+                                if record.remaining_quantity is None
+                                else str(record.remaining_quantity)
+                            )
+                        if isinstance(record, UserAnalizePaymentDAO.model):
+                            balance_text = (
+                                "неограниченный"
+                                if record.remaining_quantity is None
+                                else str(record.remaining_quantity)
+                            )
                     text = i18n.user.profile.expire_notice(
                         amount=balance_text,
                         source="истекшим записям (промокоды или платежи)"
