@@ -135,6 +135,7 @@ async def handle_sequential_file(
     i18n: TranslatorRunner,
     user_info: User,
 ):
+    await asyncio.sleep(3)
     file = message.document
     if not file.file_name.endswith((".mat", '.txt', '.sgf', '.sgg', '.bkg', '.gam', '.pos', '.fibs', '.tmg')):
         return await message.answer(i18n.auto.analyze.invalid())
@@ -150,7 +151,6 @@ async def handle_sequential_file(
     file_paths.append(file_path)
     await state.update_data(file_paths=file_paths)
     await message.answer(i18n.auto.batch.added(count = len(file_paths)))
-    await asyncio.sleep(1)
 
 
 @batch_auto_analyze_router.message(
