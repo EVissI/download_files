@@ -300,7 +300,11 @@ class UserDAO(BaseDAO[User]):
             )  # Используем scalar вместо scalar_one_or_none
 
             if payment_service:
-                # Decrease balance in UserAnalizePaymentService
+                if payment_service.remaining_quantity is None:
+                    logger.info(
+                        f"Found UserAnalizePaymentService ID {payment_service.id} with NULL remaining_quantity for user {user_id}"
+                    )
+                    return True
                 payment_service.remaining_quantity -= 1
                 if payment_service.remaining_quantity == 0:
                     payment_service.is_active = False

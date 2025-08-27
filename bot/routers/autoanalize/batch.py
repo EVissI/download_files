@@ -293,6 +293,7 @@ async def process_single_analysis(
     }
     user_dao = UserDAO(session)
     players_metrics = get_analysis_data(analysis_data)
+
     if duration > 0:
         descrease_result = await user_dao.decrease_analiz_balance(user_info.id, ServiceType.MATCH)
         try:
@@ -308,7 +309,8 @@ async def process_single_analysis(
                     )
         except Exception as e:
             logger.error(f"Error sending message to group: {e}")
-    if duration == 0 :
+
+    if duration == 0:
         descrease_result = await user_dao.decrease_analiz_balance(user_info.id, ServiceType.MONEYGAME)
     if descrease_result:
         data = await state.get_data()
@@ -380,9 +382,12 @@ async def handle_batch_player_selection(
         
         await callback.message.delete()
 
-        if process_result:
+        try:
             await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message_id)
-            progress_message = await callback.message.answer(i18n.auto.batch.progress(current = current_file_idx, total = total_files))
+        except:
+            pass
+        progress_message = await callback.message.answer(i18n.auto.batch.progress(current = current_file_idx, total = total_files))
+        if process_result:
             for idx, file_path in enumerate(file_paths, current_file_idx + 1):
                 await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
                 progress_message = await callback.message.answer(i18n.auto.batch.progress(current = idx, total = total_files))
@@ -443,8 +448,10 @@ async def handle_batch_player_selection(
                     )
                     await state.set_state(BatchAnalyzeDialog.select_player)
                     return
-        
-        await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
+        try:
+            await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
+        except:
+            pass
         await finalize_batch(
             callback.message, state, user_info, i18n, all_analysis_datas,
             successful_count, session_without_commit
