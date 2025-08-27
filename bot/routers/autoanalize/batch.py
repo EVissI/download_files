@@ -126,6 +126,8 @@ async def cancel_batch_auto_analyze(
     )
 
 
+sequential_file_lock = asyncio.Lock()
+
 @batch_auto_analyze_router.message(
     F.document, StateFilter(BatchAnalyzeDialog.uploading_sequential), UserInfo()
 )
@@ -135,22 +137,51 @@ async def handle_sequential_file(
     i18n: TranslatorRunner,
     user_info: User,
 ):
-    await asyncio.sleep(3)
+    """
+    Handles sequential file uploads, ensuring exclusive access with a lock to prevent race conditions.
+    """
     file = message.document
     if not file.file_name.endswith((".mat", '.txt', '.sgf', '.sgg', '.bkg', '.gam', '.pos', '.fibs', '.tmg')):
         return await message.answer(i18n.auto.analyze.invalid())
-    
-    files_dir = os.path.join(os.getcwd(), "files")
-    os.makedirs(files_dir, exist_ok=True)
-    file_name = file.file_name.replace(" ", "").replace('.txt', '.mat')
-    file_path = os.path.join(files_dir, file_name)
-    await message.bot.download(file.file_id, destination=file_path)
-    
-    data = await state.get_data()
-    file_paths = data.get("file_paths", [])
-    file_paths.append(file_path)
-    await state.update_data(file_paths=file_paths)
-    await message.answer(i18n.auto.batch.added(count = len(file_paths)))
+
+    async with sequential_file_lock:
+        try:
+            # Create the 'files' directory if it doesn't exist
+            files_dir = os.path.join(os.getcwd(), "files")
+            os.makedirs(files_dir, exist_ok=True)
+
+            # Sanitize and normalize filename
+            file_name = file.file_name.replace(" ", "").replace('.txt', '.mat')
+            file_path = os.path.join(files_dir, file_name)
+
+            # Download the file
+            try:
+                await message.bot.download(file.file_id, destination=file_path)
+            except Exception as e:
+                logger.error(f"Failed to download file {file_name} for user {user_info.id}: {e}")
+                await message.answer("Ошибка при загрузке файла. Попробуйте снова.")
+                return
+
+            # Update state with the new file path
+            try:
+                data = await state.get_data()
+                file_paths = data.get("file_paths", [])
+                if file_path not in file_paths:  # Prevent duplicates
+                    file_paths.append(file_path)
+                    await state.update_data(file_paths=file_paths)
+                    logger.info(f"Added file {file_path} for user {user_info.id}, total files: {len(file_paths)}")
+                else:
+                    logger.warning(f"Duplicate file {file_path} skipped for user {user_info.id}")
+            except Exception as e:
+                logger.error(f"Failed to update state for user {user_info.id}: {e}")
+                await message.answer("Ошибка при обработке файла. Попробуйте снова.")
+                return
+
+            # Send confirmation message
+            await message.answer(i18n.auto.batch.added(count=len(file_paths)))
+        except Exception as e:
+            logger.error(f"Unexpected error in handle_sequential_file for user {user_info.id}: {e}")
+            await message.answer("Произошла ошибка при обработке файла. Попробуйте снова.")
 
 
 @batch_auto_analyze_router.message(
