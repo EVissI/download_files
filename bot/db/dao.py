@@ -268,6 +268,11 @@ class UserDAO(BaseDAO[User]):
             )  # Используем scalar вместо scalar_one_or_none
 
             if promo_service:
+                if promo_service.remaining_quantity is None:
+                    logger.info(
+                        f"Found UserPromocodeService ID {promo_service.id} with NULL remaining_quantity for user {user_id}"
+                    )
+                    return True
                 # Decrease balance in UserPromocodeService
                 promo_service.remaining_quantity -= 1
                 if promo_service.remaining_quantity == 0:
@@ -345,6 +350,7 @@ class UserDAO(BaseDAO[User]):
             promo_records = promo_result.all()
 
             for user_promo, duration_days in promo_records:
+                
                 expiration_date = user_promo.created_at + timedelta(days=duration_days)
                 if expiration_date.tzinfo is None:
                     expiration_date = expiration_date.replace(tzinfo=timezone.utc)
