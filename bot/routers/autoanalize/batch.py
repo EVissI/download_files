@@ -150,6 +150,7 @@ async def handle_sequential_file(
     file_paths.append(file_path)
     await state.update_data(file_paths=file_paths)
     await message.answer(i18n.auto.batch.added(count = len(file_paths)))
+    await asyncio.sleep(1)
 
 
 @batch_auto_analyze_router.message(
