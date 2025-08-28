@@ -37,7 +37,7 @@ def html_to_pdf_bytes(html_text: str) -> bytes:
         "<head>"
         "<meta charset='UTF-8'>"
         "<style>"
-        "body { font-family: 'Noto Sans', sans-serif; font-size: 0.9em;}"
+        "body { font-family: 'Noto Sans', sans-serif; font-size: 1.1em;}"
         "pre { white-space: pre-wrap; word-wrap: break-word; }"
         "img.emoji { width: 1em; height: 1em; vertical-align: left; display: inline-block; }"
         "</style>"
