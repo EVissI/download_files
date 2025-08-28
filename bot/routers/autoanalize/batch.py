@@ -524,8 +524,8 @@ async def finalize_batch(
         for player, pr in pr_values.items():
             average_pr = calculate_average_analysis(pr)
             pr_list = ", ".join([f"{pr:.2f}" for pr in pr])
-            group_pr_msg += ru_i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}")
-            user_pr_msg += i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}")
+            group_pr_msg += ru_i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n'
+            user_pr_msg += i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n'
         await message.bot.send_message(
             settings.CHAT_GROUP_ID,
             group_pr_msg,
