@@ -173,4 +173,5 @@ user-static-select_autoanalyze_type = Please select the type of auto analysis:
 auto-batch-summary_pr_header = Game Analysis. Average pr from { $count } matches, 
     Analysis time: { $time }. 
     Date: { $date }.
-auto-batch-summary_pr = PR for <b>{ $player }</b>: ({ $pr_list }) - average <b>{ $average_pr }</b>
+auto-batch-summary_pr = pr for <b>{ $player }</b> - average <b>{ $average_pr }</b>: 
+    ({ $pr_list })

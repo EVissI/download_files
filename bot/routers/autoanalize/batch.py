@@ -350,7 +350,7 @@ async def process_single_analysis(
         data = await state.get_data()
         pr_values = data.get("pr_values", {})
         for player in players_metrics.keys():
-            pr_values.setdefault(player, []).append(players_metrics[player].get("snowie_error_rate", 0))
+            pr_values.setdefault(player, []).append(abs(players_metrics[player].get("snowie_error_rate", 0)))
         await state.update_data(pr_values=pr_values)
 
         dao = DetailedAnalysisDAO(session)
@@ -526,7 +526,7 @@ async def finalize_batch(
             pr_list = ", ".join([f"{pr:.2f}" for pr in pr])
             group_pr_msg += ru_i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n\n'
             user_pr_msg += i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n\n'
-        group_pr_msg += '\n.'
+        group_pr_msg += '\n🎲'
         await message.bot.send_message(
             settings.CHAT_GROUP_ID,
             group_pr_msg,

@@ -265,7 +265,8 @@ class AutoBatch:
 Analysis time: { $time }. 
 Date: { $date }."""]: ...
     @staticmethod
-    def summary_pr(*, average_pr: PossibleValue, player: PossibleValue, pr_list: PossibleValue) -> Literal["""PR for &lt;b&gt;{ $player }&lt;/b&gt;: ({ $pr_list }) - average &lt;b&gt;{ $average_pr }&lt;/b&gt;"""]: ...
+    def summary_pr(*, average_pr: PossibleValue, player: PossibleValue, pr_list: PossibleValue) -> Literal["""pr for &lt;b&gt;{ $player }&lt;/b&gt; - average &lt;b&gt;{ $average_pr }&lt;/b&gt;: 
+({ $pr_list })"""]: ...
 
 class Auto:
     analyze: AutoAnalyze

@@ -175,4 +175,5 @@ user-static-select_autoanalyze_type = Пожалуйста, выберите т�
 auto-batch-summary_pr_header = Анализ игр. Средний pr за { $count } игр, 
     Время анализа: { $time }. 
     Дата: { $date }.
-auto-batch-summary_pr = Средний PR: <b>{ $average_pr }</b> для <b>{ $player }</b>: ({ $pr_list })
+auto-batch-summary_pr = Средний pr: <b>{ $average_pr }</b> для <b>{ $player }</b>: 
+    ({ $pr_list })
