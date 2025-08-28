@@ -37,7 +37,7 @@ def html_to_pdf_bytes(html_text: str) -> bytes:
         "<head>"
         "<meta charset='UTF-8'>"
         "<style>"
-        "body { font-family: 'Noto Sans', sans-serif; font-size: 15px;}"
+        "body { font-family: 'Noto Sans', sans-serif; font-size: 14px;}"
         "pre { white-space: pre-wrap; word-wrap: break-word; }"
         "img.emoji { width: 1em; height: 1em; vertical-align: left; display: inline-block; }"
         "</style>"
@@ -60,7 +60,7 @@ def make_page(text: str) -> HTML:
       <head>
         <meta charset='UTF-8'>
         <style>
-          body {{ font-family: 'Noto Sans', sans-serif; font-size: 9px; }}
+          body {{ font-family: 'Noto Sans', sans-serif; font-size: 13px; }}
           pre {{ white-space: pre-wrap; word-wrap: break-word; }}
           img.emoji {{ width: 1em; height: 1em; vertical-align: middle; display: inline-block; }}
           .page {{ page-break-after: always; }}
