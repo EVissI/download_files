@@ -207,7 +207,17 @@ async def handle_zip_file(
     with zipfile.ZipFile(zip_path, 'r') as zipf:
         for member in zipf.namelist():
             if member.endswith(('.mat', '.txt', '.sgf', '.sgg', '.bkg', '.gam', '.pos', '.fibs', '.tmg')):
-                extracted_path = zipf.extract(member, files_dir)
+                new_name = member.replace(" ", "")
+                # путь, куда будем извлекать
+                extracted_path = os.path.join(files_dir, new_name)
+
+                # убедимся, что директории существуют
+                os.makedirs(os.path.dirname(extracted_path), exist_ok=True)
+
+                # открыть файл из архива и сохранить под новым именем
+                with zipf.open(member) as source, open(extracted_path, "wb") as target:
+                    target.write(source.read())
+
                 file_paths.append(extracted_path)
     
     # Remove the ZIP file after extraction
