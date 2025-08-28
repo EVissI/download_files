@@ -566,11 +566,10 @@ async def handle_download_pdf(
             await callback.message.answer(i18n.auto.batch.no_data_pdf())
             return
         analysis_data = json.loads(analysis_data_json)
-        html_text = ''
         pdf_pages = []
         for data in analysis_data:            
             pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n)))
-        pdf_bytes = merge_pages(html_text)
+        pdf_bytes = merge_pages(pdf_pages)
         if not pdf_bytes:
             await callback.message.answer(i18n.auto.analyze.error.parse())
             return
