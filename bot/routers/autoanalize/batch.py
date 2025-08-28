@@ -25,7 +25,7 @@ from bot.common.func.func import (
     get_analysis_data,
     get_user_file_name,
 )
-from bot.common.func.generate_pdf import html_to_pdf_bytes
+from bot.common.func.generate_pdf import html_to_pdf_bytes, make_page, merge_pages
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
@@ -567,9 +567,10 @@ async def handle_download_pdf(
             return
         analysis_data = json.loads(analysis_data_json)
         html_text = ''
+        pdf_pages = []
         for data in analysis_data:            
-            html_text += format_detailed_analysis(get_analysis_data(data), i18n) + "\n===============================\n"
-        pdf_bytes = html_to_pdf_bytes(html_text)
+            pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n)))
+        pdf_bytes = merge_pages(html_text)
         if not pdf_bytes:
             await callback.message.answer(i18n.auto.analyze.error.parse())
             return

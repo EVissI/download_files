@@ -51,3 +51,36 @@ def html_to_pdf_bytes(html_text: str) -> bytes:
     HTML(string=full_html, encoding='utf-8').write_pdf(pdf_io)
     pdf_io.seek(0)
     return pdf_io.read()
+
+def make_page(text: str) -> HTML:
+    """Создаёт HTML-страницу (WeasyPrint HTML объект)"""
+    text = replace_emoji_with_twemoji_svg(text)
+    full_html = f"""
+    <html>
+      <head>
+        <meta charset='UTF-8'>
+        <style>
+          body {{ font-family: 'Noto Sans', sans-serif; }}
+          pre {{ white-space: pre-wrap; word-wrap: break-word; }}
+          img.emoji {{ width: 1em; height: 1em; vertical-align: middle; display: inline-block; }}
+          .page {{ page-break-after: always; }}
+        </style>
+      </head>
+      <body>
+        <div class="page">{convert_newlines_to_br(text)}</div>
+      </body>
+    </html>
+    """
+    return HTML(string=full_html, encoding="utf-8")
+
+
+def merge_pages(pages: list[HTML]) -> bytes:
+    """Объединяет список HTML-страниц в один PDF"""
+    pdf_io = io.BytesIO()
+    documents = [page.render() for page in pages]  # каждая страница → PDF document
+    merged = documents[0]
+    for doc in documents[1:]:
+        merged.pages.extend(doc.pages)
+    merged.write_pdf(pdf_io)
+    pdf_io.seek(0)
+    return pdf_io.read()
