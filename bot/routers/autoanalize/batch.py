@@ -519,8 +519,8 @@ async def finalize_batch(
         ru_i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
                 'ru'
             )
-        group_pr_msg = ru_i18n.auto.batch.summary_pr_header(count=successful_count, time=datetime.now().strftime("%H:%M"), date=datetime.now().strftime("%d.%m.%y")) + "\n\n"
-        user_pr_msg = i18n.auto.batch.summary_pr_header(count=successful_count, time=datetime.now().strftime("%H:%M"), date=datetime.now().strftime("%d.%m.%y")) + "\n\n"
+        group_pr_msg = '<b>' + ru_i18n.auto.batch.summary_pr_header(count=successful_count, time=datetime.now().strftime("%H:%M"), date=datetime.now().strftime("%d.%m.%y")) + "</b>\n\n"
+        user_pr_msg = '<b>' + i18n.auto.batch.summary_pr_header(count=successful_count, time=datetime.now().strftime("%H:%M"), date=datetime.now().strftime("%d.%m.%y")) + "</b>\n\n"
         for player, pr in pr_values.items():
             average_pr = calculate_average_analysis(pr)
             pr_list = ", ".join([f"{pr:.2f}" for pr in pr])
