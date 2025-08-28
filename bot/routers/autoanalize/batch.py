@@ -522,10 +522,10 @@ async def finalize_batch(
         group_pr_msg = '<b>' + ru_i18n.auto.batch.summary_pr_header(count=successful_count, time=datetime.now().strftime("%H:%M"), date=datetime.now().strftime("%d.%m.%y")) + "</b>\n\n"
         user_pr_msg = '<b>' + i18n.auto.batch.summary_pr_header(count=successful_count, time=datetime.now().strftime("%H:%M"), date=datetime.now().strftime("%d.%m.%y")) + "</b>\n\n"
         for player, pr in pr_values.items():
-            average_pr = calculate_average_analysis(pr)
+            average_pr = abs(calculate_average_analysis(pr))
             pr_list = ", ".join([f"{pr:.2f}" for pr in pr])
-            group_pr_msg += ru_i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n'
-            user_pr_msg += i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n'
+            group_pr_msg += ru_i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n\n'
+            user_pr_msg += i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n\n'
         group_pr_msg += '\n.'
         await message.bot.send_message(
             settings.CHAT_GROUP_ID,

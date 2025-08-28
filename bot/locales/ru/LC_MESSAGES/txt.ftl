@@ -172,7 +172,7 @@ auto-analyze-batch_type = Пакетный анализ
 auto-analyze-error-balance = Недостаточно баланса для полного анализа. Пожалуйста, активируйте промокод или купите баланс в профиле.
 auto-analyze-single_match = Одна игра
 user-static-select_autoanalyze_type = Пожалуйста, выберите тип автоанализа:
-auto-batch-summary_pr_header = Анализ игр. Средний pr из { $count } игр, 
+auto-batch-summary_pr_header = Анализ игр. Средний pr за { $count } игр, 
     Время анализа: { $time }. 
     Дата: { $date }.
-auto-batch-summary_pr = Средний PR: { $average_pr } для { $player }: ({ $pr_list })
+auto-batch-summary_pr = Средний PR: <b>{ $average_pr }</b> для <b>{ $player }</b>: ({ $pr_list })
