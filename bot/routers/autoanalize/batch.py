@@ -516,22 +516,26 @@ async def finalize_batch(
         # Calculate and send averages
         data = await state.get_data()
         pr_values = data.get("pr_values", [])
+        ru_i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
+                'ru'
+            )
+        group_pr_msg = ru_i18n.auto.batch.summary_pr_header(count=successful_count, time=datetime.now().strftime("%H:%M"), date=datetime.now().strftime("%d.%m.%y")) + "\n\n"
+        user_pr_msg = i18n.auto.batch.summary_pr_header(count=successful_count, time=datetime.now().strftime("%H:%M"), date=datetime.now().strftime("%d.%m.%y")) + "\n\n"
         for player, pr in pr_values.items():
             average_pr = calculate_average_analysis(pr)
             pr_list = ", ".join([f"{pr:.2f}" for pr in pr])
-            ru_i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
-                'ru'
-            )
-            await message.bot.send_message(
-                settings.CHAT_GROUP_ID,
-                ru_i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}"),
-                parse_mode="HTML"
-            )
-            await message.answer(
-                i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}"),
-                parse_mode="HTML",
-                reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
-            )
+            group_pr_msg += ru_i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}")
+            user_pr_msg += i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}")
+        await message.bot.send_message(
+            settings.CHAT_GROUP_ID,
+            group_pr_msg,
+            parse_mode="HTML"
+        )
+        await message.answer(
+            user_pr_msg,
+            parse_mode="HTML",
+            reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
+        )
         await message.answer(
             i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'batch')
         )
