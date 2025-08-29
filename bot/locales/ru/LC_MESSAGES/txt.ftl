@@ -174,5 +174,5 @@ auto-analyze-single_match = Одна игра
 user-static-select_autoanalyze_type = Пожалуйста, выберите тип автоанализа:
 auto-batch-summary_pr_header = Игр: { $count }  
     Дата: { $date }
-auto-batch-summary_pr = Средний pr: <b>{ $average_pr }</b> для <b>{ $player }</b>: 
+auto-batch-summary_pr = <b>{ $player }</b>: <b>{ $average_pr }</b>:
     ({ $pr_list })
