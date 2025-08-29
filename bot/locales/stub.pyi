@@ -261,8 +261,7 @@ class AutoBatch:
     @staticmethod
     def no_data_pdf() -> Literal["""No batch analysis data available for PDF generation."""]: ...
     @staticmethod
-    def summary_pr_header(*, count: PossibleValue, date: PossibleValue, time: PossibleValue) -> Literal["""Game Analysis. Average pr from { $count } matches, 
-Analysis time: { $time }. 
+    def summary_pr_header(*, count: PossibleValue, date: PossibleValue) -> Literal["""Games: { $count }, 
 Date: { $date }."""]: ...
     @staticmethod
     def summary_pr(*, average_pr: PossibleValue, player: PossibleValue, pr_list: PossibleValue) -> Literal["""pr for &lt;b&gt;{ $player }&lt;/b&gt; - average &lt;b&gt;{ $average_pr }&lt;/b&gt;: 

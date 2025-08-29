@@ -170,8 +170,7 @@ auto-analyze-error-balance = Not enough balance for full analysis. Please activa
 auto-analyze-batch_type = Batch Analyze
 auto-analyze-single_match = Single Match Analysis
 user-static-select_autoanalyze_type = Please select the type of auto analysis:
-auto-batch-summary_pr_header = Game Analysis. Average pr from { $count } matches, 
-    Analysis time: { $time }. 
+auto-batch-summary_pr_header = Games: { $count }, 
     Date: { $date }.
 auto-batch-summary_pr = pr for <b>{ $player }</b> - average <b>{ $average_pr }</b>: 
     ({ $pr_list })
