@@ -1,4 +1,5 @@
-﻿from aiogram import Router, F, Bot
+﻿from aiogram import Router, F
+from datetime import datetime
 from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -6,17 +7,22 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest, TelegramRetryAfter
+from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback, get_user_locale
 from loguru import logger
 import asyncio
+
+from pytz import timezone
 
 from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.config import bot
-from bot.db.dao import UserDAO
+from bot.db.dao import BroadcastDAO, UserDAO
 from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import translator_hub
-
+from bot.db.models import BroadcastStatus
+from bot.config import scheduler
+from bot.db.schemas import SBroadcast
 # Инициализация роутера
 broadcast_router = Router()
 
@@ -29,6 +35,8 @@ class BroadcastStates(StatesGroup):
     waiting_for_text = State()
     waiting_for_media = State()
     waiting_for_confirmation = State()
+    waiting_for_date = State()
+    waiting_for_time = State()
 
 # Функция отправки сообщения пользователю
 async def notify_user(user_id: int, text: str, media_id: str = None, media_type: str = None):
@@ -103,6 +111,7 @@ async def broadcast_message(user_ids: list[int], text: str, media_id: str = None
     logger.info(f"Рассылка завершена. Успешно: {successful}, Неудачно: {failed}")
     return successful, failed
 
+
 # Команда для старта рассылки
 @broadcast_router.message(F.text == AdminKeyboard.get_kb_text().get('notify'))
 async def start_broadcast(message: Message, state: FSMContext):
@@ -127,6 +136,7 @@ async def start_broadcast(message: Message, state: FSMContext):
         reply_markup=builder.as_markup()
     )
     await state.update_data(sent_message_id=sent_message.message_id)
+
 
 @broadcast_router.callback_query(BroadcastCallback.filter(F.action.in_(['all_users', 'with_purchases', 'without_purchases'])))
 async def process_broadcast_group(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext,i18n):
@@ -245,6 +255,10 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
         InlineKeyboardButton(
             text="Отменить",
             callback_data=BroadcastCallback(action="cancel").pack()
+        ),
+        InlineKeyboardButton(
+            text="Добавить время рассылки",
+            callback_data=BroadcastCallback(action="date").pack()
         )
     )
     
@@ -270,11 +284,128 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
     else:
         sent_message = await message.answer(
             text=preview_text,
-        reply_markup=builder.as_markup()
+            reply_markup=builder.as_markup()
         )
     
     await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_confirmation)
+
+@broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action == "date"))
+async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(
+        "Выберите дату рассылки:",
+        reply_markup=await SimpleCalendar(locale=await get_user_locale(callback.from_user)).start_calendar()
+    )
+    await state.set_state(BroadcastStates.waiting_for_date)
+
+@broadcast_router.callback_query(SimpleCalendarCallback.filter())
+async def process_simple_calendar(callback_query: CallbackQuery, callback_data: CallbackData, state: FSMContext):
+    tz = timezone("Europe/Moscow")
+    today = datetime.now(tz).date()  # текущая дата по МСК
+
+    calendar = SimpleCalendar(
+        locale=await get_user_locale(callback_query.from_user),
+        show_alerts=True
+    )
+    calendar.set_dates_range(today, datetime(2025, 12, 31).date())
+
+    selected, date = await calendar.process_selection(callback_query, callback_data)
+    if selected:
+        await state.update_data(selected_date=date)
+        await callback_query.message.answer("Введите время рассылки в формате HH:MM (по Москве):")
+        await state.set_state(BroadcastStates.waiting_for_time)
+
+@broadcast_router.message(StateFilter(BroadcastStates.waiting_for_time))
+async def process_time(message: Message, state: FSMContext, session_without_commit):
+    try:
+        hour, minute = map(int, message.text.strip().split(":"))
+    except ValueError:
+        await message.answer("Неверный формат. Введите время как HH:MM, например 14:30")
+        return
+
+    user_data = await state.get_data()
+    date = user_data["selected_date"]
+
+    tz = timezone("Europe/Moscow")
+    now = datetime.now(tz)
+
+    # создаём datetime с учётом выбранной даты и введённого времени
+    run_time = tz.localize(
+        date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    )
+
+    # 🚨 проверка на прошлое
+    if run_time <= now:
+        await message.answer("Указанное время уже прошло. Выберите время позже текущего момента.")
+        return
+
+    text = user_data["broadcast_text"]
+    media_id = user_data.get("media_id")
+    media_type = user_data.get("media_type")
+    group = user_data.get("group")
+
+    # сохраняем рассылку в БД
+    broadcast_dao = BroadcastDAO(session_without_commit)
+    broadcast = await broadcast_dao.add(
+        SBroadcast(
+            text=text,
+            media_id=media_id,
+            media_type=media_type,
+            group=group,
+            run_time=run_time,
+            status=BroadcastStatus.SCHEDULED,
+        )
+    )
+
+    # сразу же регистрируем задачу в APScheduler
+    scheduler.add_job(
+        run_broadcast_job,
+        "date",
+        run_date=run_time,
+        args=[broadcast.id],
+        id=f"broadcast_{broadcast.id}"
+    )
+
+    await message.answer(
+        f"Рассылка запланирована на {run_time.strftime('%d.%m.%Y %H:%M (МСК)')}",
+        reply_markup=AdminKeyboard.build()
+    )
+    await state.clear()
+    await state.set_state(GeneralStates.admin_panel)
+
+async def run_broadcast_job(broadcast_id: int):
+    """
+    Выполняет рассылку по ID из БД
+    """
+    from bot.db.database import async_session_maker
+    async with async_session_maker() as session:
+        broadcast_dao = BroadcastDAO(session)
+        user_dao = UserDAO(session)
+
+        broadcast = await broadcast_dao.get_by_id(broadcast_id)
+        if not broadcast or broadcast.status != BroadcastStatus.SCHEDULED:
+            return
+
+        # выборка пользователей
+        if broadcast.group == "all_users":
+            user_ids = [user.id for user in await user_dao.find_all()]
+        elif broadcast.group == "with_purchases":
+            user_ids = [user.id for user in await user_dao.get_users_with_payments()]
+        elif broadcast.group == "without_purchases":
+            user_ids = [user.id for user in await user_dao.get_users_without_payments()]
+        else:
+            return
+
+        successful, failed = await broadcast_message(
+            user_ids=user_ids,
+            text=broadcast.text,
+            media_id=broadcast.media_id,
+            media_type=broadcast.media_type,
+        )
+
+        # обновляем статус
+        await broadcast_dao.update_status(broadcast.id, BroadcastStatus.SENT)
+        logger.info(f"Рассылка {broadcast.id} завершена. Успешно: {successful}, Неудачно: {failed}")
 
 # Обработка подтверждения через инлайн-кнопки
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action.in_(['confirm', 'cancel'])))

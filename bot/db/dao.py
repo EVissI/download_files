@@ -2,6 +2,8 @@
 import pytz
 from bot.db.base import BaseDAO
 from bot.db.models import (
+    Broadcast,
+    BroadcastStatus,
     ServiceType,
     User,
     Analysis,
@@ -906,4 +908,23 @@ class UserAnalizePaymentDAO(BaseDAO[UserAnalizePayment]):
             logger.error(
                 f"Ошибка при получении UserAnalizePayment для пользователя {user_id}: {e}"
             )
+            raise
+
+class BroadcastDAO(BaseDAO[Broadcast]):
+    model = Broadcast
+
+    async def get_scheduled_broadcasts(self) -> List[Broadcast]:
+        """
+        Получает все запланированные рассылки, которые еще не были отправлены.
+        """
+        try:
+            query = select(self.model).where(
+                self.model.status == BroadcastStatus.SCHEDULED
+            )
+            result = await self._session.execute(query)
+            broadcasts = result.scalars().all()
+            logger.info(f"Загружено {len(broadcasts)} запланированных рассылок")
+            return broadcasts
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при загрузке запланированных рассылок: {e}")
             raise

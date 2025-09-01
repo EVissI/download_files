@@ -120,3 +120,15 @@ class SUserAnalizePayment(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SBroadcast(BaseModel):
+    id: int | None = None
+    text: str | None = None
+    media_id: str | None = None
+    media_type: str | None = None
+    group: str | None = None
+    run_time: str | None = None
+    status: str | None = None
+
+    class Config:
+        from_attributes = True

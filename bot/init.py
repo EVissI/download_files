@@ -16,7 +16,7 @@ setup_logger("bot")
 from aiogram.types import BotCommand, BotCommandScopeDefault
 from bot.config import translator_hub
 from loguru import logger
-from bot.config import bot, admins
+from bot.config import bot, admins, scheduler
 
 async def set_commands():
     commands = [
@@ -25,7 +25,6 @@ async def set_commands():
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
 
 def setup_expire_scheduler():
-    scheduler = AsyncIOScheduler()
     scheduler.add_job(expire_analiz_balances, "interval", hours=1)
     scheduler.add_job(check_and_notify_gift, CronTrigger(day_of_week='tue,sat', hour=13, minute=0))
     scheduler.add_job(backup_postgres_to_yandex_disk, CronTrigger(hour=0, minute=0))  

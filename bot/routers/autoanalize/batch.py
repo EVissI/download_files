@@ -520,11 +520,11 @@ async def finalize_batch(
     session_without_commit: AsyncSession
 ):
     if successful_count > 0: 
-        # Store in Redis
+        #сохраняем дату в редис для пдф
         await redis_client.set(f"batch_analysis_data:{user_info.id}", json.dumps(all_analysis_datas), expire=3600)
-        
-        # Calculate and send averages
         data = await state.get_data()
+        
+        #формируем сообщение с пр
         pr_values = data.get("pr_values", [])
         ru_i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
                 'ru'
@@ -536,6 +536,25 @@ async def finalize_batch(
             pr_list = ", ".join([f"{pr:.2f}" for pr in pr])
             group_pr_msg += ru_i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n\n'
             user_pr_msg += i18n.auto.batch.summary_pr(player=player, pr_list=pr_list, average_pr=f"{average_pr:.2f}") + '\n\n'
+        
+        #формируем название пдф файла 
+        players_avg_pr = {
+            player: abs(calculate_average_analysis(pr))
+            for player, pr in pr_values.items()
+        }
+        sorted_players = sorted(players_avg_pr.items(), key=lambda x: x[1])
+        players_order_str = "_".join([player for player, _ in sorted_players])
+        await redis_client.set(
+            f"pdf_file_name:{user_info.id}",
+            players_order_str,
+            expire=3600
+        )
+        await redis_client.set(
+            f"user_pr_msg:{user_info.id}",
+            user_pr_msg,
+            expire=3600
+        )
+        #отправляем сообщения юзеру и в группу
         group_pr_msg += '\n🎲'
         await message.bot.send_message(
             settings.CHAT_GROUP_ID,
@@ -572,7 +591,9 @@ async def handle_download_pdf(
     await callback.message.delete()
     if callback_data.action == "yes":
         key = f"batch_analysis_data:{user_info.id}"
-        file_name_key = f"file_name:{user_info.id}"
+        file_name_key = f"pdf_file_name:{user_info.id}"
+        user_pr_msg_key = f"user_pr_msg:{user_info.id}"
+        user_pr_msg = await redis_client.get(user_pr_msg_key)
         file_name = await redis_client.get(file_name_key)
         file_type = file_name.split('.')[-1] if file_name else 'pdf'
         file_name = file_name.replace(file_type, 'pdf') if file_name else 'batch_analysis.pdf'
@@ -582,6 +603,8 @@ async def handle_download_pdf(
             return
         analysis_data = json.loads(analysis_data_json)
         pdf_pages = []
+        if user_pr_msg:
+            pdf_pages.append(make_page(user_pr_msg))
         for data in analysis_data:            
             pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n)))
         pdf_bytes = merge_pages(pdf_pages)
@@ -596,5 +619,6 @@ async def handle_download_pdf(
             caption=i18n.auto.analyze.pdf_ready(),
         )
         await redis_client.delete(key)
+        await redis_client.delete(file_name_key)
     else:
         await callback.message.answer(i18n.auto.analyze.no_pdf())

@@ -8,6 +8,8 @@ from typing import List
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram import Bot
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from pytz import timezone
 
 class Settings(BaseSettings):
     BASE_DIR: str = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -49,6 +51,7 @@ bot = Bot(
     token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 admins = settings.ROOT_ADMIN_IDS
+scheduler = AsyncIOScheduler(timezone=timezone("Europe/Moscow"))
 
 def setup_logger(app_name: str):
     log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "log")

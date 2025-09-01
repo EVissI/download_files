@@ -2,7 +2,7 @@
 import enum
 from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Enum, String
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Enum, String, Text
 from bot.db.database import Base
 
 
@@ -264,4 +264,28 @@ class UserAnalizePayment(Base):
     user: Mapped["User"] = relationship("User", back_populates="analize_payments_assoc")
     analize_payment: Mapped["AnalizePayment"] = relationship(
         "AnalizePayment", back_populates="users_assoc"
+    )
+
+
+class BroadcastStatus(enum.Enum):
+    SCHEDULED = "scheduled"
+    SENT = "sent"
+    CANCELLED = "cancelled"
+
+class Broadcast(Base):
+    __tablename__ = "broadcasts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    media_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    media_type: Mapped[str | None] = mapped_column(String(20), nullable=True)  
+    group: Mapped[str] = mapped_column(String(30), nullable=False)  
+
+    run_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    status: Mapped["BroadcastStatus"] = mapped_column(
+        Enum(BroadcastStatus),
+        default=BroadcastStatus.SCHEDULED.value,
+        nullable=False
     )

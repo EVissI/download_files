@@ -14,9 +14,5 @@ def get_download_pdf_kb(i18n, context) -> InlineKeyboardMarkup:
         text=i18n.auto.analyze.download_pdf(),
         callback_data=DownloadPDFCallback(action="yes",context = context).pack(),
     )
-    kb.button(
-        text=i18n.auto.analyze.no_thanks(),
-        callback_data=DownloadPDFCallback(action="no", context = context).pack(),
-    )
     kb.adjust(1)
     return kb.as_markup()
