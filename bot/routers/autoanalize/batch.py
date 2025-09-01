@@ -546,11 +546,6 @@ async def finalize_batch(
         players_order_str = ",".join([player for player, _ in sorted_players])
         players_order_str = players_order_str + f"_({datetime.now().strftime('%d.%m.%y_%H:%M')}).pdf"
         await redis_client.set(
-            f"pdf_file_name:{user_info.id}",
-            players_order_str,
-            expire=3600
-        )
-        await redis_client.set(
             f"user_pr_msg:{user_info.id}",
             user_pr_msg,
             expire=3600
@@ -568,10 +563,20 @@ async def finalize_batch(
                 chat_id = settings.CHAT_GROUP_ID,
                 document=BufferedInputFile(
                     pdf_bytes,
-                    filename=user_pr_msg
+                    filename=players_order_str
                 ),
                 caption = group_pr_msg,
                 parse_mode="HTML"
+            )
+            await redis_client.set(
+                f"pdf_file_name:{user_info.id}",
+                players_order_str,
+                expire=3600
+            )
+            await redis_client.set(
+                f"file_pdf_bytes:{user_info.id}",
+                pdf_bytes,
+                expire=3600
             )
         except Exception as e:
             logger.error(f"Error sending group PR message: {e}")
@@ -604,24 +609,27 @@ async def handle_download_pdf(
 ):
     await callback.message.delete()
     if callback_data.action == "yes":
-        key = f"batch_analysis_data:{user_info.id}"
+        pdf_bytes_key = f"file_pdf_bytes:{user_info.id}"
         file_name_key = f"pdf_file_name:{user_info.id}"
-        user_pr_msg_key = f"user_pr_msg:{user_info.id}"
-        user_pr_msg = await redis_client.get(user_pr_msg_key)
+        pdf_bytes = await redis_client.get(pdf_bytes_key)
         file_name = await redis_client.get(file_name_key)
-        file_type = file_name.split('.')[-1] if file_name else 'pdf'
-        file_name = file_name.replace(file_type, 'pdf') if file_name else 'batch_analysis.pdf'
-        analysis_data_json = await redis_client.get(key)
-        if not analysis_data_json:
-            await callback.message.answer(i18n.auto.batch.no_data_pdf())
-            return
-        analysis_data = json.loads(analysis_data_json)
-        pdf_pages = []
-        if user_pr_msg:
-            pdf_pages.append(make_page(user_pr_msg))
-        for data in analysis_data:            
-            pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n)))
-        pdf_bytes = merge_pages(pdf_pages)
+        # file_name_key = f"pdf_file_name:{user_info.id}"
+        # user_pr_msg_key = f"user_pr_msg:{user_info.id}"
+        # user_pr_msg = await redis_client.get(user_pr_msg_key)
+        # file_name = await redis_client.get(file_name_key)
+        # file_type = file_name.split('.')[-1] if file_name else 'pdf'
+        # file_name = file_name.replace(file_type, 'pdf') if file_name else 'batch_analysis.pdf'
+        # analysis_data_json = await redis_client.get(key)
+        # if not analysis_data_json:
+        #     await callback.message.answer(i18n.auto.batch.no_data_pdf())
+        #     return
+        # analysis_data = json.loads(analysis_data_json)
+        # pdf_pages = []
+        # if user_pr_msg:
+        #     pdf_pages.append(make_page(user_pr_msg))
+        # for data in analysis_data:            
+        #     pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n)))
+        # pdf_bytes = merge_pages(pdf_pages)
         if not pdf_bytes:
             await callback.message.answer(i18n.auto.analyze.error.parse())
             return
@@ -632,8 +640,8 @@ async def handle_download_pdf(
             ),
             caption=i18n.auto.analyze.pdf_ready(),
         )
-        await redis_client.delete(key)
+        await redis_client.delete(pdf_bytes_key)
         await redis_client.delete(file_name_key)
-        await redis_client.delete(user_pr_msg_key)
+        # await redis_client.delete(user_pr_msg_key)
     else:
         await callback.message.answer(i18n.auto.analyze.no_pdf())
