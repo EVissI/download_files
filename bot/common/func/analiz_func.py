@@ -125,7 +125,7 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
         x_line = next((line for line in lines if line.startswith("X:")), None)
         o_line = next((line for line in lines if line.startswith("O:")), None)
         player_line = next((line for line in lines if line.startswith("Player")), None)
-
+        logger.info(f"x_line: {x_line}, o_line: {o_line}, player_line: {player_line}")
         if not x_line or not o_line or not player_line:
             logger.error("Не удалось найти строки X:, O:, или Player.")
             raise RuntimeError("Ошибка извлечения строк X:, O:, или Player.")
@@ -137,7 +137,7 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
         # Ник O:
         o_match = re.search(r"O:\s*(.+)", o_line)
         o_nick = o_match.group(1).strip() if o_match else None
-
+        logger.info(f"x_nick: {x_nick}, o_nick: {o_nick}")
         # Проверим, что Player содержит оба ника
         if not (x_nick and o_nick and x_nick in player_line and o_nick in player_line):
             logger.error(f"Ошибка парсинга ников. X: {x_nick}, O: {o_nick}, Player: {player_line}")
