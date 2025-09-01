@@ -520,8 +520,6 @@ async def finalize_batch(
     session_without_commit: AsyncSession
 ):
     if successful_count > 0: 
-        #сохраняем дату в редис для пдф
-        await redis_client.set(f"batch_analysis_data:{user_info.id}", json.dumps(all_analysis_datas), expire=3600)
         data = await state.get_data()
         
         #формируем сообщение с пр
@@ -545,11 +543,6 @@ async def finalize_batch(
         sorted_players = sorted(players_avg_pr.items(), key=lambda x: x[1])
         players_order_str = ",".join([player for player, _ in sorted_players])
         players_order_str = players_order_str + f"_({datetime.now().strftime('%d.%m.%y_%H:%M')}).pdf"
-        await redis_client.set(
-            f"user_pr_msg:{user_info.id}",
-            user_pr_msg,
-            expire=3600
-        )
         #отправляем сообщения юзеру и в группу
         try:
             pdf_pages = []
