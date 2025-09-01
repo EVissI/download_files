@@ -559,9 +559,9 @@ async def finalize_batch(
         try:
             pdf_pages = []
             if user_pr_msg:
-                pdf_pages.append(make_page(user_pr_msg))
+                pdf_pages.append(make_page(user_pr_msg), 22)
             for data in all_analysis_datas:            
-                pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n)))
+                pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n), 11))
             pdf_bytes = merge_pages(pdf_pages)
             group_pr_msg += '\n🎲'
             await message.bot.send_document(
@@ -623,9 +623,9 @@ async def handle_download_pdf(
         analysis_data = json.loads(analysis_data_json)
         pdf_pages = []
         if user_pr_msg:
-            pdf_pages.append(make_page(user_pr_msg))
+            pdf_pages.append(make_page(user_pr_msg, 22))
         for data in analysis_data:            
-            pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n)))
+            pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n), 11))
         pdf_bytes = merge_pages(pdf_pages)
         if not pdf_bytes:
             await callback.message.answer(i18n.auto.analyze.error.parse())

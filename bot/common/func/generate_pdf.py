@@ -52,7 +52,7 @@ def html_to_pdf_bytes(html_text: str) -> bytes:
     pdf_io.seek(0)
     return pdf_io.read()
 
-def make_page(text: str) -> HTML:
+def make_page(text: str, font_size:int) -> HTML:
     """Создаёт HTML-страницу (WeasyPrint HTML объект)"""
     text = replace_emoji_with_twemoji_svg(text)
     full_html = f"""
@@ -60,7 +60,7 @@ def make_page(text: str) -> HTML:
       <head>
         <meta charset='UTF-8'>
         <style>
-          body {{ font-family: 'Noto Sans', sans-serif; font-size: 11px; }}
+          body {{ font-family: 'Noto Sans', sans-serif; font-size: {font_size}px; }}
           pre {{ white-space: pre-wrap; word-wrap: break-word; }}
           img.emoji {{ width: 1em; height: 1em; vertical-align: middle; display: inline-block; }}
           .page {{ page-break-after: always; }}
