@@ -4,6 +4,13 @@ import subprocess
 import os
 from loguru import logger
 
+def clean_nick(raw: str) -> str:
+    """
+    Убирает всё после скобок и чистит пробелы
+    """
+    # Отрезаем всё, что в скобках
+    raw = re.sub(r"\s*\(.*?\)", "", raw)
+    return raw.strip()
 
 def analyze_mat_file(file: str, type: str = None) -> tuple:
     """
@@ -130,13 +137,12 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
             logger.error("Не удалось найти строки X:, O:, или Player.")
             raise RuntimeError("Ошибка извлечения строк X:, O:, или Player.")
 
-        # Ник X:
         x_match = re.search(r"X:\s*(.+)", x_line)
-        x_nick = x_match.group(1).strip() if x_match else None
+        x_nick = clean_nick(x_match.group(1)) if x_match else None
 
-        # Ник O:
+        # Ник O
         o_match = re.search(r"O:\s*(.+)", o_line)
-        o_nick = o_match.group(1).strip() if o_match else None
+        o_nick = clean_nick(o_match.group(1)) if o_match else None
         logger.info(f"x_nick: {x_nick}, o_nick: {o_nick}")
         # Проверим, что Player содержит оба ника
         if not (x_nick and o_nick and x_nick in player_line and o_nick in player_line):
