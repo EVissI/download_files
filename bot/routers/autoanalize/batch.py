@@ -559,7 +559,7 @@ async def finalize_batch(
         try:
             pdf_pages = []
             if user_pr_msg:
-                pdf_pages.append(make_page(user_pr_msg), 22)
+                pdf_pages.append(make_page(user_pr_msg, 22))
             for data in all_analysis_datas:            
                 pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n), 11))
             pdf_bytes = merge_pages(pdf_pages)
@@ -572,11 +572,6 @@ async def finalize_batch(
                 ),
                 caption = group_pr_msg,
                 parse_mode="HTML"
-            )
-            await redis_client.set(
-                f"file_pdf_bytes:{user_info.id}",
-                pdf_bytes,
-                expire=3600
             )
         except Exception as e:
             logger.error(f"Error sending group PR message: {e}")
