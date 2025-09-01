@@ -543,7 +543,8 @@ async def finalize_batch(
             for player, pr in pr_values.items()
         }
         sorted_players = sorted(players_avg_pr.items(), key=lambda x: x[1])
-        players_order_str = "_".join([player for player, _ in sorted_players])
+        players_order_str = ",".join([player for player, _ in sorted_players])
+        players_order_str = players_order_str + f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         await redis_client.set(
             f"pdf_file_name:{user_info.id}",
             players_order_str,
@@ -620,5 +621,6 @@ async def handle_download_pdf(
         )
         await redis_client.delete(key)
         await redis_client.delete(file_name_key)
+        await redis_client.delete(user_pr_msg_key)
     else:
         await callback.message.answer(i18n.auto.analyze.no_pdf())
