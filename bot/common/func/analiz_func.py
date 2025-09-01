@@ -122,9 +122,9 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
                 break
 
         # Извлечение строк X:, O:, и Player
-        x_line = next((line for line in lines if line.startswith("X:")), None)
-        o_line = next((line for line in lines if line.startswith("O:")), None)
-        player_line = next((line for line in lines if line.startswith("Player")), None)
+        x_line = next((line for line in lines if "X:" in line), None)
+        o_line = next((line for line in lines if "O:" in line), None)
+        player_line = next((line for line in lines if line.strip().startswith("Player")), None)
         logger.info(f"x_line: {x_line}, o_line: {o_line}, player_line: {player_line}")
         if not x_line or not o_line or not player_line:
             logger.error("Не удалось найти строки X:, O:, или Player.")
