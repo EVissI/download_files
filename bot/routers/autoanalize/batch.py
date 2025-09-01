@@ -556,12 +556,25 @@ async def finalize_batch(
             expire=3600
         )
         #отправляем сообщения юзеру и в группу
-        group_pr_msg += '\n🎲'
-        await message.bot.send_message(
-            settings.CHAT_GROUP_ID,
-            group_pr_msg,
-            parse_mode="HTML"
-        )
+        try:
+            pdf_pages = []
+            if user_pr_msg:
+                pdf_pages.append(make_page(user_pr_msg))
+            for data in all_analysis_datas:            
+                pdf_pages.append(make_page(format_detailed_analysis(get_analysis_data(data), i18n)))
+            pdf_bytes = merge_pages(pdf_pages)
+            group_pr_msg += '\n🎲'
+            await message.bot.send_document(
+                chat_id = settings.CHAT_GROUP_ID,
+                document=BufferedInputFile(
+                    pdf_bytes,
+                    filename=user_pr_msg
+                ),
+                caption = group_pr_msg,
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            logger.error(f"Error sending group PR message: {e}")
         await message.answer(
             user_pr_msg,
             parse_mode="HTML",
