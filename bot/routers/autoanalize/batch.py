@@ -544,7 +544,7 @@ async def finalize_batch(
         }
         sorted_players = sorted(players_avg_pr.items(), key=lambda x: x[1])
         players_order_str = ",".join([player for player, _ in sorted_players])
-        players_order_str = players_order_str + f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        players_order_str = players_order_str + f"_({datetime.now().strftime('%d.%m.%y_%H:%M')}).pdf"
         await redis_client.set(
             f"pdf_file_name:{user_info.id}",
             players_order_str,
