@@ -122,24 +122,28 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
                 break
 
         # Извлечение строк X:, O:, и Player
-        x_line = next((line for line in lines if "X:" in line), None)
-        o_line = next((line for line in lines if "O:" in line), None)
+        x_line = next((line for line in lines if line.startswith("X:")), None)
+        o_line = next((line for line in lines if line.startswith("O:")), None)
         player_line = next((line for line in lines if line.startswith("Player")), None)
 
         if not x_line or not o_line or not player_line:
             logger.error("Не удалось найти строки X:, O:, или Player.")
             raise RuntimeError("Ошибка извлечения строк X:, O:, или Player.")
 
-        # Извлечение первого ника (X:)
-        x_words = set(re.findall(r"\w+", x_line))
-        player_words = set(re.findall(r"\w+", player_line))
-        second_nick = " ".join(x_words & player_words)
+        # Ник X:
+        x_match = re.search(r"X:\s*(.+)", x_line)
+        x_nick = x_match.group(1).strip() if x_match else None
 
-        # Извлечение второго ника (O:)
-        o_words = set(re.findall(r"\w+", o_line))
-        first_nick = " ".join(o_words & player_words)
+        # Ник O:
+        o_match = re.search(r"O:\s*(.+)", o_line)
+        o_nick = o_match.group(1).strip() if o_match else None
 
-        players = [first_nick, second_nick]
+        # Проверим, что Player содержит оба ника
+        if not (x_nick and o_nick and x_nick in player_line and o_nick in player_line):
+            logger.error(f"Ошибка парсинга ников. X: {x_nick}, O: {o_nick}, Player: {player_line}")
+            raise RuntimeError("Ошибка сопоставления игроков в строке Player")
+
+        players = [o_nick, x_nick]
 
         if len(players) != 2 or not all(players):
             logger.error("Не удалось извлечь никнеймы игроков.")
