@@ -10,7 +10,6 @@ class SUser(BaseModel):
     last_name: str | None = None
     role: str | None = None
     lang_code: str | None = None
-    analiz_balance: int | None = None
 
 
 class SAnalysis(BaseModel):

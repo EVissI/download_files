@@ -12,6 +12,7 @@ from bot.config import settings
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
+
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
