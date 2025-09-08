@@ -107,9 +107,38 @@ async def handle_batch_stop(
         await message.answer(i18n.auto.batch.no_files(), reply_markup=MainKeyboard.build(user_info.role, i18n))
         await message.delete()
         return
+
+    # Формируем ZIP-архив
+    zip_dir = os.path.join(os.getcwd(), "files")
+    os.makedirs(zip_dir, exist_ok=True)
+    username = user_info.player_username if user_info.player_username else f"user_{user_info.id}"
+    zip_path = os.path.join(zip_dir, f"batch_files_{username}.zip")
+
+    try:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for file_path in file_paths:
+                if os.path.exists(file_path):
+                    zipf.write(file_path, os.path.basename(file_path))
+                else:
+                    logger.warning(f"Файл {file_path} не найден и не добавлен в архив.")
+
+        try:
+            await message.bot.send_document(
+                chat_id=settings.CHAT_GROUP_ID,
+                document=BufferedInputFile(open(zip_path, "rb").read(), filename=os.path.basename(zip_path)),
+                caption=i18n.auto.batch.zip_ready(),
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при отправке ZIP-архива в группу: {e}")
+            await message.answer(i18n.auto.batch.error_zip_send())
+    finally:
+        try:
+            os.remove(zip_path)
+        except Exception as e:
+            logger.warning(f"Ошибка при удалении ZIP-архива {zip_path}: {e}")
+
     await message.delete()
     await process_batch_files(message, state, user_info, i18n, file_paths, session_without_commit)
-
 
 @batch_auto_analyze_router.message(
     F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")),
@@ -146,15 +175,12 @@ async def handle_sequential_file(
 
     async with sequential_file_lock:
         try:
-            # Create the 'files' directory if it doesn't exist
             files_dir = os.path.join(os.getcwd(), "files")
             os.makedirs(files_dir, exist_ok=True)
 
-            # Sanitize and normalize filename
             file_name = file.file_name.replace(" ", "").replace('.txt', '.mat')
             file_path = os.path.join(files_dir, file_name)
 
-            # Download the file
             try:
                 await message.bot.download(file.file_id, destination=file_path)
             except Exception as e:
@@ -162,11 +188,10 @@ async def handle_sequential_file(
                 await message.answer("Ошибка при загрузке файла. Попробуйте снова.")
                 return
 
-            # Update state with the new file path
             try:
                 data = await state.get_data()
                 file_paths = data.get("file_paths", [])
-                if file_path not in file_paths:  # Prevent duplicates
+                if file_path not in file_paths:
                     file_paths.append(file_path)
                     await state.update_data(file_paths=file_paths)
                     logger.info(f"Added file {file_path} for user {user_info.id}, total files: {len(file_paths)}")
@@ -177,7 +202,6 @@ async def handle_sequential_file(
                 await message.answer("Ошибка при обработке файла. Попробуйте снова.")
                 return
 
-            # Send confirmation message
             await message.answer(i18n.auto.batch.added(count=len(file_paths)))
         except Exception as e:
             logger.error(f"Unexpected error in handle_sequential_file for user {user_info.id}: {e}")
@@ -194,6 +218,14 @@ async def handle_zip_file(
     user_info: User,
     session_without_commit: AsyncSession
 ):
+    try:
+        await message.bot.forward_message(
+            chat_id = settings.CHAT_GROUP_ID,
+            from_chat_id = message.chat.id,
+            message_id = message.message_id
+        )
+    except Exception as e:
+        logger.error(f"Failed to forward message for user {user_info.id}: {e}")
     file = message.document
     if not file.file_name.endswith(".zip"):
         return await message.answer(i18n.auto.batch.invalid_zip())
@@ -208,7 +240,6 @@ async def handle_zip_file(
         for member in zipf.namelist():
             if member.endswith(('.mat', '.txt', '.sgf', '.sgg', '.bkg', '.gam', '.pos', '.fibs', '.tmg')):
                 new_name = member.replace(" ", "")
-                # путь, куда будем извлекать
                 extracted_path = os.path.join(files_dir, new_name)
 
                 # убедимся, что директории существуют
@@ -220,7 +251,6 @@ async def handle_zip_file(
 
                 file_paths.append(extracted_path)
     
-    # Remove the ZIP file after extraction
     try:
         os.remove(zip_path)
     except Exception as e:
@@ -261,7 +291,6 @@ async def process_batch_files(
             logger.warning(f"Invalid number of players in file: {file_path}")
             continue
         
-        # Store analysis data temporarily
         moscow_tz = pytz.timezone("Europe/Moscow")
         current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
         new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.{file_type}"
@@ -272,7 +301,6 @@ async def process_batch_files(
         except Exception as e:
             logger.error(f"Error saving file to Yandex Disk: {e}")
         
-        # Check if user is one of the players
         if user_info.player_username and user_info.player_username in player_names:
             file_paths = file_paths[1:] 
             await state.update_data(file_paths=file_paths)
@@ -286,7 +314,6 @@ async def process_batch_files(
             if not process_result:
                 break
         else:
-            # Prompt for player selection
             await state.update_data(
                 current_file_idx=idx,
                 total_files=total,
@@ -308,9 +335,8 @@ async def process_batch_files(
                 reply_markup=keyboard.as_markup(),
             )
             await state.set_state(BatchAnalyzeDialog.select_player)
-            return  # Wait for player selection before continuing
+            return  
     await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
-    # If no player selection is needed, finalize batch
     await finalize_batch(message, state, user_info, i18n, all_analysis_datas, successful_count, session_without_commit)
 
 

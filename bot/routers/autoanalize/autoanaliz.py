@@ -131,6 +131,14 @@ async def handle_mat_file(
     """
     # Try to acquire the lock non-blocking
     if not mat_file_lock.locked():
+        try:
+            await message.bot.forward_message(
+                chat_id = settings.CHAT_GROUP_ID,
+                from_chat_id = message.chat.id,
+                message_id = message.message_id
+            )
+        except Exception as e:
+            logger.error(f"Failed to forward message for user {user_info.id}: {e}")
         async with mat_file_lock:
             try:
                 waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
