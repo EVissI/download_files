@@ -130,7 +130,6 @@ async def handle_batch_stop(
             )
         except Exception as e:
             logger.error(f"Ошибка при отправке ZIP-архива в группу: {e}")
-            await message.answer(i18n.auto.batch.error_zip_send())
     finally:
         try:
             os.remove(zip_path)
