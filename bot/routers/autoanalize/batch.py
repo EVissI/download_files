@@ -126,7 +126,7 @@ async def handle_batch_stop(
             await message.bot.send_document(
                 chat_id=settings.CHAT_GROUP_ID,
                 document=BufferedInputFile(open(zip_path, "rb").read(), filename=os.path.basename(zip_path)),
-                caption=f'📁 Пакетный анализ от {user_info.full_name} (@{user_info.username if user_info.username else "NoUsername"})\n\n',
+                caption=f'📁 Пакетный анализ от {user_info.first_name} (@{user_info.username if user_info.username else "NoUsername"})\n\n',
             )
         except Exception as e:
             logger.error(f"Ошибка при отправке ZIP-архива в группу: {e}")
