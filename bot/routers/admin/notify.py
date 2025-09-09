@@ -376,7 +376,7 @@ async def run_broadcast_job(broadcast_id: int):
         broadcast_dao = BroadcastDAO(session)
         user_dao = UserDAO(session)
 
-        broadcast = await broadcast_dao.get_by_id(broadcast_id)
+        broadcast = await broadcast_dao.find_one_or_none_by_id(broadcast_id)
         if not broadcast or broadcast.status != BroadcastStatus.SCHEDULED:
             return
 
