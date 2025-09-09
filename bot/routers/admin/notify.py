@@ -406,10 +406,13 @@ async def run_broadcast_job(broadcast_id: int):
 
         # обновляем статус, используя локальную переменную id (не access через detached объект)
         await broadcast_dao.update_status(b_id, BroadcastStatus.SENT)
-        await bot.send_message(
-            b_created_by,
-            f"Рассылка {b_id} завершена. Успешно: {successful}, Неудачно: {failed}",
-        )
+        try:
+            await bot.send_message(
+                b_created_by,
+                f"Рассылка {b_id} завершена. Успешно: {successful}, Неудачно: {failed}",
+            )
+        except Exception as e:
+            pass
         logger.info(f"Рассылка {b_id} завершена. Успешно: {successful}, Неудачно: {failed}")
 
 
