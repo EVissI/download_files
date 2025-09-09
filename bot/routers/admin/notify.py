@@ -327,7 +327,9 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
 
     # 🚨 проверка на прошлое
     if run_time <= now:
-        await message.answer("Указанное время уже прошло. Выберите время позже текущего момента.")
+        await message.answer("Указанное время уже прошло. Выберите время позже текущего момента.",reply_markup=AdminKeyboard.build())
+        await state.clear()
+        await state.set_state(GeneralStates.admin_panel)
         return
 
     text = user_data["broadcast_text"]
