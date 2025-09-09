@@ -268,9 +268,9 @@ class UserAnalizePayment(Base):
 
 
 class BroadcastStatus(enum.Enum):
-    SCHEDULED = "scheduled"
-    SENT = "sent"
-    CANCELLED = "cancelled"
+    SCHEDULED = "SCHEDULED"
+    SENT = "SENT"
+    CANCELLED = "CANCELLED"
 
 class Broadcast(Base):
     __tablename__ = "broadcasts"
