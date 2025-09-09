@@ -318,7 +318,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
     date = datetime.strptime(user_data["selected_date"], "%Y-%m-%d")
 
     tz = timezone("Europe/Moscow")
-    now = datetime.now(tz).replace(tzinfo=None)
+    now = datetime.now(tz)
 
     # создаём datetime с учётом выбранной даты и введённого времени
     run_time = tz.localize(
