@@ -1,4 +1,5 @@
-﻿from pydantic import BaseModel
+﻿from datetime import datetime
+from pydantic import BaseModel
 from typing import List
 
 
@@ -126,7 +127,7 @@ class SBroadcast(BaseModel):
     media_id: str | None = None
     media_type: str | None = None
     group: str | None = None
-    run_time: str | None = None
+    run_time: datetime | None = None
     status: str | None = None
 
     class Config:
