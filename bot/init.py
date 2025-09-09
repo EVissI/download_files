@@ -9,6 +9,7 @@ from bot.common.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.common.tasks.deactivate import expire_analiz_balances
 from bot.common.tasks.gift import check_and_notify_gift
 from bot.db.pg_backup import backup_postgres_to_yandex_disk
+from bot.routers.admin.notify import resume_scheduled_broadcasts
 from bot.routers.setup import setup_router
 from bot.config import settings, setup_logger
 from bot.db.redis import redis_client
@@ -28,11 +29,13 @@ def setup_expire_scheduler():
     scheduler.add_job(expire_analiz_balances, "interval", hours=1)
     scheduler.add_job(check_and_notify_gift, CronTrigger(day_of_week='tue,sat', hour=13, minute=0))
     scheduler.add_job(backup_postgres_to_yandex_disk, CronTrigger(hour=0, minute=0))  
-    scheduler.start()
+
 
 async def start_bot():
     await set_commands()
     setup_expire_scheduler()
+    await resume_scheduled_broadcasts()
+    scheduler.start()
     for admin_id in admins:
         try:
             await bot.send_message(admin_id, f"Я запущен🥳.")

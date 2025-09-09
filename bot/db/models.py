@@ -38,6 +38,9 @@ class User(Base):
     analize_payments_assoc: Mapped[list["UserAnalizePayment"]] = relationship(
         "UserAnalizePayment", back_populates="user"
     )
+    broadcasts: Mapped[list["Broadcast"]] = relationship(
+        "Broadcast", back_populates="user"
+    )
 
 
 class Analysis(Base):
@@ -289,3 +292,7 @@ class Broadcast(Base):
         default=BroadcastStatus.SCHEDULED.value,
         nullable=False
     )
+    created_by: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=False
+        )
+    user: Mapped["User"] = relationship("User", back_populates="broadcasts")

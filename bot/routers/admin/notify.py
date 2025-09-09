@@ -347,6 +347,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
             group=group,
             run_time=run_time,
             status=BroadcastStatus.SCHEDULED,
+            created_by=message.from_user.id
         )
     )
     # сразу же регистрируем задачу в APScheduler
@@ -385,7 +386,7 @@ async def run_broadcast_job(broadcast_id: int):
         b_text = broadcast.text
         b_media_id = broadcast.media_id
         b_media_type = broadcast.media_type
-
+        b_created_by = broadcast.created_by
         # выборка пользователей
         if b_group == "all_users":
             user_ids = [user.id for user in await user_dao.find_all()]
@@ -405,7 +406,12 @@ async def run_broadcast_job(broadcast_id: int):
 
         # обновляем статус, используя локальную переменную id (не access через detached объект)
         await broadcast_dao.update_status(b_id, BroadcastStatus.SENT)
+        await bot.send_message(
+            b_created_by,
+            f"Рассылка {b_id} завершена. Успешно: {successful}, Неудачно: {failed}",
+        )
         logger.info(f"Рассылка {b_id} завершена. Успешно: {successful}, Неудачно: {failed}")
+
 
 # Обработка подтверждения через инлайн-кнопки
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action.in_(['confirm', 'cancel'])))
@@ -447,3 +453,60 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
     await callback.message.answer(f"Рассылка завершена! Успешно: {successful}, Неудачно: {failed}", reply_markup=AdminKeyboard.build())
     await state.clear()
     await state.set_state(GeneralStates.admin_panel)
+
+
+async def resume_scheduled_broadcasts(tz_name: str = "Europe/Moscow", immediate_delay_seconds: int = 5):
+    """
+    При старте приложения восстанавливает job'ы рассылок из БД для всех Broadcast.status == SCHEDULED.
+    Если run_time в прошлом — заменяет run_date на текущее время + immediate_delay_seconds.
+    Параметры:
+      - async_session_maker: фабрика асинхронных сессий SQLAlchemy
+      - scheduler: экземпляр APScheduler
+      - tz_name: имя таймзоны (по умолчанию Europe/Moscow)
+      - immediate_delay_seconds: задержка для немедленного выполнения просроченных задач
+    """
+    from bot.db.database import async_session_maker
+
+    tz = timezone(tz_name)
+    now = datetime.now(tz)
+
+    try:
+        async with async_session_maker() as session:
+            dao = BroadcastDAO(session)
+            broadcasts = await dao.get_scheduled_broadcasts()
+            logger.info(f"Resuming {len(broadcasts)} scheduled broadcasts")
+            for b in broadcasts:
+                try:
+                    job_id = f"broadcast_{b.id}"
+                    # если job уже зарегистрирована — пропустить
+                    if scheduler.get_job(job_id):
+                        continue
+
+                    run_time = b.run_time
+                    if run_time is None:
+                        logger.warning(f"Broadcast {b.id} has no run_time, skipping")
+                        continue
+
+                    # привести к timezone-aware (предполагаем, что naive время в MSK)
+                    if run_time.tzinfo is None:
+                        run_time = tz.localize(run_time)
+
+                    # если время в прошлом — выполнить почти сразу
+                    if run_time <= now:
+                        run_date = now + timedelta(seconds=immediate_delay_seconds)
+                        logger.info(f"Broadcast {b.id} run_time in past, scheduling now (+{immediate_delay_seconds}s)")
+                    else:
+                        run_date = run_time
+
+                    scheduler.add_job(
+                        run_broadcast_job,
+                        "date",
+                        run_date=run_date,
+                        args=[b.id],
+                        id=job_id
+                    )
+                except Exception as e:
+                    logger.exception(f"Failed to schedule broadcast {getattr(b, 'id', 'unknown')}: {e}")
+    except Exception as e:
+        from loguru import logger
+        logger.exception(f"Failed to resume scheduled broadcasts: {e}")

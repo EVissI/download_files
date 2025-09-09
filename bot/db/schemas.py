@@ -129,6 +129,6 @@ class SBroadcast(BaseModel):
     group: str | None = None
     run_time: datetime | None = None
     status: str | None = None
-
+    created_by: int | None = None
     class Config:
         from_attributes = True
