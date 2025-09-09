@@ -1,5 +1,5 @@
 ﻿from aiogram import Router, F
-from datetime import datetime
+from datetime import datetime, timedelta
 from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -292,21 +292,30 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
 
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action == "date"))
 async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
+    tz = timezone("Europe/Moscow")
+    today = datetime.now(tz).date()  
+    next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
+    calendar = SimpleCalendar(
+        locale='ru_RU',
+        show_alerts=True
+    )
+    calendar.set_dates_range(today, next_month)
     await callback.message.answer(
         "Выберите дату рассылки:",
-        reply_markup=await SimpleCalendar().start_calendar()
+        reply_markup=await calendar.start_calendar()
     )
     await state.set_state(BroadcastStates.waiting_for_date)
 
 @broadcast_router.callback_query(SimpleCalendarCallback.filter())
 async def process_simple_calendar(callback_query: CallbackQuery, callback_data: CallbackData, state: FSMContext):
     tz = timezone("Europe/Moscow")
-    today = datetime.now(tz).date()  # текущая дата по МСК
-
+    today = datetime.now(tz).date()  
+    next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
     calendar = SimpleCalendar(
+        locale='ru_RU',
         show_alerts=True
     )
-    calendar.set_dates_range(today, datetime(2025, 12, 31).date())
+    calendar.set_dates_range(today, next_month)
 
     selected, date = await calendar.process_selection(callback_query, callback_data)
     if selected:
@@ -371,6 +380,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
     )
     await state.clear()
     await state.set_state(GeneralStates.admin_panel)
+
 
 async def run_broadcast_job(broadcast_id: int):
     """
