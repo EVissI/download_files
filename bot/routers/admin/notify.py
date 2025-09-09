@@ -379,26 +379,33 @@ async def run_broadcast_job(broadcast_id: int):
         if not broadcast or broadcast.status != BroadcastStatus.SCHEDULED:
             return
 
+        # Сохраняем все нужные поля локально, чтобы не вызывать lazy-load после await
+        b_id = broadcast.id
+        b_group = broadcast.group
+        b_text = broadcast.text
+        b_media_id = broadcast.media_id
+        b_media_type = broadcast.media_type
+
         # выборка пользователей
-        if broadcast.group == "all_users":
+        if b_group == "all_users":
             user_ids = [user.id for user in await user_dao.find_all()]
-        elif broadcast.group == "with_purchases":
+        elif b_group == "with_purchases":
             user_ids = [user.id for user in await user_dao.get_users_with_payments()]
-        elif broadcast.group == "without_purchases":
+        elif b_group == "without_purchases":
             user_ids = [user.id for user in await user_dao.get_users_without_payments()]
         else:
             return
 
         successful, failed = await broadcast_message(
             user_ids=user_ids,
-            text=broadcast.text,
-            media_id=broadcast.media_id,
-            media_type=broadcast.media_type,
+            text=b_text,
+            media_id=b_media_id,
+            media_type=b_media_type,
         )
 
-        # обновляем статус
-        await broadcast_dao.update_status(broadcast.id, BroadcastStatus.SENT)
-        logger.info(f"Рассылка {broadcast.id} завершена. Успешно: {successful}, Неудачно: {failed}")
+        # обновляем статус, используя локальную переменную id (не access через detached объект)
+        await broadcast_dao.update_status(b_id, BroadcastStatus.SENT)
+        logger.info(f"Рассылка {b_id} завершена. Успешно: {successful}, Неудачно: {failed}")
 
 # Обработка подтверждения через инлайн-кнопки
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action.in_(['confirm', 'cancel'])))

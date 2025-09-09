@@ -40,7 +40,7 @@ async def list_users(message: Message, session_without_commit):
             return await message.answer("Нет зарегистрированных пользователей.")
 
         user_list = "\n".join(
-            [f"ID: {user.id}, Username: {user.username or 'нет'}, Role: {user.role}" for user in users]
+            [f"ID: <code>{user.id}</code>, Username: <code>{user.username or 'нет'}</code>, Role: {user.role}" for user in users]
         )
         await message.answer(f"Список пользователей:\n{user_list}")
     except Exception as e:
