@@ -928,3 +928,24 @@ class BroadcastDAO(BaseDAO[Broadcast]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке запланированных рассылок: {e}")
             raise
+        
+    async def update_status(self, broadcast_id: int, status: BroadcastStatus) -> bool:
+        """
+        Обновляет статус рассылки по id.
+
+        Возвращает True при успешном обновлении, False при ошибке или если запись не найдена.
+        """
+        try:
+            broadcast = await self._session.get(self.model, broadcast_id)
+            if not broadcast:
+                logger.warning(f"Broadcast with id {broadcast_id} not found for status update")
+                return False
+
+            broadcast.status = status
+            await self._session.commit()
+            logger.info(f"Broadcast {broadcast_id} status updated to {status}")
+            return True
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при обновлении статуса рассылки {broadcast_id}: {e}")
+            await self._session.rollback()
+            return False
