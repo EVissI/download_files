@@ -294,7 +294,7 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
 async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(
         "Выберите дату рассылки:",
-        reply_markup=await SimpleCalendar(locale=await get_user_locale(callback.from_user.language_code)).start_calendar()
+        reply_markup=await SimpleCalendar().start_calendar()
     )
     await state.set_state(BroadcastStates.waiting_for_date)
 
@@ -304,7 +304,6 @@ async def process_simple_calendar(callback_query: CallbackQuery, callback_data: 
     today = datetime.now(tz).date()  # текущая дата по МСК
 
     calendar = SimpleCalendar(
-        locale=await get_user_locale(callback_query.from_user.language_code),
         show_alerts=True
     )
     calendar.set_dates_range(today, datetime(2025, 12, 31).date())
