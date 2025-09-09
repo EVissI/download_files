@@ -349,7 +349,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
             status=BroadcastStatus.SCHEDULED,
         )
     )
-
+    await session_without_commit.commit()
     # сразу же регистрируем задачу в APScheduler
     scheduler.add_job(
         run_broadcast_job,
