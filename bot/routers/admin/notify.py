@@ -349,7 +349,6 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
             status=BroadcastStatus.SCHEDULED,
         )
     )
-    await session_without_commit.commit()
     # сразу же регистрируем задачу в APScheduler
     scheduler.add_job(
         run_broadcast_job,
@@ -358,7 +357,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
         args=[broadcast.id],
         id=f"broadcast_{broadcast.id}"
     )
-
+    await session_without_commit.commit()
     await message.answer(
         f"Рассылка запланирована на {run_time.strftime('%d.%m.%Y %H:%M (МСК)')}",
         reply_markup=AdminKeyboard.build()
