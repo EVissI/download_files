@@ -194,7 +194,7 @@ async def process_broadcast_text(message: Message, state: FSMContext):
     await state.set_state(BroadcastStates.waiting_for_media)
 
 @broadcast_router.message(StateFilter(BroadcastStates.waiting_for_targets))
-async def process_targets(message: Message, state: FSMContext, session_without_commit):
+async def process_targets(message: Message, state: FSMContext, session_without_commit, i18n):
     """
     Разбирает введённые id/username, проверяет их наличие в БД и сохраняет только валидные id в state.
     Поддерживается ввод через пробел/запятую, username можно с @ или без.
@@ -267,7 +267,7 @@ async def process_targets(message: Message, state: FSMContext, session_without_c
     if failed:
         info += f"Не найдено: {', '.join(failed)}"
 
-    await message.answer(info + "\n\nТеперь введите текст рассылки:", reply_markup=get_cancel_kb(None))
+    await message.answer(info + "\n\nТеперь введите текст рассылки:", reply_markup=get_cancel_kb(i18n))
     await state.set_state(BroadcastStates.waiting_for_text)
 
 # Получение медиа или обработка кнопки "Без медиа"
