@@ -469,7 +469,7 @@ async def resume_scheduled_broadcasts(tz_name: str = "Europe/Moscow", immediate_
       - immediate_delay_seconds: задержка для немедленного выполнения просроченных задач
     """
     from bot.db.database import async_session_maker
-
+    from loguru import logger
     tz = timezone(tz_name)
     now = datetime.now(tz)
 
@@ -511,5 +511,4 @@ async def resume_scheduled_broadcasts(tz_name: str = "Europe/Moscow", immediate_
                 except Exception as e:
                     logger.exception(f"Failed to schedule broadcast {getattr(b, 'id', 'unknown')}: {e}")
     except Exception as e:
-        from loguru import logger
         logger.exception(f"Failed to resume scheduled broadcasts: {e}")
