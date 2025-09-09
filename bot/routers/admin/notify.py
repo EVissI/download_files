@@ -293,7 +293,7 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action == "date"))
 async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
     tz = timezone("Europe/Moscow")
-    today = datetime.now(tz).date()  
+    today = datetime.now(tz)
     next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
     calendar = SimpleCalendar(
         show_alerts=True
@@ -308,7 +308,7 @@ async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
 @broadcast_router.callback_query(SimpleCalendarCallback.filter())
 async def process_simple_calendar(callback_query: CallbackQuery, callback_data: CallbackData, state: FSMContext):
     tz = timezone("Europe/Moscow")
-    today = datetime.now(tz).date()  
+    today = datetime.now(tz)
     next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
     calendar = SimpleCalendar(
         show_alerts=True
