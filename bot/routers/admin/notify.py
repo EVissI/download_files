@@ -157,12 +157,12 @@ async def process_broadcast_group(callback: CallbackQuery, callback_data: Broadc
     await state.set_state(BroadcastStates.waiting_for_text)
 
 @broadcast_router.callback_query(BroadcastCallback.filter(F.action == "specific"))
-async def process_specific_user(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext):
+async def process_specific_user(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext, i18n):
     await callback.message.delete()
     await state.update_data(group="specific")
     await callback.message.answer(
         "Введите через пробел или запятую id или username (username можно с @ или без). "
-        "Пример: 123456 @someuser otheruser 78910"
+        "Пример: 123456 @someuser otheruser 78910", reply_markup=get_cancel_kb(i18n)
     )
     await state.set_state(BroadcastStates.waiting_for_targets)
 
