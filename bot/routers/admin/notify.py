@@ -267,11 +267,12 @@ async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     tz = timezone("Europe/Moscow")
     today = datetime.now(tz).replace(tzinfo=None)
-    next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
+    yesterday = today - timedelta(days=1)
+    next_month = (yesterday.replace(day=1) + timedelta(days=32)).replace(day=1)
     calendar = SimpleCalendar(
         show_alerts=True
     )
-    calendar.set_dates_range(today, next_month)
+    calendar.set_dates_range(yesterday, next_month)
     await callback.message.answer(
         "Выберите дату рассылки:",
         reply_markup=await calendar.start_calendar()
@@ -282,16 +283,20 @@ async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
 async def process_simple_calendar(callback_query: CallbackQuery, callback_data: CallbackData, state: FSMContext):
     tz = timezone("Europe/Moscow")
     today = datetime.now(tz).replace(tzinfo=None)
-    next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
+    yesterday = today - timedelta(days=1)
+    next_month = (yesterday.replace(day=1) + timedelta(days=32)).replace(day=1)
     calendar = SimpleCalendar(
         show_alerts=True
     )
-    calendar.set_dates_range(today, next_month)
+    calendar.set_dates_range(yesterday, next_month)
 
     selected, date = await calendar.process_selection(callback_query, callback_data)
     if selected:
         await state.update_data(selected_date=date.strftime("%Y-%m-%d"))
-        await callback_query.message.answer("Введите время рассылки в формате HH:MM (по Москве):")
+        await callback_query.message.answer(
+            f"Вы выбрали дату: {date.strftime('%d.%m.%Y')}\n"
+            "Введите время рассылки в формате HH:MM (по Москве):"
+        )
         await state.set_state(BroadcastStates.waiting_for_time)
 
 @broadcast_router.message(StateFilter(BroadcastStates.waiting_for_time))
@@ -310,14 +315,14 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
         return
 
     user_data = await state.get_data()
-    date = datetime.strptime(user_data["selected_date"], "%Y-%m-%d").date()
+    date = datetime.strptime(user_data["selected_date"], "%Y-%m-%d")
 
     tz = timezone("Europe/Moscow")
     now = datetime.now(tz).replace(tzinfo=None)
 
     # создаём datetime с учётом выбранной даты и введённого времени
     run_time = tz.localize(
-        date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        date.replace(hour=hour, minute=minute, second=0, microsecond=0, tzinfo=None)
     )
 
     # 🚨 проверка на прошлое
