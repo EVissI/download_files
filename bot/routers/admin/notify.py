@@ -296,7 +296,6 @@ async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
     today = datetime.now(tz).date()  
     next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
     calendar = SimpleCalendar(
-        locale='ru_RU',
         show_alerts=True
     )
     calendar.set_dates_range(today, next_month)
@@ -312,7 +311,6 @@ async def process_simple_calendar(callback_query: CallbackQuery, callback_data: 
     today = datetime.now(tz).date()  
     next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
     calendar = SimpleCalendar(
-        locale='ru_RU',
         show_alerts=True
     )
     calendar.set_dates_range(today, next_month)
