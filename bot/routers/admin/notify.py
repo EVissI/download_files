@@ -10,6 +10,7 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest, Teleg
 from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback, get_user_locale
 from loguru import logger
 import asyncio
+import re
 
 from pytz import timezone
 
@@ -37,6 +38,7 @@ class BroadcastStates(StatesGroup):
     waiting_for_confirmation = State()
     waiting_for_date = State()
     waiting_for_time = State()
+    waiting_for_targets = State()
 
 # Функция отправки сообщения пользователю
 async def notify_user(user_id: int, text: str, media_id: str = None, media_type: str = None):
@@ -128,6 +130,10 @@ async def start_broadcast(message: Message, state: FSMContext):
         InlineKeyboardButton(
             text="Без покупок и промокодов",
             callback_data=BroadcastCallback(action="without_purchases").pack()
+        ),
+        InlineKeyboardButton(
+            text="Конкретные пользователи",
+            callback_data=BroadcastCallback(action="specific").pack()
         )
     )
     builder.adjust(1) 
@@ -149,6 +155,16 @@ async def process_broadcast_group(callback: CallbackQuery, callback_data: Broadc
         reply_markup=get_cancel_kb(i18n)  
     )
     await state.set_state(BroadcastStates.waiting_for_text)
+
+@broadcast_router.callback_query(BroadcastCallback.filter(F.action == "specific"))
+async def process_specific_user(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext):
+    await callback.message.delete()
+    await state.update_data(group="specific")
+    await callback.message.answer(
+        "Введите через пробел или запятую id или username (username можно с @ или без). "
+        "Пример: 123456 @someuser otheruser 78910"
+    )
+    await state.set_state(BroadcastStates.waiting_for_targets)
 
 @broadcast_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(BroadcastStates))
 async def cancel_broadcast(message: Message, state: FSMContext):
@@ -176,6 +192,45 @@ async def process_broadcast_text(message: Message, state: FSMContext):
         reply_markup=builder.as_markup()
     )
     await state.set_state(BroadcastStates.waiting_for_media)
+
+@broadcast_router.message(StateFilter(BroadcastStates.waiting_for_targets))
+async def process_targets(message: Message, state: FSMContext):
+    text = message.text.strip()
+    if not text:
+        await message.answer("Пустой список. Введите хотя бы один id или username.")
+        return
+
+    tokens = [t.strip() for t in re.split(r"[,\s]+", text) if t.strip()]
+    resolved_ids: list[int] = []
+    failed: list[str] = []
+
+    for tok in tokens:
+        # numeric id
+        if tok.lstrip("-").isdigit():
+            try:
+                resolved_ids.append(int(tok))
+            except Exception:
+                failed.append(tok)
+            continue
+
+        # username: remove leading @ if present
+        uname = tok[1:] if tok.startswith("@") else tok
+        try:
+            chat = await bot.get_chat(uname)
+            resolved_ids.append(chat.id)
+        except Exception:
+            failed.append(tok)
+
+    if not resolved_ids:
+        await message.answer(f"Не удалось разрешить ни одного пользователя. Ошибки: {', '.join(failed) if failed else 'нет'}")
+        return
+
+    await state.update_data(target_user_ids=resolved_ids)
+    info = f"Разрешено {len(resolved_ids)} пользователей."
+    if failed:
+        info += f" Не удалось разрешить: {', '.join(failed)}"
+    await message.answer(info + "\n\nТеперь введите текст рассылки:", reply_markup=get_cancel_kb(None))
+    await state.set_state(BroadcastStates.waiting_for_text)
 
 # Получение медиа или обработка кнопки "Без медиа"
 @broadcast_router.message(StateFilter(BroadcastStates.waiting_for_media), F.photo | F.video)
@@ -227,12 +282,16 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
         InlineKeyboardButton(
             text="Отменить",
             callback_data=BroadcastCallback(action="cancel").pack()
-        ),
-        InlineKeyboardButton(
-            text="Добавить время рассылки",
-            callback_data=BroadcastCallback(action="date").pack()
         )
     )
+    # Добавляем кнопку для назначения времени только если это не рассылка по конкретным пользователям
+    if user_data.get("group") != "specific":
+        builder.add(
+            InlineKeyboardButton(
+                text="Добавить время рассылки",
+                callback_data=BroadcastCallback(action="date").pack()
+            )
+        )
     builder.adjust(1)  
     # Отправка превью
     if media_id and media_type:
@@ -264,6 +323,12 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
 
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action == "date"))
 async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
+    user_data = await state.get_data()
+    # запрет на планирование для конкретных пользователей (нет сохранения targets в БД)
+    if user_data.get("group") == "specific":
+        await callback.answer("Планирование по времени для конкретных пользователей сейчас не поддерживается. Отправьте без времени.", show_alert=True)
+        return
+
     await callback.message.delete()
     tz = timezone("Europe/Moscow")
     today = datetime.now(tz).replace(tzinfo=None)
@@ -433,18 +498,26 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
     group = user_data.get("group")
     
     # Выборка пользователей в зависимости от группы
-    user_dao = UserDAO(session_without_commit)
-    if group == "all_users":
-        user_ids = [user.id for user in await user_dao.find_all()]
-    elif group == "with_purchases":
-        user_ids = [user.id for user in await user_dao.get_users_with_payments()]
-    elif group == "without_purchases":
-        user_ids = [user.id for user in await user_dao.get_users_without_payments()]
+    if group == "specific":
+        user_ids = user_data.get("target_user_ids", [])
+        if not user_ids:
+            await callback.message.answer("Не указаны целевые пользователи.", reply_markup=AdminKeyboard.build())
+            await state.clear()
+            await state.set_state(GeneralStates.admin_panel)
+            return
     else:
-        await callback.message.answer("Выбрана неверная группа.")
-        await state.clear()
-        await state.set_state(GeneralStates.admin_panel)
-        return
+        user_dao = UserDAO(session_without_commit)
+        if group == "all_users":
+            user_ids = [user.id for user in await user_dao.find_all()]
+        elif group == "with_purchases":
+            user_ids = [user.id for user in await user_dao.get_users_with_payments()]
+        elif group == "without_purchases":
+            user_ids = [user.id for user in await user_dao.get_users_without_payments()]
+        else:
+            await callback.message.answer("Выбрана неверная группа.")
+            await state.clear()
+            await state.set_state(GeneralStates.admin_panel)
+            return
     
     successful, failed = await broadcast_message(
         user_ids=user_ids,
