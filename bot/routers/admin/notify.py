@@ -194,13 +194,25 @@ async def process_broadcast_text(message: Message, state: FSMContext):
     await state.set_state(BroadcastStates.waiting_for_media)
 
 @broadcast_router.message(StateFilter(BroadcastStates.waiting_for_targets))
-async def process_targets(message: Message, state: FSMContext):
-    text = message.text.strip()
+async def process_targets(message: Message, state: FSMContext, session_without_commit):
+    """
+    Разбирает введённые id/username, проверяет их наличие в БД и сохраняет только валидные id в state.
+    Поддерживается ввод через пробел/запятую, username можно с @ или без.
+    """
+    text = (message.text or "").strip()
     if not text:
         await message.answer("Пустой список. Введите хотя бы один id или username.")
         return
 
+    # Разбиваем вход по разделителям (пробелы, запятые и т.п.)
     tokens = [t.strip() for t in re.split(r"[,\s]+", text) if t.strip()]
+    if not tokens:
+        await message.answer("Не найдено валидных токенов. Попробуйте ещё раз.")
+        return
+
+    from sqlalchemy import select
+    from bot.db.models import User
+
     resolved_ids: list[int] = []
     failed: list[str] = []
 
@@ -208,27 +220,53 @@ async def process_targets(message: Message, state: FSMContext):
         # numeric id
         if tok.lstrip("-").isdigit():
             try:
-                resolved_ids.append(int(tok))
+                uid = int(tok)
             except Exception:
+                failed.append(tok)
+                continue
+
+            try:
+                res = await session_without_commit.execute(select(User).where(User.id == uid))
+                user = res.scalars().first()
+                if user:
+                    resolved_ids.append(user.id)
+                else:
+                    failed.append(tok)
+            except Exception as e:
+                logger.exception(f"DB error while checking user id {tok}: {e}")
                 failed.append(tok)
             continue
 
-        # username: remove leading @ if present
+        # username (remove leading @ if present)
         uname = tok[1:] if tok.startswith("@") else tok
+        if not uname:
+            failed.append(tok)
+            continue
+
         try:
-            chat = await bot.get_chat(uname)
-            resolved_ids.append(chat.id)
-        except Exception:
+            res = await session_without_commit.execute(select(User).where(User.username == uname))
+            user = res.scalars().first()
+            if user:
+                resolved_ids.append(user.id)
+            else:
+                failed.append(tok)
+        except Exception as e:
+            logger.exception(f"DB error while checking username {tok}: {e}")
             failed.append(tok)
 
     if not resolved_ids:
-        await message.answer(f"Не удалось разрешить ни одного пользователя. Ошибки: {', '.join(failed) if failed else 'нет'}")
+        await message.answer(
+            f"Не удалось найти ни одного пользователя в базе. Ошибки: {', '.join(failed) if failed else 'нет'}"
+        )
         return
 
+    # Сохраняем валидные id в state
     await state.update_data(target_user_ids=resolved_ids)
-    info = f"Разрешено {len(resolved_ids)} пользователей."
+
+    info = f"Найдено {len(resolved_ids)} пользователей в базе. "
     if failed:
-        info += f" Не удалось разрешить: {', '.join(failed)}"
+        info += f"Не найдено: {', '.join(failed)}"
+
     await message.answer(info + "\n\nТеперь введите текст рассылки:", reply_markup=get_cancel_kb(None))
     await state.set_state(BroadcastStates.waiting_for_text)
 
