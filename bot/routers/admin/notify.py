@@ -130,8 +130,8 @@ async def start_broadcast(message: Message, state: FSMContext):
             callback_data=BroadcastCallback(action="without_purchases").pack()
         )
     )
-    builder.adjust(1)  # Одна кнопка в строке
-    sent_message = await message.answer(
+    builder.adjust(1) 
+    await message.answer(
         "Выберите группу пользователей для рассылки:",
         reply_markup=builder.as_markup()
     )
@@ -139,6 +139,7 @@ async def start_broadcast(message: Message, state: FSMContext):
 
 @broadcast_router.callback_query(BroadcastCallback.filter(F.action.in_(['all_users', 'with_purchases', 'without_purchases'])))
 async def process_broadcast_group(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext,i18n):
+    await callback.message.delete()
     
     # Сохраняем выбранную группу
     await state.update_data(group=callback_data.action)
@@ -160,9 +161,6 @@ async def cancel_broadcast(message: Message, state: FSMContext):
 
 @broadcast_router.message(F.text, StateFilter(BroadcastStates.waiting_for_text))
 async def process_broadcast_text(message: Message, state: FSMContext):
-    user_data = await state.get_data()
-
-    
     await state.update_data(broadcast_text=message.text)
     
     # Создание инлайн-кнопки "Без медиа"
@@ -187,7 +185,6 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
     
     # Определение объекта сообщения
     message = event if isinstance(event, Message) else event.message
-
     
     media_id = None
     media_type = None
@@ -205,6 +202,7 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
             await state.update_data(sent_message_id=sent_message.message_id)
             return
     elif isinstance(event, CallbackQuery):
+        await event.message.delete()
         if event.data == BroadcastCallback(action="no_media").pack():
             pass  # Без медиа
         else:
@@ -266,6 +264,7 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
 
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action == "date"))
 async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
+    await callback.message.delete()
     tz = timezone("Europe/Moscow")
     today = datetime.now(tz).replace(tzinfo=None)
     next_month = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
@@ -298,9 +297,16 @@ async def process_simple_calendar(callback_query: CallbackQuery, callback_data: 
 @broadcast_router.message(StateFilter(BroadcastStates.waiting_for_time))
 async def process_time(message: Message, state: FSMContext, session_without_commit):
     try:
-        hour, minute = map(int, message.text.strip().split(":"))
+        parts = message.text.strip().split(":")
+        if len(parts) != 2:
+            raise ValueError
+        hour, minute = map(int, parts)
     except ValueError:
         await message.answer("Неверный формат. Введите время как HH:MM, например 14:30")
+        return
+
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        await message.answer("Неверное время. Час должен быть от 0 до 23, минуты — от 0 до 59.")
         return
 
     user_data = await state.get_data()
@@ -392,7 +398,7 @@ async def run_broadcast_job(broadcast_id: int):
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action.in_(['confirm', 'cancel'])))
 async def process_broadcast_confirmation(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext, session_without_commit):
     user_data = await state.get_data()
-    
+    await callback.message.delete()
     if callback_data.action == "cancel":
         await callback.message.answer("Рассылка отменена.", reply_markup=AdminKeyboard.build())
         await state.clear()
