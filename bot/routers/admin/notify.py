@@ -135,28 +135,18 @@ async def start_broadcast(message: Message, state: FSMContext):
         "Выберите группу пользователей для рассылки:",
         reply_markup=builder.as_markup()
     )
-    await state.update_data(sent_message_id=sent_message.message_id)
 
 
 @broadcast_router.callback_query(BroadcastCallback.filter(F.action.in_(['all_users', 'with_purchases', 'without_purchases'])))
 async def process_broadcast_group(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext,i18n):
-    sent_message_id = (await state.get_data()).get("sent_message_id")
-    
-    # Удаление сообщения с выбором группы
-    if sent_message_id:
-        try:
-            await bot.delete_message(chat_id=callback.message.chat.id, message_id=sent_message_id)
-        except Exception as e:
-            logger.warning(f"Не удалось удалить сообщение {sent_message_id}: {e}")
     
     # Сохраняем выбранную группу
     await state.update_data(group=callback_data.action)
     
-    sent_message = await callback.message.answer(
+    await callback.message.answer(
         "Введите текст для рассылки:",
         reply_markup=get_cancel_kb(i18n)  
     )
-    await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_text)
 
 @broadcast_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(BroadcastStates))
@@ -171,14 +161,7 @@ async def cancel_broadcast(message: Message, state: FSMContext):
 @broadcast_router.message(F.text, StateFilter(BroadcastStates.waiting_for_text))
 async def process_broadcast_text(message: Message, state: FSMContext):
     user_data = await state.get_data()
-    sent_message_id = user_data.get("sent_message_id")
-    
-    # Удаление предыдущего сообщения
-    if sent_message_id:
-        try:
-            await bot.delete_message(chat_id=message.chat.id, message_id=sent_message_id)
-        except Exception as e:
-            logger.warning(f"Не удалось удалить сообщение {sent_message_id}: {e}")
+
     
     await state.update_data(broadcast_text=message.text)
     
@@ -190,12 +173,10 @@ async def process_broadcast_text(message: Message, state: FSMContext):
             callback_data=BroadcastCallback(action="no_media").pack()
         )
     )
-    
-    sent_message = await message.answer(
+    await message.answer(
         "Отправьте фото или видео, или нажмите 'Без медиа':",
         reply_markup=builder.as_markup()
     )
-    await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_media)
 
 # Получение медиа или обработка кнопки "Без медиа"
@@ -203,17 +184,10 @@ async def process_broadcast_text(message: Message, state: FSMContext):
 @broadcast_router.callback_query(StateFilter(BroadcastStates.waiting_for_media), BroadcastCallback.filter(F.action == "no_media"))
 async def process_broadcast_media(event: Message | CallbackQuery, state: FSMContext):
     user_data = await state.get_data()
-    sent_message_id = user_data.get("sent_message_id")
     
     # Определение объекта сообщения
     message = event if isinstance(event, Message) else event.message
-    
-    # Удаление предыдущего сообщения
-    if sent_message_id:
-        try:
-            await bot.delete_message(chat_id=message.chat.id, message_id=sent_message_id)
-        except Exception as e:
-            logger.warning(f"Не удалось удалить сообщение {sent_message_id}: {e}")
+
     
     media_id = None
     media_type = None
@@ -317,7 +291,7 @@ async def process_simple_calendar(callback_query: CallbackQuery, callback_data: 
 
     selected, date = await calendar.process_selection(callback_query, callback_data)
     if selected:
-        await state.update_data(selected_date=date)
+        await state.update_data(selected_date=date.strftime("%Y-%m-%d"))
         await callback_query.message.answer("Введите время рассылки в формате HH:MM (по Москве):")
         await state.set_state(BroadcastStates.waiting_for_time)
 
@@ -330,10 +304,10 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
         return
 
     user_data = await state.get_data()
-    date = user_data["selected_date"]
+    date = datetime.strptime(user_data["selected_date"], "%Y-%m-%d").date()
 
     tz = timezone("Europe/Moscow")
-    now = datetime.now(tz)
+    now = datetime.now(tz).replace(tzinfo=None)
 
     # создаём datetime с учётом выбранной даты и введённого времени
     run_time = tz.localize(
@@ -418,14 +392,6 @@ async def run_broadcast_job(broadcast_id: int):
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action.in_(['confirm', 'cancel'])))
 async def process_broadcast_confirmation(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext, session_without_commit):
     user_data = await state.get_data()
-    sent_message_id = user_data.get("sent_message_id")
-    
-    # Удаление сообщения с превью
-    if sent_message_id:
-        try:
-            await bot.delete_message(chat_id=callback.message.chat.id, message_id=sent_message_id)
-        except Exception as e:
-            logger.warning(f"Не удалось удалить сообщение {sent_message_id}: {e}")
     
     if callback_data.action == "cancel":
         await callback.message.answer("Рассылка отменена.", reply_markup=AdminKeyboard.build())
