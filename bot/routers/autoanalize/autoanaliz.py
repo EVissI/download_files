@@ -131,14 +131,6 @@ async def handle_mat_file(
     """
     # Try to acquire the lock non-blocking
     if not mat_file_lock.locked():
-        try:
-            await message.bot.forward_message(
-                chat_id = settings.CHAT_GROUP_ID,
-                from_chat_id = message.chat.id,
-                message_id = message.message_id
-            )
-        except Exception as e:
-            logger.error(f"Failed to forward message for user {user_info.id}: {e}")
         async with mat_file_lock:
             try:
                 waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
@@ -170,6 +162,15 @@ async def handle_mat_file(
                 duration, analysis_result = await loop.run_in_executor(
                     None, analyze_mat_file, file_path, file_type
                 )
+                if duration > 0:
+                    try:
+                        await message.bot.forward_message(
+                            chat_id = settings.CHAT_GROUP_ID,
+                            from_chat_id = message.chat.id,
+                            message_id = message.message_id
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to forward message for user {user_info.id}: {e}")
                 await state.update_data(duration=duration)
                 analysis_data = await loop.run_in_executor(None, json.loads, analysis_result)
                 await redis_client.set(
@@ -259,13 +260,27 @@ async def handle_mat_file(
                             p2 = formated_data.get(player2_name)
                             current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                            await message.bot.send_message(
-                                settings.CHAT_GROUP_ID,
-                                f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                            # Генерация PDF
+                            html_text = format_detailed_analysis(formated_data, i18n)
+                            pdf_bytes = html_to_pdf_bytes(html_text)
+                            if not pdf_bytes:
+                                logger.error("Ошибка при генерации PDF.")
+                                await message.bot.send_message(
+                                    settings.CHAT_GROUP_ID,
+                                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                                    parse_mode="HTML",
+                                )
+                                return
+
+                            # Отправка сообщения с PDF
+                            await message.bot.send_document(
+                                chat_id=settings.CHAT_GROUP_ID,
+                                document=BufferedInputFile(pdf_bytes, filename=f"analysis_{current_date}.pdf"),
+                                caption=f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
                                 parse_mode="HTML",
                             )
                         except Exception as e:
-                            logger.error(f"Ошибка при отправке сообщения в группу: {e}")
+                            logger.error(f"Ошибка при отправке сообщения с PDF в группу: {e}")
                     await waiting_manager.stop()
                     await message.answer(
                         f"{formatted_analysis}\n\n",
@@ -375,13 +390,27 @@ async def handle_player_selection(
                 p2 = formated_data.get(player2_name)
                 current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                await callback.message.bot.send_message(
-                    settings.CHAT_GROUP_ID,
-                    f"<b>Автоматичеѝкий анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                # Генерация PDF
+                html_text = format_detailed_analysis(formated_data, i18n)
+                pdf_bytes = html_to_pdf_bytes(html_text)
+                if not pdf_bytes:
+                    logger.error("Ошибка при генерации PDF.")
+                    await callback.bot.send_message(
+                        settings.CHAT_GROUP_ID,
+                        f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                        parse_mode="HTML",
+                    )
+                    return
+
+                # Отправка сообщения с PDF
+                await callback.bot.send_document(
+                    chat_id=settings.CHAT_GROUP_ID,
+                    document=BufferedInputFile(pdf_bytes, filename=f"analysis_{current_date}.pdf"),
+                    caption=f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
                     parse_mode="HTML",
                 )
             except Exception as e:
-                logger.error(f"Ошибка при отправке Сообщениѝ в группу: {e}")
+                logger.error(f"Ошибка при отправке сообщения с PDF в группу: {e}")
         await callback.message.answer(
             f"{formatted_analysis}\n\n",
             parse_mode="HTML",
