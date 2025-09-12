@@ -42,44 +42,45 @@ class DetailedUserUnloadingCallback(CallbackData, prefix="detailed_user_unloadin
     Данные обратного вызова для действий выгрузки детального анализа.
     """
     action: str
+    context: str
 
 
-def get_detailed_user_unloading_kb() -> InlineKeyboardMarkup:
+def get_detailed_user_unloading_kb(context:str) -> InlineKeyboardMarkup:
     """
     Создает инлайн-клавиатуру для опций выгрузки детального анализа с предопределенными временными диапазонами.
     """
     builder = InlineKeyboardBuilder()
     builder.button(
         text="Сегодня",
-        callback_data=DetailedUserUnloadingCallback(action="today").pack(),
+        callback_data=DetailedUserUnloadingCallback(action="today", context = context).pack(),
     )
     builder.button(
         text="Вчера",
-        callback_data=DetailedUserUnloadingCallback(action="yesterday").pack(),
+        callback_data=DetailedUserUnloadingCallback(action="yesterday", context = context).pack(),
     )
     builder.button(
         text="Неделя",
-        callback_data=DetailedUserUnloadingCallback(action="week").pack(),
+        callback_data=DetailedUserUnloadingCallback(action="week", context = context).pack(),
     )
     builder.button(
         text="Месяц",
-        callback_data=DetailedUserUnloadingCallback(action="month").pack(),
+        callback_data=DetailedUserUnloadingCallback(action="month", context = context).pack(),
     )
     builder.button(
         text="Полгода",
-        callback_data=DetailedUserUnloadingCallback(action="half_year").pack(),
+        callback_data=DetailedUserUnloadingCallback(action="half_year", context = context).pack(),
     )
     builder.button(
         text="Всё время",
-        callback_data=DetailedUserUnloadingCallback(action="all_time").pack(),
+        callback_data=DetailedUserUnloadingCallback(action="all_time", context = context).pack(),
     )
     builder.button(
         text="Свой диапазон дат",
-        callback_data=DetailedUserUnloadingCallback(action="custom").pack(),
+        callback_data=DetailedUserUnloadingCallback(action="custom", context = context).pack(),
     )
     builder.button(
         text="Отмена",
-        callback_data=DetailedUserUnloadingCallback(action="back").pack()
+        callback_data=DetailedUserUnloadingCallback(action="back", context = context).pack()
     )
     builder.adjust(1)
     return builder.as_markup()
@@ -125,7 +126,7 @@ async def handle_player_name_pagination(
         await state.update_data(player_name=callback_data.player_name)
         await callback.message.edit_text(
             "Выберите временной диапазон для выгрузки детального анализа:",
-            reply_markup=get_detailed_user_unloading_kb(),
+            reply_markup=get_detailed_user_unloading_kb(context='by_user_gnu'),
         )
         await state.set_state(GeneralStates.excel_view)
     elif callback_data.action in ("prev", "next"):
@@ -150,7 +151,7 @@ async def cancel_detailed_user_unloading(
 
 
 @detailed_user_unloading_router.callback_query(
-    DetailedUserUnloadingCallback.filter(), UserInfo()
+    DetailedUserUnloadingCallback.filter(F.context == 'by_user_gnu'), UserInfo()
 )
 async def handle_detailed_user_unloading_callback(
     callback: CallbackQuery,

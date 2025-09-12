@@ -17,13 +17,11 @@ from loguru import logger
 import os
 import json
 import zipfile
-import tempfile
 
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.func import (
     format_detailed_analysis,
     get_analysis_data,
-    get_user_file_name,
 )
 from bot.common.func.generate_pdf import html_to_pdf_bytes, make_page, merge_pages
 from bot.common.func.waiting_message import WaitingMessageManager
@@ -33,9 +31,9 @@ from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, get_download
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
-from bot.db.models import PromocodeServiceQuantity, ServiceType, User
+from bot.db.models import ServiceType, User
 from bot.common.func.analiz_func import analyze_mat_file
-from bot.db.schemas import SDetailedAnalysis, SUser
+from bot.db.schemas import SDetailedAnalysis
 from bot.db.redis import redis_client
 
 from bot.common.utils.i18n import get_all_locales_for_key

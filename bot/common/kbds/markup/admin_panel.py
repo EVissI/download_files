@@ -8,6 +8,7 @@ class AdminKeyboard:
         'promo':'Промокоды',
         'payment':'Пакеты услуг',
         'notify':'Рассылка',
+        'users_setting':'Пользователи',
         'back':'Назад',
     }
 
@@ -22,5 +23,5 @@ class AdminKeyboard:
             kb.add(
                 KeyboardButton(text=text)
             )
-        kb.adjust(2)
+        kb.adjust(2,2,1,1)
         return kb.as_markup(resize_keyboard=True)

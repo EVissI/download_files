@@ -133,7 +133,29 @@ class UserDAO(BaseDAO[User]):
                 f"Ошибка при получении общего баланса для пользователя {user_id}: {e}"
             )
             raise
+    
+    async def update_admin_insert_name(self, user_id: int, admin_insert_name: str) -> Optional[User]:
+        """
+        Обновляет поле admin_insert_name для пользователя с заданным user_id.
+        Возвращает обновлённый объект User или None, если пользователь не найден или при ошибке.
+        """
+        try:
+            user = await self._session.get(self.model, user_id)
+            if not user:
+                logger.warning(f"User with id {user_id} not found for admin_insert_name update")
+                return None
 
+            user.admin_insert_name = admin_insert_name
+            await self._session.commit()
+            # Обновляем объект из сессии, чтобы вернуть актуальные данные
+            await self._session.refresh(user)
+            logger.info(f"Updated admin_insert_name for user {user_id} -> {admin_insert_name}")
+            return user
+        except SQLAlchemyError as e:
+            logger.error(f"Error updating admin_insert_name for user {user_id}: {e}")
+            await self._session.rollback()
+            return None
+        
     async def get_total_analiz_balance(
         self, user_id: int, service_type: ServiceType
     ) -> Optional[int]:
@@ -448,6 +470,37 @@ class AnalisisDAO(BaseDAO[Analysis]):
 class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
     model = DetailedAnalysis
 
+    
+    async def get_detailed_analyzes_by_user_id(
+        self,
+        user_id: int,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> List[DetailedAnalysis]:
+        """
+        Получает записи детального анализа для конкретного user_id с необязательной фильтрацией по дате.
+        """
+        try:
+            conditions = [self.model.user_id == user_id]
+            if start_date and end_date:
+                conditions.append(self.model.created_at.between(start_date, end_date))
+            elif start_date:
+                conditions.append(self.model.created_at >= start_date)
+            elif end_date:
+                conditions.append(self.model.created_at <= end_date)
+
+            query = select(self.model).where(*conditions)
+            result = await self._session.execute(query)
+            analyses = result.scalars().all()
+            logger.info(
+                f"Загружено {len(analyses)} записей детального анализа для user_id {user_id}"
+            )
+            return analyses
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при загрузке записей детального анализа для user_id {user_id}: {e}"
+            )
+            raise
     async def get_average_analysis_by_user(self, user_id: int) -> dict:
         try:
             logger.info(
