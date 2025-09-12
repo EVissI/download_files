@@ -11,6 +11,8 @@ from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 
+from bot.db.models import User
+
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
@@ -279,7 +281,16 @@ def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
         players = list(analysis_data.get("chequerplay", {}).keys())
         return {player: extract(player) for player in players}
 
-
+def create_message_for_user(user: User) -> str:
+    return (
+        f"ID: {user.id}\n"
+        f"Username: @{user.username or 'нет'}\n"
+        f"Имя: {user.first_name or 'нет'}\n"
+        f"Фамилия: {user.last_name or 'нет'}\n"
+        f"Роль: {user.role}\n"
+        f"Язык: {user.lang_code or 'не установлен'}\n"
+        f"Поставленное имя: {user.admin_insert_name or 'не установлен'}"
+    )
 def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str:
     """
     Форматирует результаты анализа для двух игроков в виде ASCII-таблиц для вывода в Telegram,

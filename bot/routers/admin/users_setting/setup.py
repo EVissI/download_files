@@ -1,5 +1,6 @@
 ﻿from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
+from bot.common.func.func import create_message_for_user
 from bot.common.kbds.inline.user_settings import get_user_settings_kb, UserSettingsCallback
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.db.models import User
@@ -13,17 +14,6 @@ user_setting_router = Router()
 user_setting_router.include_routers(
     user_list_update_username_router,user_setting_notify_router,user_settings_excel_router
 )
-
-def create_message_for_user(user: User) -> str:
-    return (
-        f"ID: {user.id}\n"
-        f"Username: @{user.username or 'нет'}\n"
-        f"Имя: {user.first_name or 'нет'}\n"
-        f"Фамилия: {user.last_name or 'нет'}\n"
-        f"Роль: {user.role}\n"
-        f"Язык: {user.lang_code or 'не установлен'}\n"
-        f"Поставленное имя: {user.admin_insert_name or 'не установлен'}"
-    )
 
 @user_setting_router.message(F.text == AdminKeyboard.admin_text_kb['users_setting'])
 async def handle_user_settings(message: Message, session_without_commit):

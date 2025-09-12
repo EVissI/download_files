@@ -7,6 +7,7 @@ from aiogram.filters import StateFilter
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.common.func.func import create_message_for_user
 from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.kbds.markup.cancel import get_cancel_kb
@@ -19,7 +20,6 @@ from bot.common.func.excel_generate import generate_detailed_user_analysis_repor
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
 from bot.config import translator_hub
 from bot.common.utils.i18n import get_all_locales_for_key
-from bot.routers.admin.users_setting.setup import create_message_for_user
 
 user_settings_excel_router = Router()
 

@@ -4,6 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 from loguru import logger
+from bot.common.func.func import create_message_for_user
 from bot.db.dao import UserDAO
 from bot.db.models import User
 
@@ -17,7 +18,6 @@ from bot.common.kbds.inline.user_settings import (
 from bot.common.kbds.markup.cancel import get_cancel_kb
 
 from bot.config import translator_hub
-from bot.routers.admin.users_setting.setup import create_message_for_user
 
 class UpdateNicknameState(StatesGroup):
     nickname = State()
