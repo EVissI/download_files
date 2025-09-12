@@ -15,6 +15,7 @@ import re
 from pytz import timezone
 
 from bot.common.general_states import GeneralStates
+from bot.common.kbds.inline.paginate import PaginatedCallback, get_paginated_keyboard
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.config import bot
@@ -157,12 +158,21 @@ async def process_broadcast_group(callback: CallbackQuery, callback_data: Broadc
     await state.set_state(BroadcastStates.waiting_for_text)
 
 @broadcast_router.callback_query(BroadcastCallback.filter(F.action == "specific"))
-async def process_specific_user(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext, i18n):
+async def process_specific_user(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext, i18n, session_without_commit):
     await callback.message.delete()
     await state.update_data(group="specific")
+    user_dao = UserDAO(session_without_commit)
+    users = await user_dao.find_all()
     await callback.message.answer(
-        "Введите через пробел или запятую id или username (username можно с @ или без). "
-        "Пример: 123456 @someuser otheruser 78910", reply_markup=get_cancel_kb(i18n)
+        'Выберите юзера для рассылки:',
+        reply_markup=get_paginated_keyboard(
+            items=users,
+            context="broadcast_specific",
+            get_display_text=lambda user: f"{user.admin_insert_name or user.username or user.id}",
+            get_item_id=lambda user: user.id,
+            page=0,
+            items_per_page=5,
+        )
     )
     await state.set_state(BroadcastStates.waiting_for_targets)
 
@@ -193,82 +203,28 @@ async def process_broadcast_text(message: Message, state: FSMContext):
     )
     await state.set_state(BroadcastStates.waiting_for_media)
 
-@broadcast_router.message(StateFilter(BroadcastStates.waiting_for_targets))
-async def process_targets(message: Message, state: FSMContext, session_without_commit, i18n):
+@broadcast_router.callback_query(PaginatedCallback.filter(F.context == 'broadcast_specific'), StateFilter(BroadcastStates.waiting_for_targets))
+async def process_targets(callback: CallbackQuery, callback_data:PaginatedCallback, state: FSMContext, session_without_commit, i18n):
     """
     Разбирает введённые id/username, проверяет их наличие в БД и сохраняет только валидные id в state.
     Поддерживается ввод через пробел/запятую, username можно с @ или без.
     """
-    text = (message.text or "").strip()
-    if not text:
-        await message.answer("Пустой список. Введите хотя бы один id или username.")
-        return
-
-    # Разбиваем вход по разделителям (пробелы, запятые и т.п.)
-    tokens = [t.strip() for t in re.split(r"[,\s]+", text) if t.strip()]
-    if not tokens:
-        await message.answer("Не найдено валидных токенов. Попробуйте ещё раз.")
-        return
-
-    from sqlalchemy import select
-    from bot.db.models import User
-
-    resolved_ids: list[int] = []
-    failed: list[str] = []
-
-    for tok in tokens:
-        # numeric id
-        if tok.lstrip("-").isdigit():
-            try:
-                uid = int(tok)
-            except Exception:
-                failed.append(tok)
-                continue
-
-            try:
-                res = await session_without_commit.execute(select(User).where(User.id == uid))
-                user = res.scalars().first()
-                if user:
-                    resolved_ids.append(user.id)
-                else:
-                    failed.append(tok)
-            except Exception as e:
-                logger.exception(f"DB error while checking user id {tok}: {e}")
-                failed.append(tok)
-            continue
-
-        # username (remove leading @ if present)
-        uname = tok[1:] if tok.startswith("@") else tok
-        if not uname:
-            failed.append(tok)
-            continue
-
-        try:
-            res = await session_without_commit.execute(select(User).where(User.username == uname))
-            user = res.scalars().first()
-            if user:
-                resolved_ids.append(user.id)
-            else:
-                failed.append(tok)
-        except Exception as e:
-            logger.exception(f"DB error while checking username {tok}: {e}")
-            failed.append(tok)
-
-    if not resolved_ids:
-        await message.answer(
-            f"Не удалось найти ни одного пользователя в базе. Ошибки: {', '.join(failed) if failed else 'нет'}"
+    if callback_data.action == "page":
+        keyboard = get_paginated_keyboard(
+            items=await UserDAO(session_without_commit).find_all(),
+            context="broadcast_specific",
+            get_display_text=lambda user: f"{user.admin_insert_name or user.username or user.id}",
+            get_item_id=lambda user: user.id,
+            page=callback_data.page,
+            items_per_page=5,
         )
-        return
+        await callback.message.edit_reply_markup(reply_markup=keyboard)
+    if callback_data.action == "select":
+        user_id = callback_data.item_id
+        await state.update_data(target_user_ids=[user_id])
 
-    # Сохраняем валидные id в state
-    await state.update_data(target_user_ids=resolved_ids)
-
-    info = f"Найдено {len(resolved_ids)} пользователей в базе. "
-    if failed:
-        info += f"Не найдено: {', '.join(failed)}"
-
-    await message.answer(info + "\n\nТеперь введите текст рассылки:", reply_markup=get_cancel_kb(i18n))
-    await state.set_state(BroadcastStates.waiting_for_text)
+        await callback.message.answer("Теперь введите текст рассылки:", reply_markup=get_cancel_kb(i18n))
+        await state.set_state(BroadcastStates.waiting_for_text)
 
 # Получение медиа или обработка кнопки "Без медиа"
 @broadcast_router.message(StateFilter(BroadcastStates.waiting_for_media), F.photo | F.video)
