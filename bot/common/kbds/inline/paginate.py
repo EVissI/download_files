@@ -175,7 +175,6 @@ class PaginatedCheckboxCallback(CallbackData, prefix="paginated_chk"):
     page: int = 0
     action: str = "toggle"  # toggle, prev, next, done
     context: str = ""
-    selected: str = ""  # comma separated ids
 
 def get_paginated_checkbox_keyboard(
     items: List[Any],
@@ -187,10 +186,8 @@ def get_paginated_checkbox_keyboard(
     items_per_page: int = 5,
 ) -> InlineKeyboardMarkup:
     """
-    Создает инлайн-клавиатуру с чекбоксами (toggle) для элементов и кнопкой "Далее" внизу.
-    - selected_ids: множество/список выбранных id. При создании колбэков текущее состояние сериализуется в поле `selected`.
-    Клиентский хэндлер при получении callback'а должен разбирать поле selected и формировать новую клавиатуру,
-    обновляя состояние выбранных элементов.
+    Создаёт клавиатуру с чекбоксами. Состояние выбранных id хранится в FSM state,
+    а в callback_data передаётся только item_id/page/action/context (без списка selected).
     """
     kb = InlineKeyboardBuilder()
     start_idx = page * items_per_page
@@ -199,7 +196,6 @@ def get_paginated_checkbox_keyboard(
 
     sel_set = set(selected_ids or [])
 
-    # Добавление кнопок для элементов — текст с префиксом '+' если выбран
     for item in current_items:
         item_id = get_item_id(item)
         display = get_display_text(item)
@@ -209,43 +205,33 @@ def get_paginated_checkbox_keyboard(
             page=page,
             action="toggle",
             context=context,
-            selected=",".join(map(str, sel_set)) if sel_set else ""
         ).pack()
         kb.button(text=f"{prefix}{display}", callback_data=cb)
 
-    # Навигационные кнопки (стрелки) — сохраняем selected в callback_data
+    # Навигация
     nav_buttons = []
     if page > 0:
         nav_buttons.append((
             "←",
-            PaginatedCheckboxCallback(item_id=0, page=page-1, action="prev", context=context,
-                                     selected=",".join(map(str, sel_set)) if sel_set else "").pack()
+            PaginatedCheckboxCallback(item_id=0, page=page-1, action="prev", context=context).pack()
         ))
     if end_idx < len(items):
         nav_buttons.append((
             "→",
-            PaginatedCheckboxCallback(item_id=0, page=page+1, action="next", context=context,
-                                     selected=",".join(map(str, sel_set)) if sel_set else "").pack()
+            PaginatedCheckboxCallback(item_id=0, page=page+1, action="next", context=context).pack()
         ))
 
     for text, callback in nav_buttons:
         kb.button(text=text, callback_data=callback)
 
-    # Кнопка "Далее" внизу, возвращает выбранные id в поле selected
-    done_cb = PaginatedCheckboxCallback(
-        item_id=0,
-        page=page,
-        action="done",
-        context=context,
-        selected=",".join(map(str, sel_set)) if sel_set else ""
-    ).pack()
+    # Кнопка "Далее"
+    done_cb = PaginatedCheckboxCallback(item_id=0, page=page, action="done", context=context).pack()
     kb.button(text="Далее", callback_data=done_cb)
 
-    # Настройка раскладки: по одной кнопке на строку для элементов, затем навигация, затем кнопка Далее
     rows = [1] * len(current_items)
     if nav_buttons:
         rows.append(len(nav_buttons))
-    rows.append(1)  # строка для "Далее"
-
+    rows.append(1)
     kb.adjust(*rows)
     return kb.as_markup()
+# ...existing code...

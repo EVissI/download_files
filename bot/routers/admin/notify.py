@@ -205,41 +205,72 @@ async def process_broadcast_text(message: Message, state: FSMContext):
     await state.set_state(BroadcastStates.waiting_for_media)
 
 @broadcast_router.callback_query(PaginatedCheckboxCallback.filter(F.context == 'broadcast_specific'), StateFilter(BroadcastStates.waiting_for_targets))
-async def process_targets(callback: CallbackQuery, callback_data:PaginatedCheckboxCallback, state: FSMContext, session_without_commit, i18n):
+async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheckboxCallback, state: FSMContext, session_without_commit, i18n):
     """
-    Разбирает введённые id/username, проверяет их наличие в БД и сохраняет только валидные id в state.
-    Поддерживается ввод через пробел/запятую, username можно с @ или без.
+    Обработка чекбокс-пагинации для выбора конкретных пользователей.
+    Выбранные id хранятся в FSM state под ключом 'broadcast_specific_selected'.
     """
-    selected_ids_str = callback_data.selected
-    selected_ids = set(int(uid) for uid in selected_ids_str.split(",") if uid.isdigit())
-    if callback_data.action == "toggle":
-        selected_ids.add(callback_data.item_id)
-        keyboard = get_paginated_checkbox_keyboard(
-            items=await UserDAO(session_without_commit).find_all(),
+    await callback.answer()  # быстро закроем loading
+    STORAGE_KEY = "broadcast_specific_selected"
+
+    # загрузим текущее состояние выбранных id из state
+    data = await state.get_data()
+    sel_list = data.get(STORAGE_KEY, [])
+    sel_set = set(sel_list)
+
+    # подгружаем всех пользователей для построения клавиатуры
+    users = await UserDAO(session_without_commit).find_all()
+
+    # действия: toggle / prev / next / done
+    action = callback_data.action
+    item_id = int(callback_data.item_id or 0)
+    page = int(callback_data.page or 0)
+
+    if action == "toggle":
+        if item_id in sel_set:
+            sel_set.remove(item_id)
+        else:
+            sel_set.add(item_id)
+        # сохраняем обновлённый набор в state
+        await state.update_data({STORAGE_KEY: list(sel_set)})
+        # перестроим клавиатуру текущей страницы
+        kb = get_paginated_checkbox_keyboard(
+            items=users,
             context="broadcast_specific",
-            get_display_text=lambda user: f"{user.admin_insert_name or user.username or user.id}",
-            get_item_id=lambda user: user.id,
-            page=callback_data.page,
-            selected_ids=selected_ids,
+            get_display_text=lambda u: f"{u.admin_insert_name or u.username or u.id}",
+            get_item_id=lambda u: u.id,
+            selected_ids=sel_set,
+            page=page,
             items_per_page=5,
         )
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
-    if callback_data.action in ['next', 'prev']:
-        keyboard = get_paginated_checkbox_keyboard(
-            items=await UserDAO(session_without_commit).find_all(),
+        await callback.message.edit_text("Выберите пользователей (нажмите чтобы отметить):", reply_markup=kb)
+        return
+
+    if action in ("prev", "next"):
+        # просто перестроим клавиатуру на нужной странице
+        kb = get_paginated_checkbox_keyboard(
+            items=users,
             context="broadcast_specific",
-            get_display_text=lambda user: f"{user.admin_insert_name or user.username or user.id}",
-            get_item_id=lambda user: user.id,
-            page=callback_data.page,
-            selected_ids=selected_ids,
+            get_display_text=lambda u: f"{u.admin_insert_name or u.username or u.id}",
+            get_item_id=lambda u: u.id,
+            selected_ids=sel_set,
+            page=page,
             items_per_page=5,
         )
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
-    if callback_data.action == "done":
-        await callback.message.delete()
-        await state.update_data(target_user_ids=[selected_ids])
-        await callback.message.answer("Теперь введите текст рассылки:", reply_markup=get_cancel_kb(i18n))
+        await callback.message.edit_text("Выберите пользователей (нажмите чтобы отметить):", reply_markup=kb)
+        return
+
+    if action == "done":
+        if not sel_set:
+            await callback.message.answer("Не выбрано ни одного пользователя.")
+            return
+        # сохранить итоговый список как целевые пользователи и продолжить поток ввода текста
+        await state.update_data(target_user_ids=list(sel_set))
+        info = f"Выбрано {len(sel_set)} пользователей."
+        await callback.message.answer(info + "\n\nТеперь введите текст рассылки:", reply_markup=get_cancel_kb(None))
         await state.set_state(BroadcastStates.waiting_for_text)
+        return
+
 
 # Получение медиа или обработка кнопки "Без медиа"
 @broadcast_router.message(StateFilter(BroadcastStates.waiting_for_media), F.photo | F.video)
