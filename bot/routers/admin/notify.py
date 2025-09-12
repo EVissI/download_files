@@ -210,7 +210,6 @@ async def process_targets(callback: CallbackQuery, callback_data:PaginatedCheckb
     Разбирает введённые id/username, проверяет их наличие в БД и сохраняет только валидные id в state.
     Поддерживается ввод через пробел/запятую, username можно с @ или без.
     """
-    await callback.message.delete()
     selected_ids_str = callback_data.selected
     selected_ids = set(int(uid) for uid in selected_ids_str.split(",") if uid.isdigit())
     if callback_data.action == "toggle":
@@ -237,6 +236,7 @@ async def process_targets(callback: CallbackQuery, callback_data:PaginatedCheckb
         )
         await callback.message.edit_reply_markup(reply_markup=keyboard)
     if callback_data.action == "done":
+        await callback.message.delete()
         await state.update_data(target_user_ids=[selected_ids])
         await callback.message.answer("Теперь введите текст рассылки:", reply_markup=get_cancel_kb(i18n))
         await state.set_state(BroadcastStates.waiting_for_text)
