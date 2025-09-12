@@ -264,6 +264,7 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
         if not sel_set:
             await callback.message.answer("Не выбрано ни одного пользователя.")
             return
+        await callback.message.delete()
         # сохранить итоговый список как целевые пользователи и продолжить поток ввода текста
         await state.update_data(target_user_ids=list(sel_set))
         info = f"Выбрано {len(sel_set)} пользователей."
