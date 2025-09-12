@@ -25,7 +25,7 @@ user_settings_excel_router = Router()
 class ExportUserState(StatesGroup):
     date_range = State()
 
-@user_settings_excel_router.callback_query(UserSettingsCallback.filter(F.action == "export_analysis"))
+@user_settings_excel_router.callback_query(UserSettingsCallback.filter(F.action == "export_excel"))
 async def handle_export_from_user_settings(
     callback: CallbackQuery,
     callback_data: UserSettingsCallback,

@@ -19,7 +19,7 @@ class NotifyUserState(StatesGroup):
 
 user_setting_notify_router = Router()
 
-@user_setting_notify_router.callback_query(UserSettingsCallback.filter(F.action == "notify"))
+@user_setting_notify_router.callback_query(UserSettingsCallback.filter(F.action == "notify_user"))
 async def prompt_notify_user(callback: CallbackQuery, callback_data: UserSettingsCallback, state:FSMContext, i18n):
     await callback.message.delete()
     await state.set_state(NotifyUserState.notify_message)
