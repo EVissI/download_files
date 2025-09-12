@@ -6,10 +6,12 @@ from bot.db.models import User
 from bot.db.dao import UserDAO
 from bot.common.kbds.inline.paginate import PaginatedCallback, get_paginated_keyboard
 from bot.routers.admin.users_setting.update_username import user_list_update_username_router
+from bot.routers.admin.users_setting.notify import user_setting_notify_router
+from bot.routers.admin.users_setting.excel import user_settings_excel_router
 
 user_setting_router = Router()
 user_setting_router.include_routers(
-    user_list_update_username_router
+    user_list_update_username_router,user_setting_notify_router,user_settings_excel_router
 )
 
 @user_setting_router.message(F.text == AdminKeyboard.admin_text_kb['users_setting'])
