@@ -41,8 +41,8 @@ async def generate_detailed_analysis_report(
             "ID пользователя",
             "Имя игрока",
             "Дата анализа",
-            "Плохие ходы",
-            "Очень плохие ходы",
+            "Рейтинг ошибок",
+            "Общий рейтинг",
             "Ошибка (Chequerplay)",
             "Рейтинг Chequerplay",
             "Очень удачные броски",
@@ -58,8 +58,8 @@ async def generate_detailed_analysis_report(
             "Ошибки взятия",
             "Неправильные пасы",
             "Ошибки куба",
-            "Рейтинг ошибок",
-            "Общий рейтинг",
+            "Плохие ходы",
+            "Очень плохие ходы",
         ]
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col)
@@ -167,14 +167,13 @@ async def generate_detailed_user_analysis_report(
     center_align = Alignment(horizontal="center")
     left_align = Alignment(horizontal="left") 
 
-    # Заголовки
     headers = [
         "ID анализа",
         "ID пользователя",
         "Имя игрока",
         "Дата анализа",
-        "Плохие ходы",
-        "Очень плохие ходы",
+        "Рейтинг ошибок",
+        "Общий рейтинг",
         "Ошибка (Chequerplay)",
         "Рейтинг Chequerplay",
         "Очень удачные броски",
@@ -190,8 +189,8 @@ async def generate_detailed_user_analysis_report(
         "Ошибки взятия",
         "Неправильные пасы",
         "Ошибки куба",
-        "Рейтинг ошибок",
-        "Общий рейтинг",
+        "Плохие ходы",
+        "Очень плохие ходы",
     ]
 
     for col, header in enumerate(headers, 1):
@@ -309,8 +308,8 @@ async def generate_detailed_user_analysis_report(
         "ID пользователя",
         "Имя игрока",
         "Дата анализа",
-        "Плохие ходы",
-        "Очень плохие ходы",
+        "Рейтинг ошибок",
+        "Общий рейтинг",
         "Ошибка (Chequerplay)",
         "Рейтинг Chequerplay",
         "Очень удачные броски",
@@ -326,8 +325,8 @@ async def generate_detailed_user_analysis_report(
         "Ошибки взятия",
         "Неправильные пасы",
         "Ошибки куба",
-        "Рейтинг ошибок",
-        "Общий рейтинг",
+        "Плохие ходы",
+        "Очень плохие ходы",
     ]
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col)
