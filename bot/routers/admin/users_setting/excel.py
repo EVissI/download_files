@@ -16,7 +16,7 @@ from bot.routers.admin.excel_view.upload_by_user_gnu import (
     DetailedUserUnloadingCallback,
     get_detailed_user_unloading_kb,
 )
-from bot.common.func.excel_generate import generate_detailed_user_analysis_report
+from bot.common.func.excel_generate import generate_detailed_user_by_id_analysis_report
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
 from bot.config import translator_hub
 from bot.common.utils.i18n import get_all_locales_for_key
@@ -120,7 +120,7 @@ async def handle_export_user_ranges(
 
     dao = DetailedAnalysisDAO(session_without_commit)
     try:
-        excel_buffer = await generate_detailed_user_analysis_report(dao, user_id=user_id, start_date=start_date, end_date=end_date)
+        excel_buffer = await generate_detailed_user_by_id_analysis_report(dao, user_id=user_id, start_date=start_date, end_date=end_date)
         await callback.message.answer_document(
             document=BufferedInputFile(excel_buffer.getvalue(), filename=filename),
             caption=caption,
@@ -184,7 +184,7 @@ async def handle_custom_date_range_input(
         caption = f"Детальный анализ для пользователя {user_id} с {start_date.strftime('%d.%m.%Y')} по {end_date.strftime('%d.%m.%Y')}"
 
         dao = DetailedAnalysisDAO(session_without_commit)
-        excel_buffer = await generate_detailed_user_analysis_report(dao, user_id=user_id, start_date=start_date, end_date=end_date)
+        excel_buffer = await generate_detailed_user_by_id_analysis_report(dao, user_id=user_id, start_date=start_date, end_date=end_date)
         await message.answer_document(
             document=BufferedInputFile(excel_buffer.getvalue(), filename=filename),
             caption=caption,

@@ -283,7 +283,7 @@ async def generate_detailed_user_analysis_report(
         logger.error(f"Ошибка при генерации Excel отчета: {e}")
         raise
 
-async def generate_detailed_user_analysis_report(
+async def generate_detailed_user_by_id_analysis_report(
     dao: DetailedAnalysisDAO,
     user_id: int,
     start_date: datetime = None,
