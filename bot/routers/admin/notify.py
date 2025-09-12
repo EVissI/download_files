@@ -15,7 +15,7 @@ import re
 from pytz import timezone
 
 from bot.common.general_states import GeneralStates
-from bot.common.kbds.inline.paginate import PaginatedCallback, get_paginated_keyboard
+from bot.common.kbds.inline.paginate import PaginatedCallback, PaginatedCheckboxCallback, get_paginated_checkbox_keyboard, get_paginated_keyboard
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.config import bot
@@ -165,11 +165,12 @@ async def process_specific_user(callback: CallbackQuery, callback_data: Broadcas
     users = await user_dao.find_all()
     await callback.message.answer(
         'Выберите юзера для рассылки:',
-        reply_markup=get_paginated_keyboard(
+        reply_markup=get_paginated_checkbox_keyboard(
             items=users,
             context="broadcast_specific",
             get_display_text=lambda user: f"{user.admin_insert_name or user.username or user.id}",
             get_item_id=lambda user: user.id,
+            selected_ids=set(),
             page=0,
             items_per_page=5,
         )
@@ -203,27 +204,40 @@ async def process_broadcast_text(message: Message, state: FSMContext):
     )
     await state.set_state(BroadcastStates.waiting_for_media)
 
-@broadcast_router.callback_query(PaginatedCallback.filter(F.context == 'broadcast_specific'), StateFilter(BroadcastStates.waiting_for_targets))
-async def process_targets(callback: CallbackQuery, callback_data:PaginatedCallback, state: FSMContext, session_without_commit, i18n):
+@broadcast_router.callback_query(PaginatedCheckboxCallback.filter(F.context == 'broadcast_specific'), StateFilter(BroadcastStates.waiting_for_targets))
+async def process_targets(callback: CallbackQuery, callback_data:PaginatedCheckboxCallback, state: FSMContext, session_without_commit, i18n):
     """
     Разбирает введённые id/username, проверяет их наличие в БД и сохраняет только валидные id в state.
     Поддерживается ввод через пробел/запятую, username можно с @ или без.
     """
     await callback.message.delete()
-    if callback_data.action == "page":
-        keyboard = get_paginated_keyboard(
+    selected_ids_str = callback_data.selected
+    selected_ids = set(int(uid) for uid in selected_ids_str.split(",") if uid.isdigit())
+    if callback_data.action == "toggle":
+        selected_ids.add(callback_data.item_id)
+        keyboard = get_paginated_checkbox_keyboard(
             items=await UserDAO(session_without_commit).find_all(),
             context="broadcast_specific",
             get_display_text=lambda user: f"{user.admin_insert_name or user.username or user.id}",
             get_item_id=lambda user: user.id,
             page=callback_data.page,
+            selected_ids=selected_ids,
             items_per_page=5,
         )
         await callback.message.edit_reply_markup(reply_markup=keyboard)
-    if callback_data.action == "select":
-        user_id = callback_data.item_id
-        await state.update_data(target_user_ids=[user_id])
-
+    if callback_data.action in ['next', 'prev']:
+        keyboard = get_paginated_checkbox_keyboard(
+            items=await UserDAO(session_without_commit).find_all(),
+            context="broadcast_specific",
+            get_display_text=lambda user: f"{user.admin_insert_name or user.username or user.id}",
+            get_item_id=lambda user: user.id,
+            page=callback_data.page,
+            selected_ids=selected_ids,
+            items_per_page=5,
+        )
+        await callback.message.edit_reply_markup(reply_markup=keyboard)
+    if callback_data.action == "done":
+        await state.update_data(target_user_ids=[selected_ids])
         await callback.message.answer("Теперь введите текст рассылки:", reply_markup=get_cancel_kb(i18n))
         await state.set_state(BroadcastStates.waiting_for_text)
 
