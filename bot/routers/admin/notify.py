@@ -209,6 +209,7 @@ async def process_targets(callback: CallbackQuery, callback_data:PaginatedCallba
     Разбирает введённые id/username, проверяет их наличие в БД и сохраняет только валидные id в state.
     Поддерживается ввод через пробел/запятую, username можно с @ или без.
     """
+    await callback.message.delete()
     if callback_data.action == "page":
         keyboard = get_paginated_keyboard(
             items=await UserDAO(session_without_commit).find_all(),
