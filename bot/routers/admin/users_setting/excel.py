@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.common.general_states import GeneralStates
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.kbds.markup.cancel import get_cancel_kb
-from bot.common.kbds.inline.user_settings import UserSettingsCallback
+from bot.common.kbds.inline.user_settings import UserSettingsCallback, get_user_settings_kb
 from bot.routers.admin.excel_view.upload_by_user_gnu import (
     DetailedUserUnloadingCallback,
     get_detailed_user_unloading_kb,
@@ -19,6 +19,7 @@ from bot.common.func.excel_generate import generate_detailed_user_analysis_repor
 from bot.db.dao import DetailedAnalysisDAO, UserDAO
 from bot.config import translator_hub
 from bot.common.utils.i18n import get_all_locales_for_key
+from bot.routers.admin.users_setting.setup import create_message_for_user
 
 user_settings_excel_router = Router()
 
@@ -135,6 +136,10 @@ async def handle_export_user_ranges(
         logger.exception(f"Unexpected error exporting detailed analysis for user_id={user_id}: {e}")
         await callback.message.answer("Ошибка при генерации отчёта.")
         await state.set_state(GeneralStates.admin_panel)
+    await callback.message.answer(
+                create_message_for_user(user),
+                reply_markup=get_user_settings_kb(user_id)
+        )
 
 
 @user_settings_excel_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "auto-batch-stop")),
@@ -184,6 +189,10 @@ async def handle_custom_date_range_input(
             document=BufferedInputFile(excel_buffer.getvalue(), filename=filename),
             caption=caption,
             reply_markup=AdminKeyboard.build(),
+        )
+        await message.answer(
+                create_message_for_user(user),
+                reply_markup=get_user_settings_kb(user_id)
         )
         await state.set_state(GeneralStates.admin_panel)
         await state.clear()

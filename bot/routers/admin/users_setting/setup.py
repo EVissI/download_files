@@ -14,6 +14,17 @@ user_setting_router.include_routers(
     user_list_update_username_router,user_setting_notify_router,user_settings_excel_router
 )
 
+def create_message_for_user(user: User) -> str:
+    return (
+        f"ID: {user.id}\n"
+        f"Username: @{user.username or 'нет'}\n"
+        f"Имя: {user.first_name or 'нет'}\n"
+        f"Фамилия: {user.last_name or 'нет'}\n"
+        f"Роль: {user.role}\n"
+        f"Язык: {user.lang_code or 'не установлен'}\n"
+        f"Поставленное имя: {user.admin_insert_name or 'не установлен'}"
+    )
+
 @user_setting_router.message(F.text == AdminKeyboard.admin_text_kb['users_setting'])
 async def handle_user_settings(message: Message, session_without_commit):
     users = await UserDAO(session_without_commit).find_all()
@@ -37,13 +48,7 @@ async def handle_user_settings_pagination(callback: CallbackQuery, callback_data
         user_id = callback_data.item_id
         user = await UserDAO(session_without_commit).find_one_or_none_by_id(user_id)
         await callback.message.answer(
-            f"ID: {user.id}\n"
-            f"Username: @{user.username or 'нет'}\n"
-            f"Имя: {user.first_name or 'нет'}\n"
-            f"Фамилия: {user.last_name or 'нет'}\n"
-            f"Роль: {user.role}\n"
-            f"Язык: {user.lang_code or 'не установлен'}\n"
-            f"Поставленное имя: {user.admin_insert_name or 'не установлен'}",
+            create_message_for_user(user),
             reply_markup=get_user_settings_kb(user_id)
         )
     else:

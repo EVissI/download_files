@@ -17,6 +17,7 @@ from bot.common.kbds.inline.user_settings import (
 from bot.common.kbds.markup.cancel import get_cancel_kb
 
 from bot.config import translator_hub
+from bot.routers.admin.users_setting.setup import create_message_for_user
 
 class UpdateNicknameState(StatesGroup):
     nickname = State()
@@ -56,13 +57,7 @@ async def update_nickname(message: Message, state: FSMContext, session_without_c
         await state.clear()
         await state.set_state(GeneralStates.admin_panel)
         await message.answer(
-            f"ID: {updated_user.id}\n"
-            f"Username: @{updated_user.username or 'нет'}\n"
-            f"Имя: {updated_user.first_name or 'нет'}\n"
-            f"Фамилия: {updated_user.last_name or 'нет'}\n"
-            f"Роль: {updated_user.role}\n"
-            f"Язык: {updated_user.lang_code or 'не установлен'}\n"
-            f"Поставленное имя: {updated_user.admin_insert_name or 'не установлен'}",
+            create_message_for_user(updated_user),
             reply_markup=get_user_settings_kb(user_id)
         )
     except Exception as e:
