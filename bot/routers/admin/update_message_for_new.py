@@ -26,7 +26,7 @@ class UpdateMessageState(StatesGroup):
     confirm = State()
 
 @message_for_new_router.message(F.text == AdminKeyboard.admin_text_kb['message_for_new'])
-async def start_update_message(message: Message, state: FSMContext, i18n):
+async def start_update_message(message: Message, state: FSMContext, i18n, session_without_commit):
     try:
         await state.set_state(UpdateMessageState.text)
         await message.answer("<b>Напоминание</b>:" \
@@ -35,6 +35,27 @@ async def start_update_message(message: Message, state: FSMContext, i18n):
         "\n- Отправляться сообщение будет всегда при первом заходе в бота и по заданному рассписанию " \
         "\n- При повторном заполнение формы - старое сообщение убирается" \
         "\n- К сообщениям будут прикрепленны кнопки 'Активировать Промокод' и 'Получить промокод'" )
+        message_for_new_dao = MessageForNewDAO(session_without_commit)
+        message_ru = await message_for_new_dao.get_by_lang_code('ru')
+        message_en = await message_for_new_dao.get_by_lang_code('en')
+        if message_ru and message_en:
+            days_dict = {
+                'mon' : 'Понедельник',
+                'tue': 'Вторник',
+                'wed': 'Среда',
+                'thu': 'Четверг',
+                'fri': 'Пятница',
+                'sat': 'Суббота',
+                'sun': 'Воскресенье'
+            }
+            selected_days = [list(days_dict.keys()).index(day) for day in message_ru.dispatch_day.split(',') if day in days_dict]
+            day_of_week_for_view = ', '.join([days_dict[day] for day in sorted(selected_days)])
+            await message.answer(f"Найдено существующее сообщение для новых пользователей.\n\n"
+                                 f"<b>ru:</b>\n{message_ru.text}\n\n"
+                                 f"<b>en:</b>\n{message_en.text}\n\n"
+                                 f"<b>Дни недели:</b> {day_of_week_for_view}\n"
+                                 f"<b>Время отправки:</b> {message_ru.dispatch_time}\n\n")
+            return
         await message.answer("Введите текст сообщения для новых пользователей:",reply_markup=get_cancel_kb(i18n))
     except Exception as e:
         logger.error(f"Ошибка при начале обновления сообщения: {e}")
