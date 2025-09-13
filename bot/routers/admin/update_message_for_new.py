@@ -58,7 +58,7 @@ async def start_update_message(message: Message, state: FSMContext, i18n, sessio
                     'sat': 'Суббота',
                     'sun': 'Воскресенье'
                 }
-                selected_days = [list(days_dict.keys()).index(day) for day in message_ru.dispatch_day.split(',') if day in days_dict]
+                selected_days = message_en.dispatch_day.split(',') if message_en.dispatch_day else []
                 day_of_week_for_view = ', '.join([days_dict[day] for day in sorted(selected_days)])
                 await message.answer(f"Найдено существующее сообщение для новых пользователей.\n\n"
                                     f"<b>ru:</b>\n{normalize_slashes(message_ru.text)}\n\n"
