@@ -269,7 +269,8 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
         await state.update_data(target_user_ids=list(sel_set))
         info = f"Выбрано {len(sel_set)} пользователей:"
         for us in sel_set:
-            info += f"\n- {us}"
+            user = await UserDAO(session_without_commit).find_one_or_none_by_id(us)
+            info += f"\n- {user.admin_insert_name or user.username or user.id}"
         await callback.message.answer(info + "\n\nТеперь введите текст рассылки:", reply_markup=get_cancel_kb(i18n))
         await state.set_state(BroadcastStates.waiting_for_text)
         return
