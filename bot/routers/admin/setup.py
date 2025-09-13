@@ -14,6 +14,7 @@ from bot.routers.admin.promocode.setup import promo_setup_router
 from bot.routers.admin.payment.setup import payment_setup_router
 from bot.routers.admin.notify import broadcast_router
 from bot.routers.admin.users_setting.setup import user_setting_router
+from bot.routers.admin.update_message_for_new import message_for_new_router
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
@@ -31,7 +32,8 @@ admin_setup_router.include_routers(
     promo_setup_router,
     payment_setup_router,
     broadcast_router,
-    user_setting_router
+    user_setting_router,
+    message_for_new_router
 )
 
 @admin_setup_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-admin-reply-admin_panel")))
