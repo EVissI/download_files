@@ -18,6 +18,6 @@ async def check_and_notify_gift():
             user_promocodes = await user_promocode_dao.get_all_by_user(user.id)
             i18n = translator_hub.get_translator_by_locale(user.lang_code or 'en')
             if not user_promocodes:
-                text = await message_dao.get_by_lang_code(user.lang_code)
+                record = await message_dao.get_by_lang_code(user.lang_code)
                 keyboard = get_activate_promo_without_link_keyboard(i18n)
-                await notify_user(user.id, text, keyboard)
+                await notify_user(user.id, record.text, keyboard)
