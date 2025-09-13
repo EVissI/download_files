@@ -70,7 +70,7 @@ async def receive_message_text(message: Message, state: FSMContext):
                 get_item_id=lambda x: days.index(x),
                 selected_ids=[],
                 page=0,
-                items_per_page=4,
+                items_per_page=7,
             ))
     except Exception as e:
         logger.error(f"Ошибка при получении текста сообщения: {e}")
@@ -80,14 +80,14 @@ async def receive_message_text(message: Message, state: FSMContext):
 async def handle_day_selection(callback: CallbackQuery, callback_data: PaginatedCheckboxCallback, state: FSMContext):
     try:
         data = await state.get_data()
-        selected_days = data.get("selected_days", set())
+        selected_days = set(data.get("selected_days", []))
         
         if callback_data.action == "toggle":
             if callback_data.item_id in selected_days:
                 selected_days.remove(callback_data.item_id)
             else:
                 selected_days.add(callback_data.item_id)
-            await state.update_data(selected_days=selected_days)
+            await state.update_data(selected_days=list(selected_days))
             await callback.message.edit_reply_markup(
                 reply_markup=get_paginated_checkbox_keyboard(
                     items=days,
@@ -96,7 +96,7 @@ async def handle_day_selection(callback: CallbackQuery, callback_data: Paginated
                     get_item_id=lambda x: days.index(x),
                     selected_ids=selected_days,
                     page=callback_data.page,
-                    items_per_page=4,
+                    items_per_page=7,
                 )
             )
         elif callback_data.action in ["prev", "next"]:
@@ -108,7 +108,7 @@ async def handle_day_selection(callback: CallbackQuery, callback_data: Paginated
                     get_item_id=lambda x: days.index(x),
                     selected_ids=selected_days,
                     page=callback_data.page,
-                    items_per_page=4,
+                    items_per_page=7,
                 )
             )
         elif callback_data.action == "done":
