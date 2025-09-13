@@ -1,4 +1,6 @@
 ﻿from aiogram import Router, F
+from apscheduler.triggers.cron import CronTrigger
+from bot.config import scheduler
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -8,6 +10,7 @@ from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.inline.confirm import get_confrim_kb, ConfrimCallback
 from bot.common.kbds.inline.paginate import get_paginated_checkbox_keyboard, PaginatedCheckboxCallback
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
+from bot.common.tasks.gift import check_and_notify_gift
 from bot.db.dao import MessageForNewDAO
 from loguru import logger
 from bot.config import translator_hub
@@ -115,8 +118,20 @@ async def handle_day_selection(callback: CallbackQuery, callback_data: Paginated
             if not selected_days:
                 await callback.answer("Пожалуйста, выберите хотя бы один день.", show_alert=True)
                 return
-            day_of_week_str = ",".join([days[day] for day in sorted(selected_days)])
-            await state.update_data(day_of_week=day_of_week_str)
+            #mon,tue,wed,thu,fri,sat,sun
+            days_dict = {
+                0 : 'mon',
+                1: 'tue',
+                2: 'wed',
+                3: 'thu',
+                4: 'fri',
+                5: 'sat',
+                6: 'sun'
+            }
+            day_of_week_view = ', '.join([days[day] for day in sorted(selected_days)])
+            day_of_week_data = ','.join([days_dict[day] for day in sorted(selected_days)])
+            await state.update_data(day_of_week_for_view=day_of_week_view)
+            await state.update_data(day_of_week=day_of_week_data)
             await state.set_state(UpdateMessageState.time)
             await callback.message.delete()
             await callback.message.answer("Введите время отправки сообщения в формате ЧЧ:ММ (например, 14:30):")
@@ -138,13 +153,12 @@ async def receive_time(message: Message, state: FSMContext,i18n):
         formatted_time = f"{hours:02}:{minutes:02}"
         await state.update_data(time=formatted_time)
         data = await state.get_data()
-        text = '<b>ru:</b>\n' + data.get("text_ru") + "\n\n<b>en</b>" + data.get("text_en")
-        day_of_week = data.get("day_of_week")
+        text = '<b>ru:</b>\n' + data.get("text_ru") + "\n\n<b>en:</b>\n" + data.get("text_en")
         time = data.get("time")
-        
+        day_of_week_for_view = data.get("day_of_week_for_view")
         confirm_text = f"Пожалуйста, подтвердите введённые данные:\n\n" \
                        f"<b>Текст сообщения:</b>\n{text}\n\n" \
-                       f"<b>Дни недели:</b> {day_of_week}\n" \
+                       f"<b>Дни недели:</b> {day_of_week_for_view}\n" \
                        f"<b>Время отправки:</b> {time}\n\n" \
                        "Если всё верно, нажмите 'Подтвердить'. Если хотите изменить, нажмите 'Отмена'."
         
@@ -157,12 +171,9 @@ async def receive_time(message: Message, state: FSMContext,i18n):
 @message_for_new_router.callback_query(ConfrimCallback.filter(F.context == "message_for_new_confirm"))
 async def handle_confirmation(callback: CallbackQuery, callback_data: ConfrimCallback, state:FSMContext, session_without_commit):
     try:
-        if callback_data.context != "message_for_new_confirm":
-            await callback.answer("Неверный контекст действия.", show_alert=True)
-            return
+        await callback.message.delete()
         data = await state.get_data()
         if callback_data.action == "confirm":
-            await callback.message.delete()
             text_ru = data.get("text_ru")
             text_en = data.get("text_en")
             day_of_week = data.get("day_of_week")
@@ -180,6 +191,17 @@ async def handle_confirmation(callback: CallbackQuery, callback_data: ConfrimCal
                 text=text_en,
                 lang_code='en'
             )
+            try:
+                if day_of_week and time:
+                    hour, minute = map(int, time.split(":"))
+                    scheduler.add_job(
+                        check_and_notify_gift,
+                        CronTrigger(day_of_week=day_of_week, hour=hour, minute=minute),
+                        id="gift_notification",
+                        replace_existing=True
+                    )
+            except Exception as sch_e:
+                logger.error(f"Ошибка при обновлении задачи рассылки: {sch_e}")
             await state.clear()
             await callback.message.answer("Сообщение для новых пользователей успешно обновлено.", 
                                           reply_markup=AdminKeyboard.build())

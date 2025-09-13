@@ -4,6 +4,7 @@ from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram import Bot, Dispatcher
 from apscheduler.triggers.cron import CronTrigger
 
+from bot.common.func.aps_sheldure import schedule_gift_job_from_db
 from bot.common.middlewares.database_middleware import DatabaseMiddlewareWithCommit, DatabaseMiddlewareWithoutCommit
 from bot.common.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.common.tasks.deactivate import expire_analiz_balances
@@ -27,7 +28,6 @@ async def set_commands():
 
 def setup_expire_scheduler():
     scheduler.add_job(expire_analiz_balances, "interval", hours=1)
-    scheduler.add_job(check_and_notify_gift, CronTrigger(day_of_week='tue,sat', hour=13, minute=0))
     scheduler.add_job(backup_postgres_to_yandex_disk, CronTrigger(hour=0, minute=0))  
 
 
@@ -35,6 +35,7 @@ async def start_bot():
     await set_commands()
     setup_expire_scheduler()
     await resume_scheduled_broadcasts()
+    await schedule_gift_job_from_db()
     scheduler.start()
     for admin_id in admins:
         try:

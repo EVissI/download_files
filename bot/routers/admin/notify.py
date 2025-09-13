@@ -626,3 +626,5 @@ async def resume_scheduled_broadcasts(tz_name: str = "Europe/Moscow", immediate_
                     logger.exception(f"Failed to schedule broadcast {getattr(b, 'id', 'unknown')}: {e}")
     except Exception as e:
         logger.exception(f"Failed to resume scheduled broadcasts: {e}")
+
+
