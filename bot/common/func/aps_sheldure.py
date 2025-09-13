@@ -14,7 +14,7 @@ async def schedule_gift_job_from_db():
     try:
         async with async_session_maker() as session:
             message_dao = MessageForNewDAO(session)
-            result:MessageForNew = message_dao.get_by_lang_code('en')
+            result:MessageForNew = await message_dao.get_by_lang_code('en')
             if result is None:
                 return
             dispatch_day = result.dispatch_day
