@@ -199,19 +199,21 @@ async def handle_confirmation(callback: CallbackQuery, callback_data: ConfrimCal
         if callback_data.action == "confirm":
             text_ru = data.get("text_ru")
             text_en = data.get("text_en")
+            text_ru_clean = normalize_slashes(text_ru)
+            text_en_clean = normalize_slashes(text_en)
             day_of_week = data.get("day_of_week")
             time = data.get("time")
             message_dao = MessageForNewDAO(session_without_commit)
             await message_dao.upsert_message_for_new(
                 dispatch_day=day_of_week,
                 dispatch_time=time,
-                text=text_ru,
+                text=text_ru_clean,
                 lang_code='ru'
             )
             await message_dao.upsert_message_for_new(
                 dispatch_day=day_of_week,
                 dispatch_time=time,
-                text=text_en,
+                text=text_en_clean,
                 lang_code='en'
             )
             try:
