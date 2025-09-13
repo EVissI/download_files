@@ -41,6 +41,14 @@ async def start_update_message(message: Message, state: FSMContext, i18n, sessio
         message_en = await message_for_new_dao.get_by_lang_code('en')
         try:
             if message_ru and message_en:
+                # Логируем значения и типы полей для диагностики ошибок
+                logger.info("message_ru repr: {}", repr(message_ru))
+                logger.info("message_en repr: {}", repr(message_en))
+                logger.info("message_ru.dispatch_day type={} value={!r}", type(getattr(message_ru, "dispatch_day", None)), getattr(message_ru, "dispatch_day", None))
+                logger.info("message_ru.dispatch_time type={} value={!r}", type(getattr(message_ru, "dispatch_time", None)), getattr(message_ru, "dispatch_time", None))
+                logger.info("message_ru.text type={} len={}", type(getattr(message_ru, "text", None)), len(getattr(message_ru, "text", "")) if getattr(message_ru, "text", None) else 0)
+                logger.info("message_en.text type={} len={}", type(getattr(message_en, "text", None)), len(getattr(message_en, "text", "")) if getattr(message_en, "text", None) else 0)
+
                 days_dict = {
                     'mon' : 'Понедельник',
                     'tue': 'Вторник',
@@ -57,6 +65,8 @@ async def start_update_message(message: Message, state: FSMContext, i18n, sessio
                                     f"<b>en:</b>\n{normalize_slashes(message_en.text)}\n\n"
                                     f"<b>Дни недели:</b> {day_of_week_for_view}\n"
                                     f"<b>Время отправки:</b> {message_ru.dispatch_time}\n\n")
+        except Exception as e:
+            logger.exception("Ошибка при отображении существующего сообщения")
         except Exception as e:
             logger.error(f"Ошибка при отображении существующего сообщения: {e}")
         await message.answer("Введите текст сообщения для новых пользователей:",reply_markup=get_cancel_kb(i18n))
