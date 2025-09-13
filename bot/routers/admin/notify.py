@@ -267,7 +267,9 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
         await callback.message.delete()
         # сохранить итоговый список как целевые пользователи и продолжить поток ввода текста
         await state.update_data(target_user_ids=list(sel_set))
-        info = f"Выбрано {len(sel_set)} пользователей."
+        info = f"Выбрано {len(sel_set)} пользователей:"
+        for us in sel_set:
+            info += f"\n- {us}"
         await callback.message.answer(info + "\n\nТеперь введите текст рассылки:", reply_markup=get_cancel_kb(i18n))
         await state.set_state(BroadcastStates.waiting_for_text)
         return
