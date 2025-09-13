@@ -1,4 +1,5 @@
-﻿from loguru import logger
+﻿from zoneinfo import ZoneInfo
+from loguru import logger
 from bot.common.tasks.gift import check_and_notify_gift
 from bot.db.dao import MessageForNewDAO
 from bot.db.database import async_session_maker
@@ -21,9 +22,10 @@ async def schedule_gift_job_from_db():
             dispatch_time = result.dispatch_time
             if dispatch_day and dispatch_time:
                 hour, minute = map(int, dispatch_time.split(":"))
+                moscow_tz = ZoneInfo("Europe/Moscow")
                 scheduler.add_job(
                     check_and_notify_gift,
-                    CronTrigger(day_of_week=dispatch_day, hour=hour, minute=minute),
+                    CronTrigger(day_of_week=dispatch_day, hour=hour, minute=minute,timezone=moscow_tz),
                     id="gift_notification",
                     replace_existing=True,
                 )

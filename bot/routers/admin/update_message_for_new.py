@@ -1,4 +1,5 @@
-﻿from aiogram import Router, F
+﻿from zoneinfo import ZoneInfo
+from aiogram import Router, F
 from apscheduler.triggers.cron import CronTrigger
 from bot.config import scheduler
 from aiogram.types import Message, CallbackQuery
@@ -194,9 +195,10 @@ async def handle_confirmation(callback: CallbackQuery, callback_data: ConfrimCal
             try:
                 if day_of_week and time:
                     hour, minute = map(int, time.split(":"))
+                    moscow_tz = ZoneInfo("Europe/Moscow")
                     scheduler.add_job(
                         check_and_notify_gift,
-                        CronTrigger(day_of_week=day_of_week, hour=hour, minute=minute),
+                        CronTrigger(day_of_week=day_of_week, hour=hour, minute=minute,timezone=moscow_tz),
                         id="gift_notification",
                         replace_existing=True
                     )
