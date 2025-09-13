@@ -10,7 +10,7 @@ keyboard-reply-back = Back
 
 keyboard-inline-change_language-ru = 🇷🇺 Русский
 keyboard-inline-change_language-en = 🇺🇸 English
-
+keyboard-confirm = Confirm
 user-profile-change_language_text = Select a language for the bot:
 user-profile-text = 
     🧍‍♂️ <b>Profile</b>

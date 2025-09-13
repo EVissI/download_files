@@ -12,6 +12,7 @@ keyboard-reply-back = Назад
 
 keyboard-inline-change_language-ru = 🇷🇺 Русский
 keyboard-inline-change_language-en = 🇺🇸 English
+keyboard-confirm = Подтвердить
 
 user-profile-change_language_text = Выберите язык для бота:
 user-profile-text = 

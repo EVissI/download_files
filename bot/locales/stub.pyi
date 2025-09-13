@@ -179,6 +179,9 @@ class Keyboard:
     reply: KeyboardReply
     inline: KeyboardInline
 
+    @staticmethod
+    def confirm() -> Literal["""Confirm"""]: ...
+
 class AutoAnalyzeError:
     @staticmethod
     def parse() -> Literal["""An error occurred while parsing the file."""]: ...

@@ -12,7 +12,8 @@ from bot.config import settings
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
-
+from bot.db.dao import MessageForNewDAO
+from bot.common.kbds.inline.activate_promo import get_activate_promo_without_link_keyboard
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
@@ -48,11 +49,12 @@ async def start_command(message: Message,state:FSMContext, session_with_commit: 
         i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
         user_info.lang_code if user_info.lang_code else 'en'
         )
+        message_for_new = await MessageForNewDAO(session_with_commit).get_by_lang_code(user_info.lang_code)
         await message.answer(
-            i18n.user.static.hello(),reply_markup=MainKeyboard.build(user_info.role, i18n)
+            i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_info.role, i18n)
         )
         await message.answer(
-            i18n.user.static.gift()
+            message_for_new.text, reply_markup=get_activate_promo_without_link_keyboard(i18n)
         )
         await state.clear()
         return

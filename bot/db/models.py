@@ -297,3 +297,12 @@ class Broadcast(Base):
         BigInteger, ForeignKey("users.id"), nullable=False
         )
     user: Mapped["User"] = relationship("User", back_populates="broadcasts")
+
+class MessageForNew(Base):
+    __tablename__ = "messages_for_new"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    lang_code: Mapped[str] = mapped_column(String(3), nullable=False, default="en")
+    dispatch_day: Mapped[str] = mapped_column(String, nullable=False)  # День рассылки, например, "Monday"
+    dispatch_time: Mapped[str] = mapped_column(String(5), nullable=False)  # Время рассылки в формате "HH:MM"

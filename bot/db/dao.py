@@ -16,6 +16,7 @@ from bot.db.models import (
     UserPromocodeService,
     AnalizePaymentServiceQuantity,
     PromocodeServiceQuantity,
+    MessageForNew
 )
 from sqlalchemy import func, literal, not_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -1002,3 +1003,68 @@ class BroadcastDAO(BaseDAO[Broadcast]):
             logger.error(f"Ошибка при обновлении статуса рассылки {broadcast_id}: {e}")
             await self._session.rollback()
             return False
+
+class MessageForNewDAO(BaseDAO[MessageForNew]):
+    model = MessageForNew
+
+    async def upsert_message_for_new(
+        self,
+        dispatch_day: str,
+        dispatch_time: str,
+        text: str,
+        lang_code: str = "en",
+    ) -> MessageForNew | None:
+        """
+        Создаёт или обновляет запись MessageForNew по (dispatch_day, lang_code).
+        Если запись с такими значениями есть — обновляет поля dispatch_time и text.
+        Возвращает созданный/обновлённый объект или None при ошибке.
+        """
+        try:
+            query = select(self.model).where(
+                self.model.dispatch_day == dispatch_day,
+                self.model.lang_code == lang_code,
+            )
+            result = await self._session.execute(query)
+            record = result.scalar_one_or_none()
+
+            if record:
+                record.dispatch_time = dispatch_time
+                record.text = text
+                action = "updated"
+            else:
+                record = self.model(
+                    dispatch_day=dispatch_day,
+                    dispatch_time=dispatch_time,
+                    text=text,
+                    lang_code=lang_code,
+                )
+                self._session.add(record)
+                action = "created"
+            logger.info(f"MessageForNew {action}: day={dispatch_day}, lang={lang_code}")
+            return record
+        except SQLAlchemyError as e:
+            logger.error(f"Error upserting MessageForNew (day={dispatch_day}, lang={lang_code}): {e}")
+            await self._session.rollback()
+            return None
+        
+    async def get_by_lang_code(self, lang_code: str) -> Optional[MessageForNew]:
+        """
+        Возвращает запись MessageForNew по lang_code или None, если не найдена.
+        Если на вход приходит не 'ru' или 'en' — используется 'en'.
+        """
+        try:
+            lang = (lang_code or "").lower()
+            if lang not in ("ru", "en"):
+                lang = "en"
+
+            query = select(self.model).where(self.model.lang_code == lang)
+            result = await self._session.execute(query)
+            record = result.scalar_one_or_none()
+            if record:
+                logger.info(f"Loaded MessageForNew for lang={lang}, day={record.dispatch_day}")
+            else:
+                logger.info(f"No MessageForNew found for lang={lang}")
+            return record
+        except SQLAlchemyError as e:
+            logger.error(f"Error loading MessageForNew for lang={lang_code}: {e}")
+            raise

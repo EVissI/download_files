@@ -9,6 +9,7 @@ class AdminKeyboard:
         'payment':'Пакеты услуг',
         'notify':'Рассылка',
         'users_setting':'Пользователи',
+        'message_for_new': 'Сообщение для новых пользователей',
         'back':'Назад',
     }
 
