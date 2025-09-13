@@ -39,24 +39,26 @@ async def start_update_message(message: Message, state: FSMContext, i18n, sessio
         message_for_new_dao = MessageForNewDAO(session_without_commit)
         message_ru = await message_for_new_dao.get_by_lang_code('ru')
         message_en = await message_for_new_dao.get_by_lang_code('en')
-        if message_ru and message_en:
-            days_dict = {
-                'mon' : 'Понедельник',
-                'tue': 'Вторник',
-                'wed': 'Среда',
-                'thu': 'Четверг',
-                'fri': 'Пятница',
-                'sat': 'Суббота',
-                'sun': 'Воскресенье'
-            }
-            selected_days = [list(days_dict.keys()).index(day) for day in message_ru.dispatch_day.split(',') if day in days_dict]
-            day_of_week_for_view = ', '.join([days_dict[day] for day in sorted(selected_days)])
-            await message.answer(f"Найдено существующее сообщение для новых пользователей.\n\n"
-                                 f"<b>ru:</b>\n{normalize_slashes(message_ru.text)}\n\n"
-                                 f"<b>en:</b>\n{normalize_slashes(message_en.text)}\n\n"
-                                 f"<b>Дни недели:</b> {day_of_week_for_view}\n"
-                                 f"<b>Время отправки:</b> {message_ru.dispatch_time}\n\n")
-            return
+        try:
+            if message_ru and message_en:
+                days_dict = {
+                    'mon' : 'Понедельник',
+                    'tue': 'Вторник',
+                    'wed': 'Среда',
+                    'thu': 'Четверг',
+                    'fri': 'Пятница',
+                    'sat': 'Суббота',
+                    'sun': 'Воскресенье'
+                }
+                selected_days = [list(days_dict.keys()).index(day) for day in message_ru.dispatch_day.split(',') if day in days_dict]
+                day_of_week_for_view = ', '.join([days_dict[day] for day in sorted(selected_days)])
+                await message.answer(f"Найдено существующее сообщение для новых пользователей.\n\n"
+                                    f"<b>ru:</b>\n{normalize_slashes(message_ru.text)}\n\n"
+                                    f"<b>en:</b>\n{normalize_slashes(message_en.text)}\n\n"
+                                    f"<b>Дни недели:</b> {day_of_week_for_view}\n"
+                                    f"<b>Время отправки:</b> {message_ru.dispatch_time}\n\n")
+        except Exception as e:
+            logger.error(f"Ошибка при отображении существующего сообщения: {e}")
         await message.answer("Введите текст сообщения для новых пользователей:",reply_markup=get_cancel_kb(i18n))
     except Exception as e:
         logger.error(f"Ошибка при начале обновления сообщения: {e}")
