@@ -1,6 +1,7 @@
 ﻿from zoneinfo import ZoneInfo
 from aiogram import Router, F
 from apscheduler.triggers.cron import CronTrigger
+from bot.common.func.func import normalize_slashes
 from bot.config import scheduler
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -51,8 +52,8 @@ async def start_update_message(message: Message, state: FSMContext, i18n, sessio
             selected_days = [list(days_dict.keys()).index(day) for day in message_ru.dispatch_day.split(',') if day in days_dict]
             day_of_week_for_view = ', '.join([days_dict[day] for day in sorted(selected_days)])
             await message.answer(f"Найдено существующее сообщение для новых пользователей.\n\n"
-                                 f"<b>ru:</b>\n{message_ru.text}\n\n"
-                                 f"<b>en:</b>\n{message_en.text}\n\n"
+                                 f"<b>ru:</b>\n{normalize_slashes(message_ru.text)}\n\n"
+                                 f"<b>en:</b>\n{normalize_slashes(message_en.text)}\n\n"
                                  f"<b>Дни недели:</b> {day_of_week_for_view}\n"
                                  f"<b>Время отправки:</b> {message_ru.dispatch_time}\n\n")
             return

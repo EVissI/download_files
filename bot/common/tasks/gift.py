@@ -1,4 +1,5 @@
-﻿from bot.common.kbds.inline.activate_promo import get_activate_promo_without_link_keyboard
+﻿from bot.common.func.func import normalize_slashes
+from bot.common.kbds.inline.activate_promo import get_activate_promo_without_link_keyboard
 from bot.common.utils.notify import notify_user
 from bot.config import translator_hub
 from bot.db.dao import UserDAO, UserPromocodeDAO
@@ -20,4 +21,4 @@ async def check_and_notify_gift():
             if not user_promocodes:
                 record = await message_dao.get_by_lang_code(user.lang_code)
                 keyboard = get_activate_promo_without_link_keyboard(i18n)
-                await notify_user(user.id, record.text, keyboard)
+                await notify_user(user.id, normalize_slashes(record.text), keyboard)

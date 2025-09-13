@@ -181,7 +181,15 @@ def determine_rank_rate_chequer(deviation: float) -> str:
         return "unlucky"
     else:
         return "very unlucky"
-
+    
+def normalize_slashes(text: str | None) -> str | None:
+    """
+    Заменяет все обратные слеши '\' на прямые '/'.
+    Возвращает None как есть.
+    """
+    if text is None:
+        return None
+    return text.replace("\\", "/")
 
 def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
     """
