@@ -205,6 +205,7 @@ async def handle_confirmation(callback: CallbackQuery, callback_data: ConfrimCal
             await state.clear()
             await callback.message.answer("Сообщение для новых пользователей успешно обновлено.", 
                                           reply_markup=AdminKeyboard.build())
+            await session_without_commit.commit()
         if callback_data.action == "back":
             await state.clear()
             await state.set_state(GeneralStates.admin_panel)

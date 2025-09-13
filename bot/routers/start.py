@@ -53,9 +53,10 @@ async def start_command(message: Message,state:FSMContext, session_with_commit: 
         await message.answer(
             i18n.user.static.hello(), reply_markup=MainKeyboard.build(user_info.role, i18n)
         )
-        await message.answer(
-            message_for_new.text, reply_markup=get_activate_promo_without_link_keyboard(i18n)
-        )
+        if message_for_new:
+            await message.answer(
+                message_for_new.text, reply_markup=get_activate_promo_without_link_keyboard(i18n)
+            )
         await state.clear()
         return
     i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
