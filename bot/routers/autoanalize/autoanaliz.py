@@ -275,7 +275,7 @@ async def handle_mat_file(
                             # Отправка сообщения с PDF
                             await message.bot.send_document(
                                 chat_id=settings.CHAT_GROUP_ID,
-                                document=BufferedInputFile(pdf_bytes, filename=f"analysis_{current_date}.pdf"),
+                                document=BufferedInputFile(pdf_bytes, filename=file_name_to_pdf),
                                 caption=f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
                                 parse_mode="HTML",
                             )
@@ -389,7 +389,7 @@ async def handle_player_selection(
                 p1 = formated_data.get(player1_name)
                 p2 = formated_data.get(player2_name)
                 current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+                file_name_to_pdf = redis_client.get(f'file_name:{user_info.id}') or f"analysis_{current_date}.pdf"
                 # Генерация PDF
                 html_text = format_detailed_analysis(formated_data, i18n)
                 pdf_bytes = html_to_pdf_bytes(html_text)
@@ -405,7 +405,7 @@ async def handle_player_selection(
                 # Отправка сообщения с PDF
                 await callback.bot.send_document(
                     chat_id=settings.CHAT_GROUP_ID,
-                    document=BufferedInputFile(pdf_bytes, filename=f"analysis_{current_date}.pdf"),
+                    document=BufferedInputFile(pdf_bytes, filename=file_name_to_pdf),
                     caption=f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
                     parse_mode="HTML",
                 )
