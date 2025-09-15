@@ -254,7 +254,7 @@ async def handle_mat_file(
                     p2 = formated_data.get(player2_name)
                     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     players_str = f'{player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}'
-                    file_name_to_pdf = f"analysis_{current_date}.pdf".replace(":",".").replace(" ","_")
+                    file_name_to_pdf = f"{players_str}_{current_date}.pdf".replace(":",".").replace(" ","_")
                     await redis_client.set(
                         f"file_name:{user_info.id}", file_name_to_pdf, expire=3600
                     )
