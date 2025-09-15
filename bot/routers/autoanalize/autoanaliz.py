@@ -205,10 +205,6 @@ async def handle_mat_file(
                 current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
                 new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
                 new_file_path = os.path.join(files_dir, new_file_name)
-                file_name_to_pdf = f"{player_names[0]}-{player_names[1]}({current_date}).pdf"
-                await redis_client.set(
-                    f"file_name:{user_info.id}", file_name_to_pdf, expire=3600
-                )
                 # Rename file
                 try:
                     os.rename(file_path, new_file_path)
@@ -240,6 +236,7 @@ async def handle_mat_file(
                     dao = DetailedAnalysisDAO(session_without_commit)
                     await dao.add(SDetailedAnalysis(**player_data))
                     user_dao = UserDAO(session_without_commit)
+                    formated_data = get_analysis_data(analysis_data)
                     if duration is None or duration == 0:
                         await user_dao.decrease_analiz_balance(
                             user_info.id, service_type=ServiceType.MONEYGAME
@@ -249,25 +246,29 @@ async def handle_mat_file(
                             user_info.id, service_type=ServiceType.MATCH
                         )
                     formatted_analysis = format_detailed_analysis(
-                        get_analysis_data(analysis_data), i18n
+                        formated_data, i18n
+                    )
+                    player_names = list(formated_data)
+                    player1_name, player2_name = player_names
+                    p1 = formated_data.get(player1_name)
+                    p2 = formated_data.get(player2_name)
+                    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    players_str = f'{player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}'
+                    file_name_to_pdf = f"analysis_{current_date}.pdf".replace(":",".").replace(" ","_")
+                    await redis_client.set(
+                        f"file_name:{user_info.id}", file_name_to_pdf, expire=3600
                     )
                     if duration is not None and duration != 0:
                         try:
-                            formated_data = get_analysis_data(analysis_data)
-                            player_names = list(formated_data)
-                            player1_name, player2_name = player_names
-                            p1 = formated_data.get(player1_name)
-                            p2 = formated_data.get(player2_name)
-                            current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
                             # Генерация PDF
                             html_text = format_detailed_analysis(formated_data, i18n)
                             pdf_bytes = html_to_pdf_bytes(html_text)
+                            
                             if not pdf_bytes:
                                 logger.error("Ошибка при генерации PDF.")
                                 await message.bot.send_message(
                                     settings.CHAT_GROUP_ID,
-                                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {players_str}) Матч до {duration}\n\n",
                                     parse_mode="HTML",
                                 )
                                 return
@@ -276,7 +277,7 @@ async def handle_mat_file(
                             await message.bot.send_document(
                                 chat_id=settings.CHAT_GROUP_ID,
                                 document=BufferedInputFile(pdf_bytes, filename=file_name_to_pdf),
-                                caption=f"<b>Автоматический анализ игры от {current_date}</b>\n\n {player1_name} ({p1['snowie_error_rate']}) - {player2_name} ({p2['snowie_error_rate']}) Матч до {duration}\n\n",
+                                caption=f"<b>Автоматический анализ игры от {current_date}</b>\n\n {players_str}) Матч до {duration}\n\n",
                                 parse_mode="HTML",
                             )
                         except Exception as e:
