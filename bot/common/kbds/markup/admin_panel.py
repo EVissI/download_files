@@ -6,7 +6,7 @@ class AdminKeyboard:
     admin_text_kb = {
         'excel':'Excel выгрузки',
         'promo':'Промокоды',
-        'payment':'Пакеты услуг',
+        'payment':'Пакеты',
         'notify':'Рассылка',
         'users_setting':'Пользователи',
         'message_for_new': 'Сообщение для новых пользователей',
