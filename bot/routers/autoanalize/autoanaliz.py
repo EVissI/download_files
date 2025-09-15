@@ -390,7 +390,7 @@ async def handle_player_selection(
                 p1 = formated_data.get(player1_name)
                 p2 = formated_data.get(player2_name)
                 current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                file_name_to_pdf = redis_client.get(f'file_name:{user_info.id}') or f"analysis_{current_date}.pdf"
+                file_name_to_pdf = await redis_client.get(f'file_name:{user_info.id}') or f"analysis_{current_date}.pdf"
                 # Генерация PDF
                 html_text = format_detailed_analysis(formated_data, i18n)
                 pdf_bytes = html_to_pdf_bytes(html_text)
