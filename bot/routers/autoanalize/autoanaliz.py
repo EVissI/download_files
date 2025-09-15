@@ -390,7 +390,11 @@ async def handle_player_selection(
                 p1 = formated_data.get(player1_name)
                 p2 = formated_data.get(player2_name)
                 current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                file_name_to_pdf = await redis_client.get(f'file_name:{user_info.id}') or f"analysis_{current_date}.pdf"
+                players_str = f'{player1_name} ({abs(p1['snowie_error_rate'])}) - {player2_name} ({abs(p2['snowie_error_rate'])})'
+                file_name_to_pdf = f"{players_str}_{current_date}.pdf".replace(":",".").replace(" ","")
+                await redis_client.set(
+                        f"file_name:{user_info.id}", file_name_to_pdf, expire=3600
+                    )
                 # Генерация PDF
                 html_text = format_detailed_analysis(formated_data, i18n)
                 pdf_bytes = html_to_pdf_bytes(html_text)
