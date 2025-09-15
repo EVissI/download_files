@@ -1021,7 +1021,6 @@ class MessageForNewDAO(BaseDAO[MessageForNew]):
         """
         try:
             query = select(self.model).where(
-                self.model.dispatch_day == dispatch_day,
                 self.model.lang_code == lang_code,
             )
             result = await self._session.execute(query)
