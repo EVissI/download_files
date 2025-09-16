@@ -28,6 +28,7 @@ async def handle_user_settings(message: Message, session_without_commit):
         get_item_id=lambda user: user.id,
         page=0,
         items_per_page=5,
+        
     )
     await message.answer("Список пользователей:", reply_markup=keyboard)
 

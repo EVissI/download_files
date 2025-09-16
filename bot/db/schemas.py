@@ -133,3 +133,7 @@ class SBroadcast(BaseModel):
     created_by: int | None = None
     class Config:
         from_attributes = True
+
+class SGroup(BaseModel):
+    id: int | None = None
+    name: str | None = None

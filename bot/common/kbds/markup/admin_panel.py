@@ -9,6 +9,7 @@ class AdminKeyboard:
         'payment':'Пакеты',
         'notify':'Рассылка',
         'users_setting':'Пользователи',
+        'users_group': 'Группы пользователей',
         'message_for_new': 'Сообщение для новых пользователей',
         'back':'Назад',
     }
@@ -24,5 +25,5 @@ class AdminKeyboard:
             kb.add(
                 KeyboardButton(text=text)
             )
-        kb.adjust(2,2,1,1)
+        kb.adjust(2,2,2,1,1)
         return kb.as_markup(resize_keyboard=True)

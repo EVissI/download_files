@@ -11,6 +11,8 @@ from bot.db.models import (
     Promocode,
     UserAnalizePayment,
     UserAnalizePaymentService,
+    UserGroup,
+    UserInGroup,
     UserPromocode,
     AnalizePayment,
     UserPromocodeService,
@@ -18,7 +20,7 @@ from bot.db.models import (
     PromocodeServiceQuantity,
     MessageForNew
 )
-from sqlalchemy import func, literal, not_, or_, select
+from sqlalchemy import delete, func, literal, not_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -1066,4 +1068,83 @@ class MessageForNewDAO(BaseDAO[MessageForNew]):
             return record
         except SQLAlchemyError as e:
             logger.error(f"Error loading MessageForNew for lang={lang_code}: {e}")
+            raise
+
+
+
+class UserGroupDAO(BaseDAO[UserGroup]):
+    model = UserGroup
+
+    async def add_users_to_group(self, group_id: int, user_ids: list[int]) -> UserGroup:
+        """
+        Добавить пользователей в группу по списку user_ids.
+        """
+        try:
+            # достаем группу вместе с текущими пользователями
+            query = (
+                select(self.model)
+                .where(self.model.id == group_id)
+                .options(selectinload(self.model.users))
+            )
+            result = await self._session.execute(query)
+            group = result.scalar_one_or_none()
+
+            if not group:
+                raise ValueError(f"Группа с id={group_id} не найдена")
+
+            # получаем id уже привязанных пользователей
+            existing_user_ids = {u.user_id for u in group.users}
+
+            # фильтруем только новых
+            new_user_ids = set(user_ids) - existing_user_ids
+
+            # создаем объекты UserInGroup
+            new_relations = [
+                UserInGroup(user_id=user_id, group_id=group_id)
+                for user_id in new_user_ids
+            ]
+
+            self._session.add_all(new_relations)
+            await self._session.commit()
+            await self._session.refresh(group)
+
+            return group
+
+        except SQLAlchemyError as e:
+            await self._session.rollback()
+            logger.error(f"Ошибка при добавлении пользователей в группу: {e}")
+            raise
+    
+    async def remove_users_from_group(self, group_id: int, user_ids: list[int]) -> UserGroup:
+        """
+        Удалить пользователей из группы по списку user_ids.
+        """
+        try:
+            # проверяем, что группа существует
+            query = (
+                select(self.model)
+                .where(self.model.id == group_id)
+                .options(selectinload(self.model.users))
+            )
+            result = await self._session.execute(query)
+            group = result.scalar_one_or_none()
+
+            if not group:
+                raise ValueError(f"Группа с id={group_id} не найдена")
+
+            # удаляем связи
+            await self._session.execute(
+                delete(UserInGroup).where(
+                    UserInGroup.group_id == group_id,
+                    UserInGroup.user_id.in_(user_ids),
+                )
+            )
+            await self._session.commit()
+            await self._session.refresh(group)
+
+            return group
+
+        except SQLAlchemyError as e:
+            await self._session.rollback()
+            logger.error(f"Ошибка при удалении пользователей из группы: {e}")
             raise

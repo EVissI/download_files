@@ -15,6 +15,7 @@ from bot.routers.admin.payment.setup import payment_setup_router
 from bot.routers.admin.notify import broadcast_router
 from bot.routers.admin.users_setting.setup import user_setting_router
 from bot.routers.admin.update_message_for_new import message_for_new_router
+from bot.routers.admin.user_group import user_group_router
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner

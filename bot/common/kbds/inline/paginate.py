@@ -112,6 +112,7 @@ def get_paginated_keyboard(
     get_item_id: Callable[[Any], int],
     page: int = 0,
     items_per_page: int = 5,
+    with_back_butn:bool = False
 ) -> InlineKeyboardMarkup:
     """
     Создает инлайн-клавиатуру с пагинацией для списка объектов.
@@ -161,11 +162,14 @@ def get_paginated_keyboard(
 
     for text, callback in nav_buttons:
         kb.button(text=text, callback_data=callback)
-
-    # Настройка раскладки
     rows = [1] * len(current_items)
     if nav_buttons:
         rows.append(len(nav_buttons))
+
+    if with_back_butn:
+        back_cb = PaginatedCallback(item_id=0, page=page, action="back", context=context).pack()
+        kb.button(text="Назад", callback_data=back_cb)
+        rows.append(1)
 
     kb.adjust(*rows)
     return kb.as_markup()
@@ -184,6 +188,7 @@ def get_paginated_checkbox_keyboard(
     selected_ids: Set[int] | List[int] | None = None,
     page: int = 0,
     items_per_page: int = 5,
+    with_back_butn:bool = False
 ) -> InlineKeyboardMarkup:
     """
     Создаёт клавиатуру с чекбоксами. Состояние выбранных id хранится в FSM state,
@@ -231,6 +236,10 @@ def get_paginated_checkbox_keyboard(
     rows = [1] * len(current_items)
     if nav_buttons:
         rows.append(len(nav_buttons))
+    if with_back_butn:
+        back_cb = PaginatedCheckboxCallback(item_id=0, page=page, action="back", context=context).pack()
+        kb.button(text="Назад", callback_data=back_cb)
+        rows.append(1)
     rows.append(1)
     kb.adjust(*rows)
     return kb.as_markup()

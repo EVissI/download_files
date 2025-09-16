@@ -42,7 +42,11 @@ class User(Base):
     broadcasts: Mapped[list["Broadcast"]] = relationship(
         "Broadcast", back_populates="user"
     )
-
+    groups: Mapped[list["UserInGroup"]] = relationship(
+        "UserInGroup",
+        back_populates="group",
+        cascade="all, delete-orphan",
+    )
 
 class Analysis(Base):
     __tablename__ = "analyzes"
@@ -306,3 +310,24 @@ class MessageForNew(Base):
     lang_code: Mapped[str] = mapped_column(String(3), nullable=False, default="en")
     dispatch_day: Mapped[str] = mapped_column(String, nullable=False)  # День рассылки, например, "Monday"
     dispatch_time: Mapped[str] = mapped_column(String(5), nullable=False)  # Время рассылки в формате "HH:MM"
+
+class UserGroup(Base):
+    __tablename__ = "user_groups"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+
+    users: Mapped[list["UserInGroup"]] = relationship(
+        "UserInGroup",
+        back_populates="group",
+        cascade="all, delete-orphan",
+    )
+
+class UserInGroup(Base):
+    __tablename__ = "user_in_groups"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    group_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_groups.id"), nullable=False)
+
+    group: Mapped["UserGroup"] = relationship("UserGroup", back_populates="users")
