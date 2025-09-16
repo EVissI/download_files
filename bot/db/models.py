@@ -44,7 +44,7 @@ class User(Base):
     )
     groups: Mapped[list["UserInGroup"]] = relationship(
         "UserInGroup",
-        back_populates="group",
+        back_populates="user",
         cascade="all, delete-orphan",
     )
 
@@ -329,5 +329,6 @@ class UserInGroup(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     group_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_groups.id"), nullable=False)
-
+    
+    user: Mapped["User"] = relationship("User", back_populates="groups")
     group: Mapped["UserGroup"] = relationship("UserGroup", back_populates="users")
