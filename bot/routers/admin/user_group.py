@@ -85,7 +85,7 @@ async def create_user_group(message: Message, state: FSMContext, i18n, session_w
     group_name = message.text.strip()
     await UserGroupDAO(session_without_commit).add(SGroup(name=group_name))
     await session_without_commit.commit()
-    await message.answer(f'Группа "{group_name}" успешно создана.')
+    await message.answer(f'Группа "{group_name}" успешно создана.', reply_markup=AdminKeyboard.build())
     await state.clear()
     await state.set_state(GeneralStates.admin_panel)
     await message.answer(
@@ -101,9 +101,12 @@ async def handle_delete_group_pagination(callback: CallbackQuery, callback_data:
             group_id = callback_data.item_id
             group = await UserGroupDAO(session_without_commit).find_one_or_none_by_id(group_id)
             if group:
-                await UserGroupDAO(session_without_commit).delete(SGroup.model_validate(group.to_dict()))
-                await session_without_commit.commit()
                 await callback.message.answer(f'Группа "{group.name}" успешно удалена.')
+                await UserGroupDAO(session_without_commit).delete_group(group_id)
+                await callback.message.answer(
+                    'Выберите действие с группами',
+                    reply_markup=get_user_group_kb()
+                )
             else:
                 await callback.message.answer("Группа не найдена.")
             await callback.message.delete()
@@ -138,7 +141,7 @@ async def handle_delete_group_pagination(callback: CallbackQuery, callback_data:
             await state.update_data(selected_group_id=group_id)
             users = await UserDAO(session_without_commit).find_all()
             await callback.message.answer(
-                'Выберите юзера для рассылки:',
+                'Выберите юзеров для добавления в группу',
                 reply_markup=get_paginated_checkbox_keyboard(
                     items=users,
                     context="add_users_to_group",
@@ -147,6 +150,7 @@ async def handle_delete_group_pagination(callback: CallbackQuery, callback_data:
                     selected_ids=set(),
                     page=0,
                     items_per_page=5,
+                    with_back_butn=True
                 )
             )
         case 'prev' | 'next':
@@ -206,6 +210,7 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
             selected_ids=sel_set,
             page=page,
             items_per_page=5,
+            with_back_butn=True
         )
         await callback.message.edit_text("Выберите пользователей:", reply_markup=kb)
         return
@@ -220,6 +225,7 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
             selected_ids=sel_set,
             page=page,
             items_per_page=5,
+            with_back_butn=True
         )
         await callback.message.edit_text("Выберите пользователей:", reply_markup=kb)
         return

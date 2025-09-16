@@ -1148,3 +1148,25 @@ class UserGroupDAO(BaseDAO[UserGroup]):
             await self._session.rollback()
             logger.error(f"Ошибка при удалении пользователей из группы: {e}")
             raise
+
+    async def delete_group(self, group_id: int) -> None:
+        """
+        Удалить группу целиком вместе с записями UserInGroup.
+        """
+        try:
+            # Сначала удаляем связи
+            await self._session.execute(
+                delete(UserInGroup).where(UserInGroup.group_id == group_id)
+            )
+
+            # Потом саму группу
+            await self._session.execute(
+                delete(self.model).where(self.model.id == group_id)
+            )
+
+            await self._session.commit()
+
+        except SQLAlchemyError as e:
+            await self._session.rollback()
+            logger.error(f"Ошибка при удалении группы: {e}")
+            raise
