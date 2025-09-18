@@ -265,7 +265,7 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
     }
     for broadcast in broadcasts:
         # Формируем текст для каждой рассылки
-        broadcast.run_time = broadcast.run_time.replace(tzinfo=tz)
+        broadcast.run_time = broadcast.run_time.replace(tzinfo=None)
         info = f"Имя рассылки: {broadcast.name}\n"
         info += f"Текст: {broadcast.text[:30]}{'...' if len(broadcast.text) > 30 else ''}\n"
         info += f"Медиа: {'есть' if broadcast.media_id else 'нет'}\n"
@@ -421,7 +421,7 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
             page=page,
             items_per_page=5,
         )
-        await callback.message.edit_text("Выберите пользователей (нажмите чтобы отметить):", reply_markup=kb)
+        await callback.message.edit_text("Выберите пользователей:", reply_markup=kb)
         return
 
     if action in ("prev", "next"):
@@ -435,7 +435,7 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
             page=page,
             items_per_page=5,
         )
-        await callback.message.edit_text("Выберите пользователей (нажмите чтобы отметить):", reply_markup=kb)
+        await callback.message.edit_text("Выберите пользователей:", reply_markup=kb)
         return
 
     if action == "done":
