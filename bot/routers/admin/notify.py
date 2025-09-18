@@ -266,7 +266,7 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
     for broadcast in broadcasts:
         # Формируем текст для каждой рассылки
         broadcast.run_time = broadcast.run_time.replace(hour=broadcast.run_time.hour+3)
-        info = f"Имя рассылки: {broadcast.name}\n"
+        info = f"Имя рассылки: <b>{broadcast.name}</b>\n"
         info += f"Текст: {broadcast.text[:30]}{'...' if len(broadcast.text) > 30 else ''}\n"
         info += f"Медиа: {'есть' if broadcast.media_id else 'нет'}\n"
         info += f"Тип: {group_ru.get(broadcast.group)}\n"
