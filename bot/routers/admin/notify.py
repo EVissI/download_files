@@ -219,7 +219,7 @@ async def handle_broadcast_user_group_selection(callback: CallbackQuery, callbac
             await callback.message.delete()
             await callback.message.answer(
                 "Выберите группу пользователей для рассылки:",
-                reply_markup=AdminKeyboard.build_notify_kb()
+                reply_markup=build_notify_kb()
             )
             await state.set_state(GeneralStates.admin_panel)
 
@@ -709,7 +709,7 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
         case 'user_group':
             user_group_id = user_data.get("user_group_id")
             group_dao = UserGroupDAO(session_without_commit)
-            target_user_ids = [user.id for user in await group_dao.get_users_in_group(user_group_id)]
+            user_ids = [user.id for user in await group_dao.get_users_in_group(user_group_id)]
     
     successful, failed = await broadcast_message(
         user_ids=user_ids,
