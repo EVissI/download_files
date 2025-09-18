@@ -19,7 +19,7 @@ from bot.common.kbds.inline.paginate import PaginatedCallback, PaginatedCheckbox
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.config import bot
-from bot.db.dao import BroadcastDAO, UserDAO
+from bot.db.dao import BroadcastDAO, UserDAO, UserGroupDAO
 from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import translator_hub
 from bot.db.models import BroadcastStatus
@@ -118,10 +118,7 @@ async def broadcast_message(user_ids: list[int], text: str, media_id: str = None
     logger.info(f"Рассылка завершена. Успешно: {successful}, Неудачно: {failed}")
     return successful, failed
 
-
-# Команда для старта рассылки
-@broadcast_router.message(F.text == AdminKeyboard.get_kb_text().get('notify'))
-async def start_broadcast(message: Message, state: FSMContext):
+def build_notify_kb():
     builder = InlineKeyboardBuilder()
     builder.add(
         InlineKeyboardButton(
@@ -141,14 +138,24 @@ async def start_broadcast(message: Message, state: FSMContext):
             callback_data=BroadcastCallback(action="specific").pack()
         ),
         InlineKeyboardButton(
+            text="Кастомные группы",
+            callback_data=BroadcastCallback(action="user_group").pack()
+        ),
+        InlineKeyboardButton(
             text="Текущие рассылки",
             callback_data=BroadcastCallback(action="current_broadcast").pack()
         )
     )
     builder.adjust(1) 
+    return builder.as_markup()
+
+
+# Команда для старта рассылки
+@broadcast_router.message(F.text == AdminKeyboard.get_kb_text().get('notify'))
+async def start_broadcast(message: Message, state: FSMContext):
     await message.answer(
         "Выберите группу пользователей для рассылки:",
-        reply_markup=builder.as_markup()
+        reply_markup=build_notify_kb()
     )
 
 
@@ -164,6 +171,57 @@ async def process_broadcast_group(callback: CallbackQuery, callback_data: Broadc
         reply_markup=get_cancel_kb(i18n)  
     )
     await state.set_state(BroadcastStates.waiting_for_text)
+
+@broadcast_router.callback_query(BroadcastCallback.filter(F.action == "user_group"))
+async def process_broadcast_user_group(callback: CallbackQuery, state: FSMContext, i18n, session_without_commit):
+    await callback.message.delete()
+    group_dao = UserGroupDAO(session_without_commit)
+    groups = await group_dao.find_all()
+    await callback.message.answer(
+        "Выберите группу для рассылки:",
+        reply_markup=get_paginated_keyboard(
+            items=groups,
+            context="broadcast_user_group",
+            get_display_text=lambda group: f"{group.name}",
+            get_item_id=lambda group: group.id,
+            page=0,
+            items_per_page=5,
+            with_back_butn=True
+        )
+    )
+    await state.set_state(GeneralStates.admin_panel)
+
+@broadcast_router.callback_query(PaginatedCallback.filter(F.context == "broadcast_user_group"))
+async def handle_broadcast_user_group_selection(callback: CallbackQuery, callback_data: PaginatedCallback, state: FSMContext, i18n, session_without_commit):
+    match callback_data.action:
+        case "select":
+            await callback.message.delete()
+            group_id = callback_data.item_id
+            group_dao = UserGroupDAO(session_without_commit)
+            group = await group_dao.find_one_or_none_by_id(group_id)
+            await state.update_data(group="user_group", user_group_id=group_id)
+            await callback.message.answer(
+                f"Вы выбрали группу: {group.name}\n\nВведите текст для рассылки:",
+                reply_markup=get_cancel_kb(i18n)
+            )
+            await state.set_state(BroadcastStates.waiting_for_text)
+        case "prev" | "next":
+            keyboard = get_paginated_keyboard(
+                items=await UserGroupDAO(session_without_commit).find_all(),
+                context="broadcast_user_group",
+                get_display_text=lambda group: f"{group.name}",
+                get_item_id=lambda group: group.id,
+                page=callback_data.page,
+                items_per_page=5,
+            )
+            await callback.message.edit_reply_markup(reply_markup=keyboard)
+        case "back":
+            await callback.message.delete()
+            await callback.message.answer(
+                "Выберите группу пользователей для рассылки:",
+                reply_markup=AdminKeyboard.build_notify_kb()
+            )
+            await state.set_state(GeneralStates.admin_panel)
 
 @broadcast_router.callback_query(BroadcastCallback.filter(F.action == "specific"))
 async def process_specific_user(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext, i18n, session_without_commit):
@@ -214,13 +272,12 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
                 callback_data=BroadcastListCallback(action="show_users", broadcast_id=broadcast.id).pack()
             )
         )
-        if broadcast.status == BroadcastStatus.SCHEDULED:
-            builder.add(
-                InlineKeyboardButton(
-                    text="Отменить рассылку",
-                    callback_data=BroadcastListCallback(action="cancel_broadcast", broadcast_id=broadcast.id).pack()
-                )
+        builder.add(
+            InlineKeyboardButton(
+                text="Отменить рассылку",
+                callback_data=BroadcastListCallback(action="cancel_broadcast", broadcast_id=broadcast.id).pack()
             )
+        )
         builder.adjust(1)
         
         # Отправляем сообщение с информацией о рассылке и кнопками
@@ -550,6 +607,10 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
             target_user_ids = [user.id for user in await user_dao.get_users_with_payments()]
         case 'without_purchases':
             target_user_ids = [user.id for user in await user_dao.get_users_without_payments()]
+        case 'user_group':
+            user_group_id = user_data.get("user_group_id")
+            group_dao = UserGroupDAO(session_without_commit)
+            target_user_ids = [user.id for user in await group_dao.get_users_in_group(user_group_id)]
     # сохраняем рассылку в БД
     broadcast_dao = BroadcastDAO(session_without_commit)
     broadcast = await broadcast_dao.add(
@@ -645,6 +706,10 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
             user_ids = [user.id for user in await user_dao.get_users_with_payments()]
         case 'without_purchases':
             user_ids = [user.id for user in await user_dao.get_users_without_payments()]
+        case 'user_group':
+            user_group_id = user_data.get("user_group_id")
+            group_dao = UserGroupDAO(session_without_commit)
+            target_user_ids = [user.id for user in await group_dao.get_users_in_group(user_group_id)]
     
     successful, failed = await broadcast_message(
         user_ids=user_ids,
