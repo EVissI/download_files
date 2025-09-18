@@ -265,7 +265,7 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
     }
     for broadcast in broadcasts:
         # Формируем текст для каждой рассылки
-        broadcast.run_time = broadcast.run_time.replace(tzinfo=None)
+        broadcast.run_time = broadcast.run_time.replace(hour=broadcast.run_time.hour+3)
         info = f"Имя рассылки: {broadcast.name}\n"
         info += f"Текст: {broadcast.text[:30]}{'...' if len(broadcast.text) > 30 else ''}\n"
         info += f"Медиа: {'есть' if broadcast.media_id else 'нет'}\n"
@@ -303,12 +303,13 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
 async def show_broadcast_users(callback: CallbackQuery, callback_data: BroadcastListCallback, session_without_commit):
     broadcast_id = callback_data.broadcast_id
     broadcast_dao = BroadcastDAO(session_without_commit)
+    broadcast = await broadcast_dao.find_one_or_none_by_id(broadcast_id)
     user_dao = UserDAO(session_without_commit)
     await callback.message.delete()
     # Получаем список user_id для рассылки
     user_ids = await broadcast_dao.get_recipients_for_broadcast(broadcast_id)
     if not user_ids:
-        await callback.message.answer(f"Для рассылки ID {broadcast_id} нет получателей.", reply_markup=AdminKeyboard.build())
+        await callback.message.answer(f"Для рассылки <b>{broadcast.name}</b> нет получателей.", reply_markup=AdminKeyboard.build())
         return
     
     # Получаем информацию о пользователях
@@ -320,7 +321,7 @@ async def show_broadcast_users(callback: CallbackQuery, callback_data: Broadcast
             users_info.append(f"- {display_name} (ID: {user_id})")
     
     # Формируем сообщение
-    message_text = f"Получатели рассылки ID {broadcast_id}:\n\n" + "\n".join(users_info) if users_info else f"Для рассылки ID {broadcast_id} нет получателей."
+    message_text = f"Получатели рассылки <b>{broadcast.name}</b>:\n\n" + "\n".join(users_info) if users_info else f"Для рассылки <b>{broadcast.name}</b> нет получателей."
     await callback.message.answer(message_text, reply_markup=AdminKeyboard.build())
 
 
@@ -330,6 +331,7 @@ async def cancel_broadcast_action(callback: CallbackQuery, callback_data: Broadc
     broadcast_dao = BroadcastDAO(session_without_commit)
     await callback.message.delete()
     # Обновляем статус рассылки на CANCELLED
+    broadcast = await broadcast_dao.find_one_or_none_by_id(broadcast_id)
     success = await broadcast_dao.update_status(broadcast_id, BroadcastStatus.CANCELLED)
     if not success:
         await callback.message.answer(f"Не удалось отменить рассылку ID {broadcast_id}.", reply_markup=AdminKeyboard.build())
@@ -343,7 +345,7 @@ async def cancel_broadcast_action(callback: CallbackQuery, callback_data: Broadc
         logger.info(f"Scheduled job for broadcast {broadcast_id} removed.")
     
     await session_without_commit.commit()
-    await callback.message.answer(f"Рассылка ID {broadcast_id} отменена.", reply_markup=AdminKeyboard.build())
+    await callback.message.answer(f"Рассылка <b>{broadcast.name}</b> отменена.", reply_markup=AdminKeyboard.build())
 
 
 @broadcast_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(BroadcastStates))
@@ -683,6 +685,7 @@ async def run_broadcast_job(broadcast_id: int):
         b_media_id = broadcast.media_id
         b_media_type = broadcast.media_type
         b_created_by = broadcast.created_by
+        b_name = broadcast.name
         user_ids = await broadcast_dao.get_recipients_for_broadcast(broadcast_id=b_id)
 
         successful, failed = await broadcast_message(
@@ -697,11 +700,11 @@ async def run_broadcast_job(broadcast_id: int):
         try:
             await bot.send_message(
                 b_created_by,
-                f"Рассылка {b_id} завершена. Успешно: {successful}, Неудачно: {failed}",
+                f"Рассылка <b>{b_name}</b> завершена. Успешно: {successful}, Неудачно: {failed}",
             )
         except Exception as e:
             pass
-        logger.info(f"Рассылка {b_id} завершена. Успешно: {successful}, Неудачно: {failed}")
+        logger.info(f"Рассылка {b_name} завершена. Успешно: {successful}, Неудачно: {failed}")
 
 
 # Обработка подтверждения через инлайн-кнопки
@@ -719,7 +722,7 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
     media_id = user_data.get("media_id")
     media_type = user_data.get("media_type")
     group = user_data.get("group")
-    
+    b_name = user_data["broadcast_name"]
     user_dao = UserDAO(session_without_commit)
     match group:
         case "specific":
@@ -742,7 +745,7 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
         media_type=media_type
     )
     
-    await callback.message.answer(f"Рассылка завершена! Успешно: {successful}, Неудачно: {failed}", reply_markup=AdminKeyboard.build())
+    await callback.message.answer(f"Рассылка <b>{b_name}</b>завершена! Успешно: {successful}, Неудачно: {failed}", reply_markup=AdminKeyboard.build())
     await state.clear()
     await state.set_state(GeneralStates.admin_panel)
 
