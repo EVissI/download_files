@@ -265,11 +265,12 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
     }
     for broadcast in broadcasts:
         # Формируем текст для каждой рассылки
+        broadcast.run_time = broadcast.run_time.replace(tzinfo=tz)
         info = f"Имя рассылки: {broadcast.name}\n"
         info += f"Текст: {broadcast.text[:30]}{'...' if len(broadcast.text) > 30 else ''}\n"
         info += f"Медиа: {'есть' if broadcast.media_id else 'нет'}\n"
         info += f"Тип: {group_ru.get(broadcast.group)}\n"
-        info += f"Время: {broadcast.run_time.strftime('%d.%m.%Y %H:%M (МСК)').replace(timezone=tz) if broadcast.run_time else 'без времени'}\n"
+        info += f"Время: {broadcast.run_time.strftime('%d.%m.%Y %H:%M (МСК)') if broadcast.run_time else 'без времени'}\n"
         info += f"Статус: Запланированно\n"
 
         # Создаем кнопки "Юзеры" и "Отменить рассылку"
