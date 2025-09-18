@@ -585,7 +585,7 @@ async def run_broadcast_job(broadcast_id: int):
         b_media_id = broadcast.media_id
         b_media_type = broadcast.media_type
         b_created_by = broadcast.created_by
-        user_ids = await BroadcastDAO.get_recipients_for_broadcast(broadcast_id=b_id)
+        user_ids = await broadcast_dao.get_recipients_for_broadcast(broadcast_id=b_id)
 
         successful, failed = await broadcast_message(
             user_ids=user_ids,
