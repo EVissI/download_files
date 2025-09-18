@@ -57,7 +57,7 @@ async def handle_user_group_actions(callback: CallbackQuery, callback_data: User
                 "Выберите группу для добавления пользователей:",
                 reply_markup=get_paginated_keyboard(
                     items=groups,
-                    context='add_users',
+                    context='add_users_to_group',
                     get_display_text=lambda group: group.name,
                     get_item_id=lambda group: group.id,
                     page=0,
@@ -66,7 +66,20 @@ async def handle_user_group_actions(callback: CallbackQuery, callback_data: User
                 )
             )
         case "delete_users":
-            await callback.message.answer("Удаление пользователей из группы - функция в разработке.")
+            await callback.message.delete()
+            groups = await UserGroupDAO(session_without_commit).find_all()
+            await callback.message.answer(
+                "Выберите группу для удаления пользователей:",
+                reply_markup=get_paginated_keyboard(
+                    items=groups,
+                    context='delete_users_to_group',
+                    get_display_text=lambda group: group.name,
+                    get_item_id=lambda group: group.id,
+                    page=0,
+                    items_per_page=5,
+                    with_back_butn=True
+                )
+            )
         case _:
             await callback.message.answer("Неизвестное действие.")
 
@@ -130,7 +143,7 @@ async def handle_delete_group_pagination(callback: CallbackQuery, callback_data:
             )
 
 
-@user_group_router.callback_query(PaginatedCallback.filter(F.context == "add_users"))
+@user_group_router.callback_query(PaginatedCallback.filter(F.context == "add_users_to_group"))
 async def handle_delete_group_pagination(callback: CallbackQuery, callback_data: PaginatedCallback,
                                         state:FSMContext,
                                         session_without_commit, i18n):
@@ -181,12 +194,10 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
     """
     await callback.answer()  # быстро закроем loading
     STORAGE_KEY = "add_users_to_group_selected"
-
     # загрузим текущее состояние выбранных id из state
     data = await state.get_data()
     sel_list = data.get(STORAGE_KEY, [])
     sel_set = set(sel_list)
-
     # подгружаем всех пользователей для построения клавиатуры
     users = await UserDAO(session_without_commit).find_all()
 
@@ -236,7 +247,7 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
                 "Выберите группу для добавления пользователей:",
                 reply_markup=get_paginated_keyboard(
                     items=groups,
-                    context='add_users',
+                    context='add_users_to_group',
                     get_display_text=lambda group: group.name,
                     get_item_id=lambda group: group.id,
                     page=0,
@@ -262,6 +273,136 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
             user = await UserDAO(session_without_commit).find_one_or_none_by_id(us)
             info += f"\n- {user.admin_insert_name or user.username or user.id}"
         info += f"\nуспешно добавлены в группу '{group.name}'"
+        await callback.message.answer(info)
+        await state.clear()
+        await state.set_state(GeneralStates.admin_panel)
+        return
+    
+@user_group_router.callback_query(PaginatedCallback.filter(F.context == "delete_users_to_group"))
+async def handle_delete_group_pagination(callback: CallbackQuery, callback_data: PaginatedCallback,state:FSMContext, session_without_commit, i18n):
+    match callback_data.action:
+        case "select":
+            await callback.message.delete()
+            group_id = callback_data.item_id
+            await state.update_data(selected_group_id=group_id)
+            group = await UserGroupDAO(session_without_commit).find_one_or_none_by_id(group_id)
+            users = await UserGroupDAO(session_without_commit).get_users_in_group(group_id)
+            await callback.message.answer(
+                f'Выберите юзеров для удаления из группы "{group.name}"',
+                reply_markup=get_paginated_checkbox_keyboard(
+                    items=users,
+                    context="delete_users_to_group",
+                    get_display_text=lambda user: f"{user.admin_insert_name or user.username or user.id}",
+                    get_item_id=lambda user: user.id,
+                    selected_ids=set(),
+                    page=0,
+                    items_per_page=5,
+                    with_back_butn=True
+                )
+            )
+        case 'prev' | 'next':
+            groups = await UserGroupDAO(session_without_commit).find_all()
+            keyboard = get_paginated_keyboard(
+                items=groups,
+                context='delete_group',
+                get_display_text=lambda group: group.name,
+                get_item_id=lambda group: group.id,
+                page=callback_data.page,
+                items_per_page=5,
+                with_back_butn=True
+            )
+            await callback.message.edit_reply_markup(reply_markup=keyboard)
+        case 'back':
+            await callback.message.delete()
+            await callback.message.answer(
+                'Выберите действие с группами',
+                reply_markup=get_user_group_kb()
+            )
+
+@user_group_router.callback_query(PaginatedCheckboxCallback.filter(F.context == 'delete_users_to_group'), StateFilter(GeneralStates.admin_panel))
+async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheckboxCallback, state:
+    FSMContext, session_without_commit, i18n):
+    await callback.answer() 
+    STORAGE_KEY = "delete_users_to_group_selected"
+    # загрузим текущее состояние выбранных id из state
+    data = await state.get_data()
+    sel_list = data.get(STORAGE_KEY, [])
+    sel_set = set(sel_list)
+    # подгружаем всех пользователей для построения клавиатуры
+    state_data = await state.get_data()
+    group_id = state_data.get("selected_group_id")
+    users = await UserGroupDAO(session_without_commit).get_users_in_group(group_id)
+
+    # действия: toggle / prev / next / done
+    action = callback_data.action
+    item_id = int(callback_data.item_id or 0)
+    page = int(callback_data.page or 0)
+
+    if action == "toggle":
+        if item_id in sel_set:
+            sel_set.remove(item_id)
+        else:
+            sel_set.add(item_id)
+        # сохраняем обновлённый набор в state
+        await state.update_data({STORAGE_KEY: list(sel_set)})
+        kb = get_paginated_checkbox_keyboard(
+            items=users,
+            context="delete_users_to_group",
+            get_display_text=lambda u: f"{u.admin_insert_name or u.username or u.id}",
+            get_item_id=lambda u: u.id,
+            selected_ids=sel_set,
+            page=page,
+            items_per_page=5,
+            with_back_butn=True
+        )
+        await callback.message.edit_text("Выберите пользователей:", reply_markup=kb)
+        return
+
+    if action in ("prev", "next"):
+        # просто перестроим клавиатуру на нужной странице
+        kb = get_paginated_checkbox_keyboard(
+            items=users,
+            context="delete_users_to_group",
+            get_display_text=lambda u: f"{u.admin_insert_name or u.username or u.id}",
+            get_item_id=lambda u: u.id,
+            selected_ids=sel_set,
+            page=page,
+            items_per_page=5,
+            with_back_butn=True
+        )
+        await callback.message.edit_text("Выберите пользователей:", reply_markup=kb)
+        return
+    if action == "back":
+        await callback.message.delete()
+        groups = await UserGroupDAO(session_without_commit).find_all()
+        await callback.message.answer(
+                "Выберите группу для добавления пользователей:",
+                reply_markup=get_paginated_keyboard(
+                    items=groups,
+                    context='add_users_to_group',
+                    get_display_text=lambda group: group.name,
+                    get_item_id=lambda group: group.id,
+                    page=0,
+                    items_per_page=5,
+                    with_back_butn=True
+                )
+            )
+        await state.clear()
+        await state.set_state(GeneralStates.admin_panel)
+        return
+
+    if action == "done":
+        if not sel_set:
+            await callback.message.answer("Не выбрано ни одного пользователя.")
+            return
+        await callback.message.delete()
+        await UserGroupDAO(session_without_commit).remove_users_from_group(group_id, list(sel_set))
+        group = await UserGroupDAO(session_without_commit).find_one_or_none_by_id(group_id)
+        info = f"Пользователи:"
+        for us in sel_set:
+            user = await UserDAO(session_without_commit).find_one_or_none_by_id(us)
+            info += f"\n- {user.admin_insert_name or user.username or user.id}"
+        info += f"\nудалены из группы '{group.name}'"
         await callback.message.answer(info)
         await state.clear()
         await state.set_state(GeneralStates.admin_panel)

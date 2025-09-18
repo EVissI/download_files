@@ -4,6 +4,7 @@ from bot.db.base import BaseDAO
 from bot.db.models import (
     Broadcast,
     BroadcastStatus,
+    BroadcastUser,
     ServiceType,
     User,
     Analysis,
@@ -20,7 +21,7 @@ from bot.db.models import (
     PromocodeServiceQuantity,
     MessageForNew
 )
-from sqlalchemy import delete, func, literal, not_, or_, select
+from sqlalchemy import delete, func, insert, literal, not_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -988,7 +989,6 @@ class BroadcastDAO(BaseDAO[Broadcast]):
     async def update_status(self, broadcast_id: int, status: BroadcastStatus) -> bool:
         """
         Обновляет статус рассылки по id.
-
         Возвращает True при успешном обновлении, False при ошибке или если запись не найдена.
         """
         try:
@@ -1005,6 +1005,60 @@ class BroadcastDAO(BaseDAO[Broadcast]):
             logger.error(f"Ошибка при обновлении статуса рассылки {broadcast_id}: {e}")
             await self._session.rollback()
             return False
+
+    async def add_recipients_to_broadcast(self, broadcast_id: int, user_ids: List[int]) -> bool:
+        """
+        Добавляет записи в таблицу BroadcastUser, связывая broadcast_id с указанными user_ids.
+        Возвращает True при успешном добавлении, False при ошибке или если broadcast_id не существует.
+        """
+        try:
+            # Проверяем, существует ли рассылка
+            broadcast = await self._session.get(self.model, broadcast_id)
+            if not broadcast:
+                logger.warning(f"Broadcast with id {broadcast_id} not found")
+                return False
+
+            # Создаем список словарей для массовой вставки
+            broadcast_user_entries = [
+                {"broadcast_id": broadcast_id, "user_id": user_id}
+                for user_id in user_ids
+            ]
+
+            # Выполняем массовую вставку в таблицу BroadcastUser
+            await self._session.execute(
+                insert(BroadcastUser),
+                broadcast_user_entries
+            )
+            await self._session.commit()
+            logger.info(f"Added {len(user_ids)} recipients to broadcast {broadcast_id}")
+            return True
+        except SQLAlchemyError as e:
+            logger.error(f"Error adding recipients to broadcast {broadcast_id}: {e}")
+            await self._session.rollback()
+            return False
+        
+    async def get_recipients_for_broadcast(self, broadcast_id: int) -> List[int]:
+        """
+        Получает список user_id, прикрепленных к указанной рассылке через таблицу BroadcastUser.
+        Возвращает пустой список, если рассылка не найдена или у нее нет получателей.
+        """
+        try:
+            # Проверяем, существует ли рассылка
+            broadcast = await self._session.get(self.model, broadcast_id)
+            if not broadcast:
+                logger.warning(f"Broadcast with id {broadcast_id} not found")
+                return []
+
+            # Запрашиваем user_id из таблицы BroadcastUser
+            query = select(BroadcastUser.user_id).where(BroadcastUser.broadcast_id == broadcast_id)
+            result = await self._session.execute(query)
+            user_ids = [row.user_id for row in result.fetchall()]
+            logger.info(f"Retrieved {len(user_ids)} recipients for broadcast {broadcast_id}")
+            return user_ids
+        except SQLAlchemyError as e:
+            logger.error(f"Error retrieving recipients for broadcast {broadcast_id}: {e}")
+            return []
+
 
 class MessageForNewDAO(BaseDAO[MessageForNew]):
     model = MessageForNew
@@ -1075,6 +1129,22 @@ class MessageForNewDAO(BaseDAO[MessageForNew]):
 class UserGroupDAO(BaseDAO[UserGroup]):
     model = UserGroup
 
+    async def get_users_in_group(self, group_id: int) -> list[User]:
+        """
+        Получить всех пользователей, входящих в указанную группу.
+        """
+        try:
+            query = (
+                select(User)
+                .join(UserInGroup, User.id == UserInGroup.user_id)
+                .where(UserInGroup.group_id == group_id)
+            )
+            result = await self._session.execute(query)
+            return result.scalars().all()
+
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении пользователей группы {group_id}: {e}")
+            raise
     async def add_users_to_group(self, group_id: int, user_ids: list[int]) -> UserGroup:
         """
         Добавить пользователей в группу по списку user_ids.

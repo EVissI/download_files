@@ -47,6 +47,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    broadcast_recipients: Mapped[list["Broadcast"]] = relationship(
+        "Broadcast",
+        secondary="broadcast_users",
+        back_populates="recipients"
+    )
 
 class Analysis(Base):
     __tablename__ = "analyzes"
@@ -284,14 +289,11 @@ class Broadcast(Base):
     __tablename__ = "broadcasts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
     text: Mapped[str] = mapped_column(Text, nullable=False)
     media_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    media_type: Mapped[str | None] = mapped_column(String(20), nullable=True)  
-    group: Mapped[str] = mapped_column(String(30), nullable=False)  
-
+    media_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    group: Mapped[str] = mapped_column(String(30), nullable=False)
     run_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-
     status: Mapped["BroadcastStatus"] = mapped_column(
         Enum(BroadcastStatus),
         default=BroadcastStatus.SCHEDULED.value,
@@ -299,8 +301,22 @@ class Broadcast(Base):
     )
     created_by: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id"), nullable=False
-        )
+    )
     user: Mapped["User"] = relationship("User", back_populates="broadcasts")
+    recipients: Mapped[list["User"]] = relationship(
+        "User",
+        secondary="broadcast_users",
+        back_populates="broadcast_recipients"
+    )
+
+
+class BroadcastUser(Base):
+    __tablename__ = "broadcast_users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    broadcast_id: Mapped[int] = mapped_column(Integer, ForeignKey("broadcasts.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+
 
 class MessageForNew(Base):
     __tablename__ = "messages_for_new"
@@ -329,6 +345,6 @@ class UserInGroup(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     group_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_groups.id"), nullable=False)
-    
+
     user: Mapped["User"] = relationship("User", back_populates="groups")
     group: Mapped["UserGroup"] = relationship("UserGroup", back_populates="users")

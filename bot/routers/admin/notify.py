@@ -135,6 +135,10 @@ async def start_broadcast(message: Message, state: FSMContext):
         InlineKeyboardButton(
             text="Конкретные пользователи",
             callback_data=BroadcastCallback(action="specific").pack()
+        ),
+        InlineKeyboardButton(
+            text="Текущие рассылки",
+            callback_data=BroadcastCallback(action="current_broadcast").pack()
         )
     )
     builder.adjust(1) 
@@ -176,6 +180,91 @@ async def process_specific_user(callback: CallbackQuery, callback_data: Broadcas
         )
     )
     await state.set_state(BroadcastStates.waiting_for_targets)
+
+@broadcast_router.callback_query(BroadcastCallback.filter(F.action == "current_broadcast"))
+async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, session_without_commit):
+    await callback.message.delete()
+    broadcast_dao = BroadcastDAO(session_without_commit)
+    broadcasts = await broadcast_dao.find_all(SBroadcast(
+        status=BroadcastStatus.SCHEDULED
+    ))
+    if not broadcasts:
+        await callback.message.answer("Нет запланированных или отправленных рассылок.", reply_markup=AdminKeyboard.build())
+        return
+    
+    for broadcast in broadcasts:
+        # Формируем текст для каждой рассылки
+        info = f"Рассылка ID: {broadcast.id}\n"
+        info += f"Текст: {broadcast.text[:30]}{'...' if len(broadcast.text) > 30 else ''}\n"
+        info += f"Медиа: {'есть' if broadcast.media_id else 'нет'}\n"
+        info += f"Группа: {broadcast.group}\n"
+        info += f"Время: {broadcast.run_time.strftime('%d.%m.%Y %H:%M (МСК)') if broadcast.run_time else 'без времени'}\n"
+        info += f"Статус: {broadcast.status.value}\n"
+
+        # Создаем кнопки "Юзеры" и "Отменить рассылку"
+        builder = InlineKeyboardBuilder()
+        builder.add(
+            InlineKeyboardButton(
+                text="Юзеры",
+                callback_data=BroadcastCallback(action="show_users", broadcast_id=broadcast.id).pack()
+            )
+        )
+        if broadcast.status == BroadcastStatus.SCHEDULED:
+            builder.add(
+                InlineKeyboardButton(
+                    text="Отменить рассылку",
+                    callback_data=BroadcastCallback(action="cancel_broadcast", broadcast_id=broadcast.id).pack()
+                )
+            )
+        builder.adjust(1)
+        
+        # Отправляем сообщение с информацией о рассылке и кнопками
+        await callback.message.answer(info, reply_markup=builder.as_markup())
+
+@broadcast_router.callback_query(BroadcastCallback.filter(F.action == "show_users"))
+async def show_broadcast_users(callback: CallbackQuery, callback_data: BroadcastCallback, session_without_commit):
+    broadcast_id = callback_data.broadcast_id
+    broadcast_dao = BroadcastDAO(session_without_commit)
+    user_dao = UserDAO(session_without_commit)
+    
+    # Получаем список user_id для рассылки
+    user_ids = await broadcast_dao.get_recipients_for_broadcast(broadcast_id)
+    if not user_ids:
+        await callback.message.answer(f"Для рассылки ID {broadcast_id} нет получателей.", reply_markup=AdminKeyboard.build())
+        return
+    
+    # Получаем информацию о пользователях
+    users_info = []
+    for user_id in user_ids:
+        user = await user_dao.find_one_or_none_by_id(user_id)
+        if user:
+            display_name = user.admin_insert_name or user.username or str(user.id)
+            users_info.append(f"- {display_name} (ID: {user_id})")
+    
+    # Формируем сообщение
+    message_text = f"Получатели рассылки ID {broadcast_id}:\n\n" + "\n".join(users_info) if users_info else f"Для рассылки ID {broadcast_id} нет получателей."
+    await callback.message.answer(message_text, reply_markup=AdminKeyboard.build())
+
+@broadcast_router.callback_query(BroadcastCallback.filter(F.action == "cancel_broadcast"))
+async def cancel_broadcast_action(callback: CallbackQuery, callback_data: BroadcastCallback, session_without_commit):
+    broadcast_id = callback_data.broadcast_id
+    broadcast_dao = BroadcastDAO(session_without_commit)
+    
+    # Обновляем статус рассылки на CANCELLED
+    success = await broadcast_dao.update_status(broadcast_id, BroadcastStatus.CANCELLED)
+    if not success:
+        await callback.message.answer(f"Не удалось отменить рассылку ID {broadcast_id}.", reply_markup=AdminKeyboard.build())
+        return
+    
+    # Удаляем задачу из планировщика
+    job_id = f"broadcast_{broadcast_id}"
+    job = scheduler.get_job(job_id)
+    if job:
+        scheduler.remove_job(job_id)
+        logger.info(f"Scheduled job for broadcast {broadcast_id} removed.")
+    
+    await session_without_commit.commit()
+    await callback.message.answer(f"Рассылка ID {broadcast_id} отменена.", reply_markup=AdminKeyboard.build())
 
 @broadcast_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(BroadcastStates))
 async def cancel_broadcast(message: Message, state: FSMContext):
@@ -328,14 +417,12 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
             callback_data=BroadcastCallback(action="cancel").pack()
         )
     )
-    # Добавляем кнопку для назначения времени только если это не рассылка по конкретным пользователям
-    if user_data.get("group") != "specific":
-        builder.add(
-            InlineKeyboardButton(
-                text="Добавить время рассылки",
-                callback_data=BroadcastCallback(action="date").pack()
-            )
+    builder.add(
+        InlineKeyboardButton(
+            text="Добавить время рассылки",
+            callback_data=BroadcastCallback(action="date").pack()
         )
+    )
     builder.adjust(1)  
     # Отправка превью
     if media_id and media_type:
@@ -368,11 +455,6 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action == "date"))
 async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
     user_data = await state.get_data()
-    # запрет на планирование для конкретных пользователей (нет сохранения targets в БД)
-    if user_data.get("group") == "specific":
-        await callback.answer("Планирование по времени для конкретных пользователей сейчас не поддерживается. Отправьте без времени.", show_alert=True)
-        return
-
     await callback.message.delete()
     tz = timezone("Europe/Moscow")
     today = datetime.now(tz).replace(tzinfo=None)
@@ -445,7 +527,16 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
     media_id = user_data.get("media_id")
     media_type = user_data.get("media_type")
     group = user_data.get("group")
-
+    user_dao = UserDAO(session_without_commit)
+    match group:
+        case "specific":
+            target_user_ids = user_data.get("target_user_ids", [])
+        case 'all_users':
+            target_user_ids = [user.id for user in await user_dao.find_all()]
+        case 'with_purchases':
+            target_user_ids = [user.id for user in await user_dao.get_users_with_payments()]
+        case 'without_purchases':
+            target_user_ids = [user.id for user in await user_dao.get_users_without_payments()]
     # сохраняем рассылку в БД
     broadcast_dao = BroadcastDAO(session_without_commit)
     broadcast = await broadcast_dao.add(
@@ -459,7 +550,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
             created_by=message.from_user.id
         )
     )
-    # сразу же регистрируем задачу в APScheduler
+    await broadcast_dao.add_recipients_to_broadcast(broadcast.id, target_user_ids)
     scheduler.add_job(
         run_broadcast_job,
         "date",
@@ -483,7 +574,6 @@ async def run_broadcast_job(broadcast_id: int):
     from bot.db.database import async_session_maker
     async with async_session_maker() as session:
         broadcast_dao = BroadcastDAO(session)
-        user_dao = UserDAO(session)
 
         broadcast = await broadcast_dao.find_one_or_none_by_id(broadcast_id)
         if not broadcast or broadcast.status != BroadcastStatus.SCHEDULED:
@@ -491,20 +581,11 @@ async def run_broadcast_job(broadcast_id: int):
 
         # Сохраняем все нужные поля локально, чтобы не вызывать lazy-load после await
         b_id = broadcast.id
-        b_group = broadcast.group
         b_text = broadcast.text
         b_media_id = broadcast.media_id
         b_media_type = broadcast.media_type
         b_created_by = broadcast.created_by
-        # выборка пользователей
-        if b_group == "all_users":
-            user_ids = [user.id for user in await user_dao.find_all()]
-        elif b_group == "with_purchases":
-            user_ids = [user.id for user in await user_dao.get_users_with_payments()]
-        elif b_group == "without_purchases":
-            user_ids = [user.id for user in await user_dao.get_users_without_payments()]
-        else:
-            return
+        user_ids = await BroadcastDAO.get_recipients_for_broadcast(b_id)
 
         successful, failed = await broadcast_message(
             user_ids=user_ids,
@@ -541,27 +622,16 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
     media_type = user_data.get("media_type")
     group = user_data.get("group")
     
-    # Выборка пользователей в зависимости от группы
-    if group == "specific":
-        user_ids = user_data.get("target_user_ids", [])
-        if not user_ids:
-            await callback.message.answer("Не указаны целевые пользователи.", reply_markup=AdminKeyboard.build())
-            await state.clear()
-            await state.set_state(GeneralStates.admin_panel)
-            return
-    else:
-        user_dao = UserDAO(session_without_commit)
-        if group == "all_users":
+    user_dao = UserDAO(session_without_commit)
+    match group:
+        case "specific":
+            user_ids = user_data.get("target_user_ids", [])
+        case 'all_users':
             user_ids = [user.id for user in await user_dao.find_all()]
-        elif group == "with_purchases":
+        case 'with_purchases':
             user_ids = [user.id for user in await user_dao.get_users_with_payments()]
-        elif group == "without_purchases":
+        case 'without_purchases':
             user_ids = [user.id for user in await user_dao.get_users_without_payments()]
-        else:
-            await callback.message.answer("Выбрана неверная группа.")
-            await state.clear()
-            await state.set_state(GeneralStates.admin_panel)
-            return
     
     successful, failed = await broadcast_message(
         user_ids=user_ids,
