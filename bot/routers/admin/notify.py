@@ -232,7 +232,7 @@ async def show_broadcast_users(callback: CallbackQuery, callback_data: Broadcast
     broadcast_id = callback_data.broadcast_id
     broadcast_dao = BroadcastDAO(session_without_commit)
     user_dao = UserDAO(session_without_commit)
-    
+    await callback.message.delete()
     # Получаем список user_id для рассылки
     user_ids = await broadcast_dao.get_recipients_for_broadcast(broadcast_id)
     if not user_ids:
