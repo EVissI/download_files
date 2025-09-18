@@ -32,6 +32,10 @@ broadcast_router = Router()
 class BroadcastCallback(CallbackData, prefix="broadcast"):
     action: str  # confirm, cancel, no_media, all_users, with_purchases, without_purchases
 
+class BroadcastListCallback(CallbackData, prefix="broadcast_list"):
+    action: str  # show_users, cancel_broadcast
+    broadcast_id: int
+
 # Определение состояний для FSM
 class BroadcastStates(StatesGroup):
     waiting_for_text = State()
@@ -181,6 +185,7 @@ async def process_specific_user(callback: CallbackQuery, callback_data: Broadcas
     )
     await state.set_state(BroadcastStates.waiting_for_targets)
 
+
 @broadcast_router.callback_query(BroadcastCallback.filter(F.action == "current_broadcast"))
 async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, session_without_commit):
     await callback.message.delete()
@@ -206,14 +211,14 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
         builder.add(
             InlineKeyboardButton(
                 text="Юзеры",
-                callback_data=BroadcastCallback(action="show_users", broadcast_id=broadcast.id).pack()
+                callback_data=BroadcastListCallback(action="show_users", broadcast_id=broadcast.id).pack()
             )
         )
         if broadcast.status == BroadcastStatus.SCHEDULED:
             builder.add(
                 InlineKeyboardButton(
                     text="Отменить рассылку",
-                    callback_data=BroadcastCallback(action="cancel_broadcast", broadcast_id=broadcast.id).pack()
+                    callback_data=BroadcastListCallback(action="cancel_broadcast", broadcast_id=broadcast.id).pack()
                 )
             )
         builder.adjust(1)
@@ -221,8 +226,9 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
         # Отправляем сообщение с информацией о рассылке и кнопками
         await callback.message.answer(info, reply_markup=builder.as_markup())
 
-@broadcast_router.callback_query(BroadcastCallback.filter(F.action == "show_users"))
-async def show_broadcast_users(callback: CallbackQuery, callback_data: BroadcastCallback, session_without_commit):
+
+@broadcast_router.callback_query(BroadcastListCallback.filter(F.action == "show_users"))
+async def show_broadcast_users(callback: CallbackQuery, callback_data: BroadcastListCallback, session_without_commit):
     broadcast_id = callback_data.broadcast_id
     broadcast_dao = BroadcastDAO(session_without_commit)
     user_dao = UserDAO(session_without_commit)
@@ -245,8 +251,9 @@ async def show_broadcast_users(callback: CallbackQuery, callback_data: Broadcast
     message_text = f"Получатели рассылки ID {broadcast_id}:\n\n" + "\n".join(users_info) if users_info else f"Для рассылки ID {broadcast_id} нет получателей."
     await callback.message.answer(message_text, reply_markup=AdminKeyboard.build())
 
-@broadcast_router.callback_query(BroadcastCallback.filter(F.action == "cancel_broadcast"))
-async def cancel_broadcast_action(callback: CallbackQuery, callback_data: BroadcastCallback, session_without_commit):
+
+@broadcast_router.callback_query(BroadcastListCallback.filter(F.action == "cancel_broadcast"))
+async def cancel_broadcast_action(callback: CallbackQuery, callback_data: BroadcastListCallback, session_without_commit):
     broadcast_id = callback_data.broadcast_id
     broadcast_dao = BroadcastDAO(session_without_commit)
     
@@ -266,6 +273,7 @@ async def cancel_broadcast_action(callback: CallbackQuery, callback_data: Broadc
     await session_without_commit.commit()
     await callback.message.answer(f"Рассылка ID {broadcast_id} отменена.", reply_markup=AdminKeyboard.build())
 
+
 @broadcast_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")), StateFilter(BroadcastStates))
 async def cancel_broadcast(message: Message, state: FSMContext):
     await state.clear()
@@ -274,6 +282,7 @@ async def cancel_broadcast(message: Message, state: FSMContext):
         "Рассылка отменена.",
         reply_markup=AdminKeyboard.build()
     )
+
 
 @broadcast_router.message(F.text, StateFilter(BroadcastStates.waiting_for_text))
 async def process_broadcast_text(message: Message, state: FSMContext):
@@ -292,6 +301,7 @@ async def process_broadcast_text(message: Message, state: FSMContext):
         reply_markup=builder.as_markup()
     )
     await state.set_state(BroadcastStates.waiting_for_media)
+
 
 @broadcast_router.callback_query(PaginatedCheckboxCallback.filter(F.context == 'broadcast_specific'), StateFilter(BroadcastStates.waiting_for_targets))
 async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheckboxCallback, state: FSMContext, session_without_commit, i18n):
@@ -452,6 +462,7 @@ async def process_broadcast_media(event: Message | CallbackQuery, state: FSMCont
     await state.update_data(sent_message_id=sent_message.message_id)
     await state.set_state(BroadcastStates.waiting_for_confirmation)
 
+
 @broadcast_router.callback_query(BroadcastStates.waiting_for_confirmation, BroadcastCallback.filter(F.action == "date"))
 async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
     user_data = await state.get_data()
@@ -469,6 +480,7 @@ async def process_broadcast_date(callback: CallbackQuery, state: FSMContext):
         reply_markup=await calendar.start_calendar()
     )
     await state.set_state(BroadcastStates.waiting_for_date)
+
 
 @broadcast_router.callback_query(SimpleCalendarCallback.filter())
 async def process_simple_calendar(callback_query: CallbackQuery, callback_data: CallbackData, state: FSMContext):
@@ -489,6 +501,7 @@ async def process_simple_calendar(callback_query: CallbackQuery, callback_data: 
             "Введите время рассылки в формате HH:MM (по Москве):"
         )
         await state.set_state(BroadcastStates.waiting_for_time)
+
 
 @broadcast_router.message(StateFilter(BroadcastStates.waiting_for_time))
 async def process_time(message: Message, state: FSMContext, session_without_commit):
