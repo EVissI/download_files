@@ -80,6 +80,16 @@ async def handle_user_group_actions(callback: CallbackQuery, callback_data: User
                     with_back_butn=True
                 )
             )
+        case "group_view":
+            await callback.answer()
+            groups = await UserGroupDAO(session_without_commit).find_all()
+            for g in groups:
+                users = await UserGroupDAO(session_without_commit).get_users_in_group(g.id)
+                message = f'<b>Участники группы{g.name}:</b>\n'
+                for u in users:
+                    message += f'- {u.admin_insert_name or u.username or u.id}'
+                await callback.message.answer(message)
+
         case _:
             await callback.message.answer("Неизвестное действие.")
 

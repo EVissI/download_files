@@ -289,6 +289,7 @@ class Broadcast(Base):
     __tablename__ = "broadcasts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str]
     text: Mapped[str] = mapped_column(Text, nullable=False)
     media_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     media_type: Mapped[str | None] = mapped_column(String(20), nullable=True)

@@ -124,6 +124,7 @@ class SUserAnalizePayment(BaseModel):
 
 class SBroadcast(BaseModel):
     id: int | None = None
+    name: str | None = None
     text: str | None = None
     media_id: str | None = None
     media_type: str | None = None

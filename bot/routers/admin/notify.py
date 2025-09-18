@@ -38,6 +38,7 @@ class BroadcastListCallback(CallbackData, prefix="broadcast_list"):
 
 # Определение состояний для FSM
 class BroadcastStates(StatesGroup):
+    waiting_broadcase_name = State()
     waiting_for_text = State()
     waiting_for_media = State()
     waiting_for_confirmation = State()
@@ -167,10 +168,10 @@ async def process_broadcast_group(callback: CallbackQuery, callback_data: Broadc
     await state.update_data(group=callback_data.action)
     
     await callback.message.answer(
-        "Введите текст для рассылки:",
+        "Придумайте название рассылки:",
         reply_markup=get_cancel_kb(i18n)  
     )
-    await state.set_state(BroadcastStates.waiting_for_text)
+    await state.set_state(BroadcastStates.waiting_broadcase_name)
 
 @broadcast_router.callback_query(BroadcastCallback.filter(F.action == "user_group"))
 async def process_broadcast_user_group(callback: CallbackQuery, state: FSMContext, i18n, session_without_commit):
@@ -201,10 +202,10 @@ async def handle_broadcast_user_group_selection(callback: CallbackQuery, callbac
             group = await group_dao.find_one_or_none_by_id(group_id)
             await state.update_data(group="user_group", user_group_id=group_id)
             await callback.message.answer(
-                f"Вы выбрали группу: {group.name}\n\nВведите текст для рассылки:",
+                f"Вы выбрали группу: {group.name}\n\nПридумайте название рассылки:",
                 reply_markup=get_cancel_kb(i18n)
             )
-            await state.set_state(BroadcastStates.waiting_for_text)
+            await state.set_state(BroadcastStates.waiting_broadcase_name)
         case "prev" | "next":
             keyboard = get_paginated_keyboard(
                 items=await UserGroupDAO(session_without_commit).find_all(),
@@ -254,15 +255,22 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
     if not broadcasts:
         await callback.message.answer("Нет запланированных или отправленных рассылок.", reply_markup=AdminKeyboard.build())
         return
-    
+    tz = timezone("Europe/Moscow")
+    group_ru={
+        'user_group':'Кастомные группы',
+        'without_purchases':'Без покупок',
+        'all_users':'Все пользователи',
+        'with_purchases':'Пользователи с покупками',
+        'specific':'Таргетированная рассылка'
+    }
     for broadcast in broadcasts:
         # Формируем текст для каждой рассылки
-        info = f"Рассылка ID: {broadcast.id}\n"
+        info = f"Имя рассылки: {broadcast.name}\n"
         info += f"Текст: {broadcast.text[:30]}{'...' if len(broadcast.text) > 30 else ''}\n"
         info += f"Медиа: {'есть' if broadcast.media_id else 'нет'}\n"
-        info += f"Группа: {broadcast.group}\n"
-        info += f"Время: {broadcast.run_time.strftime('%d.%m.%Y %H:%M (МСК)') if broadcast.run_time else 'без времени'}\n"
-        info += f"Статус: {broadcast.status.value}\n"
+        info += f"Тип: {group_ru.get(broadcast.group)}\n"
+        info += f"Время: {broadcast.run_time.strftime('%d.%m.%Y %H:%M (МСК)').replace(timezone=tz) if broadcast.run_time else 'без времени'}\n"
+        info += f"Статус: Запланированно\n"
 
         # Создаем кнопки "Юзеры" и "Отменить рассылку"
         builder = InlineKeyboardBuilder()
@@ -280,8 +288,14 @@ async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, se
         )
         builder.adjust(1)
         
-        # Отправляем сообщение с информацией о рассылке и кнопками
-        await callback.message.answer(info, reply_markup=builder.as_markup())
+        match broadcast.media_type:
+            case 'photo':
+                await callback.message.answer_photo(photo=broadcast.media_id, caption=info, reply_markup=builder.as_markup())
+            case 'video':
+                await callback.message.answer_video(photo=broadcast.media_id, caption=info, reply_markup=builder.as_markup())
+            case _:
+                await callback.message.answer(info, reply_markup=builder.as_markup())
+        await asyncio.sleep(0.1)
 
 
 @broadcast_router.callback_query(BroadcastListCallback.filter(F.action == "show_users"))
@@ -340,6 +354,13 @@ async def cancel_broadcast(message: Message, state: FSMContext):
         reply_markup=AdminKeyboard.build()
     )
 
+@broadcast_router.message(F.text, StateFilter(BroadcastStates.waiting_broadcase_name))
+async def process_broadcast_name(message: Message, state: FSMContext):
+    await state.update_data(broadcast_name=message.text)
+    await message.answer(
+        "Введите текст рассылки"
+    )
+    await state.set_state(BroadcastStates.waiting_for_text)
 
 @broadcast_router.message(F.text, StateFilter(BroadcastStates.waiting_for_text))
 async def process_broadcast_text(message: Message, state: FSMContext):
@@ -427,8 +448,8 @@ async def process_targets(callback: CallbackQuery, callback_data: PaginatedCheck
         for us in sel_set:
             user = await UserDAO(session_without_commit).find_one_or_none_by_id(us)
             info += f"\n- {user.admin_insert_name or user.username or user.id}"
-        await callback.message.answer(info + "\n\nТеперь введите текст рассылки:", reply_markup=get_cancel_kb(i18n))
-        await state.set_state(BroadcastStates.waiting_for_text)
+        await callback.message.answer(info + "\n\nПридумайте название рассылки:", reply_markup=get_cancel_kb(i18n))
+        await state.set_state(BroadcastStates.waiting_broadcase_name)
         return
 
 
@@ -597,6 +618,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
     media_id = user_data.get("media_id")
     media_type = user_data.get("media_type")
     group = user_data.get("group")
+    broadcast_name = user_data.get('broadcast_name')
     user_dao = UserDAO(session_without_commit)
     match group:
         case "specific":
@@ -616,6 +638,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
     broadcast = await broadcast_dao.add(
         SBroadcast(
             text=text,
+            name=broadcast_name,
             media_id=media_id,
             media_type=media_type,
             group=group,

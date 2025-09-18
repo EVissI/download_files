@@ -23,5 +23,9 @@ def get_user_group_kb() -> InlineKeyboardMarkup:
         text='Удалить пользователей из группы',
         callback_data=UserGroupCallback(action="delete_users").pack(),
     )
+    kb.button(
+        text='Просмотреть группы',
+        callback_data=UserGroupCallback(action="group_view").pack(),
+    )
     kb.adjust(1)
     return kb.as_markup()
