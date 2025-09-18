@@ -256,7 +256,7 @@ async def show_broadcast_users(callback: CallbackQuery, callback_data: Broadcast
 async def cancel_broadcast_action(callback: CallbackQuery, callback_data: BroadcastListCallback, session_without_commit):
     broadcast_id = callback_data.broadcast_id
     broadcast_dao = BroadcastDAO(session_without_commit)
-    
+    await callback.message.delete()
     # Обновляем статус рассылки на CANCELLED
     success = await broadcast_dao.update_status(broadcast_id, BroadcastStatus.CANCELLED)
     if not success:
