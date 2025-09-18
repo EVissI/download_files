@@ -1029,7 +1029,6 @@ class BroadcastDAO(BaseDAO[Broadcast]):
                 insert(BroadcastUser),
                 broadcast_user_entries
             )
-            await self._session.commit()
             logger.info(f"Added {len(user_ids)} recipients to broadcast {broadcast_id}")
             return True
         except SQLAlchemyError as e:
