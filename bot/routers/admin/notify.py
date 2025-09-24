@@ -185,7 +185,7 @@ async def process_archive_broadcast(callback: CallbackQuery, callback_data: Broa
             context='archive_broadcasts',
             get_display_text=lambda broadcast: f"{broadcast.name}",
             get_item_id=lambda broadcast: broadcast.id,
-            page=callback_data.page,
+            page=0,
             items_per_page=7,
         )
     )
