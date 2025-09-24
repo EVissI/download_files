@@ -241,6 +241,12 @@ async def generate_detailed_user_analysis_report(
                 ws.cell(row=current_row, column=col).alignment = center_align
             current_row += 1
 
+        if current_row > 2: 
+            avg_cell = ws.cell(row=current_row, column=5)
+            avg_cell.value = f"=AVERAGE(E2:E{current_row-1})"
+            avg_cell.font = Font(bold=True)
+            avg_cell.alignment = center_align
+
         column_widths = {
             "A": 25,
             "B": 25,
@@ -372,7 +378,11 @@ async def generate_detailed_user_by_id_analysis_report(
             for col in range(1, 24):
                 ws.cell(row=current_row, column=col).alignment = center_align
             current_row += 1
-
+        if current_row > 2:  # значит есть хотя бы одна запись
+            avg_cell = ws.cell(row=current_row, column=5)
+            avg_cell.value = f"=AVERAGE(E2:E{current_row-1})"
+            avg_cell.font = Font(bold=True)
+            avg_cell.alignment = center_align
         column_widths = {
             "A": 25, "B": 25, "C": 25, "D": 25, "E": 25, "F": 25, "G": 25, "H": 25,
             "I": 25, "J": 25, "K": 25, "L": 25, "M": 35, "N": 35, "O": 35, "P": 35,

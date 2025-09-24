@@ -46,6 +46,14 @@ class BroadcastStates(StatesGroup):
     waiting_for_time = State()
     waiting_for_targets = State()
 
+    
+group_ru={
+    'user_group':'Кастомные группы',
+    'without_purchases':'Без покупок',
+    'all_users':'Все пользователи',
+    'with_purchases':'Пользователи с покупками',
+    'specific':'Таргетированная рассылка'
+}
 # Функция отправки сообщения пользователю
 async def notify_user(user_id: int, text: str, media_id: str = None, media_type: str = None):
     """
@@ -145,6 +153,10 @@ def build_notify_kb():
         InlineKeyboardButton(
             text="Текущие рассылки",
             callback_data=BroadcastCallback(action="current_broadcast").pack()
+        ),
+        InlineKeyboardButton(
+            text="Архив рассылок",
+            callback_data=BroadcastCallback(action="archive_broadcast").pack()
         )
     )
     builder.adjust(1) 
@@ -159,6 +171,123 @@ async def start_broadcast(message: Message, state: FSMContext):
         reply_markup=build_notify_kb()
     )
 
+@broadcast_router.callback_query(BroadcastListCallback.filter(F.action == "archive_back"))
+@broadcast_router.callback_query(BroadcastCallback.filter(F.action == 'archive_broadcast'))
+async def process_archive_broadcast(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext,session_without_commit):
+    await callback.message.delete()
+    broadcast_dao = BroadcastDAO(session_without_commit)
+    broadcasts = await broadcast_dao.find_all(SBroadcast(
+        status=BroadcastStatus.SENT
+    ))
+    await callback.message.answer(
+        'Архив рассылок', reply_markup=get_paginated_keyboard(
+            items=broadcasts,
+            context='archive_broadcasts',
+            get_display_text=lambda broadcast: f"{broadcast.name}",
+            get_item_id=lambda broadcast: broadcast.id,
+            page=callback_data.page,
+            items_per_page=7,
+        )
+    )
+
+@broadcast_router.callback_query(PaginatedCallback.filter(F.context == 'archive_broadcasts'))
+async def process_archive_paginate(callback: CallbackQuery, callback_data: PaginatedCallback, state: FSMContext, i18n, session_without_commit):
+    match callback_data.action:
+        case "select":
+            await callback.message.delete()
+            broadcast_dao = BroadcastDAO(session_without_commit)
+            user_dao = UserDAO(session_without_commit)
+            broadcast = await broadcast_dao.find_one_or_none_by_id(callback_data.item_id)
+            if broadcast.media_type in ['specific','user_group']:
+                group_msg = 'Кому:\n'
+                users_ids = await broadcast_dao.get_recipients_for_broadcast(broadcast.id)
+                for user_id in users_ids:
+                    user = await user_dao.find_one_or_none_by_id(user_id)
+                    group_msg += f'- {user.admin_insert_name or user.username or str(user.id)}\n'
+            else:
+                group_msg = f"Тип: {group_ru.get(broadcast.group)}\n"
+                
+            # Формируем текст для каждой рассылки
+            broadcast.run_time = broadcast.run_time.replace(hour=broadcast.run_time.hour+3)
+            info = f"Имя рассылки: <b>{broadcast.name}</b>\n"
+            info += f"Текст: {broadcast.text[:30]}{'...' if len(broadcast.text) > 30 else ''}\n"
+            info += f"Медиа: {'есть' if broadcast.media_id else 'нет'}\n"
+            info += group_msg
+            info += f"Время: {broadcast.run_time.strftime('%d.%m.%Y %H:%M (МСК)') if broadcast.run_time else 'без времени'}\n"
+            info += f"Статус: Отправленно\n"
+
+            builder = InlineKeyboardBuilder()
+            builder.add(
+                InlineKeyboardButton(
+                    text="Повторить рассылку",
+                    callback_data=BroadcastListCallback(action="archive_repeat", broadcast_id=broadcast.id).pack()
+                )
+            )
+            builder.add(
+                InlineKeyboardButton(
+                    text="Назад",
+                    callback_data=BroadcastListCallback(action="archive_back", broadcast_id=broadcast.id).pack()
+                )
+            )
+            builder.adjust(1)
+            
+            match broadcast.media_type:
+                case 'photo':
+                    await callback.message.answer_photo(photo=broadcast.media_id, caption=info, reply_markup=builder.as_markup())
+                case 'video':
+                    await callback.message.answer_video(photo=broadcast.media_id, caption=info, reply_markup=builder.as_markup())
+                case _:
+                    await callback.message.answer(info, reply_markup=builder.as_markup())
+            await asyncio.sleep(0.1)
+        case "prev" | "next":
+            keyboard = get_paginated_keyboard(
+                items=await BroadcastDAO(session_without_commit).find_all(
+                SBroadcast(
+                    status=BroadcastStatus.SENT
+                )),
+                context="archive_broadcasts",
+                get_display_text=lambda broadcast: f"{broadcast.name}",
+                get_item_id=lambda broadcast: broadcast.id,
+                page=callback_data.page,
+                items_per_page=7,
+            )
+            await callback.message.edit_reply_markup(reply_markup=keyboard)
+
+@broadcast_router.callback_query(BroadcastListCallback.filter(F.action == 'archive_repeat'))
+async def process_archive_repeat(callback: CallbackQuery, callback_data: BroadcastListCallback, state: FSMContext, session_without_commit):
+    broadcast_dao = BroadcastDAO(session_without_commit)
+    broadcast = await broadcast_dao.find_one_or_none_by_id(callback_data.broadcast_id)
+    users = await broadcast_dao.get_recipients_for_broadcast(broadcast.id)
+
+    # сохраняем в state все нужные данные
+    await state.update_data(
+        group=broadcast.group,
+        target_user_ids=users,
+        broadcast_text=broadcast.text,
+        media_id=broadcast.media_id,
+        media_type=broadcast.media_type,
+        broadcast_name=f"{broadcast.name} (повтор)"
+    )
+
+    preview_text = f"Повтор рассылки:\n\n{broadcast.text[:100]}"
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        InlineKeyboardButton(text="Подтвердить", callback_data=BroadcastCallback(action="confirm").pack()),
+        InlineKeyboardButton(text="Отменить", callback_data=BroadcastCallback(action="cancel").pack())
+    )
+    builder.add(
+        InlineKeyboardButton(text="Добавить время", callback_data=BroadcastCallback(action="date").pack())
+    )
+    builder.adjust(1)
+
+    if broadcast.media_id and broadcast.media_type == "photo":
+        await callback.message.answer_photo(broadcast.media_id, caption=preview_text, reply_markup=builder.as_markup())
+    elif broadcast.media_id and broadcast.media_type == "video":
+        await callback.message.answer_video(broadcast.media_id, caption=preview_text, reply_markup=builder.as_markup())
+    else:
+        await callback.message.answer(preview_text, reply_markup=builder.as_markup())
+
+    await state.set_state(BroadcastStates.waiting_for_confirmation)
 
 @broadcast_router.callback_query(BroadcastCallback.filter(F.action.in_(['all_users', 'with_purchases', 'without_purchases'])))
 async def process_broadcast_group(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext,i18n):
@@ -249,27 +378,30 @@ async def process_specific_user(callback: CallbackQuery, callback_data: Broadcas
 async def show_current_broadcasts(callback: CallbackQuery, state: FSMContext, session_without_commit):
     await callback.message.delete()
     broadcast_dao = BroadcastDAO(session_without_commit)
+    user_dao = UserDAO(session_without_commit)
     broadcasts = await broadcast_dao.find_all(SBroadcast(
         status=BroadcastStatus.SCHEDULED
     ))
     if not broadcasts:
-        await callback.message.answer("Нет запланированных или отправленных рассылок.", reply_markup=AdminKeyboard.build())
+        await callback.message.answer("Нет запланированных рассылок.", reply_markup=AdminKeyboard.build())
         return
-    tz = timezone("Europe/Moscow")
-    group_ru={
-        'user_group':'Кастомные группы',
-        'without_purchases':'Без покупок',
-        'all_users':'Все пользователи',
-        'with_purchases':'Пользователи с покупками',
-        'specific':'Таргетированная рассылка'
-    }
+
     for broadcast in broadcasts:
+        if broadcast.media_type in ['specific','user_group']:
+            group_msg = 'Кому:\n'
+            users_ids = await broadcast_dao.get_recipients_for_broadcast(broadcast.id)
+            for user_id in users_ids:
+                user = await user_dao.find_one_or_none_by_id(user_id)
+                group_msg += f'- {user.admin_insert_name or user.username or str(user.id)}\n'
+        else:
+            group_msg = f"Тип: {group_ru.get(broadcast.group)}\n"
+            
         # Формируем текст для каждой рассылки
         broadcast.run_time = broadcast.run_time.replace(hour=broadcast.run_time.hour+3)
         info = f"Имя рассылки: <b>{broadcast.name}</b>\n"
         info += f"Текст: {broadcast.text[:30]}{'...' if len(broadcast.text) > 30 else ''}\n"
         info += f"Медиа: {'есть' if broadcast.media_id else 'нет'}\n"
-        info += f"Тип: {group_ru.get(broadcast.group)}\n"
+        info += group_msg
         info += f"Время: {broadcast.run_time.strftime('%d.%m.%Y %H:%M (МСК)') if broadcast.run_time else 'без времени'}\n"
         info += f"Статус: Запланированно\n"
 
