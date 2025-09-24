@@ -194,7 +194,7 @@ async def handle_custom_date_range_input(
                 create_message_for_user(user),
                 reply_markup=get_user_settings_kb(user_id)
         )
-        await state.set_state(GeneralStates.admin_panel)
         await state.clear()
+        await state.set_state(GeneralStates.admin_panel)
     except ValueError as e:
         await message.answer(f"Ошибка: {e}\nПопробуйте снова или введите 'Отмена' для выхода.")

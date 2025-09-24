@@ -104,6 +104,12 @@ async def generate_detailed_analysis_report(
                 ws.cell(row=current_row, column=col).alignment = center_align
 
             current_row += 1
+            
+        if current_row > 2: 
+            avg_cell = ws.cell(row=current_row, column=5)
+            avg_cell.value = f"=AVERAGE(E2:E{current_row-1})"
+            avg_cell.font = Font(bold=True)
+            avg_cell.alignment = center_align
 
         column_widths = {
             "A": 25,
