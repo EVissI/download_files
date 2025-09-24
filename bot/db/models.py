@@ -293,6 +293,7 @@ class Broadcast(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     media_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     media_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    group_id:Mapped[int | None] = mapped_column(Integer, nullable=True)
     group: Mapped[str] = mapped_column(String(30), nullable=False)
     run_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped["BroadcastStatus"] = mapped_column(

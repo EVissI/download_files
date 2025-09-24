@@ -259,17 +259,14 @@ async def process_archive_repeat(callback: CallbackQuery, callback_data: Broadca
     broadcast_dao = BroadcastDAO(session_without_commit)
     broadcast = await broadcast_dao.find_one_or_none_by_id(callback_data.broadcast_id)
     users = await broadcast_dao.get_recipients_for_broadcast(broadcast.id)
-    if broadcast.media_type == 'user_group':
-        media_type = 'specific'
-    else:
-        media_type = broadcast.media_type
     # сохраняем в state все нужные данные
     await state.update_data(
         group=broadcast.group,
         target_user_ids=users,
         broadcast_text=broadcast.text,
         media_id=broadcast.media_id,
-        media_type=media_type,
+        user_group_id=broadcast.group_id,
+        media_type=broadcast.media_type,
         broadcast_name=f"{broadcast.name} (повтор)"
     )
 
@@ -780,6 +777,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
             name=broadcast_name,
             media_id=media_id,
             media_type=media_type,
+            group_id=user_data.get("user_group_id"),
             group=group,
             run_time=run_time,
             status=BroadcastStatus.SCHEDULED,

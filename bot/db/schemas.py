@@ -128,6 +128,7 @@ class SBroadcast(BaseModel):
     text: str | None = None
     media_id: str | None = None
     media_type: str | None = None
+    group_id: int| None = None
     group: str | None = None
     run_time: datetime | None = None
     status: str | None = None
