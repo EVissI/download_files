@@ -969,6 +969,35 @@ class UserAnalizePaymentDAO(BaseDAO[UserAnalizePayment]):
 
 class BroadcastDAO(BaseDAO[Broadcast]):
     model = Broadcast
+    async def get_unique_content_broadcasts(self) -> List[Broadcast]:
+        """
+        Получает все рассылки со статусом SENT, выбирая только одну рассылку с уникальным текстом (с наименьшим id).
+        """
+        try:
+            # Подзапрос для получения минимального id для каждого уникального content
+            subquery = (
+                select(func.min(self.model.id).label("min_id"))
+                .where(self.model.status == BroadcastStatus.SENT)
+                .group_by(self.model.text)
+                .subquery()
+            )
+
+            # Основной запрос, который выбирает полные записи Broadcast, где id совпадает с min_id
+            query = (
+                select(self.model)
+                .where(
+                    self.model.status == BroadcastStatus.SENT,
+                    self.model.id.in_(select(subquery.c.min_id))
+                )
+                .order_by(self.model.id)
+            )
+            result = await self._session.execute(query)
+            broadcasts = result.scalars().all()
+            logger.info(f"Загружено {len(broadcasts)} уникальных рассылок со статусом SENT")
+            return broadcasts
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при загрузке уникальных рассылок: {e}")
+            raise
 
     async def get_scheduled_broadcasts(self) -> List[Broadcast]:
         """

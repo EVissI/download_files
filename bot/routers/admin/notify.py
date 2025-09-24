@@ -176,9 +176,7 @@ async def start_broadcast(message: Message, state: FSMContext):
 async def process_archive_broadcast(callback: CallbackQuery, callback_data: BroadcastCallback, state: FSMContext,session_without_commit):
     await callback.message.delete()
     broadcast_dao = BroadcastDAO(session_without_commit)
-    broadcasts = await broadcast_dao.find_all(SBroadcast(
-        status=BroadcastStatus.SENT
-    ))
+    broadcasts = await broadcast_dao.get_unique_content_broadcasts()
     await callback.message.answer(
         'Архив рассылок', reply_markup=get_paginated_keyboard(
             items=broadcasts,
@@ -241,10 +239,7 @@ async def process_archive_paginate(callback: CallbackQuery, callback_data: Pagin
             await asyncio.sleep(0.1)
         case "prev" | "next":
             keyboard = get_paginated_keyboard(
-                items=await BroadcastDAO(session_without_commit).find_all(
-                SBroadcast(
-                    status=BroadcastStatus.SENT
-                )),
+                items=await BroadcastDAO(session_without_commit).get_unique_content_broadcasts(),
                 context="archive_broadcasts",
                 get_display_text=lambda broadcast: f"{broadcast.name}",
                 get_item_id=lambda broadcast: broadcast.id,
