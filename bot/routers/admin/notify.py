@@ -255,6 +255,7 @@ async def process_archive_paginate(callback: CallbackQuery, callback_data: Pagin
 
 @broadcast_router.callback_query(BroadcastListCallback.filter(F.action == 'archive_repeat'))
 async def process_archive_repeat(callback: CallbackQuery, callback_data: BroadcastListCallback, state: FSMContext, session_without_commit):
+    await callback.message.delete()
     broadcast_dao = BroadcastDAO(session_without_commit)
     broadcast = await broadcast_dao.find_one_or_none_by_id(callback_data.broadcast_id)
     users = await broadcast_dao.get_recipients_for_broadcast(broadcast.id)
