@@ -6,6 +6,7 @@ import asyncio
 import tempfile
 import os
 import json
+import re
 from prettytable import PrettyTable
 
 from aiogram.fsm.context import FSMContext
@@ -71,21 +72,23 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
 
             # формируем таблицу
             table = PrettyTable()
-            table.field_names = ["№", "Ход", "Eq", "Вероятности"]
+            table.field_names = ["№", "Ход", "Вероятности", "Eq"]
             table.align = "l"
 
             for h in hints:
                 idx = h.get("idx", "")
                 move = (h.get("move") or "").strip()
+                # Убираем в тексте маркеры типа "Cubeful 2-ply" или "0-ply", "2-ply" и т.п.
+                move = re.sub(r"(?i)\b(?:cubeful\s*)?\d+-ply\b", "", move)
+                # Сжимаем лишние пробелы и убираем ведущие/хвостовые знаки пунктуации
+                move = " ".join(move.split()).strip(" .:-")
                 eq = h.get("eq", 0.0)
                 probs = h.get("probs") or []
                 # беру первые три вероятности для компактного представления
                 probs_display = (
-                    "(" + ", ".join(f"{p:.3f}" for p in probs[:3]) + ")"
-                    if probs
-                    else "—"
+                    ", ".join(f"{p:.3f}" for p in probs[:3]) if probs else "—"
                 )
-                table.add_row([idx, move, f"{eq:+.3f}", probs_display])
+                table.add_row([idx, move, probs_display, f"{eq:+.3f}"])
 
             header = f"Файл: {fname}\nХод: {entry.get('turn', '—')} игрок: {entry.get('player', '—')}\n"
             # отправляем как HTML с <pre> чтобы таблица сохранила форматирование
