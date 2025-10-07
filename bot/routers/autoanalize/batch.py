@@ -712,9 +712,21 @@ async def finalize_batch(
 ):
     if successful_count > 0:
         # сохраняем дату в редис для пдф
+        # Фильтруем пустые/None записи перед сохранением и генерацией PDF
+        sanitized_all_analysis = []
+        for item in all_analysis_datas:
+            analysis = item.get("analysis") if isinstance(item, dict) else item
+            if analysis:
+                sanitized_all_analysis.append(item)
+            else:
+                logger.warning(
+                    "Skipped empty analysis entry when preparing PDF for user %s",
+                    user_info.id,
+                )
+
         await redis_client.set(
             f"batch_analysis_data:{user_info.id}",
-            json.dumps(all_analysis_datas),
+            json.dumps(sanitized_all_analysis),
             expire=3600,
         )
         data = await state.get_data()
@@ -777,10 +789,14 @@ async def finalize_batch(
             pdf_pages = []
             if user_pr_msg:
                 pdf_pages.append(make_page(user_pr_msg, 22))
-            for item in all_analysis_datas:
+            for item in sanitized_all_analysis:
                 analysis = item.get("analysis") if isinstance(item, dict) else item
                 file_name = item.get("file_name") if isinstance(item, dict) else None
-                # добавляем страницу-заголовок с именем файла (если есть)
+                if not analysis:
+                    logger.warning(
+                        "Skipping None analysis in pdf generation (finalize_batch)"
+                    )
+                    continue
                 if file_name:
                     pdf_pages.append(make_page(f"<b>{file_name}</b>", 16))
                 pdf_pages.append(
@@ -851,9 +867,15 @@ async def handle_download_pdf(
         pdf_pages = []
         if user_pr_msg:
             pdf_pages.append(make_page(user_pr_msg, 22))
+        # Защита от None-элементов, которые могли попасть в redis
         for item in analysis_data:
             analysis = item.get("analysis") if isinstance(item, dict) else item
             file_name = item.get("file_name") if isinstance(item, dict) else None
+            if not analysis:
+                logger.warning(
+                    "Skipping None analysis in pdf download for user %s", user_info.id
+                )
+                continue
             if file_name:
                 pdf_pages.append(make_page(f"<b>{file_name}</b>", 16))
             pdf_pages.append(
