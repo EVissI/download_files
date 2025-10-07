@@ -16,6 +16,7 @@ from bot.routers.admin.notify import broadcast_router
 from bot.routers.admin.users_setting.setup import user_setting_router
 from bot.routers.admin.update_message_for_new import message_for_new_router
 from bot.routers.admin.user_group import user_group_router
+from bot.routers.admin.hint_viewer_router import hint_viewer_router
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
@@ -28,6 +29,7 @@ admin_setup_router.message.filter(RoleFilter(
                                         User.Role.ADMIN.value
                                         ))
 admin_setup_router.include_routers(
+    hint_viewer_router,
     commands_router,
     excel_setup_router,
     promo_setup_router,
