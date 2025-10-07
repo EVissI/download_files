@@ -8,17 +8,36 @@ import os
 import json
 from prettytable import PrettyTable
 
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.filters import StateFilter
+
 from bot.common.func.hint_viewer import process_mat_file, random_filename
+from bot.common.kbds.markup.admin_panel import AdminKeyboard
 
 hint_viewer_router = Router()
 
-@hint_viewer_router.message(F.document)
-async def hint_viewer_menu(message: Message):
+
+class HintViewerStates(StatesGroup):
+    waiting_file = State()
+
+
+@hint_viewer_router.message(F.text == AdminKeyboard.get_kb_text()["test"])
+async def hint_viewer_start(message: Message, state: FSMContext):
+    await state.set_state(HintViewerStates.waiting_file)
+    await message.answer(
+        "Нажата кнопка просмотра подсказок. Пришлите .mat файл для анализа."
+    )
+
+
+@hint_viewer_router.message(F.document, StateFilter(HintViewerStates.waiting_file))
+async def hint_viewer_menu(message: Message, state: FSMContext):
     """
-    Принимает .mat файл, запускает process_mat_file -> output json,
+    Принимает .mat файл после нажатия кнопки, запускает process_mat_file -> output json,
     для каждого хода с подсказками отправляет таблицу (prettytable) с:
       № | Ход | Eq | Вероятности (первые 3 значения)
     """
+    await state.clear()
     doc = message.document
     fname = doc.file_name or "game.mat"
     if not fname.lower().endswith(".mat"):
@@ -27,7 +46,9 @@ async def hint_viewer_menu(message: Message):
 
     # временные файлы для входа и выхода
     tmp_in = os.path.join(tempfile.gettempdir(), random_filename(ext=".mat", length=8))
-    tmp_out = os.path.join(tempfile.gettempdir(), random_filename(ext=".json", length=8))
+    tmp_out = os.path.join(
+        tempfile.gettempdir(), random_filename(ext=".json", length=8)
+    )
 
     try:
         await message.reply("Принял файл, начинаю обработку...")
@@ -58,13 +79,19 @@ async def hint_viewer_menu(message: Message):
                 eq = h.get("eq", 0.0)
                 probs = h.get("probs") or []
                 # беру первые три вероятности для компактного представления
-                probs_display = "(" + ", ".join(f"{p:.3f}" for p in probs[:3]) + ")" if probs else "—"
+                probs_display = (
+                    "(" + ", ".join(f"{p:.3f}" for p in probs[:3]) + ")"
+                    if probs
+                    else "—"
+                )
                 table.add_row([idx, move, f"{eq:+.3f}", probs_display])
 
             header = f"Файл: {fname}\nХод: {entry.get('turn', '—')} игрок: {entry.get('player', '—')}\n"
             # отправляем как HTML с <pre> чтобы таблица сохранила форматирование
             try:
-                await message.answer(f"{header}<pre>{table.get_string()}</pre>", parse_mode="HTML")
+                await message.answer(
+                    f"{header}<pre>{table.get_string()}</pre>", parse_mode="HTML"
+                )
             except TelegramAPIError:
                 # fallback — отправка без HTML
                 await message.answer(header + "\n" + table.get_string())
@@ -81,4 +108,3 @@ async def hint_viewer_menu(message: Message):
                 os.remove(tmp_out)
         except Exception:
             pass
-
