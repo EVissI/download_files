@@ -1,5 +1,13 @@
 ﻿
 services:
+  # test:
+  #   build: .
+  #   container_name: backgammon_test
+  #   command: /bin/sh -c "python test.py test.mat out/output.json"
+  #   volumes:
+  #     - ./out:/app/out
+  #   restart: "no"
+    
   backgammon-bot:
     build: .
     command: /bin/sh -c "alembic upgrade head && python -m bot.init"
@@ -28,7 +36,7 @@ services:
     volumes:
       - ./redisdata:/data
     command: >
-      sh -c '
+      sh -c '0
         mkdir -p /usr/local/etc/redis &&
         echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
         echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&

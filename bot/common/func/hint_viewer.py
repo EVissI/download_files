@@ -11,10 +11,7 @@ import time
 import select
 import threading
 import pexpect
-
 from loguru import logger
-
-
 def parse_backgammon_mat(content):
     # Убираем пустые строки, комментарии и метаданные
     lines = [
@@ -313,7 +310,6 @@ def read_available(proc, timeout=0.1):
             pass
     return out
 
-
 def parse_hint_output(text: str):
     """
     Парсит блоки подсказок из вывода gnubg после команды "hint".
@@ -342,18 +338,14 @@ def parse_hint_output(text: str):
             except Exception:
                 eq = 0.0
             probs = []
-            # соберём следующие 1-2 строк с числами (иногда вероятность разбита на две строки)
             j = i + 1
             while j < len(lines) and lines[j].strip():
                 found = float_re.findall(lines[j])
                 if found:
                     probs.extend([float(x) for x in found])
-                    # если собрали хотя бы 3-6 чисел — вероятно блок завершён
                     if len(probs) >= 3 and len(probs) % 3 == 0:
-                        # но всё равно пробуем захватить ещё строки, если они содержат числа
                         j += 1
                         continue
-                # если строка не содержит чисел и не начинается с отступа — прерываем
                 if not float_re.search(lines[j]):
                     break
                 j += 1
@@ -363,14 +355,7 @@ def parse_hint_output(text: str):
             i += 1
     return hints
 
-
-def main():
-    if len(sys.argv) != 3:
-        print("Usage: python script.py input.mat output.json")
-        sys.exit(1)
-
-    input_file = sys.argv[1]
-    output_json = sys.argv[2]
+def process_mat_file(input_file, output_file):
     temp_script = random_filename()
     command_delay = 0.1
     try:
@@ -380,7 +365,7 @@ def main():
         parsed_moves = parse_backgammon_mat(content)
         augmented = process_game(parsed_moves)
 
-        with open(output_json, "w", encoding="utf-8") as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(augmented, f, indent=2, ensure_ascii=False)
 
         # генерируем токены команд
@@ -391,9 +376,8 @@ def main():
         for entry in augmented:
             entry.setdefault("hints", [])
 
-        # Отправляем команды через pty с pexpect — надёжнее для интерактивных программ
+        # Отправляем команды через pty с pexpect
         child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
-        # даём время на старт и читаем стартовый вывод
         time.sleep(0.5)
         try:
             try:
@@ -406,10 +390,8 @@ def main():
                 line = token["cmd"]
                 logger.debug("send: {}", line)
                 child.sendline(line)
-                # подождём, чтобы gnubg обработал команду
                 time.sleep(command_delay)
 
-                # собираем вывод сразу после команды
                 out = ""
                 while True:
                     try:
@@ -427,17 +409,13 @@ def main():
                 if out:
                     logger.debug("gnubg output after '{}':\n{}", line, out)
 
-                # Если токен — hint, распарсим и прикрепим результат к целевой записи augmented[target]
                 if token["type"] == "hint":
                     target_idx = token.get("target")
                     hints = parse_hint_output(out)
                     if hints:
-                        # Вставляем всю структуру подсказок в соответствующую запись
-                        # Если hint генерирует несколько вариантов — добавляем все
                         for h in hints:
                             augmented[target_idx]["hints"].append(h)
                     else:
-                        # Если parse вернул пусто, логируем и добавляем пустой маркер
                         logger.debug(
                             "No hints parsed for target %s, raw output length=%d",
                             target_idx,
@@ -475,15 +453,11 @@ def main():
                 pass
 
         try:
-            with open(output_json, "w", encoding="utf-8") as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(augmented, f, indent=2, ensure_ascii=False)
-            logger.info("Updated %s with hint data", output_json)
+            logger.info("Updated %s with hint data", output_file)
         except Exception:
             logger.exception("Failed to write augmented json with hints")
     finally:
         if os.path.exists(temp_script):
             os.remove(temp_script)
-
-
-if __name__ == "__main__":
-    main()
