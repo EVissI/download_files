@@ -53,7 +53,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
     try:
         await message.reply("Принял файл, начинаю обработку...")
         # сохранить файл локально
-        await doc.download(destination_file=tmp_in)
+        await message.bot.download(destination_file=tmp_in)
 
         # heavy processing in thread
         await asyncio.to_thread(process_mat_file, tmp_in, tmp_out)
