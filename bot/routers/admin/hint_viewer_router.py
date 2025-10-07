@@ -53,8 +53,9 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
     try:
         await message.reply("Принял файл, начинаю обработку...")
         # сохранить файл локально
-        await message.bot.download(destination_file=tmp_in)
-
+        file = await message.bot.get_file(doc.file_id)
+        with open(tmp_in, "wb") as f:
+            await message.bot.download_file(file.file_path, f)
         # heavy processing in thread
         await asyncio.to_thread(process_mat_file, tmp_in, tmp_out)
 
@@ -98,7 +99,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
 
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
-        await message.reply("Ошибка при обработке файла. Посмотрите логи.")
+        await message.reply("Ошибка при обработке файла.")
     finally:
         # чистим временные файлы
         try:
@@ -108,3 +109,4 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
                 os.remove(tmp_out)
         except Exception:
             pass
+        await state.clear()
