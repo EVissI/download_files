@@ -587,11 +587,11 @@ async def finalize_batch(
         try:
             pdf_pages = []
             if user_pr_msg:
-                pdf_pages.append(make_page(user_pr_msg, 14))
+                pdf_pages.append(make_page(user_pr_msg, 22))
             for item in all_analysis_datas:
-                header = f"<h2>{item['file_name']}</h2>"
+                header = f"{item['file_name']}"
                 content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
-                pdf_pages.append(make_page(content, 9))
+                pdf_pages.append(make_page(content, 11))
             pdf_bytes = merge_pages(pdf_pages)
             group_pr_msg += '\n🎲'
             await message.bot.send_document(
@@ -648,11 +648,11 @@ async def handle_download_pdf(
         analysis_data = json.loads(analysis_data_json)
         pdf_pages = []
         if user_pr_msg:
-            pdf_pages.append(make_page(user_pr_msg, 14))
+            pdf_pages.append(make_page(user_pr_msg, 22))
         for item in analysis_data:
-            header = f"<h2>{item['file_name']}</h2>"
+            header = f"{item['file_name']}"
             content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
-            pdf_pages.append(make_page(content, 9))
+            pdf_pages.append(make_page(content, 11))
         pdf_bytes = merge_pages(pdf_pages)
         if not pdf_bytes:
             await callback.message.answer(i18n.auto.analyze.error.parse())
