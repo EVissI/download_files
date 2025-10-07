@@ -589,7 +589,7 @@ async def finalize_batch(
             if user_pr_msg:
                 pdf_pages.append(make_page(user_pr_msg, 22))
             for item in all_analysis_datas:
-                header = f"{item['file_name']}"
+                header = f"{item['file_name']}\n"
                 content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
                 pdf_pages.append(make_page(content, 11))
             pdf_bytes = merge_pages(pdf_pages)
@@ -650,7 +650,7 @@ async def handle_download_pdf(
         if user_pr_msg:
             pdf_pages.append(make_page(user_pr_msg, 22))
         for item in analysis_data:
-            header = f"{item['file_name']}"
+            header = f"{item['file_name']}\n"
             content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
             pdf_pages.append(make_page(content, 11))
         pdf_bytes = merge_pages(pdf_pages)
