@@ -84,7 +84,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
                 move = " ".join(move.split()).strip(" .:-")
                 eq = h.get("eq", 0.0)
                 probs = h.get("probs") or []
-                # беру первые три вероятности для компактного представления
+                # первые три вероятности 
                 probs_display = (
                     ", ".join(f"{p:.3f}" for p in probs[:3]) if probs else "—"
                 )
@@ -99,6 +99,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
             except TelegramAPIError:
                 # fallback — отправка без HTML
                 await message.answer(header + "\n" + table.get_string())
+            await asyncio.sleep(0.5) 
 
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
