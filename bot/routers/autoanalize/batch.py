@@ -587,7 +587,7 @@ async def finalize_batch(
         try:
             pdf_pages = []
             if user_pr_msg:
-                pdf_pages.append(make_page(user_pr_msg, 22))
+                pdf_pages.append(make_page(user_pr_msg, 16))
             for item in all_analysis_datas:
                 header = f"<h2>{item['file_name']}</h2>"
                 content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
@@ -648,7 +648,7 @@ async def handle_download_pdf(
         analysis_data = json.loads(analysis_data_json)
         pdf_pages = []
         if user_pr_msg:
-            pdf_pages.append(make_page(user_pr_msg, 22))
+            pdf_pages.append(make_page(user_pr_msg, 16))
         for item in analysis_data:
             header = f"<h2>{item['file_name']}</h2>"
             content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
