@@ -1,4 +1,4 @@
-﻿﻿import asyncio
+﻿import asyncio
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
