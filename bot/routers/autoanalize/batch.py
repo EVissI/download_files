@@ -1,4 +1,4 @@
-﻿import asyncio
+﻿﻿import asyncio
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -114,7 +114,8 @@ async def handle_batch_stop(
 
     try:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-            for file_path in file_paths:
+            for file_dict in file_paths:
+                file_path = file_dict['path']
                 if os.path.exists(file_path):
                     zipf.write(file_path, os.path.basename(file_path))
                 else:
@@ -136,6 +137,7 @@ async def handle_batch_stop(
 
     await message.delete()
     await process_batch_files(message, state, user_info, i18n, file_paths, session_without_commit)
+
 
 @batch_auto_analyze_router.message(
     F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-reply-cancel")),
@@ -175,7 +177,8 @@ async def handle_sequential_file(
             files_dir = os.path.join(os.getcwd(), "files")
             os.makedirs(files_dir, exist_ok=True)
 
-            file_name = file.file_name.replace(" ", "").replace('.txt', '.mat')
+            original_name = file.file_name
+            file_name = original_name.replace(" ", "").replace('.txt', '.mat')
             file_path = os.path.join(files_dir, file_name)
 
             try:
@@ -188,10 +191,10 @@ async def handle_sequential_file(
             try:
                 data = await state.get_data()
                 file_paths = data.get("file_paths", [])
-                if file_path not in file_paths:
-                    file_paths.append(file_path)
+                if file_path not in [d['path'] for d in file_paths]:
+                    file_paths.append({'path': file_path, 'original_name': original_name})
                     await state.update_data(file_paths=file_paths)
-                    logger.info(f"Added file {file_path} for user {user_info.id}, total files: {len(file_paths)}")
+                    logger.info(f"Added file {file_path} (original: {original_name}) for user {user_info.id}, total files: {len(file_paths)}")
                 else:
                     logger.warning(f"Duplicate file {file_path} skipped for user {user_info.id}")
             except Exception as e:
@@ -236,7 +239,8 @@ async def handle_zip_file(
     with zipfile.ZipFile(zip_path, 'r') as zipf:
         for member in zipf.namelist():
             if member.endswith(('.mat', '.txt', '.sgf', '.sgg', '.bkg', '.gam', '.pos', '.fibs', '.tmg')):
-                new_name = member.replace(" ", "")
+                original_name = os.path.basename(member)
+                new_name = original_name.replace(" ", "")
                 extracted_path = os.path.join(files_dir, new_name)
 
                 # убедимся, что директории существуют
@@ -246,7 +250,7 @@ async def handle_zip_file(
                 with zipf.open(member) as source, open(extracted_path, "wb") as target:
                     target.write(source.read())
 
-                file_paths.append(extracted_path)
+                file_paths.append({'path': extracted_path, 'original_name': original_name})
     
     try:
         os.remove(zip_path)
@@ -275,9 +279,11 @@ async def process_batch_files(
     progress_message = await message.answer(i18n.auto.batch.progress(current = 0, total = total))
     data = await state.get_data()
     current_file_idx = data.get('current_file_idx', 1)
-    for idx, file_path in enumerate(file_paths, current_file_idx):
+    for idx, file_dict in enumerate(file_paths, current_file_idx):
         await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
         progress_message = await message.answer(i18n.auto.batch.progress(current = idx, total = total))
+        file_path = file_dict['path']
+        original_name = file_dict['original_name']
         file_type = os.path.splitext(file_path)[1][1:]
         loop = asyncio.get_running_loop()
         duration, analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
@@ -294,7 +300,7 @@ async def process_batch_files(
         new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
         shutil.move(file_path, new_file_path)
         try:
-            asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
+            asyncio.create_task(save_file_to_yandex_disk(new_file_path, original_name))
         except Exception as e:
             logger.error(f"Error saving file to Yandex Disk: {e}")
         
@@ -306,7 +312,7 @@ async def process_batch_files(
                 message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
                 selected_player, session=session_without_commit, duration=duration
             )
-            all_analysis_datas.append({'data': analysis_data, 'file_name': new_file_name})
+            all_analysis_datas.append({'data': analysis_data, 'file_name': original_name})
             successful_count += 1
             if not process_result:
                 break
@@ -316,6 +322,7 @@ async def process_batch_files(
                 total_files=total,
                 file_path=new_file_path,
                 file_name=new_file_name,
+                original_name=original_name,
                 analysis_data=analysis_data,
                 player_names=player_names,
                 all_analysis_datas=all_analysis_datas,
@@ -414,6 +421,7 @@ async def handle_batch_player_selection(
         selected_player = callback.data.split(":")[1]
         analysis_data = data["analysis_data"]
         file_name = data["file_name"]
+        original_name = data["original_name"]
         file_path = data["file_path"]
         current_file_idx = data["current_file_idx"]
         total_files = data["total_files"]
@@ -435,7 +443,7 @@ async def handle_batch_player_selection(
                 selected_player, session=session_without_commit, duration=duration
             )
         
-        all_analysis_datas.append({'data': analysis_data, 'file_name': file_name})
+        all_analysis_datas.append({'data': analysis_data, 'file_name': original_name})
         successful_count += 1
         
         # Update state for next file
@@ -456,9 +464,11 @@ async def handle_batch_player_selection(
             pass
         progress_message = await callback.message.answer(i18n.auto.batch.progress(current = current_file_idx, total = total_files))
         if process_result:
-            for idx, file_path in enumerate(file_paths, current_file_idx + 1):
+            for idx, file_dict in enumerate(file_paths, current_file_idx + 1):
                 await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
                 progress_message = await callback.message.answer(i18n.auto.batch.progress(current = idx, total = total_files))
+                file_path = file_dict['path']
+                original_name = file_dict['original_name']
                 file_type = os.path.splitext(file_path)[1][1:]
                 loop = asyncio.get_running_loop()
                 duration, analysis_result = await loop.run_in_executor(None, analyze_mat_file, file_path, file_type)
@@ -476,7 +486,7 @@ async def handle_batch_player_selection(
                 new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
                 shutil.move(file_path, new_file_path)
                 try:
-                    asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
+                    asyncio.create_task(save_file_to_yandex_disk(new_file_path, original_name))
                 except Exception as e:
                     logger.error(f"Error saving file to Yandex Disk: {e}")
                 
@@ -490,7 +500,7 @@ async def handle_batch_player_selection(
                         callback.message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
                         selected_player, session=session_without_commit, duration=duration
                     )
-                    all_analysis_datas.append({'data': analysis_data, 'file_name': new_file_name})
+                    all_analysis_datas.append({'data': analysis_data, 'file_name': original_name})
                     successful_count += 1
                     if not process_result:
                         break
@@ -500,6 +510,7 @@ async def handle_batch_player_selection(
                         total_files=total_files,
                         file_path=new_file_path,
                         file_name=new_file_name,
+                        original_name=original_name,
                         analysis_data=analysis_data,
                         player_names=player_names,
                         all_analysis_datas=all_analysis_datas,
@@ -589,7 +600,7 @@ async def finalize_batch(
             if user_pr_msg:
                 pdf_pages.append(make_page(user_pr_msg, 22))
             for item in all_analysis_datas:
-                header = f"{item['file_name']}\n"
+                header = f"<h2>{item['file_name']}</h2>"
                 content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
                 pdf_pages.append(make_page(content, 11))
             pdf_bytes = merge_pages(pdf_pages)
@@ -650,7 +661,7 @@ async def handle_download_pdf(
         if user_pr_msg:
             pdf_pages.append(make_page(user_pr_msg, 22))
         for item in analysis_data:
-            header = f"{item['file_name']}\n"
+            header = f"<h2>{item['file_name']}</h2>"
             content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
             pdf_pages.append(make_page(content, 11))
         pdf_bytes = merge_pages(pdf_pages)
