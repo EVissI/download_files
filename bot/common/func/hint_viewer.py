@@ -316,7 +316,8 @@ def read_available(proc, timeout=0.1):
 def parse_hint_output(text: str):
     """
     Парсит блоки подсказок из вывода gnubg после команды "hint".
-    Возвращает список словарей: {"idx": int, "move": str, "eq": float, "probs": [float,...]}
+    Возвращает список словарей: {"idx": int|None, "move": str|None, "eq": float|None,
+    "probs": [float,...], "prefer_action": str|None}
     Предобрабатывает вывод: удаляет управляющие символы (backspace и т.п.),
     убирает служебные строки (hint / Considering / Cube analysis) и нормализует переносы.
     """
@@ -324,25 +325,24 @@ def parse_hint_output(text: str):
     def clean_text(s: str) -> str:
         if not s:
             return ""
-        # Удаляем backspace: симулируем эффект удаления предыдущего символа
+        # Удаляем backspace (симулируем эффект)
         while "\x08" in s:
             i = s.find("\x08")
             if i <= 0:
                 s = s[i + 1 :]
             else:
                 s = s[: i - 1] + s[i + 1 :]
-        # Нормализуем возвраты каретки и переводы строки — переводим \r в \n
+        # Нормализуем переводы строк
         s = s.replace("\r\n", "\n").replace("\r", "\n")
-        # Удаляем прочие управляющие символы, оставляем только печатные, пробелы и переводы строки
+        # Оставляем печатные символы, пробелы и переводы строки
         s = re.sub(r"[^\x09\x0A\x20-\x7E\u00A0-\uFFFF]+", "", s)
-        # Разбиваем на строки и отфильтруем служебные/шумные строки
         lines = []
         for ln in s.splitlines():
             ln_stripped = ln.strip()
             if not ln_stripped:
                 continue
             low = ln_stripped.lower()
-            # Отклоняем служебные и прогресс-строки
+            # Отфильтровываем стартовые служебные строки
             if (
                 low.startswith("hint")
                 or low.startswith("considering")
@@ -350,7 +350,7 @@ def parse_hint_output(text: str):
                 or "cubeless equity" in low
             ):
                 continue
-            # отключаем строки, состоящие только из повторяющихся пробелов/знаков
+            # отключаем шумные строки из повторяющихся символов
             if re.match(r"^[\s\-=_\*\.]+$", ln_stripped):
                 continue
             lines.append(ln.rstrip())
@@ -363,12 +363,10 @@ def parse_hint_output(text: str):
 
     lines = [ln.rstrip() for ln in cleaned.splitlines()]
     i = 0
-    # захватываем индекс, блок хода и Eq (варианты "Eq." или "Eq.:")
     entry_re = re.compile(
         r"^\s*(\d+)\.\s*(?:\([^\)]*\)\s*)?(.*?)\s+Eq\.[:]?\s*([+-]?\d+(?:\.\d+)?)",
         re.IGNORECASE,
     )
-    # числа с дробной частью
     float_re = re.compile(r"[+-]?\d*\.\d+")
     while i < len(lines):
         m = entry_re.match(lines[i])
@@ -378,10 +376,11 @@ def parse_hint_output(text: str):
             try:
                 eq = float(m.group(3))
             except Exception:
-                eq = 0.0
+                eq = None
             probs = []
+            prefer_action = None
             j = i + 1
-            # собираем последующие строки с числами (вероятности), допускаем, что они могут быть в одной или нескольких строках
+            # Сначала ищем явные численные строки прямо после записи
             while j < len(lines):
                 line = lines[j].strip()
                 if not line:
@@ -390,14 +389,101 @@ def parse_hint_output(text: str):
                 if found:
                     probs.extend([float(x) for x in found])
                     j += 1
-                    # если после чтения хотя бы 3 чисел и следующая строка не содержит чисел — можно завершить
                     continue
-                # если строка не содержит чисел — выходим
+                # если встретили строку "cubeful equities" — используем её блок вместо предыдущего
+                low = line.lower()
+                if "cubeful equities" in low:
+                    # соберём до 3 следующих строк с числами
+                    k = j + 1
+                    probs = []
+                    while k < len(lines) and len(probs) < 12:
+                        f = float_re.findall(lines[k])
+                        if f:
+                            probs.extend([float(x) for x in f])
+                            k += 1
+                        else:
+                            break
+                    j = k
+                    continue
+                # proper cube action
+                pa = re.match(r"proper cube action[:\s]*(.+)", line, re.IGNORECASE)
+                if pa:
+                    prefer_action = pa.group(1).strip()
+                    j += 1
+                    continue
                 break
-            hints.append({"idx": idx, "move": move, "eq": eq, "probs": probs})
+            # Дополнительный поиск вперед (в пределах ближайших строк) на случай сложной структуры
+            if not probs or prefer_action is None:
+                look_ahead_limit = min(len(lines), i + 20)
+                for k in range(i + 1, look_ahead_limit):
+                    lowk = lines[k].lower()
+                    if "cubeful equities" in lowk and not probs:
+                        mnums = []
+                        kk = k + 1
+                        while kk < len(lines) and len(mnums) < 12:
+                            f = float_re.findall(lines[kk])
+                            if f:
+                                mnums.extend([float(x) for x in f])
+                                kk += 1
+                            else:
+                                break
+                        if mnums:
+                            probs = mnums
+                    pa = re.match(
+                        r"proper cube action[:\s]*(.+)", lines[k], re.IGNORECASE
+                    )
+                    if pa and not prefer_action:
+                        prefer_action = pa.group(1).strip()
+                    if probs and prefer_action:
+                        break
+
+            hints.append(
+                {
+                    "idx": idx,
+                    "move": move,
+                    "eq": eq,
+                    "probs": probs,
+                    "prefer_action": prefer_action,
+                }
+            )
             i = j
         else:
             i += 1
+
+    # Если не найдено обычных подсказок, но в тексте есть блок "Proper cube action" / "Cubeful equities",
+    # сформируем единичную запись с prefer_action и probs (чтобы не возвращать сырое 'hint' в caller).
+    if not hints:
+        # поиск по всем линиям
+        prefer_action = None
+        probs = []
+        for k, ln in enumerate(lines):
+            pa = re.match(r"proper cube action[:\s]*(.+)", ln, re.IGNORECASE)
+            if pa:
+                prefer_action = pa.group(1).strip()
+            if "cubeful equities" in ln.lower():
+                # собрать следующие 3-4 строки с числами
+                kk = k + 1
+                nums = []
+                while kk < len(lines) and len(nums) < 12:
+                    f = float_re.findall(lines[kk])
+                    if f:
+                        nums.extend([float(x) for x in f])
+                        kk += 1
+                    else:
+                        break
+                if nums:
+                    probs = nums
+        if prefer_action or probs:
+            hints.append(
+                {
+                    "idx": None,
+                    "move": None,
+                    "eq": None,
+                    "probs": probs,
+                    "prefer_action": prefer_action,
+                }
+            )
+
     return hints
 
 

@@ -41,7 +41,9 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         return
 
     tmp_in = os.path.join(tempfile.gettempdir(), random_filename(ext=".mat", length=8))
-    tmp_out = os.path.join(tempfile.gettempdir(), random_filename(ext=".json", length=8))
+    tmp_out = os.path.join(
+        tempfile.gettempdir(), random_filename(ext=".json", length=8)
+    )
 
     try:
         await message.reply("Принял файл, начинаю обработку...")
@@ -50,6 +52,24 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
             await message.bot.download_file(file.file_path, f)
 
         await asyncio.to_thread(process_mat_file, tmp_in, tmp_out)
+
+        # Send the raw JSON file to user
+        with open(tmp_out, "r", encoding="utf-8") as f:
+            json_content = f.read()
+            try:
+                with tempfile.NamedTemporaryFile(
+                    suffix=".json", delete=False, mode="w", encoding="utf-8"
+                ) as temp_json:
+                    temp_json.write(json_content)
+                    temp_json.flush()
+                    await message.answer_document(
+                        document=open(temp_json.name, "rb"),
+                        caption="Сгенерированный JSON",
+                    )
+                    os.unlink(temp_json.name)
+            except Exception as e:
+                logger.error(f"Error sending JSON file: {e}")
+
 
         with open(tmp_out, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -101,6 +121,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
                 pass
         await state.clear()
 
+
 def parse_hints_with_log(entry: dict) -> list:
     """
     Безопасно извлекает и парсит hints из entry, с логированием содержимого.
@@ -120,7 +141,9 @@ def parse_hints_with_log(entry: dict) -> list:
         try:
             hints = json.loads(hints_raw)
         except json.JSONDecodeError:
-            logger.warning(f"❌ Не удалось распарсить hints как JSON: {hints_raw[:200]}")
+            logger.warning(
+                f"❌ Не удалось распарсить hints как JSON: {hints_raw[:200]}"
+            )
             hints = []
     else:
         hints = hints_raw or []
