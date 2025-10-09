@@ -320,7 +320,6 @@ def parse_hint_output(text: str):
     и аналогичные варианты.
     """
     hints = []
-    # нормализуем переносы и уберём лишние подряд пробелы в конце строк
     lines = [ln.rstrip() for ln in text.splitlines()]
     i = 0
     entry_re = re.compile(
@@ -356,6 +355,7 @@ def parse_hint_output(text: str):
     return hints
 
 def process_mat_file(input_file, output_file):
+
     temp_script = random_filename()
     command_delay = 0.2
     try:
