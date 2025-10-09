@@ -340,7 +340,7 @@ def parse_hint_output(text: str):
                 low.startswith("hint")
                 or low.startswith("considering")
                 or "(black)" in low
-                or "(red)" in line
+                or "(red)" in low  
             ):
                 continue
             # отключаем строки из повторяющихся символов
