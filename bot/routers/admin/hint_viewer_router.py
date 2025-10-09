@@ -70,7 +70,6 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
             except Exception as e:
                 logger.error(f"Error sending JSON file: {e}")
 
-
         with open(tmp_out, "r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -78,36 +77,60 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
             data = data.get("entries") or data.get("turns") or []
 
         for entry in data:
-            # ✅ используем нашу функцию
             hints = parse_hints_with_log(entry)
             if not hints:
                 continue
 
-            table = PrettyTable()
-            table.field_names = ["№", "Ход", "Вероятности", "Eq"]
-            table.align = "l"
-
-            for h in hints:
-                idx = h.get("idx", "")
-                move = (h.get("move") or "").strip()
-                move = re.sub(r"(?i)\b(?:cubeful\s*)?\d+-ply\b", "", move)
-                move = " ".join(move.split()).strip(" .:-")
-                eq = h.get("eq", 0.0)
-                probs = h.get("probs") or []
-                probs_display = (
-                    ", ".join(f"{p:.3f}" for p in probs[:3]) if probs else "—"
-                )
-                table.add_row([idx, move, probs_display, f"{eq:+.3f}"])
-
             header = f"Файл: {fname}\nХод: {entry.get('turn', '—')} игрок: {entry.get('player', '—')}\n"
-            try:
-                await message.answer(
-                    f"{header}<pre>{table.get_string()}</pre>", parse_mode="HTML"
-                )
-            except TelegramAPIError:
-                await message.answer(header + "\n" + table.get_string())
 
-            await asyncio.sleep(0.5)
+            for hint in hints:
+                hint_type = hint.get("type")
+
+                if hint_type == "cube":
+                    # Создаем таблицу для кубовых решений
+                    table = PrettyTable()
+                    table.field_names = ["№", "Действие", "Eq"]
+                    table.align = "l"
+
+                    for equity in hint.get("cubeful_equities", []):
+                        idx = equity.get("idx", "")
+                        action = equity.get("action", "").strip()
+                        eq = equity.get("eq", 0.0)
+                        table.add_row([idx, action, f"{eq:+.3f}"])
+
+                    prefer = hint.get("prefer_action", "")
+                    cube_header = (
+                        f"{header}Анализ куба\nРекомендуемое действие: {prefer}\n"
+                    )
+
+                elif hint_type == "move":
+                    # Создаем таблицу для ходов (существующая логика)
+                    table = PrettyTable()
+                    table.field_names = ["№", "Ход", "Вероятности", "Eq"]
+                    table.align = "l"
+
+                    idx = hint.get("idx", "")
+                    move = (hint.get("move") or "").strip()
+                    move = re.sub(r"(?i)\b(?:cubeful\s*)?\d+-ply\b", "", move)
+                    move = " ".join(move.split()).strip(" .:-")
+                    eq = hint.get("eq", 0.0)
+                    probs = hint.get("probs") or []
+                    probs_display = (
+                        ", ".join(f"{p:.3f}" for p in probs[:3]) if probs else "—"
+                    )
+                    table.add_row([idx, move, probs_display, f"{eq:+.3f}"])
+
+                    cube_header = header
+
+                try:
+                    await message.answer(
+                        f"{cube_header}<pre>{table.get_string()}</pre>",
+                        parse_mode="HTML",
+                    )
+                except TelegramAPIError:
+                    await message.answer(cube_header + "\n" + table.get_string())
+
+                await asyncio.sleep(0.5)
 
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
