@@ -357,7 +357,7 @@ def parse_hint_output(text: str):
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 0
+    command_delay = 0.1
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()

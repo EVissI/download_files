@@ -99,7 +99,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
             except TelegramAPIError:
                 # fallback — отправка без HTML
                 await message.answer(header + "\n" + table.get_string())
-            await asyncio.sleep(0.5) 
+            await asyncio.sleep(0.5)  # небольшая пауза между сообщениями
 
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
