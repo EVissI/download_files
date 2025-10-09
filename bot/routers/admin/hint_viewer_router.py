@@ -77,21 +77,48 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
 
             for h in hints:
                 idx = h.get("idx", "")
-                move = (h.get("move") or "").strip()
-                # Убираем в тексте маркеры типа "Cubeful 2-ply" или "0-ply", "2-ply" и т.п.
-                move = re.sub(r"(?i)\b(?:cubeful\s*)?\d+-ply\b", "", move)
-                # Сжимаем лишние пробелы и убираем ведущие/хвостовые знаки пунктуации
+                raw_move = h.get("move") or ""
+                # логируем сырой hint для диагностики
+                logger.debug(
+                    "Raw hint: idx=%s move=%r eq=%s probs=%r",
+                    idx,
+                    raw_move,
+                    h.get("eq"),
+                    h.get("probs"),
+                )
+
+                # Нормализуем move: убираем NBSP, разные виды дефисов, и маркеры типа "Cubeful 2-ply"
+                move = raw_move.replace("\u00a0", " ")
+                move = re.sub(r"[–—‒]+", "-", move)  # normalize dashes
+                move = re.sub(r"(?i)\b(?:cubeful\s*)?\d+\s*-\s*ply\b", "", move)
                 move = " ".join(move.split()).strip(" .:-")
+
                 eq = h.get("eq", 0.0)
                 probs = h.get("probs") or []
-                # первые три вероятности 
-                probs_display = (
-                    ", ".join(f"{p:.3f}" for p in probs[:3]) if probs else "—"
-                )
-                table.add_row([idx, move, probs_display, f"{eq:+.3f}"])
+
+                # Если пришло 6 чисел — считаем как (playerA 3, playerB 3)
+                if len(probs) >= 6:
+                    a = probs[:3]
+                    b = probs[3:6]
+                    probs_display = f"({', '.join(f'{x:.3f}' for x in a)}) / ({', '.join(f'{x:.3f}' for x in b)})"
+                elif probs:
+                    probs_display = "(" + ", ".join(f"{p:.3f}" for p in probs[:3]) + ")"
+                else:
+                    probs_display = "—"
+
+                # Выводим Eq как есть; если нужно дополнительное поле "ошибка" — вычисляем (b0 - a0)
+                error_val = None
+                if len(probs) >= 6:
+                    error_val = probs[3] - probs[0]
+
+                if error_val is not None:
+                    table.add_row(
+                        [idx, move, probs_display, f"{eq:+.3f} ({error_val:+.3f})"]
+                    )
+                else:
+                    table.add_row([idx, move, probs_display, f"{eq:+.3f}"])
 
             header = f"Файл: {fname}\nХод: {entry.get('turn', '—')} игрок: {entry.get('player', '—')}\n"
-            # отправляем как HTML с <pre> чтобы таблица сохранила форматирование
             try:
                 await message.answer(
                     f"{header}<pre>{table.get_string()}</pre>", parse_mode="HTML"
