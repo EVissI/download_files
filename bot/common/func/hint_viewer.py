@@ -313,20 +313,28 @@ def read_available(proc, timeout=0.1):
 def parse_hint_output(text: str):
     """
     Парсит блоки подсказок из вывода gnubg после команды "hint".
-    Возвращает список словарей: {"idx": int, "move": str, "eq": float, "probs": [float,...]}
-    Работает достаточно гибко: ищет строки вида:
-      1. (...) Cubeful 0-ply    6/off 5/off                 Eq.: +1.619
-        0.962 0.647 0.061 -0.038 0.000 0.000
-    и аналогичные варианты.
+    Возвращает список словарей: {"idx": int, "move": str, "eq": float, "probs": [float,...]}.
     """
+    # 🧹 Предварительная очистка
+    text = text.replace("\r", "")  # убираем carriage return
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+
+    # отбрасываем строки до начала реальных ходов (1., 2., ...)
+    start_index = 0
+    for i, ln in enumerate(lines):
+        if re.match(r"^\s*\d+\.", ln):  # нашли первый номерованный ход
+            start_index = i
+            break
+    lines = lines[start_index:]
+
     hints = []
-    lines = [ln.rstrip() for ln in text.splitlines()]
     i = 0
     entry_re = re.compile(
         r"^\s*(\d+)\.\s*(?:\([^\)]*\)\s*)?(.*?)\s+Eq\.\s*[:]?\s*([+-]?\d+(?:\.\d+)?)",
         re.IGNORECASE,
     )
     float_re = re.compile(r"[+-]?\d+\.\d+")
+
     while i < len(lines):
         m = entry_re.match(lines[i])
         if m:
@@ -336,22 +344,27 @@ def parse_hint_output(text: str):
                 eq = float(m.group(3))
             except Exception:
                 eq = 0.0
+
             probs = []
             j = i + 1
             while j < len(lines) and lines[j].strip():
                 found = float_re.findall(lines[j])
                 if found:
                     probs.extend([float(x) for x in found])
-                    if len(probs) >= 3 and len(probs) % 3 == 0:
-                        j += 1
-                        continue
-                if not float_re.search(lines[j]):
+                else:
                     break
                 j += 1
-            hints.append({"idx": idx, "move": move, "eq": eq, "probs": probs})
+
+            hints.append({
+                "idx": idx,
+                "move": move,
+                "eq": eq,
+                "probs": probs,
+            })
             i = j
         else:
             i += 1
+
     return hints
 
 def process_mat_file(input_file, output_file):
