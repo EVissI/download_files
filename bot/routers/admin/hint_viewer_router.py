@@ -103,32 +103,35 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
 
             header = f"Файл: {fname}\nХод: {entry.get('turn', '—')} игрок: {entry.get('player', '—')}\n"
 
+            # Create tables for moves and cube analysis
+            move_table = PrettyTable()
+            move_table.field_names = ["№", "Ход", "Вероятности", "Eq"]
+            move_table.align = "l"
+
+            cube_table = PrettyTable()
+            cube_table.field_names = ["№", "Действие", "Eq"]
+            cube_table.align = "l"
+
+            cube_header = None
+            has_cube = False
+            has_moves = False
+
             for hint in hints:
                 hint_type = hint.get("type")
 
                 if hint_type == "cube":
-                    # Создаем таблицу для кубовых решений
-                    table = PrettyTable()
-                    table.field_names = ["№", "Действие", "Eq"]
-                    table.align = "l"
-
+                    has_cube = True
                     for equity in hint.get("cubeful_equities", []):
                         idx = equity.get("idx", "")
                         action = equity.get("action", "").strip()
                         eq = equity.get("eq", 0.0)
-                        table.add_row([idx, action, f"{eq:+.3f}"])
+                        cube_table.add_row([idx, action, f"{eq:+.3f}"])
 
                     prefer = hint.get("prefer_action", "")
-                    cube_header = (
-                        f"{header}Анализ куба\nРекомендуемое действие: {prefer}\n"
-                    )
+                    cube_header = f"Анализ куба\nРекомендуемое действие: {prefer}\n"
 
                 elif hint_type == "move":
-                    # Создаем таблицу для ходов (существующая логика)
-                    table = PrettyTable()
-                    table.field_names = ["№", "Ход", "Вероятности", "Eq"]
-                    table.align = "l"
-
+                    has_moves = True
                     idx = hint.get("idx", "")
                     move = (hint.get("move") or "").strip()
                     move = re.sub(r"(?i)\b(?:cubeful\s*)?\d+-ply\b", "", move)
@@ -138,19 +141,24 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
                     probs_display = (
                         ", ".join(f"{p:.3f}" for p in probs[:3]) if probs else "—"
                     )
-                    table.add_row([idx, move, probs_display, f"{eq:+.3f}"])
+                    move_table.add_row([idx, move, probs_display, f"{eq:+.3f}"])
 
-                    cube_header = header
+            # Send combined message
+            message_parts = [header]
 
-                try:
-                    await message.answer(
-                        f"{cube_header}<pre>{table.get_string()}</pre>",
-                        parse_mode="HTML",
-                    )
-                except TelegramAPIError:
-                    await message.answer(cube_header + "\n" + table.get_string())
+            if has_cube:
+                message_parts.extend(
+                    [cube_header, f"<pre>{cube_table.get_string()}</pre>\n"]
+                )
 
-                await asyncio.sleep(0.5)
+            if has_moves:
+                message_parts.append(f"<pre>{move_table.get_string()}</pre>")
+
+            try:
+                await message.answer("\n".join(message_parts), parse_mode="HTML")
+            except TelegramAPIError:
+                # Fallback without HTML formatting
+                await message.answer("\n".join(message_parts))
 
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
