@@ -57,19 +57,39 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         with open(tmp_out, "r", encoding="utf-8") as f:
             json_content = f.read()
             try:
-                with tempfile.NamedTemporaryFile(
-                    suffix=".json", delete=False, mode="w", encoding="utf-8"
-                ) as temp_json:
-                    temp_json.write(json_content)
-                    temp_json.flush()
-                    await message.answer_document(
-                        document=open(temp_json.name, "rb"),
-                        caption="Сгенерированный JSON",
-                    )
-                    os.unlink(temp_json.name)
-            except Exception as e:
-                logger.error(f"Error sending JSON file: {e}")
+                # Create temporary file with proper name
+                temp_filename = f"analysis_{random_filename(ext='.json', length=8)}"
+                temp_filepath = os.path.join(tempfile.gettempdir(), temp_filename)
 
+                with open(temp_filepath, "w", encoding="utf-8") as temp_file:
+                    temp_file.write(json_content)
+
+                # Send file using FSInputFile for proper handling
+                from aiogram.types import FSInputFile
+
+                document = FSInputFile(path=temp_filepath, filename=temp_filename)
+
+                await message.answer_document(
+                    document=document, caption="Сгенерированный JSON"
+                )
+
+                # Clean up temp file
+                os.unlink(temp_filepath)
+
+            except Exception as e:
+                logger.error(f"Error sending JSON file: {str(e)}")
+                # Try to send as text message if file is small enough
+                if len(json_content) < 4000:
+                    try:
+                        await message.answer(
+                            f"JSON содержимое:\n<pre>{json_content}</pre>",
+                            parse_mode="HTML",
+                        )
+                    except Exception as text_error:
+                        logger.error(f"Error sending JSON as text: {str(text_error)}")
+                        await message.answer("Не удалось отправить JSON результат.")
+
+        # Continue with JSON processing
         with open(tmp_out, "r", encoding="utf-8") as f:
             data = json.load(f)
 
