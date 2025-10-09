@@ -1,69 +1,69 @@
 ﻿
 services:
-  test:
-    build: .
-    container_name: backgammon_test
-    command: /bin/sh -c "python test.py test3.mat out/output.json"
-    volumes:
-      - ./out:/app/out
-    restart: "no"
-    
-  # backgammon-bot:
+  # test:
   #   build: .
-  #   command: /bin/sh -c "alembic upgrade head && python -m bot.init"
-  #   # command: /bin/sh -c "python -m bot.common.func.analiz_func"
-  #   container_name: backgammon_bot
+  #   container_name: backgammon_test
+  #   command: /bin/sh -c "python test.py test3.mat out/output.json"
   #   volumes:
-  #     - ./bot:/app/bot
-  #     - ./log:/app/log
-  #     - ./files:/app/files
-  #     - ./front/public/json:/app/front/public/json
-  #     - ./bot/migration/versions:/app/bot/migration/versions
-  #   env_file:
-  #     - .env
-  #   restart: unless-stopped
+  #     - ./out:/app/out
+  #   restart: "no"
+    
+  backgammon-bot:
+    build: .
+    command: /bin/sh -c "alembic upgrade head && python -m bot.init"
+    # command: /bin/sh -c "python -m bot.common.func.analiz_func"
+    container_name: backgammon_bot
+    volumes:
+      - ./bot:/app/bot
+      - ./log:/app/log
+      - ./files:/app/files
+      - ./front/public/json:/app/front/public/json
+      - ./bot/migration/versions:/app/bot/migration/versions
+    env_file:
+      - .env
+    restart: unless-stopped
 
 
-  # redis:
-  #   image: redis:latest
-  #   container_name: redis
-  #   environment:
-  #     - REDIS_PASSWORD=${REDIS_PASSWORD}
-  #     - REDIS_USER=${REDIS_USER}
-  #     - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - ./redisdata:/data
-  #   command: >
-  #     sh -c '0
-  #       mkdir -p /usr/local/etc/redis &&
-  #       echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
-  #       echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
-  #       echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
-  #       echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
-  #       echo "user default on >$REDIS_PASSWORD ~* +@all" > /usr/local/etc/redis/users.acl &&
-  #       echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
-  #       redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
-  #     '
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-  #   restart: unless-stopped
-  #   tty: true
-  #   stdin_open: true
+  redis:
+    image: redis:latest
+    container_name: redis
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redisdata:/data
+    command: >
+      sh -c '0
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        echo "user default on >$REDIS_PASSWORD ~* +@all" > /usr/local/etc/redis/users.acl &&
+        echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      '
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
 
-  # db:
-  #   image: postgres
-  #   restart: always
-  #   environment:
-  #     - POSTGRES_USER=${POSTGRES_USER}
-  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-  #     - POSTGRES_DB=${POSTGRES_DB}
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
 
 volumes:
