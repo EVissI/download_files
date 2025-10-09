@@ -159,7 +159,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
             except TelegramAPIError:
                 # Fallback without HTML formatting
                 await message.answer("\n".join(message_parts))
-
+            await asyncio.sleep(0.3)
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
         await message.reply("Ошибка при обработке файла.")

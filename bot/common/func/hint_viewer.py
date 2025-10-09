@@ -324,26 +324,26 @@ def parse_hint_output(text: str):
                 s = s[i + 1 :]
             else:
                 s = s[: i - 1] + s[i + 1 :]
-        # Нормализуем возвраты каретки и переводы строки — переводим \r в \n
+        # Нормализуем возвраты каретки и переводы строки
         s = s.replace("\r\n", "\n").replace("\r", "\n")
-        # Удаляем прочие управляющие символы, оставляем только печатные, пробелы и переводы строки
+        # Удаляем прочие управляющие символы
         s = re.sub(r"[^\x09\x0A\x20-\x7E\u00A0-\uFFFF]+", "", s)
-        # Разбиваем на строки и отфильтруем служебные/шумные строки
+        # Разбиваем на строки и фильтруем
         lines = []
         for ln in s.splitlines():
             ln_stripped = ln.strip()
             if not ln_stripped:
                 continue
             low = ln_stripped.lower()
-            # Отклоняем служебные и прогресс-строки
+            # Отклоняем только служебные строки
             if (
                 low.startswith("hint")
                 or low.startswith("considering")
-                or "cube analysis" in low
-                or "cubeless equity" in low
+                or "(black)" in low
+                or "(red)" in line
             ):
                 continue
-            # отключаем строки, состоящие только из повторяющихся пробелов/знаков
+            # отключаем строки из повторяющихся символов
             if re.match(r"^[\s\-=_\*\.]+$", ln_stripped):
                 continue
             lines.append(ln.rstrip())
@@ -355,13 +355,24 @@ def parse_hint_output(text: str):
 
     lines = [ln.rstrip() for ln in cleaned.splitlines()]
 
-    # Check if this is a cube analysis hint
+    # Проверяем наличие кубового анализа
     is_cube_analysis = any("Cube analysis" in line for line in lines)
 
     if is_cube_analysis:
         result = {"type": "cube"}
 
-        # Parse prefer action
+        # Парсим cubeful equities
+        equities = []
+        for line in lines:
+            if match := re.match(
+                r"(\d+)\.\s+(.*?)\s+([+-]?\d+\.\d+)(?:\s+\(([+-]?\d+\.\d+)\))?$", line
+            ):
+                idx = int(match.group(1))
+                action = match.group(2).strip()
+                eq = float(match.group(3))
+                equities.append({"idx": idx, "action": action, "eq": eq})
+
+        # Парсим proper cube action
         for line in lines:
             if "Proper cube action:" in line:
                 result["prefer_action"] = line.split("Proper cube action:", 1)[
@@ -369,36 +380,11 @@ def parse_hint_output(text: str):
                 ].strip()
                 break
 
-        # Parse cubeful equities
-        equities = []
-        for line in lines:
-            if ". " in line and "(" in line and ")" in line:
-                try:
-                    idx_part, rest = line.split(".", 1)
-                    idx = int(idx_part.strip())
+        if equities:  # Добавляем equities только если они найдены
+            result["cubeful_equities"] = equities
+            return [result]
 
-                    # Extract action and equity
-                    main_part = rest.split("(")[0].strip()
-                    eq_part = line.split("(")[1].split(")")[0].strip()
-                    if eq_part.startswith("+"):
-                        eq = float(eq_part[1:])
-                    else:
-                        eq = float(eq_part)
-
-                    equities.append(
-                        {
-                            "idx": idx,
-                            "action": main_part,
-                            "eq": eq,
-                        }
-                    )
-                except Exception:
-                    continue
-
-        result["cubeful_equities"] = equities
-        return [result]
-
-    # Original hint parsing for move analysis
+    # Парсинг для обычных ходов остается прежним
     hints = []
     i = 0
     entry_re = re.compile(
