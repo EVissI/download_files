@@ -12,6 +12,8 @@ import select
 import threading
 import pexpect
 from loguru import logger
+
+
 def parse_backgammon_mat(content):
     # Убираем пустые строки, комментарии и метаданные
     lines = [
@@ -310,31 +312,64 @@ def read_available(proc, timeout=0.1):
             pass
     return out
 
+
 def parse_hint_output(text: str):
     """
     Парсит блоки подсказок из вывода gnubg после команды "hint".
-    Возвращает список словарей: {"idx": int, "move": str, "eq": float, "probs": [float,...]}.
+    Возвращает список словарей: {"idx": int, "move": str, "eq": float, "probs": [float,...]}
+    Предобрабатывает вывод: удаляет управляющие символы (backspace и т.п.),
+    убирает служебные строки (hint / Considering / Cube analysis) и нормализует переносы.
     """
-    # 🧹 Предварительная очистка
-    text = text.replace("\r", "")  # убираем carriage return
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
 
-    # отбрасываем строки до начала реальных ходов (1., 2., ...)
-    start_index = 0
-    for i, ln in enumerate(lines):
-        if re.match(r"^\s*\d+\.", ln):  # нашли первый номерованный ход
-            start_index = i
-            break
-    lines = lines[start_index:]
+    def clean_text(s: str) -> str:
+        if not s:
+            return ""
+        # Удаляем backspace: симулируем эффект удаления предыдущего символа
+        while "\x08" in s:
+            i = s.find("\x08")
+            if i <= 0:
+                s = s[i + 1 :]
+            else:
+                s = s[: i - 1] + s[i + 1 :]
+        # Нормализуем возвраты каретки и переводы строки — переводим \r в \n
+        s = s.replace("\r\n", "\n").replace("\r", "\n")
+        # Удаляем прочие управляющие символы, оставляем только печатные, пробелы и переводы строки
+        s = re.sub(r"[^\x09\x0A\x20-\x7E\u00A0-\uFFFF]+", "", s)
+        # Разбиваем на строки и отфильтруем служебные/шумные строки
+        lines = []
+        for ln in s.splitlines():
+            ln_stripped = ln.strip()
+            if not ln_stripped:
+                continue
+            low = ln_stripped.lower()
+            # Отклоняем служебные и прогресс-строки
+            if (
+                low.startswith("hint")
+                or low.startswith("considering")
+                or "cube analysis" in low
+                or "cubeless equity" in low
+            ):
+                continue
+            # отключаем строки, состоящие только из повторяющихся пробелов/знаков
+            if re.match(r"^[\s\-=_\*\.]+$", ln_stripped):
+                continue
+            lines.append(ln.rstrip())
+        return "\n".join(lines)
 
+    cleaned = clean_text(text)
     hints = []
+    if not cleaned:
+        return hints
+
+    lines = [ln.rstrip() for ln in cleaned.splitlines()]
     i = 0
+    # захватываем индекс, блок хода и Eq (варианты "Eq." или "Eq.:")
     entry_re = re.compile(
-        r"^\s*(\d+)\.\s*(?:\([^\)]*\)\s*)?(.*?)\s+Eq\.\s*[:]?\s*([+-]?\d+(?:\.\d+)?)",
+        r"^\s*(\d+)\.\s*(?:\([^\)]*\)\s*)?(.*?)\s+Eq\.[:]?\s*([+-]?\d+(?:\.\d+)?)",
         re.IGNORECASE,
     )
-    float_re = re.compile(r"[+-]?\d+\.\d+")
-
+    # числа с дробной частью
+    float_re = re.compile(r"[+-]?\d*\.\d+")
     while i < len(lines):
         m = entry_re.match(lines[i])
         if m:
@@ -344,28 +379,27 @@ def parse_hint_output(text: str):
                 eq = float(m.group(3))
             except Exception:
                 eq = 0.0
-
             probs = []
             j = i + 1
-            while j < len(lines) and lines[j].strip():
-                found = float_re.findall(lines[j])
+            # собираем последующие строки с числами (вероятности), допускаем, что они могут быть в одной или нескольких строках
+            while j < len(lines):
+                line = lines[j].strip()
+                if not line:
+                    break
+                found = float_re.findall(line)
                 if found:
                     probs.extend([float(x) for x in found])
-                else:
-                    break
-                j += 1
-
-            hints.append({
-                "idx": idx,
-                "move": move,
-                "eq": eq,
-                "probs": probs,
-            })
+                    j += 1
+                    # если после чтения хотя бы 3 чисел и следующая строка не содержит чисел — можно завершить
+                    continue
+                # если строка не содержит чисел — выходим
+                break
+            hints.append({"idx": idx, "move": move, "eq": eq, "probs": probs})
             i = j
         else:
             i += 1
-
     return hints
+
 
 def process_mat_file(input_file, output_file):
 
