@@ -98,10 +98,23 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
 
         for entry in data:
             hints = parse_hints_with_log(entry)
-            if not hints:
+            if not hints and not entry.get("moves"):
                 continue
 
-            header = f"Файл: {fname}\nХод: {entry.get('turn', '—')} игрок: {entry.get('player', '—')}\n"
+            # Prepare header with move information
+            turn = entry.get('turn', '—')
+            player = entry.get('player', '—')
+            player_name = entry.get('player_name', '—')
+            original_move = " ".join(f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in entry.get('moves', [])) or "Нет хода"
+            gnu_move = entry.get('gnu_move', 'Нет GNU хода')
+            is_best_move = "Да" if entry.get('is_best_move', False) else "Нет"
+            header = (
+                f"Файл: {fname}\n"
+                f"Ход: {turn} игрок: {player} ({player_name})\n"
+                f"Оригинальный ход: {original_move}\n"
+                f"GNU ход: {gnu_move}\n"
+                f"Совпадает с лучшей подсказкой: {is_best_move}\n"
+            )
 
             # Create tables for moves and cube analysis
             move_table = PrettyTable()
