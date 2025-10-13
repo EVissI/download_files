@@ -285,10 +285,11 @@ def parse_hint_output(text: str):
         if equities:
             result["cubeful_equities"] = equities
             return [result]
+
     hints = []
     i = 0
     entry_re = re.compile(
-        r"^\s*(\d+)\.\s*(?:\([^\)]*\)\s*)?(.*?)\s+Eq\.[:]?\s*([+-]?\d+(?:\.\d+)?)",
+        r"^\s*(\d+)\.\s*(?:Cubeful \d+-ply\s*)?(.*?)\s+Eq\.[:]?\s*([+-]?\d+(?:\.\d+)?)",
         re.IGNORECASE,
     )
     float_re = re.compile(r"[+-]?\d*\.\d+")
@@ -297,7 +298,7 @@ def parse_hint_output(text: str):
         m = entry_re.match(lines[i])
         if m:
             idx = int(m.group(1))
-            move = m.group(2).strip()
+            move = m.group(2).strip()  # Move without "Cubeful X-ply" prefix
             try:
                 eq = float(m.group(3))
             except Exception:
