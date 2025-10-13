@@ -52,40 +52,49 @@ def parse_backgammon_mat(content):
         turn = int(num_match.group(1))
         rest = num_match.group(2)
 
-        # Проверяем удвоение
-        double_match = re.match(r"Doubles => (\d+)\s*(Takes|Drops)", rest)
-        if double_match:
-            value = int(double_match.group(1))
-            response = double_match.group(2).lower()
-            moves_list.append(
-                {"turn": turn, "player": "Red", "action": "double", "cube": value}
-            )
-            moves_list.append({"turn": turn, "player": "Black", "action": response})
-            continue
-
-        # --- Обработка обычных ходов ---
+        # --- Сначала находим части с бросками (чтобы знать spans) ---
         dice_pattern = r"(\d)(\d):"
         dice_matches = list(re.finditer(dice_pattern, rest))
         red_part = None
         black_part = None
+        red_span = None   # (start, end) в индексе rest для red_moves_str (включая "XY: ")
+        black_span = None # (start, end) для black_moves_str
 
         if len(dice_matches) >= 1:
-            red_dice_str = dice_matches[0].group(0)
             red_moves_start = dice_matches[0].end()
             if len(dice_matches) >= 2:
                 red_moves_end = dice_matches[1].start()
-                red_moves_str = rest[red_moves_start:red_moves_end].strip()
-                black_dice_str = dice_matches[1].group(0)
                 black_moves_start = dice_matches[1].end()
+                red_moves_str = rest[red_moves_start:red_moves_end].strip()
                 black_moves_str = rest[black_moves_start:].strip()
+                red_span = (dice_matches[0].start(), red_moves_end)
+                black_span = (dice_matches[1].start(), len(rest))
             else:
                 red_moves_str = rest[red_moves_start:].strip()
-                black_dice_str = None
                 black_moves_str = None
+                red_span = (dice_matches[0].start(), len(rest))
 
-            red_part = f"{red_dice_str} {red_moves_str}".strip()
-            if black_dice_str:
-                black_part = f"{black_dice_str} {black_moves_str}".strip()
+            red_part = f"{dice_matches[0].group(0)} {red_moves_str}".strip()
+            if len(dice_matches) >= 2:
+                black_part = f"{dice_matches[1].group(0)} {black_moves_str}".strip()
+
+        # --- Ищем 'Doubles => N' в rest, но решаем — событие это или часть ходов ---
+        doubles_search = re.search(r"Doubles\s*=>\s*(\d+)\s*(Takes|Drops)?", rest)
+        if doubles_search:
+            ds_start, ds_end = doubles_search.start(), doubles_search.end()
+            inside_red = red_span and (ds_start >= red_span[0] and ds_end <= red_span[1])
+            inside_black = black_span and (ds_start >= black_span[0] and ds_end <= black_span[1])
+            # Если написано внутри распознанной части ходов — считаем это частью ходов (не событием)
+            if not inside_red and not inside_black:
+                # Это внешнее событие — регистрируем отдельно и не включаем в moves
+                value = int(doubles_search.group(1))
+                response = (doubles_search.group(2) or "").lower()
+                moves_list.append(
+                    {"turn": turn, "player": "Red", "action": "double", "cube": value}
+                )
+                if response:
+                    moves_list.append({"turn": turn, "player": "Black", "action": response})
+
 
         def parse_part(part, player):
             if not part:
@@ -98,7 +107,13 @@ def parse_backgammon_mat(content):
             moves_str = dice_match.group(3) or ""
             move_list = []
 
+            # Разбиваем по пробелам; если 'Doubles => N' внутри — это останется как токены и
+            # не будет интерпретировано как fr/to (т.к. нет '/'), поэтому безопасно пропустится
             for m in moves_str.split():
+                # Пропускаем явные маркеры Doubles (если они попали внутрь)
+                if re.match(r"Doubles\s*=>", m, re.IGNORECASE) or m.lower() in ("doubles", "=>", "takes", "drops"):
+                    continue
+
                 hit = False
                 if "*" in m:
                     hit = True
@@ -106,17 +121,18 @@ def parse_backgammon_mat(content):
                 fr_to = m.split("/")
                 try:
                     fr_str = fr_to[0]
-                    fr = 25 if fr_str == "Bar" else int(fr_str)
+                    fr = 25 if fr_str.lower() in ("bar", "b") else int(fr_str)
                     to = (
                         0
                         if len(fr_to) == 1
-                        else (0 if fr_to[1] == "Off" else int(fr_to[1]))
+                        else (0 if fr_to[1].lower() in ("off", "o") else int(fr_to[1]))
                     )
                 except (ValueError, IndexError):
+                    # Не смогли распарсить этот токен как ход — пропускаем
                     continue
                 move_list.append({"from": fr, "to": to, "hit": hit})
 
-            # ✅ теперь возвращаем даже если move_list пуст
+            # возвращаем даже если move_list пуст
             return {"turn": turn, "player": player, "dice": dice, "moves": move_list}
 
         red_move = parse_part(red_part, "Red")
@@ -517,7 +533,7 @@ def convert_moves_to_gnu(moves_list):
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 0.4
+    command_delay = 0.5
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
