@@ -207,10 +207,12 @@ def json_to_gnubg_commands(data):
             next_turn = data[i + 1].get("turn")
 
         if act == "double":
+            tokens.append({"cmd": "hint", "type": "hint", "target": i})
             tokens.append({"cmd": "double", "type": "cmd", "target": None})
             i += 1
             continue
         elif act in ("takes", "drop"):
+            tokens.append({"cmd": "hint", "type": "hint", "target": i})
             tokens.append({"cmd": act, "type": "cmd", "target": None})
             i += 1
             continue
