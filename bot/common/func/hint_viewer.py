@@ -131,107 +131,11 @@ def parse_backgammon_mat(content):
     return moves_list
 
 
-class BackgammonBoard:
-    def __init__(self):
-        self.board = [0] * 26
-        # Red positions (positive)
-        self.board[24] = 2
-        self.board[13] = 5
-        self.board[8] = 3
-        self.board[6] = 5
-        # Black positions (negative)
-        self.board[1] = -2
-        self.board[12] = -5
-        self.board[17] = -3
-        self.board[19] = -5
-        self.off_red = 0
-        self.off_black = 0
-
-    def _get_fixed_point(self, p, player):
-        if player == "Red":
-            if p == 25:
-                return 0  # Red bar
-            elif p == 0:
-                return None  # bear off
-            else:
-                return p
-        else:  # Black
-            if p == 25:
-                return 25  # Black bar
-            elif p == 0:
-                return None  # bear off
-            else:
-                return 25 - p
-
-    def apply_move(self, player, fr, to, hit):
-        f_fixed = self._get_fixed_point(fr, player)
-        t_fixed = self._get_fixed_point(to, player)
-
-        if f_fixed is None:
-            raise ValueError("Cannot move from bear off")
-
-        # Determine signs and bars
-        if player == "Red":
-            sign = 1
-            bar_own = 0
-            bar_opp = 25
-        else:
-            sign = -1
-            bar_own = 25
-            bar_opp = 0
-
-        # Remove from from
-        if f_fixed == bar_own:
-            self.board[bar_own] -= 1
-        else:
-            self.board[f_fixed] -= sign
-
-        # Add to to
-        if t_fixed is None:
-            # Bear off
-            if player == "Red":
-                self.off_red += 1
-            else:
-                self.off_black += 1
-        else:
-            # Check for hit
-            if self.board[t_fixed] == -sign:  # single opponent
-                self.board[t_fixed] = 0
-                self.board[bar_opp] += 1  # opponent to bar
-            self.board[t_fixed] += sign
-
-    def get_positions(self):
-        red_pos = {"bar": self.board[0], "off": self.off_red}
-        black_pos = {"bar": self.board[25], "off": self.off_black}
-        for i in range(1, 25):
-            if self.board[i] > 0:
-                red_pos[i] = self.board[i]
-            elif self.board[i] < 0:
-                black_pos[i] = -self.board[i]
-        return {"red": red_pos, "black": black_pos}
-
-
 def load_game_data(file_path="output.json"):
     with open(file_path, "r") as f:
         return json.load(f)
 
 
-def process_game(game_data):
-    board = BackgammonBoard()
-    augmented = []
-    for entry in game_data:
-        augmented_entry = copy.deepcopy(entry)
-        if "moves" in entry:
-            for move in entry["moves"]:
-                board.apply_move(entry["player"], move["from"], move["to"], move["hit"])
-        if (
-            "positions" not in augmented_entry
-        ):  # For non-move entries like double, takes, win
-            augmented_entry["positions"] = board.get_positions()
-        else:
-            augmented_entry["positions"] = board.get_positions()
-        augmented.append(augmented_entry)
-    return augmented
 
 
 def json_to_gnubg_commands(data):
@@ -340,7 +244,7 @@ def parse_hint_output(text: str):
                 low.startswith("hint")
                 or low.startswith("considering")
                 or "(black)" in low
-                or "(red)" in low  
+                or "(red)" in low
             ):
                 continue
             # отключаем строки из повторяющихся символов
@@ -380,11 +284,9 @@ def parse_hint_output(text: str):
                 ].strip()
                 break
 
-        if equities:  # Добавляем equities только если они найдены
+        if equities:
             result["cubeful_equities"] = equities
             return [result]
-
-    # Парсинг для обычных ходов остается прежним
     hints = []
     i = 0
     entry_re = re.compile(
@@ -404,7 +306,6 @@ def parse_hint_output(text: str):
                 eq = 0.0
             probs = []
             j = i + 1
-            # собираем последующие строки с числами (вероятности), допускаем, что они могут быть в одной или нескольких строках
             while j < len(lines):
                 line = lines[j].strip()
                 if not line:
@@ -413,9 +314,7 @@ def parse_hint_output(text: str):
                 if found:
                     probs.extend([float(x) for x in found])
                     j += 1
-                    # если после чтения хотя бы 3 чисел и следующая строка не содержит чисел — можно завершить
                     continue
-                # если строка не содержит чисел — выходим
                 break
             hints.append(
                 {"type": "move", "idx": idx, "move": move, "eq": eq, "probs": probs}
@@ -426,6 +325,35 @@ def parse_hint_output(text: str):
     return hints
 
 
+def extract_player_names(content: str) -> tuple[str, str]:
+    """
+    Extracts player nicknames from .mat file content.
+    Returns tuple of (red_player, black_player)
+    """
+    lines = content.splitlines()
+
+    for i, line in enumerate(lines):
+        if line.strip().startswith("Game"):
+            if i + 1 < len(lines):
+                # Next line contains player names and scores
+                players_line = lines[i + 1].strip()
+                # Split by : to separate players and their scores
+                parts = players_line.split(":")
+                if (
+                    len(parts) >= 3
+                ):  # Should have at least 3 parts: red_name : score black_name : score
+                    red_player = parts[0].strip()
+                    black_player = parts[2].strip()
+                    logger.info(
+                        f"Extracted players: Red={red_player}, Black={black_player}"
+                    )
+                    return red_player, black_player
+
+    logger.warning("Could not extract player names from .mat file")
+    return "Red", "Black"  # Default fallback names
+
+
+# Modify process_mat_file to use the extracted names
 def process_mat_file(input_file, output_file):
 
     temp_script = random_filename()
@@ -434,21 +362,29 @@ def process_mat_file(input_file, output_file):
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
 
+        # Extract player names before parsing moves
+        red_player, black_player = extract_player_names(content)
+
         parsed_moves = parse_backgammon_mat(content)
-        augmented = process_game(parsed_moves)
+
+        # Add player names to the output
+        for entry in parsed_moves:
+            if entry.get("player") == "Red":
+                entry["player_name"] = red_player
+            elif entry.get("player") == "Black":
+                entry["player_name"] = black_player
 
         with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(augmented, f, indent=2, ensure_ascii=False)
+            json.dump(parsed_moves, f, indent=2, ensure_ascii=False)
 
         # генерируем токены команд
-        gnubg_tokens = json_to_gnubg_commands(augmented)
+        gnubg_tokens = json_to_gnubg_commands(parsed_moves)
         logger.info([t["cmd"] for t in gnubg_tokens])
 
         # Инициализируем поле для подсказок в каждой записи
-        for entry in augmented:
+        for entry in parsed_moves:
             entry.setdefault("hints", [])
 
-        # Отправляем команды через pty с pexpect
         child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
         time.sleep(0.5)
         try:
@@ -486,14 +422,14 @@ def process_mat_file(input_file, output_file):
                     hints = parse_hint_output(out)
                     if hints:
                         for h in hints:
-                            augmented[target_idx]["hints"].append(h)
+                            parsed_moves[target_idx]["hints"].append(h)
                     else:
                         logger.debug(
                             "No hints parsed for target %s, raw output length=%d",
                             target_idx,
                             len(out),
                         )
-                        augmented[target_idx]["hints"].append({"raw": out})
+                        parsed_moves[target_idx]["hints"].append({"raw": out})
 
             logger.debug("send: exit / y")
             try:
@@ -526,7 +462,7 @@ def process_mat_file(input_file, output_file):
 
         try:
             with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(augmented, f, indent=2, ensure_ascii=False)
+                json.dump(parsed_moves, f, indent=2, ensure_ascii=False)
             logger.info("Updated %s with hint data", output_file)
         except Exception:
             logger.exception("Failed to write augmented json with hints")

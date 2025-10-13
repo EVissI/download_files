@@ -243,4 +243,3 @@ def get_paginated_checkbox_keyboard(
     rows.append(1)
     kb.adjust(*rows)
     return kb.as_markup()
-# ...existing code...
