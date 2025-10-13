@@ -505,7 +505,6 @@ def convert_moves_to_gnu(moves_list):
         if m.get('hit'):
             edge_hit[(fr, to)] = True
 
-    # helpers to compute outgoing/incoming counts for remaining edges
     def build_degree_maps():
         out = defaultdict(int)
         inn = defaultdict(int)
@@ -517,73 +516,93 @@ def convert_moves_to_gnu(moves_list):
 
     result_parts = []
 
-    # While any edge remains, extract a maximal path and output compressed notation
     while True:
-        # remove zero-count edges from edges dict view by checking counts; break if none left
         remaining = [(e, c) for e, c in edges.items() if c > 0]
         if not remaining:
             break
 
         out_map, in_map = build_degree_maps()
 
-        # Prefer start nodes that are not destinations (in==0), so chains start at sources.
+        # Prefer start nodes that are not destinations (sources)
         candidate_starts = [a for (a, b), c in edges.items() if c > 0 and in_map.get(a, 0) == 0]
         if not candidate_starts:
-            # fallback: choose node with largest out-degree (deterministic tie-breaker: larger pos)
-            cand = [(out_map.get(n, 0), n) for (n, _), _ in edges.items() if edges[(n, _)] > 0]
-            if not cand:
-                # last resort: pick any existing 'from'
-                candidate_starts = [e[0][0] for e in remaining]
+            # fallback: choose node with largest out-degree (tie: largest node)
+            cand = {}
+            for (fr, to), cnt in edges.items():
+                if cnt > 0:
+                    cand.setdefault(fr, 0)
+                    cand[fr] += cnt
+            if cand:
+                max_out = max(cand.values())
+                candidate_starts = [n for n, v in cand.items() if v == max_out]
             else:
-                # choose max out, then max node
-                max_out = max(cand)[0]
-                candidate_starts = [n for (o, n) in cand if o == max_out]
+                candidate_starts = [e[0][0] for e in remaining]
 
-        # deterministic pick: prefer highest pos (bar=25 will be chosen before lower)
+        # deterministic pick: prefer higher position (so bar=25 goes first)
         start = max(candidate_starts)
 
-        # build path greedily: at each node pick outgoing edge with largest remaining count; tie-breaker: largest 'to'
-        path = []  # list of (fr,to)
+        # build path greedily: pick outgoing edge with largest remaining count; tie-breaker: largest 'to'
+        path = []
         cur = start
         while True:
-            # collect possible next edges
             next_edges = [(to, edges[(cur, to)]) for (fr, to) in edges.keys() if fr == cur and edges[(fr, to)] > 0]
             if not next_edges:
                 break
-            # choose to with highest count, tie -> highest 'to'
             next_edges.sort(key=lambda x: (x[1], x[0]), reverse=True)
             nxt = next_edges[0][0]
             path.append((cur, nxt))
             cur = nxt
 
         if not path:
-            # nothing to follow from start (shouldn't happen often) -> consume single edge if exists
-            # find any edge with from == start
+            # consume any single outgoing edge or any remaining edge
             single = None
             for (fr, to), cnt in edges.items():
                 if cnt > 0 and fr == start:
                     single = (fr, to)
                     break
             if single is None:
-                # pick any remaining edge
                 single = remaining[0][0]
             path = [single]
 
-        # determine multiplicity k = min count along path
+        # multiplicity k = min count along path
         counts = [edges[e] for e in path]
         k = min(counts)
 
-        # determine if any hit on any of these edges -> mark final hit
-        any_hit = any(edge_hit[e] for e in path)
+        # determine if any hits on edges, and whether any middle-edge hits exist
+        hits_per_edge = [edge_hit[e] for e in path]
+        any_hit = any(hits_per_edge)
+        middle_hits = any(hits_per_edge[:-1]) if len(hits_per_edge) > 1 else False
+        last_edge_hit = hits_per_edge[-1]
 
-        # output a compressed move: start/.../final
-        move_from = path[0][0]
-        move_to = path[-1][1]
-        move_str = f"{fmt(move_from)}/{fmt(move_to)}"
-        if any_hit:
-            move_str += "*"
-        if k > 1:
-            move_str += f"({k})"
+        # Build output depending on hits
+        if len(path) == 1:
+            # single edge: straightforward
+            fr, to = path[0]
+            move_str = f"{fmt(fr)}/{fmt(to)}"
+            if last_edge_hit:
+                move_str += "*"
+            if k > 1:
+                move_str += f"({k})"
+        else:
+            if middle_hits:
+                # expand full chain and mark each landing that had hit
+                parts = [fmt(path[0][0])]
+                for (fr, to), hit in zip(path, hits_per_edge):
+                    landing = fmt(to)
+                    if hit:
+                        landing += "*"
+                    parts.append(landing)
+                move_str = "/".join(parts)
+                if k > 1:
+                    # append multiplicity to final landing
+                    move_str += f"({k})"
+            else:
+                # no middle hits: compress to start/.../final and add * only if last edge was hit
+                move_str = f"{fmt(path[0][0])}/{fmt(path[-1][1])}"
+                if last_edge_hit:
+                    move_str += "*"
+                if k > 1:
+                    move_str += f"({k})"
 
         result_parts.append(move_str)
 
@@ -591,20 +610,16 @@ def convert_moves_to_gnu(moves_list):
         for e in path:
             edges[e] -= k
             if edges[e] <= 0:
-                # ensure non-negative
                 edges[e] = 0
-            # if all copies of that edge consumed, also clear hit info for cleanliness
-            if edges[e] == 0:
                 edge_hit[e] = False
 
-    # preserve natural order (we built result_parts in chosen order)
     final = " ".join(result_parts)
     logger.debug(f"Converted to GNU: {final}")
     return final or None
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 0.65
+    command_delay = 0.7
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
