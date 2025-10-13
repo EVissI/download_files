@@ -1,4 +1,4 @@
-﻿from collections import defaultdict
+﻿from collections import Counter, defaultdict
 import copy
 import os
 from pprint import pprint
@@ -567,8 +567,18 @@ def convert_moves_to_gnu(moves_list):
 
         result.append(move_str)
 
-    return " ".join(result) if result else None
+    # Group identical move strings and add (count) for repeats >1
+    counted = Counter(result)
+    new_result = []
+    for m in sorted(counted.keys()):
+        c = counted[m]
+        if c > 1:
+            new_result.append(f"{m}({c})")
+        else:
+            new_result.append(m)
 
+    logger.debug(f"Converted to GNU: {' '.join(new_result)}")
+    return " ".join(new_result) if new_result else None
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
