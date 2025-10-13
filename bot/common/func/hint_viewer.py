@@ -373,46 +373,40 @@ def convert_moves_to_gnu(moves_list):
     # Process all moves first
     processed_moves = [process_move(move) for move in moves_list]
 
-    # Combine sequential moves
-    combined_moves = []
-    i = 0
-    while i < len(processed_moves):
-        current = processed_moves[i]
-        start_point = current["from"]
-        end_point = current["to"]
-        hit = current["hit"]
+    # Group moves by starting point
+    moves_by_start = {}
+    for move in processed_moves:
+        key = (move["from"], move["to"])
+        if key not in moves_by_start:
+            moves_by_start[key] = {
+                "count": 1,
+                "hit": move["hit"],
+                "from": move["from"],
+                "to": move["to"],
+            }
+        else:
+            moves_by_start[key]["count"] += 1
+            moves_by_start[key]["hit"] |= move["hit"]
 
-        # Look for sequential moves
-        j = i + 1
-        while j < len(processed_moves):
-            next_move = processed_moves[j]
-            if next_move["from"] == end_point:
-                # Found sequential move, update endpoint
-                end_point = next_move["to"]
-                hit = hit or next_move["hit"]
-                j += 1
-            else:
-                break
+    # Sort moves by starting point (higher numbers first)
+    formatted_moves = []
+    sorted_moves = sorted(
+        moves_by_start.values(),
+        key=lambda x: (-(x["from"] if isinstance(x["from"], int) else 25)),
+    )
 
-        # Format the move
-        from_str = str(start_point) if isinstance(start_point, int) else start_point
-        to_str = "off" if end_point == 0 else str(end_point)
-        move_str = f"{from_str}/{to_str}{'*' if hit else ''}"
+    for move in sorted_moves:
+        from_str = str(move["from"]) if isinstance(move["from"], int) else move["from"]
+        to_str = "off" if move["to"] == 0 else str(move["to"])
+        hit_str = "*" if move["hit"] else ""
 
-        # Check for duplicates
-        count = sum(
-            1
-            for k in range(i, j)
-            if processed_moves[k]["from"] == processed_moves[i]["from"]
-            and processed_moves[k]["to"] == processed_moves[i]["to"]
-        )
-        if count > 1:
-            move_str = f"{move_str}({count})"
+        move_str = f"{from_str}/{to_str}{hit_str}"
+        if move["count"] > 1:
+            move_str = f"{move_str}({move['count']})"
 
-        combined_moves.append(move_str)
-        i = j if j > i else i + 1
+        formatted_moves.append(move_str)
 
-    return " ".join(combined_moves)
+    return " ".join(formatted_moves)
 
 
 # Modify process_mat_file to use the extracted names
