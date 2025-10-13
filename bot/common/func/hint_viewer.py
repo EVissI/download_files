@@ -361,8 +361,10 @@ def merge_off_moves(moves_list, dice):
     if not moves_list or not dice:
         return moves_list
 
+    logger.debug(f"Merging off moves: {moves_list}, dice: {dice}")
+
     # Доступные значения кубиков
-    dice_values = dice if dice[0] != dice[1] else [dice[0]] * 4  # Для дубля: [5,5] → [5,5,5,5]
+    dice_values = dice if dice[0] != dice[1] else [dice[0]] * 4
     new_moves = []
     off_moves = defaultdict(int)  # {from_pos: count} для ходов к 'off'
     non_off_moves = []
@@ -380,21 +382,18 @@ def merge_off_moves(moves_list, dice):
     while i < len(non_off_moves):
         curr = non_off_moves[i]
         fr, to, hit = curr['from'], curr['to'], curr['hit']
-        # Ищем следующий ход, начинающийся с текущего 'to'
         j = i + 1
         while j < len(non_off_moves):
             next_m = non_off_moves[j]
             if to == next_m['from'] and next_m['to'] == 0 and not hit and not next_m['hit']:
-                # Сжимаем X/Y Y/off → X/off, если есть подходящий кубик
                 total_distance = fr - 0
                 if total_distance in dice_values and total_distance <= max(dice_values):
                     off_moves[fr] += 1
                     used_dice.append(total_distance)
                     dice_values.remove(total_distance)
-                    i = j + 1  # Пропускаем оба хода
+                    i = j + 1
                     break
                 else:
-                    # Нет подходящего кубика, оставляем как есть
                     new_moves.append(curr)
                     i += 1
                     break
@@ -411,6 +410,7 @@ def merge_off_moves(moves_list, dice):
     for fr, count in off_moves.items():
         new_moves.append({'from': fr, 'to': 0, 'hit': False, 'count': count})
 
+    logger.debug(f"Merged off moves result: {new_moves}")
     return new_moves
 
 def normalize_move(move_str: str, dice=None) -> str:
@@ -419,6 +419,11 @@ def normalize_move(move_str: str, dice=None) -> str:
     сжимает цепочки к 'off' (e.g., '10/5 5/0' → '10/off').
     dice: список [d1, d2] для валидации сжатия (опционально).
     """
+    if not move_str:
+        return ""
+
+    logger.debug(f"Normalizing move: {move_str}, dice: {dice}")
+
     moves = parse_gnu_move(move_str)
     if not moves:
         return ""
@@ -440,20 +445,19 @@ def normalize_move(move_str: str, dice=None) -> str:
 
     # Assign hit to first move per to (для count=1)
     need_hit = set(to for to in hit_to if hit_to[to])
-    new_tuples = []
+    new_moves = []
     for fr, to, hit, count in move_tuples:
         new_hit = hit
         if count == 1 and to in need_hit:
             new_hit = True
             need_hit.discard(to)
-        new_tuples.append({'from': fr, 'to': to, 'hit': new_hit, 'count': count})
-
-    # Rebuild moves list
-    new_moves = [{'from': fr, 'to': to, 'hit': hit, 'count': count} for fr, to, hit, count in new_tuples]
+        new_moves.append({'from': fr, 'to': to, 'hit': new_hit, 'count': count})
 
     # Combine and return finalized
     combined = convert_moves_to_gnu(new_moves) or ""
-    return finalize_string(combined)
+    result = finalize_string(combined)
+    logger.debug(f"Normalized result: {result}")
+    return result
 
 def finalize_string(move_str):
     if not move_str:
@@ -503,6 +507,68 @@ def parse_gnu_move(move_str: str):
 
     return moves
 
+def merge_off_moves(moves_list, dice):
+    """
+    Сжимает ходы, ведущие к 'off' (0), если это возможно по кубикам.
+    Например, '10/5 5/0' → '10/0' (если кубик 5), '5/0 5/0' → '5/0(2)'.
+    dice: список [d1, d2] или [d, d] для дубля.
+    Возвращает новый moves_list.
+    """
+    if not moves_list or not dice:
+        return moves_list
+
+    logger.debug(f"Merging off moves: {moves_list}, dice: {dice}")
+
+    # Доступные значения кубиков
+    dice_values = dice if dice[0] != dice[1] else [dice[0]] * 4
+    new_moves = []
+    off_moves = defaultdict(int)  # {from_pos: count} для ходов к 'off'
+    non_off_moves = []
+    used_dice = []
+
+    # Собираем ходы к 'off' и остальные
+    for move in moves_list:
+        if move['to'] == 0:
+            off_moves[move['from']] += 1
+        else:
+            non_off_moves.append(move)
+
+    # Проверяем возможность сжатия цепочек к 'off'
+    i = 0
+    while i < len(non_off_moves):
+        curr = non_off_moves[i]
+        fr, to, hit = curr['from'], curr['to'], curr['hit']
+        j = i + 1
+        while j < len(non_off_moves):
+            next_m = non_off_moves[j]
+            if to == next_m['from'] and next_m['to'] == 0 and not hit and not next_m['hit']:
+                total_distance = fr - 0
+                if total_distance in dice_values and total_distance <= max(dice_values):
+                    off_moves[fr] += 1
+                    used_dice.append(total_distance)
+                    dice_values.remove(total_distance)
+                    i = j + 1
+                    break
+                else:
+                    new_moves.append(curr)
+                    i += 1
+                    break
+            else:
+                new_moves.append(curr)
+                i += 1
+                break
+        else:
+            if i < len(non_off_moves):
+                new_moves.append(curr)
+            i += 1
+
+    # Добавляем ходы к 'off'
+    for fr, count in off_moves.items():
+        new_moves.append({'from': fr, 'to': 0, 'hit': False, 'count': count})
+
+    logger.debug(f"Merged off moves result: {new_moves}")
+    return new_moves
+
 def convert_moves_to_gnu(moves_list):
     if not moves_list:
         return None
@@ -521,13 +587,18 @@ def convert_moves_to_gnu(moves_list):
         fr = curr['from']
         to = curr['to']
         hit = curr['hit']
-        count = curr.get('count', 1)  # Поддержка 'count' из merge_off_moves
+        count = curr.get('count', 1)  # Поддержка 'count'
+
+        if not isinstance(count, int):
+            logger.error(f"Invalid count type: {count} in move {curr}")
+            count = 1  # Фоллбек
 
         if count > 1:
             move_str = f"{format_position(fr)}/{format_position(to)}"
             if hit:
                 move_str += "*"
-            move_str += f"({count})"
+            if count > 1:  # Повторяем проверку для ясности
+                move_str += f"({count})"
             result.append(move_str)
             i += 1
             continue
@@ -547,13 +618,11 @@ def convert_moves_to_gnu(moves_list):
         has_middle_hit = any(h for _, h in landings[:-1]) if len(landings) > 1 else False
 
         if len(landings) > 1 and not has_middle_hit and landings[-1][0] != "off":
-            # Сжимаем только не-off цепочки без хитов в середине
             final_pos, final_hit = landings[-1]
             move_str = f"{format_position(fr)}/{final_pos}"
             if final_hit:
                 move_str += "*"
         else:
-            # Полная цепочка или одиночный ход
             move_str = format_position(fr)
             for pos, h in landings:
                 move_str += f"/{pos}"
@@ -563,6 +632,7 @@ def convert_moves_to_gnu(moves_list):
         result.append(move_str)
         i = j
 
+    logger.debug(f"Converted to GNU: {result}")
     return " ".join(result) if result else None
 
 
@@ -650,26 +720,21 @@ def process_mat_file(input_file, output_file):
             # Compare gnu_move with the first hint's move
             for entry in parsed_moves:
                 if "gnu_move" in entry and entry.get("hints"):
-                    # Find the first hint (idx == 1)
                     first_hint = next((hint for hint in entry["hints"] if hint.get("idx") == 1 and hint.get("type") == "move"), None)
                     if first_hint and "move" in first_hint:
-                        # Нормализуем обе строки перед сравнением
-                        normalized_gnu = normalize_move(entry["gnu_move"])
-                        normalized_hint = normalize_move(first_hint["move"])
-                        
+                        normalized_gnu = normalize_move(entry["gnu_move"], entry.get("dice"))
+                        normalized_hint = normalize_move(first_hint["move"], entry.get("dice"))
                         entry["is_best_move"] = normalized_gnu == normalized_hint
-                        
-                        # Логирование для отладки
                         if not entry["is_best_move"]:
                             logger.debug(
                                 "Move mismatch: gnu_move='{}' (normalized: '{}') vs hint='{}' (normalized: '{}')",
                                 entry["gnu_move"], normalized_gnu, first_hint["move"], normalized_hint
                             )
                     else:
-                        entry["is_best_move"] = False  # No valid first hint found
+                        entry["is_best_move"] = False
                         logger.warning("No valid first hint for entry: {}", entry)
                 else:
-                    entry["is_best_move"] = False  # No gnu_move or hints
+                    entry["is_best_move"] = False
                     logger.debug("Skipping comparison for entry without gnu_move or hints: {}", entry)
 
             logger.debug("send: exit / y")
