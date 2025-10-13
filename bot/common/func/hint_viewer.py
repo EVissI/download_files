@@ -350,6 +350,26 @@ def extract_player_names(content: str) -> tuple[str, str]:
     return "Red", "Black"  # Default fallback names
 
 
+def normalize_move(move_str: str) -> str:
+    """
+    Нормализует строку хода: убирает пробелы, сортирует части (ходы) для независимости от порядка.
+    Обработка специальных случаев: комбинированные хиты/повторения.
+    """
+    if not move_str:
+        return ""
+    
+    # Убираем внешние пробелы
+    move_str = move_str.strip()
+    
+    # Разбиваем на части (ходы)
+    parts = [part.strip() for part in move_str.split() if part.strip()]
+    
+    # Сортируем части алфавитно (чтобы порядок не влиял)
+    parts.sort()
+    
+    # Собираем обратно
+    return " ".join(parts)
+
 def convert_moves_to_gnu(moves_list):
     """
     Converts moves to GNU Backgammon format with move combining
@@ -507,11 +527,24 @@ def process_mat_file(input_file, output_file):
                     # Find the first hint (idx == 1)
                     first_hint = next((hint for hint in entry["hints"] if hint.get("idx") == 1 and hint.get("type") == "move"), None)
                     if first_hint and "move" in first_hint:
-                        entry["is_best_move"] = entry["gnu_move"] == first_hint["move"]
+                        # Нормализуем обе строки перед сравнением
+                        normalized_gnu = normalize_move(entry["gnu_move"])
+                        normalized_hint = normalize_move(first_hint["move"])
+                        
+                        entry["is_best_move"] = normalized_gnu == normalized_hint
+                        
+                        # Логирование для отладки
+                        if not entry["is_best_move"]:
+                            logger.debug(
+                                "Move mismatch: gnu_move='{}' (normalized: '{}') vs hint='{}' (normalized: '{}')",
+                                entry["gnu_move"], normalized_gnu, first_hint["move"], normalized_hint
+                            )
                     else:
                         entry["is_best_move"] = False  # No valid first hint found
+                        logger.warning("No valid first hint for entry: {}", entry)
                 else:
                     entry["is_best_move"] = False  # No gnu_move or hints
+                    logger.debug("Skipping comparison for entry without gnu_move or hints: {}", entry)
 
             logger.debug("send: exit / y")
             try:
