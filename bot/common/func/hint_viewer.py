@@ -417,6 +417,8 @@ def process_mat_file(input_file, output_file):
 
         # Инициализируем поле для подсказок в каждой записи
         for entry in parsed_moves:
+            if "moves" in entry:
+                entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
             entry.setdefault("hints", [])
 
         child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
