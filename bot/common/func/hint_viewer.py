@@ -442,40 +442,54 @@ def convert_moves_to_gnu(moves_list):
     result = []
     i = 0
     while i < len(moves_list):
-        current_move = moves_list[i]
-        fr = current_move["from"]
-        to = current_move["to"]
-        hit = current_move["hit"]
+        curr = moves_list[i]
+        fr = curr['from']
+        to = curr['to']
+        hit = curr['hit']
 
-        move_str = f"{format_position(fr)}/{format_position(to)}"
-        combined = False
+        landings = []
+        landings.append( (format_position(to), hit) )
+
         j = i + 1
         while j < len(moves_list):
-            next_move = moves_list[j]
-            next_fr = next_move["from"]
-            next_to = next_move["to"]
-            next_hit = next_move["hit"]
-            if to == next_fr:
-                move_str += f"/{format_position(next_to)}"
-                hit |= next_hit
-                combined = True
-                j += 1
-                to = next_to
-            else:
+            next_m = moves_list[j]
+            if to != next_m['from']:
                 break
-        if hit:
-            move_str += "*"
+            next_to = next_m['to']
+            next_hit = next_m['hit']
+            landings.append( (format_position(next_to), next_hit) )
+            to = next_to
+            j += 1
+
+        # Now build move_str
+        has_middle_hit = any(h for _, h in landings[:-1]) if len(landings) > 1 else False
+
+        if len(landings) > 1 and not has_middle_hit:
+            # compress
+            final_pos, final_hit = landings[-1]
+            move_str = f"{format_position(fr)}/{final_pos}"
+            if final_hit:
+                move_str += "*"
+        else:
+            # full
+            move_str = format_position(fr)
+            for pos, h in landings:
+                move_str += f"/{pos}"
+                if h:
+                    move_str += "*"
+
+        combined = len(landings) > 1
 
         if not combined:
             # Check for repeats
             count = 1
-            hit = current_move["hit"]
+            hit = curr['hit']
             j = i + 1
             while j < len(moves_list):
-                next_move = moves_list[j]
-                next_fr = next_move["from"]
-                next_to = next_move["to"]
-                next_hit = next_move["hit"]
+                next_m = moves_list[j]
+                next_fr = next_m['from']
+                next_to = next_m['to']
+                next_hit = next_m['hit']
                 if fr == next_fr and to == next_to:
                     hit |= next_hit
                     count += 1
@@ -487,7 +501,6 @@ def convert_moves_to_gnu(moves_list):
                 move_str += "*"
             if count > 1:
                 move_str += f"({count})"
-            combined = count > 1
 
         result.append(move_str)
         i = j
