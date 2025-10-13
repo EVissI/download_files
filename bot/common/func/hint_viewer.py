@@ -379,43 +379,25 @@ def convert_moves_to_gnu(moves_list):
     while i < len(processed_moves):
         current = processed_moves[i]
         start_point = current["from"]
-        points = [{"point": current["to"], "hit": current["hit"]}]
+        end_point = current["to"]
+        hit = current["hit"]
 
         # Look for sequential moves
         j = i + 1
         while j < len(processed_moves):
             next_move = processed_moves[j]
-            if next_move["from"] == points[-1]["point"]:
-                # Found sequential move, add to points list
-                points.append({"point": next_move["to"], "hit": next_move["hit"]})
+            if next_move["from"] == end_point:
+                # Found sequential move, update endpoint
+                end_point = next_move["to"]
+                hit = hit or next_move["hit"]
                 j += 1
             else:
                 break
 
-        # Format the combined move
-        if len(points) > 1:
-            # For sequential moves with multiple points
-            move_parts = []
-            if isinstance(start_point, int):
-                move_parts.append(str(start_point))
-            else:
-                move_parts.append(start_point)  # for 'bar'
-
-            for p in points:
-                point_str = "off" if p["point"] == 0 else str(p["point"])
-                move_parts.append(point_str + ("*" if p["hit"] else ""))
-
-            move_str = "/".join(move_parts)
-        else:
-            # Single move
-            from_str = (
-                str(current["from"])
-                if isinstance(current["from"], int)
-                else current["from"]
-            )
-            to_str = "off" if current["to"] == 0 else str(current["to"])
-            hit_str = current["hit"]
-            move_str = f"{from_str}/{to_str}{hit_str}"
+        # Format the move
+        from_str = str(start_point) if isinstance(start_point, int) else start_point
+        to_str = "off" if end_point == 0 else str(end_point)
+        move_str = f"{from_str}/{to_str}{'*' if hit else ''}"
 
         # Check for duplicates
         count = sum(
