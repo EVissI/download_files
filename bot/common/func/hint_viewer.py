@@ -32,6 +32,7 @@ def parse_backgammon_mat(content):
 
     moves_list = []
     previous_player_moved = None
+    last_double_owner = None  # отслеживаем, кто предложил последний double ("Red" или "Black")
 
     for line in lines[start_idx:]:
         line = line.strip()
@@ -52,27 +53,34 @@ def parse_backgammon_mat(content):
         turn = int(num_match.group(1))
         rest = num_match.group(2).strip()
 
-        # ----- Специальный случай: строка начинается с "Takes" или "Drops"
-        # Пример: "7) Takes                         16: 8/2* 2/1*"
+        # --- Спецслучай: строка начинается с "Takes" или "Drops" ---
+        # Теперь owner определяется как ОППОЗИТ last_double_owner (тот, кто должен отвечать).
         td_start = re.match(r"^(Takes|Drops)\b\s*(.*)$", rest, re.IGNORECASE)
         if td_start:
             resp = td_start.group(1).lower()  # 'takes' или 'drops'
             tail = td_start.group(2).strip()   # возможно содержит "16: 8/2* 2/1*"
 
-            # Сначала регистрируем само действие Black (ответ на куб)
-            moves_list.append({"turn": turn, "player": "Black", "action": resp})
-            previous_player_moved = "Black"
+            # Определяем владельца: если есть последний double, ответ даёт противоположный игрок.
+            if last_double_owner == "Red":
+                owner = "Black"
+            elif last_double_owner == "Black":
+                owner = "Red"
+            else:
+                # если неизвестно — по умолчанию считаем, что ответ даёт Black (совпадает с предыдущей логикой)
+                owner = "Black"
 
-            # Если после 'Takes' / 'Drops' есть часть с броском (tail) — парсим её как ход Black
+            # Записываем действие (ответ на куб) за owner
+            moves_list.append({"turn": turn, "player": owner, "action": resp})
+            previous_player_moved = owner
+
+            # Если после 'Takes' / 'Drops' идёт часть с броском — это ход того же owner
             if tail:
-                # проверим, есть ли в tail шаблон dice (например "16:" или "32:")
                 dice_match_tail = re.match(r"(\d)(\d):(?:\s*(.*))?", tail)
                 if dice_match_tail:
                     dice = [int(dice_match_tail.group(1)), int(dice_match_tail.group(2))]
                     moves_str = dice_match_tail.group(3) or ""
                     move_list = []
                     for m in moves_str.split():
-                        # пропускаем мусорные маркеры
                         if re.match(r"Doubles\s*=>", m, re.IGNORECASE) or m.lower() in (
                             "doubles",
                             "=>",
@@ -96,12 +104,13 @@ def parse_backgammon_mat(content):
                         except (ValueError, IndexError):
                             continue
                         move_list.append({"from": fr, "to": to, "hit": hit})
-                    moves_list.append({"turn": turn, "player": "Black", "dice": dice, "moves": move_list})
+                    moves_list.append({"turn": turn, "player": owner, "dice": dice, "moves": move_list})
 
-            # Мы уже обработали эту строку как Takes/Drops + возможный Black-move — пропускаем дальнейший парсинг
+            # Ответ обработан — сбрасываем last_double_owner, т.к. ситуация закрыта
+            last_double_owner = None
             continue
 
-        # ----------------- Дальше обычная логика -----------------
+        # ---------------- Обычная логика ----------------
 
         # Находим части с костями (чтобы понимать spans для doubles)
         dice_pattern = r"(\d)(\d):"
@@ -137,28 +146,35 @@ def parse_backgammon_mat(content):
             inside_black = black_span and (ds_start >= black_span[0] and ds_end <= black_span[1])
 
             if not inside_red and not inside_black:
+                # Определяем, кто предложил double: если Doubles шёл после red_span — это предложение противника (Black),
+                # иначе — Red. Это соответствует вашему формату: если после Red-хода стоит "Doubles => N", то это ход Black.
+                if red_span and ds_start >= red_span[1]:
+                    owner = "Black"
+                else:
+                    owner = "Red"
+
                 value = int(doubles_search.group(1))
                 response = (doubles_search.group(2) or "").lower()
 
-                # hint перед double
+                # Добавляем hint перед double (как вы просили ранее)
                 moves_list.append(
-                    {
-                        "turn": turn,
-                        "player": "Red",
-                        "hints": [{"type": "cube", "value": value}],
-                    }
+                    {"turn": turn, "player": owner, "hints": [{"type": "cube", "value": value}]}
                 )
-                # сама операция double
-                moves_list.append({"turn": turn, "player": "Red", "action": "double", "cube": value})
+                moves_list.append({"turn": turn, "player": owner, "action": "double", "cube": value})
+
+                # Отмечаем, кто предложил double — чтобы следующий Takes/Drops мог быть привязан
+                # к противоположному игроку (ответчику).
+                last_double_owner = owner
+
                 if response:
+                    # Если явно указан Takes/Drops после Doubles, добавляем и запись ответчика
+                    responder = "Red" if owner == "Black" else "Black"
                     moves_list.append(
-                        {
-                            "turn": turn,
-                            "player": "Black",
-                            "hints": [{"type": "cube_response", "response": response}],
-                        }
+                        {"turn": turn, "player": responder, "hints": [{"type": "cube_response", "response": response}]}
                     )
-                    moves_list.append({"turn": turn, "player": "Black", "action": response})
+                    moves_list.append({"turn": turn, "player": responder, "action": response})
+                    # После явного ответа закрываем last_double_owner
+                    last_double_owner = None
 
         # ----- Парсер части (Red/Black) -----
         def parse_part(part, player):
