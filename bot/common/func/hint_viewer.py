@@ -125,7 +125,7 @@ def parse_backgammon_mat(content):
             red_part = f"{red_dice_str} {red_moves_str}".strip()
             if black_dice_str:
                 black_part = f"{black_dice_str} {black_moves_str}".strip()
-                
+
         def parse_part(part, player):
             if not part:
                 return None
@@ -556,7 +556,7 @@ def convert_moves_to_gnu(moves_list):
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 0.5
+    command_delay = 1
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
