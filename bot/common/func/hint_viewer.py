@@ -191,39 +191,53 @@ def json_to_gnubg_commands(data):
         {"cmd": "new game", "type": "cmd", "target": None},
     ]
 
-    for i, action in enumerate(data):
+    i = 0
+    while i < len(data):
+        action = data[i]
         player = action.get("player")
         dice = action.get("dice")
         moves = action.get("moves", [])
         act = action.get("action")
 
-        next_act = data[i + 1].get("action") if i + 1 < len(data) else None
+        # Проверяем следующий ход в рамках того же turn
+        next_act = None
+        next_turn = None
+        if i + 1 < len(data):
+            next_act = data[i + 1].get("action")
+            next_turn = data[i + 1].get("turn")
 
         if act == "double":
             tokens.append({"cmd": "double", "type": "cmd", "target": None})
-        elif act == "takes":
-            tokens.append({"cmd": "take", "type": "cmd", "target": None})
-        elif act == "drop":
-            tokens.append({"cmd": "drop", "type": "cmd", "target": None})
+            i += 1
+            continue
+        elif act in ("takes", "drop"):
+            tokens.append({"cmd": act, "type": "cmd", "target": None})
+            i += 1
+            continue
         elif act == "win":
             tokens.append({"cmd": "exit", "type": "cmd", "target": None})
             tokens.append({"cmd": "y", "type": "cmd", "target": None})
+            i += 1
+            continue
         elif dice:
-            # Добавляем set dice как команда, а hint помечаем целевым индексом i
+            # Добавляем set dice и hint
             tokens.append(
                 {"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i}
             )
             tokens.append({"cmd": "hint", "type": "hint", "target": i})
-            # Добавляем только если есть ходы
+            # Добавляем ходы, если есть
             if moves:
-                move_cmds = [f"{m['from']}/{m['to']}" for m in moves]
+                move_cmds = [f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in moves]
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
-            # Добавляем roll только если следующий ход не double/takes/drop
-            if next_act not in ("double", "takes", "drop"):
+            # Добавляем roll только если следующий ход не double/takes/drop или в другом turn
+            if not next_act or next_turn != action["turn"]:
                 tokens.append({"cmd": "roll", "type": "cmd", "target": i})
+            i += 1
+            continue
+
+        i += 1
 
     return tokens
-
 
 def random_filename(ext=".gnubg", length=16):
     letters = string.ascii_letters + string.digits
@@ -556,7 +570,7 @@ def convert_moves_to_gnu(moves_list):
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 1
+    command_delay = 0.75
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
