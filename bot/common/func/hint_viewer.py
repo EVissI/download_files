@@ -136,8 +136,6 @@ def load_game_data(file_path="output.json"):
         return json.load(f)
 
 
-
-
 def json_to_gnubg_commands(data):
     """
     Возвращает список токенов: {'cmd': str, 'type': 'cmd'|'hint', 'target': index_in_data_or_None}
@@ -351,6 +349,44 @@ def extract_player_names(content: str) -> tuple[str, str]:
 
     logger.warning("Could not extract player names from .mat file")
     return "Red", "Black"  # Default fallback names
+
+
+def convert_moves_to_gnu(moves_list):
+    """
+    Converts moves to GNU backgammon format
+    Returns formatted string or None if no moves
+    """
+    if not moves_list:
+        return None
+
+    def process_move(move):
+        from_point = move["from"]
+        to_point = move["to"]
+        hit = "*" if move["hit"] else ""
+
+        # Convert special points
+        if from_point == 25:
+            from_point = "bar"
+        if to_point == 0:
+            to_point = "off"
+
+        return f"{from_point}/{to_point}{hit}"
+
+    # Group moves by from/to points to detect duplicates
+    moves_grouped = {}
+    for move in moves_list:
+        key = (move["from"], move["to"], move["hit"])
+        moves_grouped[key] = moves_grouped.get(key, 0) + 1
+
+    # Format moves with count
+    formatted_moves = []
+    for (from_point, to_point, hit), count in moves_grouped.items():
+        move_str = process_move({"from": from_point, "to": to_point, "hit": hit})
+        if count > 1:
+            move_str = f"{move_str}({count})"
+        formatted_moves.append(move_str)
+
+    return " ".join(formatted_moves)
 
 
 # Modify process_mat_file to use the extracted names
