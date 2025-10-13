@@ -351,41 +351,116 @@ def extract_player_names(content: str) -> tuple[str, str]:
     return "Red", "Black"  # Default fallback names
 
 
-def normalize_move(move_str: str) -> str:
+def merge_off_moves(moves_list, dice):
     """
-    Нормализует строку хода: убирает пробелы, сортирует части для независимости от порядка,
-    канонизирует позицию хита для эквивалентных ходов (e.g., "8/7* 13/7" == "13/7* 8/7").
+    Сжимает ходы, ведущие к 'off' (0), если это возможно по кубикам.
+    Например, '10/5 5/0' → '10/0' (если кубик 5), '5/0 5/0' → '5/0(2)'.
+    dice: список [d1, d2] или [d, d] для дубля.
+    Возвращает новый moves_list.
+    """
+    if not moves_list or not dice:
+        return moves_list
+
+    # Доступные значения кубиков
+    dice_values = dice if dice[0] != dice[1] else [dice[0]] * 4  # Для дубля: [5,5] → [5,5,5,5]
+    new_moves = []
+    off_moves = defaultdict(int)  # {from_pos: count} для ходов к 'off'
+    non_off_moves = []
+    used_dice = []
+
+    # Собираем ходы к 'off' и остальные
+    for move in moves_list:
+        if move['to'] == 0:
+            off_moves[move['from']] += 1
+        else:
+            non_off_moves.append(move)
+
+    # Проверяем возможность сжатия цепочек к 'off'
+    i = 0
+    while i < len(non_off_moves):
+        curr = non_off_moves[i]
+        fr, to, hit = curr['from'], curr['to'], curr['hit']
+        # Ищем следующий ход, начинающийся с текущего 'to'
+        j = i + 1
+        while j < len(non_off_moves):
+            next_m = non_off_moves[j]
+            if to == next_m['from'] and next_m['to'] == 0 and not hit and not next_m['hit']:
+                # Сжимаем X/Y Y/off → X/off, если есть подходящий кубик
+                total_distance = fr - 0
+                if total_distance in dice_values and total_distance <= max(dice_values):
+                    off_moves[fr] += 1
+                    used_dice.append(total_distance)
+                    dice_values.remove(total_distance)
+                    i = j + 1  # Пропускаем оба хода
+                    break
+                else:
+                    # Нет подходящего кубика, оставляем как есть
+                    new_moves.append(curr)
+                    i += 1
+                    break
+            else:
+                new_moves.append(curr)
+                i += 1
+                break
+        else:
+            if i < len(non_off_moves):
+                new_moves.append(curr)
+            i += 1
+
+    # Добавляем ходы к 'off'
+    for fr, count in off_moves.items():
+        new_moves.append({'from': fr, 'to': 0, 'hit': False, 'count': count})
+
+    return new_moves
+
+def normalize_move(move_str: str, dice=None) -> str:
+    """
+    Нормализует строку хода: убирает пробелы, сортирует части, канонизирует хиты,
+    сжимает цепочки к 'off' (e.g., '10/5 5/0' → '10/off').
+    dice: список [d1, d2] для валидации сжатия (опционально).
     """
     moves = parse_gnu_move(move_str)
     if not moves:
         return ""
 
-    # Convert to tuples (from, to, hit)
-    move_tuples = [(m['from'], m['to'], m['hit']) for m in moves]
+    # Сжимаем ходы к 'off'
+    moves = merge_off_moves(moves, dice)
 
-    # Sort by from desc, to desc, hit True first
-    move_tuples.sort(key=lambda x: (-x[0], -x[1], -int(x[2])))
+    # Convert to tuples (from, to, hit, count)
+    move_tuples = [(m['from'], m['to'], m['hit'], m.get('count', 1)) for m in moves]
+
+    # Sort by from desc, to desc, hit True first, count desc
+    move_tuples.sort(key=lambda x: (-x[0], -x[1], -int(x[2]), -x[3]))
 
     # Canonicalize hits: collect per to
     hit_to = defaultdict(bool)
-    for fr, to, hit in move_tuples:
-        hit_to[to] |= hit
+    for fr, to, hit, count in move_tuples:
+        if count == 1:  # Хиты для повторов обрабатываем отдельно
+            hit_to[to] |= hit
 
-    # Assign hit to first move per to
+    # Assign hit to first move per to (для count=1)
     need_hit = set(to for to in hit_to if hit_to[to])
     new_tuples = []
-    for fr, to, _ in move_tuples:
-        hit = False
-        if to in need_hit:
-            hit = True
+    for fr, to, hit, count in move_tuples:
+        new_hit = hit
+        if count == 1 and to in need_hit:
+            new_hit = True
             need_hit.discard(to)
-        new_tuples.append((fr, to, hit))
+        new_tuples.append({'from': fr, 'to': to, 'hit': new_hit, 'count': count})
 
     # Rebuild moves list
-    new_moves = [{'from': fr, 'to': to, 'hit': hit} for fr, to, hit in new_tuples]
+    new_moves = [{'from': fr, 'to': to, 'hit': hit, 'count': count} for fr, to, hit, count in new_tuples]
 
-    # Combine and return
-    return convert_moves_to_gnu(new_moves) or ""
+    # Combine and return finalized
+    combined = convert_moves_to_gnu(new_moves) or ""
+    return finalize_string(combined)
+
+def finalize_string(move_str):
+    if not move_str:
+        return ""
+    parts = [part.strip() for part in move_str.split() if part.strip()]
+    parts.sort()
+    return " ".join(parts)
 
 def parse_gnu_move(move_str: str):
     if not move_str:
@@ -446,61 +521,44 @@ def convert_moves_to_gnu(moves_list):
         fr = curr['from']
         to = curr['to']
         hit = curr['hit']
+        count = curr.get('count', 1)  # Поддержка 'count' из merge_off_moves
 
-        landings = []
-        landings.append( (format_position(to), hit) )
+        if count > 1:
+            move_str = f"{format_position(fr)}/{format_position(to)}"
+            if hit:
+                move_str += "*"
+            move_str += f"({count})"
+            result.append(move_str)
+            i += 1
+            continue
 
+        landings = [(format_position(to), hit)]
         j = i + 1
         while j < len(moves_list):
             next_m = moves_list[j]
-            if to != next_m['from']:
+            if to != next_m['from'] or next_m.get('count', 1) > 1:
                 break
             next_to = next_m['to']
             next_hit = next_m['hit']
-            landings.append( (format_position(next_to), next_hit) )
+            landings.append((format_position(next_to), next_hit))
             to = next_to
             j += 1
 
-        # Now build move_str
         has_middle_hit = any(h for _, h in landings[:-1]) if len(landings) > 1 else False
 
-        if len(landings) > 1 and not has_middle_hit:
-            # compress
+        if len(landings) > 1 and not has_middle_hit and landings[-1][0] != "off":
+            # Сжимаем только не-off цепочки без хитов в середине
             final_pos, final_hit = landings[-1]
             move_str = f"{format_position(fr)}/{final_pos}"
             if final_hit:
                 move_str += "*"
         else:
-            # full
+            # Полная цепочка или одиночный ход
             move_str = format_position(fr)
             for pos, h in landings:
                 move_str += f"/{pos}"
                 if h:
                     move_str += "*"
-
-        combined = len(landings) > 1
-
-        if not combined:
-            # Check for repeats
-            count = 1
-            hit = curr['hit']
-            j = i + 1
-            while j < len(moves_list):
-                next_m = moves_list[j]
-                next_fr = next_m['from']
-                next_to = next_m['to']
-                next_hit = next_m['hit']
-                if fr == next_fr and to == next_to:
-                    hit |= next_hit
-                    count += 1
-                    j += 1
-                else:
-                    break
-            move_str = f"{format_position(fr)}/{format_position(to)}"
-            if hit:
-                move_str += "*"
-            if count > 1:
-                move_str += f"({count})"
 
         result.append(move_str)
         i = j
