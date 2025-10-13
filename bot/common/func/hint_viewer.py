@@ -604,7 +604,7 @@ def convert_moves_to_gnu(moves_list):
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 0.75
+    command_delay = 0.65
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
