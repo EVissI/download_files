@@ -351,71 +351,72 @@ def extract_player_names(content: str) -> tuple[str, str]:
 
 def convert_moves_to_gnu(moves_list):
     """
-    Converts moves to GNU backgammon format with move combining
+    Converts moves to GNU Backgammon format with move combining
     Returns formatted string or None if no moves
+    Args:
+        moves_list: List of move dictionaries with 'from', 'to', 'hit' keys
+    Returns:
+        Formatted string in GNU Backgammon notation or None if no moves
     """
     if not moves_list:
         return None
 
-    def process_move(move):
-        from_point = move["from"]
-        to_point = move["to"]
-        hit = "*" if move["hit"] else ""
+    # Convert special positions
+    def format_position(pos):
+        if pos == 25:
+            return "bar"
+        if pos == 0:
+            return "off"
+        return str(pos)
 
-        # Convert special points
-        if from_point == 25:
-            from_point = "bar"
-        if to_point == 0:
-            to_point = "off"
+    # Track positions to combine moves
+    result = []
+    i = 0
+    while i < len(moves_list):
+        current_move = moves_list[i]
+        fr = current_move["from"]
+        to = current_move["to"]
+        hit = current_move["hit"]
 
-        return {"from": from_point, "to": to_point, "hit": bool(move["hit"])}
+        # Format initial move
+        move_str = f"{format_position(fr)}/{format_position(to)}"
+        if hit:
+            move_str += "*"
 
-    # Process all moves first
-    processed_moves = [process_move(move) for move in moves_list]
+        # Check if we can combine with next move
+        if i + 1 < len(moves_list):
+            next_move = moves_list[i + 1]
+            next_fr = next_move["from"]
+            next_to = next_move["to"]
+            next_hit = next_move["hit"]
 
-    # Group moves by starting point
-    moves_by_start = {}
-    for move in processed_moves:
-        key = move["from"]  # Group only by starting point
-        if key not in moves_by_start:
-            moves_by_start[key] = {
-                "moves": [(move["to"], move["hit"])],
-                "from": move["from"],
-            }
+            # Combine moves if they form a chain (to == next_fr) or are identical
+            if to == next_fr or (fr == next_fr and to == next_to):
+                # For identical moves (e.g., 8/7* 8/7)
+                if fr == next_fr and to == next_to:
+                    move_str = f"{format_position(fr)}/{format_position(to)}"
+                    if hit or next_hit:
+                        move_str += "*(2)"
+                    i += 2  # Skip the next move
+                else:
+                    # Chain moves (e.g., 21/20* 20/18* -> 21/20*/18*)
+                    move_str = f"{format_position(fr)}/{format_position(next_to)}"
+                    if hit or next_hit:
+                        move_str += "*"
+                    i += 2  # Skip the next move
+            else:
+                i += 1
         else:
-            moves_by_start[key]["moves"].append((move["to"], move["hit"]))
+            i += 1
 
-    # Sort moves by starting point (higher numbers first)
-    formatted_moves = []
-    sorted_moves = sorted(
-        moves_by_start.items(), key=lambda x: (-(x[0] if isinstance(x[0], int) else 25))
-    )
+        result.append(move_str)
 
-    for _, move_data in sorted_moves:
-        from_str = (
-            str(move_data["from"])
-            if isinstance(move_data["from"], int)
-            else move_data["from"]
-        )
-        # Count identical moves
-        moves_count = {}
-        for to_point, hit in move_data["moves"]:
-            key = (to_point, hit)
-            moves_count[key] = moves_count.get(key, 0) + 1
+    # Handle single move to off (e.g., 0 -> off)
+    if len(result) == 1 and moves_list[0]["to"] == 0:
+        return "off"
 
-        # Format each unique move
-        for (to_point, hit), count in moves_count.items():
-            to_str = "off" if to_point == 0 else str(to_point)
-            hit_str = "*" if hit else ""
-
-            move_str = f"{from_str}/{to_str}{hit_str}"
-            if count > 1:
-                move_str = f"{move_str}({count})"
-
-            formatted_moves.append(move_str)
-
-    return " ".join(formatted_moves)
-
+    # Combine moves or return single move
+    return " ".join(result) if result else None
 
 # Modify process_mat_file to use the extracted names
 def process_mat_file(input_file, output_file):
@@ -438,6 +439,11 @@ def process_mat_file(input_file, output_file):
             elif entry.get("player") == "Black":
                 entry["player_name"] = black_player
 
+        # Convert moves to GNU format
+        for entry in parsed_moves:
+            if "moves" in entry:
+                entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
+
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(parsed_moves, f, indent=2, ensure_ascii=False)
 
@@ -447,8 +453,6 @@ def process_mat_file(input_file, output_file):
 
         # Инициализируем поле для подсказок в каждой записи
         for entry in parsed_moves:
-            if "moves" in entry:
-                entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
             entry.setdefault("hints", [])
 
         child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
