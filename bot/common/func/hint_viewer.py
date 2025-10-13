@@ -419,9 +419,8 @@ def convert_moves_to_gnu(moves_list):
     # Combine moves or return single move
     return " ".join(result) if result else None
 
-# Modify process_mat_file to use the extracted names
-def process_mat_file(input_file, output_file):
 
+def process_mat_file(input_file, output_file):
     temp_script = random_filename()
     command_delay = 0.4
     try:
@@ -501,6 +500,18 @@ def process_mat_file(input_file, output_file):
                             len(out),
                         )
                         parsed_moves[target_idx]["hints"].append({"raw": out})
+
+            # Compare gnu_move with the first hint's move
+            for entry in parsed_moves:
+                if "gnu_move" in entry and entry.get("hints"):
+                    # Find the first hint (idx == 1)
+                    first_hint = next((hint for hint in entry["hints"] if hint.get("idx") == 1 and hint.get("type") == "move"), None)
+                    if first_hint and "move" in first_hint:
+                        entry["is_best_move"] = entry["gnu_move"] == first_hint["move"]
+                    else:
+                        entry["is_best_move"] = False  # No valid first hint found
+                else:
+                    entry["is_best_move"] = False  # No gnu_move or hints
 
             logger.debug("send: exit / y")
             try:
