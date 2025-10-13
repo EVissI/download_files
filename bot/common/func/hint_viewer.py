@@ -487,98 +487,120 @@ def convert_moves_to_gnu(moves_list):
     if not moves_list:
         return None
 
-    def format_position(pos):
+    def fmt(pos):
         if pos == 25:
             return "bar"
         if pos == 0:
             return "off"
         return str(pos)
 
-    n = len(moves_list)
-    used = [False] * n
-    result = []
+    # Count parallel edges and record if any hit exists on that edge
+    edges = defaultdict(int)            # (fr,to) -> count
+    edge_hit = defaultdict(bool)        # (fr,to) -> True if any hit on that edge
 
-    for i in range(n):
-        if used[i]:
-            continue
-        curr = moves_list[i]
-        fr = curr['from']
-        to = curr['to']
-        hit = curr.get('hit', False)
+    for m in moves_list:
+        fr = m['from']
+        to = m['to']
+        edges[(fr, to)] += 1
+        if m.get('hit'):
+            edge_hit[(fr, to)] = True
 
-        # Start a chain from this move
-        chain = [(fr, to, hit)]
-        used[i] = True
-        curr_to = to
+    # helpers to compute outgoing/incoming counts for remaining edges
+    def build_degree_maps():
+        out = defaultdict(int)
+        inn = defaultdict(int)
+        for (a, b), cnt in edges.items():
+            if cnt > 0:
+                out[a] += cnt
+                inn[b] += cnt
+        return out, inn
 
-        # Find continuation moves anywhere in the list (first unused occurrence)
+    result_parts = []
+
+    # While any edge remains, extract a maximal path and output compressed notation
+    while True:
+        # remove zero-count edges from edges dict view by checking counts; break if none left
+        remaining = [(e, c) for e, c in edges.items() if c > 0]
+        if not remaining:
+            break
+
+        out_map, in_map = build_degree_maps()
+
+        # Prefer start nodes that are not destinations (in==0), so chains start at sources.
+        candidate_starts = [a for (a, b), c in edges.items() if c > 0 and in_map.get(a, 0) == 0]
+        if not candidate_starts:
+            # fallback: choose node with largest out-degree (deterministic tie-breaker: larger pos)
+            cand = [(out_map.get(n, 0), n) for (n, _), _ in edges.items() if edges[(n, _)] > 0]
+            if not cand:
+                # last resort: pick any existing 'from'
+                candidate_starts = [e[0][0] for e in remaining]
+            else:
+                # choose max out, then max node
+                max_out = max(cand)[0]
+                candidate_starts = [n for (o, n) in cand if o == max_out]
+
+        # deterministic pick: prefer highest pos (bar=25 will be chosen before lower)
+        start = max(candidate_starts)
+
+        # build path greedily: at each node pick outgoing edge with largest remaining count; tie-breaker: largest 'to'
+        path = []  # list of (fr,to)
+        cur = start
         while True:
-            found_idx = None
-            for k in range(n):
-                if used[k]:
-                    continue
-                if moves_list[k]['from'] == curr_to:
-                    found_idx = k
-                    break
-            if found_idx is None:
+            # collect possible next edges
+            next_edges = [(to, edges[(cur, to)]) for (fr, to) in edges.keys() if fr == cur and edges[(fr, to)] > 0]
+            if not next_edges:
                 break
-            m = moves_list[found_idx]
-            chain.append((m['from'], m['to'], m.get('hit', False)))
-            used[found_idx] = True
-            curr_to = m['to']
+            # choose to with highest count, tie -> highest 'to'
+            next_edges.sort(key=lambda x: (x[1], x[0]), reverse=True)
+            nxt = next_edges[0][0]
+            path.append((cur, nxt))
+            cur = nxt
 
-        # Now count additional identical moves (repeats) for the base fr->to if any remain
-        base_fr, base_to, base_hit = chain[0]
-        count = 1
-        for j in range(n):
-            if used[j]:
-                continue
-            if moves_list[j]['from'] == base_fr and moves_list[j]['to'] == base_to:
-                count += 1
-                used[j] = True
-                base_hit = base_hit or moves_list[j].get('hit', False)
-        chain[0] = (base_fr, base_to, base_hit)
+        if not path:
+            # nothing to follow from start (shouldn't happen often) -> consume single edge if exists
+            # find any edge with from == start
+            single = None
+            for (fr, to), cnt in edges.items():
+                if cnt > 0 and fr == start:
+                    single = (fr, to)
+                    break
+            if single is None:
+                # pick any remaining edge
+                single = remaining[0][0]
+            path = [single]
 
-        # Build landings from chain
-        landings = []
-        landings.append((format_position(chain[0][1]), chain[0][2]))
-        for _, to_pos, hit_flag in chain[1:]:
-            landings.append((format_position(to_pos), hit_flag))
+        # determine multiplicity k = min count along path
+        counts = [edges[e] for e in path]
+        k = min(counts)
 
-        has_middle_hit = any(h for _, h in landings[:-1]) if len(landings) > 1 else False
+        # determine if any hit on any of these edges -> mark final hit
+        any_hit = any(edge_hit[e] for e in path)
 
-        if len(landings) > 1 and not has_middle_hit:
-            # compress: fr/.../final
-            final_pos, final_hit = landings[-1]
-            move_str = f"{format_position(chain[0][0])}/{final_pos}"
-            if final_hit:
-                move_str += "*"
-        else:
-            # full expansion
-            move_str = format_position(chain[0][0])
-            for pos, h in landings:
-                move_str += f"/{pos}"
-                if h:
-                    move_str += "*"
+        # output a compressed move: start/.../final
+        move_from = path[0][0]
+        move_to = path[-1][1]
+        move_str = f"{fmt(move_from)}/{fmt(move_to)}"
+        if any_hit:
+            move_str += "*"
+        if k > 1:
+            move_str += f"({k})"
 
-        # append repeat count only if it's a single-landing move
-        if count > 1 and len(landings) == 1:
-            move_str += f"({count})"
+        result_parts.append(move_str)
 
-        result.append(move_str)
+        # decrement counts along path by k
+        for e in path:
+            edges[e] -= k
+            if edges[e] <= 0:
+                # ensure non-negative
+                edges[e] = 0
+            # if all copies of that edge consumed, also clear hit info for cleanliness
+            if edges[e] == 0:
+                edge_hit[e] = False
 
-    # Group identical move strings and add (count) for repeats >1
-    counted = Counter(result)
-    new_result = []
-    for m in sorted(counted.keys()):
-        c = counted[m]
-        if c > 1:
-            new_result.append(f"{m}({c})")
-        else:
-            new_result.append(m)
-
-    logger.debug(f"Converted to GNU: {' '.join(new_result)}")
-    return " ".join(new_result) if new_result else None
+    # preserve natural order (we built result_parts in chosen order)
+    final = " ".join(result_parts)
+    logger.debug(f"Converted to GNU: {final}")
+    return final or None
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
