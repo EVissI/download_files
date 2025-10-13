@@ -368,7 +368,11 @@ def convert_moves_to_gnu(moves_list):
         if to_point == 0:
             to_point = "off"
 
-        return {"from": from_point, "to": to_point, "hit": hit}
+        return {
+            "from": from_point,
+            "to": to_point,
+            "hit": bool(move["hit"]),
+        }  # Convert to boolean
 
     # Process all moves first
     processed_moves = [process_move(move) for move in moves_list]
@@ -380,13 +384,15 @@ def convert_moves_to_gnu(moves_list):
         if key not in moves_by_start:
             moves_by_start[key] = {
                 "count": 1,
-                "hit": move["hit"],
+                "hit": move["hit"],  # Now it's boolean
                 "from": move["from"],
                 "to": move["to"],
             }
         else:
             moves_by_start[key]["count"] += 1
-            moves_by_start[key]["hit"] |= move["hit"]
+            moves_by_start[key]["hit"] = (
+                moves_by_start[key]["hit"] or move["hit"]
+            )  # Boolean OR
 
     # Sort moves by starting point (higher numbers first)
     formatted_moves = []
