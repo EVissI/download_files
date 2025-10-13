@@ -27,17 +27,16 @@ def parse_backgammon_mat(content):
     start_idx = 0
     for i, line in enumerate(lines):
         if "Game" in line:
-            start_idx = i + 2
+            start_idx = i + 2  # Пропускаем строку 'Game 1' и строку счета
             break
 
     moves_list = []
     previous_player_moved = None
-    last_double_owner = None  # отслеживаем, кто предложил последний double ("Red" или "Black")
 
     for line in lines[start_idx:]:
         line = line.strip()
 
-        # Победа
+        # Проверяем победу
         win_match = re.match(r"Wins (\d+) points", line)
         if win_match:
             points = int(win_match.group(1))
@@ -46,137 +45,87 @@ def parse_backgammon_mat(content):
             )
             continue
 
-        # Номер хода
+        # Проверяем строку с номером хода
         num_match = re.match(r"(\d+)\)\s*(.*)", line)
         if not num_match:
             continue
         turn = int(num_match.group(1))
         rest = num_match.group(2).strip()
 
-        # --- Спецслучай: строка начинается с "Takes" или "Drops" ---
-        # Теперь owner определяется как ОППОЗИТ last_double_owner (тот, кто должен отвечать).
-        td_start = re.match(r"^(Takes|Drops)\b\s*(.*)$", rest, re.IGNORECASE)
-        if td_start:
-            resp = td_start.group(1).lower()  # 'takes' или 'drops'
-            tail = td_start.group(2).strip()   # возможно содержит "16: 8/2* 2/1*"
+        # Проверяем наличие удвоения в строке (может быть после хода)
+        double_pos = rest.find("Doubles =>")
+        if double_pos != -1:
+            left = rest[:double_pos].strip()
+            right = rest[double_pos + len("Doubles =>"):].strip()
 
-            # Определяем владельца: если есть последний double, ответ даёт противоположный игрок.
-            if last_double_owner == "Red":
-                owner = "Black"
-            elif last_double_owner == "Black":
-                owner = "Red"
-            else:
-                # если неизвестно — по умолчанию считаем, что ответ даёт Black (совпадает с предыдущей логикой)
-                owner = "Black"
+            # Парсим значение куба и возможный ответ (Takes/Drops)
+            right_match = re.match(r"(\d+)(?:\s*(Takes|Drops))?", right)
+            if right_match:
+                value = int(right_match.group(1))
+                response = right_match.group(2).lower() if right_match.group(2) else None
 
-            # Записываем действие (ответ на куб) за owner
-            moves_list.append({"turn": turn, "player": owner, "action": resp})
-            previous_player_moved = owner
+                # Если есть левый фрагмент, парсим как ход красных
+                if left:
+                    dice_pattern = r"(\d)(\d):"
+                    dice_matches = list(re.finditer(dice_pattern, left))
+                    if len(dice_matches) >= 1:
+                        red_dice_str = dice_matches[0].group(0)
+                        red_moves_start = dice_matches[0].end()
+                        red_moves_str = left[red_moves_start:].strip()
+                        red_part = f"{red_dice_str} {red_moves_str}".strip()
+                        red_move = parse_part(red_part, "Red")
+                        if red_move:
+                            moves_list.append(red_move)
+                            previous_player_moved = "Red"
 
-            # Если после 'Takes' / 'Drops' идёт часть с броском — это ход того же owner
-            if tail:
-                dice_match_tail = re.match(r"(\d)(\d):(?:\s*(.*))?", tail)
-                if dice_match_tail:
-                    dice = [int(dice_match_tail.group(1)), int(dice_match_tail.group(2))]
-                    moves_str = dice_match_tail.group(3) or ""
-                    move_list = []
-                    for m in moves_str.split():
-                        if re.match(r"Doubles\s*=>", m, re.IGNORECASE) or m.lower() in (
-                            "doubles",
-                            "=>",
-                            "takes",
-                            "drops",
-                        ):
-                            continue
-                        hit = False
-                        if "*" in m:
-                            hit = True
-                            m = m.replace("*", "")
-                        fr_to = m.split("/")
-                        try:
-                            fr_str = fr_to[0]
-                            fr = 25 if fr_str.lower() in ("bar", "b") else int(fr_str)
-                            to = (
-                                0
-                                if len(fr_to) == 1
-                                else (0 if fr_to[1].lower() in ("off", "o") else int(fr_to[1]))
-                            )
-                        except (ValueError, IndexError):
-                            continue
-                        move_list.append({"from": fr, "to": to, "hit": hit})
-                    moves_list.append({"turn": turn, "player": owner, "dice": dice, "moves": move_list})
+                # Добавляем удвоение (от черных, если был ход красных, иначе от красных)
+                double_player = "Black" if left else "Red"
+                moves_list.append(
+                    {"turn": turn, "player": double_player, "action": "double", "cube": value}
+                )
 
-            # Ответ обработан — сбрасываем last_double_owner, т.к. ситуация закрыта
-            last_double_owner = None
+                # Если есть ответ, добавляем для противоположного игрока
+                if response:
+                    response_player = "Red" if double_player == "Black" else "Black"
+                    moves_list.append({"turn": turn, "player": response_player, "action": response})
+
+                continue  # Переходим к следующей строке
+
+        # Проверяем удвоение в начале (оригинальная логика)
+        double_match = re.match(r"Doubles => (\d+)\s*(Takes|Drops)", rest)
+        if double_match:
+            value = int(double_match.group(1))
+            response = double_match.group(2).lower()
+            moves_list.append(
+                {"turn": turn, "player": "Red", "action": "double", "cube": value}
+            )
+            moves_list.append({"turn": turn, "player": "Black", "action": response})
             continue
 
-        # ---------------- Обычная логика ----------------
-
-        # Находим части с костями (чтобы понимать spans для doubles)
+        # --- Обработка обычных ходов --- (оригинальная логика)
         dice_pattern = r"(\d)(\d):"
         dice_matches = list(re.finditer(dice_pattern, rest))
         red_part = None
         black_part = None
-        red_span = None
-        black_span = None
 
         if len(dice_matches) >= 1:
+            red_dice_str = dice_matches[0].group(0)
             red_moves_start = dice_matches[0].end()
             if len(dice_matches) >= 2:
                 red_moves_end = dice_matches[1].start()
-                black_moves_start = dice_matches[1].end()
                 red_moves_str = rest[red_moves_start:red_moves_end].strip()
+                black_dice_str = dice_matches[1].group(0)
+                black_moves_start = dice_matches[1].end()
                 black_moves_str = rest[black_moves_start:].strip()
-                red_span = (dice_matches[0].start(), red_moves_end)
-                black_span = (dice_matches[1].start(), len(rest))
             else:
                 red_moves_str = rest[red_moves_start:].strip()
+                black_dice_str = None
                 black_moves_str = None
-                red_span = (dice_matches[0].start(), len(rest))
 
-            red_part = f"{dice_matches[0].group(0)} {red_moves_str}".strip()
-            if len(dice_matches) >= 2:
-                black_part = f"{dice_matches[1].group(0)} {black_moves_str}".strip()
+            red_part = f"{red_dice_str} {red_moves_str}".strip()
+            if black_dice_str:
+                black_part = f"{black_dice_str} {black_moves_str}".strip()
 
-        # --- Doubles => N (вне/внутри частей) ---
-        doubles_search = re.search(r"Doubles\s*=>\s*(\d+)\s*(Takes|Drops)?", rest)
-        if doubles_search:
-            ds_start, ds_end = doubles_search.start(), doubles_search.end()
-            inside_red = red_span and (ds_start >= red_span[0] and ds_end <= red_span[1])
-            inside_black = black_span and (ds_start >= black_span[0] and ds_end <= black_span[1])
-
-            if not inside_red and not inside_black:
-                # Определяем, кто предложил double: если Doubles шёл после red_span — это предложение противника (Black),
-                # иначе — Red. Это соответствует вашему формату: если после Red-хода стоит "Doubles => N", то это ход Black.
-                if red_span and ds_start >= red_span[1]:
-                    owner = "Black"
-                else:
-                    owner = "Red"
-
-                value = int(doubles_search.group(1))
-                response = (doubles_search.group(2) or "").lower()
-
-                # Добавляем hint перед double (как вы просили ранее)
-                moves_list.append(
-                    {"turn": turn, "player": owner, "hints": [{"type": "cube", "value": value}]}
-                )
-                moves_list.append({"turn": turn, "player": owner, "action": "double", "cube": value})
-
-                # Отмечаем, кто предложил double — чтобы следующий Takes/Drops мог быть привязан
-                # к противоположному игроку (ответчику).
-                last_double_owner = owner
-
-                if response:
-                    # Если явно указан Takes/Drops после Doubles, добавляем и запись ответчика
-                    responder = "Red" if owner == "Black" else "Black"
-                    moves_list.append(
-                        {"turn": turn, "player": responder, "hints": [{"type": "cube_response", "response": response}]}
-                    )
-                    moves_list.append({"turn": turn, "player": responder, "action": response})
-                    # После явного ответа закрываем last_double_owner
-                    last_double_owner = None
-
-        # ----- Парсер части (Red/Black) -----
         def parse_part(part, player):
             if not part:
                 return None
@@ -189,14 +138,6 @@ def parse_backgammon_mat(content):
             move_list = []
 
             for m in moves_str.split():
-                if re.match(r"Doubles\s*=>", m, re.IGNORECASE) or m.lower() in (
-                    "doubles",
-                    "=>",
-                    "takes",
-                    "drops",
-                ):
-                    continue
-
                 hit = False
                 if "*" in m:
                     hit = True
@@ -204,18 +145,19 @@ def parse_backgammon_mat(content):
                 fr_to = m.split("/")
                 try:
                     fr_str = fr_to[0]
-                    fr = 25 if fr_str.lower() in ("bar", "b") else int(fr_str)
+                    fr = 25 if fr_str == "Bar" else int(fr_str)
                     to = (
                         0
                         if len(fr_to) == 1
-                        else (0 if fr_to[1].lower() in ("off", "o") else int(fr_to[1]))
+                        else (0 if fr_to[1] == "Off" else int(fr_to[1]))
                     )
                 except (ValueError, IndexError):
                     continue
                 move_list.append({"from": fr, "to": to, "hit": hit})
 
+            # ✅ теперь возвращаем даже если move_list пуст
             return {"turn": turn, "player": player, "dice": dice, "moves": move_list}
-
+        
         red_move = parse_part(red_part, "Red")
         if red_move:
             moves_list.append(red_move)
@@ -440,8 +382,9 @@ def parse_hint_output(text: str):
 
 def extract_player_names(content: str) -> tuple[str, str]:
     """
-    Extracts player nicknames from .mat file content.
-    Returns tuple of (red_player, black_player)
+    Извлекает ники игроков из .mat файла.
+    Пример: "Peppa : 0                          Bbsm : 0"
+    => ("Peppa", "Bbsm")
     """
     lines = content.splitlines()
 
@@ -449,20 +392,15 @@ def extract_player_names(content: str) -> tuple[str, str]:
         if line.strip().startswith("Game"):
             if i + 1 < len(lines):
                 players_line = lines[i + 1].strip()
-                parts = players_line.split(":")
-                if (
-                    len(parts) >= 3
-                ):  # Should have at least 3 parts: red_name : score black_name : score
-                    red_player = parts[0].strip()
-                    black_player = parts[2].strip()
-                    logger.info(
-                        f"Extracted players: Red={red_player}, Black={black_player}"
-                    )
+                # Находим все пары вида "Имя : число"
+                matches = re.findall(r"(\S.*?)\s*:\s*\d+", players_line)
+                if len(matches) >= 2:
+                    red_player, black_player = matches[0].strip(), matches[1].strip()
+                    logger.info(f"Extracted players: Red={red_player}, Black={black_player}")
                     return red_player, black_player
 
     logger.warning("Could not extract player names from .mat file")
-    return "Red", "Black"  # Default fallback names
-
+    return "Red", "Black"
 
 def normalize_move(move_str: str) -> str:
     """
