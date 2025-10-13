@@ -333,9 +333,7 @@ def extract_player_names(content: str) -> tuple[str, str]:
     for i, line in enumerate(lines):
         if line.strip().startswith("Game"):
             if i + 1 < len(lines):
-                # Next line contains player names and scores
                 players_line = lines[i + 1].strip()
-                # Split by : to separate players and their scores
                 parts = players_line.split(":")
                 if (
                     len(parts) >= 3
