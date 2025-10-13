@@ -351,7 +351,7 @@ def extract_player_names(content: str) -> tuple[str, str]:
 
 def convert_moves_to_gnu(moves_list):
     """
-    Converts moves to GNU backgammon format
+    Converts moves to GNU backgammon format with move combining
     Returns formatted string or None if no moves
     """
     if not moves_list:
@@ -368,23 +368,69 @@ def convert_moves_to_gnu(moves_list):
         if to_point == 0:
             to_point = "off"
 
-        return f"{from_point}/{to_point}{hit}"
+        return {"from": from_point, "to": to_point, "hit": hit}
 
-    # Group moves by from/to points to detect duplicates
-    moves_grouped = {}
-    for move in moves_list:
-        key = (move["from"], move["to"], move["hit"])
-        moves_grouped[key] = moves_grouped.get(key, 0) + 1
+    # Process all moves first
+    processed_moves = [process_move(move) for move in moves_list]
 
-    # Format moves with count
-    formatted_moves = []
-    for (from_point, to_point, hit), count in moves_grouped.items():
-        move_str = process_move({"from": from_point, "to": to_point, "hit": hit})
+    # Combine sequential moves
+    combined_moves = []
+    i = 0
+    while i < len(processed_moves):
+        current = processed_moves[i]
+        start_point = current["from"]
+        points = [{"point": current["to"], "hit": current["hit"]}]
+
+        # Look for sequential moves
+        j = i + 1
+        while j < len(processed_moves):
+            next_move = processed_moves[j]
+            if next_move["from"] == points[-1]["point"]:
+                # Found sequential move, add to points list
+                points.append({"point": next_move["to"], "hit": next_move["hit"]})
+                j += 1
+            else:
+                break
+
+        # Format the combined move
+        if len(points) > 1:
+            # For sequential moves with multiple points
+            move_parts = []
+            if isinstance(start_point, int):
+                move_parts.append(str(start_point))
+            else:
+                move_parts.append(start_point)  # for 'bar'
+
+            for p in points:
+                point_str = "off" if p["point"] == 0 else str(p["point"])
+                move_parts.append(point_str + ("*" if p["hit"] else ""))
+
+            move_str = "/".join(move_parts)
+        else:
+            # Single move
+            from_str = (
+                str(current["from"])
+                if isinstance(current["from"], int)
+                else current["from"]
+            )
+            to_str = "off" if current["to"] == 0 else str(current["to"])
+            hit_str = current["hit"]
+            move_str = f"{from_str}/{to_str}{hit_str}"
+
+        # Check for duplicates
+        count = sum(
+            1
+            for k in range(i, j)
+            if processed_moves[k]["from"] == processed_moves[i]["from"]
+            and processed_moves[k]["to"] == processed_moves[i]["to"]
+        )
         if count > 1:
             move_str = f"{move_str}({count})"
-        formatted_moves.append(move_str)
 
-    return " ".join(formatted_moves)
+        combined_moves.append(move_str)
+        i = j if j > i else i + 1
+
+    return " ".join(combined_moves)
 
 
 # Modify process_mat_file to use the extracted names
