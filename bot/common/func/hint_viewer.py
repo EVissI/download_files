@@ -1,4 +1,5 @@
-﻿import copy
+﻿from collections import defaultdict
+import copy
 import os
 from pprint import pprint
 import random
@@ -352,37 +353,85 @@ def extract_player_names(content: str) -> tuple[str, str]:
 
 def normalize_move(move_str: str) -> str:
     """
-    Нормализует строку хода: убирает пробелы, сортирует части (ходы) для независимости от порядка.
-    Обработка специальных случаев: комбинированные хиты/повторения.
+    Нормализует строку хода: убирает пробелы, сортирует части для независимости от порядка,
+    канонизирует позицию хита для эквивалентных ходов (e.g., "8/7* 13/7" == "13/7* 8/7").
     """
-    if not move_str:
+    moves = parse_gnu_move(move_str)
+    if not moves:
         return ""
-    
-    # Убираем внешние пробелы
-    move_str = move_str.strip()
-    
-    # Разбиваем на части (ходы)
-    parts = [part.strip() for part in move_str.split() if part.strip()]
-    
-    # Сортируем части алфавитно (чтобы порядок не влиял)
-    parts.sort()
-    
-    # Собираем обратно
-    return " ".join(parts)
+
+    # Convert to tuples (from, to, hit)
+    move_tuples = [(m['from'], m['to'], m['hit']) for m in moves]
+
+    # Sort by from desc, to desc, hit True first
+    move_tuples.sort(key=lambda x: (-x[0], -x[1], -int(x[2])))
+
+    # Canonicalize hits: collect per to
+    hit_to = defaultdict(bool)
+    for fr, to, hit in move_tuples:
+        hit_to[to] |= hit
+
+    # Assign hit to first move per to
+    need_hit = set(to for to in hit_to if hit_to[to])
+    new_tuples = []
+    for fr, to, _ in move_tuples:
+        hit = False
+        if to in need_hit:
+            hit = True
+            need_hit.discard(to)
+        new_tuples.append((fr, to, hit))
+
+    # Rebuild moves list
+    new_moves = [{'from': fr, 'to': to, 'hit': hit} for fr, to, hit in new_tuples]
+
+    # Combine and return
+    return convert_moves_to_gnu(new_moves) or ""
+
+def parse_gnu_move(move_str: str):
+    if not move_str:
+        return []
+
+    parts = move_str.split()
+    moves = []
+    for part in parts:
+        hit = part.endswith('*')
+        if hit:
+            part = part[:-1]
+
+        count = 1
+        base = part
+        if '(' in part and part.endswith(')'):
+            base, count_str = part.rsplit('(', 1)
+            count = int(count_str[:-1])
+
+        segments = [s.lower() for s in base.split('/') if s]
+        if not segments:
+            continue
+
+        fr_str = segments[0]
+        fr = 25 if fr_str == 'bar' else int(fr_str) if fr_str.isdigit() else 0 if fr_str == 'off' else None
+        if fr is None:
+            continue
+
+        for _ in range(count):
+            prev = fr
+            for seg in segments[1:]:
+                to = 25 if seg == 'bar' else 0 if seg == 'off' else int(seg) if seg.isdigit() else None
+                if to is None:
+                    break
+                moves.append({'from': prev, 'to': to, 'hit': False})
+                prev = to
+
+        if hit:
+            if moves:
+                moves[-1]['hit'] = True
+
+    return moves
 
 def convert_moves_to_gnu(moves_list):
-    """
-    Converts moves to GNU Backgammon format with move combining
-    Returns formatted string or None if no moves
-    Args:
-        moves_list: List of move dictionaries with 'from', 'to', 'hit' keys
-    Returns:
-        Formatted string in GNU Backgammon notation or None if no moves
-    """
     if not moves_list:
         return None
 
-    # Convert special positions
     def format_position(pos):
         if pos == 25:
             return "bar"
@@ -390,7 +439,6 @@ def convert_moves_to_gnu(moves_list):
             return "off"
         return str(pos)
 
-    # Track positions to combine moves
     result = []
     i = 0
     while i < len(moves_list):
@@ -399,44 +447,51 @@ def convert_moves_to_gnu(moves_list):
         to = current_move["to"]
         hit = current_move["hit"]
 
-        # Format initial move
         move_str = f"{format_position(fr)}/{format_position(to)}"
-        if hit:
-            move_str += "*"
-
-        # Check if we can combine with next move
-        if i + 1 < len(moves_list):
-            next_move = moves_list[i + 1]
+        combined = False
+        j = i + 1
+        while j < len(moves_list):
+            next_move = moves_list[j]
             next_fr = next_move["from"]
             next_to = next_move["to"]
             next_hit = next_move["hit"]
-
-            # Combine moves if they form a chain (to == next_fr) or are identical
-            if to == next_fr or (fr == next_fr and to == next_to):
-                # For identical moves (e.g., 8/7* 8/7)
-                if fr == next_fr and to == next_to:
-                    move_str = f"{format_position(fr)}/{format_position(to)}"
-                    if hit or next_hit:
-                        move_str += "*(2)"
-                    i += 2  # Skip the next move
-                else:
-                    # Chain moves (e.g., 21/20* 20/18* -> 21/20*/18*)
-                    move_str = f"{format_position(fr)}/{format_position(next_to)}"
-                    if hit or next_hit:
-                        move_str += "*"
-                    i += 2  # Skip the next move
+            if to == next_fr:
+                move_str += f"/{format_position(next_to)}"
+                hit |= next_hit
+                combined = True
+                j += 1
+                to = next_to
             else:
-                i += 1
-        else:
-            i += 1
+                break
+        if hit:
+            move_str += "*"
+
+        if not combined:
+            # Check for repeats
+            count = 1
+            hit = current_move["hit"]
+            j = i + 1
+            while j < len(moves_list):
+                next_move = moves_list[j]
+                next_fr = next_move["from"]
+                next_to = next_move["to"]
+                next_hit = next_move["hit"]
+                if fr == next_fr and to == next_to:
+                    hit |= next_hit
+                    count += 1
+                    j += 1
+                else:
+                    break
+            move_str = f"{format_position(fr)}/{format_position(to)}"
+            if hit:
+                move_str += "*"
+            if count > 1:
+                move_str += f"({count})"
+            combined = count > 1
 
         result.append(move_str)
+        i = j
 
-    # Handle single move to off (e.g., 0 -> off)
-    if len(result) == 1 and moves_list[0]["to"] == 0:
-        return "off"
-
-    # Combine moves or return single move
     return " ".join(result) if result else None
 
 
