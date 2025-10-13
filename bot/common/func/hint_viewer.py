@@ -351,120 +351,41 @@ def extract_player_names(content: str) -> tuple[str, str]:
     return "Red", "Black"  # Default fallback names
 
 
-def merge_off_moves(moves_list, dice):
+def normalize_move(move_str: str) -> str:
     """
-    Сжимает ходы, ведущие к 'off' (0), если это возможно по кубикам.
-    Например, '10/5 5/0' → '10/0' (если кубик 5), '5/0 5/0' → '5/0(2)'.
-    dice: список [d1, d2] или [d, d] для дубля.
-    Возвращает новый moves_list.
+    Нормализует строку хода: убирает пробелы, сортирует части для независимости от порядка,
+    канонизирует позицию хита для эквивалентных ходов (e.g., "8/7* 13/7" == "13/7* 8/7").
     """
-    if not moves_list or not dice:
-        return moves_list
-
-    logger.debug(f"Merging off moves: {moves_list}, dice: {dice}")
-
-    # Доступные значения кубиков
-    dice_values = dice if dice[0] != dice[1] else [dice[0]] * 4
-    new_moves = []
-    off_moves = defaultdict(int)  # {from_pos: count} для ходов к 'off'
-    non_off_moves = []
-    used_dice = []
-
-    # Собираем ходы к 'off' и остальные
-    for move in moves_list:
-        if move['to'] == 0:
-            off_moves[move['from']] += 1
-        else:
-            non_off_moves.append(move)
-
-    # Проверяем возможность сжатия цепочек к 'off'
-    i = 0
-    while i < len(non_off_moves):
-        curr = non_off_moves[i]
-        fr, to, hit = curr['from'], curr['to'], curr['hit']
-        j = i + 1
-        while j < len(non_off_moves):
-            next_m = non_off_moves[j]
-            if to == next_m['from'] and next_m['to'] == 0 and not hit and not next_m['hit']:
-                total_distance = fr - 0
-                if total_distance in dice_values and total_distance <= max(dice_values):
-                    off_moves[fr] += 1
-                    used_dice.append(total_distance)
-                    dice_values.remove(total_distance)
-                    i = j + 1
-                    break
-                else:
-                    new_moves.append(curr)
-                    i += 1
-                    break
-            else:
-                new_moves.append(curr)
-                i += 1
-                break
-        else:
-            if i < len(non_off_moves):
-                new_moves.append(curr)
-            i += 1
-
-    # Добавляем ходы к 'off'
-    for fr, count in off_moves.items():
-        new_moves.append({'from': fr, 'to': 0, 'hit': False, 'count': count})
-
-    logger.debug(f"Merged off moves result: {new_moves}")
-    return new_moves
-
-def normalize_move(move_str: str, dice=None) -> str:
-    """
-    Нормализует строку хода: убирает пробелы, сортирует части, канонизирует хиты,
-    сжимает цепочки к 'off' (e.g., '10/5 5/0' → '10/off').
-    dice: список [d1, d2] для валидации сжатия (опционально).
-    """
-    if not move_str:
-        return ""
-
-    logger.debug(f"Normalizing move: {move_str}, dice: {dice}")
-
     moves = parse_gnu_move(move_str)
     if not moves:
         return ""
 
-    # Сжимаем ходы к 'off'
-    moves = merge_off_moves(moves, dice)
+    # Convert to tuples (from, to, hit)
+    move_tuples = [(m['from'], m['to'], m['hit']) for m in moves]
 
-    # Convert to tuples (from, to, hit, count)
-    move_tuples = [(m['from'], m['to'], m['hit'], m.get('count', 1)) for m in moves]
-
-    # Sort by from desc, to desc, hit True first, count desc
-    move_tuples.sort(key=lambda x: (-x[0], -x[1], -int(x[2]), -x[3]))
+    # Sort by from desc, to desc, hit True first
+    move_tuples.sort(key=lambda x: (-x[0], -x[1], -int(x[2])))
 
     # Canonicalize hits: collect per to
     hit_to = defaultdict(bool)
-    for fr, to, hit, count in move_tuples:
-        if count == 1:  # Хиты для повторов обрабатываем отдельно
-            hit_to[to] |= hit
+    for fr, to, hit in move_tuples:
+        hit_to[to] |= hit
 
-    # Assign hit to first move per to (для count=1)
+    # Assign hit to first move per to
     need_hit = set(to for to in hit_to if hit_to[to])
-    new_moves = []
-    for fr, to, hit, count in move_tuples:
-        new_hit = hit
-        if count == 1 and to in need_hit:
-            new_hit = True
+    new_tuples = []
+    for fr, to, _ in move_tuples:
+        hit = False
+        if to in need_hit:
+            hit = True
             need_hit.discard(to)
-        new_moves.append({'from': fr, 'to': to, 'hit': new_hit, 'count': count})
+        new_tuples.append((fr, to, hit))
 
-    # Combine and return finalized
-    combined = convert_moves_to_gnu(new_moves) or ""
-    result = finalize_string(combined)
-    logger.debug(f"Normalized result: {result}")
-    return result
+    # Rebuild moves list
+    new_moves = [{'from': fr, 'to': to, 'hit': hit} for fr, to, hit in new_tuples]
 
-def finalize_string(move_str):
-    if not move_str:
-        return ""
-    parts = [part.strip() for part in move_str.split() if part.strip()]
-    parts.sort()
-    return " ".join(parts)
+    # Combine and return
+    return convert_moves_to_gnu(new_moves) or ""
 
 def parse_gnu_move(move_str: str):
     if not move_str:
@@ -507,68 +428,6 @@ def parse_gnu_move(move_str: str):
 
     return moves
 
-def merge_off_moves(moves_list, dice):
-    """
-    Сжимает ходы, ведущие к 'off' (0), если это возможно по кубикам.
-    Например, '10/5 5/0' → '10/0' (если кубик 5), '5/0 5/0' → '5/0(2)'.
-    dice: список [d1, d2] или [d, d] для дубля.
-    Возвращает новый moves_list.
-    """
-    if not moves_list or not dice:
-        return moves_list
-
-    logger.debug(f"Merging off moves: {moves_list}, dice: {dice}")
-
-    # Доступные значения кубиков
-    dice_values = dice if dice[0] != dice[1] else [dice[0]] * 4
-    new_moves = []
-    off_moves = defaultdict(int)  # {from_pos: count} для ходов к 'off'
-    non_off_moves = []
-    used_dice = []
-
-    # Собираем ходы к 'off' и остальные
-    for move in moves_list:
-        if move['to'] == 0:
-            off_moves[move['from']] += 1
-        else:
-            non_off_moves.append(move)
-
-    # Проверяем возможность сжатия цепочек к 'off'
-    i = 0
-    while i < len(non_off_moves):
-        curr = non_off_moves[i]
-        fr, to, hit = curr['from'], curr['to'], curr['hit']
-        j = i + 1
-        while j < len(non_off_moves):
-            next_m = non_off_moves[j]
-            if to == next_m['from'] and next_m['to'] == 0 and not hit and not next_m['hit']:
-                total_distance = fr - 0
-                if total_distance in dice_values and total_distance <= max(dice_values):
-                    off_moves[fr] += 1
-                    used_dice.append(total_distance)
-                    dice_values.remove(total_distance)
-                    i = j + 1
-                    break
-                else:
-                    new_moves.append(curr)
-                    i += 1
-                    break
-            else:
-                new_moves.append(curr)
-                i += 1
-                break
-        else:
-            if i < len(non_off_moves):
-                new_moves.append(curr)
-            i += 1
-
-    # Добавляем ходы к 'off'
-    for fr, count in off_moves.items():
-        new_moves.append({'from': fr, 'to': 0, 'hit': False, 'count': count})
-
-    logger.debug(f"Merged off moves result: {new_moves}")
-    return new_moves
-
 def convert_moves_to_gnu(moves_list):
     if not moves_list:
         return None
@@ -587,52 +446,65 @@ def convert_moves_to_gnu(moves_list):
         fr = curr['from']
         to = curr['to']
         hit = curr['hit']
-        count = curr.get('count', 1)  # Поддержка 'count'
 
-        if not isinstance(count, int):
-            logger.error(f"Invalid count type: {count} in move {curr}")
-            count = 1  # Фоллбек
+        landings = []
+        landings.append( (format_position(to), hit) )
 
-        if count > 1:
-            move_str = f"{format_position(fr)}/{format_position(to)}"
-            if hit:
-                move_str += "*"
-            if count > 1:  # Повторяем проверку для ясности
-                move_str += f"({count})"
-            result.append(move_str)
-            i += 1
-            continue
-
-        landings = [(format_position(to), hit)]
         j = i + 1
         while j < len(moves_list):
             next_m = moves_list[j]
-            if to != next_m['from'] or next_m.get('count', 1) > 1:
+            if to != next_m['from']:
                 break
             next_to = next_m['to']
             next_hit = next_m['hit']
-            landings.append((format_position(next_to), next_hit))
+            landings.append( (format_position(next_to), next_hit) )
             to = next_to
             j += 1
 
+        # Now build move_str
         has_middle_hit = any(h for _, h in landings[:-1]) if len(landings) > 1 else False
 
-        if len(landings) > 1 and not has_middle_hit and landings[-1][0] != "off":
+        if len(landings) > 1 and not has_middle_hit:
+            # compress
             final_pos, final_hit = landings[-1]
             move_str = f"{format_position(fr)}/{final_pos}"
             if final_hit:
                 move_str += "*"
         else:
+            # full
             move_str = format_position(fr)
             for pos, h in landings:
                 move_str += f"/{pos}"
                 if h:
                     move_str += "*"
 
+        combined = len(landings) > 1
+
+        if not combined:
+            # Check for repeats
+            count = 1
+            hit = curr['hit']
+            j = i + 1
+            while j < len(moves_list):
+                next_m = moves_list[j]
+                next_fr = next_m['from']
+                next_to = next_m['to']
+                next_hit = next_m['hit']
+                if fr == next_fr and to == next_to:
+                    hit |= next_hit
+                    count += 1
+                    j += 1
+                else:
+                    break
+            move_str = f"{format_position(fr)}/{format_position(to)}"
+            if hit:
+                move_str += "*"
+            if count > 1:
+                move_str += f"({count})"
+
         result.append(move_str)
         i = j
 
-    logger.debug(f"Converted to GNU: {result}")
     return " ".join(result) if result else None
 
 
@@ -720,21 +592,26 @@ def process_mat_file(input_file, output_file):
             # Compare gnu_move with the first hint's move
             for entry in parsed_moves:
                 if "gnu_move" in entry and entry.get("hints"):
+                    # Find the first hint (idx == 1)
                     first_hint = next((hint for hint in entry["hints"] if hint.get("idx") == 1 and hint.get("type") == "move"), None)
                     if first_hint and "move" in first_hint:
-                        normalized_gnu = normalize_move(entry["gnu_move"], entry.get("dice"))
-                        normalized_hint = normalize_move(first_hint["move"], entry.get("dice"))
+                        # Нормализуем обе строки перед сравнением
+                        normalized_gnu = normalize_move(entry["gnu_move"])
+                        normalized_hint = normalize_move(first_hint["move"])
+                        
                         entry["is_best_move"] = normalized_gnu == normalized_hint
+                        
+                        # Логирование для отладки
                         if not entry["is_best_move"]:
                             logger.debug(
                                 "Move mismatch: gnu_move='{}' (normalized: '{}') vs hint='{}' (normalized: '{}')",
                                 entry["gnu_move"], normalized_gnu, first_hint["move"], normalized_hint
                             )
                     else:
-                        entry["is_best_move"] = False
+                        entry["is_best_move"] = False  # No valid first hint found
                         logger.warning("No valid first hint for entry: {}", entry)
                 else:
-                    entry["is_best_move"] = False
+                    entry["is_best_move"] = False  # No gnu_move or hints
                     logger.debug("Skipping comparison for entry without gnu_move or hints: {}", entry)
 
             logger.debug("send: exit / y")

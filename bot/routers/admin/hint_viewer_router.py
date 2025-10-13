@@ -15,7 +15,7 @@ from aiogram.filters import StateFilter
 
 from bot.common.func.hint_viewer import process_mat_file, random_filename
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
-
+from bot.common.general_states import GeneralStates
 hint_viewer_router = Router()
 
 
@@ -183,7 +183,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
                     os.remove(tmp)
             except Exception:
                 pass
-        await state.clear()
+        await state.set_state(GeneralStates.admin_panel)
 
 
 def parse_hints_with_log(entry: dict) -> list:
