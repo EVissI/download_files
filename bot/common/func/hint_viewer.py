@@ -439,71 +439,78 @@ def convert_moves_to_gnu(moves_list):
             return "off"
         return str(pos)
 
+    n = len(moves_list)
+    used = [False] * n
     result = []
-    i = 0
-    while i < len(moves_list):
+
+    for i in range(n):
+        if used[i]:
+            continue
         curr = moves_list[i]
         fr = curr['from']
         to = curr['to']
-        hit = curr['hit']
+        hit = curr.get('hit', False)
 
-        landings = []
-        landings.append( (format_position(to), hit) )
+        # Start a chain from this move
+        chain = [(fr, to, hit)]
+        used[i] = True
+        curr_to = to
 
-        j = i + 1
-        while j < len(moves_list):
-            next_m = moves_list[j]
-            if to != next_m['from']:
+        # Find continuation moves anywhere in the list (first unused occurrence)
+        while True:
+            found_idx = None
+            for k in range(n):
+                if used[k]:
+                    continue
+                if moves_list[k]['from'] == curr_to:
+                    found_idx = k
+                    break
+            if found_idx is None:
                 break
-            next_to = next_m['to']
-            next_hit = next_m['hit']
-            landings.append( (format_position(next_to), next_hit) )
-            to = next_to
-            j += 1
+            m = moves_list[found_idx]
+            chain.append((m['from'], m['to'], m.get('hit', False)))
+            used[found_idx] = True
+            curr_to = m['to']
 
-        # Now build move_str
+        # Now count additional identical moves (repeats) for the base fr->to if any remain
+        base_fr, base_to, base_hit = chain[0]
+        count = 1
+        for j in range(n):
+            if used[j]:
+                continue
+            if moves_list[j]['from'] == base_fr and moves_list[j]['to'] == base_to:
+                count += 1
+                used[j] = True
+                base_hit = base_hit or moves_list[j].get('hit', False)
+        chain[0] = (base_fr, base_to, base_hit)
+
+        # Build landings from chain
+        landings = []
+        landings.append((format_position(chain[0][1]), chain[0][2]))
+        for _, to_pos, hit_flag in chain[1:]:
+            landings.append((format_position(to_pos), hit_flag))
+
         has_middle_hit = any(h for _, h in landings[:-1]) if len(landings) > 1 else False
 
         if len(landings) > 1 and not has_middle_hit:
-            # compress
+            # compress: fr/.../final
             final_pos, final_hit = landings[-1]
-            move_str = f"{format_position(fr)}/{final_pos}"
+            move_str = f"{format_position(chain[0][0])}/{final_pos}"
             if final_hit:
                 move_str += "*"
         else:
-            # full
-            move_str = format_position(fr)
+            # full expansion
+            move_str = format_position(chain[0][0])
             for pos, h in landings:
                 move_str += f"/{pos}"
                 if h:
                     move_str += "*"
 
-        combined = len(landings) > 1
-
-        if not combined:
-            # Check for repeats
-            count = 1
-            hit = curr['hit']
-            j = i + 1
-            while j < len(moves_list):
-                next_m = moves_list[j]
-                next_fr = next_m['from']
-                next_to = next_m['to']
-                next_hit = next_m['hit']
-                if fr == next_fr and to == next_to:
-                    hit |= next_hit
-                    count += 1
-                    j += 1
-                else:
-                    break
-            move_str = f"{format_position(fr)}/{format_position(to)}"
-            if hit:
-                move_str += "*"
-            if count > 1:
-                move_str += f"({count})"
+        # append repeat count only if it's a single-landing move
+        if count > 1 and len(landings) == 1:
+            move_str += f"({count})"
 
         result.append(move_str)
-        i = j
 
     return " ".join(result) if result else None
 
