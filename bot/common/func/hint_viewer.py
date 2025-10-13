@@ -368,11 +368,7 @@ def convert_moves_to_gnu(moves_list):
         if to_point == 0:
             to_point = "off"
 
-        return {
-            "from": from_point,
-            "to": to_point,
-            "hit": bool(move["hit"]),
-        }  # Convert to boolean
+        return {"from": from_point, "to": to_point, "hit": bool(move["hit"])}
 
     # Process all moves first
     processed_moves = [process_move(move) for move in moves_list]
@@ -380,37 +376,43 @@ def convert_moves_to_gnu(moves_list):
     # Group moves by starting point
     moves_by_start = {}
     for move in processed_moves:
-        key = (move["from"], move["to"])
+        key = move["from"]  # Group only by starting point
         if key not in moves_by_start:
             moves_by_start[key] = {
-                "count": 1,
-                "hit": move["hit"],  # Now it's boolean
+                "moves": [(move["to"], move["hit"])],
                 "from": move["from"],
-                "to": move["to"],
             }
         else:
-            moves_by_start[key]["count"] += 1
-            moves_by_start[key]["hit"] = (
-                moves_by_start[key]["hit"] or move["hit"]
-            )  # Boolean OR
+            moves_by_start[key]["moves"].append((move["to"], move["hit"]))
 
     # Sort moves by starting point (higher numbers first)
     formatted_moves = []
     sorted_moves = sorted(
-        moves_by_start.values(),
-        key=lambda x: (-(x["from"] if isinstance(x["from"], int) else 25)),
+        moves_by_start.items(), key=lambda x: (-(x[0] if isinstance(x[0], int) else 25))
     )
 
-    for move in sorted_moves:
-        from_str = str(move["from"]) if isinstance(move["from"], int) else move["from"]
-        to_str = "off" if move["to"] == 0 else str(move["to"])
-        hit_str = "*" if move["hit"] else ""
+    for _, move_data in sorted_moves:
+        from_str = (
+            str(move_data["from"])
+            if isinstance(move_data["from"], int)
+            else move_data["from"]
+        )
+        # Count identical moves
+        moves_count = {}
+        for to_point, hit in move_data["moves"]:
+            key = (to_point, hit)
+            moves_count[key] = moves_count.get(key, 0) + 1
 
-        move_str = f"{from_str}/{to_str}{hit_str}"
-        if move["count"] > 1:
-            move_str = f"{move_str}({move['count']})"
+        # Format each unique move
+        for (to_point, hit), count in moves_count.items():
+            to_str = "off" if to_point == 0 else str(to_point)
+            hit_str = "*" if hit else ""
 
-        formatted_moves.append(move_str)
+            move_str = f"{from_str}/{to_str}{hit_str}"
+            if count > 1:
+                move_str = f"{move_str}({count})"
+
+            formatted_moves.append(move_str)
 
     return " ".join(formatted_moves)
 
