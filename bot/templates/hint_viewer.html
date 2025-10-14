@@ -307,30 +307,30 @@
         blackImg.onload = checkImagesLoaded;
         whiteImg.onload = checkImagesLoaded;
 
-        // Function to get X coordinate for a point (1-24)
+        // Function to get X coordinate for a point (1-24), adjusted for right board
         function getX(point) {
             if (point >= 13 && point <= 18) {
                 return 50 + (point - 13) * 60; // Top left half
             } else if (point >= 19 && point <= 24) {
-                return 470 + (point - 19) * 60; // Top right half
+                return 450 + (point - 19) * 60; // Top right half, shifted left by 20
             } else if (point >= 7 && point <= 12) {
                 return 50 + (12 - point) * 60; // Bottom left half
             } else if (point >= 1 && point <= 6) {
-                return 470 + (6 - point) * 60; // Bottom right half
+                return 450 + (6 - point) * 60; // Bottom right half, shifted left by 20
             }
             return 0;
         }
 
-        // Base Y and direction for stacking
+        // Base Y and direction for stacking with padding
         function getBaseY(point) {
-            return (point > 12) ? 0 : 400; // Top: start at 0, bottom: start at 400
+            return (point > 12) ? 10 : 390; // Adjusted with padding: Top: start at 10, bottom: start at 390
         }
 
         function getDy(point) {
             return (point > 12) ? 40 : -40; // Top: stack down (+), bottom: stack up (-)
         }
 
-        // Draw checkers for a player
+        // Draw checkers for a player with padding
         function drawCheckers(player, img) {
             const positions = data[current].positions[player];
             ctx.font = 'bold 20px Arial';
@@ -344,7 +344,7 @@
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
-                // Draw up to 4 checkers
+                // Draw up to 4 checkers with padding
                 for (let i = 0; i < Math.min(count, 4); i++) {
                     ctx.drawImage(img, x - 25, y + (i * dy) - 25, 50, 50);
                 }
