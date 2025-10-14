@@ -191,7 +191,10 @@ def json_to_gnubg_commands(data):
             continue
         elif act in ("takes", "drops"):
             tokens.append({"cmd": "hint", "type": "hint", "target": i})
-            tokens.append({"cmd": act, "type": "cmd", "target": None})
+            if act == "takes":
+                tokens.append({"cmd": "take", "type": "cmd", "target": None})
+            if act == "drops":
+                tokens.append({"cmd": 'drop', "type": "cmd", "target": None})
             i += 1
             continue
         elif act == "win":
@@ -593,7 +596,7 @@ def convert_moves_to_gnu(moves_list):
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 0.85
+    command_delay = 0.80
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
