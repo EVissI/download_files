@@ -348,26 +348,34 @@
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
-                // Draw up to 4 checkers with padding
+                // Draw up to 6 checkers with padding
                 for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
 
-                // If more than 4, draw text with count to the right, closer to the last checker
+                // If more than 6, draw text with count to the right, closer to the last checker
                 if (count > 6) {
-                    const lastCheckerY = y + (3 * dy); // Position near the last checker (4th one)
+                    const lastCheckerY = y + (5 * dy); // Position near the last checker (6th one)
                     ctx.fillText(`(${count})`, x + 20, lastCheckerY + 5); // Adjusted to right side, closer to last checker
                 }
             }
 
-            // Bar and Off as text with new format (on new line below)
+            // Draw bar checkers
             const barX = 410; // Middle bar
-            const barY = (player === 'black') ? 100 : 700; 
+            const barY = (player === 'black') ? 100 : 700;
             if (positions.bar > 0) {
-                ctx.fillText('Bar:', barX - 20, barY);
-                ctx.fillText(`${positions.bar}`, barX - 20, barY + 40); 
+                let y = barY;
+                const dy = (player === 'black') ? 55 : -55; // Down for black, up for white
+                for (let i = 0; i < Math.min(positions.bar, 6); i++) {
+                    ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
+                }
+                if (positions.bar > 6) {
+                    const lastCheckerY = y + (5 * dy);
+                    ctx.fillText(`(${positions.bar})`, barX + 20, lastCheckerY + 5);
+                }
             }
 
+            // Draw off checkers
             const offX = (player === 'black') ? 20 : 760;
             const offY = 400; 
             if (positions.off > 0) {
