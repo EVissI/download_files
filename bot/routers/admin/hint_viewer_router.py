@@ -72,7 +72,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
             caption="Сгенерированный JSON файл анализа"
         )
 
-        mini_app_url = f"{settings.MINI_APP_URL}?game_id={game_id}"
+        mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="Открыть интерактивную визуализацию", web_app=WebAppInfo(url = mini_app_url))]
