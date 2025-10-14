@@ -79,7 +79,7 @@
         }
 
         tr:hover {
-            background-color: #3a3a3a;
+            background-color: #3a3a2a;
         }
 
         #controls {
@@ -234,7 +234,7 @@
 <body>
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
-        <canvas id="boardCanvas" width="800" height="400"></canvas>
+        <canvas id="boardCanvas" width="800" height="800"></canvas>
 
         <div id="controls">
             <button onclick="prevTurn()" id="prevBtn">←</button>
@@ -323,13 +323,13 @@
             return 0;
         }
 
-        // Base Y and direction for stacking with padding
+        // Base Y and direction for stacking with doubled height
         function getBaseY(point) {
-            return (point > 12) ? 60 : 320; 
+            return (point > 12) ? 100 : 700; // Adjusted for doubled height (400 -> 800)
         }
 
         function getDy(point) {
-            return (point > 12) ? 40 : -40; // Top: stack down (+), bottom: stack up (-)
+            return (point > 12) ? 80 : -80; // Doubled step (40 -> 80) to match new height
         }
 
         // Draw checkers for a player with padding
@@ -360,17 +360,17 @@
 
             // Bar and Off as text with new format (on new line below)
             const barX = 410; // Middle bar
-            const barY = (player === 'black') ? 50 : 350;
+            const barY = (player === 'black') ? 100 : 700; // Adjusted for doubled height
             if (positions.bar > 0) {
                 ctx.fillText('Bar:', barX - 20, barY);
-                ctx.fillText(`${positions.bar}`, barX - 20, barY + 20); // New line below with offset
+                ctx.fillText(`${positions.bar}`, barX - 20, barY + 40); // New line below with doubled offset
             }
 
             const offX = (player === 'black') ? 20 : 760;
-            const offY = 200;
+            const offY = 400; // Adjusted for doubled height
             if (positions.off > 0) {
                 ctx.fillText('Off:', offX, offY);
-                ctx.fillText(`${positions.off}`, offX, offY + 20); // New line below with offset
+                ctx.fillText(`${positions.off}`, offX, offY + 40); // New line below with doubled offset
             }
         }
 
@@ -380,8 +380,8 @@
             document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
 
             // Draw board
-            ctx.clearRect(0, 0, 800, 400);
-            ctx.drawImage(boardImg, 0, 0, 800, 400);
+            ctx.clearRect(0, 0, 800, 800); // Updated height to 800
+            ctx.drawImage(boardImg, 0, 0, 800, 800); // Updated height to 800
 
             // Draw checkers
             drawCheckers('red', whiteImg); // Red uses white checkers
