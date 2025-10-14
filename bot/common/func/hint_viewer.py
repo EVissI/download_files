@@ -34,7 +34,7 @@ def parse_backgammon_mat(content):
     previous_player_moved = None
 
     for line in lines[start_idx:]:
-        line = line.rstrip()  # сохраним ведущие пробелы справа, уберём только \n
+        line = line.strip()
 
         # Проверяем победу
         win_match = re.match(r"Wins (\d+) points", line)
@@ -50,7 +50,7 @@ def parse_backgammon_mat(content):
         if not num_match:
             continue
         turn = int(num_match.group(1))
-        rest = num_match.group(2)
+        rest = num_match.group(2).strip()
 
         # Проверяем наличие удвоения в строке (может быть после хода)
         double_pos = rest.find("Doubles =>")
@@ -78,7 +78,7 @@ def parse_backgammon_mat(content):
                             moves_list.append(red_move)
                             previous_player_moved = "Red"
 
-                # Добавляем удвоение
+                # Добавляем удвоение (от черных, если был ход красных, иначе от красных)
                 double_player = "Black" if left else "Red"
                 moves_list.append(
                     {"turn": turn, "player": double_player, "action": "double", "cube": value}
@@ -91,44 +91,40 @@ def parse_backgammon_mat(content):
 
                 continue  # Переходим к следующей строке
 
-        # --- Обработка обычных ходов ---
+        # Проверяем удвоение в начале (оригинальная логика)
+        double_match = re.match(r"Doubles => (\d+)\s*(Takes|Drops)", rest)
+        if double_match:
+            value = int(double_match.group(1))
+            response = double_match.group(2).lower()
+            moves_list.append(
+                {"turn": turn, "player": "Red", "action": "double", "cube": value}
+            )
+            moves_list.append({"turn": turn, "player": "Black", "action": response})
+            continue
+
+        # --- Обработка обычных ходов --- (оригинальная логика)
         dice_pattern = r"(\d)(\d):"
         dice_matches = list(re.finditer(dice_pattern, rest))
         red_part = None
         black_part = None
 
-        # Detect case when red move is absent and only black part exists.
-        red_missing = False
-        if dice_matches:
-            first_start = dice_matches[0].start()
-            # если до первой пары "XY:" только пробелы (нет текста), и всего одна пара — это, скорее всего, ход Black
-            if rest[:first_start].strip() == "" and len(dice_matches) == 1:
-                red_missing = True
-                # формируем black_part из найденной пары
-                black_dice_str = dice_matches[0].group(0)
-                black_moves_start = dice_matches[0].end()
+        if len(dice_matches) >= 1:
+            red_dice_str = dice_matches[0].group(0)
+            red_moves_start = dice_matches[0].end()
+            if len(dice_matches) >= 2:
+                red_moves_end = dice_matches[1].start()
+                red_moves_str = rest[red_moves_start:red_moves_end].strip()
+                black_dice_str = dice_matches[1].group(0)
+                black_moves_start = dice_matches[1].end()
                 black_moves_str = rest[black_moves_start:].strip()
-                black_part = f"{black_dice_str} {black_moves_str}".strip()
-                red_part = None
             else:
-                # обычная логика: если есть >=2 матчей — первая для Red, вторая для Black
-                if len(dice_matches) >= 1:
-                    red_dice_str = dice_matches[0].group(0)
-                    red_moves_start = dice_matches[0].end()
-                    if len(dice_matches) >= 2:
-                        red_moves_end = dice_matches[1].start()
-                        red_moves_str = rest[red_moves_start:red_moves_end].strip()
-                        black_dice_str = dice_matches[1].group(0)
-                        black_moves_start = dice_matches[1].end()
-                        black_moves_str = rest[black_moves_start:].strip()
-                    else:
-                        red_moves_str = rest[red_moves_start:].strip()
-                        black_dice_str = None
-                        black_moves_str = None
+                red_moves_str = rest[red_moves_start:].strip()
+                black_dice_str = None
+                black_moves_str = None
 
-                    red_part = f"{red_dice_str} {red_moves_str}".strip()
-                    if black_dice_str:
-                        black_part = f"{black_dice_str} {black_moves_str}".strip()
+            red_part = f"{red_dice_str} {red_moves_str}".strip()
+            if black_dice_str:
+                black_part = f"{black_dice_str} {black_moves_str}".strip()
 
         def parse_part(part, player):
             if not part:
@@ -161,21 +157,7 @@ def parse_backgammon_mat(content):
 
             # ✅ теперь возвращаем даже если move_list пуст
             return {"turn": turn, "player": player, "dice": dice, "moves": move_list}
-
-        # Парсим и добавляем в правильном порядке.
-        # Если red_missing == True — сначала добавляем фиктивную запись Red (missing), затем Black
-        if red_missing:
-            # вставляем фиктивную запись для Red
-            moves_list.append({"turn": turn, "player": "Red", "dice": [], "moves": [], "missing": True})
-            previous_player_moved = "Red"
-            # затем парсим и добавляем Black
-            black_move = parse_part(black_part, "Black")
-            if black_move:
-                moves_list.append(black_move)
-                previous_player_moved = "Black"
-            continue  # переход к следующей строке, т.к. мы обработали этот turn
-
-        # обычный путь
+        
         red_move = parse_part(red_part, "Red")
         if red_move:
             moves_list.append(red_move)
