@@ -349,23 +349,25 @@
                     ctx.drawImage(img, x - 25, y + (i * dy) - 25, 50, 50);
                 }
 
-                // If more than 4, draw text with count
+                // If more than 4, draw text with count to the right
                 if (count > 4) {
-                    ctx.fillText(`(${count})`, x - 10, y + (4 * dy) + 10);
+                    ctx.fillText(`(${count})`, x + 20, y + (2 * dy)); // Adjusted to right side
                 }
             }
 
-            // Bar and Off as text (simple, not images)
+            // Bar and Off as text with new format (on new line)
             const barX = 410; // Middle bar
             const barY = (player === 'black') ? 50 : 350;
             if (positions.bar > 0) {
-                ctx.fillText(`Bar: ${positions.bar}`, barX - 20, barY);
+                ctx.fillText('Bar:', barX - 20, barY);
+                ctx.fillText(`${positions.bar}`, barX + 20, barY); // On new line to the right
             }
 
             const offX = (player === 'black') ? 20 : 760;
             const offY = 200;
             if (positions.off > 0) {
-                ctx.fillText(`Off: ${positions.off}`, offX, offY);
+                ctx.fillText('Off:', offX, offY);
+                ctx.fillText(`${positions.off}`, offX + 40, offY); // On new line to the right
             }
         }
 
