@@ -52,21 +52,58 @@ def parse_backgammon_mat(content):
         if not num_match:
             continue
         turn = int(num_match.group(1))
-        rest = num_match.group(2)  # no strip to preserve spaces
+        rest = num_match.group(2)  # keep spaces
 
-        # Разделяем левую (Red) и правую (Black) части по большим пробелам (10+)
+        # Try split by large spaces
         parts = re.split(r'\s{10,}', rest)
         left = parts[0].strip() if len(parts) > 0 else ''
         right = parts[1].strip() if len(parts) > 1 else ''
 
-        # Если не разделилось, определяем сторону по содержимому
         if len(parts) == 1:
-            if re.match(r'\d\d:', parts[0].strip()) or 'Doubles' in parts[0]:
-                right = parts[0].strip()
-                left = ''
+            rest_single = rest.strip()
+            dice_matches = list(re.finditer(r'(\d)(\d):', rest_single))
+            if len(dice_matches) >= 2:
+                red_dice_str = dice_matches[0].group(0)
+                red_moves_start = dice_matches[0].end()
+                red_moves_end = dice_matches[1].start()
+                red_moves_str = rest_single[red_moves_start:red_moves_end].strip()
+                left = f"{red_dice_str} {red_moves_str}"
+                black_dice_str = dice_matches[1].group(0)
+                black_moves_start = dice_matches[1].end()
+                black_moves_str = rest_single[black_moves_start:].strip()
+                right = f"{black_dice_str} {black_moves_str}"
+            elif len(dice_matches) == 1:
+                dice_match_original = re.search(r'(\d)(\d):', rest)
+                if dice_match_original:
+                    dice_pos = dice_match_original.start()
+                    pre_dice = rest[:dice_pos].strip()
+                    post_dice = rest[dice_pos:].strip()
+                    if pre_dice and re.match(r"(Takes|Drops|Take|Drop|Doubles)", pre_dice, re.I):
+                        left = pre_dice
+                        right = post_dice
+                    else:
+                        if dice_pos > 20:
+                            left = ''
+                            right = post_dice
+                        else:
+                            left = post_dice
+                            right = ''
             else:
-                left = parts[0].strip()
-                right = ''
+                action_match_original = re.search(r'\S', rest)
+                if action_match_original:
+                    action_pos = action_match_original.start()
+                    pre = rest[:action_pos].strip()
+                    post = rest[action_pos:].strip()
+                    if pre:
+                        left = pre
+                        right = post
+                    else:
+                        if action_pos > 20:
+                            left = ''
+                            right = post
+                        else:
+                            left = post
+                            right = ''
 
         def parse_side(side_str, player):
             if not side_str:
