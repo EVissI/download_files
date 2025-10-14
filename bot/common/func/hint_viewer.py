@@ -33,7 +33,7 @@ def parse_backgammon_mat(content):
     moves_list = []
     previous_player_moved = None
 
-    for line in lines[start_idx:]:
+    for idx, line in enumerate(lines[start_idx:]):
         line = line.strip()
         if not line:
             continue
@@ -59,6 +59,8 @@ def parse_backgammon_mat(content):
         left = parts[0].strip() if len(parts) > 0 else ''
         right = parts[1].strip() if len(parts) > 1 else ''
 
+        is_first_turn = (turn == 1)
+
         if len(parts) == 1:
             rest_single = rest.strip()
             dice_matches = list(re.finditer(r'(\d)(\d):', rest_single))
@@ -82,12 +84,23 @@ def parse_backgammon_mat(content):
                         left = pre_dice
                         right = post_dice
                     else:
-                        if dice_pos > 20:
-                            left = ''
-                            right = post_dice
+                        # Специальная логика только для первого хода
+                        if is_first_turn:
+                            # Считаем ведущие пробелы
+                            leading_spaces = len(rest) - len(rest.lstrip(' '))
+                            if leading_spaces > 20:  # Если слишком много пробелов слева, это пустой Red, ход Black
+                                left = ''
+                                right = post_dice
+                            else:
+                                left = post_dice
+                                right = ''
                         else:
-                            left = post_dice
-                            right = ''
+                            if dice_pos > 20:
+                                left = ''
+                                right = post_dice
+                            else:
+                                left = post_dice
+                                right = ''
             else:
                 action_match_original = re.search(r'\S', rest)
                 if action_match_original:
@@ -98,12 +111,21 @@ def parse_backgammon_mat(content):
                         left = pre
                         right = post
                     else:
-                        if action_pos > 20:
-                            left = ''
-                            right = post
+                        if is_first_turn:
+                            leading_spaces = len(rest) - len(rest.lstrip(' '))
+                            if leading_spaces > 20:
+                                left = ''
+                                right = post
+                            else:
+                                left = post
+                                right = ''
                         else:
-                            left = post
-                            right = ''
+                            if action_pos > 20:
+                                left = ''
+                                right = post
+                            else:
+                                left = post
+                                right = ''
 
         def parse_side(side_str, player):
             if not side_str:
