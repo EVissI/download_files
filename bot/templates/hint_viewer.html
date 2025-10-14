@@ -33,6 +33,8 @@
             height: auto;
             display: block;
             margin: 0 auto 20px;
+            width: 1000px;
+            height: 500px;
         }
 
         .game-info {
@@ -143,8 +145,8 @@
 
             canvas {
                 width: 100%;
-                max-width: 400px;
-                height: 200px;
+                max-width: 600px;
+                height: 300px;
             }
 
             #controls {
@@ -336,8 +338,8 @@
         // Draw checkers for a player
         function drawCheckers(player, img) {
             const positions = data[current].positions[player];
-            ctx.font = 'bold 16px Arial';
-            ctx.fillStyle = '#000';
+            ctx.font = 'bold 20px Arial';
+            ctx.fillStyle = '#ffffff';
 
             for (let pointStr in positions) {
                 if (pointStr === 'bar' || pointStr === 'off') continue;
