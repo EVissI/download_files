@@ -349,25 +349,26 @@
                     ctx.drawImage(img, x - 25, y + (i * dy) - 25, 50, 50);
                 }
 
-                // If more than 4, draw text with count to the right
+                // If more than 4, draw text with count to the right, closer to the last checker
                 if (count > 4) {
-                    ctx.fillText(`(${count})`, x + 20, y + (2 * dy)); // Adjusted to right side
+                    const lastCheckerY = y + (3 * dy); // Position near the last checker (4th one)
+                    ctx.fillText(`(${count})`, x + 20, lastCheckerY + 5); // Adjusted to right side, closer to last checker
                 }
             }
 
-            // Bar and Off as text with new format (on new line)
+            // Bar and Off as text with new format (on new line below)
             const barX = 410; // Middle bar
             const barY = (player === 'black') ? 50 : 350;
             if (positions.bar > 0) {
                 ctx.fillText('Bar:', barX - 20, barY);
-                ctx.fillText(`${positions.bar}`, barX + 20, barY); // On new line to the right
+                ctx.fillText(`${positions.bar}`, barX - 20, barY + 20); // New line below with offset
             }
 
             const offX = (player === 'black') ? 20 : 760;
             const offY = 200;
             if (positions.off > 0) {
                 ctx.fillText('Off:', offX, offY);
-                ctx.fillText(`${positions.off}`, offX + 40, offY); // On new line to the right
+                ctx.fillText(`${positions.off}`, offX, offY + 20); // New line below with offset
             }
         }
 
