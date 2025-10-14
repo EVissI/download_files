@@ -325,11 +325,11 @@
 
         // Base Y and direction for stacking with doubled height
         function getBaseY(point) {
-            return (point > 12) ? 100 : 700; // Adjusted for doubled height (400 -> 800)
+            return (point > 12) ? 100 : 600; // Adjusted for doubled height (400 -> 800)
         }
 
         function getDy(point) {
-            return (point > 12) ? 80 : -80; // Doubled step (40 -> 80) to match new height
+            return (point > 12) ? 40 : -40; // Doubled step (40 -> 80) to match new height
         }
 
         // Draw checkers for a player with padding
