@@ -33,8 +33,6 @@
             height: auto;
             display: block;
             margin: 0 auto 20px;
-            width: 1000px;
-            height: 500px;
         }
 
         .game-info {
@@ -90,6 +88,7 @@
             justify-content: space-between;
             align-items: center;
             gap: 15px;
+            width: 100%;
         }
 
         .turn-display {
@@ -153,6 +152,7 @@
                 align-items: center;
                 gap: 10px;
                 justify-content: center;
+                width: 100%;
             }
 
             #turnLabel {
@@ -376,7 +376,7 @@
         // Render the current turn
         function render(turn) {
             current = turn;
-            document.getElementById('turnLabel').innerText = `Turn ${data[turn].turn || 'End'}`;
+            document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
 
             // Draw board
             ctx.clearRect(0, 0, 800, 400);
@@ -398,13 +398,13 @@
             document.getElementById('info').innerHTML = info;
 
             // Hints table
-            let tableHtml = '<table><tr><th>Move</th><th>Win Prob</th><th>Gammon Prob</th><th>Eq</th></tr>';
+            let tableHtml = '<table><tr><th>Ход</th><th>Вероятности</th><th>Ошибка</th></tr>';
             (item.hints || []).forEach(hint => {
                 if (hint.probs && hint.probs.length >= 2) {
-                    const winProb = hint.probs[0] ? hint.probs[0].toFixed(3) : '-';
-                    const gammonProb = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
+                    const prob1 = hint.probs[0] ? hint.probs[0].toFixed(3) : '-';
+                    const prob2 = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                    tableHtml += `<tr><td>${hint.move || '-'}</td><td>${winProb}</td><td>${gammonProb}</td><td>${eq}</td></tr>`;
+                    tableHtml += `<tr><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
                 }
             });
             tableHtml += '</table>';
