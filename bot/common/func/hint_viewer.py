@@ -35,9 +35,11 @@ def parse_backgammon_mat(content):
 
     for line in lines[start_idx:]:
         line = line.strip()
+        if not line:
+            continue
 
-        # Проверяем победу
-        win_match = re.match(r"Wins (\d+) points", line)
+        # Проверяем победу (может быть с ведущими пробелами)
+        win_match = re.match(r".*Wins (\d+) points", line)
         if win_match:
             points = int(win_match.group(1))
             moves_list.append(
@@ -50,126 +52,98 @@ def parse_backgammon_mat(content):
         if not num_match:
             continue
         turn = int(num_match.group(1))
-        rest = num_match.group(2).strip()
+        rest = num_match.group(2)  # no strip to preserve spaces
 
-        # Проверяем наличие удвоения в строке (может быть после хода)
-        double_pos = rest.find("Doubles =>")
-        if double_pos != -1:
-            left = rest[:double_pos].strip()
-            right = rest[double_pos + len("Doubles =>"):].strip()
+        # Разделяем левую (Red) и правую (Black) части по большим пробелам (10+)
+        parts = re.split(r'\s{10,}', rest)
+        left = parts[0].strip() if len(parts) > 0 else ''
+        right = parts[1].strip() if len(parts) > 1 else ''
 
-            # Парсим значение куба и возможный ответ (Takes/Drops)
-            right_match = re.match(r"(\d+)(?:\s*(Takes|Drops))?", right)
-            if right_match:
-                value = int(right_match.group(1))
-                response = right_match.group(2).lower() if right_match.group(2) else None
-
-                # Если есть левый фрагмент, парсим как ход красных
-                if left:
-                    dice_pattern = r"(\d)(\d):"
-                    dice_matches = list(re.finditer(dice_pattern, left))
-                    if len(dice_matches) >= 1:
-                        red_dice_str = dice_matches[0].group(0)
-                        red_moves_start = dice_matches[0].end()
-                        red_moves_str = left[red_moves_start:].strip()
-                        red_part = f"{red_dice_str} {red_moves_str}".strip()
-                        red_move = parse_part(red_part, "Red")
-                        if red_move:
-                            moves_list.append(red_move)
-                            previous_player_moved = "Red"
-
-                # Добавляем удвоение (от черных, если был ход красных, иначе от красных)
-                double_player = "Black" if left else "Red"
-                moves_list.append(
-                    {"turn": turn, "player": double_player, "action": "double", "cube": value}
-                )
-
-                # Если есть ответ, добавляем для противоположного игрока
-                if response:
-                    response_player = "Red" if double_player == "Black" else "Black"
-                    moves_list.append({"turn": turn, "player": response_player, "action": response})
-
-                continue  # Переходим к следующей строке
-
-        # Проверяем удвоение в начале (оригинальная логика)
-        double_match = re.match(r"Doubles => (\d+)\s*(Takes|Drops)", rest)
-        if double_match:
-            value = int(double_match.group(1))
-            response = double_match.group(2).lower()
-            moves_list.append(
-                {"turn": turn, "player": "Red", "action": "double", "cube": value}
-            )
-            moves_list.append({"turn": turn, "player": "Black", "action": response})
-            continue
-
-        # --- Обработка обычных ходов --- (оригинальная логика)
-        dice_pattern = r"(\d)(\d):"
-        dice_matches = list(re.finditer(dice_pattern, rest))
-        red_part = None
-        black_part = None
-
-        if len(dice_matches) >= 1:
-            red_dice_str = dice_matches[0].group(0)
-            red_moves_start = dice_matches[0].end()
-            if len(dice_matches) >= 2:
-                red_moves_end = dice_matches[1].start()
-                red_moves_str = rest[red_moves_start:red_moves_end].strip()
-                black_dice_str = dice_matches[1].group(0)
-                black_moves_start = dice_matches[1].end()
-                black_moves_str = rest[black_moves_start:].strip()
+        # Если не разделилось, определяем сторону по содержимому
+        if len(parts) == 1:
+            if re.match(r'\d\d:', parts[0].strip()) or 'Doubles' in parts[0]:
+                right = parts[0].strip()
+                left = ''
             else:
-                red_moves_str = rest[red_moves_start:].strip()
-                black_dice_str = None
-                black_moves_str = None
+                left = parts[0].strip()
+                right = ''
 
-            red_part = f"{red_dice_str} {red_moves_str}".strip()
-            if black_dice_str:
-                black_part = f"{black_dice_str} {black_moves_str}".strip()
-
-        def parse_part(part, player):
-            if not part:
-                return None
-            dice_match = re.match(r"(\d)(\d):(?:\s*(.*))?", part)
-            if not dice_match:
+        def parse_side(side_str, player):
+            if not side_str:
                 return None
 
-            dice = [int(dice_match.group(1)), int(dice_match.group(2))]
-            moves_str = dice_match.group(3) or ""
-            move_list = []
+            # Проверяем простые действия: Takes, Drops (независимо от регистра)
+            action_match = re.match(r"(Takes|Drops|Take|Drop)", side_str, re.I)
+            if action_match:
+                act = action_match.group(1).lower()
+                if act in ['take', 'takes']:
+                    act = 'takes'
+                elif act in ['drop', 'drops']:
+                    act = 'drops'
+                return {"turn": turn, "player": player, "action": act}
 
-            for m in moves_str.split():
-                hit = False
-                if "*" in m:
-                    hit = True
-                    m = m.replace("*", "")
-                fr_to = m.split("/")
-                try:
-                    fr_str = fr_to[0]
-                    fr = 25 if fr_str == "Bar" else int(fr_str)
-                    to = (
-                        0
-                        if len(fr_to) == 1
-                        else (0 if fr_to[1] == "Off" else int(fr_to[1]))
-                    )
-                except (ValueError, IndexError):
-                    continue
-                move_list.append({"from": fr, "to": to, "hit": hit})
+            # Проверяем удвоение
+            double_match = re.match(r"Doubles => (\d+)(?:\s*(Takes|Drops|Take|Drop))?", side_str, re.I)
+            if double_match:
+                value = int(double_match.group(1))
+                res = {"turn": turn, "player": player, "action": "double", "cube": value}
+                response = double_match.group(2)
+                if response:
+                    resp_act = response.lower()
+                    if resp_act in ['take', 'takes']:
+                        resp_act = 'takes'
+                    elif resp_act in ['drop', 'drops']:
+                        resp_act = 'drops'
+                    # Добавляем ответ для противоположного игрока
+                    resp_player = "Black" if player == "Red" else "Red"
+                    moves_list.append({"turn": turn, "player": resp_player, "action": resp_act})
+                return res
 
-            # ✅ теперь возвращаем даже если move_list пуст
-            return {"turn": turn, "player": player, "dice": dice, "moves": move_list}
-        
-        red_move = parse_part(red_part, "Red")
+            # Иначе парсим обычный ход
+            dice_match = re.match(r"(\d)(\d):(?:\s*(.*))?", side_str)
+            if dice_match:
+                dice = [int(dice_match.group(1)), int(dice_match.group(2))]
+                moves_str = dice_match.group(3) or ""
+                move_list = []
+                for m in moves_str.split():
+                    hit = False
+                    if "*" in m:
+                        hit = True
+                        m = m.replace("*", "")
+                    fr_to = m.split("/")
+                    if len(fr_to) < 2:  # Требуем from/to
+                        continue
+                    try:
+                        fr_str = fr_to[0]
+                        fr = 25 if fr_str.lower() == "bar" else int(fr_str)
+                        to_str = fr_to[1]
+                        to = 0 if to_str.lower() == "off" else int(to_str)
+                    except (ValueError, IndexError):
+                        continue
+                    move_list.append({"from": fr, "to": to, "hit": hit})
+                return {"turn": turn, "player": player, "dice": dice, "moves": move_list}
+
+            return None
+
+        red_move = parse_side(left, "Red")
         if red_move:
             moves_list.append(red_move)
             previous_player_moved = "Red"
 
-        black_move = parse_part(black_part, "Black")
+        black_move = parse_side(right, "Black")
         if black_move:
             moves_list.append(black_move)
             previous_player_moved = "Black"
 
-    return moves_list
+        # Добавляем фиктивную запись для пропущенного хода (как в начале для Red)
+        if not red_move and black_move:
+            skip_entry = {"turn": turn, "player": "Red", "action": "skip"}
+            moves_list.insert(-1 if black_move else len(moves_list), skip_entry)
+        elif red_move and not black_move:
+            skip_entry = {"turn": turn, "player": "Black", "action": "skip"}
+            moves_list.append(skip_entry)
 
+    return moves_list
 
 def load_game_data(file_path="output.json"):
     with open(file_path, "r") as f:
@@ -206,12 +180,16 @@ def json_to_gnubg_commands(data):
             next_act = data[i + 1].get("action")
             next_turn = data[i + 1].get("turn")
 
-        if act == "double":
+        if act == "skip":
+            # Просто пропускаем, без команд
+            i += 1
+            continue
+        elif act == "double":
             tokens.append({"cmd": "hint", "type": "hint", "target": i})
             tokens.append({"cmd": "double", "type": "cmd", "target": None})
             i += 1
             continue
-        elif act in ("takes", "drop"):
+        elif act in ("takes", "drops"):
             tokens.append({"cmd": "hint", "type": "hint", "target": i})
             tokens.append({"cmd": act, "type": "cmd", "target": None})
             i += 1
