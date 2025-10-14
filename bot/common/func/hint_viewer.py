@@ -115,7 +115,7 @@ def parse_backgammon_mat(content):
                         left = pre_dice
                         right = post_dice
                     else:
-                        if turn == 1 and dice_pos > 20:
+                        if turn == 1:
                             left = ''
                             right = post_dice
                         else:
@@ -131,7 +131,7 @@ def parse_backgammon_mat(content):
                         left = pre
                         right = post
                     else:
-                        if turn == 1 and action_pos > 20:
+                        if turn == 1:
                             left = ''
                             right = post
                         else:
