@@ -33,7 +33,7 @@ def parse_backgammon_mat(content):
     moves_list = []
     previous_player_moved = None
 
-    for idx, line in enumerate(lines[start_idx:]):
+    for line in lines[start_idx:]:
         line = line.strip()
         if not line:
             continue
@@ -54,12 +54,43 @@ def parse_backgammon_mat(content):
         turn = int(num_match.group(1))
         rest = num_match.group(2)  # keep spaces
 
+        # Check for double in the line
+        double_pos = rest.find("Doubles =>")
+        if double_pos != -1:
+            left = rest[:double_pos].strip()
+            right = rest[double_pos + len("Doubles =>"):].strip()
+
+            right_match = re.match(r"(\d+)(?:\s*(Takes|Drops|Take|Drop))?", right, re.I)
+            if right_match:
+                value = int(right_match.group(1))
+                response = right_match.group(2).lower() if right_match.group(2) else None
+
+                if left:
+                    red_part = left
+                    double_player = "Black"
+                    red_move = parse_side(red_part, "Red")  # Use parse_side defined below
+                    if red_move:
+                        moves_list.append(red_move)
+                        previous_player_moved = "Red"
+                else:
+                    double_player = "Red"
+
+                moves_list.append({"turn": turn, "player": double_player, "action": "double", "cube": value})
+
+                if response:
+                    if response in ['take', 'takes']:
+                        response = 'take'
+                    elif response in ['drop', 'drops']:
+                        response = 'drop'
+                    response_player = "Red" if double_player == "Black" else "Black"
+                    moves_list.append({"turn": turn, "player": response_player, "action": response})
+
+            continue
+
         # Try split by large spaces
         parts = re.split(r'\s{10,}', rest)
         left = parts[0].strip() if len(parts) > 0 else ''
         right = parts[1].strip() if len(parts) > 1 else ''
-
-        is_first_turn = (turn == 1)
 
         if len(parts) == 1:
             rest_single = rest.strip()
@@ -69,11 +100,11 @@ def parse_backgammon_mat(content):
                 red_moves_start = dice_matches[0].end()
                 red_moves_end = dice_matches[1].start()
                 red_moves_str = rest_single[red_moves_start:red_moves_end].strip()
-                left = f"{red_dice_str} {red_moves_str}"
+                left = f"{red_dice_str} {red_moves_str}".strip()
                 black_dice_str = dice_matches[1].group(0)
                 black_moves_start = dice_matches[1].end()
                 black_moves_str = rest_single[black_moves_start:].strip()
-                right = f"{black_dice_str} {black_moves_str}"
+                right = f"{black_dice_str} {black_moves_str}".strip()
             elif len(dice_matches) == 1:
                 dice_match_original = re.search(r'(\d)(\d):', rest)
                 if dice_match_original:
@@ -84,23 +115,12 @@ def parse_backgammon_mat(content):
                         left = pre_dice
                         right = post_dice
                     else:
-                        # Специальная логика только для первого хода
-                        if is_first_turn:
-                            # Считаем ведущие пробелы
-                            leading_spaces = len(rest) - len(rest.lstrip(' '))
-                            if leading_spaces > 20:  # Если слишком много пробелов слева, это пустой Red, ход Black
-                                left = ''
-                                right = post_dice
-                            else:
-                                left = post_dice
-                                right = ''
+                        if turn == 1 and dice_pos > 20:
+                            left = ''
+                            right = post_dice
                         else:
-                            if dice_pos > 20:
-                                left = ''
-                                right = post_dice
-                            else:
-                                left = post_dice
-                                right = ''
+                            left = post_dice
+                            right = ''
             else:
                 action_match_original = re.search(r'\S', rest)
                 if action_match_original:
@@ -111,21 +131,12 @@ def parse_backgammon_mat(content):
                         left = pre
                         right = post
                     else:
-                        if is_first_turn:
-                            leading_spaces = len(rest) - len(rest.lstrip(' '))
-                            if leading_spaces > 20:
-                                left = ''
-                                right = post
-                            else:
-                                left = post
-                                right = ''
+                        if turn == 1 and action_pos > 20:
+                            left = ''
+                            right = post
                         else:
-                            if action_pos > 20:
-                                left = ''
-                                right = post
-                            else:
-                                left = post
-                                right = ''
+                            left = post
+                            right = ''
 
         def parse_side(side_str, player):
             if not side_str:
@@ -136,9 +147,9 @@ def parse_backgammon_mat(content):
             if action_match:
                 act = action_match.group(1).lower()
                 if act in ['take', 'takes']:
-                    act = 'takes'
+                    act = 'take'
                 elif act in ['drop', 'drops']:
-                    act = 'drops'
+                    act = 'drop'
                 return {"turn": turn, "player": player, "action": act}
 
             # Проверяем удвоение
@@ -150,9 +161,9 @@ def parse_backgammon_mat(content):
                 if response:
                     resp_act = response.lower()
                     if resp_act in ['take', 'takes']:
-                        resp_act = 'takes'
+                        resp_act = 'take'
                     elif resp_act in ['drop', 'drops']:
-                        resp_act = 'drops'
+                        resp_act = 'drop'
                     # Добавляем ответ для противоположного игрока
                     resp_player = "Black" if player == "Red" else "Red"
                     moves_list.append({"turn": turn, "player": resp_player, "action": resp_act})
@@ -203,6 +214,7 @@ def parse_backgammon_mat(content):
             moves_list.append(skip_entry)
 
     return moves_list
+
 
 def load_game_data(file_path="output.json"):
     with open(file_path, "r") as f:
@@ -653,9 +665,105 @@ def convert_moves_to_gnu(moves_list):
     logger.debug(f"Converted to GNU: {final}")
     return final or None
 
+class BackgammonBoard:
+    def __init__(self):
+        self.board = [0] * 26
+        # Red positions (positive)
+        self.board[24] = 2
+        self.board[13] = 5
+        self.board[8] = 3
+        self.board[6] = 5
+        # Black positions (negative)
+        self.board[1] = -2
+        self.board[12] = -5
+        self.board[17] = -3
+        self.board[19] = -5
+        self.off_red = 0
+        self.off_black = 0
+
+    def _get_fixed_point(self, p, player):
+        if player == "Red":
+            if p == 25:
+                return 0  # Red bar
+            elif p == 0:
+                return None  # bear off
+            else:
+                return p
+        else:  # Black
+            if p == 25:
+                return 25  # Black bar
+            elif p == 0:
+                return None  # bear off
+            else:
+                return 25 - p
+
+    def apply_move(self, player, fr, to, hit):
+        f_fixed = self._get_fixed_point(fr, player)
+        t_fixed = self._get_fixed_point(to, player)
+
+        if f_fixed is None:
+            raise ValueError("Cannot move from bear off")
+
+        # Determine signs and bars
+        if player == "Red":
+            sign = 1
+            bar_own = 0
+            bar_opp = 25
+        else:
+            sign = -1
+            bar_own = 25
+            bar_opp = 0
+
+        # Remove from from
+        if f_fixed == bar_own:
+            self.board[bar_own] -= 1
+        else:
+            self.board[f_fixed] -= sign
+
+        # Add to to
+        if t_fixed is None:
+            # Bear off
+            if player == "Red":
+                self.off_red += 1
+            else:
+                self.off_black += 1
+        else:
+            # Check for hit
+            if self.board[t_fixed] == -sign:  # single opponent
+                self.board[t_fixed] = 0
+                self.board[bar_opp] += 1  # opponent to bar
+            self.board[t_fixed] += sign
+
+    def get_positions(self):
+        red_pos = {"bar": self.board[0], "off": self.off_red}
+        black_pos = {"bar": self.board[25], "off": self.off_black}
+        for i in range(1, 25):
+            if self.board[i] > 0:
+                red_pos[i] = self.board[i]
+            elif self.board[i] < 0:
+                black_pos[i] = -self.board[i]
+        return {"red": red_pos, "black": black_pos}
+
+def process_game(game_data):
+    board = BackgammonBoard()
+    augmented = []
+    for entry in game_data:
+        augmented_entry = copy.deepcopy(entry)
+        if "moves" in entry:
+            for move in entry["moves"]:
+                board.apply_move(entry["player"], move["from"], move["to"], move["hit"])
+        if (
+            "positions" not in augmented_entry
+        ):  # For non-move entries like double, takes, win
+            augmented_entry["positions"] = board.get_positions()
+        else:
+            augmented_entry["positions"] = board.get_positions()
+        augmented.append(augmented_entry)
+    return augmented
+
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 0.80
+    command_delay = 0.5
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
@@ -664,28 +772,29 @@ def process_mat_file(input_file, output_file):
         red_player, black_player = extract_player_names(content)
 
         parsed_moves = parse_backgammon_mat(content)
+        aug = process_game(parsed_moves)
 
         # Add player names to the output
-        for entry in parsed_moves:
+        for entry in aug:
             if entry.get("player") == "Red":
                 entry["player_name"] = red_player
             elif entry.get("player") == "Black":
                 entry["player_name"] = black_player
 
         # Convert moves to GNU format
-        for entry in parsed_moves:
+        for entry in aug:
             if "moves" in entry:
                 entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
 
         with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(parsed_moves, f, indent=2, ensure_ascii=False)
+            json.dump(aug, f, indent=2, ensure_ascii=False)
 
         # генерируем токены команд
-        gnubg_tokens = json_to_gnubg_commands(parsed_moves)
+        gnubg_tokens = json_to_gnubg_commands(aug)
         logger.info([t["cmd"] for t in gnubg_tokens])
 
         # Инициализируем поле для подсказок в каждой записи
-        for entry in parsed_moves:
+        for entry in aug:
             entry.setdefault("hints", [])
 
         child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
@@ -725,17 +834,17 @@ def process_mat_file(input_file, output_file):
                     hints = parse_hint_output(out)
                     if hints:
                         for h in hints:
-                            parsed_moves[target_idx]["hints"].append(h)
+                            aug[target_idx]["hints"].append(h)
                     else:
                         logger.debug(
                             "No hints parsed for target %s, raw output length=%d",
                             target_idx,
                             len(out),
                         )
-                        parsed_moves[target_idx]["hints"].append({"raw": out})
+                        aug[target_idx]["hints"].append({"raw": out})
 
             # Compare gnu_move with the first hint's move
-            for entry in parsed_moves:
+            for entry in aug:
                 if "gnu_move" in entry and entry.get("hints"):
                     # Find the first hint (idx == 1)
                     first_hint = next((hint for hint in entry["hints"] if hint.get("idx") == 1 and hint.get("type") == "move"), None)
