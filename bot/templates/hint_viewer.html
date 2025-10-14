@@ -234,7 +234,7 @@
 <body>
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
-        <canvas id="boardCanvas" width="800" height="400"></canvas>
+        <canvas id="boardCanvas" width="800" height="1200"></canvas>
 
         <div id="controls">
             <button onclick="prevTurn()" id="prevBtn">←</button>
@@ -312,30 +312,30 @@
         // Function to get X coordinate for a point (1-24), adjusted for right board
         function getX(point) {
             if (point >= 13 && point <= 18) {
-                return 50 + (point - 13) * 60; 
+                return 150 + (point - 13) * 180;
             } else if (point >= 19 && point <= 24) {
-                return 450 + (point - 19) * 60; 
+                return 1350 + (point - 19) * 180;
             } else if (point >= 7 && point <= 12) {
-                return 50 + (12 - point) * 60; 
+                return 150 + (12 - point) * 180;
             } else if (point >= 1 && point <= 6) {
-                return 450 + (6 - point) * 60; 
+                return 1350 + (6 - point) * 180;
             }
             return 0;
         }
 
         // Base Y and direction for stacking with padding
         function getBaseY(point) {
-            return (point > 12) ? 60 : 320; 
+            return (point > 12) ? 180 : 1020;
         }
 
         function getDy(point) {
-            return (point > 12) ? 40 : -40; // Top: stack down (+), bottom: stack up (-)
+            return (point > 12) ? 120 : -120; // Top: stack down (+), bottom: stack up (-)
         }
 
         // Draw checkers for a player with padding
         function drawCheckers(player, img) {
             const positions = data[current].positions[player];
-            ctx.font = 'bold 20px Arial';
+            ctx.font = 'bold 60px Arial';
             ctx.fillStyle = '#ffffff';
 
             for (let pointStr in positions) {
@@ -348,29 +348,29 @@
 
                 // Draw up to 4 checkers with padding
                 for (let i = 0; i < Math.min(count, 4); i++) {
-                    ctx.drawImage(img, x - 25, y + (i * dy) - 25, 50, 50);
+                    ctx.drawImage(img, x - 75, y + (i * dy) - 75, 150, 150);
                 }
 
                 // If more than 4, draw text with count to the right, closer to the last checker
                 if (count > 4) {
                     const lastCheckerY = y + (3 * dy); // Position near the last checker (4th one)
-                    ctx.fillText(`(${count})`, x + 20, lastCheckerY + 5); // Adjusted to right side, closer to last checker
+                    ctx.fillText(`(${count})`, x + 60, lastCheckerY + 15); // Adjusted to right side, closer to last checker
                 }
             }
 
             // Bar and Off as text with new format (on new line below)
             const barX = 410; // Middle bar
-            const barY = (player === 'black') ? 50 : 350;
+            const barY = (player === 'black') ? 150 : 1050;
             if (positions.bar > 0) {
-                ctx.fillText('Bar:', barX - 20, barY);
-                ctx.fillText(`${positions.bar}`, barX - 20, barY + 20); // New line below with offset
+                ctx.fillText('Bar:', barX - 60, barY);
+                ctx.fillText(`${positions.bar}`, barX - 60, barY + 60); // New line below with offset
             }
 
-            const offX = (player === 'black') ? 20 : 760;
-            const offY = 200;
+            const offX = (player === 'black') ? 60 : 740;
+            const offY = 600;
             if (positions.off > 0) {
                 ctx.fillText('Off:', offX, offY);
-                ctx.fillText(`${positions.off}`, offX, offY + 20); // New line below with offset
+                ctx.fillText(`${positions.off}`, offX, offY + 60); // New line below with offset
             }
         }
 
@@ -380,8 +380,8 @@
             document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
 
             // Draw board
-            ctx.clearRect(0, 0, 800, 400);
-            ctx.drawImage(boardImg, 0, 0, 800, 400);
+            ctx.clearRect(0, 0, 800, 1200);
+            ctx.drawImage(boardImg, 0, 0, 800, 1200);
 
             // Draw checkers
             drawCheckers('red', whiteImg); // Red uses white checkers
