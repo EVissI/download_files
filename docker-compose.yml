@@ -1,5 +1,4 @@
-﻿
-services:
+﻿services:
   # test:
   #   build: .
   #   container_name: backgammon_test
@@ -22,15 +21,13 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    networks:
-      - backgammon_network
 
   backgammon-api:
     build: .
     command: /bin/sh -c "uvicorn bot.api:app --host 0.0.0.0 --port 8000 --reload"
     container_name: backgammon_api
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     volumes:
       - ./bot:/app/bot
       - ./files:/app/files
@@ -42,25 +39,6 @@ services:
       - redis
       - db
     restart: unless-stopped
-    networks:
-      - backgammon_network
-
-  nginx:
-    image: nginx:latest
-    container_name: backgammon_nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./ssl:/etc/ssl/certs
-    depends_on:
-      - backgammon-api
-    restart: unless-stopped
-    networks:
-      - backgammon_network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
 
   redis:
@@ -70,8 +48,8 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_USER=${REDIS_USER}
       - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
-    expose:
-      - "6379"
+    ports:
+      - "6379:6379"
     volumes:
       - ./redisdata:/data
     command: >
@@ -93,8 +71,6 @@ services:
     restart: unless-stopped
     tty: true
     stdin_open: true
-    networks:
-      - backgammon_network
 
   db:
     image: postgres
@@ -105,13 +81,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    networks:
-      - backgammon_network
 
-
-networks:
-  backgammon_network:
-    driver: bridge
 
 volumes:
   pgdata:
