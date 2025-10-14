@@ -331,7 +331,7 @@
         }
 
         function getDy(point) {
-            return (point > 12) ? 45 : -45; 
+            return (point > 12) ? 55 : -55; 
         }
 
         // Draw checkers for a player with padding
@@ -382,8 +382,8 @@
             document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
 
             // Draw board
-            ctx.clearRect(0, 0, 800, 800); // Updated height to 800
-            ctx.drawImage(boardImg, 0, 0, 800, 800); // Updated height to 800
+            ctx.clearRect(0, 0, 800, 800); 
+            ctx.drawImage(boardImg, 0, 0, 800, 800); 
 
             // Draw checkers
             drawCheckers('red', whiteImg); // Red uses white checkers
