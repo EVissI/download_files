@@ -360,36 +360,19 @@
                 }
             }
 
-            // Draw checkers on bar
+            // Bar and Off as text with new format (on new line below)
             const barX = 410; // Middle bar
-            const barY = (player === 'black') ? 100 : 700;
-            const barDy = getDy(point); // Use the same dy logic as on the board
-            const barImg = (player === 'black') ? blackImg : whiteImg;
-            const barCount = positions.bar;
-
-            if (barCount > 0) {
-                for (let i = 0; i < Math.min(barCount, 4); i++) {
-                    ctx.drawImage(barImg, barX - 31.25, barY + (i * barDy) - 31.25, 62.5, 62.5);
-                }
-                if (barCount > 4) {
-                    const lastBarCheckerY = barY + (3 * barDy);
-                    ctx.fillText(`(${barCount})`, barX + 20, lastBarCheckerY + 5);
-                }
+            const barY = (player === 'black') ? 100 : 700; 
+            if (positions.bar > 0) {
+                ctx.fillText('Bar:', barX - 20, barY);
+                ctx.fillText(`${positions.bar}`, barX - 20, barY + 40); 
             }
 
-            // Draw checkers off
             const offX = (player === 'black') ? 20 : 760;
-            const offY = 400;
-            const offCount = positions.off;
-
-            if (offCount > 0) {
-                for (let i = 0; i < Math.min(offCount, 6); i++) {
-                    ctx.drawImage(barImg, offX - 31.25, offY + (i * barDy) - 31.25, 62.5, 62.5);
-                }
-                if (offCount > 6) {
-                    const lastOffCheckerY = offY + (3 * barDy);
-                    ctx.fillText(`(${offCount})`, offX + 20, lastOffCheckerY + 5);
-                }
+            const offY = 400; 
+            if (positions.off > 0) {
+                ctx.fillText('Off:', offX, offY);
+                ctx.fillText(`${positions.off}`, offX, offY + 40);
             }
         }
 
