@@ -53,13 +53,13 @@
 
         // Load images (assume they are in the same directory or provide full paths)
         const boardImg = new Image();
-        boardImg.src = 'board.png'; // The board image you provided
+        boardImg.src = '/static/board.png';
 
         const blackImg = new Image();
-        blackImg.src = 'black_checker.png'; // Black checker image
+        blackImg.src = '/static/black_checker.png';
 
         const whiteImg = new Image();
-        whiteImg.src = 'white_checker.png'; // White checker image (for red player)
+        whiteImg.src = '/static/white_checker.png';
 
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
