@@ -194,7 +194,7 @@ def json_to_gnubg_commands(data):
             if act == "takes":
                 tokens.append({"cmd": "take", "type": "cmd", "target": None})
             if act == "drops":
-                tokens.append({"cmd": 'drop', "type": "cmd", "target": None})
+                tokens.append({"cmd": 'pass', "type": "cmd", "target": None})
             i += 1
             continue
         elif act == "win":
