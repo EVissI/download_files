@@ -309,18 +309,18 @@
         blackImg.onload = checkImagesLoaded;
         whiteImg.onload = checkImagesLoaded;
 
-        // Function to get X coordinate for a point (1-24), adjusted for left side rightmost shift
+        // Function to get X coordinate for a point (1-24), adjusted for left side first row left shift
         function getX(point) {
             if (point >= 13 && point <= 18) {
                 const baseX = 50 + (point - 13) * 60; // Base position for left top
-                return baseX + (point === 18 ? 20 : 0); // Shift point 18 right by 20
+                return baseX - (point === 13 ? 20 : 0); // Shift point 13 left by 20
             } else if (point >= 19 && point <= 24) {
-                return 450 + (point - 19) * 60; // Reverted to original for right top
+                return 450 + (point - 19) * 60; // Original position for right top
             } else if (point >= 7 && point <= 12) {
                 const baseX = 50 + (12 - point) * 60; // Base position for left bottom
-                return baseX + (point === 12 ? 20 : 0); // Shift point 12 right by 20
+                return baseX - (point === 7 ? 20 : 0); // Shift point 7 left by 20
             } else if (point >= 1 && point <= 6) {
-                return 450 + (6 - point) * 60; // Reverted to original for right bottom
+                return 450 + (6 - point) * 60; // Original position for right bottom
             }
             return 0;
         }
@@ -348,11 +348,13 @@
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
-                for (let i = 0; i < Math.min(count, 6); i++) {
+                // Draw up to 4 checkers with padding
+                for (let i = 0; i < Math.min(count, 4); i++) {
                     ctx.drawImage(img, x - 25, y + (i * dy) - 25, 50, 50);
                 }
 
-                if (count > 6) {
+                // If more than 4, draw text with count to the right, closer to the last checker
+                if (count > 4) {
                     const lastCheckerY = y + (3 * dy); // Position near the last checker (4th one)
                     ctx.fillText(`(${count})`, x + 20, lastCheckerY + 5); // Adjusted to right side, closer to last checker
                 }
