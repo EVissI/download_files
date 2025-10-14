@@ -899,7 +899,7 @@ def process_mat_file(input_file, output_file):
 
         try:
             with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(parsed_moves, f, indent=2, ensure_ascii=False)
+                json.dump(aug, f, indent=2, ensure_ascii=False)
             logger.info("Updated %s with hint data", output_file)
         except Exception:
             logger.exception("Failed to write augmented json with hints")
