@@ -5,11 +5,216 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Backgammon Game Viewer</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        canvas { border: 1px solid #000; }
-        table { margin: 20px auto; border-collapse: collapse; }
-        th, td { border: 1px solid #000; padding: 8px; }
-        #controls { margin: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            color: white;
+            background-color: #1a1a1a;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        canvas {
+            border: 2px solid #333;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
+        }
+
+        .game-info {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #444;
+        }
+
+        .hints-table {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #444;
+            overflow-x: auto;
+        }
+
+        table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 800px;
+            background-color: #333;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid #555;
+            padding: 12px;
+            text-align: left;
+            color: white;
+        }
+
+        th {
+            background-color: #444;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+
+        tr:hover {
+            background-color: #3a3a3a;
+        }
+
+        #controls {
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        #turnLabel {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 0 20px;
+        }
+
+        .info-text {
+            color: #ccc;
+            margin: 10px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            canvas {
+                width: 100%;
+                max-width: 400px;
+                height: 200px;
+            }
+
+            #controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+
+            #turnLabel {
+                margin: 10px 0;
+                font-size: 16px;
+            }
+
+            button {
+                width: 150px;
+                padding: 10px 20px;
+            }
+
+            table {
+                font-size: 14px;
+            }
+
+            th, td {
+                padding: 8px 6px;
+            }
+
+            .container {
+                padding: 0 10px;
+            }
+
+            .game-info, .hints-table {
+                padding: 15px;
+                margin: 15px 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            canvas {
+                width: 100%;
+                max-width: 300px;
+                height: 150px;
+            }
+
+            button {
+                width: 120px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 6px 4px;
+            }
+        }
+
+        /* Loading indicator */
+        .loading {
+            color: #007bff;
+            font-style: italic;
+        }
+
+        /* Error messages */
+        .error {
+            color: #dc3545;
+            background-color: #2d1b1b;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
     </style>
     <!-- Telegram Web App Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -20,14 +225,23 @@
     </script>
 </head>
 <body>
-    <h1>Backgammon Game Analysis</h1>
-    <canvas id="boardCanvas" width="800" height="400"></canvas>
-    <div id="info"></div>
-    <div id="hints"></div>
-    <div id="controls">
-        <button onclick="prevTurn()">← Previous</button>
-        <span id="turnLabel">Turn 0</span>
-        <button onclick="nextTurn()">Next →</button>
+    <div class="container">
+        <h1>Backgammon Game Analysis</h1>
+        <canvas id="boardCanvas" width="800" height="400"></canvas>
+
+        <div class="game-info">
+            <div id="info" class="info-text"></div>
+        </div>
+
+        <div id="controls">
+            <button onclick="prevTurn()" id="prevBtn">← Previous</button>
+            <span id="turnLabel">Turn 0</span>
+            <button onclick="nextTurn()" id="nextBtn">Next →</button>
+        </div>
+
+        <div class="hints-table">
+            <div id="hints"></div>
+        </div>
     </div>
 
     <script>
@@ -39,19 +253,35 @@
 
         // Load JSON data from API
         let data = [];
+        const infoDiv = document.getElementById('info');
+        infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
+
         fetch(`/api/analysis/${gameId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(json => {
                 data = json.filter(item => item.turn !== undefined); // Filter to only turns, exclude final win if needed
-                render(0);
+                if (data.length > 0) {
+                    render(0);
+                    infoDiv.innerHTML = ''; // Clear loading message
+                } else {
+                    infoDiv.innerHTML = '<div class="error">No game data found for this game ID.</div>';
+                }
             })
-            .catch(error => console.error('Error loading JSON:', error));
+            .catch(error => {
+                console.error('Error loading JSON:', error);
+                infoDiv.innerHTML = '<div class="error">Error loading game data. Please check the game ID and try again.</div>';
+            });
 
         let current = 0;
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Load images (assume they are in the same directory or provide full paths)
+        // Load images (assume they are in the static directory)
         const boardImg = new Image();
         boardImg.src = '/static/board.png';
 
@@ -150,17 +380,23 @@
 
             // Info (player, dice, etc.)
             const item = data[turn];
-            let info = `Player: ${item.player} (${item.player_name})<br>`;
-            if (item.dice) info += `Dice: ${item.dice.join(', ')}<br>`;
-            if (item.moves) info += `Moves: ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}<br>`;
-            if (item.gnu_move) info += `Best Move: ${item.gnu_move}<br>`;
+            let info = `<strong>Player:</strong> ${item.player} (${item.player_name || 'Unknown'})<br>`;
+            if (item.dice) info += `<strong>Dice:</strong> ${item.dice.join(', ')}<br>`;
+            if (item.moves) info += `<strong>Moves:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}<br>`;
+            if (item.gnu_move) info += `<strong>Best Move:</strong> ${item.gnu_move}<br>`;
+            if (item.is_best_move !== undefined) {
+                info += `<strong>Matches Best:</strong> ${item.is_best_move ? 'Yes' : 'No'}`;
+            }
             document.getElementById('info').innerHTML = info;
 
             // Hints table
             let tableHtml = '<table><tr><th>Move</th><th>Win Prob</th><th>Gammon Prob</th><th>Eq</th></tr>';
             (item.hints || []).forEach(hint => {
                 if (hint.probs && hint.probs.length >= 2) {
-                    tableHtml += `<tr><td>${hint.move}</td><td>${hint.probs[0].toFixed(3)}</td><td>${hint.probs[1].toFixed(3)}</td><td>${hint.eq.toFixed(3)}</td></tr>`;
+                    const winProb = hint.probs[0] ? hint.probs[0].toFixed(3) : '-';
+                    const gammonProb = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
+                    const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                    tableHtml += `<tr><td>${hint.move || '-'}</td><td>${winProb}</td><td>${gammonProb}</td><td>${eq}</td></tr>`;
                 }
             });
             tableHtml += '</table>';
@@ -168,11 +404,25 @@
         }
 
         function prevTurn() {
-            if (current > 0) render(current - 1);
+            if (current > 0) {
+                render(current - 1);
+                updateButtons();
+            }
         }
 
         function nextTurn() {
-            if (current < data.length - 1) render(current + 1);
+            if (current < data.length - 1) {
+                render(current + 1);
+                updateButtons();
+            }
+        }
+
+        function updateButtons() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            prevBtn.disabled = current <= 0;
+            nextBtn.disabled = current >= data.length - 1;
         }
     </script>
 </body>
