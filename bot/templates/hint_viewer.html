@@ -22,9 +22,7 @@
         }
 
         h1 {
-            color: white;
-            margin-bottom: 30px;
-            font-size: 2.5rem;
+            display: none; /* Hide the main title */
         }
 
         canvas {
@@ -85,11 +83,18 @@
         }
 
         #controls {
-            margin: 30px 0;
+            margin: 20px 0;
             display: flex;
             justify-content: center;
-            gap: 20px;
+            align-items: center;
+            gap: 15px;
             flex-wrap: wrap;
+        }
+
+        .turn-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         button {
@@ -116,7 +121,9 @@
             font-size: 18px;
             font-weight: bold;
             color: #007bff;
-            margin: 0 20px;
+            margin: 0;
+            min-width: 80px;
+            text-align: center;
         }
 
         .info-text {
@@ -234,9 +241,9 @@
         </div>
 
         <div id="controls">
-            <button onclick="prevTurn()" id="prevBtn">← Previous</button>
+            <button onclick="prevTurn()" id="prevBtn">←</button>
             <span id="turnLabel">Turn 0</span>
-            <button onclick="nextTurn()" id="nextBtn">Next →</button>
+            <button onclick="nextTurn()" id="nextBtn">→</button>
         </div>
 
         <div class="hints-table">
@@ -380,12 +387,12 @@
 
             // Info (player, dice, etc.)
             const item = data[turn];
-            let info = `<strong>Player:</strong> ${item.player} (${item.player_name || 'Unknown'})<br>`;
-            if (item.dice) info += `<strong>Dice:</strong> ${item.dice.join(', ')}<br>`;
-            if (item.moves) info += `<strong>Moves:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}<br>`;
-            if (item.gnu_move) info += `<strong>Best Move:</strong> ${item.gnu_move}<br>`;
+            let info = `<strong>Игрок:</strong> ${item.player} (${item.player_name || 'Unknown'})<br>`;
+            if (item.dice) info += `<strong>Кости:</strong> ${item.dice.join(', ')}<br>`;
+            if (item.moves) info += `<strong>Ходы:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}<br>`;
+            if (item.gnu_move) info += `<strong>Лучший ход:</strong> ${item.gnu_move}<br>`;
             if (item.is_best_move !== undefined) {
-                info += `<strong>Matches Best:</strong> ${item.is_best_move ? 'Yes' : 'No'}`;
+                info += `<strong>Лучший ли ход?:</strong> ${item.is_best_move ? 'Yes' : 'No'}`;
             }
             document.getElementById('info').innerHTML = info;
 
