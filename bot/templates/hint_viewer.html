@@ -309,16 +309,18 @@
         blackImg.onload = checkImagesLoaded;
         whiteImg.onload = checkImagesLoaded;
 
-        // Function to get X coordinate for a point (1-24), adjusted for right board
+        // Function to get X coordinate for a point (1-24), adjusted for right board with offset
         function getX(point) {
             if (point >= 13 && point <= 18) {
-                return 50 + (point - 13) * 60; 
+                return 50 + (point - 13) * 60; // Left side (13-18), no change
             } else if (point >= 19 && point <= 24) {
-                return 450 + (point - 19) * 60; 
+                const baseX = 450 + (point - 19) * 60; // Base position for right side
+                return baseX - 20 + (point - 19) * 5; // Shift first (-20) and increase progressively to last (+20)
             } else if (point >= 7 && point <= 12) {
-                return 50 + (12 - point) * 60; 
+                return 50 + (12 - point) * 60; // Left side (7-12), no change
             } else if (point >= 1 && point <= 6) {
-                return 450 + (6 - point) * 60; 
+                const baseX = 450 + (6 - point) * 60; // Base position for right side
+                return baseX - 20 + (6 - point) * 5; // Shift first (-20) and increase progressively to last (+20)
             }
             return 0;
         }
