@@ -348,13 +348,11 @@
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
-                // Draw up to 4 checkers with padding
-                for (let i = 0; i < Math.min(count, 4); i++) {
+                for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 25, y + (i * dy) - 25, 50, 50);
                 }
 
-                // If more than 4, draw text with count to the right, closer to the last checker
-                if (count > 4) {
+                if (count > 6) {
                     const lastCheckerY = y + (3 * dy); // Position near the last checker (4th one)
                     ctx.fillText(`(${count})`, x + 20, lastCheckerY + 5); // Adjusted to right side, closer to last checker
                 }
