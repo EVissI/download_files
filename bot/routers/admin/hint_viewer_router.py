@@ -1,22 +1,31 @@
 ﻿from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 from aiogram.exceptions import TelegramAPIError
 from loguru import logger
 import asyncio
 import tempfile
 import os
 import json
-import re
-from prettytable import PrettyTable
 
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import StateFilter
 
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+
 from bot.common.func.hint_viewer import process_mat_file, random_filename
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.general_states import GeneralStates
+from bot.config import settings
+
+# Telegram router
 hint_viewer_router = Router()
+
+# FastAPI router for web interface
+hint_viewer_api_router = APIRouter()
+templates = Jinja2Templates(directory="bot/templates")
 
 
 class HintViewerStates(StatesGroup):
@@ -41,9 +50,9 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         return
 
     tmp_in = os.path.join(tempfile.gettempdir(), random_filename(ext=".mat", length=8))
-    tmp_out = os.path.join(
-        tempfile.gettempdir(), random_filename(ext=".json", length=8)
-    )
+    # Use permanent location for JSON output
+    game_id = fname.replace('.mat', '')
+    permanent_json_path = f"files/{game_id}.json"
 
     try:
         await message.reply("Принял файл, начинаю обработку...")
@@ -51,169 +60,100 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         with open(tmp_in, "wb") as f:
             await message.bot.download_file(file.file_path, f)
 
-        await asyncio.to_thread(process_mat_file, tmp_in, tmp_out)
+        # Process file directly to permanent location
+        game_id = fname.replace('.mat', '')
+        permanent_json_path = f"files/{game_id}.json"
 
-        # Send the raw JSON file to user
-        with open(tmp_out, "r", encoding="utf-8") as f:
-            json_content = f.read()
-            try:
-                # Create temporary file with proper name
-                temp_filename = f"analysis_{random_filename(ext='.json', length=8)}"
-                temp_filepath = os.path.join(tempfile.gettempdir(), temp_filename)
+        await asyncio.to_thread(process_mat_file, tmp_in, permanent_json_path)
 
-                with open(temp_filepath, "w", encoding="utf-8") as temp_file:
-                    temp_file.write(json_content)
+        json_document = FSInputFile(path=permanent_json_path, filename=f"{game_id}.json")
+        await message.answer_document(
+            document=json_document,
+            caption="Сгенерированный JSON файл анализа"
+        )
 
-                # Send file using FSInputFile for proper handling
-                from aiogram.types import FSInputFile
+        mini_app_url = f"{settings.MINI_APP_URL}?game_id={game_id}"
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Открыть интерактивную визуализацию", web_app=WebAppInfo(url = mini_app_url))]
+            ]
+        )
+        await message.answer(
+            "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации игры:",
+            reply_markup=keyboard
+        )
 
-                document = FSInputFile(path=temp_filepath, filename=temp_filename)
-
-                await message.answer_document(
-                    document=document, caption="Сгенерированный JSON"
-                )
-
-                # Clean up temp file
-                os.unlink(temp_filepath)
-
-            except Exception as e:
-                logger.error(f"Error sending JSON file: {str(e)}")
-                # Try to send as text message if file is small enough
-                if len(json_content) < 4000:
-                    try:
-                        await message.answer(
-                            f"JSON содержимое:\n<pre>{json_content}</pre>",
-                            parse_mode="HTML",
-                        )
-                    except Exception as text_error:
-                        logger.error(f"Error sending JSON as text: {str(text_error)}")
-                        await message.answer("Не удалось отправить JSON результат.")
-
-        # Continue with JSON processing
-        with open(tmp_out, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        if isinstance(data, dict):
-            data = data.get("entries") or data.get("turns") or []
-
-        for entry in data:
-            hints = parse_hints_with_log(entry)
-            if not hints and not entry.get("moves"):
-                continue
-
-            # Prepare header with move information
-            turn = entry.get('turn', '—')
-            player = entry.get('player', '—')
-            player_name = entry.get('player_name', '—')
-            original_move = " ".join(f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in entry.get('moves', [])) or "Нет хода"
-            gnu_move = entry.get('gnu_move', 'Нет GNU хода')
-            is_best_move = "Да" if entry.get('is_best_move', False) else "Нет"
-            header = (
-                f"Файл: {fname}\n"
-                f"Ход: {turn} игрок: {player} ({player_name})\n"
-                f"Оригинальный ход: {original_move}\n"
-                f"GNU ход: {gnu_move}\n"
-                f"Совпадает с лучшей подсказкой: {is_best_move}\n"
-            )
-
-            # Create tables for moves and cube analysis
-            move_table = PrettyTable()
-            move_table.field_names = ["№", "Ход", "Вероятности", "Eq"]
-            move_table.align = "l"
-
-            cube_table = PrettyTable()
-            cube_table.field_names = ["№", "Действие", "Eq"]
-            cube_table.align = "l"
-
-            cube_header = None
-            has_cube = False
-            has_moves = False
-
-            for hint in hints:
-                hint_type = hint.get("type")
-
-                if hint_type == "cube":
-                    has_cube = True
-                    for equity in hint.get("cubeful_equities", []):
-                        idx = equity.get("idx", "")
-                        action = equity.get("action", "").strip()
-                        eq = equity.get("eq", 0.0)
-                        cube_table.add_row([idx, action, f"{eq:+.3f}"])
-
-                    prefer = hint.get("prefer_action", "")
-                    cube_header = f"Анализ куба\nРекомендуемое действие: {prefer}\n"
-
-                elif hint_type == "move":
-                    has_moves = True
-                    idx = hint.get("idx", "")
-                    move = (hint.get("move") or "").strip()
-                    move = re.sub(r"(?i)\b(?:cubeful\s*)?\d+-ply\b", "", move)
-                    move = " ".join(move.split()).strip(" .:-")
-                    eq = hint.get("eq", 0.0)
-                    probs = hint.get("probs") or []
-                    probs_display = (
-                        ", ".join(f"{p:.3f}" for p in probs[:3]) if probs else "—"
-                    )
-                    move_table.add_row([idx, move, probs_display, f"{eq:+.3f}"])
-
-            # Send combined message
-            message_parts = [header]
-
-            if has_cube:
-                message_parts.extend(
-                    [cube_header, f"<pre>{cube_table.get_string()}</pre>\n"]
-                )
-
-            if has_moves:
-                message_parts.append(f"<pre>{move_table.get_string()}</pre>")
-
-            try:
-                await message.answer("\n".join(message_parts), parse_mode="HTML")
-            except TelegramAPIError:
-                # Fallback without HTML formatting
-                await message.answer("\n".join(message_parts))
-            await asyncio.sleep(0.3)
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
         await message.reply("Ошибка при обработке файла.")
     finally:
-        for tmp in (tmp_in, tmp_out):
-            try:
-                if os.path.exists(tmp):
-                    os.remove(tmp)
-            except Exception:
-                pass
+        try:
+            if os.path.exists(tmp_in):
+                os.remove(tmp_in)
+        except Exception:
+            pass
         await state.set_state(GeneralStates.admin_panel)
 
 
-def parse_hints_with_log(entry: dict) -> list:
+# FastAPI endpoints for web interface
+
+@hint_viewer_api_router.get("/hint-viewer")
+async def get_hint_viewer_web(request: Request, game_id: str = None):
     """
-    Безопасно извлекает и парсит hints из entry, с логированием содержимого.
-    Возвращает список подсказок или пустой список.
+    Serve the hint viewer HTML page for a specific game.
     """
-    hints_raw = entry.get("hints")
+    if not game_id:
+        raise HTTPException(status_code=400, detail="game_id parameter is required")
+    # For now, return a placeholder; we'll integrate with data later
+    return templates.TemplateResponse("hint_viewer.html", {"request": request, "game_id": game_id})
 
-    logger.info(f"Raw hints type: {type(hints_raw).__name__}")
-    if isinstance(hints_raw, (list, dict)):
-        logger.info(f"Raw hints (list/dict, first 200 chars): {str(hints_raw)[:200]}")
-    elif isinstance(hints_raw, str):
-        logger.info(f"Raw hints (string, first 200 chars): {hints_raw[:200]}")
-    else:
-        logger.info(f"Raw hints value: {repr(hints_raw)}")
+@hint_viewer_api_router.get("/api/analysis/{game_id}")
+async def get_analysis_data(game_id: str):
+    """
+    Return JSON data for the game analysis.
+    """
+    try:
+        data = generate_analysis_data(game_id)
+        return data
+    except Exception as e:
+        logger.error(f"Error fetching analysis data for {game_id}: {e}")
+        raise HTTPException(status_code=500, detail="Error generating analysis data")
 
-    if isinstance(hints_raw, str):
-        try:
-            hints = json.loads(hints_raw)
-        except json.JSONDecodeError:
-            logger.warning(
-                f"❌ Не удалось распарсить hints как JSON: {hints_raw[:200]}"
-            )
-            hints = []
-    else:
-        hints = hints_raw or []
+# Function to generate analysis data (integrate with hint_viewer.py)
+def generate_analysis_data(game_id: str):
+    """
+    Generate or load analysis data for the given game_id.
+    This should integrate with process_mat_file or similar.
+    """
+    import tempfile
+    import os
 
-    if not isinstance(hints, list):
-        logger.warning(f"⚠️ hints не список после парсинга: {type(hints).__name__}")
+    # For now, assume game_id is a path to .mat file or identifier
+    # In real implementation, this would map game_id to file path or DB record
+    mat_file_path = f"files/{game_id}.mat"  # Example path
+
+    if not os.path.exists(mat_file_path):
+        logger.warning(f"File not found: {mat_file_path}")
         return []
 
-    return hints
+    tmp_out = os.path.join(tempfile.gettempdir(), random_filename(ext=".json", length=8))
+
+    try:
+        # Process the .mat file to generate JSON
+        process_mat_file(mat_file_path, tmp_out)
+
+        # Load the generated JSON
+        with open(tmp_out, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return data
+    except Exception as e:
+        logger.error(f"Error generating analysis data for {game_id}: {e}")
+        return []
+    finally:
+        # Clean up temp file
+        if os.path.exists(tmp_out):
+            try:
+                os.unlink(tmp_out)
+            except Exception:
+                pass

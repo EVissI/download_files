@@ -23,6 +23,24 @@ services:
       - .env
     restart: unless-stopped
 
+  backgammon-api:
+    build: .
+    command: /bin/sh -c "uvicorn bot.api:app --host 0.0.0.0 --port 8000 --reload"
+    container_name: backgammon_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./bot:/app/bot
+      - ./files:/app/files
+      - ./bot/templates:/app/bot/templates
+      - ./bot/static:/app/bot/static
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+    restart: unless-stopped
+
 
   redis:
     image: redis:latest

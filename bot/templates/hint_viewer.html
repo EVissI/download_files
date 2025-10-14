@@ -1,0 +1,179 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backgammon Game Viewer</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        canvas { border: 1px solid #000; }
+        table { margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid #000; padding: 8px; }
+        #controls { margin: 20px; }
+    </style>
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        // Get game_id from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id') || 'default';
+    </script>
+</head>
+<body>
+    <h1>Backgammon Game Analysis</h1>
+    <canvas id="boardCanvas" width="800" height="400"></canvas>
+    <div id="info"></div>
+    <div id="hints"></div>
+    <div id="controls">
+        <button onclick="prevTurn()">← Previous</button>
+        <span id="turnLabel">Turn 0</span>
+        <button onclick="nextTurn()">Next →</button>
+    </div>
+
+    <script>
+        // Telegram Web App initialization
+        if (window.Telegram) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+        }
+
+        // Load JSON data from API
+        let data = [];
+        fetch(`/api/analysis/${gameId}`)
+            .then(response => response.json())
+            .then(json => {
+                data = json.filter(item => item.turn !== undefined); // Filter to only turns, exclude final win if needed
+                render(0);
+            })
+            .catch(error => console.error('Error loading JSON:', error));
+
+        let current = 0;
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Load images (assume they are in the same directory or provide full paths)
+        const boardImg = new Image();
+        boardImg.src = 'board.png'; // The board image you provided
+
+        const blackImg = new Image();
+        blackImg.src = 'black_checker.png'; // Black checker image
+
+        const whiteImg = new Image();
+        whiteImg.src = 'white_checker.png'; // White checker image (for red player)
+
+        let imagesLoaded = 0;
+        const checkImagesLoaded = () => {
+            imagesLoaded++;
+            if (imagesLoaded === 3 && data.length > 0) {
+                render(current);
+            }
+        };
+
+        boardImg.onload = checkImagesLoaded;
+        blackImg.onload = checkImagesLoaded;
+        whiteImg.onload = checkImagesLoaded;
+
+        // Function to get X coordinate for a point (1-24)
+        function getX(point) {
+            if (point >= 13 && point <= 18) {
+                return 50 + (point - 13) * 60; // Top left half
+            } else if (point >= 19 && point <= 24) {
+                return 470 + (point - 19) * 60; // Top right half
+            } else if (point >= 7 && point <= 12) {
+                return 50 + (12 - point) * 60; // Bottom left half
+            } else if (point >= 1 && point <= 6) {
+                return 470 + (6 - point) * 60; // Bottom right half
+            }
+            return 0;
+        }
+
+        // Base Y and direction for stacking
+        function getBaseY(point) {
+            return (point > 12) ? 0 : 400; // Top: start at 0, bottom: start at 400
+        }
+
+        function getDy(point) {
+            return (point > 12) ? 40 : -40; // Top: stack down (+), bottom: stack up (-)
+        }
+
+        // Draw checkers for a player
+        function drawCheckers(player, img) {
+            const positions = data[current].positions[player];
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = '#000';
+
+            for (let pointStr in positions) {
+                if (pointStr === 'bar' || pointStr === 'off') continue;
+                const point = parseInt(pointStr);
+                let count = positions[pointStr];
+                const x = getX(point);
+                let y = getBaseY(point);
+                const dy = getDy(point);
+
+                // Draw up to 4 checkers
+                for (let i = 0; i < Math.min(count, 4); i++) {
+                    ctx.drawImage(img, x - 25, y + (i * dy) - 25, 50, 50);
+                }
+
+                // If more than 4, draw text with count
+                if (count > 4) {
+                    ctx.fillText(`(${count})`, x - 10, y + (4 * dy) + 10);
+                }
+            }
+
+            // Bar and Off as text (simple, not images)
+            const barX = 410; // Middle bar
+            const barY = (player === 'black') ? 50 : 350;
+            if (positions.bar > 0) {
+                ctx.fillText(`Bar: ${positions.bar}`, barX - 20, barY);
+            }
+
+            const offX = (player === 'black') ? 20 : 760;
+            const offY = 200;
+            if (positions.off > 0) {
+                ctx.fillText(`Off: ${positions.off}`, offX, offY);
+            }
+        }
+
+        // Render the current turn
+        function render(turn) {
+            current = turn;
+            document.getElementById('turnLabel').innerText = `Turn ${data[turn].turn || 'End'}`;
+
+            // Draw board
+            ctx.clearRect(0, 0, 800, 400);
+            ctx.drawImage(boardImg, 0, 0, 800, 400);
+
+            // Draw checkers
+            drawCheckers('red', whiteImg); // Red uses white checkers
+            drawCheckers('black', blackImg);
+
+            // Info (player, dice, etc.)
+            const item = data[turn];
+            let info = `Player: ${item.player} (${item.player_name})<br>`;
+            if (item.dice) info += `Dice: ${item.dice.join(', ')}<br>`;
+            if (item.moves) info += `Moves: ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}<br>`;
+            if (item.gnu_move) info += `Best Move: ${item.gnu_move}<br>`;
+            document.getElementById('info').innerHTML = info;
+
+            // Hints table
+            let tableHtml = '<table><tr><th>Move</th><th>Win Prob</th><th>Gammon Prob</th><th>Eq</th></tr>';
+            (item.hints || []).forEach(hint => {
+                if (hint.probs && hint.probs.length >= 2) {
+                    tableHtml += `<tr><td>${hint.move}</td><td>${hint.probs[0].toFixed(3)}</td><td>${hint.probs[1].toFixed(3)}</td><td>${hint.eq.toFixed(3)}</td></tr>`;
+                }
+            });
+            tableHtml += '</table>';
+            document.getElementById('hints').innerHTML = tableHtml;
+        }
+
+        function prevTurn() {
+            if (current > 0) render(current - 1);
+        }
+
+        function nextTurn() {
+            if (current < data.length - 1) render(current + 1);
+        }
+    </script>
+</body>
+</html>
