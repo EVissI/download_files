@@ -3,7 +3,6 @@ from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, InlineKeybo
 from aiogram.exceptions import TelegramAPIError
 from loguru import logger
 import asyncio
-import tempfile
 import os
 import json
 
@@ -49,33 +48,38 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         await message.reply("Пожалуйста, пришлите .mat файл.")
         return
 
-    tmp_in = os.path.join(tempfile.gettempdir(), random_filename(ext=".mat", length=8))
-    # Use permanent location for JSON output
-    game_id = fname.replace('.mat', '')
-    permanent_json_path = f"files/{game_id}.json"
+    # Скачиваем оригинальный .mat в папку files/
+    game_id = fname.replace(".mat", "")
+    mat_path = f"files/{fname}"
+    json_path = f"files/{game_id}.json"
 
     try:
         await message.reply("Принял файл, начинаю обработку...")
         file = await message.bot.get_file(doc.file_id)
-        with open(tmp_in, "wb") as f:
+
+        # Сохраняем .mat в постоянную директорию
+        os.makedirs("files", exist_ok=True)
+        with open(mat_path, "wb") as f:
             await message.bot.download_file(file.file_path, f)
 
-        # Process file directly to permanent location
-        game_id = fname.replace('.mat', '')
-        permanent_json_path = f"files/{game_id}.json"
+        # Обрабатываем .mat → .json
+        await asyncio.to_thread(process_mat_file, mat_path, json_path)
 
-        await asyncio.to_thread(process_mat_file, tmp_in, permanent_json_path)
-
-        json_document = FSInputFile(path=permanent_json_path, filename=f"{game_id}.json")
+        # Отправляем готовый JSON обратно пользователю
+        json_document = FSInputFile(path=json_path, filename=f"{game_id}.json")
         await message.answer_document(
             document=json_document,
             caption="Сгенерированный JSON файл анализа"
         )
 
+        # Кнопка для открытия в мини-приложении
         mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="Открыть интерактивную визуализацию", web_app=WebAppInfo(url = mini_app_url))]
+                [InlineKeyboardButton(
+                    text="Открыть интерактивную визуализацию",
+                    web_app=WebAppInfo(url=mini_app_url)
+                )]
             ]
         )
         await message.answer(
@@ -87,73 +91,53 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         logger.exception("Ошибка при обработке hint viewer")
         await message.reply("Ошибка при обработке файла.")
     finally:
+        # Удаляем только исходный .mat файл, JSON остаётся
         try:
-            if os.path.exists(tmp_in):
-                os.remove(tmp_in)
+            if os.path.exists(mat_path):
+                os.remove(mat_path)
         except Exception:
-            pass
+            logger.warning("Не удалось удалить mat файл после обработки.")
         await state.set_state(GeneralStates.admin_panel)
 
 
-# FastAPI endpoints for web interface
+# --- FastAPI часть ---
+
+def take_json_info(game_id: str):
+    """
+    Загружает и возвращает JSON с анализом для указанного game_id.
+    """
+    path = f"files/{game_id}.json"
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"JSON файл для {game_id} не найден")
+
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 
 @hint_viewer_api_router.get("/hint-viewer")
 async def get_hint_viewer_web(request: Request, game_id: str = None):
     """
-    Serve the hint viewer HTML page for a specific game.
+    Возвращает HTML-страницу интерактивного просмотра подсказок.
     """
     if not game_id:
         raise HTTPException(status_code=400, detail="game_id parameter is required")
-    # For now, return a placeholder; we'll integrate with data later
-    return templates.TemplateResponse("hint_viewer.html", {"request": request, "game_id": game_id})
+
+    return templates.TemplateResponse(
+        "hint_viewer.html",
+        {"request": request, "game_id": game_id}
+    )
+
 
 @hint_viewer_api_router.get("/api/analysis/{game_id}")
 async def get_analysis_data(game_id: str):
     """
-    Return JSON data for the game analysis.
+    Возвращает JSON-данные анализа для указанного game_id.
     """
     try:
-        data = generate_analysis_data(game_id)
+        data = take_json_info(game_id)
         return data
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Game {game_id} not found")
     except Exception as e:
         logger.error(f"Error fetching analysis data for {game_id}: {e}")
         raise HTTPException(status_code=500, detail="Error generating analysis data")
-
-# Function to generate analysis data (integrate with hint_viewer.py)
-def generate_analysis_data(game_id: str):
-    """
-    Generate or load analysis data for the given game_id.
-    This should integrate with process_mat_file or similar.
-    """
-    import tempfile
-    import os
-
-    # For now, assume game_id is a path to .mat file or identifier
-    # In real implementation, this would map game_id to file path or DB record
-    mat_file_path = f"files/{game_id}.mat"  # Example path
-
-    if not os.path.exists(mat_file_path):
-        logger.warning(f"File not found: {mat_file_path}")
-        return []
-
-    tmp_out = os.path.join(tempfile.gettempdir(), random_filename(ext=".json", length=8))
-
-    try:
-        # Process the .mat file to generate JSON
-        process_mat_file(mat_file_path, tmp_out)
-
-        # Load the generated JSON
-        with open(tmp_out, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        return data
-    except Exception as e:
-        logger.error(f"Error generating analysis data for {game_id}: {e}")
-        return []
-    finally:
-        # Clean up temp file
-        if os.path.exists(tmp_out):
-            try:
-                os.unlink(tmp_out)
-            except Exception:
-                pass
