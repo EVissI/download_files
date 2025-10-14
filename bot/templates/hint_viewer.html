@@ -311,20 +311,20 @@
         // Function to get X coordinate for a point (1-24), adjusted for right board
         function getX(point) {
             if (point >= 13 && point <= 18) {
-                return 50 + (point - 13) * 60; // Top left half
+                return 50 + (point - 13) * 60; 
             } else if (point >= 19 && point <= 24) {
-                return 450 + (point - 19) * 60; // Top right half, shifted left by 20
+                return 450 + (point - 19) * 60; 
             } else if (point >= 7 && point <= 12) {
-                return 50 + (12 - point) * 60; // Bottom left half
+                return 50 + (12 - point) * 60; 
             } else if (point >= 1 && point <= 6) {
-                return 450 + (6 - point) * 60; // Bottom right half, shifted left by 20
+                return 450 + (6 - point) * 60; 
             }
             return 0;
         }
 
         // Base Y and direction for stacking with padding
         function getBaseY(point) {
-            return (point > 12) ? 40 : 360; // Adjusted with padding: Top: start at 10, bottom: start at 390
+            return (point > 12) ? 40 : 350; // Adjusted with padding: Top: start at 10, bottom: start at 390
         }
 
         function getDy(point) {
