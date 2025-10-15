@@ -349,7 +349,8 @@
 
         // Draw checkers for a player with padding
         function drawCheckers(player, img) {
-            const positions = data[current].positions[player];
+            // Use positions from the last turn (index -1) unless current turn is 0
+            const positions = current === 0 ? data[current].positions[player] : data[data.length - 1].positions[player];
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#ffffff';
 
@@ -439,7 +440,7 @@
                     }
                     // Hide error column for the first row
                     const errorCell = index === 0 ? '' : `<td>${eq}</td>`;
-                    tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td>${errorCell}</tr>`;
+                    tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td>${errorCell}</td></tr>`;
                 }
             });
             tableHtml += '</table>';
