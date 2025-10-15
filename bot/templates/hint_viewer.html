@@ -82,6 +82,19 @@
             background-color: #3a3a2a;
         }
 
+        /* Highlight styles for hint rows */
+        .hint-best {
+            background-color: #2e7d32 !important; /* Green for best move (first row if matched) */
+        }
+
+        .hint-good {
+            background-color: #fbc02d !important; /* Yellow for ranks 2-5 if matched */
+        }
+
+        .hint-poor {
+            background-color: #d32f2f !important; /* Red for ranks 6+ if matched */
+        }
+
         #controls {
             margin: 20px 0;
             display: flex;
@@ -352,7 +365,6 @@
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
 
-
                 if (count > 6) {
                     const lastCheckerY = y + (5 * dy); // Position near the last checker (6th one)
                     ctx.fillText(`(${count})`, x + 30, lastCheckerY + 5); // Adjusted to right side, closer to last checker
@@ -409,12 +421,25 @@
 
             // Hints table
             let tableHtml = '<table><tr><th>Ход</th><th>Вероятности</th><th>Ошибка</th></tr>';
-            (item.hints || []).forEach(hint => {
+            (item.hints || []).forEach((hint, index) => {
                 if (hint.probs && hint.probs.length >= 2) {
                     const prob1 = hint.probs[0] ? hint.probs[0].toFixed(3) : '-';
                     const prob2 = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                    tableHtml += `<tr><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
+                    let rowClass = '';
+                    // Check if the hint move matches gnu_move
+                    if (item.gnu_move && hint.move === item.gnu_move) {
+                        if (index === 0) {
+                            rowClass = 'hint-best'; // Green for first row
+                        } else if (index >= 1 && index <= 4) {
+                            rowClass = 'hint-good'; // Yellow for ranks 2-5
+                        } else {
+                            rowClass = 'hint-poor'; // Red for ranks 6+
+                        }
+                    }
+                    // Hide error column for the first row
+                    const errorCell = index === 0 ? '' : `<td>${eq}</td>`;
+                    tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td>${errorCell}</tr>`;
                 }
             });
             tableHtml += '</table>';
