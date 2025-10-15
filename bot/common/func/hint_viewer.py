@@ -172,9 +172,7 @@ def parse_backgammon_mat(content):
                     # Добавляем ответ для противоположного игрока
                     resp_player = "Black" if player == "Red" else "Red"
                     actions = resp_act.split(',')
-                    action_1 = actions[0].strip()
-                    action_2 = actions[1].strip() if len(actions) > 1 else None
-                    moves_list.append({"turn": turn, "player": resp_player, "action_1": action_1,"action_2": action_2, "cube": value, "gnu_move": gnu_move_resp})
+                    moves_list.append({"turn": turn, "player": resp_player, "action": resp_act, "cube": value, "gnu_move": gnu_move_resp})
                 return res
 
             # Иначе парсим обычный ход
@@ -388,7 +386,10 @@ def parse_hint_output(text: str):
                 idx = int(match.group(1))
                 action = match.group(2).strip()
                 eq = float(match.group(3))
-                equities.append({"idx": idx, "action": action, "eq": eq})
+                actions = action.split(",")
+                action_1 = actions[0].strip()
+                action_2 = actions[1].strip() if len(actions) > 1 else None
+                equities.append({"idx": idx, "action_1": action_1,'action_2':action_2,  "eq": eq})
 
         # Парсим proper cube action
         for line in lines:
