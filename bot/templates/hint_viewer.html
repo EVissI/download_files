@@ -353,10 +353,10 @@
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
 
-                // If more than 6, draw text with count to the right, closer to the last checker
+
                 if (count > 6) {
                     const lastCheckerY = y + (5 * dy); // Position near the last checker (6th one)
-                    ctx.fillText(`(${count})`, x + 20, lastCheckerY + 5); // Adjusted to right side, closer to last checker
+                    ctx.fillText(`(${count})`, x + 30, lastCheckerY + 5); // Adjusted to right side, closer to last checker
                 }
             }
 
