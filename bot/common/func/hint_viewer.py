@@ -171,7 +171,10 @@ def parse_backgammon_mat(content):
                         gnu_move_resp = 'pass'
                     # Добавляем ответ для противоположного игрока
                     resp_player = "Black" if player == "Red" else "Red"
-                    moves_list.append({"turn": turn, "player": resp_player, "action": resp_act, "cube": value, "gnu_move": gnu_move_resp})
+                    actions = resp_act.split(',')
+                    action_1 = actions[0].strip()
+                    action_2 = actions[1].strip() if len(actions) > 1 else None
+                    moves_list.append({"turn": turn, "player": resp_player, "action_1": action_1,"action_2": action_2, "cube": value, "gnu_move": gnu_move_resp})
                 return res
 
             # Иначе парсим обычный ход
