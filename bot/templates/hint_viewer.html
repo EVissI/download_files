@@ -72,7 +72,6 @@
         th {
             background-color: #444;
             font-weight: bold;
-            text-align: center;
         }
 
         tr:nth-child(even) {
@@ -329,31 +328,14 @@
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
-            if (imagesLoaded === 9 && data.length > 0) { // Wait for all 9 images (board, checkers, 6 dice)
+            if (imagesLoaded === 3 && data.length > 0) {
                 render(current);
             }
         };
 
-        // Assign onload handlers for all images
         boardImg.onload = checkImagesLoaded;
         blackImg.onload = checkImagesLoaded;
         whiteImg.onload = checkImagesLoaded;
-        Dice1.onload = checkImagesLoaded;
-        Dice2.onload = checkImagesLoaded;
-        Dice3.onload = checkImagesLoaded;
-        Dice4.onload = checkImagesLoaded;
-        Dice5.onload = checkImagesLoaded;
-        Dice6.onload = checkImagesLoaded;
-
-        // Map dice numbers to images
-        const diceImages = {
-            1: Dice1,
-            2: Dice2,
-            3: Dice3,
-            4: Dice4,
-            5: Dice5,
-            6: Dice6
-        };
 
         // Function to get X coordinate for a point (1-24), adjusted for left side first row left shift
         function getX(point) {
@@ -382,7 +364,7 @@
 
         // Draw checkers for a player with padding
         function drawCheckers(player, img) {
-            // Use positions from the previous turn (index -1) unless current turn is 0
+            // Use positions from the last turn (index -1) unless current turn is 0
             const positions = current === 0 ? data[current].positions[player] : data[current - 1].positions[player];
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#ffffff';
@@ -442,19 +424,8 @@
             drawCheckers('red', whiteImg); // Red uses white checkers
             drawCheckers('black', blackImg);
 
-            // Draw dice
-            const item = data[turn];
-            if (item.dice && item.dice.length >= 2) {
-                const [dice1, dice2] = item.dice;
-                if (dice1 >= 1 && dice1 <= 6 && diceImages[dice1]) {
-                    ctx.drawImage(diceImages[dice1], 370, 350, 80, 80); // First die
-                }
-                if (dice2 >= 1 && dice2 <= 6 && diceImages[dice2]) {
-                    ctx.drawImage(diceImages[die2], 430, 350, 80, 80); // Second die
-                }
-            }
-
             // Info (player, dice, etc.)
+            const item = data[turn];
             let info = `<strong>Игрок:</strong> ${item.player} (${item.player_name || 'Unknown'})<br>`;
             if (item.dice) info += `<strong>Кости:</strong> ${item.dice.join(', ')}<br>`;
             if (item.moves) info += `<strong>Ходы:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}<br>`;
