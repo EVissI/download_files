@@ -83,7 +83,7 @@ def parse_backgammon_mat(content):
                     elif response in ['drop', 'drops']:
                         response = 'drop'
                     response_player = "Red" if double_player == "Black" else "Black"
-                    gnu_move = "take " if response == 'take' else 'pass'
+                    gnu_move = "take" if response == 'take' else 'pass'
                     moves_list.append({"turn": turn, "player": response_player, "action": response, "cube": value, "gnu_move": gnu_move})
 
             continue
