@@ -298,6 +298,7 @@
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     render(1);
+                    updateButtons();
                     infoDiv.innerHTML = ''; // Clear loading message
                 } else {
                     infoDiv.innerHTML = '<div class="error">No game data found for this game ID.</div>';
