@@ -64,7 +64,7 @@
 
         th, td {
             border: 1px solid #555;
-            padding: 20px;
+            padding: 20px 30px; /* Increased horizontal padding for more spacing between text elements */
             text-align: left;
             color: white;
         }
@@ -72,7 +72,7 @@
         th {
             background-color: #444;
             font-weight: bold;
-            text-align: center;
+            text-align: center; /* Center-align text in table headers */
         }
 
         tr:nth-child(even) {
@@ -185,7 +185,7 @@
             }
 
             th, td {
-                padding: 8px 6px;
+                padding: 8px 12px; /* Adjusted padding for smaller screens */
             }
 
             .container {
@@ -219,7 +219,7 @@
             }
 
             th, td {
-                padding: 6px 4px;
+                padding: 6px 8px; /* Further reduced padding for very small screens */
             }
         }
 
@@ -329,14 +329,31 @@
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
-            if (imagesLoaded === 3 && data.length > 0) {
+            if (imagesLoaded === 9 && data.length > 0) { // Wait for all 9 images (board, checkers, 6 dice)
                 render(current);
             }
         };
 
+        // Assign onload handlers for all images
         boardImg.onload = checkImagesLoaded;
         blackImg.onload = checkImagesLoaded;
         whiteImg.onload = checkImagesLoaded;
+        Dice1.onload = checkImagesLoaded;
+        Dice2.onload = checkImagesLoaded;
+        Dice3.onload = checkImagesLoaded;
+        Dice4.onload = checkImagesLoaded;
+        Dice5.onload = checkImagesLoaded;
+        Dice6.onload = checkImagesLoaded;
+
+        // Map dice numbers to images
+        const diceImages = {
+            1: Dice1,
+            2: Dice2,
+            3: Dice3,
+            4: Dice4,
+            5: Dice5,
+            6: Dice6
+        };
 
         // Function to get X coordinate for a point (1-24), adjusted for left side first row left shift
         function getX(point) {
@@ -365,7 +382,7 @@
 
         // Draw checkers for a player with padding
         function drawCheckers(player, img) {
-            // Use positions from the last turn (index -1) unless current turn is 0
+            // Use positions from the previous turn (index -1) unless current turn is 0
             const positions = current === 0 ? data[current].positions[player] : data[current - 1].positions[player];
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#ffffff';
@@ -425,8 +442,21 @@
             drawCheckers('red', whiteImg); // Red uses white checkers
             drawCheckers('black', blackImg);
 
-            // Info (player, dice, etc.)
+            // Draw dice based on whose turn it is
             const item = data[turn];
+            if (item.dice && item.dice.length >= 2) {
+                const [die1, die2] = item.dice;
+                // Determine dice position based on player
+                const diceY = item.player === 'black' ? 200 : 500; // Top for black, bottom for red
+                if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
+                    ctx.drawImage(diceImages[die1], 370, diceY, 80, 80); // First die, larger size
+                }
+                if (die2 >= 1 && die2 <= 6 && diceImages[die2]) {
+                    ctx.drawImage(diceImages[die2], 460, diceY, 80, 80); // Second die, larger size
+                }
+            }
+
+            // Info (player, dice, etc.)
             let info = `<strong>Игрок:</strong> ${item.player} (${item.player_name || 'Unknown'})<br>`;
             if (item.dice) info += `<strong>Кости:</strong> ${item.dice.join(', ')}<br>`;
             if (item.moves) info += `<strong>Ходы:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}<br>`;
@@ -464,7 +494,7 @@
         }
 
         function prevTurn() {
-            if (current > 0) {
+            if (current > 1) {
                 render(current - 1);
                 updateButtons();
             }
