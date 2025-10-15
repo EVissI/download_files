@@ -88,10 +88,11 @@
         }
 
         .hint-good {
-            color: #1a1a1a !important;
             background-color: #fbc02d !important; /* Yellow for ranks 2-5 if matched */
         }
-
+        .hint-good td {
+            color: #1a1a1a !important; /* Explicitly target td elements within hint-good row */
+        }
         .hint-poor {
             background-color: #d32f2f !important; /* Red for ranks 6+ if matched */
         }
