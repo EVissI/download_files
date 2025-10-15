@@ -72,6 +72,7 @@
         th {
             background-color: #444;
             font-weight: bold;
+            text-align: center;
         }
 
         tr:nth-child(even) {
@@ -441,17 +442,15 @@
             drawCheckers('red', whiteImg); // Red uses white checkers
             drawCheckers('black', blackImg);
 
-            // Draw dice based on whose turn it is
+            // Draw dice
             const item = data[turn];
             if (item.dice && item.dice.length >= 2) {
-                const [die1, die2] = item.dice;
-                // Determine dice position based on player
-                const diceY = item.player === 'black' ? 200 : 500; // Top for black, bottom for red
-                if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
-                    ctx.drawImage(diceImages[die1], 370, diceY, 80, 80); // First die, larger size
+                const [dice1, dice2] = item.dice;
+                if (dice1 >= 1 && dice1 <= 6 && diceImages[dice1]) {
+                    ctx.drawImage(diceImages[dice1], 370, 350, 80, 80); // First die
                 }
-                if (die2 >= 1 && die2 <= 6 && diceImages[die2]) {
-                    ctx.drawImage(diceImages[die2], 460, diceY, 80, 80); // Second die, larger size
+                if (dice2 >= 1 && dice2 <= 6 && diceImages[dice2]) {
+                    ctx.drawImage(diceImages[die2], 430, 350, 80, 80); // Second die
                 }
             }
 
@@ -485,7 +484,7 @@
                     }
                     // Hide error column for the first row
                     const errorCell = index === 0 ? '' : `<td>${eq}</td>`;
-                    tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td>${errorCell}</td></tr>`;
+                    tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1}  ${prob2}</td>${errorCell}</td></tr>`;
                 }
             });
             tableHtml += '</table>';
