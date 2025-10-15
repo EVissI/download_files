@@ -441,15 +441,17 @@
             drawCheckers('red', whiteImg); // Red uses white checkers
             drawCheckers('black', blackImg);
 
-            // Draw dice
+            // Draw dice based on whose turn it is
             const item = data[turn];
             if (item.dice && item.dice.length >= 2) {
                 const [die1, die2] = item.dice;
+                // Determine dice position based on player
+                const diceY = item.player === 'black' ? 200 : 500; // Top for black, bottom for red
                 if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
-                    ctx.drawImage(diceImages[die1], 370, 350, 50, 50); // First die
+                    ctx.drawImage(diceImages[die1], 370, diceY, 80, 80); // First die, larger size
                 }
                 if (die2 >= 1 && die2 <= 6 && diceImages[die2]) {
-                    ctx.drawImage(diceImages[die2], 430, 350, 50, 50); // Second die
+                    ctx.drawImage(diceImages[die2], 460, diceY, 80, 80); // Second die, larger size
                 }
             }
 
