@@ -296,7 +296,7 @@
                     // Extract player names: first Red player, then Black player
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
-                    playersInfoDiv.innerHTML = `Белая шашка: ${redPlayer} – Черная шашка: ${blackPlayer}`;
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     render(1);
                     infoDiv.innerHTML = ''; // Clear loading message
                 } else {
