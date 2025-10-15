@@ -145,7 +145,7 @@
 
         .info-text {
             color: #ccc;
-            margin: 5px 0;
+            margin: 10px 0;
             font-size: 14px; /* Reduced font size for smaller height */
         }
 
@@ -227,7 +227,7 @@
             }
 
             .game-info {
-                padding: 2px; /* Further reduced for very small screens */
+                padding: 6px; /* Further reduced for very small screens */
             }
         }
 
@@ -253,29 +253,7 @@
         // Get game_id from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
-    </script>
-</head>
-<body>
-    <div class="container">
-        <h1>Backgammon Game Analysis</h1>
-        <div id="players-info"></div>
-        <canvas id="boardCanvas" width="800" height="800"></canvas>
 
-        <div id="controls">
-            <button onclick="prevTurn()" id="prevBtn">←</button>
-            <span id="turnLabel">Ход 0</span>
-            <button onclick="nextTurn()" id="nextBtn">→</button>
-        </div>
-        <div class="game-info">
-            <div id="info" class="info-text"></div>
-        </div>
-
-        <div class="hints-table">
-            <div id="hints"></div>
-        </div>
-    </div>
-
-    <script>
         // Telegram Web App initialization
         if (window.Telegram) {
             Telegram.WebApp.ready();
@@ -296,15 +274,15 @@
                 return response.json();
             })
             .then(json => {
-                data = json.filter(item => item.turn !== undefined); // Filter to only turns, exclude final win if needed
+                data = json.filter(item => item.turn !== undefined); // Filter to only turns
                 if (data.length > 1) {
-                    // Extract player names: first Red player, then Black player
+                    // Extract player names
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
-                    render(1);
+                    // Render text-based content immediately
+                    renderText(1);
                     updateButtons();
-                    infoDiv.innerHTML = ''; // Clear loading message
                 } else {
                     infoDiv.innerHTML = '<div class="error">No game data found for this game ID.</div>';
                 }
@@ -344,8 +322,8 @@
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
-            if (imagesLoaded === 9 && data.length > 0) { // Wait for all 9 images (board, checkers, 6 dice)
-                render(current);
+            if (imagesLoaded === 9 && data.length > 0) { // Wait for all 9 images
+                renderCanvas(current); // Render canvas content only after images are loaded
             }
         };
 
@@ -370,7 +348,7 @@
             6: Dice6
         };
 
-        // Function to get X coordinate for a point (1-24), adjusted for left side first row left shift
+        // Function to get X coordinate for a point (1-24)
         function getX(point) {
             if (point >= 13 && point <= 18) {
                 const baseX = 50 + (point - 13) * 60;
@@ -386,18 +364,17 @@
             return 0;
         }
 
-        // Base Y and direction for stacking with doubled height
+        // Base Y and direction for stacking
         function getBaseY(point) {
-            return (point > 12) ? 70 : 690; 
+            return (point > 12) ? 70 : 690;
         }
 
         function getDy(point) {
-            return (point > 12) ? 55 : -55; 
+            return (point > 12) ? 55 : -55;
         }
 
-        // Draw checkers for a player with padding
+        // Draw checkers for a player
         function drawCheckers(player, img) {
-            // Use positions from the previous turn (index -1) unless current turn is 0
             const positions = current === 0 ? data[current].positions[player] : data[current - 1].positions[player];
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#ffffff';
@@ -415,17 +392,17 @@
                 }
 
                 if (count > 6) {
-                    const lastCheckerY = y + (5 * dy); // Position near the last checker (6th one)
-                    ctx.fillText(`(${count})`, x + 30, lastCheckerY + 5); // Adjusted to right side, closer to last checker
+                    const lastCheckerY = y + (5 * dy);
+                    ctx.fillText(`(${count})`, x + 30, lastCheckerY + 5);
                 }
             }
 
             // Draw bar checkers
-            const barX = 400; // Middle bar
+            const barX = 400;
             const barY = (player === 'black') ? 220 : 520;
             if (positions.bar > 0) {
                 let y = barY;
-                const dy = (player === 'black') ? 55 : -55; // Down for black, up for white
+                const dy = (player === 'black') ? 55 : -55;
                 for (let i = 0; i < Math.min(positions.bar, 6); i++) {
                     ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
@@ -437,48 +414,27 @@
 
             // Draw off checkers
             const offX = (player === 'black') ? 20 : 760;
-            const offY = 400; 
+            const offY = 400;
             if (positions.off > 0) {
                 ctx.fillText('Off:', offX, offY);
                 ctx.fillText(`${positions.off}`, offX, offY + 40);
             }
         }
 
-        // Render the current turn
-        function render(turn) {
+        // Render text-based content (game info and hints)
+        function renderText(turn) {
             current = turn;
             document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
 
-            // Draw board
-            ctx.clearRect(0, 0, 800, 800); 
-            ctx.drawImage(boardImg, 0, 0, 800, 800); 
-
-            // Draw checkers
-            drawCheckers('red', whiteImg); // Red uses white checkers
-            drawCheckers('black', blackImg);
-
-            // Draw dice based on whose turn it is
-            const item = data[turn];
-            if (item.dice && item.dice.length >= 2) {
-                const [die1, die2] = item.dice;
-                // Determine dice position based on player
-                const diceY = item.player === 'black' ? 200 : 500; // Top for black, bottom for red
-                if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
-                    ctx.drawImage(diceImages[die1], 370, diceY, 80, 80); // First die, larger size
-                }
-                if (die2 >= 1 && die2 <= 6 && diceImages[die2]) {
-                    ctx.drawImage(diceImages[die2], 460, diceY, 80, 80); // Second die, larger size
-                }
-            }
-
             // Info (only move)
             let info = '';
+            const item = data[turn];
             if (item.moves && item.moves.length > 0) {
                 info += `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
             } else {
                 info += '<strong>Ход:</strong> Нет данных о ходе';
             }
-            document.getElementById('info').innerHTML = info;
+            infoDiv.innerHTML = info; // Update game-info and clear loading message
 
             // Hints table
             let tableHtml = '<table><tr><th>Ход</th><th>Вероятности</th><th>Ошибка</th></tr>';
@@ -488,17 +444,15 @@
                     const prob2 = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let rowClass = '';
-                    // Check if the hint move matches gnu_move
                     if (item.gnu_move && hint.move === item.gnu_move) {
                         if (index === 0) {
-                            rowClass = 'hint-best'; // Green for first row
+                            rowClass = 'hint-best';
                         } else if (index >= 1 && index <= 4) {
-                            rowClass = 'hint-good'; // Yellow for ranks 2-5
+                            rowClass = 'hint-good';
                         } else {
-                            rowClass = 'hint-poor'; // Red for ranks 6+
+                            rowClass = 'hint-poor';
                         }
                     }
-                    // Hide error column for the first row
                     const errorCell = index === 0 ? '' : `<td>${eq}</td>`;
                     tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td>${errorCell}</td></tr>`;
                 }
@@ -507,16 +461,48 @@
             document.getElementById('hints').innerHTML = tableHtml;
         }
 
+        // Render canvas-based content (board, checkers, dice)
+        function renderCanvas(turn) {
+            current = turn;
+
+            // Draw board
+            ctx.clearRect(0, 0, 800, 800);
+            ctx.drawImage(boardImg, 0, 0, 800, 800);
+
+            // Draw checkers
+            drawCheckers('red', whiteImg);
+            drawCheckers('black', blackImg);
+
+            // Draw dice
+            const item = data[turn];
+            if (item.dice && item.dice.length >= 2) {
+                const [die1, die2] = item.dice;
+                const diceY = item.player === 'black' ? 200 : 500;
+                if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
+                    ctx.drawImage(diceImages[die1], 370, diceY, 80, 80);
+                }
+                if (die2 >= 1 && die2 <= 6 && diceImages[die2]) {
+                    ctx.drawImage(diceImages[die2], 460, diceY, 80, 80);
+                }
+            }
+        }
+
         function prevTurn() {
             if (current > 1) {
-                render(current - 1);
+                renderText(current - 1);
+                if (imagesLoaded === 9) {
+                    renderCanvas(current - 1);
+                }
                 updateButtons();
             }
         }
 
         function nextTurn() {
             if (current < data.length - 1) {
-                render(current + 1);
+                renderText(current + 1);
+                if (imagesLoaded === 9) {
+                    renderCanvas(current + 1);
+                }
                 updateButtons();
             }
         }
