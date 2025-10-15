@@ -38,7 +38,7 @@
         .game-info {
             background-color: #2d2d2d;
             border-radius: 8px;
-            padding: 10px; /* Reduced padding from 20px to 10px to halve height */
+            padding: 20px;
             margin: 20px 0;
             border: 1px solid #444;
         }
@@ -64,16 +64,16 @@
 
         th, td {
             border: 1px solid #555;
-            padding: 20px 30px;
+            padding: 20px 30px; /* Increased horizontal padding for spacing between cells */
             text-align: left;
             color: white;
-            word-spacing: 16px;
+            word-spacing: 16px; /* Increased spacing between words in cells */
         }
 
         th {
             background-color: #444;
             font-weight: bold;
-            text-align: center;
+            text-align: center; /* Center-align text in table headers */
         }
 
         tr:nth-child(even) {
@@ -81,22 +81,22 @@
         }
 
         tr:hover {
-            background-color: #3a3a3a;
+            background-color: #3a3a2a;
         }
 
         /* Highlight styles for hint rows */
         .hint-best {
-            background-color: #2e7d32 !important; /* Green for best move */
+            background-color: #2e7d32 !important; /* Green for best move (first row if matched) */
         }
 
         .hint-good {
-            background-color: #fbc02d !important; /* Yellow for ranks 2-5 */
+            background-color: #fbc02d !important; /* Yellow for ranks 2-5 if matched */
         }
         .hint-good td {
-            color: #1a1a1a !important;
+            color: #1a1a1a !important; /* Explicitly target td elements within hint-good row */
         }
         .hint-poor {
-            background-color: #d32f2f !important; /* Red for ranks 6+ */
+            background-color: #d32f2f !important; /* Red for ranks 6+ if matched */
         }
 
         #controls {
@@ -145,7 +145,7 @@
 
         .info-text {
             color: #ccc;
-            margin: 5px 0;
+            margin: 10px 0;
         }
 
         /* Responsive Design */
@@ -186,18 +186,16 @@
             }
 
             th, td {
-                padding: 8px 12px;
-                word-spacing: 12px;
+                padding: 8px 12px; /* Adjusted padding for smaller screens */
+                word-spacing: 12px; /* Slightly reduced word spacing for smaller screens */
             }
 
             .container {
                 padding: 0 10px;
             }
-            .info-text {
-                font-size: 24px;
-            }
+
             .game-info, .hints-table {
-                padding: 8px; /* Adjusted for game-info in smaller screens */
+                padding: 15px;
                 margin: 15px 0;
             }
         }
@@ -223,15 +221,8 @@
             }
 
             th, td {
-                padding: 6px 8px;
-                word-spacing: 4px;
-            }
-
-            .game-info {
-                padding: 2px; /* Further reduced for very small screens */
-            }
-            .info-text {
-                font-size: 18px;
+                padding: 6px 8px; /* Further reduced padding for very small screens */
+                word-spacing: 4px; /* Further reduced word spacing for very small screens */
             }
         }
 
@@ -477,16 +468,12 @@
 
             // Info (only move)
             let info = '';
-            if (item.moves && item.moves.length > 0) {
-                info += `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
-            } else {
-                info += '<strong>Ход:</strong> Нет данных о ходе';
-            }
+            if (item.moves) info += `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
             document.getElementById('info').innerHTML = info;
 
             // Hints table
             let tableHtml = '<table><tr><th>Ход</th><th>Вероятности</th><th>Ошибка</th></tr>';
-            (item.hints || []).forEach((hint, index) => {
+            (item.hints || []).slice(0, 3).forEach((hint, index) => {
                 if (hint.probs && hint.probs.length >= 2) {
                     const prob1 = hint.probs[0] ? hint.probs[0].toFixed(3) : '-';
                     const prob2 = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
