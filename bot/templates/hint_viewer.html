@@ -182,7 +182,7 @@
             }
 
             table {
-                font-size: 14px;
+                font-size: 18px;
             }
 
             th, td {
@@ -253,6 +253,7 @@
 <body>
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
+        <div id="players-info"></div>
         <canvas id="boardCanvas" width="800" height="800"></canvas>
 
         <div id="controls">
@@ -279,6 +280,7 @@
         // Load JSON data from API
         let data = [];
         const infoDiv = document.getElementById('info');
+        const playersInfoDiv = document.getElementById('players-info');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
         fetch(`/api/analysis/${gameId}`)
@@ -291,6 +293,11 @@
             .then(json => {
                 data = json.filter(item => item.turn !== undefined); // Filter to only turns, exclude final win if needed
                 if (data.length > 1) {
+                    // Extract player names from the first turn
+                    const firstTurn = data[0];
+                    const blackPlayer = firstTurn.player === 'black' ? firstTurn.player_name : (data.find(item => item.player === 'black')?.player_name || 'Unknown');
+                    const whitePlayer = firstTurn.player === 'red' ? firstTurn.player_name : (data.find(item => item.player === 'red')?.player_name || 'Unknown');
+                    playersInfoDiv.innerHTML = `Белая шашка: ${whitePlayer} – Черная шашка: ${blackPlayer}`;
                     render(1);
                     infoDiv.innerHTML = ''; // Clear loading message
                 } else {
