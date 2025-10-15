@@ -64,7 +64,7 @@
 
         th, td {
             border: 1px solid #555;
-            padding: 10px 15px; /* Reduced padding to half height */
+            padding: 20px 30px; /* Increased horizontal padding for spacing between cells */
             text-align: left;
             color: white;
             word-spacing: 16px; /* Increased spacing between words in cells */
@@ -186,7 +186,7 @@
             }
 
             th, td {
-                padding: 4px 6px; /* Adjusted padding for smaller screens, halved */
+                padding: 8px 12px; /* Adjusted padding for smaller screens */
                 word-spacing: 12px; /* Slightly reduced word spacing for smaller screens */
             }
 
@@ -221,7 +221,7 @@
             }
 
             th, td {
-                padding: 3px 4px; /* Further reduced padding for very small screens, halved */
+                padding: 6px 8px; /* Further reduced padding for very small screens */
                 word-spacing: 4px; /* Further reduced word spacing for very small screens */
             }
         }
@@ -468,8 +468,8 @@
 
             // Info (only move)
             let info = '';
-            if (item.gnu_move) {
-                info += `<strong>Ход:</strong> ${item.gnu_move}`;
+            if (item.moves && item.moves.length > 0) {
+                info += `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
             } else {
                 info += '<strong>Ход:</strong> Нет данных о ходе';
             }
