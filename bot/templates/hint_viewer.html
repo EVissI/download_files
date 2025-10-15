@@ -293,11 +293,10 @@
             .then(json => {
                 data = json.filter(item => item.turn !== undefined); // Filter to only turns, exclude final win if needed
                 if (data.length > 1) {
-                    // Extract player names from the first turn
-                    const firstTurn = data[0];
-                    const blackPlayer = firstTurn.player === 'black' ? firstTurn.player_name : (data.find(item => item.player === 'black')?.player_name || 'Unknown');
-                    const whitePlayer = firstTurn.player === 'red' ? firstTurn.player_name : (data.find(item => item.player === 'red')?.player_name || 'Unknown');
-                    playersInfoDiv.innerHTML = `Белая шашка: ${whitePlayer} – Черная шашка: ${blackPlayer}`;
+                    // Extract player names: first Red player, then Black player
+                    const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
+                    const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
+                    playersInfoDiv.innerHTML = `Белая шашка: ${redPlayer} – Черная шашка: ${blackPlayer}`;
                     render(1);
                     infoDiv.innerHTML = ''; // Clear loading message
                 } else {
