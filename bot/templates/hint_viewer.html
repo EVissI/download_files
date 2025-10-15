@@ -261,12 +261,12 @@
             <span id="turnLabel">Ход 0</span>
             <button onclick="nextTurn()" id="nextBtn">→</button>
         </div>
-        <div class="hints-table">
-            <div id="hints"></div>
-        </div>
-
         <div class="game-info">
             <div id="info" class="info-text"></div>
+        </div>
+
+        <div class="hints-table">
+            <div id="hints"></div>
         </div>
     </div>
 
@@ -465,14 +465,9 @@
                 }
             }
 
-            // Info (player, dice, etc.)
-            let info = `<strong>Игрок:</strong> ${item.player} (${item.player_name || 'Unknown'})<br>`;
-            if (item.dice) info += `<strong>Кости:</strong> ${item.dice.join(', ')}<br>`;
-            if (item.moves) info += `<strong>Ходы:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}<br>`;
-            if (item.gnu_move) info += `<strong>Лучший ход:</strong> ${item.gnu_move}<br>`;
-            if (item.is_best_move !== undefined) {
-                info += `<strong>Лучший ли ход?:</strong> ${item.is_best_move ? 'Да' : 'Нет'}`;
-            }
+            // Info (only move)
+            let info = '';
+            if (item.moves) info += `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
             document.getElementById('info').innerHTML = info;
 
             // Hints table
