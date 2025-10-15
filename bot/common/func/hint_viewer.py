@@ -75,7 +75,7 @@ def parse_backgammon_mat(content):
                 else:
                     double_player = "Red"
 
-                moves_list.append({"turn": turn, "player": double_player, "action": "double", "cube": value, "gnu_move": " Double"})
+                moves_list.append({"turn": turn, "player": double_player, "action": "double", "cube": value})
 
                 if response:
                     if response in ['take', 'takes']:
@@ -83,8 +83,7 @@ def parse_backgammon_mat(content):
                     elif response in ['drop', 'drops']:
                         response = 'drop'
                     response_player = "Red" if double_player == "Black" else "Black"
-                    gnu_move = "take " if response == 'take' else 'pass'
-                    moves_list.append({"turn": turn, "player": response_player, "action": response, "cube": value, "gnu_move": gnu_move})
+                    moves_list.append({"turn": turn, "player": response_player, "action": response})
 
             continue
 
@@ -149,30 +148,25 @@ def parse_backgammon_mat(content):
                 act = action_match.group(1).lower()
                 if act in ['take', 'takes']:
                     act = 'take'
-                    gnu_move = 'take '
                 elif act in ['drop', 'drops']:
                     act = 'drop'
-                    gnu_move = 'pass'
-                return {"turn": turn, "player": player, "action": act, "gnu_move": gnu_move}
+                return {"turn": turn, "player": player, "action": act}
 
             # Проверяем удвоение
             double_match = re.match(r"Doubles => (\d+)(?:\s*(Takes|Drops|Take|Drop))?", side_str, re.I)
             if double_match:
                 value = int(double_match.group(1))
-                res = {"turn": turn, "player": player, "action": "double", "cube": value, "gnu_move": " Double"}
+                res = {"turn": turn, "player": player, "action": "double", "cube": value}
                 response = double_match.group(2)
                 if response:
                     resp_act = response.lower()
                     if resp_act in ['take', 'takes']:
                         resp_act = 'take'
-                        gnu_move_resp = 'take '
                     elif resp_act in ['drop', 'drops']:
                         resp_act = 'drop'
-                        gnu_move_resp = 'pass'
                     # Добавляем ответ для противоположного игрока
                     resp_player = "Black" if player == "Red" else "Red"
-                    actions = resp_act.split(',')
-                    moves_list.append({"turn": turn, "player": resp_player, "action": resp_act, "cube": value, "gnu_move": gnu_move_resp})
+                    moves_list.append({"turn": turn, "player": resp_player, "action": resp_act})
                 return res
 
             # Иначе парсим обычный ход
