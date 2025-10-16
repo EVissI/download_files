@@ -460,17 +460,15 @@
 
             current = turn;
             document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
-            console.log('Rendering turn:', turn, 'Data:', data[turn]); // Отладка: текущий ход
+            console.log('Rendering turn:', turn, 'Data:', data[turn]);
 
-            // Draw board
-            ctx.clearRect(0, 0, 800, 800); 
-            ctx.drawImage(boardImg, 0, 0, 800, 800); 
-
-            // Draw checkers
-            drawCheckers('red', whiteImg); // Red uses white checkers
+            // Draw board and checkers (unchanged)
+            ctx.clearRect(0, 0, 800, 800);
+            ctx.drawImage(boardImg, 0, 0, 800, 800);
+            drawCheckers('red', whiteImg);
             drawCheckers('black', blackImg);
 
-            // Draw dice based on whose turn it is
+            // Draw dice (unchanged)
             const item = data[turn];
             if (item.dice && item.dice.length >= 2) {
                 const [die1, die2] = item.dice;
@@ -483,22 +481,24 @@
                 }
             }
 
-            // Info (only move)
+            // Info (moves) with delayed update
             let info = '';
             if (item.moves && item.moves.length > 0) {
                 info = `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
-                console.log('Moves for turn:', item.moves); // Отладка: логируем moves
+                console.log('Moves for turn:', item.moves);
             } else {
                 info = '<div class="info-text">No moves available for this turn.</div>';
-                console.warn('No moves for turn:', turn, item); // Отладка: если moves отсутствует
+                console.warn('No moves for turn:', turn, item);
             }
-            document.getElementById('info').innerHTML = info;
-            console.log('Info set to:', info); // Отладка: проверяем, что установлено в info
+            // Delay DOM update to ensure rendering
+            setTimeout(() => {
+                document.getElementById('info').innerHTML = info;
+                console.log('Info set to:', info);
+                // Log actual DOM content for debugging
+                console.log('Actual info div content:', document.getElementById('info').innerHTML);
+            }, 0);
 
-            // Принудительное обновление DOM
-            document.getElementById('info').dispatchEvent(new Event('DOMSubtreeModified'));
-
-            // Hints table
+            // Hints table (unchanged)
             let tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
             (item.hints || []).slice(0, 3).forEach((hint, index) => {
                 if (hint.probs && hint.probs.length >= 2) {
