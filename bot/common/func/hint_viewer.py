@@ -456,7 +456,7 @@ def extract_player_names(content: str) -> tuple[str, str]:
                 # Находим все пары вида "Имя : число"
                 matches = re.findall(r"(\S.*?)\s*:\s*\d+", players_line)
                 if len(matches) >= 2:
-                    red_player, black_player = matches[0].strip(), matches[1].strip()
+                    black_player, red_player = matches[0].strip(), matches[1].strip()
                     logger.info(f"Extracted players: Red={red_player}, Black={black_player}")
                     return red_player, black_player
 
@@ -772,7 +772,6 @@ def process_game(game_data):
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 0
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
@@ -819,7 +818,6 @@ def process_mat_file(input_file, output_file):
                 line = token["cmd"]
                 logger.debug("send: {}", line)
                 child.sendline(line)
-                time.sleep(command_delay)
 
                 out = ""
                 while True:
@@ -840,9 +838,7 @@ def process_mat_file(input_file, output_file):
 
                 if token["type"] == "hint":
                     target_idx = token.get("target")
-                    # Wait for 1 second after hint command to allow processing
-                    time.sleep(1.5)
-                    # Read available output
+                    time.sleep(0.9)
                     try:
                         chunk = child.read_nonblocking(size=65536, timeout=0.1)
                         if chunk:
