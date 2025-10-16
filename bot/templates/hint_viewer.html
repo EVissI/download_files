@@ -64,16 +64,16 @@
 
         th, td {
             border: 1px solid #555;
-            padding: 20px 30px; /* Increased horizontal padding for spacing between cells */
+            padding: 20px 30px;
             text-align: left;
             color: white;
-            word-spacing: 16px; /* Increased spacing between words in cells */
+            word-spacing: 16px;
         }
 
         th {
             background-color: #444;
             font-weight: bold;
-            text-align: center; /* Center-align text in table headers */
+            text-align: center;
         }
 
         tr:nth-child(even) {
@@ -81,22 +81,21 @@
         }
 
         tr:hover {
-            background-color: #3a3a2a;
+            background-color: #3a3a3a;
         }
 
-        /* Highlight styles for hint rows */
         .hint-best {
-            background-color: #2e7d32 !important; /* Green for best move (first row if matched) */
+            background-color: #2e7d32 !important;
         }
 
         .hint-good {
-            background-color: #fbc02d !important; /* Yellow for ranks 2-5 if matched */
+            background-color: #fbc02d !important;
         }
         .hint-good td {
-            color: #1a1a1a !important; /* Explicitly target td elements within hint-good row */
+            color: #1a1a1a !important;
         }
         .hint-poor {
-            background-color: #d32f2f !important; /* Red for ranks 6+ if matched */
+            background-color: #d32f2f !important;
         }
 
         #controls {
@@ -148,7 +147,6 @@
             margin: 10px 0;
         }
 
-        /* Responsive Design */
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -186,8 +184,8 @@
             }
 
             th, td {
-                padding: 8px 12px; /* Adjusted padding for smaller screens */
-                word-spacing: 12px; /* Slightly reduced word spacing for smaller screens */
+                padding: 8px 12px;
+                word-spacing: 12px;
             }
 
             .container {
@@ -221,18 +219,16 @@
             }
 
             th, td {
-                padding: 6px 8px; /* Further reduced padding for very small screens */
-                word-spacing: 4px; /* Further reduced word spacing for very small screens */
+                padding: 6px 8px;
+                word-spacing: 4px;
             }
         }
 
-        /* Loading indicator */
         .loading {
             color: #007bff;
             font-style: italic;
         }
 
-        /* Error messages */
         .error {
             color: #dc3545;
             background-color: #2d1b1b;
@@ -242,10 +238,8 @@
             margin: 10px 0;
         }
     </style>
-    <!-- Telegram Web App Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-        // Get game_id from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
     </script>
@@ -271,13 +265,11 @@
     </div>
 
     <script>
-        // Telegram Web App initialization
         if (window.Telegram) {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
         }
 
-        // Load JSON data from API
         let data = [];
         let dataLoaded = false;
         const infoDiv = document.getElementById('info');
@@ -292,20 +284,24 @@
                 return response.json();
             })
             .then(json => {
-                data = json.filter(item => item.turn !== undefined); // Filter to only turns
+                data = json.filter(item => item.turn !== undefined);
                 if (data.length > 0) {
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     dataLoaded = true;
-                    console.log('Data loaded:', data); // Отладка: логируем данные
-                    console.log('First turn data:', data[0]); // Отладка: данные первого хода
-                    console.log('First turn moves:', data[0].moves); // Отладка: проверяем moves
-                    // Вызываем render после загрузки данных
+                    console.log('Data loaded:', data);
+                    console.log('First turn data:', data[0]);
+                    console.log('First turn moves:', data[0].moves);
+                    // Check if first turn has action: 'skip' and set current accordingly
+                    if (data[0]?.action === 'skip') {
+                        current = 1;
+                    }
+                    // Render after data is loaded
                     if (imagesLoaded === 9) {
-                        render(0);
+                        render(current);
                         updateButtons();
-                        infoDiv.innerHTML = ''; // Clear loading message
+                        infoDiv.innerHTML = '';
                     } else {
                         console.log('Waiting for images to load before rendering');
                     }
@@ -317,11 +313,11 @@
                 console.error('Error loading JSON:', error);
                 infoDiv.innerHTML = '<div class="error">Error loading game data. Please check the game ID and try again.</div>';
             });
+
         let current = 0;
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Load images (assume they are in the static directory)
         const boardImg = new Image();
         boardImg.src = '/static/board.png';
 
@@ -347,16 +343,15 @@
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
-            console.log('Images loaded:', imagesLoaded); // Отладка: сколько изображений загружено
+            console.log('Images loaded:', imagesLoaded);
             if (imagesLoaded === 9 && dataLoaded) {
-                console.log('All images and data loaded, rendering turn 0');
-                render(0);
+                console.log('All images and data loaded, rendering turn', current);
+                render(current);
                 updateButtons();
-                infoDiv.innerHTML = ''; // Clear loading message
+                infoDiv.innerHTML = '';
             }
         };
 
-        // Assign onload handlers for all images
         boardImg.onload = checkImagesLoaded;
         blackImg.onload = checkImagesLoaded;
         whiteImg.onload = checkImagesLoaded;
@@ -367,7 +362,6 @@
         Dice5.onload = checkImagesLoaded;
         Dice6.onload = checkImagesLoaded;
 
-        // Map dice numbers to images
         const diceImages = {
             1: Dice1,
             2: Dice2,
@@ -377,7 +371,6 @@
             6: Dice6
         };
 
-        // Function to get X coordinate for a point (1-24), adjusted for left side first row left shift
         function getX(point) {
             if (point >= 13 && point <= 18) {
                 const baseX = 50 + (point - 13) * 60;
@@ -393,7 +386,6 @@
             return 0;
         }
 
-        // Base Y and direction for stacking with doubled height
         function getBaseY(point) {
             return (point > 12) ? 70 : 690; 
         }
@@ -402,7 +394,6 @@
             return (point > 12) ? 55 : -55; 
         }
 
-        // Draw checkers for a player with padding
         function drawCheckers(player, img, positions) {
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#ffffff';
@@ -415,13 +406,12 @@
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
-                // Display position label adjusted for Nard rules
                 let displayPoint = point;
                 if (player === 'red') {
-                    displayPoint = 25 - point; // Invert for Red: 1 -> 24, 2 -> 23, ..., 24 -> 1
+                    displayPoint = 25 - point;
                 }
                 ctx.font = 'bold 16px Arial';
-                ctx.fillText(displayPoint, x, y - 10); // Label above the stack
+                ctx.fillText(displayPoint, x, y - 10);
 
                 for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
@@ -433,13 +423,12 @@
                 }
             }
 
-            // Draw bar checkers
             const barX = 400;
             const barY = (player === 'black') ? 220 : 520;
             if (positions.bar > 0) {
                 let y = barY;
                 const dy = (player === 'black') ? 55 : -55;
-                ctx.fillText('Bar', barX - 20, y - 10); // Label for bar
+                ctx.fillText('Bar', barX - 20, y - 10);
                 for (let i = 0; i < Math.min(positions.bar, 6); i++) {
                     ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
@@ -449,14 +438,14 @@
                 }
             }
 
-            // Draw off checkers
             const offX = (player === 'black') ? 20 : 760;
             const offY = 400;
             if (positions.off > 0) {
-                ctx.fillText('Off', offX, offY - 10); // Label for off
+                ctx.fillText('Off', offX, offY - 10);
                 ctx.fillText(`${positions.off}`, offX, offY + 40);
             }
         }
+
         function render(turn) {
             if (!data || !data[turn]) {
                 console.error('No data for turn:', turn);
@@ -468,27 +457,22 @@
             document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
             console.log('Rendering turn:', turn, 'Data:', data[turn]);
 
-            // Draw board
             ctx.clearRect(0, 0, 800, 800); 
             ctx.drawImage(boardImg, 0, 0, 800, 800); 
 
-            // Determine positions based on turn
             let redPositions, blackPositions;
             if (turn === 0) {
                 redPositions = { '1': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
                 blackPositions = { '24': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
             } else {
-                // Use positions from the previous turn (turn - 1)
                 const prevTurn = turn - 1;
                 redPositions = data[prevTurn].positions['red'];
                 blackPositions = data[prevTurn].positions['black'];
             }
 
-            // Draw checkers with updated or default positions
-            drawCheckers('red', whiteImg, redPositions); // Red uses white checkers
+            drawCheckers('red', whiteImg, redPositions);
             drawCheckers('black', blackImg, blackPositions);
 
-            // Draw dice based on whose turn it is
             const item = data[turn];
             if (item.dice && item.dice.length >= 2) {
                 const [die1, die2] = item.dice;
@@ -501,7 +485,6 @@
                 }
             }
 
-            // Info (only move) with delayed update
             let info = '';
             if (item.moves && item.moves.length > 0) {
                 info = `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
@@ -516,7 +499,6 @@
                 console.log('Actual info div content:', document.getElementById('info').innerHTML);
             }, 0);
 
-            // Hints table
             let tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
             (item.hints || []).slice(0, 3).forEach((hint, index) => {
                 if (hint.probs && hint.probs.length >= 2) {
