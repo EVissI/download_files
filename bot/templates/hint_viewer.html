@@ -1,259 +1,526 @@
 ﻿<!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Hint Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backgammon Game Viewer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: #2c2c2c;
-            color: white;
             text-align: center;
+            color: white;
+            background-color: #1a1a1a;
             margin: 0;
             padding: 20px;
+            min-height: 100vh;
         }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            display: none; 
+        }
+
         canvas {
-            background: #444;
-            border: 1px solid #555;
-            border-radius: 10px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
         }
+
+        .game-info {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #444;
+        }
+
+        .hints-table {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #444;
+            overflow-x: auto;
+        }
+
         table {
-            margin: 10px auto;
+            margin: 0 auto;
             border-collapse: collapse;
-            background: #333;
-            color: white;
+            width: 100%;
+            max-width: 800px;
+            background-color: #333;
+            border-radius: 6px;
+            overflow: hidden;
         }
+
         th, td {
-            border: 1px solid #666;
-            padding: 5px 10px;
+            border: 1px solid #555;
+            padding: 20px 30px; /* Increased horizontal padding for spacing between cells */
+            text-align: left;
+            color: white;
+            word-spacing: 16px; /* Increased spacing between words in cells */
         }
-        .hint-best { background: #4caf50; }
-        .hint-good { background: #2196f3; }
-        .hint-poor { background: #f44336; }
-        .controls {
-            margin: 10px;
+
+        th {
+            background-color: #444;
+            font-weight: bold;
+            text-align: center; /* Center-align text in table headers */
         }
+
+        tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+
+        tr:hover {
+            background-color: #3a3a2a;
+        }
+
+        /* Highlight styles for hint rows */
+        .hint-best {
+            background-color: #2e7d32 !important; /* Green for best move (first row if matched) */
+        }
+
+        .hint-good {
+            background-color: #fbc02d !important; /* Yellow for ranks 2-5 if matched */
+        }
+        .hint-good td {
+            color: #1a1a1a !important; /* Explicitly target td elements within hint-good row */
+        }
+        .hint-poor {
+            background-color: #d32f2f !important; /* Red for ranks 6+ if matched */
+        }
+
+        #controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .turn-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         button {
-            margin: 5px;
-            padding: 5px 15px;
-            background: #555;
+            background-color: #007bff;
             color: white;
             border: none;
-            border-radius: 5px;
+            padding: 12px 24px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
         }
+
         button:hover {
-            background: #777;
+            background-color: #0056b3;
         }
-        #info {
-            margin: 15px 0;
+
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        #turnLabel {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 0;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .info-text {
+            color: #ccc;
+            margin: 10px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            canvas {
+                width: 100%;
+                height: 100%;
+            }
+
+            #controls {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                justify-content: center;
+                width: 100%;
+            }
+
+            #turnLabel {
+                margin: 10px 0;
+                font-size: 16px;
+            }
+
+            button {
+                width: 60px;
+                padding: 10px 20px;
+            }
+
+            table {
+                font-size: 24px;
+            }
+
+            th, td {
+                padding: 8px 12px; /* Adjusted padding for smaller screens */
+                word-spacing: 12px; /* Slightly reduced word spacing for smaller screens */
+            }
+
+            .container {
+                padding: 0 10px;
+            }
+
+            .game-info, .hints-table {
+                padding: 15px;
+                margin: 15px 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            canvas {
+                width: 100%;
+                height: 100%;
+            }
+
+            button {
+                width: 60px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+
+            table {
+                font-size: 18px;
+            }
+
+            th, td {
+                padding: 6px 8px; /* Further reduced padding for very small screens */
+                word-spacing: 4px; /* Further reduced word spacing for very small screens */
+            }
+        }
+
+        /* Loading indicator */
+        .loading {
+            color: #007bff;
+            font-style: italic;
+        }
+
+        /* Error messages */
+        .error {
+            color: #dc3545;
+            background-color: #2d1b1b;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
         }
     </style>
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        // Get game_id from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id') || 'default';
+    </script>
 </head>
 <body>
-    <h2>Backgammon Hint Viewer</h2>
-    <div id="turnLabel">Ход —</div>
-    <canvas id="board" width="800" height="700"></canvas>
-    <div id="info"><em>Загрузка...</em></div>
+    <div class="container">
+        <h1>Backgammon Game Analysis</h1>
+        <div id="players-info"></div>
+        <canvas id="boardCanvas" width="800" height="800"></canvas>
 
-    <div id="hints"></div>
+        <div id="controls">
+            <button onclick="prevTurn()" id="prevBtn">←</button>
+            <span id="turnLabel">Ход 0</span>
+            <button onclick="nextTurn()" id="nextBtn">→</button>
+        </div>
+        <div class="game-info">
+            <div id="info" class="info-text"></div>
+        </div>
 
-    <div class="controls">
-        <button id="prevBtn">◀ Предыдущий</button>
-        <button id="nextBtn">Следующий ▶</button>
+        <div class="hints-table">
+            <div id="hints"></div>
+        </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('board');
-        const ctx = canvas.getContext('2d');
-        const infoDiv = document.getElementById('info');
-        const boardImg = new Image();
-        const blackImg = new Image();
-        const whiteImg = new Image();
-        const Dice1 = new Image(), Dice2 = new Image(), Dice3 = new Image(),
-              Dice4 = new Image(), Dice5 = new Image(), Dice6 = new Image();
-        const diceImages = [null, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6];
-        const images = [boardImg, blackImg, whiteImg, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6];
+        // Telegram Web App initialization
+        if (window.Telegram) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+        }
 
-        boardImg.src = 'board.png';
-        blackImg.src = 'black.png';
-        whiteImg.src = 'white.png';
-        Dice1.src = 'dice1.png';
-        Dice2.src = 'dice2.png';
-        Dice3.src = 'dice3.png';
-        Dice4.src = 'dice4.png';
-        Dice5.src = 'dice5.png';
-        Dice6.src = 'dice6.png';
-
+        // Load JSON data from API
         let data = [];
-        let current = 0;
         let dataLoaded = false;
-        let imagesReady = false;
-        let imagesLoaded = 0;
+        const infoDiv = document.getElementById('info');
+        const playersInfoDiv = document.getElementById('players-info');
+        infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
-        const markImage = () => {
+        fetch(`/api/analysis/${gameId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(json => {
+                data = json.filter(item => item.turn !== undefined); // Filter to only turns, exclude final win if needed
+                if (data.length > 1) {
+                    // Extract player names: first Red player, then Black player
+                    const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
+                    const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
+                    dataLoaded = true;
+                    render(0);
+                    updateButtons();
+                    infoDiv.innerHTML = ''; // Clear loading message
+                } else {
+                    infoDiv.innerHTML = '<div class="error">No game data found for this game ID.</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading JSON:', error);
+                infoDiv.innerHTML = '<div class="error">Error loading game data. Please check the game ID and try again.</div>';
+            });
+
+        let current = 0;
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Load images (assume they are in the static directory)
+        const boardImg = new Image();
+        boardImg.src = '/static/board.png';
+
+        const blackImg = new Image();
+        blackImg.src = '/static/black_checker.png';
+
+        const whiteImg = new Image();
+        whiteImg.src = '/static/white_checker.png';
+
+        const Dice1 = new Image();
+        Dice1.src = '/static/Dice1.png';
+        const Dice2 = new Image();
+        Dice2.src = '/static/Dice2.png';
+        const Dice3 = new Image();
+        Dice3.src = '/static/Dice3.png';
+        const Dice4 = new Image();
+        Dice4.src = '/static/Dice4.png';
+        const Dice5 = new Image();
+        Dice5.src = '/static/Dice5.png';
+        const Dice6 = new Image();
+        Dice6.src = '/static/Dice6.png';
+
+        let imagesLoaded = 0;
+        const checkImagesLoaded = () => {
             imagesLoaded++;
-            if (imagesLoaded >= images.length) {
-                imagesReady = true;
-                maybeRenderInitial();
+            if (imagesLoaded === 9 && dataLoaded) { // Wait for all 9 images and data
+                render(current);
             }
         };
 
-        images.forEach(img => {
-            img.onload = markImage;
-            img.onerror = markImage;
-        });
+        // Assign onload handlers for all images
+        boardImg.onload = checkImagesLoaded;
+        blackImg.onload = checkImagesLoaded;
+        whiteImg.onload = checkImagesLoaded;
+        Dice1.onload = checkImagesLoaded;
+        Dice2.onload = checkImagesLoaded;
+        Dice3.onload = checkImagesLoaded;
+        Dice4.onload = checkImagesLoaded;
+        Dice5.onload = checkImagesLoaded;
+        Dice6.onload = checkImagesLoaded;
 
-        fetch('data.json')
-            .then(r => r.json())
-            .then(json => {
-                data = json;
-                if (data.length > 0) {
-                    dataLoaded = true;
-                    maybeRenderInitial();
-                } else {
-                    infoDiv.innerHTML = '<em>Нет данных</em>';
-                }
-            })
-            .catch(() => {
-                infoDiv.innerHTML = '<em>Ошибка загрузки data.json</em>';
-            });
+        // Map dice numbers to images
+        const diceImages = {
+            1: Dice1,
+            2: Dice2,
+            3: Dice3,
+            4: Dice4,
+            5: Dice5,
+            6: Dice6
+        };
 
-        function maybeRenderInitial() {
-            if (dataLoaded && imagesReady && data.length > 0) {
-                render(0);
-                updateButtons();
-            }
-        }
-
+        // Function to get X coordinate for a point (1-24), adjusted for left side first row left shift
         function getX(point) {
-            const pos = [
-                null, 735, 680, 625, 570, 515, 460,
-                345, 290, 235, 180, 125, 70,
-                70, 125, 180, 235, 290, 345,
-                460, 515, 570, 625, 680, 735
-            ];
-            return pos[point] || 400;
+            if (point >= 13 && point <= 18) {
+                const baseX = 50 + (point - 13) * 60;
+                return baseX - (point === 13 ? 8 : 0);
+            } else if (point >= 19 && point <= 24) {
+                return 450 + (point - 19) * 60;
+            } else if (point >= 7 && point <= 12) {
+                const baseX = 50 + (12 - point) * 60;
+                return baseX - (point === 6 ? 4 : 0);
+            } else if (point >= 1 && point <= 6) {
+                return 450 + (6 - point) * 60;
+            }
+            return 0;
         }
 
+        // Base Y and direction for stacking with doubled height
         function getBaseY(point) {
-            return point >= 13 ? 90 : 610;
+            return (point > 12) ? 70 : 690; 
         }
 
         function getDy(point) {
-            return point >= 13 ? 55 : -55;
+            return (point > 12) ? 55 : -55; 
         }
 
-        function drawCheckers(player, img, item) {
-            const prevIndex = current > 0 ? current - 1 : 0;
-            const base = (current === 0) ? item : data[prevIndex];
-            const positions = (base && base.positions && base.positions[player]) ?
-                base.positions[player] : { bar: 0, off: 0 };
-
+        // Draw checkers for a player with padding
+        function drawCheckers(player, img) {
+            // Use positions from the previous turn (index -1) unless current turn is 0
+            const positions = current === 0 ? data[current].positions[player] : data[current - 1].positions[player];
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#ffffff';
+
             for (let pointStr in positions) {
-                if (!Object.prototype.hasOwnProperty.call(positions, pointStr)) continue;
                 if (pointStr === 'bar' || pointStr === 'off') continue;
                 const point = parseInt(pointStr);
-                if (isNaN(point)) continue;
                 let count = positions[pointStr];
                 const x = getX(point);
                 let y = getBaseY(point);
                 const dy = getDy(point);
+
                 for (let i = 0; i < Math.min(count, 6); i++) {
-                    if (img.complete) ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
+                    ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
+
                 if (count > 6) {
-                    const lastCheckerY = y + (5 * dy);
-                    ctx.fillText(`(${count})`, x + 30, lastCheckerY + 5);
+                    const lastCheckerY = y + (5 * dy); // Position near the last checker (6th one)
+                    ctx.fillText(`(${count})`, x + 30, lastCheckerY + 5); // Adjusted to right side, closer to last checker
                 }
             }
 
-            // bar
-            if ((positions.bar || 0) > 0) {
-                const barX = 400;
-                const barY = (player === 'black') ? 220 : 520;
-                const dy = (player === 'black') ? 55 : -55;
+            // Draw bar checkers
+            const barX = 400; // Middle bar
+            const barY = (player === 'black') ? 220 : 520;
+            if (positions.bar > 0) {
+                let y = barY;
+                const dy = (player === 'black') ? 55 : -55; // Down for black, up for white
                 for (let i = 0; i < Math.min(positions.bar, 6); i++) {
-                    if (img.complete) ctx.drawImage(img, barX - 31.25, barY + (i * dy) - 31.25, 62.5, 62.5);
+                    ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
                 if (positions.bar > 6) {
-                    const lastCheckerY = barY + (5 * dy);
+                    const lastCheckerY = y + (5 * dy);
                     ctx.fillText(`(${positions.bar})`, barX + 20, lastCheckerY + 5);
                 }
             }
 
-            // off
-            if ((positions.off || 0) > 0) {
-                const offX = (player === 'black') ? 20 : 760;
-                const offY = 400;
+            // Draw off checkers
+            const offX = (player === 'black') ? 20 : 760;
+            const offY = 400; 
+            if (positions.off > 0) {
                 ctx.fillText('Off:', offX, offY);
                 ctx.fillText(`${positions.off}`, offX, offY + 40);
             }
         }
 
+        // Render the current turn
         function render(turn) {
-            if (!data || data.length === 0) return;
-            if (turn < 0) turn = 0;
-            if (turn >= data.length) turn = data.length - 1;
             current = turn;
+            document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
 
-            const item = data[turn] || {};
-            document.getElementById('turnLabel').innerText = `Ход ${item.turn ?? '—'}`;
+            // Draw board
+            ctx.clearRect(0, 0, 800, 800); 
+            ctx.drawImage(boardImg, 0, 0, 800, 800); 
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (boardImg.complete) ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+            // Draw checkers
+            drawCheckers('red', whiteImg); // Red uses white checkers
+            drawCheckers('black', blackImg);
 
-            drawCheckers('red', whiteImg, item);
-            drawCheckers('black', blackImg, item);
-
+            // Draw dice based on whose turn it is
+            const item = data[turn];
             if (item.dice && item.dice.length >= 2) {
                 const [die1, die2] = item.dice;
-                const diceY = item.player === 'black' ? 200 : 500;
-                if (diceImages[die1]?.complete) ctx.drawImage(diceImages[die1], 370, diceY, 80, 80);
-                if (diceImages[die2]?.complete) ctx.drawImage(diceImages[die2], 460, diceY, 80, 80);
+                // Determine dice position based on player
+                const diceY = item.player === 'black' ? 200 : 500; // Top for black, bottom for red
+                if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
+                    ctx.drawImage(diceImages[die1], 370, diceY, 80, 80); // First die, larger size
+                }
+                if (die2 >= 1 && die2 <= 6 && diceImages[die2]) {
+                    ctx.drawImage(diceImages[die2], 460, diceY, 80, 80); // Second die, larger size
+                }
             }
 
+            // Info (only move)
             let info = '';
-            if (item.moves && Array.isArray(item.moves) && item.moves.length > 0) {
-                info = `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
-            } else if (item.turn === undefined) {
-                info = '<em>Нет данных о ходе</em>';
-            } else {
-                info = '<em>Ход отсутствует</em>';
-            }
-            infoDiv.innerHTML = info;
+            if (item.moves) info += `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
+            document.getElementById('info').innerHTML = info;
 
+            // Hints table
             let tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
             (item.hints || []).slice(0, 3).forEach((hint, index) => {
-                const prob1 = (hint.probs && hint.probs[0] != null) ? hint.probs[0].toFixed(3) : '-';
-                const prob2 = (hint.probs && hint.probs[1] != null) ? hint.probs[1].toFixed(3) : '-';
-                const eq = (hint.eq != null) ? hint.eq.toFixed(3) : '-';
-                let rowClass = '';
-                if (item.gnu_move && hint.move === item.gnu_move) {
-                    rowClass = index === 0 ? 'hint-best' : (index <= 4 ? 'hint-good' : 'hint-poor');
+                if (hint.probs && hint.probs.length >= 2) {
+                    const prob1 = hint.probs[0] ? hint.probs[0].toFixed(3) : '-';
+                    const prob2 = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
+                    const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                    let rowClass = '';
+                    // Check if the hint move matches gnu_move
+                    if (item.gnu_move && hint.move === item.gnu_move) {
+                        if (index === 0) {
+                            rowClass = 'hint-best'; // Green for first row
+                        } else if (index >= 1 && index <= 4) {
+                            rowClass = 'hint-good'; // Yellow for ranks 2-5
+                        } else {
+                            rowClass = 'hint-poor'; // Red for ranks 6+
+                        }
+                    }
+                    // Hide error column for the first row
+                    const errorCell = `<td>${eq}</td>`;
+                    tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td>${errorCell}</td></tr>`;
                 }
-                tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
             });
             tableHtml += '</table>';
             document.getElementById('hints').innerHTML = tableHtml;
         }
 
-        function updateButtons() {
-            document.getElementById('prevBtn').disabled = current <= 0;
-            document.getElementById('nextBtn').disabled = current >= data.length - 1;
+        function prevTurn() {
+            if (current > 0) {
+                render(current - 1);
+                updateButtons();
+            }
         }
 
-        document.getElementById('prevBtn').onclick = () => {
-            if (current > 0) render(current - 1);
-            updateButtons();
-        };
+        function nextTurn() {
+            if (current < data.length - 1) {
+                render(current + 1);
+                updateButtons();
+            }
+        }
 
-        document.getElementById('nextBtn').onclick = () => {
-            if (current < data.length - 1) render(current + 1);
-            updateButtons();
-        };
+        function updateButtons() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            prevBtn.disabled = current <= 0;
+            nextBtn.disabled = current >= data.length - 1;
+        }
     </script>
 </body>
 </html>
