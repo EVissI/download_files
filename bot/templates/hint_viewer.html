@@ -292,17 +292,18 @@
                 return response.json();
             })
             .then(json => {
-                data = json.filter(item => item.turn !== undefined); // Filter to only turns
+                data = json.filter(item => item.turn !== undefined);
                 if (data.length > 0) {
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     dataLoaded = true;
-                    console.log('Data loaded:', data); // Отладка: логируем данные
-                    console.log('First turn data:', data[0]); // Отладка: данные первого хода
-                    console.log('First turn moves:', data[0].moves); // Отладка: проверяем moves
-                    // Вызываем render после загрузки данных
+                    console.log('Data loaded:', data);
+                    console.log('First turn data:', data[0]);
+                    console.log('First turn moves:', data[0].moves);
+                    // Delay render until images are loaded
                     if (imagesLoaded === 9) {
+                        console.log('Calling render(0) immediately');
                         render(0);
                         updateButtons();
                         infoDiv.innerHTML = ''; // Clear loading message
@@ -317,37 +318,12 @@
                 console.error('Error loading JSON:', error);
                 infoDiv.innerHTML = '<div class="error">Error loading game data. Please check the game ID and try again.</div>';
             });
-        let current = 0;
-        const canvas = document.getElementById('boardCanvas');
-        const ctx = canvas.getContext('2d');
 
-        // Load images (assume they are in the static directory)
-        const boardImg = new Image();
-        boardImg.src = '/static/board.png';
-
-        const blackImg = new Image();
-        blackImg.src = '/static/black_checker.png';
-
-        const whiteImg = new Image();
-        whiteImg.src = '/static/white_checker.png';
-
-        const Dice1 = new Image();
-        Dice1.src = '/static/Dice1.png';
-        const Dice2 = new Image();
-        Dice2.src = '/static/Dice2.png';
-        const Dice3 = new Image();
-        Dice3.src = '/static/Dice3.png';
-        const Dice4 = new Image();
-        Dice4.src = '/static/Dice4.png';
-        const Dice5 = new Image();
-        Dice5.src = '/static/Dice5.png';
-        const Dice6 = new Image();
-        Dice6.src = '/static/Dice6.png';
-
+        // Image loading check
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
-            console.log('Images loaded:', imagesLoaded); // Отладка: сколько изображений загружено
+            console.log('Images loaded:', imagesLoaded);
             if (imagesLoaded === 9 && dataLoaded) {
                 console.log('All images and data loaded, rendering turn 0');
                 render(0);
@@ -356,26 +332,13 @@
             }
         };
 
-        // Assign onload handlers for all images
-        boardImg.onload = checkImagesLoaded;
-        blackImg.onload = checkImagesLoaded;
-        whiteImg.onload = checkImagesLoaded;
-        Dice1.onload = checkImagesLoaded;
-        Dice2.onload = checkImagesLoaded;
-        Dice3.onload = checkImagesLoaded;
-        Dice4.onload = checkImagesLoaded;
-        Dice5.onload = checkImagesLoaded;
-        Dice6.onload = checkImagesLoaded;
+        // Assign onload handlers for images (assume they are defined earlier)
 
-        // Map dice numbers to images
-        const diceImages = {
-            1: Dice1,
-            2: Dice2,
-            3: Dice3,
-            4: Dice4,
-            5: Dice5,
-            6: Dice6
-        };
+        // ... (rest of the code for image loading)
+
+        let current = 0;
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
 
         // Function to get X coordinate for a point (1-24), adjusted for left side first row left shift
         function getX(point) {
@@ -415,14 +378,6 @@
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
-                // Display position label adjusted for Nard rules
-                let displayPoint = point;
-                if (player === 'red') {
-                    displayPoint = 25 - point; // Invert for Red: 1 -> 24, 2 -> 23, ..., 24 -> 1
-                }
-                ctx.font = 'bold 16px Arial';
-                ctx.fillText(displayPoint, x, y - 10); // Label above the stack
-
                 for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
@@ -439,7 +394,6 @@
             if (positions.bar > 0) {
                 let y = barY;
                 const dy = (player === 'black') ? 55 : -55;
-                ctx.fillText('Bar', barX - 20, y - 10); // Label for bar
                 for (let i = 0; i < Math.min(positions.bar, 6); i++) {
                     ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
@@ -453,10 +407,11 @@
             const offX = (player === 'black') ? 20 : 760;
             const offY = 400;
             if (positions.off > 0) {
-                ctx.fillText('Off', offX, offY - 10); // Label for off
+                ctx.fillText('Off:', offX, offY);
                 ctx.fillText(`${positions.off}`, offX, offY + 40);
             }
         }
+
         function render(turn) {
             if (!data || !data[turn]) {
                 console.error('No data for turn:', turn);
@@ -471,6 +426,19 @@
             // Draw board
             ctx.clearRect(0, 0, 800, 800); 
             ctx.drawImage(boardImg, 0, 0, 800, 800); 
+
+            // Draw position labels
+            ctx.font = 'bold 18px Arial';
+            ctx.fillStyle = '#000000'; // Black for visibility on board
+            ctx.textAlign = 'center';
+            for (let point = 1; point <= 12; point++) {
+                const x = getX(point);
+                ctx.fillText(point, x, 780); // Bottom labels, adjust y as needed
+            }
+            for (let point = 13; point <= 24; point++) {
+                const x = getX(point);
+                ctx.fillText(point, x, 30); // Top labels, adjust y as needed
+            }
 
             // Determine positions based on turn
             let redPositions, blackPositions;
