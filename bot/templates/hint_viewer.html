@@ -297,7 +297,7 @@
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
-                    render(1);
+                    render(0);
                     updateButtons();
                     infoDiv.innerHTML = ''; // Clear loading message
                 } else {
@@ -499,7 +499,7 @@
         }
 
         function prevTurn() {
-            if (current > 1) {
+            if (current > 0) {
                 render(current - 1);
                 updateButtons();
             }
@@ -516,7 +516,7 @@
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
 
-            prevBtn.disabled = current <= 1;
+            prevBtn.disabled = current <= 0;
             nextBtn.disabled = current >= data.length - 1;
         }
     </script>
