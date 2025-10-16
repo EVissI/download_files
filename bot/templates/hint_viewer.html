@@ -299,9 +299,7 @@
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     dataLoaded = true;
-                    if (imagesLoaded === 9) {
-                        render(0);
-                    }
+                    render(0);
                     updateButtons();
                     infoDiv.innerHTML = ''; // Clear loading message
                 } else {
@@ -479,8 +477,8 @@
             let tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
             (item.hints || []).slice(0, 3).forEach((hint, index) => {
                 if (hint.probs && hint.probs.length >= 2) {
-                    const prob1 = hint.probs[0] * 100 ? hint.probs[0].toFixed(3) : '-';
-                    const prob2 = hint.probs[1] * 100 ? hint.probs[1].toFixed(3) : '-';
+                    const prob1 = hint.probs[0] ? hint.probs[0].toFixed(3) : '-';
+                    const prob2 = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let rowClass = '';
                     // Check if the hint move matches gnu_move
