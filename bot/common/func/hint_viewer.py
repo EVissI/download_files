@@ -840,6 +840,25 @@ def process_mat_file(input_file, output_file):
 
                 if token["type"] == "hint":
                     target_idx = token.get("target")
+                    # Continue reading until "Considering" disappears from output
+                    considering_pattern = re.compile(r"Considering", re.I)
+                    while True:
+                        try:
+                            chunk = child.read_nonblocking(size=4096, timeout=0.05)
+                            if not chunk:
+                                break
+                            out += chunk
+                            if considering_pattern.search(chunk):
+                                continue  # continue reading if still considering
+                            else:
+                                break  # stop when no more considering in chunk
+                        except pexpect.TIMEOUT:
+                            break
+                        except pexpect.EOF:
+                            break
+                        except Exception:
+                            break
+
                     hints = parse_hint_output(out)
                     if hints:
                         for h in hints:
