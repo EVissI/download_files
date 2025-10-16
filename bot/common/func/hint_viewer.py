@@ -289,7 +289,7 @@ def json_to_gnubg_commands(data):
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
                 move_cmds = [f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in moves]
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
-            # Добавляем roll только если следующий ход не double/takes/drop в том же turn
+            # Добавляем roll только если следующий ход не специальное действие (double/take/drop) в том же turn
             if not (next_act in ("double", "take", "drop") and next_turn == action["turn"]):
                 tokens.append({"cmd": "roll", "type": "cmd", "target": i})
             i += 1
