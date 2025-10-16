@@ -415,9 +415,13 @@
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
-                // Draw position label above checkers
+                // Display position label adjusted for Nard rules
+                let displayPoint = point;
+                if (player === 'red') {
+                    displayPoint = 25 - point; // Invert for Red: 1 -> 24, 2 -> 23, ..., 24 -> 1
+                }
                 ctx.font = 'bold 16px Arial';
-                ctx.fillText(point, x, y - 10); // Label above the stack
+                ctx.fillText(displayPoint, x, y - 10); // Label above the stack
 
                 for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
@@ -453,7 +457,6 @@
                 ctx.fillText(`${positions.off}`, offX, offY + 40);
             }
         }
-
         function render(turn) {
             if (!data || !data[turn]) {
                 console.error('No data for turn:', turn);
