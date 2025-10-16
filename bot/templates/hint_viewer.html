@@ -309,7 +309,7 @@
                 infoDiv.innerHTML = '<div class="error">Error loading game data. Please check the game ID and try again.</div>';
             });
 
-        let current = 1;
+        let current = 0;
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -442,18 +442,32 @@
         // Render the current turn
         function render(turn) {
             current = turn;
-            document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
+            const item = data[turn];
+
+            // Skip rendering for skip actions
+            if (item.action === 'skip') {
+                // Find the next non-skip turn
+                let nextTurn = turn + 1;
+                while (nextTurn < data.length && data[nextTurn].action === 'skip') {
+                    nextTurn++;
+                }
+                if (nextTurn < data.length) {
+                    render(nextTurn);
+                    return;
+                }
+            }
+
+            document.getElementById('turnLabel').innerText = `Ход ${item.turn || 'End'}`;
 
             // Draw board
-            ctx.clearRect(0, 0, 800, 800); 
-            ctx.drawImage(boardImg, 0, 0, 800, 800); 
+            ctx.clearRect(0, 0, 800, 800);
+            ctx.drawImage(boardImg, 0, 0, 800, 800);
 
             // Draw checkers
             drawCheckers('red', whiteImg); // Red uses white checkers
             drawCheckers('black', blackImg);
 
             // Draw dice based on whose turn it is
-            const item = data[turn];
             if (item.dice && item.dice.length >= 2) {
                 const [die1, die2] = item.dice;
                 // Determine dice position based on player
@@ -500,14 +514,22 @@
 
         function prevTurn() {
             if (current > 1) {
-                render(current - 1);
+                let prevTurn = current - 1;
+                while (prevTurn > 0 && data[prevTurn].action === 'skip') {
+                    prevTurn--;
+                }
+                render(prevTurn);
                 updateButtons();
             }
         }
 
         function nextTurn() {
             if (current < data.length - 1) {
-                render(current + 1);
+                let nextTurn = current + 1;
+                while (nextTurn < data.length && data[nextTurn].action === 'skip') {
+                    nextTurn++;
+                }
+                render(nextTurn);
                 updateButtons();
             }
         }
@@ -516,8 +538,20 @@
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
 
-            prevBtn.disabled = current <= 1;
-            nextBtn.disabled = current >= data.length - 1;
+            // Find the first non-skip turn
+            let firstNonSkip = 1;
+            while (firstNonSkip < data.length && data[firstNonSkip].action === 'skip') {
+                firstNonSkip++;
+            }
+
+            // Find the last non-skip turn
+            let lastNonSkip = data.length - 1;
+            while (lastNonSkip > 0 && data[lastNonSkip].action === 'skip') {
+                lastNonSkip--;
+            }
+
+            prevBtn.disabled = current <= firstNonSkip;
+            nextBtn.disabled = current >= lastNonSkip;
         }
     </script>
 </body>
