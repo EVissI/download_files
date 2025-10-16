@@ -201,22 +201,22 @@ def parse_backgammon_mat(content):
 
             return None
 
-        red_move = parse_side(left, "Black")
-        if red_move:
-            moves_list.append(red_move)
-            previous_player_moved = "Black"
-
-        black_move = parse_side(right, "Red")
+        black_move = parse_side(left, "Black")
         if black_move:
             moves_list.append(black_move)
+            previous_player_moved = "Black"
+
+        red_move = parse_side(right, "Red")
+        if red_move:
+            moves_list.append(red_move)
             previous_player_moved = "Red"
 
-        # Добавляем фиктивную запись для пропущенного хода (как в начале для Red)
-        if not red_move and black_move:
-            skip_entry = {"turn": turn, "player": "Red", "action": "skip"}
-            moves_list.insert(-1 if black_move else len(moves_list), skip_entry)
-        elif red_move and not black_move:
+        # Добавляем фиктивную запись для пропущенного хода (теперь слева черные, справа красные)
+        if not black_move and red_move:
             skip_entry = {"turn": turn, "player": "Black", "action": "skip"}
+            moves_list.insert(-1 if red_move else len(moves_list), skip_entry)
+        elif black_move and not red_move:
+            skip_entry = {"turn": turn, "player": "Red", "action": "skip"}
             moves_list.append(skip_entry)
 
     return moves_list
@@ -461,7 +461,7 @@ def extract_player_names(content: str) -> tuple[str, str]:
                     return red_player, black_player
 
     logger.warning("Could not extract player names from .mat file")
-    return "Red", "Black"
+    return "Black", "Red"
 
 def normalize_move(move_str: str) -> str:
     """
