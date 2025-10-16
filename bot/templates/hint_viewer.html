@@ -472,11 +472,11 @@
             document.getElementById('info').innerHTML = info;
 
             // Hints table
-            let tableHtml = '<table><tr><th>Ход</th><th>Вероятности</th><th>Ошибка</th></tr>';
+            let tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
             (item.hints || []).slice(0, 3).forEach((hint, index) => {
                 if (hint.probs && hint.probs.length >= 2) {
-                    const prob1 = hint.probs[0] ? hint.probs[0].toFixed(3) : '-';
-                    const prob2 = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
+                    const prob1 = hint.probs[0] * 100 ? hint.probs[0].toFixed(3) : '-';
+                    const prob2 = hint.probs[1] * 100 ? hint.probs[1].toFixed(3) : '-';
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let rowClass = '';
                     // Check if the hint move matches gnu_move
@@ -490,7 +490,7 @@
                         }
                     }
                     // Hide error column for the first row
-                    const errorCell = index === 0 ? '' : `<td>${eq}</td>`;
+                    const errorCell = `<td>${eq}</td>`;
                     tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td>${errorCell}</td></tr>`;
                 }
             });

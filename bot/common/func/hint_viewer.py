@@ -68,7 +68,7 @@ def parse_backgammon_mat(content):
                 if left:
                     red_part = left
                     double_player = "Black"
-                    red_move = parse_side(red_part, "Red")  # Use parse_side defined below
+                    red_move = parse_side(red_part, "Red") 
                     if red_move:
                         moves_list.append(red_move)
                         previous_player_moved = "Red"
@@ -201,12 +201,12 @@ def parse_backgammon_mat(content):
 
             return None
 
-        red_move = parse_side(left, "Red")
+        red_move = parse_side(right, "Red")
         if red_move:
             moves_list.append(red_move)
             previous_player_moved = "Red"
 
-        black_move = parse_side(right, "Black")
+        black_move = parse_side(left, "Black")
         if black_move:
             moves_list.append(black_move)
             previous_player_moved = "Black"
