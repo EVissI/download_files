@@ -201,15 +201,15 @@ def parse_backgammon_mat(content):
 
             return None
 
-        red_move = parse_side(left, "Red")
+        red_move = parse_side(left, "Black")
         if red_move:
             moves_list.append(red_move)
-            previous_player_moved = "Red"
+            previous_player_moved = "Black"
 
-        black_move = parse_side(right, "Black")
+        black_move = parse_side(right, "Red")
         if black_move:
             moves_list.append(black_move)
-            previous_player_moved = "Black"
+            previous_player_moved = "Red"
 
         # Добавляем фиктивную запись для пропущенного хода (как в начале для Red)
         if not red_move and black_move:
