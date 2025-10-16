@@ -840,8 +840,8 @@ def process_mat_file(input_file, output_file):
 
                 if token["type"] == "hint":
                     target_idx = token.get("target")
-                    # Continue reading until "Considering" disappears from output
-                    considering_pattern = re.compile(r"Considering", re.I)
+                    # Continue reading until "Considering move..." disappears from output
+                    considering_pattern = re.compile(r"\r\nConsidering move\.\.\.", re.I)
                     while True:
                         try:
                             chunk = child.read_nonblocking(size=4096, timeout=0.05)
