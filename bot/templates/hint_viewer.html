@@ -293,13 +293,15 @@
             })
             .then(json => {
                 data = json.filter(item => item.turn !== undefined); // Filter to only turns, exclude final win if needed
-                if (data.length > 1) {
+                if (data.length > 0) { // Проверяем, есть ли данные
                     // Extract player names: first Red player, then Black player
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     dataLoaded = true;
-                    render(0);
+                    console.log('Data loaded:', data); // Отладка: логируем данные
+                    console.log('First turn data:', data[0]); // Отладка: проверяем первый ход
+                    render(0); // Вызываем render после загрузки данных
                     updateButtons();
                     infoDiv.innerHTML = ''; // Clear loading message
                 } else {
@@ -441,8 +443,13 @@
             }
         }
 
-        // Render the current turn
         function render(turn) {
+            if (!data || !data[turn]) {
+                console.error('No data for turn:', turn); // Отладка: если данные отсутствуют
+                document.getElementById('info').innerHTML = '<div class="error">No data available for this turn.</div>';
+                return;
+            }
+
             current = turn;
             document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
 
@@ -458,7 +465,6 @@
             const item = data[turn];
             if (item.dice && item.dice.length >= 2) {
                 const [die1, die2] = item.dice;
-                // Determine dice position based on player
                 const diceY = item.player === 'black' ? 200 : 500; // Top for black, bottom for red
                 if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
                     ctx.drawImage(diceImages[die1], 370, diceY, 80, 80); // First die, larger size
@@ -470,7 +476,12 @@
 
             // Info (only move)
             let info = '';
-            if (item.moves) info += `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
+            if (item.moves && item.moves.length > 0) {
+                info += `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
+            } else {
+                info = '<div class="info-text">No moves available for this turn.</div>';
+                console.warn('No moves for turn:', turn, item); // Отладка: если moves отсутствует
+            }
             document.getElementById('info').innerHTML = info;
 
             // Hints table
@@ -481,7 +492,6 @@
                     const prob2 = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let rowClass = '';
-                    // Check if the hint move matches gnu_move
                     if (item.gnu_move && hint.move === item.gnu_move) {
                         if (index === 0) {
                             rowClass = 'hint-best'; // Green for first row
@@ -491,7 +501,6 @@
                             rowClass = 'hint-poor'; // Red for ranks 6+
                         }
                     }
-                    // Hide error column for the first row
                     const errorCell = `<td>${eq}</td>`;
                     tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td>${errorCell}</td></tr>`;
                 }
