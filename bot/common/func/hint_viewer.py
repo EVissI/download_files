@@ -201,12 +201,12 @@ def parse_backgammon_mat(content):
 
             return None
 
-        red_move = parse_side(right, "Red")
+        red_move = parse_side(left, "Red")
         if red_move:
             moves_list.append(red_move)
             previous_player_moved = "Red"
 
-        black_move = parse_side(left, "Black")
+        black_move = parse_side(right, "Black")
         if black_move:
             moves_list.append(black_move)
             previous_player_moved = "Black"
