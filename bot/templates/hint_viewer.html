@@ -415,6 +415,10 @@
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
+                // Draw position label above checkers
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText(point, x, y - 10); // Label above the stack
+
                 for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
@@ -431,6 +435,7 @@
             if (positions.bar > 0) {
                 let y = barY;
                 const dy = (player === 'black') ? 55 : -55;
+                ctx.fillText('Bar', barX - 20, y - 10); // Label for bar
                 for (let i = 0; i < Math.min(positions.bar, 6); i++) {
                     ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
@@ -444,7 +449,7 @@
             const offX = (player === 'black') ? 20 : 760;
             const offY = 400;
             if (positions.off > 0) {
-                ctx.fillText('Off:', offX, offY);
+                ctx.fillText('Off', offX, offY - 10); // Label for off
                 ctx.fillText(`${positions.off}`, offX, offY + 40);
             }
         }
