@@ -249,13 +249,19 @@ def json_to_gnubg_commands(data):
         dice = action.get("dice")
         moves = action.get("moves", [])
         act = action.get("action")
+        current_turn = action.get("turn")
 
-        # Проверяем следующий ход в рамках того же turn
+        # Проверяем, является ли текущий ход последним в текущем turn
+        is_last_in_turn = True
+        j = i + 1
+        while j < len(data) and data[j].get("turn") == current_turn:
+            is_last_in_turn = False
+            j += 1
+
+        # Проверяем следующее действие в следующем turn
         next_act = None
-        next_turn = None
-        if i + 1 < len(data):
-            next_act = data[i + 1].get("action")
-            next_turn = data[i + 1].get("turn")
+        if j < len(data):
+            next_act = data[j].get("action")
 
         if act == "skip":
             # Просто пропускаем, без команд
@@ -271,7 +277,7 @@ def json_to_gnubg_commands(data):
             if act == "take":
                 tokens.append({"cmd": "take", "type": "cmd", "target": None})
             if act == "drop":
-                tokens.append({"cmd": 'pass', "type": "cmd", "target": None})
+                tokens.append({"cmd": "pass", "type": "cmd", "target": None})
             i += 1
             continue
         elif act == "win":
@@ -289,8 +295,8 @@ def json_to_gnubg_commands(data):
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
                 move_cmds = [f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in moves]
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
-            # Добавляем roll только если следующий ход не специальное действие (double/take/drop) в том же turn
-            if not (next_act in ("double", "take", "drop") and next_turn == action["turn"]):
+
+            if is_last_in_turn and next_act != "double":
                 tokens.append({"cmd": "roll", "type": "cmd", "target": i})
             i += 1
             continue
