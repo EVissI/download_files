@@ -772,7 +772,7 @@ def process_game(game_data):
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
-    command_delay = 0.5
+    command_delay = 0
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
