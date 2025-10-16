@@ -22,7 +22,7 @@
         }
 
         h1 {
-            display: none; /* Hide the main title */
+            display: none; 
         }
 
         canvas {
@@ -279,6 +279,7 @@
 
         // Load JSON data from API
         let data = [];
+        let dataLoaded = false;
         const infoDiv = document.getElementById('info');
         const playersInfoDiv = document.getElementById('players-info');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
@@ -297,7 +298,10 @@
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
-                    render(0);
+                    dataLoaded = true;
+                    if (imagesLoaded === 9) {
+                        render(0);
+                    }
                     updateButtons();
                     infoDiv.innerHTML = ''; // Clear loading message
                 } else {
@@ -339,7 +343,7 @@
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
-            if (imagesLoaded === 9 && data.length > 0) { // Wait for all 9 images (board, checkers, 6 dice)
+            if (imagesLoaded === 9 && dataLoaded) { // Wait for all 9 images and data
                 render(current);
             }
         };
