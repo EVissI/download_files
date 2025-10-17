@@ -309,7 +309,7 @@
                     if (data[0]?.action === 'skip') {
                         current = 1;
                     }
-                    if (imagesLoaded === 9) {
+                    if (imagesLoaded === 15) {
                         render(current);
                         updateButtons();
                         infoDiv.innerHTML = '';
@@ -351,11 +351,24 @@
         const Dice6 = new Image();
         Dice6.src = '/static/Dice6.png';
 
+        const Double2 = new Image();
+        Double2.src = '/static/Double2.png';
+        const Double4 = new Image();
+        Double4.src = '/static/Double4.png';
+        const Double8 = new Image();
+        Double8.src = '/static/Double8.png';
+        const Double16 = new Image();
+        Double16.src = '/static/Double16.png';
+        const Double32 = new Image();
+        Double32.src = '/static/Double32.png';
+        const Double64 = new Image();  
+        Double64.src = '/static/Double64.png';
+
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
             console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 9 && dataLoaded) {
+            if (imagesLoaded === 15 && dataLoaded) {
                 console.log('All images and data loaded, rendering turn', current);
                 render(current);
                 updateButtons();
@@ -372,6 +385,12 @@
         Dice4.onload = checkImagesLoaded;
         Dice5.onload = checkImagesLoaded;
         Dice6.onload = checkImagesLoaded;
+        Double2.onload = checkImagesLoaded;
+        Double4.onload = checkImagesLoaded;
+        Double8.onload = checkImagesLoaded;
+        Double16.onload = checkImagesLoaded;
+        Double32.onload = checkImagesLoaded;
+        Double64.onload = checkImagesLoaded;
 
         const diceImages = {
             1: Dice1,
@@ -380,6 +399,15 @@
             4: Dice4,
             5: Dice5,
             6: Dice6
+        };
+
+        const doubleImages = {
+            2: Double2,
+            4: Double4,
+            8: Double8,
+            16: Double16,
+            32: Double32,
+            64: Double64
         };
 
         function getX(point) {
@@ -488,21 +516,30 @@
             if (item.dice && item.dice.length >= 2 && !['double', 'take'].includes(item.action)) {
                 const [d1, d2] = item.dice;
                 const diceY = 400;
-
-
                 let diceX1, diceX2;
                 if (item.player === 'Black') {
-                diceX1 = 530; // кубики справа для красных
-                diceX2 = 620;
+                    diceX1 = 530; // кубики справа для красных
+                    diceX2 = 620;
                 } else {
-                diceX1 = 130; // кубики слева для чёрных
-                diceX2 = 220;
+                    diceX1 = 130; // кубики слева для чёрных
+                    diceX2 = 220;
                 }
-
-
                 if (diceImages[d1]) ctx.drawImage(diceImages[d1], diceX1, diceY, 80, 80);
                 if (diceImages[d2]) ctx.drawImage(diceImages[d2], diceX2, diceY, 80, 80);
             }
+
+            // Draw doubling cube if item.cube exists
+            if (item.cube && doubleImages[item.cube]) {
+                const cubeY = 360; // Position above regular dice
+                let cubeX;
+                if (item.player === 'Black') {
+                    cubeX = 710; // Right side for Black
+                } else {
+                    cubeX = 40; // Left side for Red
+                }
+                ctx.drawImage(doubleImages[item.cube], cubeX, cubeY, 80, 80);
+            }
+
             let info = '';
             if (item.action === 'double') {
                 info = `<strong>Действие:</strong> Удвоение (${item.cube})`;
