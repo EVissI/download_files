@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -474,20 +474,12 @@
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && item.action !== 'double' && item.action !== 'take') {
                 const [die1, die2] = item.dice;
-                const diceY = item.player.toLowerCase() === 'black' ? 200 : 500;
-                let diceX1, diceX2;
-                if (item.player.toLowerCase() === 'black') {
-                    diceX1 = 50;
-                    diceX2 = 140;
-                } else {
-                    diceX1 = 580;
-                    diceX2 = 670;
-                }
+                const diceY = item.player === 'black' ? 200 : 500;
                 if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
-                    ctx.drawImage(diceImages[die1], diceX1, diceY, 80, 80);
+                    ctx.drawImage(diceImages[die1], 370, diceY, 80, 80);
                 }
                 if (die2 >= 1 && die2 <= 6 && diceImages[die2]) {
-                    ctx.drawImage(diceImages[die2], diceX2, diceY, 80, 80);
+                    ctx.drawImage(diceImages[die2], 460, diceY, 80, 80);
                 }
             }
 
