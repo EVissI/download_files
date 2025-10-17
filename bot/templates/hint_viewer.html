@@ -485,9 +485,9 @@
 
             let info = '';
             if (item.action === 'double') {
-                info = `<strong>Действие:</strong> Удвоение (Куб: ${item.cube})`;
+                info = `<strong>Действие:</strong> Удвоение (${item.cube})`;
             } else if (item.action === 'take') {
-                info = `<strong>Действие:</strong> Принятие удвоения`;
+                info = `<strong>Действие:</strong> Принятие `;
             } else if (item.moves && item.moves.length > 0) {
                 info = `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
                 console.log('Moves for turn:', item.moves);
@@ -513,14 +513,24 @@
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (item.gnu_move === 'Double' && hint.action_1 === bestAction1 && hint.action_2 === bestAction2) {
-                        rowClass = 'hint-best';
-                    } else if (item.action === 'take' && hint.action_2 === bestAction2) {
-                        rowClass = index === 0 ? 'hint-best' : 'hint-good';
-                    } else if (item.action === 'double' && hint.action_1 === bestAction1 && !hint.action_2) {
-                        rowClass = index === 0 ? 'hint-best' : 'hint-good';
-                    } else {
-                        rowClass = index === 0 ? 'hint-best' : (index === 1 ? 'hint-good' : 'hint-poor');
+                    if (item.gnu_move === 'Double') {
+                        if (index === 0) {
+                            rowClass = 'hint-best';
+                        } else if (index === 1) {
+                            rowClass = 'hint-good';
+                        } else {
+                            rowClass = 'hint-poor';
+                        }
+                    } else if (item.gnu_move != 'Double') {
+                        if (hint.action_2 === bestAction2) {
+                            if (index === 0) {
+                                rowClass = 'hint-best';
+                            } else if (index === 1) {
+                                rowClass = 'hint-good';
+                            } else {
+                                rowClass = 'hint-poor';
+                            }
+                        }
                     }
                     tableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${eq}</td></tr>`;
                 });
