@@ -474,7 +474,7 @@
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && item.action !== 'double' && item.action !== 'take') {
                 const [die1, die2] = item.dice;
-                const diceY = item.player === 'black' ? 200 : 500;
+                const diceY = item.player.toLowerCase() === 'black' ? 200 : 500;
                 if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
                     ctx.drawImage(diceImages[die1], 370, diceY, 80, 80);
                 }
@@ -483,11 +483,36 @@
                 }
             }
 
+            let cubeValue = 1;
+            for (let i = 0; i < turn; i++) {
+                if (data[i].action === 'double') {
+                    cubeValue = data[i].cube;
+                }
+            }
+            if (item.action === 'double') {
+                cubeValue = item.cube;
+            }
+
+            if (cubeValue > 1) {
+                let cubeX = (item.player.toLowerCase() === 'red') ? 600 : 200;
+                let cubeY = 400;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(cubeX - 40, cubeY - 40, 80, 80);
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(cubeX - 40, cubeY - 40, 80, 80);
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 40px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(cubeValue.toString(), cubeX, cubeY);
+            }
+
             let info = '';
             if (item.action === 'double') {
-                info = `<strong>Действие:</strong> Удвоение (${item.cube})`;
+                info = `<strong>Действие:</strong> Удвоение (Куб: ${item.cube})`;
             } else if (item.action === 'take') {
-                info = `<strong>Действие:</strong> Принятие `;
+                info = `<strong>Действие:</strong> Принятие удвоения`;
             } else if (item.moves && item.moves.length > 0) {
                 info = `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
                 console.log('Moves for turn:', item.moves);
@@ -501,39 +526,29 @@
                 console.log('Actual info div content:', document.getElementById('info').innerHTML);
             }, 0);
 
-            let tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
+            let tableHtml = '';
             if (item.hints && item.hints.length > 0 && item.hints[0].type === 'cube') {
-                const bestAction = item.hints[0].cubeful_equities.find(eq => eq.idx === 1);
-                const bestAction1 = bestAction.action_1;
-                const bestAction2 = bestAction.action_2;
-                (item.hints[0].cubeful_equities || []).slice(0, 3).forEach((hint, index) => {
+                tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
+                const playedGnu = item.gnu_move ? item.gnu_move.trim() : '';
+                const equities = item.hints[0].cubeful_equities || [];
+                const bestHint = equities.find(eq => eq.idx === 1);
+                const bestAction1 = bestHint ? bestHint.action_1 : null;
+                const bestAction2 = bestHint ? bestHint.action_2 : null;
+                equities.slice(0, 3).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                    let displayAction = hint.action_1;
+                    let displayAction = hint.action_1 || '-';
                     if (hint.action_2) {
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (item.gnu_move === 'Double') {
-                        if (index === 0) {
-                            rowClass = 'hint-best';
-                        } else if (index === 1) {
-                            rowClass = 'hint-good';
-                        } else {
-                            rowClass = 'hint-poor';
-                        }
-                    } else if (item.gnu_move != 'Double') {
-                        if (hint.action_2 === bestAction2) {
-                            if (index === 0) {
-                                rowClass = 'hint-best';
-                            } else if (index === 1) {
-                                rowClass = 'hint-good';
-                            } else {
-                                rowClass = 'hint-poor';
-                            }
-                        }
+                    if (item.action === 'double' && hint.action_1 === playedGnu) {
+                        rowClass = index === 0 ? 'hint-best' : (index === 1 ? 'hint-good' : 'hint-poor');
+                    } else if (item.action !== 'double' && hint.action_2 === playedGnu) {
+                        rowClass = index === 0 ? 'hint-best' : (index === 1 ? 'hint-good' : 'hint-poor');
                     }
                     tableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${eq}</td></tr>`;
                 });
+                tableHtml += '</table>';
             } else {
                 tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
                 (item.hints || []).slice(0, 3).forEach((hint, index) => {
@@ -554,8 +569,8 @@
                         tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
                     }
                 });
+                tableHtml += '</table>';
             }
-            tableHtml += '</table>';
             document.getElementById('hints').innerHTML = tableHtml;
         }
 
