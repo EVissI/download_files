@@ -284,7 +284,20 @@
                 return response.json();
             })
             .then(json => {
+                // keep only items with turn defined
                 data = json.filter(item => item.turn !== undefined);
+
+                // remove turns with empty moves unless gnu_move contains special actions
+                const isSpecial = (it) => {
+                    const gm = (it.gnu_move || '').toString().toLowerCase();
+                    if (gm.includes('double') || gm.includes('drop') || gm.includes('take')) return true;
+                    // also allow if item.action explicitly marks a special action
+                    const act = (it.action || '').toString().toLowerCase();
+                    if (act === 'double' || act === 'take' || act === 'drop') return true;
+                    return false;
+                };
+                data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0) || isSpecial(it));
+
                 if (data.length > 0) {
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
