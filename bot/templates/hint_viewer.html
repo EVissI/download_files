@@ -487,7 +487,7 @@
             if (item.action === 'double') {
                 info = `<strong>Действие:</strong> Удвоение (Куб: ${item.cube})`;
             } else if (item.action === 'take') {
-                info = `<strong>Действие:</strong> Принятие удвоения`;
+                info = `<strong>Действие:</strong> Принятие`;
             } else if (item.moves && item.moves.length > 0) {
                 info = `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
                 console.log('Moves for turn:', item.moves);
