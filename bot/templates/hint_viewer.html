@@ -485,17 +485,24 @@
             drawCheckers('black', blackImg, blackPositions);
 
             const item = data[turn];
-            if (item.dice && item.dice.length >= 2 && item.action !== 'double' && item.action !== 'take') {
-                const [die1, die2] = item.dice;
+            if (item.dice && item.dice.length >= 2 && !['double', 'take'].includes(item.action)) {
+                const [d1, d2] = item.dice;
                 const diceY = item.player === 'black' ? 200 : 500;
-                if (die1 >= 1 && die1 <= 6 && diceImages[die1]) {
-                    ctx.drawImage(diceImages[die1], 370, diceY, 80, 80);
-                }
-                if (die2 >= 1 && die2 <= 6 && diceImages[die2]) {
-                    ctx.drawImage(diceImages[die2], 460, diceY, 80, 80);
-                }
-            }
 
+
+                let diceX1, diceX2;
+                if (item.player === 'red') {
+                diceX1 = 640; // кубики справа для красных
+                diceX2 = 730;
+                } else {
+                diceX1 = 130; // кубики слева для чёрных
+                diceX2 = 220;
+                }
+
+
+                if (diceImages[d1]) ctx.drawImage(diceImages[d1], diceX1, diceY, 80, 80);
+                if (diceImages[d2]) ctx.drawImage(diceImages[d2], diceX2, diceY, 80, 80);
+            }
             let info = '';
             if (item.action === 'double') {
                 info = `<strong>Действие:</strong> Удвоение (${item.cube})`;
