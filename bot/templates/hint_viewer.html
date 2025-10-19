@@ -489,14 +489,12 @@
             if (turn === 0) {
                 redPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
                 blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
-                const currentPlayer = data[turn].player.toLowerCase();
             } else {
                 const prevTurn = turn - 1;
                 redPositions = data[prevTurn].positions['red'];
-                blackPositions = data[prevTurn].positions['black'];
-                const currentPlayer = data[prevTurn].player.toLowerCase();
-                
+                blackPositions = data[prevTurn].positions['black'];                
             }
+            const currentPlayer = data[turn].player.toLowerCase();
             drawCheckers('red', whiteImg, redPositions, currentPlayer);
             drawCheckers('black', blackImg, blackPositions, currentPlayer);
 
