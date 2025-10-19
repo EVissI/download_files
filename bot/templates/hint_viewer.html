@@ -422,7 +422,7 @@
                 let displayPoint = point;
                 if (player === 'Red') {
                     displayPoint = 25 - point; // Red sees points inverted (24 at bottom-left, 1 at top-right)
-                } else if (player === 'Black') {
+                } else if (player === 'black') {
                     displayPoint = point; // Black sees points starting from top-right (1 at top-right, 24 at bottom-left)
                 }
                 ctx.font = 'bold 18px Arial';
@@ -454,10 +454,10 @@
             }
 
             const barX = 400;
-            const barY = (player === 'Black') ? 220 : 520;
+            const barY = (player === 'black') ? 220 : 520;
             if (positions.bar > 0) {
                 let y = barY;
-                const dy = (player === 'Black') ? 55 : -55;
+                const dy = (player === 'black') ? 55 : -55;
                 ctx.fillText('Bar', barX - 20, y - 10);
                 for (let i = 0; i < Math.min(positions.bar, 6); i++) {
                     ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
@@ -468,7 +468,7 @@
                 }
             }
 
-            const offX = (player === 'Black') ? 20 : 760;
+            const offX = (player === 'black') ? 20 : 760;
             const offY = 400;
             if (positions.off > 0) {
                 ctx.fillText('Off', offX, offY - 10);
