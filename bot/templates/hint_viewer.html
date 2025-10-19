@@ -421,17 +421,17 @@
                 const dy = getDy(point);
 
                 let displayPoint = point;
-                if (player === 'Red') {
+                if (player === 'red') {
                     displayPoint = 25 - point;
                 }
                 ctx.font = 'bold 18px Arial';
                 let numberY;
                 if (point > 12) {
-                    numberY = y - 40; // Above for upper half
+                    numberY = y - 50; // Above for upper half with more padding
                 } else {
-                    numberY = y + 40; // Below for lower half
+                    numberY = y + 50; // Below for lower half with more padding
                 }
-                ctx.fillText(displayPoint, x, numberY);
+                ctx.fillText(displayPoint, x - 10, numberY); // Slightly left
             }
 
             for (let pointStr in positions) {
