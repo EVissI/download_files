@@ -577,14 +577,6 @@
                         const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
                         const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                         let move = hint.move || '-';
-                        if (currentPlayer === 'red') {
-                            move = move.split(' ').map(m => {
-                                let [from, to] = m.split('/');
-                                from = from === 'bar' ? 'bar' : (from === 'off' ? 'off' : 25 - parseInt(from));
-                                to = to === 'off' ? 'off' : 25 - parseInt(to);
-                                return `${from}/${to}`;
-                            }).join(' ');
-                        }
                         let rowClass = '';
                         if (item.gnu_move && hint.move === item.gnu_move) {
                             if (index === 0) {
