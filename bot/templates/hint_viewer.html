@@ -414,10 +414,8 @@
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#ffffff';
 
-            for (let pointStr in positions) {
-                if (pointStr === 'bar' || pointStr === 'off') continue;
-                const point = parseInt(pointStr);
-                let count = positions[pointStr];
+            // Draw position numbers for all points 1-24
+            for (let point = 1; point <= 24; point++) {
                 const x = getX(point);
                 let y = getBaseY(point);
                 const dy = getDy(point);
@@ -426,7 +424,7 @@
                 if (player === 'Red') {
                     displayPoint = 25 - point;
                 }
-                ctx.font = 'bold 16px Arial';
+                ctx.font = 'bold 18px Arial';
                 let numberY;
                 if (point > 12) {
                     numberY = y - 40; // Above for upper half
@@ -434,6 +432,15 @@
                     numberY = y + 40; // Below for lower half
                 }
                 ctx.fillText(displayPoint, x, numberY);
+            }
+
+            for (let pointStr in positions) {
+                if (pointStr === 'bar' || pointStr === 'off') continue;
+                const point = parseInt(pointStr);
+                let count = positions[pointStr];
+                const x = getX(point);
+                let y = getBaseY(point);
+                const dy = getDy(point);
 
                 for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
