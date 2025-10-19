@@ -422,7 +422,9 @@
 
                 let displayPoint = point;
                 if (player === 'Red') {
-                    displayPoint = 25 - point;
+                    displayPoint = 25 - point; 
+                } else if (player === 'Black') {
+                    displayPoint = point; 
                 }
                 ctx.font = 'bold 18px Arial';
                 let numberY;
