@@ -285,7 +285,7 @@
             })
             .then(json => {
                 data = json.filter(item => item.turn !== undefined);
-                data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0) || it.action === 'win');
+                data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0) || it.action === 'win' || it.action === 'double' || it.action === 'take');
                 
                 if (data.length > 0) {
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
@@ -403,7 +403,7 @@
         }
 
         function drawCheckers(player, img, positions, currentPlayer) {
-            ctx.font = 'bold 30px Arial'; // Единый размер шрифта
+            ctx.font = 'bold 30px Arial';
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -417,9 +417,9 @@
 
                     let displayPoint = point;
                     if (player === 'black') {
-                        displayPoint = 25 - point; 
+                        displayPoint = 25 - point; // Black sees points inverted (24 at top-right, 1 at bottom-left)
                     } else if (player === 'red') {
-                        displayPoint = point; 
+                        displayPoint = point; // Red sees points starting from bottom-left (1 at bottom-left, 24 at top-right)
                     }
                     let numberY;
                     if (point > 12) {
@@ -451,15 +451,16 @@
 
             const barX = 400;
             const barY = (player === 'black') ? 220 : 520;
-            if (positions.bar > 0) {
+            if (positions.bar && positions.bar !== 0) {
                 let y = barY;
                 const dy = (player === 'black') ? 55 : -55;
-                for (let i = 0; i < Math.min(positions.bar, 6); i++) {
+                ctx.fillText('Bar', barX, y - 10);
+                for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
                     ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
-                if (positions.bar > 6) {
+                if (Math.abs(positions.bar) > 6) {
                     const lastCheckerY = y + (5 * dy);
-                    ctx.fillText(`(${positions.bar})`, barX + 20, lastCheckerY + 5);
+                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
                 }
             }
 
@@ -491,8 +492,8 @@
                 blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
             } else {
                 const prevTurn = turn - 1;
-                redPositions = data[prevTurn].positions['red'];
-                blackPositions = data[prevTurn].positions['black'];
+                redPositions = data[turn].positions['red'];
+                blackPositions = data[turn].positions['black'];
             }
 
             const currentPlayer = data[turn].player.toLowerCase();
@@ -516,6 +517,7 @@
                 if (diceImages[d1]) ctx.drawImage(diceImages[d1], diceX1, diceY, 80, 80);
                 if (diceImages[d2]) ctx.drawImage(diceImages[d2], diceX2, diceY, 80, 80);
             }
+
             let info = '';
             if (item.action === 'double') {
                 info = `<strong>Действие:</strong> Удвоение (${item.cube})`;
@@ -581,8 +583,8 @@
                 tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
                 (item.hints || []).slice(0, 3).forEach((hint, index) => {
                     if (hint.probs && hint.probs.length >= 2) {
-                        const prob1 = hint.probs[0] ? (hint.probs[0]*100).toFixed(1) : '-';
-                        const prob2 = hint.probs[1] ? (hint.probs[1]*100).toFixed(1) : '-';
+                        const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
+                        const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
                         const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                         let move = hint.move || '-';
                         if (currentPlayer === 'red') {
