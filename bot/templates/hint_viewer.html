@@ -285,8 +285,8 @@
             })
             .then(json => {
                 data = json.filter(item => item.turn !== undefined);
-                data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0));
-
+                data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0) || it.action === 'win');
+                
                 if (data.length > 0) {
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
@@ -294,11 +294,11 @@
                     dataLoaded = true;
                     console.log('Data loaded:', data);
                     console.log('First turn data:', data[0]);
-                    console.log('First turn moves:', data[0].moves);
+                    console.log('First turn moves:', data[0]?.moves);
                     if (data[0]?.action === 'skip') {
                         current = 1;
                     }
-                    if (imagesLoaded === 15) {
+                    if (imagesLoaded === 9) {
                         render(current);
                         updateButtons();
                         infoDiv.innerHTML = '';
@@ -340,24 +340,11 @@
         const Dice6 = new Image();
         Dice6.src = '/static/Dice6.png';
 
-        const Double2 = new Image();
-        Double2.src = '/static/Double2.png';
-        const Double4 = new Image();
-        Double4.src = '/static/Double4.png';
-        const Double8 = new Image();
-        Double8.src = '/static/Double8.png';
-        const Double16 = new Image();
-        Double16.src = '/static/Double16.png';
-        const Double32 = new Image();
-        Double32.src = '/static/Dice32.png';
-        const Double64 = new Image();  
-        Double64.src = '/static/Dice64.png';
-
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
             console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 15 && dataLoaded) {
+            if (imagesLoaded === 9 && dataLoaded) {
                 console.log('All images and data loaded, rendering turn', current);
                 render(current);
                 updateButtons();
@@ -374,6 +361,14 @@
         Dice4.onload = checkImagesLoaded;
         Dice5.onload = checkImagesLoaded;
         Dice6.onload = checkImagesLoaded;
+
+        // Обработка ошибок загрузки изображений
+        [boardImg, blackImg, whiteImg, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6].forEach(img => {
+            img.onerror = () => {
+                console.error(`Failed to load image: ${img.src}`);
+                infoDiv.innerHTML = '<div class="error">Error loading game assets. Please try again later.</div>';
+            };
+        });
 
         const diceImages = {
             1: Dice1,
@@ -392,7 +387,7 @@
                 return 450 + (point - 19) * 60;
             } else if (point >= 7 && point <= 12) {
                 const baseX = 50 + (12 - point) * 60;
-                return baseX - (point === 6 ? 4 : 0);
+                return baseX - (point === 12 ? 4 : 0);
             } else if (point >= 1 && point <= 6) {
                 return 450 + (6 - point) * 60;
             }
@@ -408,7 +403,10 @@
         }
 
         function drawCheckers(player, img, positions, currentPlayer) {
+            ctx.font = 'bold 18px Arial'; // Единый размер шрифта
             ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
 
             // Draw position numbers only for the current player
             if (player === currentPlayer) {
@@ -418,19 +416,18 @@
                     const dy = getDy(point);
 
                     let displayPoint = point;
-                    if (player === 'red') {
+                    if (player === 'Red') {
                         displayPoint = 25 - point; // Red sees points inverted (24 at bottom-left, 1 at top-right)
                     } else if (player === 'black') {
                         displayPoint = point; // Black sees points starting from top-right (1 at top-right, 24 at bottom-left)
                     }
-                    ctx.font = 'bold 18px Arial';
                     let numberY;
                     if (point > 12) {
-                        numberY = y - 50; // Above for upper half with more padding
+                        numberY = y - 50; // Above for upper half
                     } else {
-                        numberY = y + 50; // Below for lower half with more padding
+                        numberY = y + 50; // Below for lower half
                     }
-                    ctx.fillText(displayPoint, x - 10, numberY); // Slightly left
+                    ctx.fillText(displayPoint, x, numberY);
                 }
             }
 
@@ -454,22 +451,22 @@
 
             const barX = 400;
             const barY = (player === 'black') ? 220 : 520;
-            if (positions.bar > 0) {
+            if (positions.bar && positions.bar !== 0) {
                 let y = barY;
                 const dy = (player === 'black') ? 55 : -55;
-                ctx.fillText('Bar', barX - 20, y - 10);
-                for (let i = 0; i < Math.min(positions.bar, 6); i++) {
+                ctx.fillText('Bar', barX, y - 10);
+                for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
                     ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
-                if (positions.bar > 6) {
+                if (Math.abs(positions.bar) > 6) {
                     const lastCheckerY = y + (5 * dy);
-                    ctx.fillText(`(${positions.bar})`, barX + 20, lastCheckerY + 5);
+                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
                 }
             }
 
             const offX = (player === 'black') ? 20 : 760;
             const offY = 400;
-            if (positions.off > 0) {
+            if (positions.off && positions.off !== 0) {
                 ctx.fillText('Off', offX, offY - 10);
                 ctx.fillText(`${positions.off}`, offX, offY + 40);
             }
@@ -494,9 +491,8 @@
                 redPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
                 blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
             } else {
-                const prevTurn = turn - 1;
-                redPositions = data[prevTurn].positions['red'];
-                blackPositions = data[prevTurn].positions['black'];
+                redPositions = data[turn].positions['red'];
+                blackPositions = data[turn].positions['black'];
             }
 
             const currentPlayer = data[turn].player.toLowerCase();
@@ -504,7 +500,7 @@
             drawCheckers('black', blackImg, blackPositions, currentPlayer);
 
             const item = data[turn];
-            if (item.dice && item.dice.length >= 2 && !['double', 'take'].includes(item.action)) {
+            if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
                 const [d1, d2] = item.dice;
                 const diceY = 400;
 
@@ -524,7 +520,7 @@
             if (item.action === 'double') {
                 info = `<strong>Действие:</strong> Удвоение (${item.cube})`;
             } else if (item.action === 'take') {
-                info = `<strong>Действие:</strong> Принятие `;
+                info = `<strong>Действие:</strong> Принятие`;
             } else if (item.action === 'win') {
                 info = `<strong>Действие:</strong> Победа (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
