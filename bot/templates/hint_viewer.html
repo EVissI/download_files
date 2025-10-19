@@ -403,7 +403,7 @@
         }
 
         function drawCheckers(player, img, positions, currentPlayer) {
-            ctx.font = 'bold 24px Arial'; // Единый размер шрифта
+            ctx.font = 'bold 30px Arial'; // Единый размер шрифта
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -451,16 +451,16 @@
 
             const barX = 400;
             const barY = (player === 'black') ? 220 : 520;
-            if (positions.bar && positions.bar !== 0) {
+            if (positions.bar > 0) {
                 let y = barY;
                 const dy = (player === 'black') ? 55 : -55;
-                ctx.fillText('Bar', barX, y - 10);
-                for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
+                ctx.fillText('Bar', barX - 20, y - 10);
+                for (let i = 0; i < Math.min(positions.bar, 6); i++) {
                     ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
-                if (Math.abs(positions.bar) > 6) {
+                if (positions.bar > 6) {
                     const lastCheckerY = y + (5 * dy);
-                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
+                    ctx.fillText(`(${positions.bar})`, barX + 20, lastCheckerY + 5);
                 }
             }
 
@@ -491,8 +491,9 @@
                 redPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
                 blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
             } else {
-                redPositions = data[turn].positions['red'];
-                blackPositions = data[turn].positions['black'];
+                const prevTurn = turn - 1;
+                redPositions = data[prevTurn].positions['red'];
+                blackPositions = data[prevTurn].positions['black'];
             }
 
             const currentPlayer = data[turn].player.toLowerCase();
