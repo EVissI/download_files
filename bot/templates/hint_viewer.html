@@ -403,7 +403,7 @@
         }
 
         function drawCheckers(player, img, positions, currentPlayer) {
-            ctx.font = 'bold 18px Arial'; // Единый размер шрифта
+            ctx.font = 'bold 24px Arial'; // Единый размер шрифта
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -416,9 +416,9 @@
                     const dy = getDy(point);
 
                     let displayPoint = point;
-                    if (player === 'red') {
+                    if (player === 'black') {
                         displayPoint = 25 - point; // Red sees points inverted (24 at bottom-left, 1 at top-right)
-                    } else if (player === 'black') {
+                    } else if (player === 'red') {
                         displayPoint = point; // Black sees points starting from top-right (1 at top-right, 24 at bottom-left)
                     }
                     let numberY;
