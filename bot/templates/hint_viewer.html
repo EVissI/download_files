@@ -374,12 +374,6 @@
         Dice4.onload = checkImagesLoaded;
         Dice5.onload = checkImagesLoaded;
         Dice6.onload = checkImagesLoaded;
-        Double2.onload = checkImagesLoaded;
-        Double4.onload = checkImagesLoaded;
-        Double8.onload = checkImagesLoaded;
-        Double16.onload = checkImagesLoaded;
-        Double32.onload = checkImagesLoaded;
-        Double64.onload = checkImagesLoaded;
 
         const diceImages = {
             1: Dice1,
@@ -414,7 +408,6 @@
         }
 
         function drawCheckers(player, img, positions, currentPlayer) {
-            ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#ffffff';
 
             // Draw position numbers only for the current player
