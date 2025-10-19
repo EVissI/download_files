@@ -581,8 +581,8 @@
                 tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
                 (item.hints || []).slice(0, 3).forEach((hint, index) => {
                     if (hint.probs && hint.probs.length >= 2) {
-                        const prob1 = hint.probs[0]*100 ? (hint.probs[0]).toFixed(1) : '-';
-                        const prob2 = hint.probs[1]*100 ? (hint.probs[1]).toFixed(1) : '-';
+                        const prob1 = hint.probs[0] ? (hint.probs[0]).toFixed(1) : '-';
+                        const prob2 = hint.probs[1] ? (hint.probs[1]).toFixed(1) : '-';
                         const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                         let move = hint.move || '-';
                         if (currentPlayer === 'red') {
