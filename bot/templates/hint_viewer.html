@@ -525,16 +525,7 @@
             } else if (item.action === 'win') {
                 info = `<strong>Действие:</strong> Победа (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
-                info = `<strong>Ход:</strong> ${item.moves.map(m => {
-                    let from = m.from;
-                    let to = m.to;
-                    if (currentPlayer === 'red') {
-                        from = from === 25 ? 'bar' : (from === 0 ? 'off' : 25 - from);
-                        to = to === 0 ? 'off' : 25 - to;
-                    }
-                    return `${from}/${to}${m.hit ? '*' : ''}`;
-                }).join(' ')}`;
-                console.log('Moves for turn:', item.moves);
+                info = `<strong>Ход:</strong> ${item.gnu_move}`;
             } else {
                 info = '<div class="info-text">No moves available for this turn.</div>';
                 console.warn('No moves for turn:', turn, item);
