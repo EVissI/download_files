@@ -287,16 +287,8 @@
                 // keep only items with turn defined
                 data = json.filter(item => item.turn !== undefined);
 
-                // remove turns with empty moves unless gnu_move contains special actions
-                const isSpecial = (it) => {
-                    const gm = (it.gnu_move || '').toString().toLowerCase();
-                    if (gm.includes('double') || gm.includes('drop') || gm.includes('take')) return true;
-                    // also allow if item.action explicitly marks a special action
-                    const act = (it.action || '').toString().toLowerCase();
-                    if (act === 'double' || act === 'take' || act === 'drop') return true;
-                    return false;
-                };
-                data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0) || isSpecial(it));
+
+                data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0));
 
                 if (data.length > 0) {
                     const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
@@ -431,11 +423,17 @@
                 const dy = getDy(point);
 
                 let displayPoint = point;
-                if (player === 'red') {
+                if (player === 'Red') {
                     displayPoint = 25 - point;
                 }
                 ctx.font = 'bold 16px Arial';
-                ctx.fillText(displayPoint, x, y - 10);
+                let numberY;
+                if (point > 12) {
+                    numberY = y - 40; // Above for upper half
+                } else {
+                    numberY = y + 40; // Below for lower half
+                }
+                ctx.fillText(displayPoint, x, numberY);
 
                 for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
