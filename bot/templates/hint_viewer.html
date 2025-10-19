@@ -490,7 +490,7 @@
                 redPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
                 blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
             } else {
-                const prevTurn = turn - 1;
+                turn = turn - 1;
                 redPositions = data[turn].positions['red'];
                 blackPositions = data[turn].positions['black'];
             }
