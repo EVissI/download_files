@@ -287,7 +287,6 @@
                 // keep only items with turn defined
                 data = json.filter(item => item.turn !== undefined);
 
-
                 data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0));
 
                 if (data.length > 0) {
@@ -422,9 +421,9 @@
 
                 let displayPoint = point;
                 if (player === 'Red') {
-                    displayPoint = 25 - point; 
+                    displayPoint = 25 - point; // Red sees points inverted (24 at bottom-left, 1 at top-right)
                 } else if (player === 'black') {
-                    displayPoint = point; 
+                    displayPoint = point; // Black sees points starting from top-right (1 at top-right, 24 at bottom-left)
                 }
                 ctx.font = 'bold 18px Arial';
                 let numberY;
@@ -509,16 +508,14 @@
                 const [d1, d2] = item.dice;
                 const diceY = 400;
 
-
                 let diceX1, diceX2;
                 if (item.player === 'Red') {
-                diceX1 = 530; // кубики справа для чёрных
-                diceX2 = 620;
+                    diceX1 = 530; // кубики справа для чёрных
+                    diceX2 = 620;
                 } else {
-                diceX1 = 130; // кубики слева для красных
-                diceX2 = 220;
+                    diceX1 = 130; // кубики слева для красных
+                    diceX2 = 220;
                 }
-
 
                 if (diceImages[d1]) ctx.drawImage(diceImages[d1], diceX1, diceY, 80, 80);
                 if (diceImages[d2]) ctx.drawImage(diceImages[d2], diceX2, diceY, 80, 80);
