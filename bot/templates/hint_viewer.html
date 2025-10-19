@@ -284,9 +284,7 @@
                 return response.json();
             })
             .then(json => {
-                // keep only items with turn defined
                 data = json.filter(item => item.turn !== undefined);
-
                 data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0));
 
                 if (data.length > 0) {
@@ -300,7 +298,7 @@
                     if (data[0]?.action === 'skip') {
                         current = 1;
                     }
-                    if (imagesLoaded === 9) {
+                    if (imagesLoaded === 15) {
                         render(current);
                         updateButtons();
                         infoDiv.innerHTML = '';
@@ -376,6 +374,12 @@
         Dice4.onload = checkImagesLoaded;
         Dice5.onload = checkImagesLoaded;
         Dice6.onload = checkImagesLoaded;
+        Double2.onload = checkImagesLoaded;
+        Double4.onload = checkImagesLoaded;
+        Double8.onload = checkImagesLoaded;
+        Double16.onload = checkImagesLoaded;
+        Double32.onload = checkImagesLoaded;
+        Double64.onload = checkImagesLoaded;
 
         const diceImages = {
             1: Dice1,
@@ -409,30 +413,32 @@
             return (point > 12) ? 55 : -55; 
         }
 
-        function drawCheckers(player, img, positions) {
+        function drawCheckers(player, img, positions, currentPlayer) {
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#ffffff';
 
-            // Draw position numbers for all points 1-24
-            for (let point = 1; point <= 24; point++) {
-                const x = getX(point);
-                let y = getBaseY(point);
-                const dy = getDy(point);
+            // Draw position numbers only for the current player
+            if (player === currentPlayer) {
+                for (let point = 1; point <= 24; point++) {
+                    const x = getX(point);
+                    let y = getBaseY(point);
+                    const dy = getDy(point);
 
-                let displayPoint = point;
-                if (player === 'Red') {
-                    displayPoint = 25 - point; // Red sees points inverted (24 at bottom-left, 1 at top-right)
-                } else if (player === 'black') {
-                    displayPoint = point; // Black sees points starting from top-right (1 at top-right, 24 at bottom-left)
+                    let displayPoint = point;
+                    if (player === 'red') {
+                        displayPoint = 25 - point; // Red sees points inverted (24 at bottom-left, 1 at top-right)
+                    } else if (player === 'black') {
+                        displayPoint = point; // Black sees points starting from top-right (1 at top-right, 24 at bottom-left)
+                    }
+                    ctx.font = 'bold 18px Arial';
+                    let numberY;
+                    if (point > 12) {
+                        numberY = y - 50; // Above for upper half with more padding
+                    } else {
+                        numberY = y + 50; // Below for lower half with more padding
+                    }
+                    ctx.fillText(displayPoint, x - 10, numberY); // Slightly left
                 }
-                ctx.font = 'bold 18px Arial';
-                let numberY;
-                if (point > 12) {
-                    numberY = y - 50; // Above for upper half with more padding
-                } else {
-                    numberY = y + 50; // Below for lower half with more padding
-                }
-                ctx.fillText(displayPoint, x - 10, numberY); // Slightly left
             }
 
             for (let pointStr in positions) {
@@ -500,8 +506,9 @@
                 blackPositions = data[prevTurn].positions['black'];
             }
 
-            drawCheckers('red', whiteImg, redPositions);
-            drawCheckers('black', blackImg, blackPositions);
+            const currentPlayer = data[turn].player.toLowerCase();
+            drawCheckers('red', whiteImg, redPositions, currentPlayer);
+            drawCheckers('black', blackImg, blackPositions, currentPlayer);
 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take'].includes(item.action)) {
@@ -510,10 +517,10 @@
 
                 let diceX1, diceX2;
                 if (item.player === 'Red') {
-                    diceX1 = 530; // кубики справа для чёрных
+                    diceX1 = 530; // кубики справа для красных
                     diceX2 = 620;
                 } else {
-                    diceX1 = 130; // кубики слева для красных
+                    diceX1 = 130; // кубики слева для черных
                     diceX2 = 220;
                 }
 
@@ -525,8 +532,18 @@
                 info = `<strong>Действие:</strong> Удвоение (${item.cube})`;
             } else if (item.action === 'take') {
                 info = `<strong>Действие:</strong> Принятие `;
+            } else if (item.action === 'win') {
+                info = `<strong>Действие:</strong> Победа (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
-                info = `<strong>Ход:</strong> ${item.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ')}`;
+                info = `<strong>Ход:</strong> ${item.moves.map(m => {
+                    let from = m.from;
+                    let to = m.to;
+                    if (currentPlayer === 'red') {
+                        from = from === 25 ? 'bar' : (from === 0 ? 'off' : 25 - from);
+                        to = to === 0 ? 'off' : 25 - to;
+                    }
+                    return `${from}/${to}${m.hit ? '*' : ''}`;
+                }).join(' ')}`;
                 console.log('Moves for turn:', item.moves);
             } else {
                 info = '<div class="info-text">No moves available for this turn.</div>';
@@ -558,7 +575,7 @@
                         } else {
                             rowClass = 'hint-poor';
                         }
-                    } else if (item.gnu_move != 'Double') {
+                    } else if (item.gnu_move !== 'Double') {
                         if (hint.action_2 === bestAction2) {
                             if (index === 0) {
                                 rowClass = 'hint-best';
@@ -575,9 +592,18 @@
                 tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
                 (item.hints || []).slice(0, 3).forEach((hint, index) => {
                     if (hint.probs && hint.probs.length >= 2) {
-                        const prob1 = hint.probs[0] ? hint.probs[0].toFixed(3) : '-';
-                        const prob2 = hint.probs[1] ? hint.probs[1].toFixed(3) : '-';
+                        const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
+                        const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
                         const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                        let move = hint.move || '-';
+                        if (currentPlayer === 'red') {
+                            move = move.split(' ').map(m => {
+                                let [from, to] = m.split('/');
+                                from = from === 'bar' ? 'bar' : (from === 'off' ? 'off' : 25 - parseInt(from));
+                                to = to === 'off' ? 'off' : 25 - parseInt(to);
+                                return `${from}/${to}`;
+                            }).join(' ');
+                        }
                         let rowClass = '';
                         if (item.gnu_move && hint.move === item.gnu_move) {
                             if (index === 0) {
@@ -588,7 +614,7 @@
                                 rowClass = 'hint-poor';
                             }
                         }
-                        tableHtml += `<tr class="${rowClass}"><td>${hint.move || '-'}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
+                        tableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
                     }
                 });
             }
