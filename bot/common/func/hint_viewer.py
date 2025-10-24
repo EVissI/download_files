@@ -680,101 +680,68 @@ def convert_moves_to_gnu(moves_list):
     logger.debug(f"Converted to GNU: {final}")
     return final or None
 
-# class BackgammonBoard:
-#     def __init__(self):
-#         self.board = [0] * 26
-#         # Red positions (positive)
-#         self.board[24] = 2
-#         self.board[13] = 5
-#         self.board[8] = 3
-#         self.board[6] = 5
-#         # Black positions (negative)
-#         self.board[1] = -2
-#         self.board[12] = -5
-#         self.board[17] = -3
-#         self.board[19] = -5
-#         self.off_red = 0
-#         self.off_black = 0
+class BackgammonPositionTracker:
+    def __init__(self):
+        # начальные позиции
+        self.start_positions = {
+            "red": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
+            "black": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
+        }
+        self.positions = copy.deepcopy(self.start_positions)
 
-#     def _get_fixed_point(self, p, player):
-#         if player == "Red":
-#             if p == 25:
-#                 return 0  # Red bar
-#             elif p == 0:
-#                 return None  # bear off
-#             else:
-#                 return p
-#         else:  # Black
-#             if p == 25:
-#                 return 25  # Black bar
-#             elif p == 0:
-#                 return None  # bear off
-#             else:
-#                 return 25 - p
+    def invert_point(self, point: int) -> int:
+        """Инвертирует номер пункта для черных"""
+        if point in (0, 25):
+            return point
+        return 25 - point
 
-#     def apply_move(self, player, fr, to, hit):
-#         f_fixed = self._get_fixed_point(fr, player)
-#         t_fixed = self._get_fixed_point(to, player)
+    def apply_move(self, player: str, move: dict):
+        """Применяет один ход"""
+        fr = move["from"]
+        to = move["to"]
+        hit = move.get("hit", False)
 
-#         if f_fixed is None:
-#             raise ValueError("Cannot move from bear off")
+        # для черных инвертируем точки
+        if player.lower() == "black":
+            fr = self.invert_point(fr)
+            to = self.invert_point(to)
 
-#         # Determine signs and bars
-#         if player == "Red":
-#             sign = 1
-#             bar_own = 0
-#             bar_opp = 25
-#         else:
-#             sign = -1
-#             bar_own = 25
-#             bar_opp = 0
+        opp = "red" if player.lower() == "black" else "black"
 
-#         # Remove from from
-#         if f_fixed == bar_own:
-#             self.board[bar_own] -= 1
-#         else:
-#             self.board[f_fixed] -= sign
+        # убираем шашку с from
+        self.positions[player.lower()][fr] = self.positions[player.lower()].get(fr, 0) - 1
+        if self.positions[player.lower()][fr] <= 0:
+            self.positions[player.lower()].pop(fr, None)
 
-#         # Add to to
-#         if t_fixed is None:
-#             # Bear off
-#             if player == "Red":
-#                 self.off_red += 1
-#             else:
-#                 self.off_black += 1
-#         else:
-#             # Check for hit
-#             if self.board[t_fixed] == -sign:  # single opponent
-#                 self.board[t_fixed] = 0
-#                 self.board[bar_opp] += 1  # opponent to bar
-#             self.board[t_fixed] += sign
+        # обработка хита
+        if hit and to not in ("off", 0):
+            if self.positions[opp].get(to, 0) > 0:
+                self.positions[opp][to] -= 1
+                if self.positions[opp][to] == 0:
+                    self.positions[opp].pop(to)
+                self.positions[opp]["bar"] = self.positions[opp].get("bar", 0) + 1
 
-#     def get_positions(self):
-#         red_pos = {"bar": self.board[0], "off": self.off_red}
-#         black_pos = {"bar": self.board[25], "off": self.off_black}
-#         for i in range(1, 25):
-#             if self.board[i] > 0:
-#                 red_pos[i] = self.board[i]
-#             elif self.board[i] < 0:
-#                 black_pos[i] = -self.board[i]
-#         return {"red": red_pos, "black": black_pos}
+        # добавляем шашку в to
+        key_to = "off" if to == 0 else to
+        self.positions[player.lower()][key_to] = self.positions[player.lower()].get(key_to, 0) + 1
 
-# def process_game(game_data):
-#     board = BackgammonBoard()
-#     augmented = []
-#     for entry in game_data:
-#         augmented_entry = copy.deepcopy(entry)
-#         if "moves" in entry:
-#             for move in entry["moves"]:
-#                 board.apply_move(entry["player"], move["from"], move["to"], move["hit"])
-#         if (
-#             "positions" not in augmented_entry
-#         ):  # For non-move entries like double, takes, win
-#             augmented_entry["positions"] = board.get_positions()
-#         else:
-#             augmented_entry["positions"] = board.get_positions()
-#         augmented.append(augmented_entry)
-#     return augmented
+    def process_game(self, game_data: list):
+        """Добавляет позиции в каждый ход"""
+        self.positions = copy.deepcopy(self.start_positions)
+        output = []
+
+        for move_entry in game_data:
+            entry = copy.deepcopy(move_entry)
+
+            if "moves" in move_entry:
+                for mv in move_entry["moves"]:
+                    self.apply_move(move_entry["player"], mv)
+
+            # сохраняем копию позиций после хода
+            entry["positions"] = copy.deepcopy(self.positions)
+            output.append(entry)
+
+        return output
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
@@ -787,29 +754,30 @@ def process_mat_file(input_file, output_file):
         red_player, black_player = extract_player_names(content)
 
         parsed_moves = parse_backgammon_mat(content)
-        # aug = process_game(parsed_moves)
+        tracker = BackgammonPositionTracker()
+        aug = tracker.process_game(parsed_moves)
 
         # Add player names to the output
-        for entry in parsed_moves:
+        for entry in aug:
             if entry.get("player") == "Red":
                 entry["player_name"] = red_player
             elif entry.get("player") == "Black":
                 entry["player_name"] = black_player
 
         # Convert moves to GNU format
-        for entry in parsed_moves:
+        for entry in aug:
             if "moves" in entry:
                 entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
 
         with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(parsed_moves, f, indent=2, ensure_ascii=False)
+            json.dump(aug, f, indent=2, ensure_ascii=False)
 
         # генерируем токены команд
-        gnubg_tokens = json_to_gnubg_commands(parsed_moves)
+        gnubg_tokens = json_to_gnubg_commands(aug)
         logger.info([t["cmd"] for t in gnubg_tokens])
 
         # Инициализируем поле для подсказок в каждой записи
-        for entry in parsed_moves:
+        for entry in aug:
             entry.setdefault("hints", [])
 
         child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
@@ -857,17 +825,17 @@ def process_mat_file(input_file, output_file):
                     hints = parse_hint_output(out)
                     if hints:
                         for h in hints:
-                            parsed_moves[target_idx]["hints"].append(h)
+                            aug[target_idx]["hints"].append(h)
                     else:
                         logger.debug(
                             "No hints parsed for target %s, raw output length=%d",
                             target_idx,
                             len(out),
                         )
-                        parsed_moves[target_idx]["hints"].append({"raw": out})
+                        aug[target_idx]["hints"].append({"raw": out})
 
             # Compare gnu_move with the first hint's move
-            for entry in parsed_moves:
+            for entry in aug:
                 if "gnu_move" in entry and entry.get("hints"):
                     # Find the first hint (idx == 1)
                     first_hint = next((hint for hint in entry["hints"] if hint.get("idx") == 1 and hint.get("type") == "move"), None)
@@ -922,7 +890,7 @@ def process_mat_file(input_file, output_file):
 
         try:
             with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(parsed_moves, f, indent=2, ensure_ascii=False)
+                json.dump(aug, f, indent=2, ensure_ascii=False)
             logger.info("Updated %s with hint data", output_file)
         except Exception:
             logger.exception("Failed to write augmented json with hints")
