@@ -34,7 +34,7 @@ async def save_file_to_yandex_disk(
                 if not any(item["name"] == player for item in contents):
                     await client.mkdir(players_path)
                     logger.info(f"Создано: {players_path}")
-            except yadisk.YaDiskError as e:
+            except YaDiskError as e:
                 logger.error(f"Ошибка при проверке {base_path}: {e}")
                 raise
 
@@ -44,7 +44,7 @@ async def save_file_to_yandex_disk(
                 if not any(item["name"] == date_folder for item in contents):
                     await client.mkdir(date_path)
                     logger.info(f"Создано: {date_path}")
-            except yadisk.YaDiskError as e:
+            except YaDiskError as e:
                 logger.error(f"Ошибка при проверке {players_path}: {e}")
                 raise
 
@@ -54,10 +54,10 @@ async def save_file_to_yandex_disk(
                     await client.upload(file_path, remote_path, overwrite=True)
                     logger.info(f"Файл {file_path} успешно сохранён в {remote_path} ✅")
                     break
-                except yadisk.PathExistsError:
+                except PathExistsError:
                     logger.info(f"Файл уже существует в {remote_path}, перезаписан ✅")
                     break
-                except (yadisk.YaDiskError, ConnectionError, OSError) as e:
+                except (YaDiskError, ConnectionError, OSError) as e:
                     if attempt == max_retries - 1:
                         logger.error(
                             f"Ошибка при сохранении после {max_retries} попыток: {e} ❌"
