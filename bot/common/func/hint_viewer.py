@@ -680,101 +680,101 @@ def convert_moves_to_gnu(moves_list):
     logger.debug(f"Converted to GNU: {final}")
     return final or None
 
-class BackgammonBoard:
-    def __init__(self):
-        self.board = [0] * 26
-        # Red positions (positive)
-        self.board[24] = 2
-        self.board[13] = 5
-        self.board[8] = 3
-        self.board[6] = 5
-        # Black positions (negative)
-        self.board[1] = -2
-        self.board[12] = -5
-        self.board[17] = -3
-        self.board[19] = -5
-        self.off_red = 0
-        self.off_black = 0
+# class BackgammonBoard:
+#     def __init__(self):
+#         self.board = [0] * 26
+#         # Red positions (positive)
+#         self.board[24] = 2
+#         self.board[13] = 5
+#         self.board[8] = 3
+#         self.board[6] = 5
+#         # Black positions (negative)
+#         self.board[1] = -2
+#         self.board[12] = -5
+#         self.board[17] = -3
+#         self.board[19] = -5
+#         self.off_red = 0
+#         self.off_black = 0
 
-    def _get_fixed_point(self, p, player):
-        if player == "Red":
-            if p == 25:
-                return 0  # Red bar
-            elif p == 0:
-                return None  # bear off
-            else:
-                return p
-        else:  # Black
-            if p == 25:
-                return 25  # Black bar
-            elif p == 0:
-                return None  # bear off
-            else:
-                return 25 - p
+#     def _get_fixed_point(self, p, player):
+#         if player == "Red":
+#             if p == 25:
+#                 return 0  # Red bar
+#             elif p == 0:
+#                 return None  # bear off
+#             else:
+#                 return p
+#         else:  # Black
+#             if p == 25:
+#                 return 25  # Black bar
+#             elif p == 0:
+#                 return None  # bear off
+#             else:
+#                 return 25 - p
 
-    def apply_move(self, player, fr, to, hit):
-        f_fixed = self._get_fixed_point(fr, player)
-        t_fixed = self._get_fixed_point(to, player)
+#     def apply_move(self, player, fr, to, hit):
+#         f_fixed = self._get_fixed_point(fr, player)
+#         t_fixed = self._get_fixed_point(to, player)
 
-        if f_fixed is None:
-            raise ValueError("Cannot move from bear off")
+#         if f_fixed is None:
+#             raise ValueError("Cannot move from bear off")
 
-        # Determine signs and bars
-        if player == "Red":
-            sign = 1
-            bar_own = 0
-            bar_opp = 25
-        else:
-            sign = -1
-            bar_own = 25
-            bar_opp = 0
+#         # Determine signs and bars
+#         if player == "Red":
+#             sign = 1
+#             bar_own = 0
+#             bar_opp = 25
+#         else:
+#             sign = -1
+#             bar_own = 25
+#             bar_opp = 0
 
-        # Remove from from
-        if f_fixed == bar_own:
-            self.board[bar_own] -= 1
-        else:
-            self.board[f_fixed] -= sign
+#         # Remove from from
+#         if f_fixed == bar_own:
+#             self.board[bar_own] -= 1
+#         else:
+#             self.board[f_fixed] -= sign
 
-        # Add to to
-        if t_fixed is None:
-            # Bear off
-            if player == "Red":
-                self.off_red += 1
-            else:
-                self.off_black += 1
-        else:
-            # Check for hit
-            if self.board[t_fixed] == -sign:  # single opponent
-                self.board[t_fixed] = 0
-                self.board[bar_opp] += 1  # opponent to bar
-            self.board[t_fixed] += sign
+#         # Add to to
+#         if t_fixed is None:
+#             # Bear off
+#             if player == "Red":
+#                 self.off_red += 1
+#             else:
+#                 self.off_black += 1
+#         else:
+#             # Check for hit
+#             if self.board[t_fixed] == -sign:  # single opponent
+#                 self.board[t_fixed] = 0
+#                 self.board[bar_opp] += 1  # opponent to bar
+#             self.board[t_fixed] += sign
 
-    def get_positions(self):
-        red_pos = {"bar": self.board[0], "off": self.off_red}
-        black_pos = {"bar": self.board[25], "off": self.off_black}
-        for i in range(1, 25):
-            if self.board[i] > 0:
-                red_pos[i] = self.board[i]
-            elif self.board[i] < 0:
-                black_pos[i] = -self.board[i]
-        return {"red": red_pos, "black": black_pos}
+#     def get_positions(self):
+#         red_pos = {"bar": self.board[0], "off": self.off_red}
+#         black_pos = {"bar": self.board[25], "off": self.off_black}
+#         for i in range(1, 25):
+#             if self.board[i] > 0:
+#                 red_pos[i] = self.board[i]
+#             elif self.board[i] < 0:
+#                 black_pos[i] = -self.board[i]
+#         return {"red": red_pos, "black": black_pos}
 
-def process_game(game_data):
-    board = BackgammonBoard()
-    augmented = []
-    for entry in game_data:
-        augmented_entry = copy.deepcopy(entry)
-        if "moves" in entry:
-            for move in entry["moves"]:
-                board.apply_move(entry["player"], move["from"], move["to"], move["hit"])
-        if (
-            "positions" not in augmented_entry
-        ):  # For non-move entries like double, takes, win
-            augmented_entry["positions"] = board.get_positions()
-        else:
-            augmented_entry["positions"] = board.get_positions()
-        augmented.append(augmented_entry)
-    return augmented
+# def process_game(game_data):
+#     board = BackgammonBoard()
+#     augmented = []
+#     for entry in game_data:
+#         augmented_entry = copy.deepcopy(entry)
+#         if "moves" in entry:
+#             for move in entry["moves"]:
+#                 board.apply_move(entry["player"], move["from"], move["to"], move["hit"])
+#         if (
+#             "positions" not in augmented_entry
+#         ):  # For non-move entries like double, takes, win
+#             augmented_entry["positions"] = board.get_positions()
+#         else:
+#             augmented_entry["positions"] = board.get_positions()
+#         augmented.append(augmented_entry)
+#     return augmented
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
@@ -787,29 +787,29 @@ def process_mat_file(input_file, output_file):
         red_player, black_player = extract_player_names(content)
 
         parsed_moves = parse_backgammon_mat(content)
-        aug = process_game(parsed_moves)
+        # aug = process_game(parsed_moves)
 
         # Add player names to the output
-        for entry in aug:
+        for entry in parsed_moves:
             if entry.get("player") == "Red":
                 entry["player_name"] = red_player
             elif entry.get("player") == "Black":
                 entry["player_name"] = black_player
 
         # Convert moves to GNU format
-        for entry in aug:
+        for entry in parsed_moves:
             if "moves" in entry:
                 entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
 
         with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(aug, f, indent=2, ensure_ascii=False)
+            json.dump(parsed_moves, f, indent=2, ensure_ascii=False)
 
         # генерируем токены команд
-        gnubg_tokens = json_to_gnubg_commands(aug)
+        gnubg_tokens = json_to_gnubg_commands(parsed_moves)
         logger.info([t["cmd"] for t in gnubg_tokens])
 
         # Инициализируем поле для подсказок в каждой записи
-        for entry in aug:
+        for entry in parsed_moves:
             entry.setdefault("hints", [])
 
         child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
@@ -857,17 +857,17 @@ def process_mat_file(input_file, output_file):
                     hints = parse_hint_output(out)
                     if hints:
                         for h in hints:
-                            aug[target_idx]["hints"].append(h)
+                            parsed_moves[target_idx]["hints"].append(h)
                     else:
                         logger.debug(
                             "No hints parsed for target %s, raw output length=%d",
                             target_idx,
                             len(out),
                         )
-                        aug[target_idx]["hints"].append({"raw": out})
+                        parsed_moves[target_idx]["hints"].append({"raw": out})
 
             # Compare gnu_move with the first hint's move
-            for entry in aug:
+            for entry in parsed_moves:
                 if "gnu_move" in entry and entry.get("hints"):
                     # Find the first hint (idx == 1)
                     first_hint = next((hint for hint in entry["hints"] if hint.get("idx") == 1 and hint.get("type") == "move"), None)
@@ -922,7 +922,7 @@ def process_mat_file(input_file, output_file):
 
         try:
             with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(aug, f, indent=2, ensure_ascii=False)
+                json.dump(parsed_moves, f, indent=2, ensure_ascii=False)
             logger.info("Updated %s with hint data", output_file)
         except Exception:
             logger.exception("Failed to write augmented json with hints")
