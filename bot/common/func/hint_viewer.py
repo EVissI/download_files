@@ -681,148 +681,97 @@ def convert_moves_to_gnu(moves_list):
     return final or None
 
 class BackgammonPositionTracker:
-    """
-    Трекер позиций в классических нардах.
-    - Начальная позиция соответствует стандарту (2/13/8/6 for Red и mirror for Black).
-    - Позиции хранятся как dict: keys are ints for points, and strings 'bar' and 'off'.
-    """
-
-    def __init__(self, start_positions: dict = None):
-        if start_positions is None:
-            # default standard starting position (Red moves from 24->1, Black mirrored)
-            self.start_positions = {
-                "red": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
-                "black": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
-            }
-        else:
-            self.start_positions = copy.deepcopy(start_positions)
+    def __init__(self):
+        self.start_positions = {
+            "red": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
+            "black": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
+        }
         self.reset()
 
     def reset(self):
         self.positions = copy.deepcopy(self.start_positions)
+        self.current_player = "red"  # красные начинают
 
     @staticmethod
     def invert_point(point: int) -> int:
-        """
-        Инвертирует нумерацию пункта для черных.
-        0 -> 0 (off), 25 -> 25 (bar)
-        1..24 -> 25 - n
-        """
         if point in (0, 25):
             return point
-        return 25 - int(point)
+        return 25 - point
 
-    def _key_for_point(self, point: int):
-        """Возвращаем ключ для positions dict: 'off' для 0, 'bar' для 25, иначе int"""
-        if point == 0:
+    def _key(self, n):
+        if n == 0:
             return "off"
-        if point == 25:
+        if n == 25:
             return "bar"
-        return int(point)
+        return n
 
-    def _dec_counter(self, side: str, key):
-        """Уменьшает счётчик на key, защищаясь от отрицательных значений."""
-        cur = self.positions[side].get(key, 0)
-        if cur <= 0:
-            logger.warning("Trying to remove checker from empty point: %s %s", side, key)
-            # не делаем отрицательных значений — просто оставляем 0
-            self.positions[side][key] = 0
-            return
-        if cur == 1:
-            # удаляем ключ чтобы не засорять, но оставляем 'bar'/'off' даже если 0
-            if key in ("bar", "off"):
-                self.positions[side][key] = 0
+    def _dec(self, side, k):
+        cur = self.positions[side].get(k, 0)
+        if cur > 1:
+            self.positions[side][k] = cur - 1
+        elif cur == 1:
+            if k in ("bar", "off"):
+                self.positions[side][k] = 0
             else:
-                self.positions[side].pop(key, None)
+                self.positions[side].pop(k)
         else:
-            self.positions[side][key] = cur - 1
+            logger.debug("warning: removing empty point %s %s", side, k)
 
-    def _inc_counter(self, side: str, key):
-        cur = self.positions[side].get(key, 0)
-        self.positions[side][key] = cur + 1
+    def _inc(self, side, k):
+        self.positions[side][k] = self.positions[side].get(k, 0) + 1
 
-    def apply_single_move(self, player: str, move: dict):
-        """
-        Применяет один атомарный перемещ (с полями from, to, hit).
-        Не вызывает изменений, если move пустой.
-        player: строка 'Red' или 'Black' (в любом регистре).
-        """
-        if not move:
-            return
+    def apply_move(self, player, move):
+        fr, to, hit = move.get("from"), move.get("to"), move.get("hit", False)
+        if player == "black":
+            fr = self.invert_point(fr)
+            to = self.invert_point(to)
 
-        player_norm = player.lower()
-        opp = "red" if player_norm == "black" else "black"
+        key_fr, key_to = self._key(fr), self._key(to)
+        opp = "red" if player == "black" else "black"
 
-        fr = move.get("from")
-        to = move.get("to")
-        hit = bool(move.get("hit", False))
+        self._dec(player, key_fr)
 
-        # normalize special tokens (some sources may use 'bar'/'off' instead of ints)
-        # our input uses ints: 25 for bar, 0 for off
-        # for Black we invert points
-        if player_norm == "black":
-            # invert only if numeric (0 and 25 preserved)
-            fr = self.invert_point(fr) if isinstance(fr, int) else fr
-            to = self.invert_point(to) if isinstance(to, int) else to
-
-        key_fr = self._key_for_point(fr)
-        key_to = self._key_for_point(to)
-
-        # Убрать шашку с from (если from == 'off' — это некорректно, просто логируем)
-        if key_fr == "off":
-            logger.warning("Move from 'off' encountered: %s", move)
-        else:
-            # если from == 'bar' или число — уменьшаем
-            self._dec_counter(player_norm, key_fr)
-
-        # Если есть хит — перемещаем оппонента шашку на bar
-        # но хит имеет смысл только если to != off (0)
         if hit and key_to != "off":
-            # Если на target у оппонента есть шашки — уводим одну на bar
-            opp_count_at_to = self.positions[opp].get(key_to, 0)
-            if opp_count_at_to > 0:
-                # уменьшить у оппонента на месте 'to'
-                self._dec_counter(opp, key_to)
-                # увеличить bar у оппонента
-                self._inc_counter(opp, "bar")
+            if self.positions[opp].get(key_to, 0) > 0:
+                self._dec(opp, key_to)
+                self._inc(opp, "bar")
 
-        # Положить шашку на to (если to == off — увеличиваем 'off')
-        self._inc_counter(player_norm, key_to)
+        self._inc(player, key_to)
 
-    def process_game(self, game_data: list):
-        """
-        Пройтись по списку записей (game_data), применять реальные moves
-        и в каждой записи дописать snapshot позиций 'positions' (deepcopy).
-        Обрабатывает плавно записи без moves (double,take,drop,skip) — позиции не меняются.
-        """
+    def process_game(self, data: list):
         self.reset()
-        out = []
-        for entry in game_data:
+        result = []
+
+        for entry in data:
             e = copy.deepcopy(entry)
+            action = e.get("action")
+            player = e.get("player", self.current_player).lower()
 
-            # Если запись содержит moves и moves непустые — применяем их последовательно
-            moves = entry.get("moves")
-            if moves and isinstance(moves, list) and len(moves) > 0:
-                # иногда в одном entry идут несколько атомарных moves (например дабл дабл-чек)
-                for mv in moves:
-                    # защитимся от недокументированных форматов mv
-                    if not isinstance(mv, dict):
-                        continue
-                    # ожидаем keys 'from','to','hit'
-                    self.apply_single_move(entry.get("player", "Red"), mv)
+            # обработка удвоений и ответов
+            if action:
+                act = action.lower()
+                if act == "double":
+                    # право хода не меняется
+                    pass
+                elif act in ("take", "drop"):
+                    # право хода переходит к другому
+                    self.current_player = "black" if self.current_player == "red" else "red"
+                e["positions"] = copy.deepcopy(self.positions)
+                result.append(e)
+                continue
 
-            # Для записей без moves (double/take/skip и т.п.) — просто не меняем board.
-            # В любом случае добавляем snapshot текущих позиций.
-            e["positions"] = self.snapshot_positions()
-            out.append(e)
-        return out
+            # обработка обычных ходов
+            moves = e.get("moves")
+            if moves:
+                for m in moves:
+                    self.apply_move(player, m)
 
-    def snapshot_positions(self):
-        """
-        Возвращает deepcopy позиций в формате удобном для JSON:
-        - keys: 'bar','off', and numeric points as ints
-        """
-        return copy.deepcopy(self.positions)
+            # после обычного хода — передаём очередь
+            self.current_player = "black" if player == "red" else "red"
+            e["positions"] = copy.deepcopy(self.positions)
+            result.append(e)
+
+        return result
 
 def process_mat_file(input_file, output_file):
     temp_script = random_filename()
