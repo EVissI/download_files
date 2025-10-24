@@ -49,7 +49,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         return
 
     # Скачиваем оригинальный .mat в папку files/
-    game_id = random_filename(ext=None)
+    game_id = random_filename(ext='')
     mat_path = f"files/{fname}"
     json_path = f"files/{game_id}.json"
 

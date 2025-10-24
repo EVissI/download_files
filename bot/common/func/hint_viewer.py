@@ -67,13 +67,13 @@ def parse_backgammon_mat(content):
 
                 if left:
                     red_part = left
-                    double_player = "Black"
-                    red_move = parse_side(red_part, "Red") 
+                    double_player = "Red"
+                    red_move = parse_side(red_part, "Black") 
                     if red_move:
                         moves_list.append(red_move)
-                        previous_player_moved = "Red"
+                        previous_player_moved = "Black"
                 else:
-                    double_player = "Red"
+                    double_player = "Black"
 
                 moves_list.append({"turn": turn, "player": double_player, "action": "double", "cube": value, "gnu_move": " Double"})
 
@@ -82,7 +82,7 @@ def parse_backgammon_mat(content):
                         response = 'take'
                     elif response in ['drop', 'drops']:
                         response = 'drop'
-                    response_player = "Red" if double_player == "Black" else "Black"
+                    response_player = "Black" if double_player == "Red" else "Red"
                     gnu_move = "take" if response == 'take' else 'pass'
                     moves_list.append({"turn": turn, "player": response_player, "action": response, "cube": value, "gnu_move": gnu_move})
 
