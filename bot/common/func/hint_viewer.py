@@ -681,29 +681,44 @@ def convert_moves_to_gnu(moves_list):
     return final or None
 
 class BackgammonPositionTracker:
-    def __init__(self):
+    def __init__(self, upper_player: str, lower_player: str):
+        """
+        upper_player — ник верхнего игрока (визуально сверху)
+        lower_player — ник нижнего игрока (визуально снизу)
+        Цвет шашек остаётся фиксированным:
+          red  = верхний игрок
+          black = нижний игрок
+        """
+        self.upper_name = upper_player.lower().strip()
+        self.lower_name = lower_player.lower().strip()
+
+        # классическая стартовая позиция
         self.start_positions = {
             "red": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
             "black": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
         }
-        self.reset()
+
+        self.positions = copy.deepcopy(self.start_positions)
+        self.current_player = "red"  # красные начинают
+        self.flipped = False  # доска в нормальной ориентации
+
+        # если верхний игрок не "red" (то есть чёрный) — переворачиваем
+        if "black" in self.upper_name.lower():
+            self._flip_board()
 
     def reset(self):
         self.positions = copy.deepcopy(self.start_positions)
-        self.current_player = "red"  # красные начинают
+        self.current_player = "red"
 
     @staticmethod
     def invert_point(point: int) -> int:
+        """Зеркалит точку (1↔24, 2↔23, ...)."""
         if point in (0, 25):
             return point
         return 25 - point
 
     def _key(self, n):
-        if n == 0:
-            return "off"
-        if n == 25:
-            return "bar"
-        return n
+        return "off" if n == 0 else "bar" if n == 25 else n
 
     def _dec(self, side, k):
         cur = self.positions[side].get(k, 0)
@@ -715,59 +730,75 @@ class BackgammonPositionTracker:
             else:
                 self.positions[side].pop(k)
         else:
-            logger.debug("warning: removing empty point %s %s", side, k)
+            logger.debug("Trying to remove empty point: %s %s", side, k)
 
     def _inc(self, side, k):
         self.positions[side][k] = self.positions[side].get(k, 0) + 1
 
-    def apply_move(self, player, move):
+    def _flip_board(self):
+        """Отражает доску, если верхний игрок оказался черным."""
+        flipped = {"red": {}, "black": {}}
+        for color in ("red", "black"):
+            for p, count in self.start_positions[color].items():
+                if p in ("bar", "off"):
+                    flipped[color][p] = count
+                else:
+                    flipped[color][self.invert_point(p)] = count
+        self.start_positions = flipped
+        self.positions = copy.deepcopy(flipped)
+        self.flipped = True
+        logger.info("Flipped board orientation (upper = black).")
+
+    def apply_move(self, player_color, move):
         fr, to, hit = move.get("from"), move.get("to"), move.get("hit", False)
-        if player == "black":
+        if player_color == "black":
             fr = self.invert_point(fr)
             to = self.invert_point(to)
 
         key_fr, key_to = self._key(fr), self._key(to)
-        opp = "red" if player == "black" else "black"
+        opp = "red" if player_color == "black" else "black"
 
-        self._dec(player, key_fr)
-
+        self._dec(player_color, key_fr)
         if hit and key_to != "off":
             if self.positions[opp].get(key_to, 0) > 0:
                 self._dec(opp, key_to)
                 self._inc(opp, "bar")
-
-        self._inc(player, key_to)
+        self._inc(player_color, key_to)
 
     def process_game(self, data: list):
+        """Добавляет positions в каждый ход, с учетом текущей стороны."""
         self.reset()
         result = []
 
         for entry in data:
             e = copy.deepcopy(entry)
-            action = e.get("action")
-            player = e.get("player", self.current_player).lower()
+            act = e.get("action")
+            player_name = e.get("player", "").lower()
 
-            # обработка удвоений и ответов
-            if action:
-                act = action.lower()
-                if act == "double":
-                    # право хода не меняется
+            # определяем цвет по нику
+            if player_name == self.upper_name:
+                color = "red"
+            elif player_name == self.lower_name:
+                color = "black"
+            else:
+                color = self.current_player
+
+            if act:
+                a = act.lower()
+                if a == "double":
                     pass
-                elif act in ("take", "drop"):
-                    # право хода переходит к другому
+                elif a in ("take", "drop"):
                     self.current_player = "black" if self.current_player == "red" else "red"
                 e["positions"] = copy.deepcopy(self.positions)
                 result.append(e)
                 continue
 
-            # обработка обычных ходов
             moves = e.get("moves")
             if moves:
                 for m in moves:
-                    self.apply_move(player, m)
+                    self.apply_move(color, m)
 
-            # после обычного хода — передаём очередь
-            self.current_player = "black" if player == "red" else "red"
+            self.current_player = "black" if color == "red" else "red"
             e["positions"] = copy.deepcopy(self.positions)
             result.append(e)
 
@@ -784,7 +815,7 @@ def process_mat_file(input_file, output_file):
         red_player, black_player = extract_player_names(content)
 
         parsed_moves = parse_backgammon_mat(content)
-        tracker = BackgammonPositionTracker()
+        tracker = BackgammonPositionTracker(upper_player=black_player, lower_player=red_player)
         aug = tracker.process_game(parsed_moves)
 
         # Add player names to the output
