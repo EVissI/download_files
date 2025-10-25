@@ -815,7 +815,7 @@ def process_mat_file(input_file, output_file):
         red_player, black_player = extract_player_names(content)
 
         parsed_moves = parse_backgammon_mat(content)
-        tracker = BackgammonPositionTracker(upper_player=black_player, lower_player=red_player)
+        tracker = BackgammonPositionTracker(upper_player=red_player, lower_player=black_player)
         aug = tracker.process_game(parsed_moves)
 
         # Add player names to the output
