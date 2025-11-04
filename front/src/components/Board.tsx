@@ -26,10 +26,11 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
     const [currentTurn, setCurrentTurn] = useState(-1);
     const [lastTurn, setLastTurn] = useState(-2);
     const [gameDirection, setGameDirection] = useState(1);
-    const [checkers, setCheckers] = useState<CheckerData[]>(generateDefaultCheckersData());
+    const [checkers, setCheckers] = useState<CheckerData[]>(generateDefaultCheckersData(data?.is_long_game));
     const [screenPending, setScreenPending] = useState(false);
     const screenBlockRef = useRef<HTMLDivElement | null>(null);
     const turn = data?.turns[currentTurn];
+    const nextTurn = data?.turns[currentTurn + 1];
     const cubeCoords = turn ? getCubeCoords(turn.cube_location) : null;
     const [isAnimating, setIsAnimating] = useState(false);
 
@@ -46,6 +47,7 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                     "second": data?.second,
                     "point_match": data?.point_match,
                     currentTurn: data?.turns[currentTurn],
+                    dice: nextTurn?.dice.length ? nextTurn.dice : [0, 0],
                 },
                 chat_id: chatId,
             }),
@@ -56,7 +58,6 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
     useEffect(() => {
         if (!data) return;
         if (!turn) return;
-        setIsAnimating(true);
 
         let maxDelay = 0;
 
@@ -96,9 +97,9 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                         foundChecker.index = maxIndex + 1;
                         foundChecker.y = calculateCordY(BAR_COORDS[otherPlayer].y, maxIndex + 1, getDirection('Bar', player), to);
                         foundChecker.check = true;
-                        foundChecker.delay = 1 + i * 0.1;
+                        foundChecker.delay = i * 0.1;
                         i++;
-                        maxDelay = Math.max(maxDelay, 1 + i * 0.1);
+                        maxDelay = Math.max(maxDelay,  i * 0.1);
                     }
                 } else {
                     const foundChecker = newCheckers.find(el => el.currentPosition === 'Bar' && el.player === otherPlayer);
@@ -111,9 +112,9 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                         foundChecker.index = maxIndex + 1;
                         foundChecker.y = calculateCordY(POINT_COORDS[from].y, maxIndex + 1, getDirection(to, player), from);
                         foundChecker.check = true;
-                        foundChecker.delay = 1 + i * 0.1;
+                        foundChecker.delay = i * 0.1;
                         i++;
-                        maxDelay = Math.max(maxDelay, 1 + i * 0.1);
+                        maxDelay = Math.max(maxDelay, i * 0.1);
                     }
                 }
             }
@@ -136,13 +137,13 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                 currentChecker.index = maxIndex + 1;
                 currentChecker.y = calculateCordY(coords.y, maxIndex + 1, getDirection(to, player), to);
                 currentChecker.check = true;
-                currentChecker.delay = 1 + i * 0.1;
+                currentChecker.delay = i * 0.1;
                 i++;
-                maxDelay = Math.max(maxDelay, 1 + i * 0.1);
+                maxDelay = Math.max(maxDelay, i * 0.1);
             }
         }
 
-        setTimeout(() => setIsAnimating(false), (maxDelay + 0.4)*1000);
+        setTimeout(() => setIsAnimating(false), (maxDelay + 1)*1000);
 
         // Обновляем состояние
         setCheckers(newCheckers);
@@ -244,9 +245,9 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                 </div>
 
                 <div className="board">
-                    {turn && !turn.dice.includes(0) && (
-                        <DiceRoll dice={turn?.dice.length ? turn.dice : [0, 0]}
-                                  size={42} className={`dice dice--${turn.turn}`} key={turn.turn}/>
+                    {!isAnimating && nextTurn && !nextTurn.dice.includes(0) && (
+                        <DiceRoll dice={nextTurn?.dice.length ? nextTurn.dice : [0, 0]}
+                                  size={42} className={`dice dice--${nextTurn.turn}`} key={nextTurn.turn}/>
                     )}
 
                     {turn?.action === 'double' && cubeCoords && (
@@ -306,6 +307,8 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
             {data && <div className="bottom-buttons">
                 <button
                     onClick={() => {
+                        setIsAnimating(true);
+
                         if (gameDirection == -1) {
                             setLastTurn((t) => Math.max(t - 1, -1))
                             setCurrentTurn((t) => Math.max(t - 1, -1));
@@ -321,6 +324,8 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                 <span/>
                 <button
                     onClick={() => {
+                        setIsAnimating(true);
+
                         if (gameDirection == 1) {
                             if (currentTurn === data.turns.length - 1) {
                                 setIsGameFinished(true)

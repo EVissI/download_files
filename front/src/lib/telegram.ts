@@ -42,6 +42,7 @@ export class TelegramBotAPI {
 
         const res = await fetch(url, options);
         const json = await res.json();
+        console.log("%c 2 --> Line: 45||telegram.ts\n json: ","color:#f0f;", json);
 
         // @ts-ignore
         if (!json.ok) {

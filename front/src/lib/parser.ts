@@ -1,8 +1,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {GameData, Player, Move as ParsedMove} from "@/components/types";
+import {GameData, Move as ParsedMove, Player} from "@/components/types";
 
 type PlayerKey = 'player1' | 'player2';
+type PlayerId = 'first' | 'second';
 
 interface Move {
     move: number;
@@ -19,8 +20,8 @@ interface ExtractedNames {
     second_score: number;
 }
 
-function togglePlayer(player: Player): Player {
-    return player === 'first' ? 'second' : 'first';
+function togglePlayer(player: Player, first: PlayerId, second: PlayerId): Player {
+    return player === 'first' ? second : first;
 }
 
 function parseMoveTable(lines: string[]): Move[] {
@@ -86,6 +87,10 @@ function extractPointMatch(text: string): number | null {
     return match ? parseInt(match[1], 10) : null;
 }
 
+function extractGameType(text: string): boolean {
+    return /Game type: Backgammon\s\+1/im.test(text);
+}
+
 function extractMoves(playerMoves: string): ParsedMove[] {
     const movesList: ParsedMove[] = [];
     const splitMoves = playerMoves.split(': ');
@@ -99,19 +104,21 @@ function extractMoves(playerMoves: string): ParsedMove[] {
             captured = true;
             end = end.slice(0, -1);
         }
-        movesList.push({ from: start, to: end, captured });
+        movesList.push({from: start, to: end, captured});
     }
     return movesList;
 }
 
-async function parseGame(text: string, pointsMatch: number | null): Promise<GameData> {
+async function parseGame(text: string, pointsMatch: number | null, isLongGame: boolean, isInverse: boolean): Promise<GameData> {
+    const [first, second]: ['first', 'second'] | ['second', 'first'] = isInverse ? ['second', 'first'] : ['first', 'second'];
     const lines = text.trim().split('\n');
     const headerData = extractNamesAndScores(lines);
 
     const gameData: GameData = {
-        first: { name: headerData.first_name, score: headerData.first_score },
-        second: { name: headerData.second_name, score: headerData.second_score },
+        [first]: {name: headerData.first_name, score: headerData.first_score},
+        [second]: {name: headerData.second_name, score: headerData.second_score},
         point_match: pointsMatch,
+        is_long_game: isLongGame,
         turns: [],
     };
 
@@ -123,13 +130,13 @@ async function parseGame(text: string, pointsMatch: number | null): Promise<Game
 
     for (const move of moves) {
         for (const playerKey of ['player1', 'player2'] as PlayerKey[]) {
-            const player: Player = playerKey === 'player1' ? 'first' : 'second';
+            const player: Player = playerKey === 'player1' ? first : second;
             const textMove = move[playerKey];
             if (!textMove) continue;
 
             if (textMove.includes('Doubles =>')) {
                 cubeValue = parseInt(textMove.split('=>')[1].trim(), 10);
-                cubeOwner = togglePlayer(player); // ставит куб противнику (тот, кто принимает)
+                cubeOwner = togglePlayer(player, first, second); // ставит куб противнику (тот, кто принимает)
                 cubeLocation = 'center'; // при двойном куб ставится в центр
                 gameData.turns.push({
                     turn: player,
@@ -189,13 +196,14 @@ async function parseGame(text: string, pointsMatch: number | null): Promise<Game
 }
 
 
-export async function parseFile(data: string, dir: string): Promise<number> {
+export async function parseFile(data: string, dir: string, isInverse: boolean): Promise<number> {
     const splitFile = data.split(/\n\nGame \d+\n/);
     const pointsMatch = extractPointMatch(splitFile[0]);
+    const gameType = extractGameType(splitFile[0]);
     const gamesRaw = splitFile.slice(1);
 
     const dirPath = path.resolve('./public/json', dir);
-    await fs.mkdir(dirPath, { recursive: true });
+    await fs.mkdir(dirPath, {recursive: true});
     const filePath = path.join(dirPath, 'games.json');
 
     // Открываем поток записи
@@ -206,7 +214,7 @@ export async function parseFile(data: string, dir: string): Promise<number> {
     let count = 0;
 
     for (const rawGame of gamesRaw) {
-        const game = await parseGame(rawGame, pointsMatch);
+        const game = await parseGame(rawGame, pointsMatch, gameType, isInverse);
         const json = JSON.stringify(game, null, 2);
 
         if (!first) {
@@ -221,4 +229,13 @@ export async function parseFile(data: string, dir: string): Promise<number> {
     await fileHandle.close();
 
     return count;
+}
+
+export const getNames = async (data: string): Promise<[string, string]> => {
+    const splitFile = data.split(/\n\nGame \d+\n/);
+    const gamesRaw = splitFile.slice(1);
+
+    const lines = gamesRaw[0].trim().split('\n');
+    const headerData = extractNamesAndScores(lines);
+    return [headerData.first_name, headerData.second_name];
 }

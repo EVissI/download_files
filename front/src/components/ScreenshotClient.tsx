@@ -2,7 +2,7 @@
 import {useEffect, useState, Suspense} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {CheckerData, PlayerInfo, Turn} from "@/components/types";
-import {getCubeCoords, sliceString} from "@/lib/helpers";
+import {getCubeCoords, sliceString, togglePlayer} from "@/lib/helpers";
 import {Checker} from "@/components/Checker";
 import DiceRoll from "@/components/DiceRoll";
 
@@ -12,6 +12,7 @@ interface state {
     point_match: number;
     second: PlayerInfo;
     currentTurn: Turn;
+    dice: [number, number];
 }
 
 export default function InnerScreenshotClient() {
@@ -118,8 +119,8 @@ export default function InnerScreenshotClient() {
 
             <div className="board">
                 {turn && !turn.dice.includes(0) && (
-                    <DiceRoll dice={turn?.dice.length ? turn.dice : [0, 0]}
-                              size={42} className={`dice dice--${turn.turn}`} key={turn.turn} notAnimated/>
+                    <DiceRoll dice={state.dice ?? [0, 0]}
+                              size={42} className={`dice dice--${togglePlayer(turn.turn)}`} key={turn.turn} notAnimated/>
                 )}
 
                 {turn?.action === 'double' && cubeCoords && (

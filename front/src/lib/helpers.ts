@@ -1,5 +1,13 @@
 import {Player} from "@/components/types";
-import {BAR_COORDS, CHECKER_RADIUS, DEFAULT_CHECKERS, DIRECTION, POINT_COORDS, ZERO_COORDS} from "@/lib/boardData";
+import {
+    BAR_COORDS,
+    CHECKER_RADIUS,
+    DEFAULT_CHECKERS,
+    DIRECTION,
+    POINT_COORDS,
+    SHORT_DEFAULT_CHECKERS,
+    ZERO_COORDS
+} from "@/lib/boardData";
 
 export const togglePlayer = (player: Player): Player => {
     return player === 'first' ? 'second' : 'first';
@@ -21,11 +29,12 @@ export const calculateCordY = (y: number, index: number, direction: number, poin
     return y + index * direction * (CHECKER_RADIUS * space)
 }
 
-export const generateDefaultCheckersData = () => {
+export const generateDefaultCheckersData = (isLongGame?: boolean) => {
     const checkers = [];
+    const defaultCheckers = isLongGame ? DEFAULT_CHECKERS : SHORT_DEFAULT_CHECKERS;
     let idCounters: Record<Player, number> = {first: 0, second: 0};
     for (const player of ["first", "second"] as Player[]) {
-        const entries = Object.entries(DEFAULT_CHECKERS[player]).filter(
+        const entries = Object.entries(defaultCheckers[player]).filter(
             ([key]) => key === "Bar" || /^[0-9]+$/.test(key)
         );
 

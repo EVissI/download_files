@@ -25,7 +25,7 @@ export const Checker: React.FC<CheckerProps> = ({x, y, player, id, delay, check}
                 left: `${xPercent}%`,
                 top: `${yPercent}%`,
             }}
-            transition={{duration: 0.4, ease: "easeInOut", delay}}
+            transition={{duration: 0.1, ease: "easeInOut", delay}}
             className={`checker checker--${player} ${check && 'checker--check'}`}
             style={{
                 position: "absolute",

@@ -6,9 +6,10 @@ export interface PlayerInfo {
 }
 
 export interface GameData {
-    "first": PlayerInfo,
-    "second": PlayerInfo,
+    "first"?: PlayerInfo,
+    "second"?: PlayerInfo,
     "point_match": number | null,
+    "is_long_game"?: boolean;
     "turns": Turn[]
 }
 

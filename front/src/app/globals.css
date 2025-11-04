@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+:root {
+    --animation-checkers-duration: .5s;
+}
+
 nextjs-portal {
     display: none;
 }
@@ -7,6 +11,7 @@ nextjs-portal {
 html, body {
     background-color: #fff8e7;
     height: 100vh;
+    font-weight: 700;
 }
 
 .loader {
@@ -60,8 +65,8 @@ html, body {
     aspect-ratio: 1.0;
     border-radius: 50%;
     border: 2px solid gray;
-    transition: left 1s ease-in-out,
-    top 1s ease-in-out;
+    transition: left var(--animation-checkers-duration) ease-in-out,
+    top calc(var(--animation-checkers-duration) * 1.5) ease-in-out;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -142,7 +147,7 @@ html, body {
     grid-template-rows: 1fr 1fr;
     justify-items: center;
     align-items: center;
-    transition: opacity 0.3s ease-in-out 1s;
+    transition: opacity 0.3s ease-in-out var(--animation-checkers-duration);
     opacity: 0;
     font-size: 12px;
     line-height: 16px;

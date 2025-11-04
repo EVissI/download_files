@@ -272,6 +272,8 @@
 
         let data = [];
         let dataLoaded = false;
+        let redPlayer = 'Unknown';
+        let blackPlayer = 'Unknown';
         const infoDiv = document.getElementById('info');
         const playersInfoDiv = document.getElementById('players-info');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
@@ -288,8 +290,8 @@
                 data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0) || it.action === 'win' || it.action === 'double' || it.action === 'take');
                 
                 if (data.length > 0) {
-                    const redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
-                    const blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
+                    redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
+                    blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     dataLoaded = true;
                     console.log('Data loaded:', data);
@@ -402,6 +404,22 @@
             return (point > 12) ? 55 : -55; 
         }
 
+        function calculatePips(positions) {
+            let totalPips = 0;
+            for (let pointStr in positions) {
+                if (pointStr === 'bar') {
+                    totalPips += Math.abs(positions[pointStr]) * 25;
+                } else if (pointStr === 'off') {
+                    // Off checkers don't count towards pips
+                } else {
+                    const point = parseInt(pointStr);
+                    const count = positions[pointStr];
+                    totalPips += count * point;
+                }
+            }
+            return totalPips;
+        }
+
         function drawCheckers(player, img, positions, currentPlayer) {
             ctx.font = 'bold 30px Arial';
             ctx.fillStyle = '#ffffff';
@@ -492,11 +510,30 @@
             } else {
                 const prevTurn = turn - 1;
                 redPositions = data[prevTurn].positions['red'];
-                blackPositions = data[prevTurn].positions['black'];                
+                blackPositions = data[prevTurn].positions['black'];
             }
             const currentPlayer = data[turn].player.toLowerCase();
             drawCheckers('red', whiteImg, redPositions, currentPlayer);
             drawCheckers('black', blackImg, blackPositions, currentPlayer);
+
+            // Calculate pips
+            const redPips = calculatePips(redPositions);
+            const blackPips = calculatePips(blackPositions);
+
+            // Draw pips rectangles
+            // Black pips: top right, black text on white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(700, 0, 100, 50);
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Черные: ${blackPips}`, 750, 30);
+
+            // Red pips: bottom right, black text on white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(700, 750, 100, 50);
+            ctx.fillStyle = '#000000';
+            ctx.fillText(`Белые: ${redPips}`, 750, 780);
 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
