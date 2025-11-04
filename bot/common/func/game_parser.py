@@ -6,7 +6,7 @@ from typing import List, Dict, Union, Optional
 
 Player = str  # 'first' or 'second'
 Move = Dict[str, Union[int, str, List[int]]]
-GameData = Dict[str, Union[Dict[str, Union[str, int]], int, List[Dict]]]
+GameData = Dict[str, Union[Dict[str, Union[str, int]], int, List[Dict], bool]]
 
 
 def toggle_player(player: Player) -> Player:
@@ -72,6 +72,10 @@ def extract_point_match(text: str) -> Optional[int]:
     return int(match[1]) if match else None
 
 
+def extract_game_type(text: str) -> bool:
+    return bool(re.search(r"Game type: Backgammon\s+\+1", text, re.IGNORECASE))
+
+
 def extract_moves(player_moves: str) -> List[Dict[str, Union[str, bool]]]:
     moves_list = []
     split_moves = player_moves.split(": ")
@@ -91,7 +95,7 @@ def extract_moves(player_moves: str) -> List[Dict[str, Union[str, bool]]]:
     return moves_list
 
 
-def parse_game(text: str, points_match: Optional[int], is_inverse: bool = False) -> GameData:
+def parse_game(text: str, points_match: Optional[int], is_long_game: bool, is_inverse: bool = False) -> GameData:
     lines = text.strip().split("\n")
     header_data = extract_names_and_scores(lines)
 
@@ -101,6 +105,7 @@ def parse_game(text: str, points_match: Optional[int], is_inverse: bool = False)
         first: {"name": header_data["first_name"], "score": header_data["first_score"]},
         second: {"name": header_data["second_name"], "score": header_data["second_score"]},
         "point_match": points_match,
+        "is_long_game": is_long_game,
         "turns": [],
     }
 
@@ -181,9 +186,10 @@ def get_names(data: str) -> List[str]:
     return [header_data["first_name"], header_data["second_name"]]
 
 
-async def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
+def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
     split_file = re.split(r"\n\nGame \d+\n", data)
     points_match = extract_point_match(split_file[0])
+    game_type = extract_game_type(split_file[0])
     games_raw = split_file[1:]
 
     dir_path = Path("./front/public/json") / dir_name
@@ -198,7 +204,7 @@ async def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
         count = 0
 
         for raw_game in games_raw:
-            game = parse_game(raw_game, points_match, is_inverse)
+            game = parse_game(raw_game, points_match, game_type, is_inverse)
             json_data = json.dumps(game, indent=2)
 
             if not first:
