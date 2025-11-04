@@ -80,8 +80,8 @@ async def handle_document(message: Message, state: FSMContext, session_without_c
         names = get_names(file_content)
 
         buttons = [
-            [InlineKeyboardButton(text=f"За {names[0]}", callback_data=f"choose_{file_path}_first")],
-            [InlineKeyboardButton(text=f"За {names[1]}", callback_data=f"choose_{file_path}_second")]
+            [InlineKeyboardButton(text=f"За {names[0]}", callback_data=f"choose_first_{dir_name}")],
+            [InlineKeyboardButton(text=f"За {names[1]}", callback_data=f"choose_second_{dir_name}")]
         ]
         keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -92,7 +92,7 @@ async def handle_document(message: Message, state: FSMContext, session_without_c
         )
 
         await state.set_state(ShortBoardDialog.choose_side)
-        await state.update_data(file_path=file_path, dir_name=dir_name, names=names)
+        await state.update_data(file_content=file_content, dir_name=dir_name, names=names)
 
     except Exception as e:
         logger.error(f"Ошибка при обработке файла: {e}")
@@ -106,15 +106,12 @@ async def handle_document(message: Message, state: FSMContext, session_without_c
 async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session_without_commit: AsyncSession):
     try:
         data = await state.get_data()
-        file_path = data["file_path"]
+        file_content = data["file_content"]
         dir_name = data["dir_name"]
         names = data["names"]
 
-        _, _, side = callback.data.split('_')
+        _, side, _ = callback.data.split('_')
         is_inverse = side == 'second'
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            file_content = f.read()
 
         await bot.send_message(
             callback.message.chat.id, "Файл обработан. Начинаю подготовку к отображению..."
