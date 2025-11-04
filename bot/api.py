@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 
 from bot.routers.admin.hint_viewer_router import hint_viewer_api_router
+from bot.screenshot_router import screenshot_api_router
 
 app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
 
@@ -21,3 +22,4 @@ templates = Jinja2Templates(directory="bot/templates")
 
 # Include routers
 app.include_router(hint_viewer_api_router)
+app.include_router(screenshot_api_router)
