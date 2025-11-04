@@ -355,7 +355,10 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
             </div>}
             <div className="flex justify-center">
                 <button disabled={screenPending || isAnimating} className="mt-2 rounded-md bg-slate-800 p-2 text-white screen"
-                        onClick={handleScreenshot}>
+                        onClick={() => {
+                            console.log('Button clicked');
+                            handleScreenshot();
+                        }}>
                     {screenPending ? (
                         <span className="loader"></span>
                     ) : (
