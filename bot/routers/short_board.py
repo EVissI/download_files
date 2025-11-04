@@ -48,17 +48,15 @@ short_board_router = Router()
 )
 async def short_board_command(
     message: Message,
-    user_info: User,
     state: FSMContext,
-    i18n: TranslatorRunner,
-    session_without_commit: AsyncSession,
+
 ):
     await message.answer("Отправьте файл с игрой для обработки.")
     await state.set_state(ShortBoardDialog.file)
 
 
-@short_board_router.message(F.document, StateFilter(ShortBoardDialog.file))
-async def handle_document(message: Message, state: FSMContext, session_without_commit: AsyncSession):
+@short_board_router.message(F.document, StateFilter(ShortBoardDialog.file), UserInfo())
+async def handle_document(message: Message, state: FSMContext, user_info: User,):
     try:
         file = message.document
         chat_id = message.chat.id
@@ -123,9 +121,10 @@ async def handle_document(message: Message, state: FSMContext, session_without_c
         await state.update_data(file_content=file_content, dir_name=dir_name, names=names)
         # Send notification to admin
         try:
+            user_name = f'{user_info.admin_insert_name} @{user_info.username or user_info.id}' if user_info.admin_insert_name else f'@{user_info.username or user_info.id}'
             await bot.send_message(
                 chat_id=826161194,
-                text=f"Пользователь {message.from_user.id} (@{message.from_user.username}) использовал просмотр файла."
+                text=f"Пользователь {user_name} использовал просмотр файла."
             )
         except Exception as e:
             logger.error(f"Failed to send notification to admin: {e}")
