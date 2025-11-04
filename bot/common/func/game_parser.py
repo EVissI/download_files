@@ -91,13 +91,15 @@ def extract_moves(player_moves: str) -> List[Dict[str, Union[str, bool]]]:
     return moves_list
 
 
-def parse_game(text: str, points_match: Optional[int]) -> GameData:
+def parse_game(text: str, points_match: Optional[int], is_inverse: bool = False) -> GameData:
     lines = text.strip().split("\n")
     header_data = extract_names_and_scores(lines)
 
+    first, second = ("second", "first") if is_inverse else ("first", "second")
+
     game_data = {
-        "first": {"name": header_data["first_name"], "score": header_data["first_score"]},
-        "second": {"name": header_data["second_name"], "score": header_data["second_score"]},
+        first: {"name": header_data["first_name"], "score": header_data["first_score"]},
+        second: {"name": header_data["second_name"], "score": header_data["second_score"]},
         "point_match": points_match,
         "turns": [],
     }
@@ -110,7 +112,7 @@ def parse_game(text: str, points_match: Optional[int]) -> GameData:
 
     for move in moves:
         for player_key in ["player1", "player2"]:
-            player = "first" if player_key == "player1" else "second"
+            player = first if player_key == "player1" else second
             text_move = move[player_key]
             if not text_move:
                 continue
@@ -171,7 +173,15 @@ def parse_game(text: str, points_match: Optional[int]) -> GameData:
     return game_data
 
 
-async def parse_file(data: str, dir_name: str) -> int:
+def get_names(data: str) -> List[str]:
+    split_file = re.split(r"\n\nGame \d+\n", data)
+    games_raw = split_file[1:]
+    lines = games_raw[0].strip().split("\n")
+    header_data = extract_names_and_scores(lines)
+    return [header_data["first_name"], header_data["second_name"]]
+
+
+async def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
     split_file = re.split(r"\n\nGame \d+\n", data)
     points_match = extract_point_match(split_file[0])
     games_raw = split_file[1:]
@@ -188,7 +198,7 @@ async def parse_file(data: str, dir_name: str) -> int:
         count = 0
 
         for raw_game in games_raw:
-            game = parse_game(raw_game, points_match)
+            game = parse_game(raw_game, points_match, is_inverse)
             json_data = json.dumps(game, indent=2)
 
             if not first:

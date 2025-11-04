@@ -7,6 +7,7 @@ from aiogram.types import (
     WebAppInfo,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    CallbackQuery,
 )
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
@@ -25,11 +26,12 @@ from bot.config import settings
 from bot.db.dao import UserDAO
 from bot.db.models import User
 from bot.config import bot
-from bot.common.func.game_parser import parse_file
+from bot.common.func.game_parser import parse_file, get_names
 
 
 class ShortBoardDialog(StatesGroup):
     file = State()
+    choose_side = State()
 
 
 short_board_router = Router()
@@ -52,7 +54,7 @@ async def short_board_command(
 
 
 @short_board_router.message(F.document, StateFilter(ShortBoardDialog.file))
-async def handle_document(message: Message, state: FSMContext,session_without_commit: AsyncSession):
+async def handle_document(message: Message, state: FSMContext, session_without_commit: AsyncSession):
     try:
         file = message.document
         chat_id = message.chat.id
@@ -72,36 +74,77 @@ async def handle_document(message: Message, state: FSMContext,session_without_co
         except Exception as e:
             await bot.send_message(chat_id, f"Ошибка при чтении файла: {e}")
             return
+
         await bot.send_message(chat_id, "Файл получен. Начинаю обработку...")
 
+        names = get_names(file_content)
+
+        buttons = [
+            [InlineKeyboardButton(text=f"За {names[0]}", callback_data=f"choose_{file_path}_first")],
+            [InlineKeyboardButton(text=f"За {names[1]}", callback_data=f"choose_{file_path}_second")]
+        ]
+        keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
         await bot.send_message(
-            chat_id, "Файл обработан. Начинаю подготовку к отображению..."
+            chat_id,
+            "Выбери, за кого просматривать матч:",
+            reply_markup=keyboard,
         )
-        await parse_file(file_content, dir_name)  # Передаем уникальное имя директории
+
+        await state.set_state(ShortBoardDialog.choose_side)
+        await state.update_data(file_path=file_path, dir_name=dir_name, names=names)
+
+    except Exception as e:
+        logger.error(f"Ошибка при обработке файла: {e}")
+        await bot.send_message(
+            message.chat.id, f"Произошла ошибка при обработке файла: {e}"
+        )
+        await state.clear()
+
+
+@short_board_router.callback_query(F.data.startswith("choose_"), StateFilter(ShortBoardDialog.choose_side))
+async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session_without_commit: AsyncSession):
+    try:
+        data = await state.get_data()
+        file_path = data["file_path"]
+        dir_name = data["dir_name"]
+        names = data["names"]
+
+        _, _, side = callback.data.split('_')
+        is_inverse = side == 'second'
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            file_content = f.read()
+
+        await bot.send_message(
+            callback.message.chat.id, "Файл обработан. Начинаю подготовку к отображению..."
+        )
+
+        await parse_file(file_content, dir_name, is_inverse)
 
         # Создаем кнопку с веб-приложением
         button = InlineKeyboardButton(
             text="Открыть игру 📲",
             web_app=WebAppInfo(
-                url=f"{settings.MINI_APP_URL}?game={dir_name}&chat_id={chat_id}"
+                url=f"{settings.MINI_APP_URL}?game={dir_name}&chat_id={callback.message.chat.id}"
             ),
         )
         keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
 
         await bot.send_message(
-            chat_id,
+            callback.message.chat.id,
             "Готово! Нажми кнопку ниже, чтобы открыть игру и просмотреть ходы.",
             reply_markup=keyboard,
         )
         await UserDAO(session_without_commit).decrease_analiz_balance(
-            user_id=message.from_user.id,
+            user_id=callback.from_user.id,
             service_type="SHORT_BOARD"
         )
-        logger.info(f"Пользователь {message.from_user.id} использовал Short Board")
+        logger.info(f"Пользователь {callback.from_user.id} использовал Short Board")
     except Exception as e:
-        logger.error(f"Ошибка при обработке файла: {e}")
+        logger.error(f"Ошибка при обработке выбора стороны: {e}")
         await bot.send_message(
-            message.chat.id, f"Произошла ошибка при обработке файла: {e}"
+            callback.message.chat.id, f"Произошла ошибка при обработке файла: {e}"
         )
     finally:
         await state.clear()
