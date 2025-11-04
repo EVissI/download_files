@@ -14,7 +14,7 @@ class MainKeyboard:
     def get_user_keyboard(i18n:TranslatorRunner) -> dict:
         return {
             'autoanalize': i18n.keyboard.user.reply.autoanalyze(),
-            # 'short_board': i18n.keyboard.user.reply.short_board_view(),
+            'short_board': i18n.keyboard.user.reply.short_board_view(),
             'profile': i18n.keyboard.user.reply.profile(),
         }
     
