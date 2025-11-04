@@ -35,8 +35,11 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
     const [isAnimating, setIsAnimating] = useState(false);
 
     const handleScreenshot = async () => {
-        if (!screenBlockRef.current) return;
-        console.log('Screenshot button clicked');
+        console.log('handleScreenshot: Starting screenshot process');
+        if (!screenBlockRef.current) {
+            console.log('handleScreenshot: screenBlockRef is null, returning');
+            return;
+        }
         setScreenPending(true);
         try {
             const response = await fetch('/api/screenshot', {
@@ -54,16 +57,15 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                     chat_id: chatId,
                 }),
             });
+            console.log('handleScreenshot: Fetch completed, response status:', response.status);
             if (!response.ok) {
-                console.error('Screenshot failed:', response.status);
-            } else {
-                console.log('Screenshot sent successfully');
+                console.error('handleScreenshot: Fetch failed with status:', response.status);
             }
         } catch (error) {
-            console.error('Screenshot error:', error);
-        } finally {
-            setScreenPending(false);
+            console.error('handleScreenshot: Error during fetch:', error);
         }
+        setScreenPending(false);
+        console.log('handleScreenshot: Screenshot process completed');
     };
 
     useEffect(() => {
@@ -355,10 +357,7 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
             </div>}
             <div className="flex justify-center">
                 <button disabled={screenPending || isAnimating} className="mt-2 rounded-md bg-slate-800 p-2 text-white screen"
-                        onClick={() => {
-                            console.log('Button clicked');
-                            handleScreenshot();
-                        }}>
+                        onClick={handleScreenshot}>
                     {screenPending ? (
                         <span className="loader"></span>
                     ) : (
