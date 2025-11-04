@@ -104,6 +104,7 @@ async def handle_document(message: Message, state: FSMContext, session_without_c
 
 @short_board_router.callback_query(F.data.startswith("choose_"), StateFilter(ShortBoardDialog.choose_side))
 async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session_without_commit: AsyncSession):
+    await callback.message.delete()
     try:
         data = await state.get_data()
         file_content = data["file_content"]
