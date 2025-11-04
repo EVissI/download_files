@@ -1,5 +1,8 @@
 ﻿import os
 import uuid  # Добавляем для генерации уникального имени директории
+import asyncio
+from datetime import datetime
+import pytz
 
 from aiogram import Router, F
 from aiogram.types import (
@@ -27,6 +30,7 @@ from bot.db.dao import UserDAO
 from bot.db.models import User
 from bot.config import bot
 from bot.common.func.game_parser import parse_file, get_names
+from bot.common.func.yadisk import save_file_to_yandex_disk
 
 
 class ShortBoardDialog(StatesGroup):
@@ -79,6 +83,30 @@ async def handle_document(message: Message, state: FSMContext, session_without_c
 
         names = get_names(file_content)
 
+        # создание файла для сохранения на ядиск
+        moscow_tz = pytz.timezone("Europe/Moscow")
+        current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
+        new_file_name = f"{current_date}:{names[0]}:{names[1]}.mat"
+        new_file_path = os.path.join(files_dir, new_file_name)
+        try:
+            import shutil
+            shutil.copy(file_path, new_file_path)
+        except Exception as e:
+            logger.error(f"Failed to copy file {file_path} to {new_file_path}: {e}")
+            await bot.send_message(chat_id, "Ошибка при копировании файла. Попробуйте снова.")
+            return
+
+        # сохранение файла на яндекс диск
+        try:
+            asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
+        except Exception as e:
+            logger.error(f"Error saving file to Yandex Disk: {e}")
+        finally:
+            try:
+                os.remove(new_file_path)
+            except Exception as e:
+                logger.error(f"Failed to remove file {new_file_path}: {e}")
+
         buttons = [
             [InlineKeyboardButton(text=f"За {names[0]}", callback_data=f"choose_first_{dir_name}")],
             [InlineKeyboardButton(text=f"За {names[1]}", callback_data=f"choose_second_{dir_name}")]
@@ -93,7 +121,14 @@ async def handle_document(message: Message, state: FSMContext, session_without_c
 
         await state.set_state(ShortBoardDialog.choose_side)
         await state.update_data(file_content=file_content, dir_name=dir_name, names=names)
-
+        # Send notification to admin
+        try:
+            await bot.send_message(
+                chat_id=826161194,
+                text=f"Пользователь {message.from_user.id} (@{message.from_user.username}) использовал просмотр файла."
+            )
+        except Exception as e:
+            logger.error(f"Failed to send notification to admin: {e}")
     except Exception as e:
         logger.error(f"Ошибка при обработке файла: {e}")
         await bot.send_message(
@@ -135,6 +170,8 @@ async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session
             service_type="SHORT_BOARD"
         )
         logger.info(f"Пользователь {callback.from_user.id} использовал Short Board")
+
+
     except Exception as e:
         logger.error(f"Ошибка при обработке выбора стороны: {e}")
         await bot.send_message(
