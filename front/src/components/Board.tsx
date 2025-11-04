@@ -36,23 +36,34 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
 
     const handleScreenshot = async () => {
         if (!screenBlockRef.current) return;
+        console.log('Screenshot button clicked');
         setScreenPending(true);
-        await fetch('/api/screenshot', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                state: {
-                    checkers,
-                    "first": data?.first,
-                    "second": data?.second,
-                    "point_match": data?.point_match,
-                    currentTurn: data?.turns[currentTurn],
-                    dice: nextTurn?.dice.length ? nextTurn.dice : [0, 0],
-                },
-                chat_id: chatId,
-            }),
-        });
-        setScreenPending(false);
+        try {
+            const response = await fetch('/api/screenshot', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    state: {
+                        checkers,
+                        "first": data?.first,
+                        "second": data?.second,
+                        "point_match": data?.point_match,
+                        currentTurn: data?.turns[currentTurn],
+                        dice: nextTurn?.dice.length ? nextTurn.dice : [0, 0],
+                    },
+                    chat_id: chatId,
+                }),
+            });
+            if (!response.ok) {
+                console.error('Screenshot failed:', response.status);
+            } else {
+                console.log('Screenshot sent successfully');
+            }
+        } catch (error) {
+            console.error('Screenshot error:', error);
+        } finally {
+            setScreenPending(false);
+        }
     };
 
     useEffect(() => {

@@ -9,27 +9,32 @@ export async function POST(req: NextRequest) {
         return new Response(JSON.stringify({ error: 'Missing game state or chat_id' }), { status: 400 });
     }
 
-    const browser = await puppeteer.launch({
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    try {
+        const browser = await puppeteer.launch({
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        });
 
-    const page = await browser.newPage();
-    await page.setViewport({ width: 360, height: 510 });
-    const encodedState = encodeURIComponent(JSON.stringify(state));
+        const page = await browser.newPage();
+        await page.setViewport({ width: 360, height: 510 });
+        const encodedState = encodeURIComponent(JSON.stringify(state));
 
-    await page.goto(`http://localhost:3000/screenshot?state=${encodedState}`, {
-        waitUntil: 'networkidle0',
-    });
+        await page.goto(`http://host.docker.internal:3000/screenshot?state=${encodedState}`, {
+            waitUntil: 'networkidle0',
+        });
 
-    const fileBytes: Uint8Array = await page.screenshot({ type: 'png' });
-    await browser.close();
+        const fileBytes: Uint8Array = await page.screenshot({ type: 'png' });
+        await browser.close();
 
-    const bot = new TelegramBotAPI();
-    await bot.sendPhoto({
-        chat_id,
-        photo: Buffer.from(fileBytes),
-    });
+        const bot = new TelegramBotAPI();
+        await bot.sendPhoto({
+            chat_id,
+            photo: Buffer.from(fileBytes),
+        });
 
-    return new Response(JSON.stringify({ ok: true }));
+        return new Response(JSON.stringify({ ok: true }));
+    } catch (error) {
+        console.error('Screenshot error:', error);
+        return new Response(JSON.stringify({ error: 'Screenshot failed' }), { status: 500 });
+    }
 }
