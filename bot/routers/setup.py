@@ -22,5 +22,5 @@ setup_router.include_routers(
     activate_promo_router,
     payment_router,
     contact_router,
-    # short_board_router,
+    short_board_router,
 )
