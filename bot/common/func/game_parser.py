@@ -6,7 +6,7 @@ from typing import List, Dict, Union, Optional
 
 Player = str  # 'first' or 'second'
 Move = Dict[str, Union[int, str, List[int]]]
-GameData = Dict[str, Union[Dict[str, Union[str, int]], int, List[Dict], bool]]
+GameData = Dict[str, Union[Dict[str, Union[str, int]], int, List[Dict]]]
 
 
 def toggle_player(player: Player) -> Player:
@@ -186,7 +186,7 @@ def get_names(data: str) -> List[str]:
     return [header_data["first_name"], header_data["second_name"]]
 
 
-def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
+async def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
     split_file = re.split(r"\n\nGame \d+\n", data)
     points_match = extract_point_match(split_file[0])
     game_type = extract_game_type(split_file[0])
