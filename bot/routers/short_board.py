@@ -99,11 +99,6 @@ async def handle_document(message: Message, state: FSMContext, user_info: User,)
             asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
         except Exception as e:
             logger.error(f"Error saving file to Yandex Disk: {e}")
-        finally:
-            try:
-                os.remove(new_file_path)
-            except Exception as e:
-                logger.error(f"Failed to remove file {new_file_path}: {e}")
 
         buttons = [
             [InlineKeyboardButton(text=f"За {names[0]}", callback_data=f"choose_first_{dir_name}")],
@@ -124,7 +119,7 @@ async def handle_document(message: Message, state: FSMContext, user_info: User,)
             user_name = f'{user_info.admin_insert_name} @{user_info.username or user_info.id}' if user_info.admin_insert_name else f'@{user_info.username or user_info.id}'
             await bot.send_message(
                 chat_id=826161194,
-                text=f"Пользователь {user_name} использовал просмотр файла."
+                text=f"Пользователь <b>{user_name}</b> использовал просмотр файла."
             )
         except Exception as e:
             logger.error(f"Failed to send notification to admin: {e}")
