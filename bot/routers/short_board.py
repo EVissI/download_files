@@ -114,10 +114,6 @@ async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session
         _, side, _ = callback.data.split('_')
         is_inverse = side == 'second'
 
-        await bot.send_message(
-            callback.message.chat.id, "Файл обработан. Начинаю подготовку к отображению..."
-        )
-
         await parse_file(file_content, dir_name, is_inverse)
 
         # Создаем кнопку с веб-приложением
