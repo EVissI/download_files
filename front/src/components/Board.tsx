@@ -83,14 +83,6 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
             console.error('handleScreenshot: Error during fetch:', error);
             const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
             
-            // Show user-friendly error message
-            if (errorMessage.includes('404')) {
-                alert('Ошибка 404: API эндпоинт не найден. Попробуйте позже или обратитесь к администратору.');
-            } else if (errorMessage.includes('500')) {
-                alert('Ошибка сервера: не удалось создать скриншот. Попробуйте позже.');
-            } else {
-                alert(`Ошибка отправки скриншота: ${errorMessage}`);
-            }
         } finally {
             setScreenPending(false);
             console.log('handleScreenshot: Screenshot process completed');

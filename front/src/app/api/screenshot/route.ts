@@ -25,8 +25,7 @@ export async function POST(req: NextRequest) {
         await page.setViewport({ width: 360, height: 510 });
         
         const encodedState = encodeURIComponent(JSON.stringify(state));
-        const baseUrl = process.env.MINI_APP_URL || 'http://localhost:3000';
-        const screenshotUrl = `${baseUrl}/screenshot?state=${encodedState}`;
+        const screenshotUrl = `http://localhost:3000/screenshot?state=${encodedState}`;
         
         console.log('Screenshot API: Navigating to URL:', screenshotUrl);
 
