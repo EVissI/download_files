@@ -24,7 +24,7 @@ user-profile-text =
     └ 🌐 Язык: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = Моя статистика
 user-profile-inline_button-change_language = Изменить язык
-user-profile-inline_button-payment = Купить автоанализы
+user-profile-inline_button-payment = Пакеты
 user-profile-change_language-confirm = Язык бота успешно изменён!
 
 user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count ->
@@ -92,7 +92,7 @@ waiting-think1 = Думаю.
 waiting-think2 = Думаю.. 
 waiting-think3 = Думаю...
 
-user-static-has_no_sub = У вас нет активной подписки. Пожалуйста, активируйте подписку, чтобы продолжить.
+user-static-has_no_sub = Недостаточно баланса для этого сервиса, активируйте промокод или купите баланс в профиле 
 user-inline-activate_promo = Активировать промокод
 user-inline-take_promo = Получить промокод
 
