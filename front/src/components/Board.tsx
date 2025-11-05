@@ -42,7 +42,7 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
         }
         setScreenPending(true);
         try {
-            const response = await fetch('http://172.19.0.2:3000/api/screenshot', {
+            const response = await fetch('/api/screenshot', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
