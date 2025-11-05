@@ -36,12 +36,22 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
 
     const handleScreenshot = async () => {
         console.log('handleScreenshot: Starting screenshot process');
+        
         if (!screenBlockRef.current) {
             console.log('handleScreenshot: screenBlockRef is null, returning');
             return;
         }
+
+        if (!chatId) {
+            console.error('handleScreenshot: chatId is missing');
+            alert('Ошибка: отсутствует ID чата для отправки скриншота');
+            return;
+        }
+
         setScreenPending(true);
+        
         try {
+            console.log('handleScreenshot: Making API request');
             const response = await fetch('/api/screenshot', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -57,15 +67,34 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                     chat_id: chatId,
                 }),
             });
+
             console.log('handleScreenshot: Fetch completed, response status:', response.status);
+            
             if (!response.ok) {
-                console.error('handleScreenshot: Fetch failed with status:', response.status);
+                const errorData = await response.json().catch(() => ({}));
+                console.error('handleScreenshot: Fetch failed with status:', response.status, errorData);
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
             }
+
+            const result = await response.json();
+            console.log('handleScreenshot: Screenshot sent successfully', result);
+            
         } catch (error) {
             console.error('handleScreenshot: Error during fetch:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+            
+            // Show user-friendly error message
+            if (errorMessage.includes('404')) {
+                alert('Ошибка 404: API эндпоинт не найден. Попробуйте позже или обратитесь к администратору.');
+            } else if (errorMessage.includes('500')) {
+                alert('Ошибка сервера: не удалось создать скриншот. Попробуйте позже.');
+            } else {
+                alert(`Ошибка отправки скриншота: ${errorMessage}`);
+            }
+        } finally {
+            setScreenPending(false);
+            console.log('handleScreenshot: Screenshot process completed');
         }
-        setScreenPending(false);
-        console.log('handleScreenshot: Screenshot process completed');
     };
 
     useEffect(() => {
@@ -213,11 +242,11 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                                 </div>
                             )}
                         </div>
-                        <div className="score">{data.second.score}</div>
+                        <div className="score">{data?.second?.score || 0}</div>
                     </div>
                     <div className="font-sans p-2 text-lg">:</div>
                     <div className="header_item justify-end">
-                        <div className="score">{data.first.score}</div>
+                        <div className="score">{data?.first?.score || 0}</div>
                         <div className="checker checker--first">
                             {turn?.turn === 'first' && (turn.action === 'drop' ? (
                                 <svg fill="#E53935" viewBox="0 0 16 16"
@@ -252,9 +281,9 @@ export default function Board({gameData, setIsGameFinished, chatId}: IBoardProps
                             )}
                         </div>
                     </div>
-                    <div className="name text-left">{sliceString(data.second.name)}</div>
-                    <div className="text-center">Матч до {data.point_match}</div>
-                    <div className="name text-right">{sliceString(data.first.name)}</div>
+                    <div className="name text-left">{sliceString(data?.second?.name || '')}</div>
+                    <div className="text-center">Матч до {data?.point_match || 0}</div>
+                    <div className="name text-right">{sliceString(data?.first?.name || '')}</div>
                 </div>
 
                 <div className="board">
