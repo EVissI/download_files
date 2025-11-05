@@ -116,7 +116,7 @@ async def handle_document(message: Message, state: FSMContext, user_info: User,)
         await state.update_data(file_content=file_content, dir_name=dir_name, names=names)
         # Send notification to admin
         try:
-            user_name = f'{user_info.admin_insert_name} @{user_info.username or user_info.id}' if user_info.admin_insert_name else f'@{user_info.username or user_info.id}'
+            user_name = f'Просмотр игры: {names[0]}-{names[1]}\n{user_info.admin_insert_name} @{user_info.username or user_info.id}' if user_info.admin_insert_name else f'@{user_info.username or user_info.id}'
             await bot.send_message(
                 chat_id=826161194,
                 text=f"Пользователь <b>{user_name}</b> использовал просмотр файла."
