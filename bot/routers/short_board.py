@@ -119,7 +119,7 @@ async def handle_document(message: Message, state: FSMContext, user_info: User,)
             user_name = f'{user_info.admin_insert_name} @{user_info.username or user_info.id}' if user_info.admin_insert_name else f'@{user_info.username or user_info.id}'
             await bot.send_message(
                 chat_id=826161194,
-                text=f"Просмотр игры:{names[0]}-{names[1]}\nПользователь <b>{user_name}</b> "
+                text=f"Просмотр игры: {names[0]} - {names[1]}\nПользователь <b>{user_name}</b> "
             )
         except Exception as e:
             logger.error(f"Failed to send notification to admin: {e}")
