@@ -164,7 +164,7 @@ async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session
             service_type="SHORT_BOARD"
         )
         logger.info(f"Пользователь {callback.from_user.id} использовал Short Board")
-
+        await session_without_commit.commit()
 
     except Exception as e:
         logger.error(f"Ошибка при обработке выбора стороны: {e}")
