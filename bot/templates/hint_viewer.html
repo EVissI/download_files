@@ -448,17 +448,20 @@
             return (point > 12) ? 55 : -55;
         }
 
-        function calculatePips(positions) {
+        function calculatePips(positions, player) {
             let totalPips = 0;
             for (let pointStr in positions) {
                 if (pointStr === 'bar') {
                     totalPips += Math.abs(positions[pointStr]) * 25;
                 } else if (pointStr === 'off') {
-                    // Off checkers don't count towards pips
                 } else {
                     const point = parseInt(pointStr);
                     const count = positions[pointStr];
-                    totalPips += count * point;
+                    if (player === 'black') {
+                        totalPips += count * (25 - point);
+                    } else {
+                        totalPips += count * point;
+                    }
                 }
             }
             return totalPips;
@@ -561,8 +564,8 @@
             drawCheckers('black', blackImg, blackPositions, currentPlayer);
 
             // Calculate pips
-            const redPips = calculatePips(redPositions);
-            const blackPips = calculatePips(blackPositions);
+            const redPips = calculatePips(redPositions, 'red');
+            const blackPips = calculatePips(blackPositions, 'black');
 
             document.getElementById('black-pips').innerText = `${blackPips}`;
             document.getElementById('red-pips').innerText = `${redPips}`;
