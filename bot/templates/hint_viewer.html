@@ -247,10 +247,9 @@
 
         .board-container {
             position: relative;
-            width: fit-content;
+            width: 800px;
+            /* Match canvas width */
             margin: 0 auto;
-            padding: 40px 0;
-            /* Changed to vertical padding only */
         }
 
         .pips-container {
@@ -258,14 +257,12 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 1;
         }
 
         .pips-box {
             position: absolute;
             width: 100px;
             height: 30px;
-            /* Reduced height */
             background-color: #ffffff;
             border: 2px solid #333;
             border-radius: 4px;
@@ -274,20 +271,22 @@
             align-items: center;
             font-weight: bold;
             color: #000000;
-            left: 50%;
-            /* Center horizontally */
-            transform: translateX(-50%);
-            /* Center horizontally */
+            right: 0;
+            /* Align to right edge */
         }
 
         .pips-black {
-            top: -35px;
-            /* Position above the board */
+            top: 0;
+            /* Align to top */
+            transform: translateY(-100%);
+            /* Move up by its height */
         }
 
         .pips-red {
-            bottom: -35px;
-            /* Position below the board */
+            bottom: 0;
+            /* Align to bottom */
+            transform: translateY(100%);
+            /* Move down by its height */
         }
 
         /* Добавляем обертку для канваса и пипсов */
