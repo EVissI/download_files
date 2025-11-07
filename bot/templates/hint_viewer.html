@@ -249,8 +249,8 @@
             position: relative;
             width: fit-content;
             margin: 0 auto;
-            padding: 0 120px;
-            /* Изменено с padding-right на padding */
+            padding: 40px 0;
+            /* Changed to vertical padding only */
         }
 
         .pips-container {
@@ -259,16 +259,13 @@
             height: 100%;
             pointer-events: none;
             z-index: 1;
-            left: 0;
-            /* Добавлено */
-            top: 0;
-            /* Добавлено */
         }
 
         .pips-box {
             position: absolute;
             width: 100px;
-            height: 50px;
+            height: 30px;
+            /* Reduced height */
             background-color: #ffffff;
             border: 2px solid #333;
             border-radius: 4px;
@@ -277,18 +274,20 @@
             align-items: center;
             font-weight: bold;
             color: #000000;
+            left: 50%;
+            /* Center horizontally */
+            transform: translateX(-50%);
+            /* Center horizontally */
         }
 
         .pips-black {
-            top: 0;
-            right: 10px;
-            /* Изменено с -120px на 10px */
+            top: -35px;
+            /* Position above the board */
         }
 
         .pips-red {
-            bottom: 0;
-            right: 10px;
-            /* Изменено с -120px на 10px */
+            bottom: -35px;
+            /* Position below the board */
         }
 
         /* Добавляем обертку для канваса и пипсов */
@@ -298,7 +297,6 @@
             width: fit-content;
             margin: 0 auto;
             padding: 0 120px;
-            /* Изменено с padding-right на padding */
         }
 
         .pips-container {
@@ -309,13 +307,13 @@
             z-index: 1;
             left: 0;
             top: 0;
-            /* Добавлено */
         }
 
         .pips-box {
             position: absolute;
             width: 100px;
-            height: 50px;
+            height: 30px;
+            /* Reduced height */
             background-color: #ffffff;
             border: 2px solid #333;
             border-radius: 4px;
@@ -324,18 +322,20 @@
             align-items: center;
             font-weight: bold;
             color: #000000;
+            left: 50%;
+            /* Center horizontally */
+            transform: translateX(-50%);
+            /* Center horizontally */
         }
 
         .pips-black {
-            top: 0;
-            right: 10px;
-            /* Изменено с -120px на 10px */
+            top: -35px;
+            /* Position above the board */
         }
 
         .pips-red {
-            bottom: 0;
-            right: 10px;
-            /* Изменено с -120px на 10px */
+            bottom: -35px;
+            /* Position below the board */
         }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
