@@ -614,7 +614,7 @@
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
                 const [d1, d2] = item.dice;
-                const diceY = 400;
+                const diceY = 450;
 
                 let diceX1, diceX2;
                 let diceSet;
@@ -628,8 +628,8 @@
                     diceSet = diceImages.black;
                 }
 
-                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 80, 80);
-                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 80, 80);
+                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
 
             let info = '';
