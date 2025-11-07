@@ -497,6 +497,20 @@
             }
         }
 
+        function drawPips(blackPips, redPips) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(700, -50, 100, 50); // Black pips above the board
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Черные: ${blackPips}`, 750, -20); // Adjusted Y position
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(700, 800, 100, 50); // Red pips below the board
+            ctx.fillStyle = '#000000';
+            ctx.fillText(`Белые: ${redPips}`, 750, 830); // Adjusted Y position
+        }
+
         function render(turn) {
             if (!data || !data[turn]) {
                 console.error('No data for turn:', turn);
@@ -528,18 +542,9 @@
             const redPips = calculatePips(redPositions);
             const blackPips = calculatePips(blackPositions);
 
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(700, -50, 100, 50); 
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Черные: ${blackPips}`, 750, -20); 
+            // Draw pips separately
+            drawPips(blackPips, redPips);
 
-
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(700, 800, 100, 50); 
-            ctx.fillStyle = '#000000';
-            ctx.fillText(`Белые: ${redPips}`, 750, 830); 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
                 const [d1, d2] = item.dice;
