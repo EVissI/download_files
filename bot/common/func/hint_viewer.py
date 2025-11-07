@@ -264,7 +264,8 @@ def json_to_gnubg_commands(data):
             next_act = data[j].get("action")
 
         if act == "skip":
-            # Просто пропускаем, без команд
+            tokens.append({"cmd": "hint", "type": "hint", "target": i})
+            tokens.append({"cmd": "roll", "type": "cmd", "target": i})
             i += 1
             continue
         elif act == "double":
