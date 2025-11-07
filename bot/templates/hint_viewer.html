@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +23,7 @@
         }
 
         h1 {
-            display: none; 
+            display: none;
         }
 
         canvas {
@@ -62,7 +63,8 @@
             overflow: hidden;
         }
 
-        th, td {
+        th,
+        td {
             border: 1px solid #555;
             padding: 20px 30px;
             text-align: left;
@@ -91,9 +93,11 @@
         .hint-good {
             background-color: #fbc02d !important;
         }
+
         .hint-good td {
             color: #1a1a1a !important;
         }
+
         .hint-poor {
             background-color: #d32f2f !important;
         }
@@ -183,7 +187,8 @@
                 font-size: 24px;
             }
 
-            th, td {
+            th,
+            td {
                 padding: 8px 12px;
                 word-spacing: 12px;
             }
@@ -192,7 +197,8 @@
                 padding: 0 10px;
             }
 
-            .game-info, .hints-table {
+            .game-info,
+            .hints-table {
                 padding: 15px;
                 margin: 15px 0;
             }
@@ -218,7 +224,8 @@
                 font-size: 16px;
             }
 
-            th, td {
+            th,
+            td {
                 padding: 6px 8px;
                 word-spacing: 4px;
             }
@@ -237,6 +244,38 @@
             padding: 10px;
             margin: 10px 0;
         }
+
+        .pips-container {
+            position: absolute;
+            width: 100%;
+            max-width: 1200px;
+            padding: 0 20px;
+            pointer-events: none;
+        }
+
+        .pips-box {
+            position: absolute;
+            width: 100px;
+            height: 50px;
+            background-color: #ffffff;
+            border: 2px solid #333;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #000000;
+        }
+
+        .pips-black {
+            top: 20px;
+            right: 20px;
+        }
+
+        .pips-red {
+            bottom: 20px;
+            right: 20px;
+        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
@@ -244,11 +283,19 @@
         const gameId = urlParams.get('game_id') || 'default';
     </script>
 </head>
+
 <body>
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
         <div id="players-info"></div>
-        <canvas id="boardCanvas" width="800" height="800"></canvas>
+
+        <div style="position: relative;">
+            <div class="pips-container">
+                <div id="blackPips" class="pips-box pips-black"></div>
+                <div id="redPips" class="pips-box pips-red"></div>
+            </div>
+            <canvas id="boardCanvas" width="800" height="800"></canvas>
+        </div>
 
         <div id="controls">
             <button onclick="prevTurn()" id="prevBtn">←</button>
@@ -288,7 +335,7 @@
             .then(json => {
                 data = json.filter(item => item.turn !== undefined);
                 data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0) || it.action === 'win' || it.action === 'double' || it.action === 'take');
-                
+
                 if (data.length > 0) {
                     redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
@@ -397,11 +444,11 @@
         }
 
         function getBaseY(point) {
-            return (point > 12) ? 70 : 690; 
+            return (point > 12) ? 70 : 690;
         }
 
         function getDy(point) {
-            return (point > 12) ? 55 : -55; 
+            return (point > 12) ? 55 : -55;
         }
 
         function calculatePips(positions) {
@@ -500,8 +547,8 @@
             document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
             console.log('Rendering turn:', turn, 'Data:', data[turn]);
 
-            ctx.clearRect(0, 0, 800, 800); 
-            ctx.drawImage(boardImg, 0, 0, 800, 800); 
+            ctx.clearRect(0, 0, 800, 800);
+            ctx.drawImage(boardImg, 0, 0, 800, 800);
 
             let redPositions, blackPositions;
             if (turn === 0) {
@@ -520,20 +567,9 @@
             const redPips = calculatePips(redPositions);
             const blackPips = calculatePips(blackPositions);
 
-            // Draw pips rectangles
-            // Black pips: top right, black text on white background
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(700, 0, 100, 50);
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Черные: ${blackPips}`, 750, 30);
-
-            // Red pips: bottom right, black text on white background
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(700, 750, 100, 50);
-            ctx.fillStyle = '#000000';
-            ctx.fillText(`Белые: ${redPips}`, 750, 780);
+            // Update pips displays outside the canvas
+            document.getElementById('blackPips').textContent = `Черные: ${blackPips}`;
+            document.getElementById('redPips').textContent = `Белые: ${redPips}`;
 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
@@ -654,4 +690,5 @@
         }
     </script>
 </body>
+
 </html>
