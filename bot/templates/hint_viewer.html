@@ -270,6 +270,11 @@
         <div class="hints-table">
             <div id="hints"></div>
         </div>
+
+        <div id="pips" style="position: relative; margin-top: 20px;">
+            <div id="blackPips" style="color: white; font-size: 20px;">Черные: 0</div>
+            <div id="redPips" style="color: white; font-size: 20px;">Белые: 0</div>
+        </div>
     </div>
 
     <script>
@@ -542,8 +547,9 @@
             const redPips = calculatePips(redPositions);
             const blackPips = calculatePips(blackPositions);
 
-            // Draw pips separately
-            drawPips(blackPips, redPips);
+            // Update pip display
+            document.getElementById('blackPips').innerText = `Черные: ${blackPips}`;
+            document.getElementById('redPips').innerText = `Белые: ${redPips}`;
 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
