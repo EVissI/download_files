@@ -373,24 +373,37 @@
         const whiteImg = new Image();
         whiteImg.src = '/static/white_checker.png';
 
-        const Dice1 = new Image();
-        Dice1.src = '/static/Dice1.png';
-        const Dice2 = new Image();
-        Dice2.src = '/static/Dice2.png';
-        const Dice3 = new Image();
-        Dice3.src = '/static/Dice3.png';
-        const Dice4 = new Image();
-        Dice4.src = '/static/Dice4.png';
-        const Dice5 = new Image();
-        Dice5.src = '/static/Dice5.png';
-        const Dice6 = new Image();
-        Dice6.src = '/static/Dice6.png';
+        const Dice1w = new Image();
+        Dice1w.src = '/static/1w.png';
+        const Dice2w = new Image();
+        Dice2w.src = '/static/2w.png';
+        const Dice3w = new Image();
+        Dice3w.src = '/static/3w.png';
+        const Dice4w = new Image();
+        Dice4w.src = '/static/4w.png';
+        const Dice5w = new Image();
+        Dice5w.src = '/static/5w.png';
+        const Dice6w = new Image();
+        Dice6w.src = '/static/6w.png';
+
+        const Dice1b = new Image();
+        Dice1b.src = '/static/1b.png';
+        const Dice2b = new Image();
+        Dice2b.src = '/static/2b.png';
+        const Dice3b = new Image();
+        Dice3b.src = '/static/3b.png';
+        const Dice4b = new Image();
+        Dice4b.src = '/static/4b.png';
+        const Dice5b = new Image();
+        Dice5b.src = '/static/5b.png';
+        const Dice6b = new Image();
+        Dice6b.src = '/static/6b.png';
 
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
             console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 9 && dataLoaded) {
+            if (imagesLoaded === 21 && dataLoaded) {
                 console.log('All images and data loaded, rendering turn', current);
                 render(current);
                 updateButtons();
@@ -401,15 +414,21 @@
         boardImg.onload = checkImagesLoaded;
         blackImg.onload = checkImagesLoaded;
         whiteImg.onload = checkImagesLoaded;
-        Dice1.onload = checkImagesLoaded;
-        Dice2.onload = checkImagesLoaded;
-        Dice3.onload = checkImagesLoaded;
-        Dice4.onload = checkImagesLoaded;
-        Dice5.onload = checkImagesLoaded;
-        Dice6.onload = checkImagesLoaded;
+        Dice1w.onload = checkImagesLoaded;
+        Dice2w.onload = checkImagesLoaded;
+        Dice3w.onload = checkImagesLoaded;
+        Dice4w.onload = checkImagesLoaded;
+        Dice5w.onload = checkImagesLoaded;
+        Dice6w.onload = checkImagesLoaded;
+        Dice1b.onload = checkImagesLoaded;
+        Dice2b.onload = checkImagesLoaded;
+        Dice3b.onload = checkImagesLoaded;
+        Dice4b.onload = checkImagesLoaded;
+        Dice5b.onload = checkImagesLoaded;
+        Dice6b.onload = checkImagesLoaded;
 
         // Обработка ошибок загрузки изображений
-        [boardImg, blackImg, whiteImg, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6].forEach(img => {
+        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b].forEach(img => {
             img.onerror = () => {
                 console.error(`Failed to load image: ${img.src}`);
                 infoDiv.innerHTML = '<div class="error">Error loading game assets. Please try again later.</div>';
@@ -417,12 +436,22 @@
         });
 
         const diceImages = {
-            1: Dice1,
-            2: Dice2,
-            3: Dice3,
-            4: Dice4,
-            5: Dice5,
-            6: Dice6
+            white: {
+                1: Dice1w,
+                2: Dice2w,
+                3: Dice3w,
+                4: Dice4w,
+                5: Dice5w,
+                6: Dice6w
+            },
+            black: {
+                1: Dice1b,
+                2: Dice2b,
+                3: Dice3b,
+                4: Dice4b,
+                5: Dice5b,
+                6: Dice6b
+            }
         };
 
         function getX(point) {
@@ -588,16 +617,19 @@
                 const diceY = 400;
 
                 let diceX1, diceX2;
+                let diceSet;
                 if (item.player === 'Red') {
                     diceX1 = 530; // кубики справа для красных
                     diceX2 = 620;
+                    diceSet = diceImages.white;
                 } else {
                     diceX1 = 130; // кубики слева для черных
                     diceX2 = 220;
+                    diceSet = diceImages.black;
                 }
 
-                if (diceImages[d1]) ctx.drawImage(diceImages[d1], diceX1, diceY, 80, 80);
-                if (diceImages[d2]) ctx.drawImage(diceImages[d2], diceX2, diceY, 80, 80);
+                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 80, 80);
+                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 80, 80);
             }
 
             let info = '';
