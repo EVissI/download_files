@@ -270,11 +270,6 @@
         <div class="hints-table">
             <div id="hints"></div>
         </div>
-
-        <div id="pips" style="position: relative; margin-top: 20px;">
-            <div id="blackPips" style="color: white; font-size: 20px;">Черные: 0</div>
-            <div id="redPips" style="color: white; font-size: 20px;">Белые: 0</div>
-        </div>
     </div>
 
     <script>
@@ -502,20 +497,6 @@
             }
         }
 
-        function drawPips(blackPips, redPips) {
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(700, -50, 100, 50); // Black pips above the board
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Черные: ${blackPips}`, 750, -20); // Adjusted Y position
-
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(700, 800, 100, 50); // Red pips below the board
-            ctx.fillStyle = '#000000';
-            ctx.fillText(`Белые: ${redPips}`, 750, 830); // Adjusted Y position
-        }
-
         function render(turn) {
             if (!data || !data[turn]) {
                 console.error('No data for turn:', turn);
@@ -547,9 +528,17 @@
             const redPips = calculatePips(redPositions);
             const blackPips = calculatePips(blackPositions);
 
-            // Update pip display
-            document.getElementById('blackPips').innerText = `Черные: ${blackPips}`;
-            document.getElementById('redPips').innerText = `Белые: ${redPips}`;
+            ctx.fillStyle = '#000000'; 
+            ctx.fillRect(650, -50, 150, 50); 
+            ctx.fillStyle = '#ffffff'; 
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Черные: ${blackPips}`, 725, -20); 
+
+            ctx.fillStyle = '#ffffff'; 
+            ctx.fillRect(650, 800, 150, 50); 
+            ctx.fillStyle = '#000000'; 
+            ctx.fillText(`Белые: ${redPips}`, 725, 830); 
 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
