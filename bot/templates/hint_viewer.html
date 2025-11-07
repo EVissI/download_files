@@ -331,7 +331,7 @@
             })
             .then(json => {
                 data = json.filter(item => item.turn !== undefined);
-                data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0) || it.action === 'win' || it.action === 'double' || it.action === 'take');
+                data = data.filter(it => (Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take');
 
                 if (data.length > 0) {
                     redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
@@ -641,6 +641,8 @@
                 info = `<strong>Действие:</strong> Победа (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
                 info = `<strong>Ход:</strong> ${item.gnu_move}`;
+            } else if (item.moves && item.moves.length === 0) {
+                info = `<strong>Ход:</strong> 'Пропуск'`;
             } else {
                 info = '<div class="info-text">No moves available for this turn.</div>';
                 console.warn('No moves for turn:', turn, item);
