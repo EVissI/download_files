@@ -272,7 +272,7 @@
             border-radius: 4px;
             font-size: 18px;
             font-weight: bold;
-            margin-top: -23px;
+            margin-top: -20px;
             text-align: right;
             display: block;
             width: fit-content;
@@ -564,22 +564,20 @@
             const redPips = calculatePips(redPositions);
             const blackPips = calculatePips(blackPositions);
 
-            // Update separate pips display
-            document.getElementById('black-pips').innerText = `Черные: ${blackPips}`;
-            document.getElementById('red-pips').innerText = `Белые: ${redPips}`;
+            document.getElementById('black-pips').innerText = `${blackPips}`;
+            document.getElementById('red-pips').innerText = `${redPips}`;
 
-            // Keep original pips display on canvas for backward compatibility
             ctx.fillStyle = '#000000';
             ctx.fillRect(650, -50, 150, 50);
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 20px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(`Черные: ${blackPips}`, 725, -20);
+            ctx.fillText(`${blackPips}`, 725, -20);
 
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(650, 800, 150, 50);
             ctx.fillStyle = '#000000';
-            ctx.fillText(`Белые: ${redPips}`, 725, 830);
+            ctx.fillText(`${redPips}`, 725, 830);
 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
