@@ -403,7 +403,7 @@
         const checkImagesLoaded = () => {
             imagesLoaded++;
             console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 21 && dataLoaded) {
+            if (dataLoaded) {
                 console.log('All images and data loaded, rendering turn', current);
                 render(current);
                 updateButtons();
