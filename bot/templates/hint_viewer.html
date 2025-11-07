@@ -248,9 +248,9 @@
         .pips-container {
             position: absolute;
             width: 100%;
-            max-width: 1200px;
-            padding: 0 20px;
+            height: 100%;
             pointer-events: none;
+            z-index: 1;
         }
 
         .pips-box {
@@ -268,13 +268,25 @@
         }
 
         .pips-black {
-            top: 20px;
-            right: 20px;
+            top: 0;
+            right: -120px;
+            /* Выносим за пределы доски */
         }
 
         .pips-red {
-            bottom: 20px;
-            right: 20px;
+            bottom: 0;
+            right: -120px;
+            /* Выносим за пределы доски */
+        }
+
+        /* Добавляем обертку для канваса и пипсов */
+
+        .board-container {
+            position: relative;
+            width: fit-content;
+            margin: 0 auto;
+            padding-right: 120px;
+            /* Оставляем место для пипсов */
         }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -289,14 +301,13 @@
         <h1>Backgammon Game Analysis</h1>
         <div id="players-info"></div>
 
-        <div style="position: relative;">
+        <div class="board-container">
             <div class="pips-container">
                 <div id="blackPips" class="pips-box pips-black"></div>
                 <div id="redPips" class="pips-box pips-red"></div>
             </div>
             <canvas id="boardCanvas" width="800" height="800"></canvas>
         </div>
-
         <div id="controls">
             <button onclick="prevTurn()" id="prevBtn">←</button>
             <span id="turnLabel">Ход 0</span>
