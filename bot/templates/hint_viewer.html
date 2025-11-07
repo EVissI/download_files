@@ -1,6 +1,5 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,15 +22,15 @@
         }
 
         h1 {
-            display: none;
+            display: none; 
         }
 
         canvas {
             border: 2px solid #333;
             border-radius: 8px;
             background-color: #2a2a2a;
-            width: 100vmin;
-            height: 100vmin;
+            max-width: 100%;
+            height: auto;
             display: block;
             margin: 0 auto 20px;
         }
@@ -63,8 +62,7 @@
             overflow: hidden;
         }
 
-        th,
-        td {
+        th, td {
             border: 1px solid #555;
             padding: 20px 30px;
             text-align: left;
@@ -93,11 +91,9 @@
         .hint-good {
             background-color: #fbc02d !important;
         }
-
         .hint-good td {
             color: #1a1a1a !important;
         }
-
         .hint-poor {
             background-color: #d32f2f !important;
         }
@@ -161,8 +157,8 @@
             }
 
             canvas {
-                width: 100vmin;
-                height: 100vmin;
+                width: 100%;
+                height: 100%;
             }
 
             #controls {
@@ -187,8 +183,7 @@
                 font-size: 24px;
             }
 
-            th,
-            td {
+            th, td {
                 padding: 8px 12px;
                 word-spacing: 12px;
             }
@@ -197,8 +192,7 @@
                 padding: 0 10px;
             }
 
-            .game-info,
-            .hints-table {
+            .game-info, .hints-table {
                 padding: 15px;
                 margin: 15px 0;
             }
@@ -210,8 +204,8 @@
             }
 
             canvas {
-                width: 100vmin;
-                height: 100vmin;
+                width: 100%;
+                height: 100%;
             }
 
             button {
@@ -224,8 +218,7 @@
                 font-size: 16px;
             }
 
-            th,
-            td {
+            th, td {
                 padding: 6px 8px;
                 word-spacing: 4px;
             }
@@ -244,97 +237,6 @@
             padding: 10px;
             margin: 10px 0;
         }
-
-        .board-container {
-            position: relative;
-            width: 100vmin;
-            height: 100vmin;
-            margin: 0 auto;
-        }
-
-        .pips-container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        .pips-box {
-            position: absolute;
-            width: 100px;
-            height: 30px;
-            background-color: #ffffff;
-            border: 2px solid #333;
-            border-radius: 4px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            color: #000000;
-            right: 0;
-            /* Align to right edge */
-        }
-
-        .pips-black {
-            top: 0;
-            /* Align to top */
-            transform: translateY(-100%);
-            /* Move up by its height */
-        }
-
-        .pips-red {
-            bottom: 0;
-            /* Align to bottom */
-            transform: translateY(100%);
-            /* Move down by its height */
-        }
-
-        /* Добавляем обертку для канваса и пипсов */
-
-        .board-container {
-            position: relative;
-            width: fit-content;
-            margin: 0 auto;
-            padding: 0 120px;
-        }
-
-        .pips-container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-            left: 0;
-            top: 0;
-        }
-
-        .pips-box {
-            position: absolute;
-            width: 100px;
-            height: 30px;
-            /* Reduced height */
-            background-color: #ffffff;
-            border: 2px solid #333;
-            border-radius: 4px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            color: #000000;
-            left: 50%;
-            transform: translateX(100%);
-            /* Center horizontally */
-        }
-
-        .pips-black {
-            top: -35px;
-            /* Position above the board */
-        }
-
-        .pips-red {
-            bottom: -35px;
-            /* Position below the board */
-        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
@@ -342,19 +244,12 @@
         const gameId = urlParams.get('game_id') || 'default';
     </script>
 </head>
-
 <body>
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
         <div id="players-info"></div>
+        <canvas id="boardCanvas" width="800" height="800"></canvas>
 
-        <div class="board-container">
-            <div class="pips-container">
-                <div id="blackPips" class="pips-box pips-black"></div>
-                <div id="redPips" class="pips-box pips-red"></div>
-            </div>
-            <canvas id="boardCanvas" width="800" height="800"></canvas>
-        </div>
         <div id="controls">
             <button onclick="prevTurn()" id="prevBtn">←</button>
             <span id="turnLabel">Ход 0</span>
@@ -393,7 +288,7 @@
             .then(json => {
                 data = json.filter(item => item.turn !== undefined);
                 data = data.filter(it => (Array.isArray(it.moves) && it.moves.length > 0) || it.action === 'win' || it.action === 'double' || it.action === 'take');
-
+                
                 if (data.length > 0) {
                     redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
@@ -502,11 +397,11 @@
         }
 
         function getBaseY(point) {
-            return (point > 12) ? 70 : 690;
+            return (point > 12) ? 70 : 690; 
         }
 
         function getDy(point) {
-            return (point > 12) ? 55 : -55;
+            return (point > 12) ? 55 : -55; 
         }
 
         function calculatePips(positions) {
@@ -605,8 +500,8 @@
             document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
             console.log('Rendering turn:', turn, 'Data:', data[turn]);
 
-            ctx.clearRect(0, 0, 800, 800);
-            ctx.drawImage(boardImg, 0, 0, 800, 800);
+            ctx.clearRect(0, 0, 800, 800); 
+            ctx.drawImage(boardImg, 0, 0, 800, 800); 
 
             let redPositions, blackPositions;
             if (turn === 0) {
@@ -625,9 +520,20 @@
             const redPips = calculatePips(redPositions);
             const blackPips = calculatePips(blackPositions);
 
-            // Update pips displays outside the canvas
-            document.getElementById('blackPips').textContent = `Черные: ${blackPips}`;
-            document.getElementById('redPips').textContent = `Белые: ${redPips}`;
+            // Draw pips rectangles
+            // Black pips: top right, black text on white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(700, 0, 100, 50);
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Черные: ${blackPips}`, 750, 30);
+
+            // Red pips: bottom right, black text on white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(700, 750, 100, 50);
+            ctx.fillStyle = '#000000';
+            ctx.fillText(`Белые: ${redPips}`, 750, 780);
 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
@@ -748,5 +654,4 @@
         }
     </script>
 </body>
-
 </html>
