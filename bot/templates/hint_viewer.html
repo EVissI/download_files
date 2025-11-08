@@ -370,6 +370,7 @@
         let current = 0;
         let doubleTurns = [];
         let firstDoubleIndex = -1;
+        let currentCube = null;
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -679,6 +680,7 @@
                         };
                         const img = doubleImages[cubeValue];
                         if (img) {
+                            currentCube = img; // Запоминаем куб
                             let cubeX;
                             if (data[doubleIndex].player === 'Red') {
                                 cubeX = 530; // куб справа для красных
@@ -689,6 +691,11 @@
                         }
                         break; // Выводим только для первого совпадающего, так как turn уникален
                     }
+                }
+
+                // Выводить запомненный куб на середине доски, если он есть
+                if (currentCube && turn > firstDoubleIndex) {
+                    ctx.drawImage(currentCube, 375, 350, 50, 50);
                 }
 
                 let info = '';
