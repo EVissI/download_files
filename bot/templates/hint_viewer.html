@@ -693,8 +693,8 @@
                     }
                 }
 
-                // Выводить запомненный куб на середине доски, если он есть
-                if (currentCube && turn > firstDoubleIndex) {
+                // Выводить запомненный куб на середине доски, если он есть, начиная со следующего хода после удвоения
+                if (currentCube && turn > firstDoubleIndex + 1) {
                     ctx.drawImage(currentCube, 375, 350, 50, 50);
                 }
 
