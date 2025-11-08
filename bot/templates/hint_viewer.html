@@ -685,18 +685,23 @@
                         if (img) {
                             currentCube = img; // Запоминаем куб
                             currentCubePlayer = data[doubleIndex].player; // Запоминаем игрока
-                            // Вывод куба на середине доски
-                            ctx.drawImage(img, 375, 350, 50, 50);
-                            // Вывод текста действия выше куба
+                            let cubeX;
+                            if (data[doubleIndex].player === 'Red') {
+                                cubeX = 130; // куб справа для красных
+                            } else {
+                                cubeX = 530; // куб слева для черных
+                            }
+                            ctx.drawImage(img, cubeX, 350, 50, 50);
                             ctx.fillStyle = '#ffffff';
                             ctx.font = 'bold 20px Arial';
                             ctx.textAlign = 'center';
-                            ctx.fillText(item.action === 'take' ? 'Take' : 'Pass', 375, 330);
+                            ctx.fillText(item.action === 'take' ? 'Take' : 'Pass', 375, cubeX);
                         }
-                        break;
+                        break; 
                     }
                 }
 
+                // Выводить запомненный куб на середине доски, если он есть, начиная со следующего хода после удвоения
                 if (currentCube && turn > firstDoubleIndex + 1) {
                     let cubeY = 350;
                     if (currentCubePlayer === 'Black') {
