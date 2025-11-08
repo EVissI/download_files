@@ -660,8 +660,8 @@
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
                 }
     
-                // Показывать Double64 только до хода с удвоением и на следующем ходу после удвоения
-                if (turn < doubleTurnIndex || turn === doubleTurnIndex + 1) {
+                // Показывать Double64 только на ходу с удвоением
+                if (turn === doubleTurnIndex) {
                     ctx.drawImage(Double64, 375, 350, 50, 50);
                 }
 
