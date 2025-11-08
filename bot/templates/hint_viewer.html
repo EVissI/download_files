@@ -699,9 +699,9 @@
                 if (currentCube && turn > firstDoubleIndex + 1) {
                     let cubeY = 350;
                     if (currentCubePlayer === 'Black') {
-                        cubeY = 300; // выше для черных
+                        cubeY = 200; // выше для черных
                     } else if (currentCubePlayer === 'Red') {
-                        cubeY = 400; // ниже для красных
+                        cubeY = 600; // ниже для красных
                     }
                     ctx.drawImage(currentCube, 375, cubeY, 50, 50);
                 }
