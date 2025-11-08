@@ -707,6 +707,7 @@
                 }
                 let info = '';
                 let prefix = (turn > 0 && data[turn - 1].action === 'take') ? 'Takes ' : '';
+                console.log(turn > 0? data[turn - 1].action === 'take' : 'N/A', 'Prefix:', prefix);
                 if (item.action === 'double') {
                     info =`<strong>Действие:</strong> Double (${item.cube})`;
                 } else if (item.action === 'win') {
