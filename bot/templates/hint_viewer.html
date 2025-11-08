@@ -697,7 +697,7 @@
                     }
                 }
 
-                if (currentCube && turn > firstDoubleIndex + 1 && item.action != 'double') {
+                if (currentCube && turn > firstDoubleIndex + 1 && item.action != 'double' && item.action != 'take'&& item.action != 'pass') {
                     let cubeY = 350;
                     if (currentCubePlayer === 'Black') {
                         cubeY = 600; 
