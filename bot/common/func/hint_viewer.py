@@ -297,7 +297,6 @@ def json_to_gnubg_commands(data):
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
             if not moves:
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
-                tokens.append({"cmd": "roll", "type": "cmd", "target": i})
             if is_last_in_turn and next_act != "double":
                 tokens.append({"cmd": "roll", "type": "cmd", "target": i})
             i += 1
