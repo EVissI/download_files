@@ -664,26 +664,30 @@
                     ctx.drawImage(Double64, 375, 350, 50, 50);
                 }
 
-                // Показывать куб эквивалентный значению item.cube из последнего хода с удвоением на следующем ходу
-                if (turn === lastDoubleIndex + 1 && lastDoubleIndex >= 0) {
-                    const cubeValue = data[lastDoubleIndex].cube;
-                    const doubleImages = {
-                        2: Double2,
-                        4: Double4,
-                        8: Double8,
-                        16: Double16,
-                        32: Double32,
-                        64: Double64
-                    };
-                    const img = doubleImages[cubeValue];
-                    if (img) {
-                        let cubeX;
-                        if (data[lastDoubleIndex].player === 'Red') {
-                            cubeX = 530; // куб справа для красных
-                        } else {
-                            cubeX = 130; // куб слева для черных
+                // Показывать куб эквивалентный значению item.cube из хода с удвоением на следующем ходу после каждого удвоения
+                for (let i = 0; i < doubleTurns.length; i++) {
+                    const doubleIndex = doubleTurns[i];
+                    if (turn === doubleIndex + 1) {
+                        const cubeValue = data[doubleIndex].cube;
+                        const doubleImages = {
+                            2: Double2,
+                            4: Double4,
+                            8: Double8,
+                            16: Double16,
+                            32: Double32,
+                            64: Double64
+                        };
+                        const img = doubleImages[cubeValue];
+                        if (img) {
+                            let cubeX;
+                            if (data[doubleIndex].player === 'Red') {
+                                cubeX = 530; // куб справа для красных
+                            } else {
+                                cubeX = 130; // куб слева для черных
+                            }
+                            ctx.drawImage(img, cubeX, 350, 50, 50);
                         }
-                        ctx.drawImage(img, cubeX, 350, 50, 50);
+                        break; // Выводим только для первого совпадающего, так как turn уникален
                     }
                 }
 
