@@ -336,6 +336,12 @@
                 data = json.filter(item => item.turn !== undefined);
                 data = data.filter(it => (Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take');
 
+                // Найти индекс хода с удвоением
+                doubleTurnIndex = data.findIndex(item => item.action === 'double');
+                if (doubleTurnIndex === -1) {
+                    doubleTurnIndex = data.length; // Если удвоения нет, установить за пределами массива
+                }
+
                 if (data.length > 0) {
                     redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
                     blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
@@ -364,6 +370,7 @@
             });
 
         let current = 0;
+        let doubleTurnIndex = -1;
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -651,9 +658,12 @@
 
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
-            }
-
-            ctx.drawImage(Double64, 375, 350, 50, 50);
+                }
+    
+                // Показывать Double64 только до хода с удвоением и на следующем ходу после удвоения
+                if (turn < doubleTurnIndex || turn === doubleTurnIndex + 1) {
+                    ctx.drawImage(Double64, 375, 350, 50, 50);
+                }
 
             let info = '';
             if (item.action === 'double') {
