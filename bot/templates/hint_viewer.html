@@ -371,6 +371,7 @@
         let doubleTurns = [];
         let firstDoubleIndex = -1;
         let currentCube = null;
+        let currentCubePlayer = null;
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -681,6 +682,7 @@
                         const img = doubleImages[cubeValue];
                         if (img) {
                             currentCube = img; // Запоминаем куб
+                            currentCubePlayer = data[doubleIndex].player; // Запоминаем игрока
                             let cubeX;
                             if (data[doubleIndex].player === 'Red') {
                                 cubeX = 530; // куб справа для красных
@@ -695,7 +697,13 @@
 
                 // Выводить запомненный куб на середине доски, если он есть, начиная со следующего хода после удвоения
                 if (currentCube && turn > firstDoubleIndex + 1) {
-                    ctx.drawImage(currentCube, 375, 350, 50, 50);
+                    let cubeY = 350;
+                    if (currentCubePlayer === 'Black') {
+                        cubeY = 300; // выше для черных
+                    } else if (currentCubePlayer === 'Red') {
+                        cubeY = 400; // ниже для красных
+                    }
+                    ctx.drawImage(currentCube, 375, cubeY, 50, 50);
                 }
 
                 let info = '';
