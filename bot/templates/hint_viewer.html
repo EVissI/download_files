@@ -665,7 +665,24 @@
                     ctx.drawImage(Double64, 375, 350, 50, 50);
                 }
 
-            let info = '';
+                // Показывать куб эквивалентный значению item.cube из хода с удвоением на следующем ходу
+                if (turn === doubleTurnIndex + 1 && doubleTurnIndex >= 0) {
+                    const cubeValue = data[doubleTurnIndex].cube;
+                    const doubleImages = {
+                        2: Double2,
+                        4: Double4,
+                        8: Double8,
+                        16: Double16,
+                        32: Double32,
+                        64: Double64
+                    };
+                    const img = doubleImages[cubeValue];
+                    if (img) {
+                        ctx.drawImage(img, 375, 350, 50, 50);
+                    }
+                }
+
+                let info = '';
             if (item.action === 'double') {
                 info = `<strong>Действие:</strong> Удвоение (${item.cube})`;
             } else if (item.action === 'take') {
