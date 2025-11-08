@@ -712,22 +712,22 @@
                     ctx.drawImage(currentCube, 375, cubeY, 50, 50);
                 }
 
-                // Выводить куб на середине доски на ходу с удвоением
-                if (item.action === 'double') {
-                    const cubeValue = item.cube;
-                    const doubleImages = {
-                        2: Double2,
-                        4: Double4,
-                        8: Double8,
-                        16: Double16,
-                        32: Double32,
-                        64: Double64
-                    };
-                    const img = doubleImages[cubeValue];
-                    if (img) {
-                        ctx.drawImage(img, 375, 350, 50, 50);
-                    }
-                }
+                // // Выводить куб на середине доски на ходу с удвоением
+                // if (item.action === 'double') {
+                //     const cubeValue = item.cube;
+                //     const doubleImages = {
+                //         2: Double2,
+                //         4: Double4,
+                //         8: Double8,
+                //         16: Double16,
+                //         32: Double32,
+                //         64: Double64
+                //     };
+                //     const img = doubleImages[cubeValue];
+                //     if (img) {
+                //         ctx.drawImage(img, 375, 350, 50, 50);
+                //     }
+                // }
 
                 let info = '';
             if (item.action === 'double') {
