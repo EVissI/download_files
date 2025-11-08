@@ -685,9 +685,9 @@
                             currentCubePlayer = data[doubleIndex].player; // Запоминаем игрока
                             let cubeX;
                             if (data[doubleIndex].player === 'Red') {
-                                cubeX = 530; // куб справа для красных
+                                cubeX = 130; // куб справа для красных
                             } else {
-                                cubeX = 130; // куб слева для черных
+                                cubeX = 530; // куб слева для черных
                             }
                             ctx.drawImage(img, cubeX, 350, 50, 50);
                         }
@@ -699,9 +699,9 @@
                 if (currentCube && turn > firstDoubleIndex + 1) {
                     let cubeY = 350;
                     if (currentCubePlayer === 'Black') {
-                        cubeY = 100; // выше для черных
+                        cubeY = 600; 
                     } else if (currentCubePlayer === 'Red') {
-                        cubeY = 600; // ниже для красных
+                        cubeY = 100; 
                     }
                     ctx.drawImage(currentCube, 375, cubeY, 50, 50);
                 }
