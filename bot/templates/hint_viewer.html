@@ -702,7 +702,7 @@
                 }
 
                 // Выводить запомненный куб на середине доски, если он есть, начиная со следующего хода после удвоения
-                if (currentCube && turn > firstDoubleIndex + 1) {
+                if (currentCube && turn > firstDoubleIndex) {
                     let cubeY = 350;
                     if (currentCubePlayer === 'Black') {
                         cubeY = 600; 
