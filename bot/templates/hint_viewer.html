@@ -678,7 +678,13 @@
                     };
                     const img = doubleImages[cubeValue];
                     if (img) {
-                        ctx.drawImage(img, 375, 350, 50, 50);
+                        let cubeX;
+                        if (data[doubleTurnIndex].player === 'Red') {
+                            cubeX = 530; // куб справа для красных
+                        } else {
+                            cubeX = 130; // куб слева для черных
+                        }
+                        ctx.drawImage(img, cubeX, 350, 50, 50);
                     }
                 }
 
