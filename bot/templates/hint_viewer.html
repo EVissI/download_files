@@ -653,22 +653,8 @@
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
 
-            // Draw double cube until double action
-            let cubeValue = 1;
-            for (let i = 0; i < data.length; i++) {
-                if (data[i].action === 'double') {
-                    break;
-                }
-                if (data[i].cube) {
-                    cubeValue = data[i].cube;
-                }
-            }
-            if (cubeValue > 1) {
-                const doubleCube = window[`Double${cubeValue}`];
-                if (doubleCube) {
-                    ctx.drawImage(doubleCube, 0, 350, 100, 100);
-                }
-            }
+            // Draw double cube Double64 on the left
+            ctx.drawImage(Double64, 0, 350, 100, 100);
 
             let info = '';
             if (item.action === 'double') {
