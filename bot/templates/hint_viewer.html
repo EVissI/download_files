@@ -334,7 +334,7 @@
             })
             .then(json => {
                 data = json.filter(item => item.turn !== undefined);
-                data = data.filter(it => (Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take');
+                data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double') && it.action !== 'take' && it.action !== 'pass');
 
                 // Найти все индексы ходов с удвоением
                 doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
@@ -710,10 +710,6 @@
                 let info = '';
             if (item.action === 'double') {
                 info = `<strong>Действие:</strong> Double (${item.cube})`;
-            } else if (item.action === 'take') {
-                info = `<strong>Действие:</strong> Take`;
-            } else if (item.action === 'pass') {
-                info = `<strong>Действие:</strong> Pass`;
             } else if (item.action === 'win') {
                 info = `<strong>Действие:</strong> Победа (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
