@@ -540,9 +540,9 @@
 
                     let displayPoint = point;
                     if (player === 'black') {
-                        displayPoint = 25 - point; 
+                        displayPoint = 25 - point; // Black sees points inverted (24 at top-right, 1 at bottom-left)
                     } else if (player === 'red') {
-                        displayPoint = point; 
+                        displayPoint = point; // Red sees points starting from bottom-left (1 at bottom-left, 24 at top-right)
                     }
                     let numberY;
                     if (point > 12) {
@@ -706,10 +706,9 @@
                     ctx.drawImage(currentCube, 375, cubeY, 50, 50);
                 }
                 let info = '';
-                console.log(data[turn - 1].action)
                 let prefix = (turn > 0 && data[turn - 1].action === 'take') ? 'Takes ' : '';
                 if (item.action === 'double') {
-                    info = `<strong>Действие:</strong> Double (${item.cube})`;
+                    info =`<strong>Действие:</strong> Double (${item.cube})`;
                 } else if (item.action === 'win') {
                     info =`<strong>Действие:</strong> Победа (${item.points} очков)`;
                 } else if (item.moves && item.moves.length > 0) {
