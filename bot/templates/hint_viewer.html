@@ -671,7 +671,7 @@
                 // Показывать куб эквивалентный значению item.cube из хода с удвоением на следующем ходу после каждого удвоения
                 for (let i = 0; i < doubleTurns.length; i++) {
                     const doubleIndex = doubleTurns[i];
-                    if (turn === doubleIndex) {
+                    if (turn === doubleIndex + 1) {
                         const cubeValue = data[doubleIndex].cube;
                         const doubleImages = {
                             2: Double2,
@@ -685,20 +685,19 @@
                         if (img) {
                             currentCube = img; // Запоминаем куб
                             currentCubePlayer = data[doubleIndex].player; // Запоминаем игрока
-                            let cubeX;
-                            if (data[doubleIndex].player === 'Red') {
-                                cubeX = 130; // куб справа для красных
-                            } else {
-                                cubeX = 530; // куб слева для черных
-                            }
-                            ctx.drawImage(img, cubeX, 350, 50, 50);
+                            // Вывод куба на середине доски
+                            ctx.drawImage(img, 375, 350, 50, 50);
+                            // Вывод текста действия выше куба
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = 'bold 20px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(item.action === 'take' ? 'Take' : 'Pass', 375, 330);
                         }
-                        break; 
+                        break;
                     }
                 }
 
-                // Выводить запомненный куб на середине доски, если он есть, начиная со следующего хода после удвоения
-                if (currentCube && turn > firstDoubleIndex) {
+                if (currentCube && turn > firstDoubleIndex + 1) {
                     let cubeY = 350;
                     if (currentCubePlayer === 'Black') {
                         cubeY = 600; 
@@ -706,6 +705,23 @@
                         cubeY = 100; 
                     }
                     ctx.drawImage(currentCube, 375, cubeY, 50, 50);
+                }
+
+                // Выводить куб на середине доски на ходу с удвоением
+                if (item.action === 'double') {
+                    const cubeValue = item.cube;
+                    const doubleImages = {
+                        2: Double2,
+                        4: Double4,
+                        8: Double8,
+                        16: Double16,
+                        32: Double32,
+                        64: Double64
+                    };
+                    const img = doubleImages[cubeValue];
+                    if (img) {
+                        ctx.drawImage(img, 375, 350, 50, 50);
+                    }
                 }
 
                 let info = '';
