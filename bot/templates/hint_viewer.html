@@ -671,7 +671,7 @@
                 // Показывать куб эквивалентный значению item.cube из хода с удвоением на следующем ходу после каждого удвоения
                 for (let i = 0; i < doubleTurns.length; i++) {
                     const doubleIndex = doubleTurns[i];
-                    if (turn === doubleIndex + 1) {
+                    if (turn === doubleIndex) {
                         const cubeValue = data[doubleIndex].cube;
                         const doubleImages = {
                             2: Double2,
