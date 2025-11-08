@@ -664,14 +664,14 @@
                 }
     
 
-                if (turn < firstDoubleIndex) {
+                if (turn <= firstDoubleIndex) {
                     ctx.drawImage(Double64, 375, 350, 50, 50);
                 }
 
                 // Показывать куб эквивалентный значению item.cube из хода с удвоением на следующем ходу после каждого удвоения
                 for (let i = 0; i < doubleTurns.length; i++) {
                     const doubleIndex = doubleTurns[i];
-                    if (turn === doubleIndex + 1) {
+                    if (turn === doubleIndex) {
                         const cubeValue = data[doubleIndex].cube;
                         const doubleImages = {
                             2: Double2,
@@ -697,7 +697,8 @@
                     }
                 }
 
-                if (currentCube && turn > firstDoubleIndex + 1 && item.action != 'double' && item.action != 'take'&& item.action != 'pass') {
+                // Выводить запомненный куб на середине доски, если он есть, начиная со следующего хода после удвоения
+                if (currentCube && turn > firstDoubleIndex) {
                     let cubeY = 350;
                     if (currentCubePlayer === 'Black') {
                         cubeY = 600; 
@@ -705,23 +706,6 @@
                         cubeY = 100; 
                     }
                     ctx.drawImage(currentCube, 375, cubeY, 50, 50);
-                }
-
-                // Выводить куб на середине доски на ходу с удвоением
-                if (item.action === 'double') {
-                    const cubeValue = item.cube;
-                    const doubleImages = {
-                        2: Double2,
-                        4: Double4,
-                        8: Double8,
-                        16: Double16,
-                        32: Double32,
-                        64: Double64
-                    };
-                    const img = doubleImages[cubeValue];
-                    if (img) {
-                        ctx.drawImage(img, 375, 350, 50, 50);
-                    }
                 }
 
                 let info = '';
