@@ -588,9 +588,12 @@
             }
 
             const offX = 783;
-            const offY = (player === 'black') ? 200 : 600;
+            const offY = (player === 'black') ? 300 : 500;
             if (positions.off && positions.off !== 0) {
+                const originalFont = ctx.font;  
+                ctx.font = 'bold 32px Arial';  
                 ctx.fillText(`${positions.off}`, offX, offY);
+                ctx.font = originalFont;  
             }
         }
 
@@ -708,9 +711,11 @@
 
                 let info = '';
             if (item.action === 'double') {
-                info = `<strong>Действие:</strong> Удвоение (${item.cube})`;
+                info = `<strong>Действие:</strong> Double (${item.cube})`;
             } else if (item.action === 'take') {
-                info = `<strong>Действие:</strong> Принятие`;
+                info = `<strong>Действие:</strong> Take`;
+            } else if (item.action === 'pass') {
+                info = `<strong>Действие:</strong> Pass`;
             } else if (item.action === 'win') {
                 info = `<strong>Действие:</strong> Победа (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
