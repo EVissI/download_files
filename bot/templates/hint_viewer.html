@@ -347,7 +347,7 @@
                     if (data[0]?.action === 'skip') {
                         current = 1;
                     }
-                    if (imagesLoaded === 15) {
+                    if (imagesLoaded === 21) {
                         render(current);
                         updateButtons();
                         infoDiv.innerHTML = '';
@@ -402,11 +402,24 @@
         const Dice6b = new Image();
         Dice6b.src = '/static/6b.png';
 
+        const Double2 = new Image();
+        Double2.src = '/static/Double2.png';
+        const Double4 = new Image();
+        Double4.src = '/static/Double4.png';
+        const Double8 = new Image();
+        Double8.src = '/static/Double8.png';
+        const Double16 = new Image();
+        Double16.src = '/static/Double16.png';
+        const Double32 = new Image();
+        Double32.src = '/static/Double32.png';
+        const Double64 = new Image();
+        Double64.src = '/static/Double64.png';
+
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
             console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 15 && dataLoaded) {
+            if (imagesLoaded === 21 && dataLoaded) {
                 console.log('All images and data loaded, rendering turn', current);
                 render(current);
                 updateButtons();
@@ -429,9 +442,15 @@
         Dice4b.onload = checkImagesLoaded;
         Dice5b.onload = checkImagesLoaded;
         Dice6b.onload = checkImagesLoaded;
+        Double2.onload = checkImagesLoaded;
+        Double4.onload = checkImagesLoaded;
+        Double8.onload = checkImagesLoaded;
+        Double16.onload = checkImagesLoaded;
+        Double32.onload = checkImagesLoaded;
+        Double64.onload = checkImagesLoaded;
 
         // Обработка ошибок загрузки изображений
-        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b].forEach(img => {
+        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64].forEach(img => {
             img.onerror = () => {
                 console.error(`Failed to load image: ${img.src}`);
                 infoDiv.innerHTML = '<div class="error">Error loading game assets. Please try again later.</div>';
@@ -632,6 +651,14 @@
 
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+            }
+
+            // Draw double cube if not double action
+            if (item.cube && item.action !== 'double') {
+                const doubleCube = window[`Double${item.cube}`];
+                if (doubleCube) {
+                    ctx.drawImage(doubleCube, 0, 400 - 50, 100, 100);
+                }
             }
 
             let info = '';
