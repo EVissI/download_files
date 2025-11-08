@@ -683,6 +683,7 @@ def convert_moves_to_gnu(moves_list):
 
 class BackgammonPositionTracker:
     def __init__(self, invert_colors=False):
+        self.invert_colors = invert_colors
         if invert_colors:
             self.start_positions = {
                 "red": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
@@ -697,7 +698,7 @@ class BackgammonPositionTracker:
 
     def reset(self):
         self.positions = copy.deepcopy(self.start_positions)
-        self.current_player = "red"  # красные начинают
+        self.current_player = "red" if not self.invert_colors else "black"  # красные начинают, если не инвертировано
 
     @staticmethod
     def invert_point(point: int) -> int:
@@ -729,9 +730,14 @@ class BackgammonPositionTracker:
 
     def apply_move(self, player, move):
         fr, to, hit = move.get("from"), move.get("to"), move.get("hit", False)
-        if player == "black":
-            fr = self.invert_point(fr)
-            to = self.invert_point(to)
+        if self.invert_colors:
+            if player == "red":
+                fr = self.invert_point(fr)
+                to = self.invert_point(to)
+        else:
+            if player == "black":
+                fr = self.invert_point(fr)
+                to = self.invert_point(to)
 
         key_fr, key_to = self._key(fr), self._key(to)
         opp = "red" if player == "black" else "black"
@@ -791,7 +797,7 @@ def process_mat_file(input_file, output_file):
         red_player, black_player = extract_player_names(content)
 
         parsed_moves = parse_backgammon_mat(content)
-        tracker = BackgammonPositionTracker(invert_colors=True)
+        tracker = BackgammonPositionTracker(True)
         aug = tracker.process_game(parsed_moves)
 
         # Add player names to the output
