@@ -706,8 +706,7 @@
                     ctx.drawImage(currentCube, 375, cubeY, 50, 50);
                 }
                 let info = '';
-                let prefix = (turn > 0 && data[turn - 1].action === 'take') ? 'Takes ' : '';
-                console.log((turn > 0) ? 'Previous action:' + data[turn - 1].action : 'No previous turn');
+                let prefix = (turn > 0 && data[turn - 1].action === 'double') ? 'Takes ' : '';
                 if (item.action === 'double') {
                     info =`<strong>Действие:</strong> Double (${item.cube})`;
                 } else if (item.action === 'win') {
