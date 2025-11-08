@@ -557,11 +557,10 @@
                 }
             }
 
-            const offX = 750;
-            const offY = (player === 'black') ? 20 : 760;
+            const offX = 760;
+            const offY = (player === 'black') ? 300 : 500;
             if (positions.off && positions.off !== 0) {
-                ctx.fillText('Off', offX, offY - 10);
-                ctx.fillText(`${positions.off}`, offX, offY + 40);
+                ctx.fillText(`${positions.off}`, offX, offY);
             }
         }
 
