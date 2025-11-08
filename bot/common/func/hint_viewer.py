@@ -682,11 +682,17 @@ def convert_moves_to_gnu(moves_list):
     return final or None
 
 class BackgammonPositionTracker:
-    def __init__(self):
-        self.start_positions = {
-            "red": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
-            "black": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
-        }
+    def __init__(self, invert_colors=False):
+        if invert_colors:
+            self.start_positions = {
+                "red": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
+                "black": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
+            }
+        else:
+            self.start_positions = {
+                "red": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
+                "black": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
+            }
         self.reset()
 
     def reset(self):
@@ -785,7 +791,7 @@ def process_mat_file(input_file, output_file):
         red_player, black_player = extract_player_names(content)
 
         parsed_moves = parse_backgammon_mat(content)
-        tracker = BackgammonPositionTracker()
+        tracker = BackgammonPositionTracker(invert_colors=True)
         aug = tracker.process_game(parsed_moves)
 
         # Add player names to the output
