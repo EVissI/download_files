@@ -1,5 +1,5 @@
 ﻿from aiogram import Router, F
-from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, CallbackQuery
 from aiogram.exceptions import TelegramAPIError
 from loguru import logger
 import asyncio
@@ -14,7 +14,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from bot.common.func.hint_viewer import process_mat_file, random_filename
+from bot.common.func.hint_viewer import process_mat_file, random_filename, extract_player_names
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.general_states import GeneralStates
 from bot.config import settings
@@ -29,6 +29,7 @@ templates = Jinja2Templates(directory="bot/templates")
 
 class HintViewerStates(StatesGroup):
     waiting_file = State()
+    choose_player = State()
 
 
 @hint_viewer_router.message(F.text == AdminKeyboard.get_kb_text()["test"])
@@ -41,7 +42,6 @@ async def hint_viewer_start(message: Message, state: FSMContext):
 
 @hint_viewer_router.message(F.document, StateFilter(HintViewerStates.waiting_file))
 async def hint_viewer_menu(message: Message, state: FSMContext):
-    await state.clear()
     doc = message.document
     fname = doc.file_name
     if not fname.lower().endswith(".mat"):
@@ -61,15 +61,57 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         os.makedirs("files", exist_ok=True)
         with open(mat_path, "wb") as f:
             await message.bot.download_file(file.file_path, f)
+        red_player, black_player = extract_player_names(mat_path)
 
+        # Сохраняем данные в state
+        await state.update_data(
+            game_id=game_id,
+            mat_path=mat_path,
+            json_path=json_path,
+            red_player=red_player,
+            black_player=black_player
+        )
+        await state.set_state(HintViewerStates.choose_player)
+
+        # Клавиатура выбора игрока
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=f"Красный: {red_player}", callback_data="choose_red")],
+                [InlineKeyboardButton(text=f"Черный: {black_player}", callback_data="choose_black")]
+            ]
+        )
+        await message.answer(
+            "Выберите игрока для анализа:",
+            reply_markup=keyboard
+        )
+
+    except Exception:
+        logger.exception("Ошибка при обработке hint viewer")
+        await message.reply("Ошибка при обработке файла.")
+        await state.clear()
+        await state.set_state(GeneralStates.admin_panel)
+
+
+@hint_viewer_router.callback_query(F.data.in_(["choose_red", "choose_black"]), StateFilter(HintViewerStates.choose_player))
+async def choose_player_callback(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    game_id = data['game_id']
+    mat_path = data['mat_path']
+    json_path = data['json_path']
+    red_player = data['red_player']
+    black_player = data['black_player']
+
+    chosen_player = red_player if callback.data == "choose_red" else black_player
+
+    try:
         # Обрабатываем .mat → .json
-        await asyncio.to_thread(process_mat_file, mat_path, json_path)
+        await asyncio.to_thread(process_mat_file, mat_path, json_path, chosen_player)
 
         # Отправляем готовый JSON обратно пользователю
         json_document = FSInputFile(path=json_path, filename=f"{game_id}.json")
-        await message.answer_document(
+        await callback.message.answer_document(
             document=json_document,
-            caption="Сгенерированный JSON файл анализа"
+            caption=f"Сгенерированный JSON файл анализа"
         )
 
         # Кнопка для открытия в мини-приложении
@@ -82,14 +124,16 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
                 )]
             ]
         )
-        await message.answer(
+        await callback.message.answer(
             "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации игры:",
             reply_markup=keyboard
         )
 
+        await callback.answer()
+
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
-        await message.reply("Ошибка при обработке файла.")
+        await callback.message.reply("Ошибка при обработке файла.")
     finally:
         # Удаляем только исходный .mat файл, JSON остаётся
         try:
@@ -97,6 +141,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
                 os.remove(mat_path)
         except Exception:
             logger.warning("Не удалось удалить mat файл после обработки.")
+        await state.clear()
         await state.set_state(GeneralStates.admin_panel)
 
 

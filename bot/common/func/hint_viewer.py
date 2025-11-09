@@ -786,7 +786,7 @@ class BackgammonPositionTracker:
 
         return result
 
-def process_mat_file(input_file, output_file):
+def process_mat_file(input_file, output_file, chosen_player):
     temp_script = random_filename()
     command_delay = 0
     try:
@@ -795,9 +795,12 @@ def process_mat_file(input_file, output_file):
 
         # Extract player names before parsing moves
         red_player, black_player = extract_player_names(content)
-
+        if chosen_player == red_player:
+            invert_colors = False
+        if chosen_player == black_player:
+            invert_colors = True
         parsed_moves = parse_backgammon_mat(content)
-        tracker = BackgammonPositionTracker(True)
+        tracker = BackgammonPositionTracker(invert_colors)
         aug = tracker.process_game(parsed_moves)
 
         # Add player names to the output
