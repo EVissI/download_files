@@ -78,8 +78,8 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         # Клавиатура выбора игрока
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text=f"Красный: {red_player}", callback_data="choose_red")],
-                [InlineKeyboardButton(text=f"Черный: {black_player}", callback_data="choose_black")]
+                [InlineKeyboardButton(text=f"{red_player}", callback_data="choose_red")],
+                [InlineKeyboardButton(text=f"{black_player}", callback_data="choose_black")]
             ]
         )
         await message.answer(
