@@ -333,7 +333,8 @@
                 return response.json();
             })
             .then(json => {
-                data = json.filter(item => item.turn !== undefined);
+                const gameInfo = json.game_info;
+                data = json.moves.filter(item => item.turn !== undefined);
                 data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double') && it.action !== 'take' && it.action !== 'pass');
 
                 // Найти все индексы ходов с удвоением
@@ -341,8 +342,8 @@
                 firstDoubleIndex = doubleTurns.length > 0 ? doubleTurns[0] : -1;
 
                 if (data.length > 0) {
-                    redPlayer = data.find(item => item.player === 'Red' || item.player === 'red')?.player_name || 'Unknown';
-                    blackPlayer = data.find(item => item.player === 'Black' || item.player === 'black')?.player_name || 'Unknown';
+                    redPlayer = gameInfo.red_player || 'Unknown';
+                    blackPlayer = gameInfo.black_player || 'Unknown';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     dataLoaded = true;
                     console.log('Data loaded:', data);
