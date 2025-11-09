@@ -822,13 +822,7 @@ def process_mat_file(input_file, output_file, chosen_player):
             if "moves" in entry:
                 entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
 
-        # Prepare output structure with game info separate from moves
-        output_data = {
-            "game_info": game_info,
-            "moves": aug
-        }
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
+
 
         # генерируем токены команд
         gnubg_tokens = json_to_gnubg_commands(aug)
@@ -947,8 +941,12 @@ def process_mat_file(input_file, output_file, chosen_player):
                 pass
 
         try:
+            output_data = {
+                "game_info": game_info,
+                "moves": aug
+            }
             with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(aug, f, indent=2, ensure_ascii=False)
+                json.dump(output_data, f, indent=2, ensure_ascii=False)
             logger.info("Updated %s with hint data", output_file)
         except Exception:
             logger.exception("Failed to write augmented json with hints")
