@@ -510,7 +510,7 @@
             return (point > 12) ? 55 : -55;
         }
 
-        function calculatePips(positions, player) {
+        function calculatePips(positions, player, invertColors = false) {
             let totalPips = 0;
             for (let pointStr in positions) {
                 if (pointStr === 'bar') {
@@ -519,11 +519,21 @@
                 } else {
                     const point = parseInt(pointStr);
                     const count = positions[pointStr];
-                    if (player === 'black') {
-                        totalPips += count * (25 - point);
+                    let effectivePoint = point;
+                    if (invertColors) {
+                        if (player === 'red') {
+                            effectivePoint = 25 - point;
+                        } else if (player === 'black') {
+                            effectivePoint = point;
+                        }
                     } else {
-                        totalPips += count * point;
+                        if (player === 'black') {
+                            effectivePoint = 25 - point;
+                        } else {
+                            effectivePoint = point;
+                        }
                     }
+                    totalPips += count * effectivePoint;
                 }
             }
             return totalPips;
@@ -632,8 +642,8 @@
             drawCheckers('black', blackImg, blackPositions, currentPlayer);
 
             // Calculate pips
-            const redPips = calculatePips(redPositions, 'red');
-            const blackPips = calculatePips(blackPositions, 'black');
+            const redPips = calculatePips(redPositions, 'red', invertColors);
+            const blackPips = calculatePips(blackPositions, 'black', invertColors);
 
             document.getElementById('black-pips').innerText = `${blackPips}`;
             document.getElementById('red-pips').innerText = `${redPips}`;
