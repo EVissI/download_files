@@ -61,7 +61,9 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         os.makedirs("files", exist_ok=True)
         with open(mat_path, "wb") as f:
             await message.bot.download_file(file.file_path, f)
-        red_player, black_player = extract_player_names(mat_path)
+        with open(mat_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        red_player, black_player = extract_player_names(content)
 
         # Сохраняем данные в state
         await state.update_data(
