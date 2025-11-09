@@ -609,9 +609,11 @@
 
             let offX = 783;
             if (invertColors) {
-                offX = 17; // Move off to the left side for inverted boards
+                const offY = (player === 'black') ? 440 : 340;
             }
-            const offY = (player === 'black') ? 340 : 440;
+            if (!invertColors) {
+                const offY = (player === 'black') ? 340 : 440;
+            }
             if (positions.off && positions.off !== 0) {
                 const originalFont = ctx.font;
                 ctx.font = 'bold 32px Arial';
@@ -652,29 +654,26 @@
             drawCheckers('red', whiteImg, redPositions, currentPlayer);
             drawCheckers('black', blackImg, blackPositions, currentPlayer);
 
-            // Calculate pips
             const redPips = calculatePips(redPositions, 'red', invertColors);
             const blackPips = calculatePips(blackPositions, 'black', invertColors);
 
-            if (invertColors) {
-                document.getElementById('black-pips').innerText = `${blackPips}`;
-                document.getElementById('red-pips').innerText = `${redPips}`;
-
+            document.getElementById('black-pips').innerText = `${blackPips}`;
+            document.getElementById('red-pips').innerText = `${redPips}`;
+            if (invertColors){
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(650, 800, 150, 50);
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 20px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText(`${blackPips}`, 725, 830);
+                ctx.fillText(`${blackPips}`, 725, -20);
 
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(650, -50, 150, 50);
                 ctx.fillStyle = '#000000';
-                ctx.fillText(`${redPips}`, 725, -20);
-            } else {
-                document.getElementById('black-pips').innerText = `${blackPips}`;
-                document.getElementById('red-pips').innerText = `${redPips}`;
-
+                ctx.fillText(`${redPips}`, 725, 830);
+            }
+            if(!invertColors)
+            {
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(650, -50, 150, 50);
                 ctx.fillStyle = '#ffffff';
@@ -687,6 +686,7 @@
                 ctx.fillStyle = '#000000';
                 ctx.fillText(`${redPips}`, 725, 830);
             }
+
 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
