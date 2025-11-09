@@ -607,13 +607,16 @@
                 }
             }
 
-            const offX = 783;
+            let offX = 783;
+            if (invertColors) {
+                offX = 17; // Move off to the left side for inverted boards
+            }
             const offY = (player === 'black') ? 340 : 440;
             if (positions.off && positions.off !== 0) {
-                const originalFont = ctx.font;  
-                ctx.font = 'bold 32px Arial';  
+                const originalFont = ctx.font;
+                ctx.font = 'bold 32px Arial';
                 ctx.fillText(`${positions.off}`, offX, offY);
-                ctx.font = originalFont;  
+                ctx.font = originalFont;
             }
         }
 
@@ -653,20 +656,37 @@
             const redPips = calculatePips(redPositions, 'red', invertColors);
             const blackPips = calculatePips(blackPositions, 'black', invertColors);
 
-            document.getElementById('black-pips').innerText = `${blackPips}`;
-            document.getElementById('red-pips').innerText = `${redPips}`;
+            if (invertColors) {
+                document.getElementById('black-pips').innerText = `${blackPips}`;
+                document.getElementById('red-pips').innerText = `${redPips}`;
 
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(650, -50, 150, 50);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${blackPips}`, 725, -20);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(650, 800, 150, 50);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${blackPips}`, 725, 830);
 
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(650, 800, 150, 50);
-            ctx.fillStyle = '#000000';
-            ctx.fillText(`${redPips}`, 725, 830);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(650, -50, 150, 50);
+                ctx.fillStyle = '#000000';
+                ctx.fillText(`${redPips}`, 725, -20);
+            } else {
+                document.getElementById('black-pips').innerText = `${blackPips}`;
+                document.getElementById('red-pips').innerText = `${redPips}`;
+
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(650, -50, 150, 50);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${blackPips}`, 725, -20);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(650, 800, 150, 50);
+                ctx.fillStyle = '#000000';
+                ctx.fillText(`${redPips}`, 725, 830);
+            }
 
             const item = data[turn];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
@@ -675,14 +695,26 @@
 
                 let diceX1, diceX2;
                 let diceSet;
-                if (item.player === 'Red') {
-                    diceX1 = 530; // кубики справа для красных
-                    diceX2 = 620;
-                    diceSet = diceImages.white;
+                if (invertColors) {
+                    if (item.player === 'Red') {
+                        diceX1 = 130; // кубики слева для красных при инверсии
+                        diceX2 = 220;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 530; // кубики справа для черных при инверсии
+                        diceX2 = 620;
+                        diceSet = diceImages.black;
+                    }
                 } else {
-                    diceX1 = 130; // кубики слева для черных
-                    diceX2 = 220;
-                    diceSet = diceImages.black;
+                    if (item.player === 'Red') {
+                        diceX1 = 530; // кубики справа для красных
+                        diceX2 = 620;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 130; // кубики слева для черных
+                        diceX2 = 220;
+                        diceSet = diceImages.black;
+                    }
                 }
 
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
@@ -711,14 +743,22 @@
                             currentCube = img; // Запоминаем куб
                             currentCubePlayer = data[doubleIndex].player; // Запоминаем игрока
                             let cubeX;
-                            if (data[doubleIndex].player === 'Red') {
-                                cubeX = 130; // куб справа для красных
+                            if (invertColors) {
+                                if (data[doubleIndex].player === 'Red') {
+                                    cubeX = 530; // куб справа для красных при инверсии
+                                } else {
+                                    cubeX = 130; // куб слева для черных при инверсии
+                                }
                             } else {
-                                cubeX = 530; // куб слева для черных
+                                if (data[doubleIndex].player === 'Red') {
+                                    cubeX = 130; // куб слева для красных
+                                } else {
+                                    cubeX = 530; // куб справа для черных
+                                }
                             }
                             ctx.drawImage(img, cubeX, 350, 50, 50);
                         }
-                        break; 
+                        break;
                     }
                 }
 
