@@ -55,7 +55,6 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
     json_path = f"files/{game_id}.json"
 
     try:
-        await message.reply("Принял файл, начинаю обработку...")
         file = await message.bot.get_file(doc.file_id)
 
         # Сохраняем .mat в постоянную директорию

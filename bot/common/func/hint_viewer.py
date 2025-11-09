@@ -803,6 +803,15 @@ def process_mat_file(input_file, output_file, chosen_player):
         tracker = BackgammonPositionTracker(invert_colors)
         aug = tracker.process_game(parsed_moves)
 
+        # Add game info element before analysis
+        game_info = {
+            "type": "game_info",
+            "red_player": red_player,
+            "black_player": black_player,
+            "invert_colors": invert_colors
+        }
+        aug.insert(0, game_info)
+
         # Add player names to the output
         for entry in aug:
             if entry.get("player") == "Red":
