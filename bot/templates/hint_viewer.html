@@ -552,10 +552,18 @@
                     const dy = getDy(point);
 
                     let displayPoint = point;
-                    if (player === 'black') {
-                        displayPoint = 25 - point; // Black sees points inverted (24 at top-right, 1 at bottom-left)
-                    } else if (player === 'red') {
-                        displayPoint = point; // Red sees points starting from bottom-left (1 at bottom-left, 24 at top-right)
+                    if (invertColors) {
+                        if (player === 'red') {
+                            displayPoint = 25 - point; // Red sees points inverted when colors are inverted
+                        } else if (player === 'black') {
+                            displayPoint = point; // Black sees points normally when colors are inverted
+                        }
+                    } else {
+                        if (player === 'black') {
+                            displayPoint = 25 - point; // Black sees points inverted (24 at top-right, 1 at bottom-left)
+                        } else if (player === 'red') {
+                            displayPoint = point; // Red sees points starting from bottom-left (1 at bottom-left, 24 at top-right)
+                        }
                     }
                     let numberY;
                     if (point > 12) {
