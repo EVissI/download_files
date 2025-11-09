@@ -15,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 from bot.common.func.hint_viewer import process_mat_file, random_filename, extract_player_names
+from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.common.general_states import GeneralStates
 from bot.config import settings
@@ -95,7 +96,10 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
 
 
 @hint_viewer_router.callback_query(F.data.in_(["choose_red", "choose_black"]), StateFilter(HintViewerStates.choose_player))
-async def choose_player_callback(callback: CallbackQuery, state: FSMContext):
+async def choose_player_callback(callback: CallbackQuery, state: FSMContext,i18n):
+    await callback.message.delete()
+    waiting_manager = WaitingMessageManager(callback.from_user.id, callback.bot, i18n)
+    await waiting_manager.start()
     data = await state.get_data()
     game_id = data['game_id']
     mat_path = data['mat_path']
@@ -131,13 +135,11 @@ async def choose_player_callback(callback: CallbackQuery, state: FSMContext):
             reply_markup=keyboard
         )
 
-        await callback.answer()
-
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
         await callback.message.reply("Ошибка при обработке файла.")
     finally:
-        # Удаляем только исходный .mat файл, JSON остаётся
+        await waiting_manager.stop()
         try:
             if os.path.exists(mat_path):
                 os.remove(mat_path)
