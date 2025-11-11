@@ -836,7 +836,7 @@
                             const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                             let move = hint.move || '-';
                             let rowClass = '';
-                            if (item.gnu_move && hint.move === item.gnu_move) {
+                            if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.replace(/\*/g, '')) {
                                 if (index === 0) {
                                     rowClass = 'hint-best';
                                 } else if (index >= 1 && index <= 4) {
