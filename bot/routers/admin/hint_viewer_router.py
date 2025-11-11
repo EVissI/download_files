@@ -110,7 +110,7 @@ async def choose_player_callback(callback: CallbackQuery, state: FSMContext, i18
 
     try:
         # Обрабатываем .mat → .json
-        await asyncio.to_thread(process_mat_file, mat_path, json_path, chosen_player, callback.from_user.id)
+        await asyncio.to_thread(process_mat_file, mat_path, json_path, chosen_player, str(callback.from_user.id))
 
         # Отправляем готовый JSON обратно пользователю
         json_document = FSInputFile(path=json_path, filename=f"{game_id}.json")

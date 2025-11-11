@@ -287,6 +287,7 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
+        const chatId = urlParams.get('chat_id') || null;
     </script>
 </head>
 
@@ -348,6 +349,7 @@
                     redPlayer = gameInfo.red_player || 'Unknown';
                     blackPlayer = gameInfo.black_player || 'Unknown';
                     invertColors = gameInfo.invert_colors || false;
+                    chatId = gameInfo.chat_id || chatId; // Use chat_id from gameInfo if available
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     dataLoaded = true;
                     console.log('Data loaded:', data);
@@ -892,9 +894,8 @@
                         const formData = new FormData();
                         formData.append('photo', file);
 
-                        // Get chat_id from URL parameters
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const chatId = urlParams.get('chat_id');
+                        // Use chat_id from global variable
+                        const currentChatId = chatId;
 
                         // You might need to adjust this based on your backend API
                         fetch(`/api/send_screenshot?chat_id=${chatId}`, {

@@ -808,7 +808,7 @@ def process_mat_file(input_file, output_file, chosen_player, chat_id):
             "red_player": red_player,
             "black_player": black_player,
             "invert_colors": invert_colors,
-            'chat_id': chat_id,
+            "chat_id": str(chat_id)
         }
 
         # Add player names to the output

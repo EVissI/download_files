@@ -149,7 +149,7 @@ async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session
         button = InlineKeyboardButton(
             text="Открыть игру 📲",
             web_app=WebAppInfo(
-                url=f"{settings.MINI_APP_URL}?game={dir_name}&chat_id={callback.message.chat.id}"
+                url=f"{settings.MINI_APP_URL}?game={dir_name}"
             ),
         )
         keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
