@@ -786,7 +786,7 @@ class BackgammonPositionTracker:
 
         return result
 
-def process_mat_file(input_file, output_file, chosen_player):
+def process_mat_file(input_file, output_file, chosen_player, chat_id):
     temp_script = random_filename()
     command_delay = 0
     try:
@@ -807,7 +807,8 @@ def process_mat_file(input_file, output_file, chosen_player):
         game_info = {
             "red_player": red_player,
             "black_player": black_player,
-            "invert_colors": invert_colors
+            "invert_colors": invert_colors,
+            'chat_id': chat_id,
         }
 
         # Add player names to the output

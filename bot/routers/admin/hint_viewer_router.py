@@ -95,7 +95,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
 
 
 @hint_viewer_router.callback_query(F.data.in_(["choose_red", "choose_black"]), StateFilter(HintViewerStates.choose_player))
-async def choose_player_callback(callback: CallbackQuery, state: FSMContext,i18n):
+async def choose_player_callback(callback: CallbackQuery, state: FSMContext, i18n):
     await callback.message.delete()
     waiting_manager = WaitingMessageManager(callback.from_user.id, callback.bot, i18n)
     await waiting_manager.start()
@@ -110,7 +110,7 @@ async def choose_player_callback(callback: CallbackQuery, state: FSMContext,i18n
 
     try:
         # Обрабатываем .mat → .json
-        await asyncio.to_thread(process_mat_file, mat_path, json_path, chosen_player)
+        await asyncio.to_thread(process_mat_file, mat_path, json_path, chosen_player, callback.from_user.id)
 
         # Отправляем готовый JSON обратно пользователю
         json_document = FSInputFile(path=json_path, filename=f"{game_id}.json")
@@ -189,3 +189,42 @@ async def get_analysis_data(game_id: str):
     except Exception as e:
         logger.error(f"Error fetching analysis data for {game_id}: {e}")
         raise HTTPException(status_code=500, detail="Error generating analysis data")
+
+
+@hint_viewer_api_router.post("/api/send_screenshot")
+async def send_screenshot(request: Request):
+    """
+    Принимает скриншот от веб-приложения и отправляет его в чат пользователя.
+    """
+    try:
+        form_data = await request.form()
+        photo = form_data.get("photo")
+
+        if not photo:
+            raise HTTPException(status_code=400, detail="No photo provided")
+
+        # Получаем chat_id из параметров запроса или из тела
+        chat_id = request.query_params.get("chat_id")
+        if not chat_id:
+            # Попробуем получить из формы
+            chat_id = form_data.get("chat_id")
+
+        if not chat_id:
+            raise HTTPException(status_code=400, detail="No chat_id provided")
+
+        # Читаем файл
+        photo_bytes = await photo.read()
+
+        # Отправляем фото в Telegram
+        from bot.config import bot
+        await bot.send_photo(
+            chat_id=int(chat_id),
+            photo=photo_bytes,
+            caption="Скриншот доски и анализа"
+        )
+
+        return {"status": "success"}
+
+    except Exception as e:
+        logger.error(f"Error sending screenshot: {e}")
+        raise HTTPException(status_code=500, detail="Error sending screenshot")
