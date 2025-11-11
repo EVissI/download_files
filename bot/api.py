@@ -20,4 +20,4 @@ app.mount("/static", StaticFiles(directory="bot/static"), name="static")
 templates = Jinja2Templates(directory="bot/templates")
 
 # Include routers
-app.include_router(hint_viewer_api_router)
+app.include_router(hint_viewer_api_router, prefix="")
