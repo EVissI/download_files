@@ -876,7 +876,11 @@
 
         function takeScreenshot() {
             // Create a canvas to capture the entire page
-            html2canvas(document.body).then(canvas => {
+            html2canvas(document.body, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#1a1a1a'
+            }).then(canvas => {
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
                     // Create a file from the blob
@@ -900,11 +904,14 @@
                             if (response.ok) {
                                 alert('Скриншот отправлен в чат!');
                             } else {
-                                alert('Ошибка при отправке скриншота');
+                                response.text().then(text => {
+                                    console.error('Server response:', text);
+                                    alert('Ошибка при отправке скриншота: ' + text);
+                                });
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
-                            alert('Ошибка при отправке скриншота');
+                            alert('Ошибка при отправке скриншота: ' + error.message);
                         });
                     } else {
                         // Fallback: download the image
@@ -914,6 +921,9 @@
                         link.click();
                     }
                 });
+            }).catch(error => {
+                console.error('Error creating screenshot:', error);
+                alert('Ошибка при создании скриншота: ' + error.message);
             });
         }
     </script>
