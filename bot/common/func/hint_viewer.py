@@ -295,8 +295,6 @@ def json_to_gnubg_commands(data):
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
                 move_cmds = [f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in moves]
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
-            if not moves:
-                tokens.append({"cmd": "hint", "type": "hint", "target": i})
             i += 1
             continue
 
