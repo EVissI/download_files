@@ -220,10 +220,9 @@ async def send_screenshot(request: Request):
         photo_bytes = await photo.read()
         logger.debug(f"Screenshot file size: {len(photo_bytes)} bytes")
 
-        # Создаем InputFile из байтов
-        from aiogram.types import InputFile
-        import io
-        photo_file = InputFile(io.BytesIO(photo_bytes), filename="screenshot.png")
+        # Создаем BufferedInputFile из байтов
+        from aiogram.types import BufferedInputFile
+        photo_file = BufferedInputFile(photo_bytes, filename="screenshot.png")
 
         # Отправляем фото в Telegram
         from bot.config import bot
