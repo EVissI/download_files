@@ -906,7 +906,12 @@
                             } else {
                                 response.text().then(text => {
                                     console.error('Server response:', text);
-                                    alert('Ошибка при отправке скриншота: ' + text);
+                                    try {
+                                        const errorData = JSON.parse(text);
+                                        alert('Ошибка при отправке скриншота: ' + (errorData.detail || text));
+                                    } catch (e) {
+                                        alert('Ошибка при отправке скриншота: ' + text);
+                                    }
                                 });
                             }
                         }).catch(error => {

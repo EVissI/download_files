@@ -201,6 +201,7 @@ async def send_screenshot(request: Request):
         photo = form_data.get("photo")
 
         if not photo:
+            logger.warning("Screenshot request received without photo")
             raise HTTPException(status_code=400, detail="No photo provided")
 
         # Получаем chat_id из параметров запроса или из тела
@@ -210,10 +211,14 @@ async def send_screenshot(request: Request):
             chat_id = form_data.get("chat_id")
 
         if not chat_id:
+            logger.warning("Screenshot request received without chat_id")
             raise HTTPException(status_code=400, detail="No chat_id provided")
+
+        logger.info(f"Sending screenshot to chat_id: {chat_id}")
 
         # Читаем файл
         photo_bytes = await photo.read()
+        logger.debug(f"Screenshot file size: {len(photo_bytes)} bytes")
 
         # Отправляем фото в Telegram
         from bot.config import bot
@@ -223,8 +228,9 @@ async def send_screenshot(request: Request):
             caption="Скриншот доски и анализа"
         )
 
+        logger.info(f"Screenshot successfully sent to chat_id: {chat_id}")
         return {"status": "success"}
 
     except Exception as e:
-        logger.error(f"Error sending screenshot: {e}")
+        logger.error(f"Error sending screenshot to chat_id {chat_id if 'chat_id' in locals() else 'unknown'}: {e}")
         raise HTTPException(status_code=500, detail="Error sending screenshot")
