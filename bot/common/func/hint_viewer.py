@@ -286,7 +286,7 @@ def json_to_gnubg_commands(data):
             i += 1
             continue
         elif dice:
-            # Добавляем set dice и hint
+            tokens.append({"cmd": "roll", "type": "cmd", "target": i})
             tokens.append(
                 {"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i}
             )
@@ -297,8 +297,6 @@ def json_to_gnubg_commands(data):
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
             if not moves:
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
-            if is_last_in_turn and next_act != "double":
-                tokens.append({"cmd": "roll", "type": "cmd", "target": i})
             i += 1
             continue
 
