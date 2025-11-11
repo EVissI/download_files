@@ -876,12 +876,19 @@
         }
 
         function takeScreenshot() {
+            // Hide controls before taking screenshot
+            const controls = document.getElementById('controls');
+            const originalDisplay = controls.style.display;
+            controls.style.display = 'none';
+
             // Create a canvas to capture the entire page
             html2canvas(document.body, {
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#1a1a1a'
             }).then(canvas => {
+                // Restore controls after taking screenshot
+                controls.style.display = originalDisplay;
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
                     // Create a file from the blob
