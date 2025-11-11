@@ -916,10 +916,9 @@
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
-                            alert('Ошибка при отправке скриншота: ' + error.message);
+                            alert('Ошибка при отправке скриншота: ' + error);
                         });
                     } else {
-                        // Fallback: download the image
                         const link = document.createElement('a');
                         link.download = 'screenshot.png';
                         link.href = canvas.toDataURL();
