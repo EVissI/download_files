@@ -909,7 +909,7 @@
                             body: formData
                         }).then(response => {
                             if (response.ok) {
-                                alert('Скриншот отправлен в чат!');
+                                
                             } else {
                                 response.text().then(text => {
                                     console.error('Server response:', text);
