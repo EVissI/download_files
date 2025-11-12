@@ -72,7 +72,7 @@ async def handle_hint_type_selection(callback: CallbackQuery, state: FSMContext)
 
 
 @hint_viewer_router.callback_query(F.data == "hint_batch_stop", StateFilter(HintViewerStates.uploading_sequential))
-async def handle_batch_stop(callback: CallbackQuery, state: FSMContext):
+async def handle_batch_stop(callback: CallbackQuery, state: FSMContext,i18n):
     data = await state.get_data()
     file_paths = data.get("file_paths", [])
     if not file_paths:
@@ -81,7 +81,7 @@ async def handle_batch_stop(callback: CallbackQuery, state: FSMContext):
         await state.set_state(GeneralStates.admin_panel)
         return
 
-    await process_batch_hint_files(callback.message, state, file_paths)
+    await process_batch_hint_files(callback.message, state, file_paths, i18n)
     await callback.answer()
     await callback.message.delete()
 
@@ -335,8 +335,8 @@ async def send_screenshot(request: Request):
         raise HTTPException(status_code=500, detail="Error sending screenshot")
 
 
-async def process_batch_hint_files(message: Message, state: FSMContext, file_paths: list):
-    waiting_manager = WaitingMessageManager(message.from_user.id, message.bot, None)
+async def process_batch_hint_files(message: Message, state: FSMContext, file_paths: list, i18n):
+    waiting_manager = WaitingMessageManager(message.from_user.id, message.bot, i18n)
     await waiting_manager.start()
 
     try:
