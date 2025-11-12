@@ -880,7 +880,7 @@
                 });
             } else {
                 tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
-                (item.hints || []).slice(0, 3).forEach((hint, index) => {
+                (item.hints || []).forEach((hint, index) => {
                     if (hint.probs && hint.probs.length >= 2) {
                         const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
                         const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
