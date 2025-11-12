@@ -475,6 +475,14 @@
                     data = json.moves.filter(item => item.turn !== undefined);
                     data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double') && it.action !== 'pass');
 
+                    // Обновить счет для текущей игры
+                    const gameScores = gameInfo.scores || {};
+                    const gameRedScore = gameScores.Red || 0;
+                    const gameBlackScore = gameScores.Black || 0;
+                    const matchText = matchLength > 0 ? `Матч до ${matchLength}<br>` : '';
+                    const scoreText = `Счет: ${gameRedScore} - ${gameBlackScore}<br>`;
+                    playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}${document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : ''}`;
+
                     // Найти все индексы ходов с удвоением
                     doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
                     firstDoubleIndex = doubleTurns.length > 0 ? doubleTurns[0] : -1;
