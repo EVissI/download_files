@@ -813,6 +813,8 @@ def parse_mat_games(content):
                     'game_number': current_game,
                     'red_player': red_player,
                     'black_player': black_player,
+                    'red_score': red_score,
+                    'black_score': black_score,
                     'content': '\n'.join(game_content)
                 })
 
@@ -823,13 +825,16 @@ def parse_mat_games(content):
                 game_content = [line]  # Начинаем с заголовка игры
                 red_player = None
                 black_player = None
+                red_score = None
+                black_score = None
         elif current_game is not None:
             game_content.append(line)
-            # Ищем строку с именами игроков
+            # Ищем строку с именами игроков и счетами
             if ":" in line and not red_player:
-                matches = re.findall(r"(\S.*?)\s*:\s*\d+", line)
+                matches = re.findall(r"(\S.*?)\s*:\s*(\d+)", line)
                 if len(matches) >= 2:
-                    black_player, red_player = matches[0].strip(), matches[1].strip()
+                    black_player, black_score = matches[0][0].strip(), int(matches[0][1])
+                    red_player, red_score = matches[1][0].strip(), int(matches[1][1])
 
     # Сохраняем последнюю игру
     if current_game is not None:
@@ -997,6 +1002,7 @@ def process_single_game(game_data, output_dir, game_number):
             "game_number": game_number,
             "red_player": red_player,
             "black_player": black_player,
+            "scores": {"Red": game_data['red_score'], "Black": game_data['black_score']},
         },
         "moves": aug
     }
@@ -1026,6 +1032,8 @@ def process_mat_file(input_file, output_file, chat_id):
         first_game = games[0]
         red_player = first_game['red_player']
         black_player = first_game['black_player']
+        red_score = first_game['red_score']
+        black_score = first_game['black_score']
 
         # Создаем директорию для результатов
         output_dir = output_file.rsplit('.', 1)[0] + "_games"
@@ -1056,6 +1064,7 @@ def process_mat_file(input_file, output_file, chat_id):
         game_info = {
             "red_player": red_player,
             "black_player": black_player,
+            "scores": {"Red": red_score, "Black": black_score},
             "chat_id": str(chat_id),
             "total_games": len(games),
             "processed_games": len(game_results)
