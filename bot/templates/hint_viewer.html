@@ -932,13 +932,10 @@
         }
 
         function takeScreenshot() {
-            // Hide controls and game selector before taking screenshot
+            // Hide controls before taking screenshot
             const controls = document.getElementById('controls');
-            const playersInfo = document.getElementById('players-info');
-            const originalControlsDisplay = controls.style.display;
-            const originalPlayersDisplay = playersInfo.style.display;
+            const originalDisplay = controls.style.display;
             controls.style.display = 'none';
-            playersInfo.style.display = 'none';
 
             // Create a canvas to capture the entire page
             html2canvas(document.body, {
@@ -946,9 +943,8 @@
                 allowTaint: true,
                 backgroundColor: '#1a1a1a'
             }).then(canvas => {
-                // Restore controls and players info after taking screenshot
-                controls.style.display = originalControlsDisplay;
-                playersInfo.style.display = originalPlayersDisplay;
+                // Restore controls after taking screenshot
+                controls.style.display = originalDisplay;
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
                     // Create a file from the blob
