@@ -842,6 +842,8 @@ def parse_mat_games(content):
             'game_number': current_game,
             'red_player': red_player,
             'black_player': black_player,
+            'red_score': red_score,
+            'black_score': black_score,
             'content': '\n'.join(game_content)
         })
 
