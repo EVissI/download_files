@@ -5,6 +5,8 @@ from loguru import logger
 import asyncio
 import os
 import json
+import zipfile
+import io
 
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -109,30 +111,71 @@ async def choose_player_callback(callback: CallbackQuery, state: FSMContext, i18
     chosen_player = red_player if callback.data == "choose_red" else black_player
 
     try:
-        # Обрабатываем .mat → .json
+        # Обрабатываем .mat → директория с JSON файлами игр
         await asyncio.to_thread(process_mat_file, mat_path, json_path, chosen_player, str(callback.from_user.id))
 
-        # Отправляем готовый JSON обратно пользователю
-        json_document = FSInputFile(path=json_path, filename=f"{game_id}.json")
-        await callback.message.answer_document(
-            document=json_document,
-            caption=f"Сгенерированный JSON файл анализа"
-        )
+        # Создаем ZIP архив из директории с результатами
+        games_dir = json_path.rsplit('.', 1)[0] + "_games"
+        if os.path.exists(games_dir):
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for root, dirs, files in os.walk(games_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, games_dir)
+                        zip_file.write(file_path, arcname)
 
-        # Кнопка для открытия в мини-приложении
-        mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(
-                    text="Открыть интерактивную визуализацию",
-                    web_app=WebAppInfo(url=mini_app_url)
-                )]
-            ]
-        )
-        await callback.message.answer(
-            "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации игры:",
-            reply_markup=keyboard
-        )
+            zip_buffer.seek(0)
+            zip_data = zip_buffer.getvalue()
+
+            # Отправляем ZIP архив пользователю
+            from aiogram.types import BufferedInputFile
+            zip_file = BufferedInputFile(zip_data, filename=f"{game_id}_analysis.zip")
+            await callback.message.answer_document(
+                document=zip_file,
+                caption=f"Архив с анализом игр ({len(os.listdir(games_dir))} файлов)"
+            )
+
+            # Кнопка для открытия в мини-приложении (если есть хотя бы одна игра)
+            game_files = [f for f in os.listdir(games_dir) if f.endswith('.json')]
+            if game_files:
+                first_game = sorted(game_files, key=lambda x: int(x.split('_')[1].split('.')[0]))[0]
+                game_num = first_game.split('_')[1].split('.')[0]
+                mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&game_num={game_num}"
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [InlineKeyboardButton(
+                            text="Открыть интерактивную визуализацию",
+                            web_app=WebAppInfo(url=mini_app_url)
+                        )]
+                    ]
+                )
+                await callback.message.answer(
+                    "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации первой игры:",
+                    reply_markup=keyboard
+                )
+        else:
+            # Fallback: отправляем одиночный JSON если директория не создана
+            if os.path.exists(json_path):
+                json_document = FSInputFile(path=json_path, filename=f"{game_id}.json")
+                await callback.message.answer_document(
+                    document=json_document,
+                    caption=f"Сгенерированный JSON файл анализа"
+                )
+
+                mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [InlineKeyboardButton(
+                            text="Открыть интерактивную визуализацию",
+                            web_app=WebAppInfo(url=mini_app_url)
+                        )]
+                    ]
+                )
+                await callback.message.answer(
+                    "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации игры:",
+                    reply_markup=keyboard
+                )
 
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
@@ -150,16 +193,27 @@ async def choose_player_callback(callback: CallbackQuery, state: FSMContext, i18
 
 # --- FastAPI часть ---
 
-def take_json_info(game_id: str):
+def take_json_info(game_id: str, game_num: str = None):
     """
-    Загружает и возвращает JSON с анализом для указанного game_id.
+    Загружает и возвращает JSON с анализом для указанного game_id и номера игры.
     """
-    path = f"files/{game_id}.json"
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"JSON файл для {game_id} не найден")
+    if game_num:
+        # Ищем файл конкретной игры
+        games_dir = f"files/{game_id}_games"
+        game_file = f"{games_dir}/game_{game_num}.json"
+        if os.path.exists(game_file):
+            with open(game_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        else:
+            raise FileNotFoundError(f"JSON файл для игры {game_num} в {game_id} не найден")
+    else:
+        # Fallback для одиночных игр
+        path = f"files/{game_id}.json"
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"JSON файл для {game_id} не найден")
 
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
 
 
 @hint_viewer_api_router.get("/hint-viewer")
@@ -177,12 +231,12 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
 
 
 @hint_viewer_api_router.get("/api/analysis/{game_id}")
-async def get_analysis_data(game_id: str):
+async def get_analysis_data(game_id: str, game_num: str = None):
     """
-    Возвращает JSON-данные анализа для указанного game_id.
+    Возвращает JSON-данные анализа для указанного game_id и номера игры.
     """
     try:
-        data = take_json_info(game_id)
+        data = take_json_info(game_id, game_num)
         return data
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Game {game_id} not found")

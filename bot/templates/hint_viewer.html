@@ -287,6 +287,7 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
+        const gameNum = urlParams.get('game_num') || null;
     </script>
 </head>
 
@@ -328,7 +329,7 @@
         const playersInfoDiv = document.getElementById('players-info');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
-        fetch(`/api/analysis/${gameId}`)
+        fetch(`/api/analysis/${gameId}${gameNum ? `?game_num=${gameNum}` : ''}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);

@@ -782,171 +782,281 @@ class BackgammonPositionTracker:
 
         return result
 
-def process_mat_file(input_file, output_file, chosen_player, chat_id):
-    temp_script = random_filename()
+def parse_mat_games(content):
+    """
+    Разбирает .mat файл на отдельные игры.
+    Возвращает список словарей с ключами: 'game_number', 'red_player', 'black_player', 'content'
+    """
+    games = []
+    lines = content.splitlines()
+    current_game = None
+    game_content = []
+
+    for line in lines:
+        if line.strip().startswith("Game"):
+            # Сохраняем предыдущую игру, если она есть
+            if current_game is not None:
+                games.append({
+                    'game_number': current_game,
+                    'red_player': red_player,
+                    'black_player': black_player,
+                    'content': '\n'.join(game_content)
+                })
+
+            # Начинаем новую игру
+            match = re.match(r"Game (\d+)", line.strip())
+            if match:
+                current_game = int(match.group(1))
+                game_content = [line]  # Начинаем с заголовка игры
+                red_player = None
+                black_player = None
+        elif current_game is not None:
+            game_content.append(line)
+            # Ищем строку с именами игроков
+            if ":" in line and not red_player:
+                matches = re.findall(r"(\S.*?)\s*:\s*\d+", line)
+                if len(matches) >= 2:
+                    black_player, red_player = matches[0].strip(), matches[1].strip()
+
+    # Сохраняем последнюю игру
+    if current_game is not None:
+        games.append({
+            'game_number': current_game,
+            'red_player': red_player,
+            'black_player': black_player,
+            'content': '\n'.join(game_content)
+        })
+
+    return games
+
+
+def process_single_game(game_data, invert_colors, output_dir, game_number):
+    """
+    Обрабатывает одну игру и сохраняет результат в отдельный файл.
+    Возвращает путь к файлу с результатом.
+    """
+    game_content = game_data['content']
+    red_player = game_data['red_player']
+    black_player = game_data['black_player']
+
+    # Парсим ходы игры
+    parsed_moves = parse_backgammon_mat(game_content)
+    tracker = BackgammonPositionTracker(invert_colors)
+    aug = tracker.process_game(parsed_moves)
+
+    # Добавляем имена игроков
+    for entry in aug:
+        if entry.get("player") == "Red":
+            entry["player_name"] = red_player
+        elif entry.get("player") == "Black":
+            entry["player_name"] = black_player
+
+    # Конвертируем ходы в GNU формат
+    for entry in aug:
+        if "moves" in entry:
+            entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
+
+    # Генерируем токены команд для gnubg
+    gnubg_tokens = json_to_gnubg_commands(aug)
+    logger.info(f"Game {game_number} tokens: {[t['cmd'] for t in gnubg_tokens]}")
+
+    # Инициализируем поле для подсказок
+    for entry in aug:
+        entry.setdefault("hints", [])
+
+    # Запускаем gnubg для этой игры
+    child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
     command_delay = 0
+    try:
+        time.sleep(0.5)
+        try:
+            start_out = child.read_nonblocking(size=4096, timeout=0.2)
+            logger.debug(f"Game {game_number} gnubg start output: {start_out}")
+        except Exception:
+            pass
+
+        for token in gnubg_tokens:
+            line = token["cmd"]
+            logger.debug(f"Game {game_number} send: {line}")
+            child.sendline(line)
+            time.sleep(command_delay)
+
+            out = ""
+            while True:
+                try:
+                    chunk = child.read_nonblocking(size=4096, timeout=0.05)
+                    if not chunk:
+                        break
+                    out += chunk
+                except pexpect.TIMEOUT:
+                    break
+                except pexpect.EOF:
+                    break
+                except Exception:
+                    break
+
+            if out:
+                logger.debug(f"Game {game_number} gnubg output after '{line}':\n{out}")
+
+            if token["type"] == "hint":
+                target_idx = token.get("target")
+                time.sleep(0.9)
+                try:
+                    chunk = child.read_nonblocking(size=65536, timeout=0.1)
+                    if chunk:
+                        out += chunk
+                except Exception:
+                    pass
+
+                hints = parse_hint_output(out)
+                if hints:
+                    for h in hints:
+                        aug[target_idx]["hints"].append(h)
+                else:
+                    logger.debug(
+                        f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
+                    )
+                    aug[target_idx]["hints"].append({"raw": out})
+
+        # Сравниваем ходы с подсказками
+        for entry in aug:
+            if "gnu_move" in entry and entry.get("hints"):
+                first_hint = next((hint for hint in entry["hints"] if hint.get("idx") == 1 and hint.get("type") == "move"), None)
+                if first_hint and "move" in first_hint:
+                    normalized_gnu = normalize_move(entry["gnu_move"])
+                    normalized_hint = normalize_move(first_hint["move"])
+                    entry["is_best_move"] = normalized_gnu == normalized_hint
+
+                    if not entry["is_best_move"]:
+                        logger.debug(
+                            f"Game {game_number} move mismatch: gnu_move='{entry['gnu_move']}' (normalized: '{normalized_gnu}') vs hint='{first_hint['move']}' (normalized: '{normalized_hint}')"
+                        )
+                else:
+                    entry["is_best_move"] = False
+                    logger.warning(f"Game {game_number} no valid first hint for entry: {entry}")
+            else:
+                entry["is_best_move"] = False
+                logger.debug(f"Game {game_number} skipping comparison for entry without gnu_move or hints: {entry}")
+
+        logger.debug(f"Game {game_number} send: exit / y")
+        try:
+            child.sendline("exit")
+            time.sleep(0.1)
+            child.sendline("y")
+        except Exception:
+            pass
+
+        try:
+            child.expect(pexpect.EOF, timeout=10)
+        except Exception:
+            try:
+                child.close(force=True)
+            except Exception:
+                pass
+
+        try:
+            remaining = child.read_nonblocking(size=65536, timeout=0.1)
+        except Exception:
+            remaining = ""
+        logger.debug(f"Game {game_number} gnubg final remaining: {remaining}")
+
+    finally:
+        try:
+            if child.isalive():
+                child.close(force=True)
+        except Exception:
+            pass
+
+    # Сохраняем результат в отдельный файл
+    game_output_file = os.path.join(output_dir, f"game_{game_number}.json")
+    game_data = {
+        "game_info": {
+            "game_number": game_number,
+            "red_player": red_player,
+            "black_player": black_player,
+            "invert_colors": invert_colors
+        },
+        "moves": aug
+    }
+    with open(game_output_file, "w", encoding="utf-8") as f:
+        json.dump(game_data, f, indent=2, ensure_ascii=False)
+    logger.info(f"Game {game_number} processed and saved to {game_output_file}")
+
+    return game_output_file
+
+
+def process_mat_file(input_file, output_file, chosen_player, chat_id):
+    """
+    Основная функция обработки .mat файла.
+    Поддерживает как одиночные игры, так и множественные игры.
+    """
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Extract player names before parsing moves
-        red_player, black_player = extract_player_names(content)
+        # Разбираем файл на игры
+        games = parse_mat_games(content)
+
+        if not games:
+            raise ValueError("No games found in .mat file")
+
+        # Определяем глобальную информацию об игроках
+        first_game = games[0]
+        red_player = first_game['red_player']
+        black_player = first_game['black_player']
+
         if chosen_player == red_player:
             invert_colors = False
-        if chosen_player == black_player:
+        elif chosen_player == black_player:
             invert_colors = True
-        parsed_moves = parse_backgammon_mat(content)
-        tracker = BackgammonPositionTracker(invert_colors)
-        aug = tracker.process_game(parsed_moves)
+        else:
+            raise ValueError(f"Chosen player {chosen_player} not found in game")
 
-        # Create game info separately
+        # Создаем директорию для результатов
+        output_dir = output_file.rsplit('.', 1)[0] + "_games"
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Обрабатываем игры параллельно
+        import concurrent.futures
+
+        game_results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(games), 4)) as executor:
+            futures = []
+            for game_data in games:
+                future = executor.submit(process_single_game, game_data, invert_colors, output_dir, game_data['game_number'])
+                futures.append((game_data['game_number'], future))
+
+            for game_number, future in futures:
+                try:
+                    result_file = future.result()
+                    game_results.append({
+                        'game_number': game_number,
+                        'result_file': result_file
+                    })
+                    logger.info(f"Game {game_number} processing completed")
+                except Exception as e:
+                    logger.error(f"Failed to process game {game_number}: {e}")
+
+        # Создаем общий результат
         game_info = {
             "red_player": red_player,
             "black_player": black_player,
             "invert_colors": invert_colors,
-            "chat_id": str(chat_id)
+            "chat_id": str(chat_id),
+            "total_games": len(games),
+            "processed_games": len(game_results)
         }
 
-        # Add player names to the output
-        for entry in aug:
-            if entry.get("player") == "Red":
-                entry["player_name"] = red_player
-            elif entry.get("player") == "Black":
-                entry["player_name"] = black_player
+        output_data = {
+            "game_info": game_info,
+            "games": game_results
+        }
 
-        # Convert moves to GNU format
-        for entry in aug:
-            if "moves" in entry:
-                entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(output_data, f, indent=2, ensure_ascii=False)
 
+        logger.info(f"Processed {len(game_results)} games from {input_file}, saved to {output_file}")
 
-
-        # генерируем токены команд
-        gnubg_tokens = json_to_gnubg_commands(aug)
-        logger.info([t["cmd"] for t in gnubg_tokens])
-
-        # Инициализируем поле для подсказок в каждой записи
-        for entry in aug:
-            entry.setdefault("hints", [])
-
-        child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
-        time.sleep(0.5)
-        try:
-            try:
-                start_out = child.read_nonblocking(size=4096, timeout=0.2)
-                logger.debug("gnubg start output: {}", start_out)
-            except Exception:
-                pass
-
-            for token in gnubg_tokens:
-                line = token["cmd"]
-                logger.debug("send: {}", line)
-                child.sendline(line)
-                time.sleep(command_delay)
-
-                out = ""
-                while True:
-                    try:
-                        chunk = child.read_nonblocking(size=4096, timeout=0.05)
-                        if not chunk:
-                            break
-                        out += chunk
-                    except pexpect.TIMEOUT:
-                        break
-                    except pexpect.EOF:
-                        break
-                    except Exception:
-                        break
-
-                if out:
-                    logger.debug("gnubg output after '{}':\n{}", line, out)
-
-                if token["type"] == "hint":
-                    target_idx = token.get("target")
-                    time.sleep(0.9)
-                    try:
-                        chunk = child.read_nonblocking(size=65536, timeout=0.1)
-                        if chunk:
-                            out += chunk
-                    except Exception:
-                        pass
-
-                    hints = parse_hint_output(out)
-                    if hints:
-                        for h in hints:
-                            aug[target_idx]["hints"].append(h)
-                    else:
-                        logger.debug(
-                            "No hints parsed for target %s, raw output length=%d",
-                            target_idx,
-                            len(out),
-                        )
-                        aug[target_idx]["hints"].append({"raw": out})
-
-            # Compare gnu_move with the first hint's move
-            for entry in aug:
-                if "gnu_move" in entry and entry.get("hints"):
-                    # Find the first hint (idx == 1)
-                    first_hint = next((hint for hint in entry["hints"] if hint.get("idx") == 1 and hint.get("type") == "move"), None)
-                    if first_hint and "move" in first_hint:
-                        # Нормализуем обе строки перед сравнением
-                        normalized_gnu = normalize_move(entry["gnu_move"])
-                        normalized_hint = normalize_move(first_hint["move"])
-                        
-                        entry["is_best_move"] = normalized_gnu == normalized_hint
-                        
-                        # Логирование для отладки
-                        if not entry["is_best_move"]:
-                            logger.debug(
-                                "Move mismatch: gnu_move='{}' (normalized: '{}') vs hint='{}' (normalized: '{}')",
-                                entry["gnu_move"], normalized_gnu, first_hint["move"], normalized_hint
-                            )
-                    else:
-                        entry["is_best_move"] = False  # No valid first hint found
-                        logger.warning("No valid first hint for entry: {}", entry)
-                else:
-                    entry["is_best_move"] = False  # No gnu_move or hints
-                    logger.debug("Skipping comparison for entry without gnu_move or hints: {}", entry)
-
-            logger.debug("send: exit / y")
-            try:
-                child.sendline("exit")
-                time.sleep(0.1)
-                child.sendline("y")
-            except Exception:
-                pass
-
-            try:
-                child.expect(pexpect.EOF, timeout=10)
-            except Exception:
-                try:
-                    child.close(force=True)
-                except Exception:
-                    pass
-
-            try:
-                remaining = child.read_nonblocking(size=65536, timeout=0.1)
-            except Exception:
-                remaining = ""
-            logger.debug("gnubg final remaining: {}", remaining)
-
-        finally:
-            try:
-                if child.isalive():
-                    child.close(force=True)
-            except Exception:
-                pass
-
-        try:
-            output_data = {
-                "game_info": game_info,
-                "moves": aug
-            }
-            with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(output_data, f, indent=2, ensure_ascii=False)
-            logger.info("Updated %s with hint data", output_file)
-        except Exception:
-            logger.exception("Failed to write augmented json with hints")
-    finally:
-        if os.path.exists(temp_script):
-            os.remove(temp_script)
+    except Exception as e:
+        logger.exception(f"Failed to process mat file {input_file}: {e}")
+        raise
