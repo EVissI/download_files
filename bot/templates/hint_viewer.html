@@ -154,11 +154,9 @@
         }
 
         #prevBtn {
-            background-image: url('/static/left.png');
         }
 
         #nextBtn {
-            background-image: url('/static/right.png');
         }
 
         #prevBtn:hover, #nextBtn:hover {
@@ -1020,6 +1018,8 @@
 
                         // You might need to adjust this based on your backend API
                         fetch(`/api/send_screenshot?chat_id=${chatId}`, {
+        document.getElementById('prevBtn').style.backgroundImage = 'url(/static/left.png?t=' + Date.now() + ')';
+        document.getElementById('nextBtn').style.backgroundImage = 'url(/static/right.png?t=' + Date.now() + ')';
                             method: 'POST',
                             body: formData
                         }).then(response => {
