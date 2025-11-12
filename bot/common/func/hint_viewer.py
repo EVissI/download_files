@@ -1053,7 +1053,7 @@ def process_single_game(game_data, output_dir, game_number):
         "moves": aug
     }
     with open(game_output_file, "w", encoding="utf-8") as f:
-        json.dump(game_data, f, indent=2, ensure_ascii=False)
+        json.dump(game_data_json, f, indent=2, ensure_ascii=False)
     logger.info(f"Game {game_number} processed and saved to {game_output_file}")
 
     return game_output_file
