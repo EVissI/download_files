@@ -81,7 +81,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext, i18n):
 
         try:
             # Обрабатываем .mat → директория с JSON файлами игр
-            await asyncio.to_thread(process_mat_file, mat_path, json_path, red_player, str(message.from_user.id))
+            await asyncio.to_thread(process_mat_file, mat_path, json_path, str(message.from_user.id))
 
             # Создаем ZIP архив из директории с результатами
             games_dir = json_path.rsplit('.', 1)[0] + "_games"
