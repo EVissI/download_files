@@ -32,7 +32,6 @@ templates = Jinja2Templates(directory="bot/templates")
 
 class HintViewerStates(StatesGroup):
     waiting_file = State()
-    choose_player = State()
 
 
 @hint_viewer_router.message(F.text == AdminKeyboard.get_kb_text()["test"])
@@ -75,19 +74,88 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
             red_player=red_player,
             black_player=black_player
         )
-        await state.set_state(HintViewerStates.choose_player)
 
-        # Клавиатура выбора игрока
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text=f"{red_player}", callback_data="choose_red")],
-                [InlineKeyboardButton(text=f"{black_player}", callback_data="choose_black")]
-            ]
-        )
-        await message.answer(
-            "Выберите игрока для анализа:",
-            reply_markup=keyboard
-        )
+        # Начинаем обработку сразу
+        waiting_manager = WaitingMessageManager(message.from_user.id, message.bot, None)
+        await waiting_manager.start()
+
+        try:
+            # Обрабатываем .mat → директория с JSON файлами игр
+            await asyncio.to_thread(process_mat_file, mat_path, json_path, red_player, str(message.from_user.id))
+
+            # Создаем ZIP архив из директории с результатами
+            games_dir = json_path.rsplit('.', 1)[0] + "_games"
+            if os.path.exists(games_dir):
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    for root, dirs, files in os.walk(games_dir):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, games_dir)
+                            zip_file.write(file_path, arcname)
+
+                zip_buffer.seek(0)
+                zip_data = zip_buffer.getvalue()
+
+                # Отправляем ZIP архив пользователю
+                from aiogram.types import BufferedInputFile
+                zip_file = BufferedInputFile(zip_data, filename=f"{game_id}_analysis.zip")
+                await message.answer_document(
+                    document=zip_file,
+                    caption=f"Архив с анализом игр ({len(os.listdir(games_dir))} файлов)"
+                )
+
+                # Кнопка для открытия в мини-приложении (если есть хотя бы одна игра)
+                game_files = [f for f in os.listdir(games_dir) if f.endswith('.json')]
+                if game_files:
+                    mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
+                    keyboard = InlineKeyboardMarkup(
+                        inline_keyboard=[
+                            [InlineKeyboardButton(
+                                text="Открыть интерактивную визуализацию",
+                                web_app=WebAppInfo(url=mini_app_url)
+                            )]
+                        ]
+                    )
+                    await message.answer(
+                        "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации первой игры:",
+                        reply_markup=keyboard
+                    )
+            else:
+                # Fallback: отправляем одиночный JSON если директория не создана
+                if os.path.exists(json_path):
+                    json_document = FSInputFile(path=json_path, filename=f"{game_id}.json")
+                    await message.answer_document(
+                        document=json_document,
+                        caption=f"Сгенерированный JSON файл анализа"
+                    )
+
+                    mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
+                    keyboard = InlineKeyboardMarkup(
+                        inline_keyboard=[
+                            [InlineKeyboardButton(
+                                text="Открыть интерактивную визуализацию",
+                                web_app=WebAppInfo(url=mini_app_url)
+                            )]
+                        ]
+                    )
+                    await message.answer(
+                        "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации игры:",
+                        reply_markup=keyboard
+                    )
+
+        except Exception:
+            logger.exception("Ошибка при обработке hint viewer")
+            await message.reply("Ошибка при обработке файла.")
+        finally:
+            await waiting_manager.stop()
+            try:
+                if os.path.exists(mat_path):
+                    os.remove(mat_path)
+            except Exception:
+                logger.warning("Не удалось удалить mat файл после обработки.")
+            await state.clear()
+            await state.set_state(GeneralStates.admin_panel)
 
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
@@ -96,97 +164,6 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         await state.set_state(GeneralStates.admin_panel)
 
 
-@hint_viewer_router.callback_query(F.data.in_(["choose_red", "choose_black"]), StateFilter(HintViewerStates.choose_player))
-async def choose_player_callback(callback: CallbackQuery, state: FSMContext, i18n):
-    await callback.message.delete()
-    waiting_manager = WaitingMessageManager(callback.from_user.id, callback.bot, i18n)
-    await waiting_manager.start()
-    data = await state.get_data()
-    game_id = data['game_id']
-    mat_path = data['mat_path']
-    json_path = data['json_path']
-    red_player = data['red_player']
-    black_player = data['black_player']
-
-    chosen_player = red_player if callback.data == "choose_red" else black_player
-
-    try:
-        # Обрабатываем .mat → директория с JSON файлами игр
-        await asyncio.to_thread(process_mat_file, mat_path, json_path, chosen_player, str(callback.from_user.id))
-
-        # Создаем ZIP архив из директории с результатами
-        games_dir = json_path.rsplit('.', 1)[0] + "_games"
-        if os.path.exists(games_dir):
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for root, dirs, files in os.walk(games_dir):
-                    for file in files:
-                        file_path = os.path.join(root, file)
-                        arcname = os.path.relpath(file_path, games_dir)
-                        zip_file.write(file_path, arcname)
-
-            zip_buffer.seek(0)
-            zip_data = zip_buffer.getvalue()
-
-            # Отправляем ZIP архив пользователю
-            from aiogram.types import BufferedInputFile
-            zip_file = BufferedInputFile(zip_data, filename=f"{game_id}_analysis.zip")
-            await callback.message.answer_document(
-                document=zip_file,
-                caption=f"Архив с анализом игр ({len(os.listdir(games_dir))} файлов)"
-            )
-
-            # Кнопка для открытия в мини-приложении (если есть хотя бы одна игра)
-            game_files = [f for f in os.listdir(games_dir) if f.endswith('.json')]
-            if game_files:
-                mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
-                keyboard = InlineKeyboardMarkup(
-                    inline_keyboard=[
-                        [InlineKeyboardButton(
-                            text="Открыть интерактивную визуализацию",
-                            web_app=WebAppInfo(url=mini_app_url)
-                        )]
-                    ]
-                )
-                await callback.message.answer(
-                    "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации первой игры:",
-                    reply_markup=keyboard
-                )
-        else:
-            # Fallback: отправляем одиночный JSON если директория не создана
-            if os.path.exists(json_path):
-                json_document = FSInputFile(path=json_path, filename=f"{game_id}.json")
-                await callback.message.answer_document(
-                    document=json_document,
-                    caption=f"Сгенерированный JSON файл анализа"
-                )
-
-                mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
-                keyboard = InlineKeyboardMarkup(
-                    inline_keyboard=[
-                        [InlineKeyboardButton(
-                            text="Открыть интерактивную визуализацию",
-                            web_app=WebAppInfo(url=mini_app_url)
-                        )]
-                    ]
-                )
-                await callback.message.answer(
-                    "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации игры:",
-                    reply_markup=keyboard
-                )
-
-    except Exception:
-        logger.exception("Ошибка при обработке hint viewer")
-        await callback.message.reply("Ошибка при обработке файла.")
-    finally:
-        await waiting_manager.stop()
-        try:
-            if os.path.exists(mat_path):
-                os.remove(mat_path)
-        except Exception:
-            logger.warning("Не удалось удалить mat файл после обработки.")
-        await state.clear()
-        await state.set_state(GeneralStates.admin_panel)
 
 
 # --- FastAPI часть ---
