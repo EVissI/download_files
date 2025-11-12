@@ -374,41 +374,6 @@ async def process_batch_hint_files(message: Message, state: FSMContext, file_pat
                 else:
                     await message.answer(f"Анализ файла {fname} завершен, но игр не найдено.")
 
-        # Создаем ZIP архив из всех обработанных файлов для скачивания
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for result in results:
-                if not isinstance(result, Exception):
-                    game_id, has_games = result
-                    json_path = f"files/{game_id}.json"
-                    mat_path = file_paths[results.index(result)]
-
-                    # Добавляем JSON в ZIP
-                    if os.path.exists(json_path):
-                        zip_file.write(json_path, f"{os.path.basename(mat_path)}.json")
-                        os.remove(json_path)
-
-                    # Добавляем директорию с играми если есть
-                    games_dir = json_path.rsplit('.', 1)[0] + "_games"
-                    if os.path.exists(games_dir):
-                        for root, dirs, files in os.walk(games_dir):
-                            for file in files:
-                                file_path = os.path.join(root, file)
-                                arcname = os.path.relpath(file_path, games_dir)
-                                zip_file.write(file_path, f"{os.path.basename(mat_path)}_{arcname}")
-                        # Удаляем директорию
-                        shutil.rmtree(games_dir)
-
-        zip_buffer.seek(0)
-        zip_data = zip_buffer.getvalue()
-
-        # Отправляем ZIP архив пользователю
-        zip_file = BufferedInputFile(zip_data, filename=f"batch_hint_analysis.zip")
-        await message.answer_document(
-            document=zip_file,
-            caption=f"Архив с пакетным анализом подсказок ({len(file_paths)} файлов)",
-            reply_markup=AdminKeyboard.build()
-        )
 
     except Exception as e:
         logger.exception("Ошибка при пакетной обработке hint viewer")
