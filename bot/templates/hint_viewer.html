@@ -423,6 +423,11 @@
             }
 
             currentGameNum = gameNum;
+            // Update the select dropdown
+            const gameSelect = document.getElementById('gameSelect');
+            if (gameSelect) {
+                gameSelect.value = gameNum;
+            }
             infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
             fetch(`/api/analysis/${gameId}?game_num=${gameNum}`)
@@ -971,6 +976,13 @@
             if (dataLoaded && current > 0) {
                 render(current - 1, invertColors);
                 updateButtons();
+            } else if (dataLoaded && availableGames.length > 1) {
+                // Try to load previous game
+                const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
+                if (currentIndex > 0) {
+                    const prevGameNum = availableGames[currentIndex - 1].game_number;
+                    loadGame(prevGameNum);
+                }
             }
         }
 
@@ -978,6 +990,13 @@
             if (dataLoaded && current < data.length - 1) {
                 render(current + 1, invertColors);
                 updateButtons();
+            } else if (dataLoaded && availableGames.length > 1) {
+                // Try to load next game
+                const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
+                if (currentIndex !== -1 && currentIndex < availableGames.length - 1) {
+                    const nextGameNum = availableGames[currentIndex + 1].game_number;
+                    loadGame(nextGameNum);
+                }
             }
         }
 
@@ -991,8 +1010,15 @@
             const nextBtn = document.getElementById('nextBtn');
 
             if (dataLoaded) {
-                prevBtn.disabled = current <= 0;
-                nextBtn.disabled = current >= data.length - 1;
+                // Disable prevBtn only if at start of data and no previous game
+                const atStartOfData = current <= 0;
+                const hasPrevGame = availableGames.length > 1 && availableGames.findIndex(game => game.game_number == currentGameNum) > 0;
+                prevBtn.disabled = atStartOfData && !hasPrevGame;
+
+                // Disable nextBtn only if at end of data and no next game
+                const atEndOfData = current >= data.length - 1;
+                const hasNextGame = availableGames.length > 1 && availableGames.findIndex(game => game.game_number == currentGameNum) < availableGames.length - 1;
+                nextBtn.disabled = atEndOfData && !hasNextGame;
             } else {
                 prevBtn.disabled = true;
                 nextBtn.disabled = true;
