@@ -680,16 +680,11 @@ def convert_moves_to_gnu(moves_list):
 class BackgammonPositionTracker:
     def __init__(self, invert_colors=False):
         self.invert_colors = invert_colors
-        if invert_colors:
-            self.start_positions = {
-                "red": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
-                "black": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
-            }
-        else:
-            self.start_positions = {
-                "red": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
-                "black": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
-            }
+        # Always use standard positions as base
+        self.start_positions = {
+            "red": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
+            "black": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
+        }
         self.reset()
 
     def reset(self):
@@ -766,6 +761,9 @@ class BackgammonPositionTracker:
                     # право хода переходит к другому
                     self.current_player = "black" if self.current_player == "red" else "red"
                 e["positions"] = copy.deepcopy(self.positions)
+                # Create inverted positions
+                inverted_positions = self._invert_positions(self.positions)
+                e["inverted_positions"] = inverted_positions
                 result.append(e)
                 continue
 
@@ -778,9 +776,24 @@ class BackgammonPositionTracker:
             # после обычного хода — передаём очередь
             self.current_player = "black" if player == "red" else "red"
             e["positions"] = copy.deepcopy(self.positions)
+            # Create inverted positions
+            inverted_positions = self._invert_positions(self.positions)
+            e["inverted_positions"] = inverted_positions
             result.append(e)
 
         return result
+
+    def _invert_positions(self, positions):
+        """Invert the positions for the board"""
+        inverted = {"red": {}, "black": {}}
+        for color in ["red", "black"]:
+            for key, value in positions[color].items():
+                if key == "bar" or key == "off":
+                    inverted[color][key] = value
+                else:
+                    inverted_point = 25 - int(key)
+                    inverted[color][str(inverted_point)] = value
+        return inverted
 
 def parse_mat_games(content):
     """
@@ -830,7 +843,7 @@ def parse_mat_games(content):
     return games
 
 
-def process_single_game(game_data, invert_colors, output_dir, game_number):
+def process_single_game(game_data, output_dir, game_number):
     """
     Обрабатывает одну игру и сохраняет результат в отдельный файл.
     Возвращает путь к файлу с результатом.
@@ -841,7 +854,7 @@ def process_single_game(game_data, invert_colors, output_dir, game_number):
 
     # Парсим ходы игры
     parsed_moves = parse_backgammon_mat(game_content)
-    tracker = BackgammonPositionTracker(invert_colors)
+    tracker = BackgammonPositionTracker()
     aug = tracker.process_game(parsed_moves)
 
     # Добавляем имена игроков
@@ -974,7 +987,6 @@ def process_single_game(game_data, invert_colors, output_dir, game_number):
             "game_number": game_number,
             "red_player": red_player,
             "black_player": black_player,
-            "invert_colors": invert_colors
         },
         "moves": aug
     }
@@ -985,7 +997,7 @@ def process_single_game(game_data, invert_colors, output_dir, game_number):
     return game_output_file
 
 
-def process_mat_file(input_file, output_file, chosen_player, chat_id):
+def process_mat_file(input_file, output_file, chat_id):
     """
     Основная функция обработки .mat файла.
     Поддерживает как одиночные игры, так и множественные игры.
@@ -1005,13 +1017,6 @@ def process_mat_file(input_file, output_file, chosen_player, chat_id):
         red_player = first_game['red_player']
         black_player = first_game['black_player']
 
-        if chosen_player == red_player:
-            invert_colors = False
-        elif chosen_player == black_player:
-            invert_colors = True
-        else:
-            raise ValueError(f"Chosen player {chosen_player} not found in game")
-
         # Создаем директорию для результатов
         output_dir = output_file.rsplit('.', 1)[0] + "_games"
         os.makedirs(output_dir, exist_ok=True)
@@ -1023,7 +1028,7 @@ def process_mat_file(input_file, output_file, chosen_player, chat_id):
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(games), 4)) as executor:
             futures = []
             for game_data in games:
-                future = executor.submit(process_single_game, game_data, invert_colors, output_dir, game_data['game_number'])
+                future = executor.submit(process_single_game, game_data, output_dir, game_data['game_number'])
                 futures.append((game_data['game_number'], future))
 
             for game_number, future in futures:
@@ -1041,7 +1046,6 @@ def process_mat_file(input_file, output_file, chosen_player, chat_id):
         game_info = {
             "red_player": red_player,
             "black_player": black_player,
-            "invert_colors": invert_colors,
             "chat_id": str(chat_id),
             "total_games": len(games),
             "processed_games": len(game_results)
