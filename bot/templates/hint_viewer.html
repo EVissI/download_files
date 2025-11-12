@@ -149,6 +149,8 @@
             height: 50px;
             padding: 0;
             color: transparent;
+            background-color: transparent;
+            border: none;
         }
 
         #prevBtn {
@@ -159,8 +161,13 @@
             background-image: url('/static/right.png');
         }
 
+        #prevBtn:hover, #nextBtn:hover {
+            background-color: transparent;
+        }
+
         #prevBtn:disabled, #nextBtn:disabled {
             opacity: 0.5;
+            background-color: transparent;
         }
 
         #turnLabel {
