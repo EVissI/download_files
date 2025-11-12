@@ -9,8 +9,8 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            color: black;
-            background-color: white;
+            color: white;
+            background-color: #1a1a1a;
             margin: 0;
             padding: 20px;
             min-height: 100vh;
@@ -27,9 +27,9 @@
         }
 
         canvas {
-            border: 2px solid black;
+            border: 2px solid #333;
             border-radius: 8px;
-            background-color: white;
+            background-color: #2a2a2a;
             max-width: 100%;
             height: auto;
             display: block;
@@ -37,11 +37,11 @@
         }
 
         .game-info {
-            background-color: white;
+            background-color: #2d2d2d;
             border-radius: 8px;
             padding: 20px;
             margin: 20px auto;
-            border: 1px solid black;
+            border: 1px solid #444;
             width: 50%;
             display: block;
             margin-left: auto;
@@ -49,11 +49,11 @@
         }
 
         .hints-table {
-            background-color: white;
+            background-color: #2d2d2d;
             border-radius: 8px;
             padding: 20px;
             margin: 20px 0;
-            border: 1px solid black;
+            border: 1px solid #444;
             overflow-x: auto;
         }
 
@@ -62,48 +62,48 @@
             border-collapse: collapse;
             width: 100%;
             max-width: 800px;
-            background-color: white;
+            background-color: #333;
             border-radius: 6px;
             overflow: hidden;
         }
 
         th,
         td {
-            border: 1px solid black;
+            border: 1px solid #555;
             padding: 20px 30px;
             text-align: left;
-            color: black;
+            color: white;
             word-spacing: 16px;
         }
 
         th {
-            background-color: lightgray;
+            background-color: #444;
             font-weight: bold;
             text-align: center;
         }
 
         tr:nth-child(even) {
-            background-color: lightgray;
+            background-color: #2a2a2a;
         }
 
         tr:hover {
-            background-color: gray;
+            background-color: #3a3a3a;
         }
 
         .hint-best {
-            background-color: lightgreen !important;
+            background-color: #2e7d32 !important;
         }
 
         .hint-good {
-            background-color: yellow !important;
+            background-color: #fbc02d !important;
         }
 
         .hint-good td {
-            color: black !important;
+            color: #1a1a1a !important;
         }
 
         .hint-poor {
-            background-color: lightcoral !important;
+            background-color: #d32f2f !important;
         }
 
         #controls {
@@ -151,7 +151,7 @@
         }
 
         .info-text {
-            color: gray;
+            color: #ccc;
             margin: 5px 0;
         }
 
@@ -246,17 +246,17 @@
         }
 
         .error {
-            color: red;
-            background-color: lightpink;
-            border: 1px solid red;
+            color: #dc3545;
+            background-color: #2d1b1b;
+            border: 1px solid #dc3545;
             border-radius: 4px;
             padding: 10px;
             margin: 10px 0;
         }
 
         .pips-above-board {
-            background-color: white;
-            color: black;
+            background-color: #000000;
+            color: #ffffff;
             padding: 3px 6px;
             border-radius: 4px;
             font-size: 18px;
@@ -269,8 +269,8 @@
         }
 
         .pips-below-board {
-            background-color: white;
-            color: black;
+            background-color: #ffffff;
+            color: #000000;
             padding: 3px 6px;
             border-radius: 4px;
             font-size: 18px;
@@ -596,7 +596,7 @@
 
         function drawCheckers(player, img, positions, currentPlayer) {
             ctx.font = 'bold 30px Arial';
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
@@ -721,29 +721,29 @@
             document.getElementById('black-pips').innerText = `${blackPips}`;
             document.getElementById('red-pips').innerText = `${redPips}`;
             if (invertColors) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(650, 800, 150, 50);
                 ctx.fillStyle = '#000000';
+                ctx.fillRect(650, 800, 150, 50);
+                ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 20px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillText(`${blackPips}`, 725, -20);
 
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(650, -50, 150, 50);
                 ctx.fillStyle = '#ffffff';
+                ctx.fillRect(650, -50, 150, 50);
+                ctx.fillStyle = '#000000';
                 ctx.fillText(`${redPips}`, 725, 830);
             }
             if (!invertColors) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(650, -50, 150, 50);
                 ctx.fillStyle = '#000000';
+                ctx.fillRect(650, -50, 150, 50);
+                ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 20px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillText(`${blackPips}`, 725, -20);
 
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(650, 800, 150, 50);
                 ctx.fillStyle = '#ffffff';
+                ctx.fillRect(650, 800, 150, 50);
+                ctx.fillStyle = '#000000';
                 ctx.fillText(`${redPips}`, 725, 830);
             }
 
@@ -955,7 +955,7 @@
             html2canvas(document.body, {
                 useCORS: true,
                 allowTaint: true,
-                backgroundColor: 'white'
+                backgroundColor: '#1a1a1a'
             }).then(canvas => {
                 // Restore controls and game selector after taking screenshot
                 controls.style.display = originalControlsDisplay;
