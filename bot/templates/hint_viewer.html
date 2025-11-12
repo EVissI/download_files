@@ -850,7 +850,7 @@
                 const bestAction = item.hints[0].cubeful_equities.find(eq => eq.idx === 1);
                 const bestAction1 = bestAction.action_1;
                 const bestAction2 = bestAction.action_2;
-                (item.hints[0].cubeful_equities || []).slice(0, 3).forEach((hint, index) => {
+                (item.hints[0].cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1;
                     if (hint.action_2) {
