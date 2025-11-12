@@ -141,6 +141,28 @@
             cursor: not-allowed;
         }
 
+        #prevBtn, #nextBtn {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 50px;
+            height: 50px;
+            padding: 0;
+            color: transparent;
+        }
+
+        #prevBtn {
+            background-image: url('/static/left.png');
+        }
+
+        #nextBtn {
+            background-image: url('/static/right.png');
+        }
+
+        #prevBtn:disabled, #nextBtn:disabled {
+            opacity: 0.5;
+        }
+
         #turnLabel {
             font-size: 18px;
             font-weight: bold;
@@ -299,9 +321,9 @@
         <div id="red-pips" class="pips-below-board">0</div>
 
         <div id="controls">
-            <button onclick="prevTurn()" id="prevBtn">←</button>
+            <button onclick="prevTurn()" id="prevBtn"></button>
             <span id="turnLabel">Ход 0</span>
-            <button onclick="nextTurn()" id="nextBtn">→</button>
+            <button onclick="nextTurn()" id="nextBtn"></button>
             <button onclick="toggleInvert()" id="invertBtn">Инверт</button>
             <button onclick="takeScreenshot()" id="screenshotBtn">Скрин</button>
         </div>
@@ -408,7 +430,7 @@
                         if (data[0]?.action === 'skip') {
                             current = 1;
                         }
-                        if (imagesLoaded === 21) {
+                        if (imagesLoaded === 25) {
                             render(current, invertColors);
                             updateButtons();
                             infoDiv.innerHTML = '';
@@ -481,11 +503,22 @@
         const Double64 = new Image();
         Double64.src = '/static/Double64.png';
 
+        const Left = new Image();
+        Left.src = '/static/left.png';
+        const Right = new Image();
+        Left.src = '/static/right.png';
+
+        const ScreenShot = new Image();
+        ScreenShot.src = '/static/Screen.png';
+
+        const ChangeColor = new Image();
+        ChangeColor.src = '/static/change_color.png';
+
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
             console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 21 && dataLoaded) {
+            if (imagesLoaded === 25 && dataLoaded) {
                 console.log('All images and data loaded, rendering turn', current);
                 render(current, invertColors);
                 updateButtons();
@@ -514,6 +547,10 @@
         Double16.onload = checkImagesLoaded;
         Double32.onload = checkImagesLoaded;
         Double64.onload = checkImagesLoaded;
+        Left.onload = checkImagesLoaded;
+        Right.onload = checkImagesLoaded;
+        ScreenShot.onload = checkImagesLoaded;
+        ChangeColor.onload = checkImagesLoaded;
 
         // Обработка ошибок загрузки изображений
         [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64].forEach(img => {
