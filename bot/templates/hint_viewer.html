@@ -9,8 +9,8 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            color: white;
-            background-color: #1a1a1a;
+            color: black;
+            background-color: white;
             margin: 0;
             padding: 20px;
             min-height: 100vh;
@@ -37,11 +37,11 @@
         }
 
         .game-info {
-            background-color: #2d2d2d;
+            background-color: #f0f0f0;
             border-radius: 8px;
             padding: 20px;
             margin: 20px auto;
-            border: 1px solid #444;
+            border: 1px solid #ddd;
             width: 50%;
             display: block;
             margin-left: auto;
@@ -49,11 +49,11 @@
         }
 
         .hints-table {
-            background-color: #2d2d2d;
+            background-color: #f0f0f0;
             border-radius: 8px;
             padding: 20px;
             margin: 20px 0;
-            border: 1px solid #444;
+            border: 1px solid #ddd;
             overflow-x: auto;
         }
 
@@ -62,48 +62,48 @@
             border-collapse: collapse;
             width: 100%;
             max-width: 800px;
-            background-color: #333;
+            background-color: white;
             border-radius: 6px;
             overflow: hidden;
         }
 
         th,
         td {
-            border: 1px solid #555;
+            border: 1px solid #ccc;
             padding: 20px 30px;
             text-align: left;
-            color: white;
+            color: black;
             word-spacing: 16px;
         }
 
         th {
-            background-color: #444;
+            background-color: #e0e0e0;
             font-weight: bold;
             text-align: center;
         }
 
         tr:nth-child(even) {
-            background-color: #2a2a2a;
+            background-color: #f9f9f9;
         }
 
         tr:hover {
-            background-color: #3a3a3a;
+            background-color: #e0e0e0;
         }
 
         .hint-best {
-            background-color: #2e7d32 !important;
+            background-color: #d4edda !important;
         }
 
         .hint-good {
-            background-color: #fbc02d !important;
+            background-color: #fff3cd !important;
         }
 
         .hint-good td {
-            color: #1a1a1a !important;
+            color: black !important;
         }
 
         .hint-poor {
-            background-color: #d32f2f !important;
+            background-color: #f8d7da !important;
         }
 
         #controls {
@@ -151,7 +151,7 @@
         }
 
         .info-text {
-            color: #ccc;
+            color: #666;
             margin: 5px 0;
         }
 
@@ -246,17 +246,17 @@
         }
 
         .error {
-            color: #dc3545;
-            background-color: #2d1b1b;
-            border: 1px solid #dc3545;
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
             border-radius: 4px;
             padding: 10px;
             margin: 10px 0;
         }
 
         .pips-above-board {
-            background-color: #000000;
-            color: #ffffff;
+            background-color: #ffffff;
+            color: #000000;
             padding: 3px 6px;
             border-radius: 4px;
             font-size: 18px;
@@ -955,7 +955,7 @@
             html2canvas(document.body, {
                 useCORS: true,
                 allowTaint: true,
-                backgroundColor: '#1a1a1a'
+                backgroundColor: '#ffffff'
             }).then(canvas => {
                 // Restore controls and game selector after taking screenshot
                 controls.style.display = originalControlsDisplay;
