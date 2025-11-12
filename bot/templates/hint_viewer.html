@@ -287,7 +287,6 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
-        const gameNum = urlParams.get('game_num') || null;
     </script>
 </head>
 
@@ -325,11 +324,14 @@
         let redPlayer = 'Unknown';
         let blackPlayer = 'Unknown';
         let invertColors = false;
+        let availableGames = [];
+        let currentGameNum = null;
         const infoDiv = document.getElementById('info');
         const playersInfoDiv = document.getElementById('players-info');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
-        fetch(`/api/analysis/${gameId}${gameNum ? `?game_num=${gameNum}` : ''}`)
+        // Загружаем список доступных игр
+        fetch(`/api/analysis/${gameId}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -338,41 +340,84 @@
             })
             .then(json => {
                 const gameInfo = json.game_info;
-                data = json.moves.filter(item => item.turn !== undefined);
-                data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double') && it.action !== 'take' && it.action !== 'pass');
+                availableGames = json.games || [];
+                redPlayer = gameInfo.red_player || 'Unknown';
+                blackPlayer = gameInfo.black_player || 'Unknown';
+                invertColors = gameInfo.invert_colors || false;
+                chatId = gameInfo.chat_id || chatId;
 
-                // Найти все индексы ходов с удвоением
-                doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
-                firstDoubleIndex = doubleTurns.length > 0 ? doubleTurns[0] : -1;
-
-                if (data.length > 0) {
-                    redPlayer = gameInfo.red_player || 'Unknown';
-                    blackPlayer = gameInfo.black_player || 'Unknown';
-                    invertColors = gameInfo.invert_colors || false;
-                    chatId = gameInfo.chat_id || chatId; // Use chat_id from gameInfo if available
-                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
-                    dataLoaded = true;
-                    console.log('Data loaded:', data);
-                    console.log('First turn data:', data[0]);
-                    console.log('First turn moves:', data[0]?.moves);
-                    if (data[0]?.action === 'skip') {
-                        current = 1;
-                    }
-                    if (imagesLoaded === 21) {
-                        render(current, invertColors);
-                        updateButtons();
-                        infoDiv.innerHTML = '';
-                    } else {
-                        console.log('Waiting for images to load before rendering');
-                    }
+                // Создаем выпадающий список для выбора игры
+                if (availableGames.length > 0) {
+                    let selectHtml = '<select id="gameSelect" onchange="loadGame(this.value)">';
+                    selectHtml += '<option value="">Выберите игру</option>';
+                    availableGames.forEach(game => {
+                        selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
+                    });
+                    selectHtml += '</select>';
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${selectHtml}`;
                 } else {
-                    infoDiv.innerHTML = '<div class="error">No game data found for this game ID.</div>';
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
+                    infoDiv.innerHTML = '<div class="error">No games found in this analysis.</div>';
                 }
             })
             .catch(error => {
-                console.error('Error loading JSON:', error);
+                console.error('Error loading games list:', error);
                 infoDiv.innerHTML = '<div class="error">Error loading game data. Please check the game ID and try again.</div>';
             });
+
+        function loadGame(gameNum) {
+            if (!gameNum) {
+                data = [];
+                dataLoaded = false;
+                infoDiv.innerHTML = '<div class="loading">Select a game to view</div>';
+                document.getElementById('hints').innerHTML = '';
+                return;
+            }
+
+            currentGameNum = gameNum;
+            infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
+
+            fetch(`/api/analysis/${gameId}?game_num=${gameNum}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(json => {
+                    const gameInfo = json.game_info;
+                    data = json.moves.filter(item => item.turn !== undefined);
+                    data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double') && it.action !== 'take' && it.action !== 'pass');
+
+                    // Найти все индексы ходов с удвоением
+                    doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
+                    firstDoubleIndex = doubleTurns.length > 0 ? doubleTurns[0] : -1;
+
+                    if (data.length > 0) {
+                        dataLoaded = true;
+                        console.log('Data loaded:', data);
+                        console.log('First turn data:', data[0]);
+                        console.log('First turn moves:', data[0]?.moves);
+                        current = 0;
+                        if (data[0]?.action === 'skip') {
+                            current = 1;
+                        }
+                        if (imagesLoaded === 21) {
+                            render(current, invertColors);
+                            updateButtons();
+                            infoDiv.innerHTML = '';
+                        } else {
+                            console.log('Waiting for images to load before rendering');
+                        }
+                    } else {
+                        infoDiv.innerHTML = '<div class="error">No game data found for this game.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading game:', error);
+                    infoDiv.innerHTML = '<div class="error">Error loading game data. Please try again.</div>';
+                });
+        }
 
         let current = 0;
         let doubleTurns = [];
@@ -855,14 +900,14 @@
         }
 
         function prevTurn() {
-            if (current > 0) {
+            if (dataLoaded && current > 0) {
                 render(current - 1, invertColors);
                 updateButtons();
             }
         }
 
         function nextTurn() {
-            if (current < data.length - 1) {
+            if (dataLoaded && current < data.length - 1) {
                 render(current + 1, invertColors);
                 updateButtons();
             }
@@ -872,8 +917,13 @@
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
 
-            prevBtn.disabled = current <= 0;
-            nextBtn.disabled = current >= data.length - 1;
+            if (dataLoaded) {
+                prevBtn.disabled = current <= 0;
+                nextBtn.disabled = current >= data.length - 1;
+            } else {
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+            }
         }
 
         function takeScreenshot() {

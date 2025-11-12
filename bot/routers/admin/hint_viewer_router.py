@@ -139,9 +139,8 @@ async def choose_player_callback(callback: CallbackQuery, state: FSMContext, i18
             # Кнопка для открытия в мини-приложении (если есть хотя бы одна игра)
             game_files = [f for f in os.listdir(games_dir) if f.endswith('.json')]
             if game_files:
-                first_game = sorted(game_files, key=lambda x: int(x.split('_')[1].split('.')[0]))[0]
-                game_num = first_game.split('_')[1].split('.')[0]
-                mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&game_num={game_num}"
+                games_dir_name = os.path.basename(games_dir)
+                mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={games_dir_name}"
                 keyboard = InlineKeyboardMarkup(
                     inline_keyboard=[
                         [InlineKeyboardButton(
