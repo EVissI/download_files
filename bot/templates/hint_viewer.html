@@ -106,6 +106,14 @@
             background-color: #d32f2f !important;
         }
 
+        #top-controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
         #controls {
             margin: 20px 0;
             display: flex;
@@ -197,6 +205,14 @@
                 height: 100%;
             }
 
+            #top-controls {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                justify-content: space-between;
+                width: 100%;
+            }
+
             #controls {
                 flex-direction: row;
                 align-items: center;
@@ -208,6 +224,14 @@
             #turnLabel {
                 margin: 10px 0;
                 font-size: 16px;
+            }
+
+            #top-controls {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                justify-content: space-between;
+                width: 100%;
             }
 
             button {
@@ -340,12 +364,14 @@
         <canvas id="boardCanvas" width="800" height="800"></canvas>
         <div id="red-pips" class="pips-below-board">0</div>
 
+        <div id="top-controls">
+            <button onclick="toggleInvert()" id="invertBtn"></button>
+            <button onclick="takeScreenshot()" id="screenshotBtn"></button>
+        </div>
         <div id="controls">
             <button onclick="prevTurn()" id="prevBtn"></button>
             <span id="turnLabel">Ход 0</span>
             <button onclick="nextTurn()" id="nextBtn"></button>
-            <button onclick="toggleInvert()" id="invertBtn"></button>
-            <button onclick="takeScreenshot()" id="screenshotBtn"></button>
         </div>
         <div class="game-info">
             <div id="info" class="info-text"></div>
@@ -440,7 +466,7 @@
                 .then(json => {
                     const gameInfo = json.game_info;
                     data = json.moves.filter(item => item.turn !== undefined);
-                    data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double') && it.action !== 'take' && it.action !== 'pass');
+                    data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double') && it.action !== 'pass');
 
                     // Найти все индексы ходов с удвоением
                     doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
