@@ -1052,10 +1052,13 @@
         function takeScreenshot() {
             // Hide controls and game selector before taking screenshot
             const controls = document.getElementById('controls');
+            const topRow = document.getElementById('top-row');
             const gameSelect = document.getElementById('gameSelect');
             const originalControlsDisplay = controls.style.display;
+            const originalTopRowDisplay = topRow.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             controls.style.display = 'none';
+            topRow.style.display = 'none';
             if (gameSelect) gameSelect.style.display = 'none';
 
             // Create a canvas to capture the entire page
@@ -1066,6 +1069,7 @@
             }).then(canvas => {
                 // Restore controls and game selector after taking screenshot
                 controls.style.display = originalControlsDisplay;
+                topRow.style.display = originalTopRowDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
