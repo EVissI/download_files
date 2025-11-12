@@ -139,8 +139,7 @@ async def choose_player_callback(callback: CallbackQuery, state: FSMContext, i18
             # Кнопка для открытия в мини-приложении (если есть хотя бы одна игра)
             game_files = [f for f in os.listdir(games_dir) if f.endswith('.json')]
             if game_files:
-                games_dir_name = os.path.basename(games_dir)
-                mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={games_dir_name}"
+                mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
                 keyboard = InlineKeyboardMarkup(
                     inline_keyboard=[
                         [InlineKeyboardButton(
@@ -206,7 +205,7 @@ def take_json_info(game_id: str, game_num: str = None):
         else:
             raise FileNotFoundError(f"JSON файл для игры {game_num} в {game_id} не найден")
     else:
-        # Fallback для одиночных игр
+        # Загружаем общий файл с информацией о всех играх
         path = f"files/{game_id}.json"
         if not os.path.exists(path):
             raise FileNotFoundError(f"JSON файл для {game_id} не найден")
@@ -233,6 +232,7 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
 async def get_analysis_data(game_id: str, game_num: str = None):
     """
     Возвращает JSON-данные анализа для указанного game_id и номера игры.
+    Если game_num не указан, возвращает список всех игр.
     """
     try:
         data = take_json_info(game_id, game_num)
