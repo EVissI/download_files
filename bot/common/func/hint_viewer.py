@@ -971,9 +971,8 @@ def process_single_game(game_data, output_dir, game_number):
                     pass
 
                 # Check if output contains "Considering move" and wait additional 0.5 seconds if it does
-                while "Considering move" in out:
-                    out = ''
-                    time.sleep(0.5)
+                if "Considering move" in out:
+                    time.sleep(1)
                     try:
                         additional_chunk = child.read_nonblocking(size=65536, timeout=0.1)
                         if additional_chunk:
