@@ -913,7 +913,7 @@ def process_single_game(game_data, output_dir, game_number):
 
             if token["type"] == "hint":
                 target_idx = token.get("target")
-                time.sleep(0.9)
+                time.sleep(1.2)
                 try:
                     chunk = child.read_nonblocking(size=65536, timeout=0.1)
                     if chunk:
