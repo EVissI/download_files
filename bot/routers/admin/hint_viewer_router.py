@@ -1,7 +1,7 @@
 ﻿from aiogram import Router, F
 from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, CallbackQuery, BufferedInputFile
 from aiogram.exceptions import TelegramAPIError
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from loguru import logger
 import asyncio
 import os
@@ -61,29 +61,27 @@ async def handle_hint_type_selection(callback: CallbackQuery, state: FSMContext)
     else:  # batch
         await state.set_state(HintViewerStates.uploading_sequential)
         await state.update_data(file_paths=[])
-        keyboard = InlineKeyboardBuilder()
-        keyboard.button(text="Завершить", callback_data="hint_batch_stop")
+        keyboard = ReplyKeyboardBuilder()
+        keyboard.button(text="Завершить")
         await callback.message.answer(
             "Присылайте .mat файлы по одному. Нажмите 'Завершить' когда закончите.",
-            reply_markup=keyboard.as_markup()
+            reply_markup=keyboard.as_markup(resize_keyboard=True)
         )
     await callback.answer()
     await callback.message.delete()
 
 
-@hint_viewer_router.callback_query(F.data == "hint_batch_stop", StateFilter(HintViewerStates.uploading_sequential))
-async def handle_batch_stop(callback: CallbackQuery, state: FSMContext,i18n):
+@hint_viewer_router.message(F.text == "Завершить", StateFilter(HintViewerStates.uploading_sequential))
+async def handle_batch_stop(message: Message, state: FSMContext, i18n):
     data = await state.get_data()
     file_paths = data.get("file_paths", [])
     if not file_paths:
-        await callback.message.answer("Нет файлов для обработки.")
+        await message.answer("Нет файлов для обработки.", reply_markup=AdminKeyboard.build())
         await state.clear()
         await state.set_state(GeneralStates.admin_panel)
         return
 
-    await process_batch_hint_files(callback.message, state, file_paths, i18n)
-    await callback.answer()
-    await callback.message.delete()
+    await process_batch_hint_files(message, state, file_paths, message.from_user.id, i18n)
 
 
 @hint_viewer_router.message(F.document, StateFilter(HintViewerStates.uploading_sequential))
@@ -335,20 +333,55 @@ async def send_screenshot(request: Request):
         raise HTTPException(status_code=500, detail="Error sending screenshot")
 
 
-async def process_batch_hint_files(message: Message, state: FSMContext, file_paths: list, i18n):
-    waiting_manager = WaitingMessageManager(message.from_user.id, message.bot, i18n)
+async def process_batch_hint_files(message: Message, state: FSMContext, file_paths: list, chat_id, i18n):
+    waiting_manager = WaitingMessageManager(chat_id, message.bot, i18n)
     await waiting_manager.start()
 
     try:
-        # Создаем ZIP архив из всех обработанных файлов
+        # Обрабатываем все файлы параллельно
+        tasks = []
+        for mat_path in file_paths:
+            task = asyncio.create_task(process_single_hint_file(mat_path, str(chat_id)))
+            tasks.append(task)
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Отправляем сообщения для каждого успешно обработанного файла
+        for idx, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.error(f"Error processing {file_paths[idx]}: {result}")
+                await message.reply(f"Ошибка при обработке файла {os.path.basename(file_paths[idx])}: {result}")
+            else:
+                game_id, has_games = result
+                mat_path = file_paths[idx]
+                fname = os.path.basename(mat_path)
+
+                # Отправляем сообщение с ссылкой на веб-приложение
+                if has_games:
+                    mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
+                    keyboard = InlineKeyboardMarkup(
+                        inline_keyboard=[
+                            [InlineKeyboardButton(
+                                text="Открыть интерактивную визуализацию",
+                                web_app=WebAppInfo(url=mini_app_url)
+                            )]
+                        ]
+                    )
+                    await message.answer(
+                        f"Анализ файла {fname} завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации:",
+                        reply_markup=keyboard
+                    )
+                else:
+                    await message.answer(f"Анализ файла {fname} завершен, но игр не найдено.")
+
+        # Создаем ZIP архив из всех обработанных файлов для скачивания
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for mat_path in file_paths:
-                try:
-                    # Обрабатываем каждый файл
-                    game_id = random_filename(ext='')
+            for result in results:
+                if not isinstance(result, Exception):
+                    game_id, has_games = result
                     json_path = f"files/{game_id}.json"
-                    await asyncio.to_thread(process_mat_file, mat_path, json_path, str(message.from_user.id))
+                    mat_path = file_paths[results.index(result)]
 
                     # Добавляем JSON в ZIP
                     if os.path.exists(json_path):
@@ -366,13 +399,6 @@ async def process_batch_hint_files(message: Message, state: FSMContext, file_pat
                         # Удаляем директорию
                         shutil.rmtree(games_dir)
 
-                except Exception as e:
-                    logger.error(f"Error processing {mat_path}: {e}")
-                finally:
-                    # Удаляем оригинальный файл
-                    if os.path.exists(mat_path):
-                        os.remove(mat_path)
-
         zip_buffer.seek(0)
         zip_data = zip_buffer.getvalue()
 
@@ -380,13 +406,36 @@ async def process_batch_hint_files(message: Message, state: FSMContext, file_pat
         zip_file = BufferedInputFile(zip_data, filename=f"batch_hint_analysis.zip")
         await message.answer_document(
             document=zip_file,
-            caption=f"Архив с пакетным анализом подсказок ({len(file_paths)} файлов)"
+            caption=f"Архив с пакетным анализом подсказок ({len(file_paths)} файлов)",
+            reply_markup=AdminKeyboard.build()
         )
 
     except Exception as e:
         logger.exception("Ошибка при пакетной обработке hint viewer")
-        await message.reply("Ошибка при обработке файлов.")
+        await message.reply("Ошибка при обработке файлов.", reply_markup=AdminKeyboard.build())
     finally:
         await waiting_manager.stop()
         await state.clear()
         await state.set_state(GeneralStates.admin_panel)
+
+
+async def process_single_hint_file(mat_path: str, user_id: str):
+    """Обрабатывает один файл и возвращает game_id и флаг наличия игр"""
+    game_id = random_filename(ext='')
+    json_path = f"files/{game_id}.json"
+
+    try:
+        await asyncio.to_thread(process_mat_file, mat_path, json_path, user_id)
+
+        # Проверяем наличие игр
+        games_dir = json_path.rsplit('.', 1)[0] + "_games"
+        has_games = os.path.exists(games_dir) and any(f.endswith('.json') for f in os.listdir(games_dir))
+
+        return game_id, has_games
+    except Exception as e:
+        logger.error(f"Error processing {mat_path}: {e}")
+        raise
+    finally:
+        # Удаляем оригинальный файл
+        if os.path.exists(mat_path):
+            os.remove(mat_path)
