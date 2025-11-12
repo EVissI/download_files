@@ -355,6 +355,11 @@
                     });
                     selectHtml += '</select>';
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${selectHtml}`;
+
+                    // Автоматически загружаем первую игру
+                    if (availableGames.length > 0) {
+                        loadGame(availableGames[0].game_number);
+                    }
                 } else {
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                     infoDiv.innerHTML = '<div class="error">No games found in this analysis.</div>';
