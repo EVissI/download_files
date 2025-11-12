@@ -913,13 +913,23 @@ def process_single_game(game_data, output_dir, game_number):
 
             if token["type"] == "hint":
                 target_idx = token.get("target")
-                time.sleep(1.2)
+                time.sleep(0.5)
                 try:
                     chunk = child.read_nonblocking(size=65536, timeout=0.1)
                     if chunk:
                         out += chunk
                 except Exception:
                     pass
+
+                # Check if output contains "Considering move" and wait additional 0.5 seconds if it does
+                if "Considering move" in out:
+                    time.sleep(0.5)
+                    try:
+                        additional_chunk = child.read_nonblocking(size=65536, timeout=0.1)
+                        if additional_chunk:
+                            out += additional_chunk
+                    except Exception:
+                        pass
 
                 hints = parse_hint_output(out)
                 if hints:
