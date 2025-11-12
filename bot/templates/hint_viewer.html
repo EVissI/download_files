@@ -141,7 +141,7 @@
             cursor: not-allowed;
         }
 
-        #prevBtn, #nextBtn, #invertBtn {
+        #prevBtn, #nextBtn, #invertBtn, #screenshotBtn {
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
@@ -154,11 +154,11 @@
         }
 
 
-        #prevBtn:hover, #nextBtn:hover, #invertBtn:hover {
+        #prevBtn:hover, #nextBtn:hover, #invertBtn:hover, #screenshotBtn:hover {
             background-color: transparent;
         }
 
-        #prevBtn:disabled, #nextBtn:disabled, #invertBtn:disabled {
+        #prevBtn:disabled, #nextBtn:disabled, #invertBtn:disabled, #screenshotBtn:disabled {
             opacity: 0.5;
             background-color: transparent;
         }
@@ -315,6 +315,7 @@
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
             const invertBtn = document.getElementById('invertBtn');
+            const screenshotBtn = document.getElementById('screenshotBtn');
             if (prevBtn) {
                 prevBtn.style.backgroundImage = "url('/static/left.png?t=" + Date.now() + "')";
             }
@@ -323,6 +324,9 @@
             }
             if (invertBtn) {
                 invertBtn.style.backgroundImage = "url('/static/change_color.png?t=" + Date.now() + "')";
+            }
+            if (screenshotBtn) {
+                screenshotBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
             }
         });
     </script>
@@ -341,7 +345,7 @@
             <span id="turnLabel">Ход 0</span>
             <button onclick="nextTurn()" id="nextBtn"></button>
             <button onclick="toggleInvert()" id="invertBtn"></button>
-            <button onclick="takeScreenshot()" id="screenshotBtn">Скрин</button>
+            <button onclick="takeScreenshot()" id="screenshotBtn"></button>
         </div>
         <div class="game-info">
             <div id="info" class="info-text"></div>
