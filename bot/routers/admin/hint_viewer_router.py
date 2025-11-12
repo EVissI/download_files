@@ -43,7 +43,7 @@ async def hint_viewer_start(message: Message, state: FSMContext):
 
 
 @hint_viewer_router.message(F.document, StateFilter(HintViewerStates.waiting_file))
-async def hint_viewer_menu(message: Message, state: FSMContext):
+async def hint_viewer_menu(message: Message, state: FSMContext, i18n):
     doc = message.document
     fname = doc.file_name
     if not fname.lower().endswith(".mat"):
@@ -76,7 +76,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext):
         )
 
         # Начинаем обработку сразу
-        waiting_manager = WaitingMessageManager(message.from_user.id, message.bot, None)
+        waiting_manager = WaitingMessageManager(message.from_user.id, message.bot, i18n)
         await waiting_manager.start()
 
         try:
