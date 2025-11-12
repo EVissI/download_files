@@ -302,6 +302,7 @@
             <button onclick="prevTurn()" id="prevBtn">←</button>
             <span id="turnLabel">Ход 0</span>
             <button onclick="nextTurn()" id="nextBtn">→</button>
+            <button onclick="toggleInvert()" id="invertBtn">Инверт</button>
             <button onclick="takeScreenshot()" id="screenshotBtn">Скрин</button>
         </div>
         <div class="game-info">
@@ -916,6 +917,11 @@
                 render(current + 1, invertColors);
                 updateButtons();
             }
+        }
+
+        function toggleInvert() {
+            invertColors = !invertColors;
+            render(current, invertColors);
         }
 
         function updateButtons() {
