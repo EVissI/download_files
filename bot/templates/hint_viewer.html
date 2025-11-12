@@ -39,13 +39,11 @@
         .game-info {
             background-color: #2d2d2d;
             border-radius: 8px;
-            padding: 20px;
-            margin: 20px auto;
+            padding: 10px;
+            margin: 0;
             border: 1px solid #444;
-            width: 50%;
+            width: 30%;
             display: block;
-            margin-left: auto;
-            margin-right: auto;
         }
 
         .hints-table {
@@ -106,7 +104,7 @@
             background-color: #d32f2f !important;
         }
 
-        #top-controls {
+        #top-row {
             margin: 20px 0;
             display: flex;
             justify-content: space-between;
@@ -205,7 +203,7 @@
                 height: 100%;
             }
 
-            #top-controls {
+            #top-row {
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
@@ -226,7 +224,7 @@
                 font-size: 16px;
             }
 
-            #top-controls {
+            #top-row {
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
@@ -364,17 +362,17 @@
         <canvas id="boardCanvas" width="800" height="800"></canvas>
         <div id="red-pips" class="pips-below-board">0</div>
 
-        <div id="top-controls">
+        <div id="top-row">
             <button onclick="toggleInvert()" id="invertBtn"></button>
+            <div class="game-info">
+                <div id="info" class="info-text"></div>
+            </div>
             <button onclick="takeScreenshot()" id="screenshotBtn"></button>
         </div>
         <div id="controls">
             <button onclick="prevTurn()" id="prevBtn"></button>
             <span id="turnLabel">Ход 0</span>
             <button onclick="nextTurn()" id="nextBtn"></button>
-        </div>
-        <div class="game-info">
-            <div id="info" class="info-text"></div>
         </div>
 
         <div class="hints-table">
