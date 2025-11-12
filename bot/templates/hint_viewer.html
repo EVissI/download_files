@@ -437,7 +437,7 @@
                         if (data[0]?.action === 'skip') {
                             current = 1;
                         }
-                        if (imagesLoaded === 25) {
+                        if (imagesLoaded === 24) {
                             render(current, invertColors);
                             updateButtons();
                             infoDiv.innerHTML = '';
@@ -525,7 +525,7 @@
         const checkImagesLoaded = () => {
             imagesLoaded++;
             console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 25 && dataLoaded) {
+            if (imagesLoaded === 24 && dataLoaded) {
                 console.log('All images and data loaded, rendering turn', current);
                 render(current, invertColors);
                 updateButtons();
