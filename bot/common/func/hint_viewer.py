@@ -962,7 +962,7 @@ def process_single_game(game_data, output_dir, game_number):
 
             if token["type"] == "hint":
                 target_idx = token.get("target")
-                time.sleep(0.5)
+                time.sleep(2)
                 try:
                     chunk = child.read_nonblocking(size=65536, timeout=0.1)
                     if chunk:
@@ -970,15 +970,6 @@ def process_single_game(game_data, output_dir, game_number):
                 except Exception:
                     pass
 
-                # Check if output contains "Considering move" and wait additional 0.5 seconds if it does
-                if "Considering move" in out:
-                    time.sleep(1)
-                    try:
-                        additional_chunk = child.read_nonblocking(size=65536, timeout=0.1)
-                        if additional_chunk:
-                            out += additional_chunk
-                    except Exception:
-                        pass
 
                 hints = parse_hint_output(out)
                 if hints:
@@ -1091,7 +1082,7 @@ def process_mat_file(input_file, output_file, chat_id):
         import concurrent.futures
 
         game_results = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(games), 4)) as executor:
             futures = []
             for game_data in games:
                 game_data['match_length'] = match_length
