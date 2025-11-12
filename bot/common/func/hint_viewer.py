@@ -971,7 +971,8 @@ def process_single_game(game_data, output_dir, game_number):
                     pass
 
                 # Check if output contains "Considering move" and wait additional 0.5 seconds if it does
-                if "Considering move" in out:
+                while "Considering move" in out:
+                    out = ''
                     time.sleep(0.5)
                     try:
                         additional_chunk = child.read_nonblocking(size=65536, timeout=0.1)
@@ -1091,7 +1092,7 @@ def process_mat_file(input_file, output_file, chat_id):
         import concurrent.futures
 
         game_results = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(games), 4)) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = []
             for game_data in games:
                 game_data['match_length'] = match_length
