@@ -158,7 +158,7 @@
         }
 
         #nextBtn {
-            background-image: url('/static/righ2.png');
+            background-image: url('/static/right2.png');
         }
 
         #prevBtn:hover, #nextBtn:hover {
@@ -316,6 +316,18 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
+
+        // Add cache-busting to CSS background images
+        document.addEventListener('DOMContentLoaded', function() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            if (prevBtn) {
+                prevBtn.style.backgroundImage = "url('/static/left1.png?t=" + Date.now() + "')";
+            }
+            if (nextBtn) {
+                nextBtn.style.backgroundImage = "url('/static/right2.png?t=" + Date.now() + "')";
+            }
+        });
     </script>
 </head>
 
