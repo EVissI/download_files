@@ -371,7 +371,7 @@
         </div>
         <div id="controls">
             <button onclick="prevTurn()" id="prevBtn"></button>
-            <span id="turnLabel">Ход 0</span>
+            <span id="turnLabel">0</span>
             <button onclick="nextTurn()" id="nextBtn"></button>
         </div>
 
@@ -772,7 +772,7 @@
             }
 
             current = turn;
-            document.getElementById('turnLabel').innerText = `Ход ${data[turn].turn || 'End'}`;
+            document.getElementById('turnLabel').innerText = `${data[turn].turn || 'End'}`;
             console.log('Rendering turn:', turn, 'Data:', data[turn]);
 
             ctx.clearRect(0, 0, 800, 800);
@@ -924,9 +924,9 @@
             } else if (item.action === 'win') {
                 info = `<strong>Действие:</strong> Победа (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
-                info = prefix + `<strong>Ход:</strong> ${item.gnu_move}`;
+                info = prefix + `<strong></strong> ${item.gnu_move}`;
             } else if (item.moves && item.moves.length === 0) {
-                info = prefix + `<strong>Ход:</strong> Пропуск`;
+                info = prefix + `<strong></strong> Пропуск`;
             } else {
                 info = prefix + '<div class="info-text">No moves available for this turn.</div>';
                 console.warn('No moves for turn:', turn, item);
