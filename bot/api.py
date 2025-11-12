@@ -16,7 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="bot/static", cachecontrol="no-cache"), name="static")
+app.mount("/static", StaticFiles(directory="bot/static", cache_control="no-cache"), name="static")
 templates = Jinja2Templates(directory="bot/templates")
 
 # Include routers
