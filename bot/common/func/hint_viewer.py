@@ -227,20 +227,27 @@ def load_game_data(file_path="output.json"):
         return json.load(f)
 
 
-def json_to_gnubg_commands(data):
+def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0, red_score=0):
     """
     Возвращает список токенов: {'cmd': str, 'type': 'cmd'|'hint', 'target': index_in_data_or_None}
     Это позволяет при обработке вывода однозначно привязывать результат hint к записи в augmented.
     """
+    jacoby_cmd = "set jacoby on" if jacobi_rule else "set jacoby off"
     tokens = [
         {"cmd": "set player 0 name Red", "type": "cmd", "target": None},
         {"cmd": "set player 1 name Black", "type": "cmd", "target": None},
-        {"cmd": "set jacoby on", "type": "cmd", "target": None},
+        {"cmd": jacoby_cmd, "type": "cmd", "target": None},
         {"cmd": "set rng manual", "type": "cmd", "target": None},
         {"cmd": "set player 0 human", "type": "cmd", "target": None},
         {"cmd": "set player 1 human", "type": "cmd", "target": None},
-        {"cmd": "new game", "type": "cmd", "target": None},
     ]
+    if black_score > 0 or red_score > 0:
+        tokens.append({"cmd": f"set score {black_score} {red_score}", "type": "cmd", "target": None})
+    if match_length > 0:
+        tokens.append({"cmd": f"new match {match_length}", "type": "cmd", "target": None})
+    else:
+        tokens.append({"cmd": "new game", "type": "cmd", "target": None})
+
 
     i = 0
     while i < len(data):
@@ -465,6 +472,41 @@ def extract_player_names(content: str) -> tuple[str, str]:
 
     logger.warning("Could not extract player names from .mat file")
     return "Black", "Red"
+
+
+def extract_match_length(content: str) -> int:
+    """
+    Извлекает длину матча из .mat файла.
+    Пример: "15 point match"
+    => 15
+    """
+    lines = content.splitlines()
+
+    for line in lines:
+        match = re.match(r"(\d+)\s+point match", line.strip())
+        if match:
+            return int(match.group(1))
+
+    logger.warning("Could not extract match length from .mat file")
+    return 0
+
+
+def extract_jacobi_rule(content: str) -> bool:
+    """
+    Извлекает правило Якоби из .mat файла.
+    Пример: ";Jacobi rule: False"
+    => False
+    По умолчанию True, если не найдено.
+    """
+    lines = content.splitlines()
+
+    for line in lines:
+        match = re.match(r";Jacobi rule:\s*(True|False)", line.strip(), re.I)
+        if match:
+            return match.group(1).lower() == 'true'
+
+    logger.warning("Could not extract Jacobi rule from .mat file, defaulting to True")
+    return True
 
 def normalize_move(move_str: str) -> str:
     """
@@ -877,7 +919,7 @@ def process_single_game(game_data, output_dir, game_number):
             entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
 
     # Генерируем токены команд для gnubg
-    gnubg_tokens = json_to_gnubg_commands(aug)
+    gnubg_tokens = json_to_gnubg_commands(aug, game_data['jacobi_rule'], game_data['match_length'], game_data['black_score'], game_data['red_score'])
     logger.info(f"Game {game_number} tokens: {[t['cmd'] for t in gnubg_tokens]}")
 
     # Инициализируем поле для подсказок
@@ -999,12 +1041,14 @@ def process_single_game(game_data, output_dir, game_number):
 
     # Сохраняем результат в отдельный файл
     game_output_file = os.path.join(output_dir, f"game_{game_number}.json")
-    game_data = {
+    game_data_json = {
         "game_info": {
             "game_number": game_number,
             "red_player": red_player,
             "black_player": black_player,
             "scores": {"Red": game_data['red_score'], "Black": game_data['black_score']},
+            "match_length": game_data['match_length'],
+            "jacobi_rule": game_data['jacobi_rule'],
         },
         "moves": aug
     }
@@ -1036,6 +1080,8 @@ def process_mat_file(input_file, output_file, chat_id):
         black_player = first_game['black_player']
         red_score = first_game['red_score']
         black_score = first_game['black_score']
+        match_length = extract_match_length(content)
+        jacobi_rule = extract_jacobi_rule(content)
 
         # Создаем директорию для результатов
         output_dir = output_file.rsplit('.', 1)[0] + "_games"
@@ -1048,6 +1094,8 @@ def process_mat_file(input_file, output_file, chat_id):
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(games), 4)) as executor:
             futures = []
             for game_data in games:
+                game_data['match_length'] = match_length
+                game_data['jacobi_rule'] = jacobi_rule
                 future = executor.submit(process_single_game, game_data, output_dir, game_data['game_number'])
                 futures.append((game_data['game_number'], future))
 
@@ -1067,6 +1115,8 @@ def process_mat_file(input_file, output_file, chat_id):
             "red_player": red_player,
             "black_player": black_player,
             "scores": {"Red": red_score, "Black": black_score},
+            "match_length": match_length,
+            "jacobi_rule": jacobi_rule,
             "chat_id": str(chat_id),
             "total_games": len(games),
             "processed_games": len(game_results)
