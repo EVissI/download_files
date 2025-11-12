@@ -141,35 +141,6 @@
             cursor: not-allowed;
         }
 
-        #prevBtn, #nextBtn {
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            width: 50px;
-            height: 50px;
-            padding: 0;
-            color: transparent;
-            background-color: transparent;
-            border: none;
-        }
-
-        #prevBtn {
-            background-image: url('/static/left.png');
-        }
-
-        #nextBtn {
-            background-image: url('/static/right.png');
-        }
-
-        #prevBtn:hover, #nextBtn:hover {
-            background-color: transparent;
-        }
-
-        #prevBtn:disabled, #nextBtn:disabled {
-            opacity: 0.5;
-            background-color: transparent;
-        }
-
         #turnLabel {
             font-size: 18px;
             font-weight: bold;
@@ -328,9 +299,9 @@
         <div id="red-pips" class="pips-below-board">0</div>
 
         <div id="controls">
-            <button onclick="prevTurn()" id="prevBtn"></button>
+            <button onclick="prevTurn()" id="prevBtn">←</button>
             <span id="turnLabel">Ход 0</span>
-            <button onclick="nextTurn()" id="nextBtn"></button>
+            <button onclick="nextTurn()" id="nextBtn">→</button>
             <button onclick="toggleInvert()" id="invertBtn">Инверт</button>
             <button onclick="takeScreenshot()" id="screenshotBtn">Скрин</button>
         </div>
@@ -437,7 +408,7 @@
                         if (data[0]?.action === 'skip') {
                             current = 1;
                         }
-                        if (imagesLoaded === 25) {
+                        if (imagesLoaded === 21) {
                             render(current, invertColors);
                             updateButtons();
                             infoDiv.innerHTML = '';
@@ -463,69 +434,58 @@
         const ctx = canvas.getContext('2d');
 
         const boardImg = new Image();
-        boardImg.src = '/static/board.png?t=' + Date.now();
+        boardImg.src = '/static/board.png';
 
         const blackImg = new Image();
-        blackImg.src = '/static/black_checker.png?t=' + Date.now();
+        blackImg.src = '/static/black_checker.png';
 
         const whiteImg = new Image();
-        whiteImg.src = '/static/white_checker.png?t=' + Date.now();
+        whiteImg.src = '/static/white_checker.png';
 
         const Dice1w = new Image();
-        Dice1w.src = '/static/1w.png?t=' + Date.now();
+        Dice1w.src = '/static/1w.png';
         const Dice2w = new Image();
-        Dice2w.src = '/static/2w.png?t=' + Date.now();
+        Dice2w.src = '/static/2w.png';
         const Dice3w = new Image();
-        Dice3w.src = '/static/3w.png?t=' + Date.now();
+        Dice3w.src = '/static/3w.png';
         const Dice4w = new Image();
-        Dice4w.src = '/static/4w.png?t=' + Date.now();
+        Dice4w.src = '/static/4w.png';
         const Dice5w = new Image();
-        Dice5w.src = '/static/5w.png?t=' + Date.now();
+        Dice5w.src = '/static/5w.png';
         const Dice6w = new Image();
-        Dice6w.src = '/static/6w.png?t=' + Date.now();
+        Dice6w.src = '/static/6w.png';
 
         const Dice1b = new Image();
-        Dice1b.src = '/static/1b.png?t=' + Date.now();
+        Dice1b.src = '/static/1b.png';
         const Dice2b = new Image();
-        Dice2b.src = '/static/2b.png?t=' + Date.now();
+        Dice2b.src = '/static/2b.png';
         const Dice3b = new Image();
-        Dice3b.src = '/static/3b.png?t=' + Date.now();
+        Dice3b.src = '/static/3b.png';
         const Dice4b = new Image();
-        Dice4b.src = '/static/4b.png?t=' + Date.now();
+        Dice4b.src = '/static/4b.png';
         const Dice5b = new Image();
-        Dice5b.src = '/static/5b.png?t=' + Date.now();
+        Dice5b.src = '/static/5b.png';
         const Dice6b = new Image();
-        Dice6b.src = '/static/6b.png?t=' + Date.now();
+        Dice6b.src = '/static/6b.png';
 
         const Double2 = new Image();
-        Double2.src = '/static/Double2.png?t=' + Date.now();
+        Double2.src = '/static/Double2.png';
         const Double4 = new Image();
-        Double4.src = '/static/Double4.png?t=' + Date.now();
+        Double4.src = '/static/Double4.png';
         const Double8 = new Image();
-        Double8.src = '/static/Double8.png?t=' + Date.now();
+        Double8.src = '/static/Double8.png';
         const Double16 = new Image();
-        Double16.src = '/static/Double16.png?t=' + Date.now();
+        Double16.src = '/static/Double16.png';
         const Double32 = new Image();
-        Double32.src = '/static/Double32.png?t=' + Date.now();
+        Double32.src = '/static/Double32.png';
         const Double64 = new Image();
-        Double64.src = '/static/Double64.png?t=' + Date.now();
-
-        const LeftArrow = new Image();
-        LeftArrow.src = '/static/left1.png?t=' + Date.now();
-        const RightArrow = new Image();
-        RightArrow.src = '/static/right2.png?t=' + Date.now();
-
-        const ScreenShot = new Image();
-        ScreenShot.src = '/static/Screen.png?t=' + Date.now();
-
-        const ChangeColor = new Image();
-        ChangeColor.src = '/static/change_color.png?t=' + Date.now();
+        Double64.src = '/static/Double64.png';
 
         let imagesLoaded = 0;
         const checkImagesLoaded = () => {
             imagesLoaded++;
             console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 25 && dataLoaded) {
+            if (imagesLoaded === 21 && dataLoaded) {
                 console.log('All images and data loaded, rendering turn', current);
                 render(current, invertColors);
                 updateButtons();
@@ -554,13 +514,9 @@
         Double16.onload = checkImagesLoaded;
         Double32.onload = checkImagesLoaded;
         Double64.onload = checkImagesLoaded;
-        LeftArrow.onload = checkImagesLoaded;
-        RightArrow.onload = checkImagesLoaded;
-        ScreenShot.onload = checkImagesLoaded;
-        ChangeColor.onload = checkImagesLoaded;
 
         // Обработка ошибок загрузки изображений
-        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64, LeftArrow, RightArrow, ScreenShot, ChangeColor].forEach(img => {
+        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64].forEach(img => {
             img.onerror = () => {
                 console.error(`Failed to load image: ${img.src}`);
                 infoDiv.innerHTML = '<div class="error">Error loading game assets. Please try again later.</div>';
