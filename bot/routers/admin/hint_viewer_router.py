@@ -97,8 +97,9 @@ async def handle_sequential_hint_file(message: Message, state: FSMContext):
     # Скачиваем файл
     mat_path = f"files/{fname}"
     os.makedirs("files", exist_ok=True)
+    file = await message.bot.get_file(doc.file_id)
     with open(mat_path, "wb") as f:
-        await message.bot.download_file(doc.file_path, f)
+        await message.bot.download_file(file.file_path, f)
 
     data = await state.get_data()
     file_paths = data.get("file_paths", [])
