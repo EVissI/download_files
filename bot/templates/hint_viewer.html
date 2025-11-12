@@ -473,7 +473,7 @@
                 .then(json => {
                     const gameInfo = json.game_info;
                     data = json.moves.filter(item => item.turn !== undefined);
-                    data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double') && it.action !== 'pass');
+                    data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
 
                     // Обновить счет для текущей игры
                     const gameScores = gameInfo.scores || {};
@@ -937,13 +937,15 @@
             let info = '';
             let prefix = (turn > 0 && data[turn - 1].action === 'double') ? '<strong>Take</strong>  <br>' : '';
             if (item.action === 'double') {
-                info = `<strong>Действие:</strong> Double (${item.cube})`;
+                info = `Double (${item.cube})`;
+            }else if (item.action === 'take') {
+                info = `Take (${item.cube})`;
             } else if (item.action === 'win') {
-                info = `<strong>Действие:</strong> Победа (${item.points} очков)`;
+                info = `Победа (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
-                info = prefix + `<strong></strong> ${item.gnu_move}`;
+                info = prefix + `${item.gnu_move}`;
             } else if (item.moves && item.moves.length === 0) {
-                info = prefix + `<strong></strong> Пропуск`;
+                info = prefix + `Пропуск`;
             } else {
                 info = prefix + '<div class="info-text">No moves available for this turn.</div>';
                 console.warn('No moves for turn:', turn, item);
