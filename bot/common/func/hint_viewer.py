@@ -260,7 +260,6 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
 
 
         if act == "skip":
-            tokens.append({"cmd": "hint", "type": "cube_hint", "target": i+1})
             i += 1
             continue
         elif act == "double":
@@ -291,7 +290,7 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
                 move_cmds = [f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in moves]
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
-                tokens.append({"cmd": "hint", "type": "cube_hint", "target": i+1})
+            tokens.append({"cmd": "hint", "type": "cube_hint", "target": i+1})
             i += 1
             continue
 
