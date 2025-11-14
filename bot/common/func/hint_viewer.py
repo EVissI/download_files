@@ -260,7 +260,7 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
 
 
         if act == "skip":
-            # Просто пропускаем, без команд
+            tokens.append({"cmd": "hint", "type": "cube_hint", "target": i+1})
             i += 1
             continue
         elif act == "double":
