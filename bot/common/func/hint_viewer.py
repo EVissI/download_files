@@ -915,6 +915,7 @@ def process_single_game(game_data, output_dir, game_number):
     # Инициализируем поле для подсказок
     for entry in aug:
         entry.setdefault("hints", [])
+        entry.setdefault("cube_hints", [])
 
     # Запускаем gnubg для этой игры
     child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
