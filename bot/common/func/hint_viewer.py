@@ -950,7 +950,7 @@ def process_single_game(game_data, output_dir, game_number):
             if out:
                 logger.debug(f"Game {game_number} gnubg output after '{line}':\n{out}")
 
-            if token["type"] == "hint":
+            if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
                 time.sleep(2)
                 try:
@@ -964,10 +964,11 @@ def process_single_game(game_data, output_dir, game_number):
                 hints = parse_hint_output(out)
                 if hints:
                     for h in hints:
-                        if h.get("type") == "cube_hint":
-                            aug[target_idx]["cube_hint"] = h
-                        else:
-                            aug[target_idx]["hints"].append(h)
+                        match token["type"]:
+                            case "cube_hint":
+                                aug[target_idx]["cube_hints"].append(h)
+                            case "hint":
+                                aug[target_idx]["hints"].append(h)
                 else:
                     logger.debug(
                         f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
