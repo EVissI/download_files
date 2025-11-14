@@ -55,6 +55,41 @@
             overflow-x: auto;
         }
 
+        .hints-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .hints-buttons button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .hints-buttons button:hover {
+            background-color: #0056b3;
+        }
+
+        .hints-buttons button.active {
+            background-color: #0056b3;
+        }
+
+        .hints-content {
+            display: none;
+            position: relative;
+        }
+
+        .hints-content.active {
+            display: block;
+        }
+
         table {
             margin: 0 auto;
             border-collapse: collapse;
@@ -376,7 +411,12 @@
         </div>
 
         <div class="hints-table">
-            <div id="hints"></div>
+            <div class="hints-buttons">
+                <button id="moveHintsBtn">Подсказки по ходу</button>
+                <button id="cubeHintsBtn">Подсказки по кубу</button>
+            </div>
+            <div id="moveHintsTable" class="hints-content"></div>
+            <div id="cubeHintsTable" class="hints-content"></div>
         </div>
     </div>
 
@@ -496,6 +536,11 @@
                         if (data[0]?.action === 'skip') {
                             current = 1;
                         }
+                        // Reset hints display
+                        moveHintsTable.classList.remove('active');
+                        cubeHintsTable.classList.remove('active');
+                        moveHintsBtn.classList.remove('active');
+                        cubeHintsBtn.classList.remove('active');
                         if (imagesLoaded === 25) {
                             render(current, invertColors);
                             updateButtons();
@@ -520,6 +565,25 @@
         let currentCubePlayer = null;
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
+
+        const moveHintsBtn = document.getElementById('moveHintsBtn');
+        const cubeHintsBtn = document.getElementById('cubeHintsBtn');
+        const moveHintsTable = document.getElementById('moveHintsTable');
+        const cubeHintsTable = document.getElementById('cubeHintsTable');
+
+        moveHintsBtn.addEventListener('click', () => {
+            moveHintsTable.classList.add('active');
+            cubeHintsTable.classList.remove('active');
+            moveHintsBtn.classList.add('active');
+            cubeHintsBtn.classList.remove('active');
+        });
+
+        cubeHintsBtn.addEventListener('click', () => {
+            cubeHintsTable.classList.add('active');
+            moveHintsTable.classList.remove('active');
+            cubeHintsBtn.classList.add('active');
+            moveHintsBtn.classList.remove('active');
+        });
 
         const boardImg = new Image();
         boardImg.src = '/static/board.png?t=' + Date.now();
@@ -956,12 +1020,13 @@
                 console.log('Actual info div content:', document.getElementById('info').innerHTML);
             }, 0);
 
-            let tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
-            if (item.hints && item.hints.length > 0 && item.hints[0].type === 'cube') {
-                const bestAction = item.hints[0].cubeful_equities.find(eq => eq.idx === 1);
-                const bestAction1 = bestAction.action_1;
-                const bestAction2 = bestAction.action_2;
-                (item.hints[0].cubeful_equities || []).forEach((hint, index) => {
+            // Generate cube hints table
+            let cubeTableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
+            if (item.cube_hints && item.cube_hints.length > 0) {
+                const bestAction = item.cube_hints[0].cubeful_equities.find(eq => eq.idx === 1);
+                const bestAction1 = bestAction ? bestAction.action_1 : '';
+                const bestAction2 = bestAction ? bestAction.action_2 : '';
+                (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1;
                     if (hint.action_2) {
@@ -987,32 +1052,35 @@
                             }
                         }
                     }
-                    tableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${eq}</td></tr>`;
-                });
-            } else {
-                tableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
-                (item.hints || []).forEach((hint, index) => {
-                    if (hint.probs && hint.probs.length >= 2) {
-                        const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
-                        const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
-                        const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                        let move = hint.move || '-';
-                        let rowClass = '';
-                        if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.replace(/\*/g, '')) {
-                            if (index === 0) {
-                                rowClass = 'hint-best';
-                            } else if (index >= 1 && index <= 4) {
-                                rowClass = 'hint-good';
-                            } else {
-                                rowClass = 'hint-poor';
-                            }
-                        }
-                        tableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
-                    }
+                    cubeTableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${eq}</td></tr>`;
                 });
             }
-            tableHtml += '</table>';
-            document.getElementById('hints').innerHTML = tableHtml;
+            cubeTableHtml += '</table>';
+            document.getElementById('cubeHintsTable').innerHTML = cubeTableHtml;
+
+            // Generate move hints table
+            let moveTableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
+            (item.hints || []).forEach((hint, index) => {
+                if (hint.probs && hint.probs.length >= 2) {
+                    const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
+                    const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
+                    const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                    let move = hint.move || '-';
+                    let rowClass = '';
+                    if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.replace(/\*/g, '')) {
+                        if (index === 0) {
+                            rowClass = 'hint-best';
+                        } else if (index >= 1 && index <= 4) {
+                            rowClass = 'hint-good';
+                        } else {
+                            rowClass = 'hint-poor';
+                        }
+                    }
+                    moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
+                }
+            });
+            moveTableHtml += '</table>';
+            document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
         }
 
         function prevTurn() {
