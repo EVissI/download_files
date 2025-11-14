@@ -241,6 +241,7 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
         {"cmd": "set player 0 human", "type": "cmd", "target": None},
         {"cmd": "set player 1 human", "type": "cmd", "target": None},
     ]
+    logger.info(f'red score:{red_score} black score {black_score}')
     if black_score > 0 or red_score > 0:
         tokens.append({"cmd": f"set score {black_score} {red_score}", "type": "cmd", "target": None})
     if match_length > 0:
