@@ -258,29 +258,18 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
         act = action.get("action")
         current_turn = action.get("turn")
 
-        # Проверяем, является ли текущий ход последним в текущем turn
-        is_last_in_turn = True
-        j = i + 1
-        while j < len(data) and data[j].get("turn") == current_turn:
-            is_last_in_turn = False
-            j += 1
-
-        # Проверяем следующее действие в следующем turn
-        next_act = None
-        if j < len(data):
-            next_act = data[j].get("action")
 
         if act == "skip":
             # Просто пропускаем, без команд
             i += 1
             continue
         elif act == "double":
-            tokens.append({"cmd": "hint", "type": "hint", "target": i})
+            tokens.append({"cmd": "hint", "type": "cube_hint", "target": i})
             tokens.append({"cmd": "double", "type": "cmd", "target": None})
             i += 1
             continue
         elif act in ("take", "drop"):
-            tokens.append({"cmd": "hint", "type": "hint", "target": i})
+            tokens.append({"cmd": "hint", "type": "cube_hint", "target": i})
             if act == "take":
                 tokens.append({"cmd": "take", "type": "cmd", "target": None})
             if act == "drop":
@@ -303,6 +292,7 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
                 move_cmds = [f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in moves]
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
             i += 1
+            tokens.append({"cmd": "hint", "type": "cube_hint", "target": i})
             continue
 
         i += 1
@@ -385,7 +375,7 @@ def parse_hint_output(text: str):
     is_cube_analysis = any("Cube analysis" in line for line in lines)
 
     if is_cube_analysis:
-        result = {"type": "cube"}
+        result = {"type": "cube_hint"}
 
         # Парсим cubeful equities
         equities = []
@@ -974,7 +964,10 @@ def process_single_game(game_data, output_dir, game_number):
                 hints = parse_hint_output(out)
                 if hints:
                     for h in hints:
-                        aug[target_idx]["hints"].append(h)
+                        if h.get("type") == "cube_hint":
+                            aug[target_idx]["cube_hint"] = h
+                        else:
+                            aug[target_idx]["hints"].append(h)
                 else:
                     logger.debug(
                         f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
