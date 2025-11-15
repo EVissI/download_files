@@ -57,12 +57,12 @@
 
         .hints-buttons {
             display: flex;
-            justify-content: center;
-            gap: 15px;
+            justify-content: space-between;
             margin-bottom: 20px;
         }
 
-        .hints-buttons button {
+        .hint-toggle-btn {
+            width: 49%;
             background-color: #007bff;
             color: white;
             border: none;
@@ -71,6 +71,14 @@
             cursor: pointer;
             font-size: 14px;
             transition: background-color 0.3s;
+        }
+
+        .hint-toggle-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .hint-toggle-btn.active {
+            background-color: #0056b3;
         }
 
         .hints-buttons button:hover {
@@ -412,8 +420,8 @@
 
         <div class="hints-table">
             <div class="hints-buttons">
-                <button id="moveHintsBtn">Подсказки по ходу</button>
-                <button id="cubeHintsBtn">Подсказки по кубу</button>
+                <button id="moveHintsBtn" class="hint-toggle-btn">Подсказки по ходу</button>
+                <button id="cubeHintsBtn" class="hint-toggle-btn">Подсказки по кубу</button>
             </div>
             <div id="moveHintsTable" class="hints-content"></div>
             <div id="cubeHintsTable" class="hints-content"></div>
