@@ -582,6 +582,9 @@
                             render(current, invertColors);
                             updateButtons();
                             infoDiv.innerHTML = '';
+                            // Auto-select move hints
+                            moveHintsTable.classList.add('active');
+                            moveHintsBtn.classList.add('active');
                         } else {
                             console.log('Waiting for images to load before rendering');
                         }
