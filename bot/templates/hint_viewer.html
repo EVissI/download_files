@@ -463,6 +463,8 @@
         let availableGames = [];
         let currentGameNum = null;
         let matchLength = 0;
+        let winner = null;
+        let winnerPoints = 0;
         const infoDiv = document.getElementById('move-info');
         const playersInfoDiv = document.getElementById('players-info');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
@@ -550,6 +552,12 @@
                     const gameInfo = json.game_info;
                     data = json.moves.filter(item => item.turn !== undefined);
                     data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
+
+                    // Извлечь информацию о победителе из последнего хода
+                    if (data.length > 0 && data[data.length - 1].action === 'win') {
+                        winner = data[data.length - 1].player;
+                        winnerPoints = data[data.length - 1].points;
+                    }
 
                     // Обновить счет для текущей игры
                     const gameScores = gameInfo.scores || {};
@@ -894,7 +902,12 @@
             }
 
             current = turn;
-            document.getElementById('turnLabel').innerText = `${data[turn].turn || 'End'}`;
+            let turnLabel = data[turn].turn || 'End';
+            if (turn === data.length - 1 && winner) {
+                const winnerName = winner === 'Red' ? redPlayer : blackPlayer;
+                turnLabel = `Победа: ${winnerName} (${winnerPoints} очков)`;
+            }
+            document.getElementById('turnLabel').innerText = turnLabel;
             console.log('Rendering turn:', turn, 'Data:', data[turn]);
 
             ctx.clearRect(0, 0, 800, 800);
