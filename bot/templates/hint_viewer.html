@@ -490,7 +490,8 @@
                         selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
                     });
                     selectHtml += '</select>';
-                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between;"><span>Матч до ${matchLength}</span><span>Счет: ${redScore} - ${blackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${selectHtml}`;
+                    currentGameNum = availableGames[0].game_number;
+                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${redScore} - ${blackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${selectHtml}`;
 
                     // Автоматически загружаем первую игру
                     if (availableGames.length > 0) {
@@ -549,7 +550,7 @@
                     const gameScores = gameInfo.scores || {};
                     const gameRedScore = gameScores.Red || 0;
                     const gameBlackScore = gameScores.Black || 0;
-                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between;"><span>Матч до ${matchLength}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : ''}`;
+                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : ''}`;
 
                     // Найти все индексы ходов с удвоением
                     doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
