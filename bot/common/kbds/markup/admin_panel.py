@@ -11,7 +11,6 @@ class AdminKeyboard:
         'users_setting':'Пользователи',
         'users_group': 'Группы пользователей',
         'message_for_new': 'Сообщение для новых пользователей',
-        'test':'Просмотр подсказок',
         'back':'Назад',
     }
 
