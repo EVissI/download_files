@@ -226,6 +226,14 @@
             margin: 5px 0;
         }
 
+        .move-info {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 10px 0;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -404,6 +412,7 @@
         <div id="black-pips" class="pips-above-board">0</div>
         <canvas id="boardCanvas" width="800" height="800"></canvas>
         <div id="red-pips" class="pips-below-board">0</div>
+        <div id="move-info" class="move-info"></div>
 
         <div id="top-row">
             <button onclick="toggleInvert()" id="invertBtn"></button>
@@ -420,8 +429,8 @@
 
         <div class="hints-table">
             <div class="hints-buttons">
-                <button id="moveHintsBtn" class="hint-toggle-btn">Подсказки по ходу</button>
-                <button id="cubeHintsBtn" class="hint-toggle-btn">Подсказки по кубу</button>
+                <button id="moveHintsBtn" class="hint-toggle-btn">Решения по ходу</button>
+                <button id="cubeHintsBtn" class="hint-toggle-btn">Решения по кубу</button>
             </div>
             <div id="moveHintsTable" class="hints-content"></div>
             <div id="cubeHintsTable" class="hints-content"></div>
@@ -442,7 +451,7 @@
         let availableGames = [];
         let currentGameNum = null;
         let matchLength = 0;
-        const infoDiv = document.getElementById('info');
+        const infoDiv = document.getElementById('move-info');
         const playersInfoDiv = document.getElementById('players-info');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
@@ -499,7 +508,8 @@
                 data = [];
                 dataLoaded = false;
                 infoDiv.innerHTML = '<div class="loading">Select a game to view</div>';
-                document.getElementById('hints').innerHTML = '';
+                document.getElementById('moveHintsTable').innerHTML = '';
+                document.getElementById('cubeHintsTable').innerHTML = '';
                 return;
             }
 
@@ -856,7 +866,7 @@
         function render(turn, invertColors = false) {
             if (!data || !data[turn]) {
                 console.error('No data for turn:', turn);
-                document.getElementById('info').innerHTML = '<div class="error">No data available for this turn.</div>';
+                document.getElementById('move-info').innerHTML = '<div class="error">No data available for this turn.</div>';
                 return;
             }
 
@@ -1023,9 +1033,9 @@
                 console.warn('No moves for turn:', turn, item);
             }
             setTimeout(() => {
-                document.getElementById('info').innerHTML = info;
+                document.getElementById('move-info').innerHTML = info;
                 console.log('Info set to:', info);
-                console.log('Actual info div content:', document.getElementById('info').innerHTML);
+                console.log('Actual move-info div content:', document.getElementById('move-info').innerHTML);
             }, 0);
 
             // Generate cube hints table
