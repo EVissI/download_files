@@ -611,6 +611,10 @@
         const moveHintsTable = document.getElementById('moveHintsTable');
         const cubeHintsTable = document.getElementById('cubeHintsTable');
 
+        // Default to move hints active
+        moveHintsBtn.classList.add('active');
+        moveHintsTable.classList.add('active');
+
         moveHintsBtn.addEventListener('click', () => {
             moveHintsTable.classList.add('active');
             cubeHintsTable.classList.remove('active');
