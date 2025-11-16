@@ -13,7 +13,7 @@ class PromoCallback(CallbackData, prefix="activate_promo"):
 def get_activate_promo_keyboard(i18n:TranslatorRunner) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
-        text=i18n.user.inline.activate_promo(),
+        text=i18n.user.inline.activate_promo_2(),
         callback_data=PromoCallback(action='activate').pack(),
     )
     builder.button(
@@ -25,7 +25,7 @@ def get_activate_promo_keyboard(i18n:TranslatorRunner) -> InlineKeyboardMarkup:
 def get_activate_promo_without_link_keyboard(i18n:TranslatorRunner) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
-        text=i18n.user.inline.activate_promo(),
+        text=i18n.user.inline.activate_promo_2(),
         callback_data=PromoCallback(action='activate').pack(),
     )
     return builder.as_markup()

@@ -94,6 +94,7 @@ waiting-think3 = Думаю...
 
 user-static-has_no_sub = Недостаточно баланса для этого сервиса, активируйте промокод или купите баланс в профиле 
 user-inline-activate_promo = Промокоды
+user-inline-activate_promo_2 = У меня есть промокод
 user-inline-take_promo = Получить промокод
 
 user-static-input_promo = Пожалуйста, введите промокод для активации
@@ -177,4 +178,4 @@ auto-batch-summary_pr_header = Игр: { $count }
     Дата: { $date }
 auto-batch-summary_pr = <b>{ $player }</b>: <b>{ $average_pr }</b>:
     ({ $pr_list })
-keyboard-user-reply-hint_viewer = 👁️ Подсказки
+keyboard-user-reply-hint_viewer = 👁️ Ошибки
