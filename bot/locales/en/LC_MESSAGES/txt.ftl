@@ -18,6 +18,7 @@ user-profile-text =
     ├ 🔮 Matches: <b>{ $match_balance }</b>
     ├ 📊 Moneygames: <b>{ $analiz_balance }</b>
     ├ 💎 Pleer <b>{ $short_board_balance }</b>
+    ├ 👁️ Error View <b>{ $hints_balance }</b>
     └ 🌐 Language: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = My Statistics
 user-profile-inline_button-change_language = Change Language
@@ -175,4 +176,4 @@ auto-batch-summary_pr_header = Games: { $count }
     Date: { $date }
 auto-batch-summary_pr = pr for <b>{ $player }</b> - average <b>{ $average_pr }</b>: 
     ({ $pr_list })
-keyboard-user-reply-hint_viewer = 👁️ Hint Viewer
+keyboard-user-reply-hint_viewer = 👁️ Error Viewer

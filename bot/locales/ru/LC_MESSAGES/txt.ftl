@@ -5,6 +5,7 @@ keyboard-user-reply-autoanalyze = 🔮 Анализ
 keyboard-user-reply-profile = 🧍‍♂️ Профиль
 keyboard-user-reply-short_board_view = 📊 Плеер
 keyboard-admin-reply-admin_panel = Админпанель
+keyboard-user-reply-hint_viewer = 👁️ Ошибки
 
 
 keyboard-reply-cancel = Отмена
@@ -21,6 +22,7 @@ user-profile-text =
     ├ 🔮 Матчи: <b>{ $match_balance }</b>
     ├ 📊 Манигеймы: <b>{ $analiz_balance }</b>
     ├ 💎 Плеер <b>{ $short_board_balance }</b>
+    ├ 👁️ Ошибки <b>{ $hints_balance }</b>
     └ 🌐 Язык: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = Моя статистика
 user-profile-inline_button-change_language = Изменить язык
@@ -178,4 +180,3 @@ auto-batch-summary_pr_header = Игр: { $count }
     Дата: { $date }
 auto-batch-summary_pr = <b>{ $player }</b>: <b>{ $average_pr }</b>:
     ({ $pr_list })
-keyboard-user-reply-hint_viewer = 👁️ Ошибки
