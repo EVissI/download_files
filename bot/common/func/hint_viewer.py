@@ -219,7 +219,27 @@ def parse_backgammon_mat(content):
             skip_entry = {"turn": turn, "player": "Red", "action": "skip"}
             moves_list.append(skip_entry)
 
-    return moves_list
+    # Renumber turns sequentially, ignoring skips
+    new_moves_list = []
+    current_turn = 1
+    i = 0
+    while i < len(moves_list):
+        entry = moves_list[i]
+        if entry.get("action") == "skip":
+            i += 1
+            continue
+        new_entry = copy.deepcopy(entry)
+        new_entry["turn"] = current_turn
+        new_moves_list.append(new_entry)
+        i += 1
+        # If this is double, check if next is take/drop, assign same turn
+        if entry.get("action") == "double" and i < len(moves_list) and moves_list[i].get("action") in ("take", "drop"):
+            new_entry2 = copy.deepcopy(moves_list[i])
+            new_entry2["turn"] = current_turn
+            new_moves_list.append(new_entry2)
+            i += 1
+        current_turn += 1
+    return new_moves_list
 
 
 def load_game_data(file_path="output.json"):

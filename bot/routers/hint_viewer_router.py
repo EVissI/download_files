@@ -29,6 +29,7 @@ from bot.config import settings
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 
+from bot.db.dao import UserDAO
 from bot.db.models import User
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -81,7 +82,7 @@ async def handle_hint_type_selection(callback: CallbackQuery, state: FSMContext)
 
 
 @hint_viewer_router.message(F.text == "Завершить", StateFilter(HintViewerStates.uploading_sequential), UserInfo())
-async def handle_batch_stop(message: Message, state: FSMContext, user_info:User, i18n):
+async def handle_batch_stop(message: Message, state: FSMContext, user_info:User, i18n, session_without_commit):
     data = await state.get_data()
     file_paths = data.get("file_paths", [])
     if not file_paths:
@@ -90,7 +91,7 @@ async def handle_batch_stop(message: Message, state: FSMContext, user_info:User,
         await state.set_state(GeneralStates.admin_panel)
         return
 
-    await process_batch_hint_files(message, state, file_paths, message.from_user.id, i18n, user_info)
+    await process_batch_hint_files(message, state, file_paths, message.from_user.id, i18n, user_info, session_without_commit)
 
 
 @hint_viewer_router.message(F.document, StateFilter(HintViewerStates.uploading_sequential))
@@ -116,7 +117,7 @@ async def handle_sequential_hint_file(message: Message, state: FSMContext):
 
 
 @hint_viewer_router.message(F.document, StateFilter(HintViewerStates.waiting_file))
-async def hint_viewer_menu(message: Message, state: FSMContext, i18n):
+async def hint_viewer_menu(message: Message, state: FSMContext, i18n, session_without_commit):
     doc = message.document
     fname = doc.file_name
     if not fname.lower().endswith(".mat"):
@@ -186,28 +187,11 @@ async def hint_viewer_menu(message: Message, state: FSMContext, i18n):
                         f"Анализ завершен!\n {red_player}-{black_player}\nНажмите кнопку ниже для просмотра интерактивной визуализации первой игры:",
                         reply_markup=keyboard
                     )
-            else:
-                if os.path.exists(json_path):
-                    json_document = FSInputFile(path=json_path, filename=f"{game_id}.json")
-                    await message.answer_document(
-                        document=json_document,
-                        caption=f"Сгенерированный JSON файл анализа"
+                    await UserDAO(session_without_commit).decrease_analiz_balance(
+                        user_id=message.from_user.id,
+                        service_type="HINTS"
                     )
-
-                    mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
-                    keyboard = InlineKeyboardMarkup(
-                        inline_keyboard=[
-                            [InlineKeyboardButton(
-                                text="Открыть интерактивную визуализацию",
-                                web_app=WebAppInfo(url=mini_app_url)
-                            )]
-                        ]
-                    )
-                    await message.answer(
-                        "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации игры:",
-                        reply_markup=keyboard
-                    )
-
+                    await session_without_commit.commit()
         except Exception:
             logger.exception("Ошибка при обработке hint viewer")
             await message.reply("Ошибка при обработке файла.")
@@ -333,7 +317,7 @@ async def send_screenshot(request: Request):
         raise HTTPException(status_code=500, detail="Error sending screenshot")
 
 
-async def process_batch_hint_files(message: Message, state: FSMContext, file_paths: list, chat_id, i18n, user_info:User):
+async def process_batch_hint_files(message: Message, state: FSMContext, file_paths: list, chat_id, i18n, user_info:User, session_without_commit):
     waiting_manager = WaitingMessageManager(chat_id, message.bot, i18n)
     await waiting_manager.start()
 
@@ -341,7 +325,7 @@ async def process_batch_hint_files(message: Message, state: FSMContext, file_pat
         # Обрабатываем все файлы параллельно
         tasks = []
         for mat_path in file_paths:
-            task = asyncio.create_task(process_single_hint_file(mat_path, str(chat_id)))
+            task = asyncio.create_task(process_single_hint_file(mat_path, str(chat_id)), session_without_commit)
             tasks.append(task)
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -373,8 +357,7 @@ async def process_batch_hint_files(message: Message, state: FSMContext, file_pat
                     )
                 else:
                     await message.answer(f"Анализ файла {fname} завершен, но игр не найдено.")
-
-
+        await session_without_commit.commit()
     except Exception as e:
         logger.exception("Ошибка при пакетной обработке hint viewer")
         await message.reply("Ошибка при обработке файлов.", reply_markup=MainKeyboard.build(user_info.role, i18n))
@@ -384,7 +367,7 @@ async def process_batch_hint_files(message: Message, state: FSMContext, file_pat
         await state.set_state(GeneralStates.admin_panel)
 
 
-async def process_single_hint_file(mat_path: str, user_id: str):
+async def process_single_hint_file(mat_path: str, user_id: str, session_without_commit):
     """Обрабатывает один файл и возвращает game_id и флаг наличия игр"""
     game_id = random_filename(ext='')
     json_path = f"files/{game_id}.json"
@@ -395,7 +378,10 @@ async def process_single_hint_file(mat_path: str, user_id: str):
         # Проверяем наличие игр
         games_dir = json_path.rsplit('.', 1)[0] + "_games"
         has_games = os.path.exists(games_dir) and any(f.endswith('.json') for f in os.listdir(games_dir))
-
+        await UserDAO(session_without_commit).decrease_analiz_balance(
+            user_id=user_id,
+            service_type="HINTS"
+        )
         return game_id, has_games
     except Exception as e:
         logger.error(f"Error processing {mat_path}: {e}")
