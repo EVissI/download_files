@@ -1,5 +1,5 @@
 ﻿from aiogram import Router
-from bot.common.middlewares.sub_middleware import AnalizMiddleware,ShortBoardMiddleware
+from bot.common.middlewares.sub_middleware import AnalizMiddleware,ShortBoardMiddleware, HintsMiddleware
 from bot.routers.start import start_router
 from bot.routers.stat import stat_router
 from bot.routers.autoanalize.setup import setup_autoanalize_router
@@ -13,6 +13,7 @@ from bot.routers.hint_viewer_router import hint_viewer_router
 setup_router = Router()
 
 short_board_router.message.middleware(ShortBoardMiddleware())
+hint_viewer_router.message.middleware(HintsMiddleware())
 
 setup_router.include_routers(
     start_router,
