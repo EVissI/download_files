@@ -124,6 +124,7 @@ class UserDAO(BaseDAO[User]):
                 ServiceType.MATCH,
                 ServiceType.MONEYGAME,
                 ServiceType.SHORT_BOARD,
+                ServiceType.HINTS,
             ]
 
             for service_type in service_types:
