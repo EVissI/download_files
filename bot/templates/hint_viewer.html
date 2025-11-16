@@ -482,22 +482,27 @@
                 const blackScore = scores.Black || 0;
                 chatId = gameInfo.chat_id || chatId;
 
-                // Создаем выпадающий список для выбора игры
-                if (availableGames.length > 0) {
+                // Создаем выпадающий список для выбора игры только если это матч
+                if (availableGames.length > 0 && matchLength > 0) {
                     let selectHtml = '<select id="gameSelect" onchange="loadGame(this.value)">';
                     selectHtml += '<option value="">Выберите игру</option>';
                     availableGames.forEach(game => {
                         selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
                     });
                     selectHtml += '</select>';
-                    const matchText = matchLength > 0 ? `Матч до ${matchLength}<br>` : '';
-                    const scoreText = `Счет: ${redScore} - ${blackScore}<br>`;
-                    playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}${selectHtml}`;
+                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between;"><span>Матч до ${matchLength}</span><span>Счет: ${redScore} - ${blackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${selectHtml}`;
 
                     // Автоматически загружаем первую игру
                     if (availableGames.length > 0) {
                         loadGame(availableGames[0].game_number);
                     }
+                } else if (availableGames.length > 0) {
+                    const matchText = matchLength > 0 ? `Матч до ${matchLength}<br>` : '';
+                    const scoreText = `Счет: ${redScore} - ${blackScore}<br>`;
+                    playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}`;
+
+                    // Автоматически загружаем единственную игру
+                    loadGame(availableGames[0].game_number);
                 } else {
                     const matchText = matchLength > 0 ? `Матч до ${matchLength}<br>` : '';
                     const scoreText = `Счет: ${redScore} - ${blackScore}<br>`;
