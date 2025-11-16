@@ -795,7 +795,14 @@ class BackgammonPositionTracker:
             # обработка удвоений и ответов
             if action:
                 act = action.lower()
-                if act == "double":
+                if act == "skip":
+                    # skip не меняет позиции и очередь
+                    e["positions"] = copy.deepcopy(self.positions)
+                    inverted_positions = self._invert_positions(self.positions)
+                    e["inverted_positions"] = inverted_positions
+                    result.append(e)
+                    continue
+                elif act == "double":
                     # право хода не меняется
                     pass
                 elif act in ("take", "drop"):
