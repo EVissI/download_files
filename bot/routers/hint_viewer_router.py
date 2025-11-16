@@ -18,11 +18,20 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
+from bot.common.filters.user_info import UserInfo
 from bot.common.func.hint_viewer import process_mat_file, random_filename, extract_player_names
 from bot.common.func.waiting_message import WaitingMessageManager
-from bot.common.kbds.markup.admin_panel import AdminKeyboard
+from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.general_states import GeneralStates
+from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import settings
+
+from bot.config import translator_hub
+from typing import TYPE_CHECKING
+
+from bot.db.models import User
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
 
 # Telegram router
 hint_viewer_router = Router()
@@ -39,7 +48,7 @@ class HintViewerStates(StatesGroup):
     uploading_zip = State()
 
 
-@hint_viewer_router.message(F.text == AdminKeyboard.get_kb_text()["test"])
+@hint_viewer_router.message(F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-user-reply-hint_viewer")), UserInfo())
 async def hint_viewer_start(message: Message, state: FSMContext):
     await state.set_state(HintViewerStates.choose_type)
     keyboard = InlineKeyboardBuilder()
@@ -71,17 +80,17 @@ async def handle_hint_type_selection(callback: CallbackQuery, state: FSMContext)
     await callback.message.delete()
 
 
-@hint_viewer_router.message(F.text == "Завершить", StateFilter(HintViewerStates.uploading_sequential))
-async def handle_batch_stop(message: Message, state: FSMContext, i18n):
+@hint_viewer_router.message(F.text == "Завершить", StateFilter(HintViewerStates.uploading_sequential), UserInfo())
+async def handle_batch_stop(message: Message, state: FSMContext, user_info:User, i18n):
     data = await state.get_data()
     file_paths = data.get("file_paths", [])
     if not file_paths:
-        await message.answer("Нет файлов для обработки.", reply_markup=AdminKeyboard.build())
+        await message.answer("Нет файлов для обработки.", reply_markup=MainKeyboard.build(user_info.role, i18n))
         await state.clear()
         await state.set_state(GeneralStates.admin_panel)
         return
 
-    await process_batch_hint_files(message, state, file_paths, message.from_user.id, i18n)
+    await process_batch_hint_files(message, state, file_paths, message.from_user.id, i18n, user_info)
 
 
 @hint_viewer_router.message(F.document, StateFilter(HintViewerStates.uploading_sequential))
@@ -322,7 +331,6 @@ async def send_screenshot(request: Request):
         await bot.send_photo(
             chat_id=int(chat_id),
             photo=photo_file,
-            caption="Скриншот доски и анализа"
         )
 
         logger.info(f"Screenshot successfully sent to chat_id: {chat_id}")
@@ -333,7 +341,7 @@ async def send_screenshot(request: Request):
         raise HTTPException(status_code=500, detail="Error sending screenshot")
 
 
-async def process_batch_hint_files(message: Message, state: FSMContext, file_paths: list, chat_id, i18n):
+async def process_batch_hint_files(message: Message, state: FSMContext, file_paths: list, chat_id, i18n, user_info:User):
     waiting_manager = WaitingMessageManager(chat_id, message.bot, i18n)
     await waiting_manager.start()
 
@@ -377,7 +385,7 @@ async def process_batch_hint_files(message: Message, state: FSMContext, file_pat
 
     except Exception as e:
         logger.exception("Ошибка при пакетной обработке hint viewer")
-        await message.reply("Ошибка при обработке файлов.", reply_markup=AdminKeyboard.build())
+        await message.reply("Ошибка при обработке файлов.", reply_markup=MainKeyboard.build(user_info.role, i18n))
     finally:
         await waiting_manager.stop()
         await state.clear()

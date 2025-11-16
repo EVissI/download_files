@@ -174,3 +174,4 @@ auto-batch-summary_pr_header = Games: { $count }
     Date: { $date }
 auto-batch-summary_pr = pr for <b>{ $player }</b> - average <b>{ $average_pr }</b>: 
     ({ $pr_list })
+keyboard-user-reply-hint_viewer = 👁️ Hint Viewer

@@ -9,6 +9,7 @@ from bot.routers.activate_promo import activate_promo_router
 from bot.routers.payment import payment_router
 from bot.routers.contact_info import contact_router
 from bot.routers.short_board import short_board_router
+from bot.routers.hint_viewer_router import hint_viewer_router
 setup_router = Router()
 
 short_board_router.message.middleware(ShortBoardMiddleware())
@@ -23,4 +24,5 @@ setup_router.include_routers(
     payment_router,
     contact_router,
     short_board_router,
+    hint_viewer_router
 )
