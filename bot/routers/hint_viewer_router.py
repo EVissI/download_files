@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 from bot.db.models import User
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
-
+from bot.config import admins
 # Telegram router
 hint_viewer_router = Router()
 
@@ -139,15 +139,6 @@ async def hint_viewer_menu(message: Message, state: FSMContext, i18n):
             content = f.read()
         red_player, black_player = extract_player_names(content)
 
-        # Сохраняем данные в state
-        await state.update_data(
-            game_id=game_id,
-            mat_path=mat_path,
-            json_path=json_path,
-            red_player=red_player,
-            black_player=black_player
-        )
-
         # Начинаем обработку сразу
         waiting_manager = WaitingMessageManager(message.from_user.id, message.bot, i18n)
         await waiting_manager.start()
@@ -159,24 +150,25 @@ async def hint_viewer_menu(message: Message, state: FSMContext, i18n):
             # Создаем ZIP архив из директории с результатами
             games_dir = json_path.rsplit('.', 1)[0] + "_games"
             if os.path.exists(games_dir):
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                    for root, dirs, files in os.walk(games_dir):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path, games_dir)
-                            zip_file.write(file_path, arcname)
+                if message.from_user.id in admins:
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                        for root, dirs, files in os.walk(games_dir):
+                            for file in files:
+                                file_path = os.path.join(root, file)
+                                arcname = os.path.relpath(file_path, games_dir)
+                                zip_file.write(file_path, arcname)
 
-                zip_buffer.seek(0)
-                zip_data = zip_buffer.getvalue()
+                    zip_buffer.seek(0)
+                    zip_data = zip_buffer.getvalue()
 
-                # Отправляем ZIP архив пользователю
-                from aiogram.types import BufferedInputFile
-                zip_file = BufferedInputFile(zip_data, filename=f"{game_id}_analysis.zip")
-                await message.answer_document(
-                    document=zip_file,
-                    caption=f"Архив с анализом игр ({len(os.listdir(games_dir))} файлов)"
-                )
+                    # Отправляем ZIP архив пользователю
+                    from aiogram.types import BufferedInputFile
+                    zip_file = BufferedInputFile(zip_data, filename=f"{game_id}_analysis.zip")
+                    await message.answer_document(
+                        document=zip_file,
+                        caption=f"Архив с анализом игр ({len(os.listdir(games_dir))} файлов)"
+                    )
 
                 # Кнопка для открытия в мини-приложении (если есть хотя бы одна игра)
                 game_files = [f for f in os.listdir(games_dir) if f.endswith('.json')]
@@ -191,7 +183,7 @@ async def hint_viewer_menu(message: Message, state: FSMContext, i18n):
                         ]
                     )
                     await message.answer(
-                        "Анализ завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации первой игры:",
+                        f"Анализ завершен!\n {red_player}-{black_player}\nНажмите кнопку ниже для просмотра интерактивной визуализации первой игры:",
                         reply_markup=keyboard
                     )
             else:
