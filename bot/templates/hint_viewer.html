@@ -374,10 +374,13 @@
             text-align: right;
             display: block;
             width: fit-content;
-            position: absolute;
-            top: 120px;
-            right: 20px;
-            z-index: 10;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
 
         .pips-below-board {
@@ -423,8 +426,10 @@
 <body>
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
-        <div id="players-info"></div>
-        <div id="black-pips" class="pips-above-board">0</div>
+        <div class="game-header">
+            <div id="players-info"></div>
+            <div id="black-pips" class="pips-above-board">0</div>
+        </div>
         <canvas id="boardCanvas" width="800" height="800"></canvas>
         <div class="board-footer">
             <div id="move-info" class="move-info"></div>
