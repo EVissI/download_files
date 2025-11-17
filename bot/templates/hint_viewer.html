@@ -1091,8 +1091,12 @@
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (displayAction === item.gnu_move.trim()) {
-                        rowClass = 'hint-best';
+                    if (item.gnu_move.trim() === 'Double' && hint.action_1 === 'Double') {
+                        if (index === 0) {
+                            rowClass = 'hint-best';
+                        } else {
+                            rowClass = 'hint-good';
+                        }
                     } else if (index === 0) {
                         rowClass = 'hint-good';
                     } else if (index === 1) {
