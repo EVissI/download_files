@@ -1084,7 +1084,7 @@
                 console.log(bestAction)
                 const bestAction1 = bestAction ? bestAction.action_1 : '';
                 const bestAction2 = bestAction ? bestAction.action_2 : '';
-                (item.cube_hints.cubeful_equities || []).forEach((hint, index) => {
+                (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1;
                     if (hint.action_2) {
