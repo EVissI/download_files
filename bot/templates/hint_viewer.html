@@ -1091,26 +1091,14 @@
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (item.gnu_move.trim() === 'Double' && item.gnu_move.trim() === hint.action_1) {
-                        if (index === 0) {
-                            rowClass = 'hint-best';
-                        } else if (index === 1 || index === 2) {
-                            rowClass = 'hint-good';
-                        }
-                    } else if (item.gnu_move.trim() === 'take' && item.gnu_move.trim() === hint.action_2) {
-                        if (index === 0) {
-                            rowClass = 'hint-best';
-                        } else if (index === 1) {
-                            rowClass = 'hint-good';
-                        } else {
-                            rowClass = 'hint-poor';
-                        }    
-                    }else if (item.gnu_move.trim() !== 'take' || item.gnu_move.trim() !== 'Double'){
-                        if (index === 0 && bestAction1 === "No double"){
-                            rowClass = 'hint-best';
-                        } else if (index === 1 || index === 2) {
-                            rowClass = 'hint-poor';
-                        }
+                    if (displayAction === item.gnu_move.trim()) {
+                        rowClass = 'hint-best';
+                    } else if (index === 0) {
+                        rowClass = 'hint-good';
+                    } else if (index === 1) {
+                        rowClass = 'hint-poor';
+                    } else {
+                        rowClass = 'hint-poor';
                     }
                     cubeTableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${eq}</td></tr>`;
                 });
