@@ -548,7 +548,7 @@
                 })
                 .then(json => {
                     const gameInfo = json.game_info;
-                    data = json.moves.filter(item => item.turn !== undefined);
+                    data = json.moves.filter(item => item.turn !== undefined || item.action === 'win');
                     data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
 
                     // Обновить счет для текущей игры
