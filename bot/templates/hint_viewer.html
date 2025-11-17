@@ -1081,10 +1081,10 @@
             let cubeTableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
             if (item.cube_hints && item.cube_hints.length > 0) {
                 const bestAction = item.cube_hints[0].cubeful_equities.find(eq => eq.idx === 1);
-                console.log(bestAction)
+                console.log(bestAction);
                 const bestAction1 = bestAction ? bestAction.action_1 : '';
                 const bestAction2 = bestAction ? bestAction.action_2 : '';
-                console.log(item.cube_hints[0])
+                console.log(item.cube_hints[0]);
                 (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {              
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1;
