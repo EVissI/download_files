@@ -1081,22 +1081,21 @@
             let cubeTableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
             if (item.cube_hints && item.cube_hints.length > 0) {
                 const bestAction = item.cube_hints[0].cubeful_equities.find(eq => eq.idx === 1);
+                console.log(bestAction)
                 const bestAction1 = bestAction ? bestAction.action_1 : '';
                 const bestAction2 = bestAction ? bestAction.action_2 : '';
-                (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {
+                (item.cube_hints.cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1;
                     if (hint.action_2) {
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (item.gnu_move === 'Double') {
+                    if (item.gnu_move === 'Double' && item.gnu_move === hint.action_1) {
                         if (index === 0) {
                             rowClass = 'hint-best';
-                        } else if (index === 1) {
-                            rowClass = 'hint-good';
                         } else {
-                            rowClass = 'hint-poor';
+                            rowClass = 'hint-good';
                         }
                     } else if (item.gnu_move !== 'Double') {
                         if (hint.action_2 === bestAction2) {
