@@ -991,7 +991,7 @@ def process_single_game(game_data, output_dir, game_number):
                                 aug[target_idx]["cube_hints"].append(h)
                             case "hint":
                                 aug[target_idx]["hints"].append(h)
-                else:
+                elif "Enter dice" not in out:
                     logger.debug(
                         f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
                     )
