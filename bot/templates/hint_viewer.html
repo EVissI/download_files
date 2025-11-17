@@ -621,6 +621,33 @@
         let firstDoubleIndex = -1;
         let currentCube = null;
         let currentCubePlayer = null;
+
+        function updateCurrentCube(turn) {
+            let lastDoubleIndex = -1;
+            for (let i = 0; i < doubleTurns.length; i++) {
+                if (doubleTurns[i] <= turn) {
+                    lastDoubleIndex = doubleTurns[i];
+                } else {
+                    break;
+                }
+            }
+            if (lastDoubleIndex !== -1) {
+                const cubeValue = data[lastDoubleIndex].cube;
+                const doubleImages = {
+                    2: Double2,
+                    4: Double4,
+                    8: Double8,
+                    16: Double16,
+                    32: Double32,
+                    64: Double64
+                };
+                currentCube = doubleImages[cubeValue];
+                currentCubePlayer = data[lastDoubleIndex].player;
+            } else {
+                currentCube = null;
+                currentCubePlayer = null;
+            }
+        }
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -915,6 +942,7 @@
             }
 
             current = turn;
+            updateCurrentCube(turn);
             document.getElementById('turnLabel').innerText = `${data[turn].turn || 'End'}`;
             console.log('Rendering turn:', turn, 'Data:', data[turn]);
 
@@ -1029,8 +1057,6 @@
                     };
                     const img = doubleImages[cubeValue];
                     if (img) {
-                        currentCube = img; // Запоминаем куб
-                        currentCubePlayer = data[doubleIndex].player; // Запоминаем игрока
                         let cubeX;
                         if (invertColors) {
                             if (data[doubleIndex].player === 'Red') {
