@@ -1094,7 +1094,7 @@
                     if (item.gnu_move.trim() === 'Double' && item.gnu_move.trim() === hint.action_1) {
                         if (index === 0) {
                             rowClass = 'hint-best';
-                        } else {
+                        } else if (index === 1 || index === 2) {
                             rowClass = 'hint-good';
                         }
                     } else if (item.gnu_move.trim() === 'take' && item.gnu_move.trim() === hint.action_2) {
@@ -1108,7 +1108,7 @@
                     }else if (item.gnu_move.trim() !== 'take' || item.gnu_move.trim() !== 'Double'){
                         if (index === 0 && bestAction1 === "No double"){
                             rowClass = 'hint-best';
-                        } else {
+                        } else if (index === 1 || index === 2) {
                             rowClass = 'hint-poor';
                         }
                     }
