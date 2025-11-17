@@ -1068,7 +1068,7 @@
                         let cubeX;
                         if (invertColors) {
                             if (data[doubleIndex].player === 'Red') {
-                                cubeX = 90; // куб справа для красных при инверсии
+                                cubeX = 150; // куб справа для красных при инверсии
                             } else {
                                 cubeX = 460; // куб слева для черных при инверсии
                             }
@@ -1076,7 +1076,7 @@
                             if (data[doubleIndex].player === 'Red') {
                                 cubeX = 460; // куб слева для красных
                             } else {
-                                cubeX = 90; // куб справа для черных
+                                cubeX = 150; // куб справа для черных
                             }
                         }
                         ctx.drawImage(img, cubeX, 345, 50, 50);
