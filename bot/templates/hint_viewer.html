@@ -472,6 +472,8 @@
         let availableGames = [];
         let currentGameNum = null;
         let matchLength = 0;
+        let gameRedScore = 0;
+        let gameBlackScore = 0;
         const infoDiv = document.getElementById('move-info');
         const playersInfoDiv = document.getElementById('players-info');
         const topBar = document.getElementById('top-bar');
@@ -506,7 +508,9 @@
                     });
                     selectHtml += '</select>';
                     currentGameNum = availableGames[0].game_number;
-                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${redScore} - ${blackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                    gameRedScore = scores.Red || 0;
+                    gameBlackScore = scores.Black || 0;
+                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                     topBar.innerHTML = selectHtml + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     // Автоматически загружаем первую игру
@@ -515,7 +519,9 @@
                     }
                 } else if (availableGames.length > 0) {
                     const matchText = matchLength > 0 ? `Матч до ${matchLength}<br>` : '';
-                    const scoreText = `Счет: ${redScore} - ${blackScore}<br>`;
+                    gameRedScore = scores.Red || 0;
+                    gameBlackScore = scores.Black || 0;
+                    const scoreText = `Счет: ${gameRedScore} - ${gameBlackScore}<br>`;
                     playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}`;
                     topBar.innerHTML = '<div id="black-pips" class="pips-above-board">0</div>';
 
@@ -523,7 +529,9 @@
                     loadGame(availableGames[0].game_number);
                 } else {
                     const matchText = matchLength > 0 ? `Матч до ${matchLength}<br>` : '';
-                    const scoreText = `Счет: ${redScore} - ${blackScore}<br>`;
+                    gameRedScore = scores.Red || 0;
+                    gameBlackScore = scores.Black || 0;
+                    const scoreText = `Счет: ${gameRedScore} - ${gameBlackScore}<br>`;
                     playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}`;
                     topBar.innerHTML = '<div id="black-pips" class="pips-above-board">0</div>';
                     infoDiv.innerHTML = '<div class="error">No games found in this analysis.</div>';
@@ -570,8 +578,8 @@
 
                         // Обновить счет для текущей игры
                         const gameScores = gameInfo.scores || {};
-                        const gameRedScore = gameScores.Red || 0;
-                        const gameBlackScore = gameScores.Black || 0;
+                        gameRedScore = gameScores.Red || 0;
+                        gameBlackScore = gameScores.Black || 0;
                         playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                         topBar.innerHTML = (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div>';
 
