@@ -1068,18 +1068,18 @@
                         let cubeX;
                         if (invertColors) {
                             if (data[doubleIndex].player === 'Red') {
-                                cubeX = 130; // куб справа для красных при инверсии
+                                cubeX = 160; // куб справа для красных при инверсии
                             } else {
-                                cubeX = 530; // куб слева для черных при инверсии
+                                cubeX = 500; // куб слева для черных при инверсии
                             }
                         } else {
                             if (data[doubleIndex].player === 'Red') {
-                                cubeX = 530; // куб слева для красных
+                                cubeX = 500; // куб слева для красных
                             } else {
-                                cubeX = 130; // куб справа для черных
+                                cubeX = 160; // куб справа для черных
                             }
                         }
-                        ctx.drawImage(img, cubeX, 350, 50, 50);
+                        ctx.drawImage(img, cubeX, 345, 50, 50);
                     }
                     break;
                 }
