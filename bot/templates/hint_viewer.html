@@ -549,7 +549,7 @@
                 .then(json => {
                     const gameInfo = json.game_info;
                     data = json.moves.filter(item => item.turn !== undefined);
-                    data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'double' || it.action === 'take') && it.action !== 'pass' || it.action === 'win');
+                    data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
 
                     // Обновить счет для текущей игры
                     const gameScores = gameInfo.scores || {};
@@ -1101,25 +1101,29 @@
 
             // Generate move hints table
             let moveTableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
-            (item.hints || []).forEach((hint, index) => {
-                if (hint.probs && hint.probs.length >= 2) {
-                    const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
-                    const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
-                    const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                    let move = hint.move || '-';
-                    let rowClass = '';
-                    if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.replace(/\*/g, '')) {
-                        if (index === 0) {
-                            rowClass = 'hint-best';
-                        } else if (index >= 1 && index <= 4) {
-                            rowClass = 'hint-good';
-                        } else {
-                            rowClass = 'hint-poor';
+            if (item.action === 'win') {
+                moveTableHtml += `<tr class="hint-best"><td>Победа (${item.points} очков)</td><td>-</td><td>-</td></tr>`;
+            } else {
+                (item.hints || []).forEach((hint, index) => {
+                    if (hint.probs && hint.probs.length >= 2) {
+                        const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
+                        const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
+                        const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                        let move = hint.move || '-';
+                        let rowClass = '';
+                        if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.replace(/\*/g, '')) {
+                            if (index === 0) {
+                                rowClass = 'hint-best';
+                            } else if (index >= 1 && index <= 4) {
+                                rowClass = 'hint-good';
+                            } else {
+                                rowClass = 'hint-poor';
+                            }
                         }
+                        moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
                     }
-                    moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
-                }
-            });
+                });
+            }
             moveTableHtml += '</table>';
             document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
         }
