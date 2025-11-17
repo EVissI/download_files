@@ -1088,9 +1088,9 @@
             if (currentCube && turn > firstDoubleIndex && !doubleTurns.includes(turn)) {
                 let cubeY = 350;
                 if (currentCubePlayer === 'Black') {
-                    cubeY = 600;
-                } else if (currentCubePlayer === 'Red') {
                     cubeY = 100;
+                } else if (currentCubePlayer === 'Red') {
+                    cubeY = 600;
                 }
                 ctx.drawImage(currentCube, 375, cubeY, 50, 50);
             }
