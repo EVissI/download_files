@@ -991,11 +991,10 @@ def process_single_game(game_data, output_dir, game_number):
                                 aug[target_idx]["cube_hints"].append(h)
                             case "hint":
                                 aug[target_idx]["hints"].append(h)
-                elif "Enter dice" not in out:
+                else:
                     logger.debug(
                         f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
                     )
-                    aug[target_idx]["hints"].append({"raw": out})
 
         # Сравниваем ходы с подсказками
         for entry in aug:
