@@ -1093,7 +1093,7 @@
             }else if (item.action === 'take') {
                 info = `Take`;
             } else if (item.action === 'win') {
-                info = `Победа (${item.points} очков)`;
+                info = `${item.player_name} победил. Счёт ${gameRedScore} - ${gameBlackScore}`;
             } else if (item.moves && item.moves.length > 0) {
                 info = prefix + `${item.gnu_move.trim()}`;
             } else if (item.moves && item.moves.length === 0) {
@@ -1153,7 +1153,9 @@
                 });
             }
             cubeTableHtml += '</table>';
-            document.getElementById('cubeHintsTable').innerHTML = cubeTableHtml;
+            if (item.action !== 'win') {
+                document.getElementById('cubeHintsTable').innerHTML = cubeTableHtml;
+            }
 
             // Generate move hints table
             let moveTableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
@@ -1181,7 +1183,12 @@
                 });
             }
             moveTableHtml += '</table>';
-            document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
+            if (item.action === 'win') {
+                document.getElementById('moveHintsTable').innerHTML = '';
+                document.getElementById('cubeHintsTable').innerHTML = '';
+            } else {
+                document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
+            }
         }
 
         async function prevTurn() {
