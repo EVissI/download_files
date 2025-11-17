@@ -1085,7 +1085,7 @@
                 }
             }
 
-            if (currentCube && turn > firstDoubleIndex && !doubleTurns.includes(turn)) {
+            if (currentCube && turn > firstDoubleIndex && !doubleTurns.includes(turn) && item.action !== 'win') {
                 let cubeY = 350;
                 if (invertColors) {
                     if (currentCubePlayer === 'Red') {
@@ -1101,6 +1101,10 @@
                     }
                 }
                 ctx.drawImage(currentCube, 375, cubeY, 50, 50);
+            }
+
+            if (item.action === 'win') {
+                ctx.drawImage(Double64, 375, 350, 50, 50);
             }
             let info = '';
             let prefix = (turn > 0 && data[turn - 1].action === 'double') ? '<strong>Take</strong>  <br>' : '';
