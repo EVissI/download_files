@@ -174,12 +174,17 @@ async def hint_viewer_menu(message: Message, state: FSMContext, i18n, session_wi
                 # Кнопка для открытия в мини-приложении (если есть хотя бы одна игра)
                 game_files = [f for f in os.listdir(games_dir) if f.endswith('.json')]
                 if game_files:
-                    mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
+                    mini_app_url_1 = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}?error=0"
+                    mini_app_url_2 = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}?error=1"
                     keyboard = InlineKeyboardMarkup(
                         inline_keyboard=[
                             [InlineKeyboardButton(
-                                text="Открыть интерактивную визуализацию",
-                                web_app=WebAppInfo(url=mini_app_url)
+                                text="Полная интерактиваная визуализация",
+                                web_app=WebAppInfo(url=mini_app_url_1)
+                            )],
+                            [InlineKeyboardButton(
+                                text="Только ошибки",
+                                web_app=WebAppInfo(url=mini_app_url_2)
                             )]
                         ]
                     )
