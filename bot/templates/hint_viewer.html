@@ -463,8 +463,6 @@
         let availableGames = [];
         let currentGameNum = null;
         let matchLength = 0;
-        let winner = null;
-        let winnerPoints = 0;
         const infoDiv = document.getElementById('move-info');
         const playersInfoDiv = document.getElementById('players-info');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
@@ -490,15 +488,16 @@
                 chatId = gameInfo.chat_id || chatId;
 
                 // Создаем выпадающий список для выбора игры только если это матч
-                if (availableGames.length > 0 && matchLength > 0) {
-                    let selectHtml = '<select id="gameSelect" onchange="loadGame(this.value)">';
-                    selectHtml += '<option value="">Выберите игру</option>';
-                    availableGames.forEach(game => {
-                        selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
-                    });
-                    selectHtml += '</select>';
-                    currentGameNum = availableGames[0].game_number;
-                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${redScore} - ${blackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${selectHtml}`;
+            if (availableGames.length > 0 && matchLength > 0) {
+                let selectHtml = '<select id="gameSelect" onchange="loadGame(this.value)">';
+                selectHtml += '<option value="">Выберите игру</option>';
+                availableGames.forEach(game => {
+                    selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
+                });
+                selectHtml += '</select>';
+                currentGameNum = availableGames[0].game_number;
+                const winnerText = winner ? `<br>Победитель: ${winner}` : '';
+                playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${redScore} - ${blackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}${winnerText}<br>${selectHtml}`;
 
                     // Автоматически загружаем первую игру
                     if (availableGames.length > 0) {
@@ -507,7 +506,8 @@
                 } else if (availableGames.length > 0) {
                     const matchText = matchLength > 0 ? `Матч до ${matchLength}<br>` : '';
                     const scoreText = `Счет: ${redScore} - ${blackScore}<br>`;
-                    playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}`;
+                    const winnerText = winner ? `Победитель: ${winner}<br>` : '';
+                    playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}${winnerText}`;
 
                     // Автоматически загружаем единственную игру
                     loadGame(availableGames[0].game_number);
@@ -550,20 +550,19 @@
                 })
                 .then(json => {
                     const gameInfo = json.game_info;
-                    data = json.moves.filter(item => item.turn !== undefined);
-                    data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
-
-                    // Извлечь информацию о победителе из последнего хода
-                    if (data.length > 0 && data[data.length - 1].action === 'win') {
-                        winner = data[data.length - 1].player;
-                        winnerPoints = data[data.length - 1].points;
+                    let originalMoves = json.moves.filter(item => item.turn !== undefined);
+                    data = originalMoves.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
+                    let winner = null;
+                    if (originalMoves.length > 0 && originalMoves[originalMoves.length - 1].action === 'win') {
+                        winner = originalMoves[originalMoves.length - 1].player === 'Red' ? redPlayer : blackPlayer;
                     }
 
                     // Обновить счет для текущей игры
                     const gameScores = gameInfo.scores || {};
                     const gameRedScore = gameScores.Red || 0;
                     const gameBlackScore = gameScores.Black || 0;
-                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : ''}`;
+                    const winnerText = winner ? `<br>Победитель: ${winner}` : '';
+                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}${winnerText}<br>${document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : ''}`;
 
                     // Найти все индексы ходов с удвоением
                     doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
@@ -902,12 +901,7 @@
             }
 
             current = turn;
-            let turnLabel = data[turn].turn || 'End';
-            if (turn === data.length - 1 && winner) {
-                const winnerName = winner === 'Red' ? redPlayer : blackPlayer;
-                turnLabel = `Победа: ${winnerName} (${winnerPoints} очков)`;
-            }
-            document.getElementById('turnLabel').innerText = turnLabel;
+            document.getElementById('turnLabel').innerText = `${data[turn].turn || 'End'}`;
             console.log('Rendering turn:', turn, 'Data:', data[turn]);
 
             ctx.clearRect(0, 0, 800, 800);
@@ -1059,7 +1053,8 @@
             }else if (item.action === 'take') {
                 info = `Take`;
             } else if (item.action === 'win') {
-                info = `Победа (${item.points} очков)`;
+                const winner = item.player === 'Red' ? redPlayer : blackPlayer;
+                info = `${winner} победил (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
                 info = prefix + `${item.gnu_move}`;
             } else if (item.moves && item.moves.length === 0) {
