@@ -1094,20 +1094,22 @@
                     if (item.gnu_move.trim() === 'Double' && item.gnu_move.trim() === hint.action_1) {
                         if (index === 0) {
                             rowClass = 'hint-best';
+                        } else {
+                            rowClass = 'hint-good';
+                        }
+                    } else if (item.gnu_move.trim() === 'pass' && item.gnu_move.trim() === hint.action_2) {
+                        if (index === 0) {
+                            rowClass = 'hint-best';
                         } else if (index === 1) {
                             rowClass = 'hint-good';
                         } else {
                             rowClass = 'hint-poor';
-                        }
-                    } else if (item.gnu_move.trim() !== 'Double') {
-                        if (hint.action_2 === bestAction2) {
-                            if (index === 0) {
-                                rowClass = 'hint-best';
-                            } else if (index === 1) {
-                                rowClass = 'hint-good';
-                            } else {
-                                rowClass = 'hint-poor';
-                            }
+                        }    
+                    }else if (item.gnu_move.trim() === 'pass' || item.gnu_move.trim() === 'Double'){
+                        if (index === 0 && hint.action_1 === "No double"){
+                            rowClass = 'hint-best';
+                        }else{
+                            rowClass = 'hint-poor';
                         }
                     }
                     cubeTableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${eq}</td></tr>`;
