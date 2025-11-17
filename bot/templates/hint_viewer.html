@@ -368,6 +368,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 10px;
         }
 
         .pips-above-board {
@@ -1064,7 +1065,7 @@
             } else if (item.action === 'win') {
                 info = `Победа (${item.points} очков)`;
             } else if (item.moves && item.moves.length > 0) {
-                info = prefix + `${item.gnu_move}`;
+                info = prefix + `${item.gnu_move.trim()}`;
             } else if (item.moves && item.moves.length === 0) {
                 info = prefix + `Пропуск`;
             } else {
@@ -1083,20 +1084,22 @@
                 const bestAction = item.cube_hints[0].cubeful_equities.find(eq => eq.idx === 1);
                 const bestAction1 = bestAction ? bestAction.action_1 : '';
                 const bestAction2 = bestAction ? bestAction.action_2 : '';
-                (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {              
+                (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1;
                     if (hint.action_2) {
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (item.gnu_move === 'Double' && item.gnu_move === hint.action_1) {
+                    if (item.gnu_move.trim() === 'Double' && item.gnu_move.trim() === hint.action_1) {
                         if (index === 0) {
                             rowClass = 'hint-best';
-                        } else {
+                        } else if (index === 1) {
                             rowClass = 'hint-good';
+                        } else {
+                            rowClass = 'hint-poor';
                         }
-                    } else if (item.gnu_move !== 'Double') {
+                    } else if (item.gnu_move.trim() !== 'Double') {
                         if (hint.action_2 === bestAction2) {
                             if (index === 0) {
                                 rowClass = 'hint-best';
@@ -1125,7 +1128,7 @@
                         const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                         let move = hint.move || '-';
                         let rowClass = '';
-                        if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.replace(/\*/g, '')) {
+                        if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.trim().replace(/\*/g, '')) {
                             if (index === 0) {
                                 rowClass = 'hint-best';
                             } else if (index >= 1 && index <= 4) {

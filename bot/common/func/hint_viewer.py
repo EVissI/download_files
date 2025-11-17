@@ -75,7 +75,7 @@ def parse_backgammon_mat(content):
                 else:
                     double_player = "Black"
 
-                moves_list.append({"turn": turn, "player": double_player, "action": "double", "cube": value, "gnu_move": " Double"})
+                moves_list.append({"turn": turn, "player": double_player, "action": "double", "cube": value, "gnu_move": "Double"})
 
                 if response:
                     if response in ['take', 'takes']:
@@ -159,7 +159,7 @@ def parse_backgammon_mat(content):
             double_match = re.match(r"Doubles => (\d+)(?:\s*(Takes|Drops|Take|Drop))?", side_str, re.I)
             if double_match:
                 value = int(double_match.group(1))
-                res = {"turn": turn, "player": player, "action": "double", "cube": value, "gnu_move": " Double"}
+                res = {"turn": turn, "player": player, "action": "double", "cube": value, "gnu_move": "Double"}
                 response = double_match.group(2)
                 if response:
                     resp_act = response.lower()
