@@ -496,8 +496,7 @@
                 });
                 selectHtml += '</select>';
                 currentGameNum = availableGames[0].game_number;
-                const winnerText = winner ? `<br>Победитель: ${winner}` : '';
-                playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${redScore} - ${blackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}${winnerText}<br>${selectHtml}`;
+                playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${redScore} - ${blackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${selectHtml}`;
 
                     // Автоматически загружаем первую игру
                     if (availableGames.length > 0) {
@@ -506,8 +505,7 @@
                 } else if (availableGames.length > 0) {
                     const matchText = matchLength > 0 ? `Матч до ${matchLength}<br>` : '';
                     const scoreText = `Счет: ${redScore} - ${blackScore}<br>`;
-                    const winnerText = winner ? `Победитель: ${winner}<br>` : '';
-                    playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}${winnerText}`;
+                    playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}`;
 
                     // Автоматически загружаем единственную игру
                     loadGame(availableGames[0].game_number);
