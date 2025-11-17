@@ -522,77 +522,82 @@
             });
 
         function loadGame(gameNum) {
-            if (!gameNum) {
-                data = [];
-                dataLoaded = false;
-                infoDiv.innerHTML = '<div class="loading">Select a game to view</div>';
-                document.getElementById('moveHintsTable').innerHTML = '';
-                document.getElementById('cubeHintsTable').innerHTML = '';
-                return;
-            }
+            return new Promise((resolve, reject) => {
+                if (!gameNum) {
+                    data = [];
+                    dataLoaded = false;
+                    infoDiv.innerHTML = '<div class="loading">Select a game to view</div>';
+                    document.getElementById('moveHintsTable').innerHTML = '';
+                    document.getElementById('cubeHintsTable').innerHTML = '';
+                    resolve();
+                    return;
+                }
 
-            currentGameNum = gameNum;
-            // Update the select dropdown
-            const gameSelect = document.getElementById('gameSelect');
-            if (gameSelect) {
-                gameSelect.value = gameNum;
-            }
-            infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
+                currentGameNum = gameNum;
+                // Update the select dropdown
+                const gameSelect = document.getElementById('gameSelect');
+                if (gameSelect) {
+                    gameSelect.value = gameNum;
+                }
+                infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
-            fetch(`/api/analysis/${gameId}?game_num=${gameNum}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(json => {
-                    const gameInfo = json.game_info;
-                    data = json.moves.filter(item => item.turn !== undefined || item.action === 'win');
-                    data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
-
-                    // Обновить счет для текущей игры
-                    const gameScores = gameInfo.scores || {};
-                    const gameRedScore = gameScores.Red || 0;
-                    const gameBlackScore = gameScores.Black || 0;
-                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : ''}`;
-
-                    // Найти все индексы ходов с удвоением
-                    doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
-                    firstDoubleIndex = doubleTurns.length > 0 ? doubleTurns[0] : -1;
-
-                    if (data.length > 0) {
-                        dataLoaded = true;
-                        console.log('Data loaded:', data);
-                        console.log('First turn data:', data[0]);
-                        console.log('First turn moves:', data[0]?.moves);
-                        current = 0;
-                        if (data[0]?.action === 'skip') {
-                            current = 1;
+                fetch(`/api/analysis/${gameId}?game_num=${gameNum}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
                         }
-                        // Reset hints display
-                        moveHintsTable.classList.remove('active');
-                        cubeHintsTable.classList.remove('active');
-                        moveHintsBtn.classList.remove('active');
-                        cubeHintsBtn.classList.remove('active');
-                        if (imagesLoaded === 25) {
-                            render(current, invertColors);
-                            updateButtons();
-                            infoDiv.innerHTML = '';
-                            // Auto-select move hints
-                            moveHintsTable.classList.add('active');
-                            moveHintsBtn.classList.add('active');
+                        return response.json();
+                    })
+                    .then(json => {
+                        const gameInfo = json.game_info;
+                        data = json.moves.filter(item => item.turn !== undefined || item.action === 'win');
+                        data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
+
+                        // Обновить счет для текущей игры
+                        const gameScores = gameInfo.scores || {};
+                        const gameRedScore = gameScores.Red || 0;
+                        const gameBlackScore = gameScores.Black || 0;
+                        playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : ''}`;
+
+                        // Найти все индексы ходов с удвоением
+                        doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
+                        firstDoubleIndex = doubleTurns.length > 0 ? doubleTurns[0] : -1;
+
+                        if (data.length > 0) {
+                            dataLoaded = true;
+                            console.log('Data loaded:', data);
+                            console.log('First turn data:', data[0]);
+                            console.log('First turn moves:', data[0]?.moves);
+                            current = 0;
+                            if (data[0]?.action === 'skip') {
+                                current = 1;
+                            }
+                            // Reset hints display
+                            moveHintsTable.classList.remove('active');
+                            cubeHintsTable.classList.remove('active');
+                            moveHintsBtn.classList.remove('active');
+                            cubeHintsBtn.classList.remove('active');
+                            if (imagesLoaded === 25) {
+                                render(current, invertColors);
+                                updateButtons();
+                                infoDiv.innerHTML = '';
+                                // Auto-select move hints
+                                moveHintsTable.classList.add('active');
+                                moveHintsBtn.classList.add('active');
+                            } else {
+                                console.log('Waiting for images to load before rendering');
+                            }
                         } else {
-                            console.log('Waiting for images to load before rendering');
+                            infoDiv.innerHTML = '<div class="error">No game data found for this game.</div>';
                         }
-                    } else {
-                        infoDiv.innerHTML = '<div class="error">No game data found for this game.</div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading game:', error);
-                    infoDiv.innerHTML = '<div class="error">Error loading game data. Please try again.</div>';
-                });
+                        resolve();
+                    })
+                    .catch(error => {
+                        console.error('Error loading game:', error);
+                        infoDiv.innerHTML = '<div class="error">Error loading game data. Please try again.</div>';
+                        reject(error);
+                    });
+            });
         }
 
         let current = 0;
@@ -1128,7 +1133,7 @@
             document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
         }
 
-        function prevTurn() {
+        async function prevTurn() {
             if (dataLoaded && current > 0) {
                 render(current - 1, invertColors);
                 updateButtons();
@@ -1137,7 +1142,10 @@
                 const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
                 if (currentIndex > 0) {
                     const prevGameNum = availableGames[currentIndex - 1].game_number;
-                    loadGame(prevGameNum);
+                    await loadGame(prevGameNum);
+                    current = data.length - 1;
+                    render(current, invertColors);
+                    updateButtons();
                 }
             }
         }
