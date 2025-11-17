@@ -1101,7 +1101,16 @@
             }else if (item.action === 'take') {
                 info = `Take`;
             } else if (item.action === 'win') {
-                info = `${item.player_name} победил. Счёт ${gameRedScore} - ${gameBlackScore}`;
+                let finalRedScore = gameRedScore;
+                let finalBlackScore = gameBlackScore;
+                if (item.player_name === redPlayer) {
+                    finalRedScore += item.points;
+                } else if (item.player_name === blackPlayer) {
+                    finalBlackScore += item.points;
+                }
+                const larger = Math.max(finalRedScore, finalBlackScore);
+                const smaller = Math.min(finalRedScore, finalBlackScore);
+                info = `${item.player_name} победил. Счёт ${larger} - ${smaller}`;
             } else if (item.moves && item.moves.length > 0) {
                 info = prefix + `${item.gnu_move.trim()}`;
             } else if (item.moves && item.moves.length === 0) {
