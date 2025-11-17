@@ -42,8 +42,11 @@ def parse_backgammon_mat(content):
         win_match = re.match(r".*Wins (\d+) points", line)
         if win_match:
             points = int(win_match.group(1))
-            # Победитель - противоположный игрок от последнего ходившего (для drop)
-            winner = "Black" if previous_player_moved == "Red" else "Red"
+            # Если предыдущий ход был drop, победитель - противоположный игрок
+            if moves_list and moves_list[-1].get('action') == 'drop':
+                winner = "Black" if previous_player_moved == "Red" else "Red"
+            else:
+                winner = previous_player_moved
             moves_list.append(
                 {"action": "win", "player": winner, "points": points}
             )
