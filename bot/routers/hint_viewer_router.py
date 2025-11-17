@@ -342,12 +342,17 @@ async def process_batch_hint_files(message: Message, state: FSMContext, file_pat
 
                 # Отправляем сообщение с ссылкой на веб-приложение
                 if has_games:
-                    mini_app_url = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}"
+                    mini_app_url_1 = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}?error=0"
+                    mini_app_url_2 = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}?error=1"
                     keyboard = InlineKeyboardMarkup(
                         inline_keyboard=[
                             [InlineKeyboardButton(
-                                text="Открыть интерактивную визуализацию",
-                                web_app=WebAppInfo(url=mini_app_url)
+                                text="Полная интерактиваная визуализация",
+                                web_app=WebAppInfo(url=mini_app_url_1)
+                            )],
+                            [InlineKeyboardButton(
+                                text="Только ошибки",
+                                web_app=WebAppInfo(url=mini_app_url_2)
                             )]
                         ]
                     )

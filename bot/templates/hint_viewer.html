@@ -403,6 +403,7 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
+        const error = urlParams.get('error') || '0';
 
         // Add cache-busting to CSS background images
         document.addEventListener('DOMContentLoaded', function() {
@@ -563,7 +564,7 @@
                     .then(json => {
                         const gameInfo = json.game_info;
                         data = json.moves.filter(item => item.turn !== undefined || item.action === 'win');
-                        data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
+                        data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass' && (error !== '1' || !it.is_best_move));
 
                         // Обновить счет для текущей игры
                         const gameScores = gameInfo.scores || {};
@@ -1085,8 +1086,7 @@
                 const bestAction = item.cube_hints[0].cubeful_equities.find(eq => eq.idx === 1);
                 const bestAction1 = bestAction ? bestAction.action_1 : '';
                 const bestAction2 = bestAction ? bestAction.action_2 : '';
-                const next_item = data[turn + 1];
-                const prev_item = data[turn - 1];
+                let nextGnuMove = (data[turn + 1] && data[turn + 1].gnu_move) ? data[turn + 1].gnu_move.trim() : 'pass';
                 (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1;
@@ -1094,7 +1094,7 @@
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (item.gnu_move.trim() === 'Double' && hint.action_1 === 'Double' && hint.action_2 === next_item.gnu_move.trim()) {
+                    if (item.gnu_move.trim() === 'Double' && hint.action_1 === 'Double' && hint.action_2 === nextGnuMove) {
                         if (index === 0) {
                             rowClass = 'hint-best';
                         } else if (index === 1) {
