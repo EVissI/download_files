@@ -573,7 +573,12 @@
                         const gameInfo = json.game_info;
 
                         data = json.moves.filter(item => item.turn !== undefined || item.action === 'win');
-                        data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass' && (error !== '1' || !it.is_best_move));
+                        data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
+
+                        // Добавьте поле is_visible
+                        data.forEach(item => {
+                            item.is_visible = error !== '1' || !item.is_best_move;
+                        });
 
 
                         // Обновить счет для текущей игры
@@ -595,6 +600,13 @@
                             current = 0;
                             if (data[0]?.action === 'skip') {
                                 current = 1;
+                            }
+                            // Найти первый видимый ход
+                            while (current < data.length && !data[current].is_visible) {
+                                current++;
+                            }
+                            if (current >= data.length) {
+                                current = 0; // fallback
                             }
                             // Reset hints display
                             moveHintsTable.classList.remove('active');
@@ -1222,8 +1234,14 @@
 
         async function prevTurn() {
             if (dataLoaded && current > 0) {
-                render(current - 1, invertColors);
-                updateButtons();
+                let newCurrent = current - 1;
+                while (newCurrent >= 0 && !data[newCurrent].is_visible) {
+                    newCurrent--;
+                }
+                if (newCurrent >= 0) {
+                    render(newCurrent, invertColors);
+                    updateButtons();
+                }
             } else if (dataLoaded && availableGames.length > 1) {
                 // Try to load previous game
                 const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
@@ -1231,16 +1249,27 @@
                     const prevGameNum = availableGames[currentIndex - 1].game_number;
                     await loadGame(prevGameNum);
                     current = data.length - 1;
-                    render(current, invertColors);
-                    updateButtons();
+                    while (current >= 0 && !data[current].is_visible) {
+                        current--;
+                    }
+                    if (current >= 0) {
+                        render(current, invertColors);
+                        updateButtons();
+                    }
                 }
             }
         }
 
         function nextTurn() {
             if (dataLoaded && current < data.length - 1) {
-                render(current + 1, invertColors);
-                updateButtons();
+                let newCurrent = current + 1;
+                while (newCurrent < data.length && !data[newCurrent].is_visible) {
+                    newCurrent++;
+                }
+                if (newCurrent < data.length) {
+                    render(newCurrent, invertColors);
+                    updateButtons();
+                }
             } else if (dataLoaded && availableGames.length > 1) {
                 // Try to load next game
                 const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
@@ -1261,15 +1290,21 @@
             const nextBtn = document.getElementById('nextBtn');
 
             if (dataLoaded) {
-                // Disable prevBtn only if at start of data and no previous game
-                const atStartOfData = current <= 0;
-                const hasPrevGame = availableGames.length > 1 && availableGames.findIndex(game => game.game_number == currentGameNum) > 0;
-                prevBtn.disabled = atStartOfData && !hasPrevGame;
+                // Найти предыдущий видимый ход
+                let prevVisible = current - 1;
+                while (prevVisible >= 0 && !data[prevVisible].is_visible) {
+                    prevVisible--;
+                }
+                const hasPrev = prevVisible >= 0 || (availableGames.length > 1 && availableGames.findIndex(game => game.game_number == currentGameNum) > 0);
+                prevBtn.disabled = !hasPrev;
 
-                // Disable nextBtn only if at end of data and no next game
-                const atEndOfData = current >= data.length - 1;
-                const hasNextGame = availableGames.length > 1 && availableGames.findIndex(game => game.game_number == currentGameNum) < availableGames.length - 1;
-                nextBtn.disabled = atEndOfData && !hasNextGame;
+                // Найти следующий видимый ход
+                let nextVisible = current + 1;
+                while (nextVisible < data.length && !data[nextVisible].is_visible) {
+                    nextVisible++;
+                }
+                const hasNext = nextVisible < data.length || (availableGames.length > 1 && availableGames.findIndex(game => game.game_number == currentGameNum) < availableGames.length - 1);
+                nextBtn.disabled = !hasNext;
             } else {
                 prevBtn.disabled = true;
                 nextBtn.disabled = true;
