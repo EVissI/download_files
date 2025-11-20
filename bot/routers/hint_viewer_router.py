@@ -420,7 +420,7 @@ async def process_batch_hint_files(
         tasks = []
         for mat_path in file_paths:
             task = asyncio.create_task(
-                process_single_hint_file(mat_path, str(chat_id), session_without_commit)
+                process_single_hint_file(mat_path, chat_id, session_without_commit)
             )
             tasks.append(task)
 
