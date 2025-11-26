@@ -519,7 +519,8 @@
                     }
                 } else if (availableGames.length > 0) {
                     if (matchLength === 0) {
-                        playersInfoDiv.innerHTML = "money game";
+                        playersInfoDiv.innerHTML = "Манигейм";
+                        playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}`;
                     } else {
                         const matchText = `Матч до ${matchLength}<br>`;
                         gameRedScore = scores.Red || 0;
@@ -533,7 +534,8 @@
                     loadGame(availableGames[0].game_number);
                 } else {
                     if (matchLength === 0) {
-                        playersInfoDiv.innerHTML = "money game";
+                        playersInfoDiv.innerHTML = "Манигейм";
+                        playersInfoDiv.innerHTML = `${matchText}Белые: ${redPlayer} – Черные: ${blackPlayer}<br>${scoreText}`;
                     } else {
                         const matchText = `Матч до ${matchLength}<br>`;
                         gameRedScore = scores.Red || 0;
