@@ -577,7 +577,7 @@
 
                         // Добавьте поле is_visible
                         data.forEach(item => {
-                            item.is_visible = error !== '1' || !item.is_best_move;
+                            item.is_visible = error !== '1' || (!item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take'));
                         });
 
 

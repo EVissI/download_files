@@ -91,7 +91,7 @@ async def handle_hint_type_selection(callback: CallbackQuery, state: FSMContext)
         keyboard = ReplyKeyboardBuilder()
         keyboard.button(text="Завершить")
         await callback.message.answer(
-            "Присылайте .mat файлы или .zip архивы по одному. Нажмите 'Завершить' когда закончите.",
+            "Присылайте .mat файлы или .zip архивы. Нажмите 'Завершить' когда закончите.",
             reply_markup=keyboard.as_markup(resize_keyboard=True),
         )
     await callback.answer()
@@ -116,7 +116,10 @@ async def handle_batch_stop(
         await state.clear()
         await state.set_state(GeneralStates.admin_panel)
         return
-
+    await message.answer(
+            "Начинаю обработку",
+            reply_markup=MainKeyboard.build(user_info.role, i18n),
+        )
     await process_batch_hint_files(
         message,
         state,
