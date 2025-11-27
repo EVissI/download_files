@@ -44,7 +44,8 @@ def parse_backgammon_mat(content):
             points = int(win_match.group(1))
             # Определяем победителя по количеству ведущих пробелов
             leading_spaces = len(line) - len(line.lstrip())
-            winner = "Black" if leading_spaces > 10 else "Red"
+            logger.info(f'ledding space: {leading_spaces}')
+            winner = "Black" if leading_spaces > 5 else "Red"
             moves_list.append(
                 {"action": "win", "player": winner, "points": points}
             )
