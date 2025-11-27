@@ -109,7 +109,7 @@ class ProgressBarMessageManager:
 
     async def _update_loop(self):
         """Основной цикл обновления прогресс-бара."""
-        update_interval = 2 # Обновляем каждые 0.5 секунды
+        update_interval = 5 
         
         while self.active:
             try:
@@ -127,10 +127,9 @@ class ProgressBarMessageManager:
                 new_text = self._generate_progress_bar(progress)
                 
                 try:
-                    await self.message.edit_text(new_text)
+                    await self.message.edit_text(new_text, reply_markup=None)
                 except Exception as e:
                     logger.error(f"Ошибка при обновлении прогресс-бара {e}")
-                    pass
                 
                 # Если прогресс завершен, выходим из цикла
                 if progress >= 1.0:
@@ -140,4 +139,4 @@ class ProgressBarMessageManager:
             except asyncio.CancelledError:
                 break
             except Exception:
-                pass
+                logger.error(f"Ошибка при обновлении прогресс-бара {e}")
