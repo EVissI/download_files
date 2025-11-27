@@ -317,7 +317,7 @@ async def hint_viewer_menu(
                         ]
                     )
                     await message.answer(
-                        f"Анализ завершен!\n{red_player}-{black_player}\nНажмите кнопку ниже для просмотра интерактивной визуализации первой игры:",
+                        f"Анализ завершен!\n{red_player}-{black_player}\nВыберите вариант просмотра ошибок:",
                         reply_markup=keyboard,
                     )
                     await UserDAO(session_without_commit).decrease_analiz_balance(
@@ -680,7 +680,7 @@ async def process_batch_hint_files(
                         ]
                     )
                     await message.answer(
-                        f"Анализ файла {fname} завершен! Нажмите кнопку ниже для просмотра интерактивной визуализации:",
+                        f"Анализ файла {fname} завершен! Выберите вариант просмотра ошибок:",
                         reply_markup=keyboard,
                     )
                 else:
