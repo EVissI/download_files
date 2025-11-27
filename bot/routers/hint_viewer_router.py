@@ -350,8 +350,9 @@ async def handle_show_stats(
     if not mat_path:
         await callback.answer("Файл не найден.")
         return
-
+    waiting_manager = WaitingMessageManager(callback.from_user.id, callback.bot, i18n)
     try:
+        await waiting_manager.start()
         with open(mat_path, "r", encoding="utf-8") as f:
             content = f.read()
         match_length = extract_match_length(content)
@@ -411,6 +412,7 @@ async def handle_show_stats(
             if os.path.exists(new_file_path):
                 os.remove(new_file_path)
             await redis_client.delete(f"mat_path:{game_id}")
+        await waiting_manager.stop()
 
     except Exception as e:
         logger.error(f"Ошибка при показе статистики: {e}")
