@@ -161,14 +161,14 @@ async def analyze_file_by_path(
     files_dir = os.path.dirname(file_path)
     new_file_path = os.path.join(files_dir, new_file_name)
     try:
-        asyncio.create_task(save_file_to_yandex_disk(file_path, new_file_name))
-    except Exception as e:
-        logger.error(f"Error saving file to Yandex Disk: {e}")
-    try:
         os.rename(file_path, new_file_path)
     except Exception as e:
         logger.error(f"Failed to rename file {file_path} to {new_file_path}: {e}")
         raise
+    try:
+        asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
+    except Exception as e:
+        logger.error(f"Error saving file to Yandex Disk: {e}")
 
 
     logger.info(f"Processing file for user {user_info.player_username}, players: {player_names}")

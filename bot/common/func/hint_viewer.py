@@ -1065,6 +1065,62 @@ def process_single_game(game_data, output_dir, game_number):
     return game_output_file
 
 
+def estimate_processing_time(mat_file_path):
+    """
+    Оценивает время выполнения обработки .mat файла на основе его содержимого.
+    Возвращает примерное время в секундах (максимальное из игр).
+    """
+    try:
+        with open(mat_file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        games = parse_mat_games(content)
+        if not games:
+            return 0
+
+        match_length = extract_match_length(content)
+        jacobi_rule = extract_jacobi_rule(content)
+
+        max_estimated_time = 0
+        for game_data in games:
+            game_data['match_length'] = match_length
+            game_data['jacobi_rule'] = jacobi_rule
+
+            # Парсим ходы игры
+            parsed_moves = parse_backgammon_mat(game_data['content'])
+            tracker = BackgammonPositionTracker()
+            aug = tracker.process_game(parsed_moves)
+
+            # Добавляем имена игроков
+            for entry in aug:
+                if entry.get("player") == "Red":
+                    entry["player_name"] = game_data['red_player']
+                elif entry.get("player") == "Black":
+                    entry["player_name"] = game_data['black_player']
+
+            # Конвертируем ходы в GNU формат
+            for entry in aug:
+                if "moves" in entry:
+                    entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
+
+            # Генерируем токены команд для gnubg
+            gnubg_tokens = json_to_gnubg_commands(aug, game_data['jacobi_rule'], game_data['match_length'], game_data['black_score'], game_data['red_score'])
+
+            # Считаем количество hint команд
+            hint_count = sum(1 for token in gnubg_tokens if token["type"] in ("hint", "cube_hint"))
+
+            # Оцениваем время: каждый hint ~2 секунды, плюс overhead ~10 секунд на игру
+            estimated_time = hint_count * 2 + 10
+            if estimated_time > max_estimated_time:
+                max_estimated_time = estimated_time
+
+        return max_estimated_time
+
+    except Exception as e:
+        logger.error(f"Error estimating processing time for {mat_file_path}: {e}")
+        return 0
+
+
 def process_mat_file(input_file, output_file, chat_id):
     """
     Основная функция обработки .mat файла.

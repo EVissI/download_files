@@ -33,12 +33,14 @@ from bot.common.func.hint_viewer import (
     process_mat_file,
     random_filename,
     extract_player_names,
+    estimate_processing_time,
 )
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.common.func.func import (
     format_detailed_analysis,
     get_analysis_data as get_data,
 )
+from bot.common.func.progress_bar import ProgressBarMessageManager
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.kbds.inline.autoanalize import get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
@@ -221,8 +223,11 @@ async def hint_viewer_menu(
             content = f.read()
         red_player, black_player = extract_player_names(content)
 
+        # Оцениваем время обработки
+        estimated_time = estimate_processing_time(mat_path)
+
         # Начинаем обработку сразу
-        waiting_manager = WaitingMessageManager(message.from_user.id, message.bot, i18n)
+        waiting_manager = ProgressBarMessageManager(message.from_user.id, message.bot, estimated_time)
         await waiting_manager.start()
 
         try:
@@ -473,9 +478,6 @@ async def handle_hint_player_selection(
         )
         await session_without_commit.commit()
 
-        # Удаляем файл
-        if os.path.exists(file_path):
-            os.remove(file_path)
         await redis_client.delete(f"mat_path:{game_id}")
         await state.clear()
 
