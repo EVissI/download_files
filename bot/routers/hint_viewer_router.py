@@ -317,11 +317,7 @@ async def hint_viewer_menu(
             await message.reply("Ошибка при обработке файла.")
         finally:
             await waiting_manager.stop()
-            try:
-                if os.path.exists(mat_path):
-                    os.remove(mat_path)
-            except Exception:
-                logger.warning("Не удалось удалить mat файл после обработки.")
+            # Файл удаляется в handler show_stats или остается
             await state.clear()
             await state.set_state(GeneralStates.admin_panel)
 
@@ -624,6 +620,5 @@ async def process_single_hint_file(mat_path: str, user_id: str, session_without_
         logger.error(f"Error processing {mat_path}: {e}")
         raise
     finally:
-        # Удаляем оригинальный файл
-        if os.path.exists(mat_path):
-            os.remove(mat_path)
+        # Файл удаляется в handler show_stats или остается для статистики
+        pass
