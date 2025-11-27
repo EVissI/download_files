@@ -17,6 +17,7 @@ import json
 import zipfile
 import io
 import shutil
+import json as json_module
 
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -32,6 +33,12 @@ from bot.common.func.hint_viewer import (
     random_filename,
     extract_player_names,
 )
+from bot.common.func.analiz_func import analyze_mat_file
+from bot.common.func.func import (
+    format_detailed_analysis,
+    get_analysis_data,
+)
+from bot.db.redis import redis_client
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.general_states import GeneralStates
@@ -43,6 +50,7 @@ from typing import TYPE_CHECKING
 
 from bot.db.dao import UserDAO
 from bot.db.models import User
+from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -216,6 +224,9 @@ async def hint_viewer_menu(
                 process_mat_file, mat_path, json_path, str(message.from_user.id)
             )
 
+            # Сохраняем mat_path для статистики
+            await redis_client.set(f"mat_path:{game_id}", mat_path, expire=3600)
+
             # Создаем ZIP архив из директории с результатами
             games_dir = json_path.rsplit(".", 1)[0] + "_games"
             if os.path.exists(games_dir):
@@ -285,6 +296,12 @@ async def hint_viewer_menu(
                                     web_app=WebAppInfo(url=mini_app_url_black_errors),
                                 )
                             ],
+                            [
+                                InlineKeyboardButton(
+                                    text="Показать статистику игры",
+                                    callback_data=f"show_stats:{game_id}",
+                                )
+                            ],
                         ]
                     )
                     await message.answer(
@@ -313,6 +330,57 @@ async def hint_viewer_menu(
         await message.reply("Ошибка при обработке файла.")
         await state.clear()
         await state.set_state(GeneralStates.admin_panel)
+
+
+@hint_viewer_router.callback_query(F.data.startswith("show_stats:"), UserInfo())
+async def handle_show_stats(
+    callback: CallbackQuery,
+    user_info: User,
+    i18n,
+    session_without_commit: AsyncSession,
+):
+    game_id = callback.data.split(":")[1]
+    mat_path = await redis_client.get(f"mat_path:{game_id}")
+    if not mat_path:
+        await callback.answer("Файл не найден.")
+        return
+
+    try:
+        # Анализируем файл
+        loop = asyncio.get_running_loop()
+        duration, analysis_result = await loop.run_in_executor(
+            None, analyze_mat_file, mat_path, "mat"
+        )
+        analysis_data = await loop.run_in_executor(None, json_module.loads, analysis_result)
+
+        # Получаем имена игроков
+        player_names = list(analysis_data["chequerplay"].keys())
+        if len(player_names) != 2:
+            await callback.answer("Ошибка в данных анализа.")
+            return
+
+        # Выбираем игрока
+        selected_player = user_info.player_username if user_info.player_username in player_names else player_names[0]
+
+        # Форматируем анализ
+        formatted_analysis = format_detailed_analysis(
+            get_analysis_data(analysis_data), i18n
+        )
+
+        await callback.message.answer(
+            f"{formatted_analysis}\n\n",
+            parse_mode="HTML",
+            reply_markup=MainKeyboard.build(user_info.role, i18n),
+        )
+
+        # Удаляем файл
+        if os.path.exists(mat_path):
+            os.remove(mat_path)
+        await redis_client.delete(f"mat_path:{game_id}")
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе статистики: {e}")
+        await callback.answer("Ошибка при обработке статистики.")
 
 
 # --- FastAPI часть ---
@@ -499,6 +567,12 @@ async def process_batch_hint_files(
                                     web_app=WebAppInfo(url=mini_app_url_black_errors),
                                 )
                             ],
+                            [
+                                InlineKeyboardButton(
+                                    text="Показать статистику игры",
+                                    callback_data=f"show_stats:{game_id}",
+                                )
+                            ],
                         ]
                     )
                     await message.answer(
@@ -543,6 +617,8 @@ async def process_single_hint_file(mat_path: str, user_id: str, session_without_
         await UserDAO(session_without_commit).decrease_analiz_balance(
             user_id=user_id, service_type="HINTS"
         )
+        # Сохраняем mat_path для статистики
+        await redis_client.set(f"mat_path:{game_id}", mat_path, expire=3600)
         return game_id, has_games, red_player, black_player
     except Exception as e:
         logger.error(f"Error processing {mat_path}: {e}")
