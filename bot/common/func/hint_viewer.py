@@ -719,7 +719,7 @@ def convert_moves_to_gnu(moves_list):
                 edge_hit[e] = False
 
     final = " ".join(result_parts)
-    logger.debug(f"Converted to GNU: {final}")
+    # logger.debug(f"Converted to GNU: {final}")
     return final or None
 
 class BackgammonPositionTracker:
@@ -759,7 +759,8 @@ class BackgammonPositionTracker:
             else:
                 self.positions[side].pop(k)
         else:
-            logger.debug("warning: removing empty point %s %s", side, k)
+            pass
+            # logger.debug("warning: removing empty point %s %s", side, k)
 
     def _inc(self, side, k):
         self.positions[side][k] = self.positions[side].get(k, 0) + 1
@@ -944,13 +945,13 @@ def process_single_game(game_data, output_dir, game_number):
         time.sleep(0.5)
         try:
             start_out = child.read_nonblocking(size=4096, timeout=0.2)
-            logger.debug(f"Game {game_number} gnubg start output: {start_out}")
+            # logger.debug(f"Game {game_number} gnubg start output: {start_out}")
         except Exception:
             pass
 
         for token in gnubg_tokens:
             line = token["cmd"]
-            logger.debug(f"Game {game_number} send: {line}")
+            # logger.debug(f"Game {game_number} send: {line}")
             child.sendline(line)
             time.sleep(command_delay)
 
@@ -969,7 +970,8 @@ def process_single_game(game_data, output_dir, game_number):
                     break
 
             if out:
-                logger.debug(f"Game {game_number} gnubg output after '{line}':\n{out}")
+                pass
+                # logger.debug(f"Game {game_number} gnubg output after '{line}':\n{out}")
 
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
@@ -991,9 +993,10 @@ def process_single_game(game_data, output_dir, game_number):
                             case "hint":
                                 aug[target_idx]["hints"].append(h)
                 else:
-                    logger.debug(
-                        f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
-                    )
+                    pass
+                    # logger.debug(
+                    #     f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
+                    # )
 
         # Сравниваем ходы с подсказками
         for entry in aug:
@@ -1005,17 +1008,18 @@ def process_single_game(game_data, output_dir, game_number):
                     entry["is_best_move"] = normalized_gnu == normalized_hint
 
                     if not entry["is_best_move"]:
-                        logger.debug(
-                            f"Game {game_number} move mismatch: gnu_move='{entry['gnu_move']}' (normalized: '{normalized_gnu}') vs hint='{first_hint['move']}' (normalized: '{normalized_hint}')"
-                        )
+                        pass
+                        # logger.debug(
+                        #     f"Game {game_number} move mismatch: gnu_move='{entry['gnu_move']}' (normalized: '{normalized_gnu}') vs hint='{first_hint['move']}' (normalized: '{normalized_hint}')"
+                        # )
                 else:
                     entry["is_best_move"] = False
                     logger.warning(f"Game {game_number} no valid first hint for entry: {entry}")
             else:
                 entry["is_best_move"] = False
-                logger.debug(f"Game {game_number} skipping comparison for entry without gnu_move or hints: {entry}")
+                # logger.debug(f"Game {game_number} skipping comparison for entry without gnu_move or hints: {entry}")
 
-        logger.debug(f"Game {game_number} send: exit / y")
+        # logger.debug(f"Game {game_number} send: exit / y")
         try:
             child.sendline("exit")
             time.sleep(0.1)
@@ -1035,7 +1039,7 @@ def process_single_game(game_data, output_dir, game_number):
             remaining = child.read_nonblocking(size=65536, timeout=0.1)
         except Exception:
             remaining = ""
-        logger.debug(f"Game {game_number} gnubg final remaining: {remaining}")
+        # logger.debug(f"Game {game_number} gnubg final remaining: {remaining}")
 
     finally:
         try:
