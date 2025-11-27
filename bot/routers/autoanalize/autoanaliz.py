@@ -114,6 +114,133 @@ async def cancel_auto_analyze(
         reply_markup=MainKeyboard.build(user_info.role, i18n),
     )
 
+async def analyze_file_by_path(
+    file_path: str,
+    file_type: str,
+    user_info: User,
+    session_without_commit: AsyncSession,
+    i18n: TranslatorRunner,
+    message_or_callback=None,
+    analysis_type=None,
+    forward_message=False,
+):
+    """
+    Analyzes a file by path, used for both uploaded files and existing files.
+    """
+    loop = asyncio.get_running_loop()
+    duration, analysis_result = await loop.run_in_executor(
+        None, analyze_mat_file, file_path, file_type
+    )
+    if forward_message and duration > 0 and hasattr(message_or_callback, 'bot') and hasattr(message_or_callback, 'chat') and hasattr(message_or_callback, 'message_id'):
+        try:
+            await message_or_callback.bot.forward_message(
+                chat_id=settings.CHAT_GROUP_ID,
+                from_chat_id=message_or_callback.chat.id,
+                message_id=message_or_callback.message_id
+            )
+        except Exception as e:
+            logger.error(f"Failed to forward message for user {user_info.id}: {e}")
+    analysis_data = await loop.run_in_executor(None, json.loads, analysis_result)
+    await redis_client.set(
+        f"analysis_data:{user_info.id}", json.dumps(analysis_data), expire=3600
+    )
+
+    player_names = list(analysis_data["chequerplay"].keys())
+    if len(player_names) != 2:
+        raise ValueError("Incorrect number of players in analysis")
+
+    if analysis_type == "moneygame" and (duration is not None and duration != 0):
+        raise ValueError("Wrong type: match instead of moneygame")
+    if analysis_type == "match" and (duration is None or duration == 0):
+        raise ValueError("Wrong type: moneygame instead of match")
+
+    # Generate new filename
+    moscow_tz = pytz.timezone("Europe/Moscow")
+    current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
+    new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
+    files_dir = os.path.dirname(file_path)
+    new_file_path = os.path.join(files_dir, new_file_name)
+    # Rename file
+    try:
+        os.rename(file_path, new_file_path)
+    except Exception as e:
+        logger.error(f"Failed to rename file {file_path} to {new_file_path}: {e}")
+        raise
+
+    try:
+        asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
+    except Exception as e:
+        logger.error(f"Error saving file to Yandex Disk: {e}")
+
+    logger.info(f"Processing file for user {user_info.player_username}, players: {player_names}")
+    if user_info.player_username and user_info.player_username in player_names:
+        selected_player = user_info.player_username
+        game_id = f"auto_{user_info.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        player_data = {
+            "user_id": user_info.id,
+            "player_name": selected_player,
+            "file_name": new_file_name,
+            "file_path": new_file_path,
+            "game_id": game_id,
+            **get_analysis_data(analysis_data, selected_player),
+        }
+
+        dao = DetailedAnalysisDAO(session_without_commit)
+        await dao.add(SDetailedAnalysis(**player_data))
+        user_dao = UserDAO(session_without_commit)
+        formated_data = get_analysis_data(analysis_data)
+        if duration is None or duration == 0:
+            await user_dao.decrease_analiz_balance(
+                user_info.id, service_type=ServiceType.MONEYGAME
+            )
+        else:
+            await user_dao.decrease_analiz_balance(
+                user_info.id, service_type=ServiceType.MATCH
+            )
+        formatted_analysis = format_detailed_analysis(
+            formated_data, i18n
+        )
+        player_names_list = list(formated_data)
+        player1_name, player2_name = player_names_list
+        p1 = formated_data.get(player1_name)
+        p2 = formated_data.get(player2_name)
+        current_date_str = datetime.now().strftime("%d.%m.%Y_%H.%M")
+        players_str = f'{player1_name} ({abs(p1["snowie_error_rate"])}) - {player2_name} ({abs(p2["snowie_error_rate"])})'
+        file_name_to_pdf = f"{players_str}_{current_date_str}.pdf".replace(":", ".").replace(" ", "")
+        await redis_client.set(
+            f"file_name:{user_info.id}", file_name_to_pdf, expire=3600
+        )
+        if duration is not None and duration != 0:
+            try:
+                # Генерация PDF
+                html_text = format_detailed_analysis(formated_data, i18n)
+                pdf_bytes = html_to_pdf_bytes(html_text)
+
+                if not pdf_bytes:
+                    logger.error("Ошибка при генерации PDF.")
+                    await message_or_callback.bot.send_message(
+                        settings.CHAT_GROUP_ID,
+                        f"<b>Автоматический анализ игры от {current_date_str}</b>\n\n {players_str}) Матч до {duration}\n\n",
+                        parse_mode="HTML",
+                    )
+                    return
+
+                # Отправка сообщения с PDF
+                await message_or_callback.bot.send_document(
+                    chat_id=settings.CHAT_GROUP_ID,
+                    document=BufferedInputFile(pdf_bytes, filename=file_name_to_pdf),
+                    caption=f"<b>Автоматический анализ игры от {current_date_str}</b>\n\n {players_str}) Матч до {duration}\n\n",
+                    parse_mode="HTML",
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при отправке сообщения с PDF в группу: {e}")
+        return formatted_analysis, new_file_path
+
+    else:
+        return analysis_data, new_file_path, player_names
+
+
 mat_file_lock = asyncio.Lock()
 
 @auto_analyze_router.message(
@@ -158,145 +285,27 @@ async def handle_mat_file(
                     await message.answer("Ошибка при загрузке файла. Попробуйте снова.")
                     return
 
-                loop = asyncio.get_running_loop()
-                duration, analysis_result = await loop.run_in_executor(
-                    None, analyze_mat_file, file_path, file_type
-                )
-                if duration > 0:
-                    try:
-                        await message.bot.forward_message(
-                            chat_id = settings.CHAT_GROUP_ID,
-                            from_chat_id = message.chat.id,
-                            message_id = message.message_id
-                        )
-                    except Exception as e:
-                        logger.error(f"Failed to forward message for user {user_info.id}: {e}")
-                await state.update_data(duration=duration)
-                analysis_data = await loop.run_in_executor(None, json.loads, analysis_result)
-                await redis_client.set(
-                    f"analysis_data:{user_info.id}", json.dumps(analysis_data), expire=3600
-                )
-
-                player_names = list(analysis_data["chequerplay"].keys())
-                if len(player_names) != 2:
-                    await waiting_manager.stop()
-                    await state.clear()
-                    raise ValueError("Incorrect number of players in analysis")
-
                 data = await state.get_data()
                 analysis_type = data.get("analysis_type")
-                if analysis_type == "moneygame" and (duration is not None and duration != 0):
+
+                try:
+                    result = await analyze_file_by_path(
+                        file_path, file_type, user_info, session_without_commit, i18n, message, analysis_type, forward_message=True
+                    )
+                except ValueError as e:
                     await waiting_manager.stop()
                     await state.clear()
                     return await message.answer(
-                        i18n.auto.analyze.wrong_type_match(),
-                        reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
-                    )
-                if analysis_type == "match" and (duration is None or duration == 0):
-                    await waiting_manager.stop()
-                    await state.clear()
-                    return await message.answer(
-                        i18n.auto.analyze.wrong_type_moneygame(),
+                        str(e),
                         reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
                     )
 
-                # Generate new filename
-                moscow_tz = pytz.timezone("Europe/Moscow")
-                current_date = datetime.now(moscow_tz).strftime("%d.%m.%y-%H.%M.%S")
-                new_file_name = f"{current_date}:{player_names[0]}:{player_names[1]}.mat"
-                new_file_path = os.path.join(files_dir, new_file_name)
-                # Rename file
-                try:
-                    os.rename(file_path, new_file_path)
-                except Exception as e:
-                    logger.error(f"Failed to rename file {file_path} to {new_file_path}: {e}")
-                    await waiting_manager.stop()
-                    await message.answer("Ошибка при переименовании файла. Попробуйте снова.")
-                    return
-
-                try:
-                    asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
-                except Exception as e:
-                    logger.error(f"Error saving file to Yandex Disk: {e}")
-
-                logger.info(f"Processing file for user {user_info.player_username}, players: {player_names}")
-                if user_info.player_username and user_info.player_username in player_names:
-                    selected_player = user_info.player_username
-                    game_id = f"auto_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-                    player_data = {
-                        "user_id": message.from_user.id,
-                        "player_name": selected_player,
-                        "file_name": new_file_name,
-                        "file_path": new_file_path,
-                        "game_id": game_id,
-                        **get_analysis_data(analysis_data, selected_player),
-                    }
-
-                    dao = DetailedAnalysisDAO(session_without_commit)
-                    await dao.add(SDetailedAnalysis(**player_data))
-                    user_dao = UserDAO(session_without_commit)
-                    formated_data = get_analysis_data(analysis_data)
-                    if duration is None or duration == 0:
-                        await user_dao.decrease_analiz_balance(
-                            user_info.id, service_type=ServiceType.MONEYGAME
-                        )
-                    else:
-                        await user_dao.decrease_analiz_balance(
-                            user_info.id, service_type=ServiceType.MATCH
-                        )
-                    formatted_analysis = format_detailed_analysis(
-                        formated_data, i18n
-                    )
-                    player_names = list(formated_data)
-                    player1_name, player2_name = player_names
-                    p1 = formated_data.get(player1_name)
-                    p2 = formated_data.get(player2_name)
-                    current_date = datetime.now().strftime("%d.%m.%Y_%H.%M")
-                    players_str = f'{player1_name} ({abs(p1['snowie_error_rate'])}) - {player2_name} ({abs(p2['snowie_error_rate'])})'
-                    file_name_to_pdf = f"{players_str}_{current_date}.pdf".replace(":",".").replace(" ","")
-                    await redis_client.set(
-                        f"file_name:{user_info.id}", file_name_to_pdf, expire=3600
-                    )
-                    if duration is not None and duration != 0:
-                        try:
-                            # Генерация PDF
-                            html_text = format_detailed_analysis(formated_data, i18n)
-                            pdf_bytes = html_to_pdf_bytes(html_text)
-                            
-                            if not pdf_bytes:
-                                logger.error("Ошибка при генерации PDF.")
-                                await message.bot.send_message(
-                                    settings.CHAT_GROUP_ID,
-                                    f"<b>Автоматический анализ игры от {current_date}</b>\n\n {players_str}) Матч до {duration}\n\n",
-                                    parse_mode="HTML",
-                                )
-                                return
-
-                            # Отправка сообщения с PDF
-                            await message.bot.send_document(
-                                chat_id=settings.CHAT_GROUP_ID,
-                                document=BufferedInputFile(pdf_bytes, filename=file_name_to_pdf),
-                                caption=f"<b>Автоматический анализ игры от {current_date}</b>\n\n {players_str}) Матч до {duration}\n\n",
-                                parse_mode="HTML",
-                            )
-                        except Exception as e:
-                            logger.error(f"Ошибка при отправке сообщения с PDF в группу: {e}")
-                    await waiting_manager.stop()
-                    await message.answer(
-                        f"{formatted_analysis}\n\n",
-                        parse_mode="HTML",
-                        reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
-                    )
-                    await message.answer(
-                        i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'solo')
-                    )
-                    await session_without_commit.commit()
-
-                else:
+                if isinstance(result, tuple) and len(result) == 3:
+                    # Multiple players
+                    analysis_data, new_file_path, player_names = result
                     await state.update_data(
                         analysis_data=analysis_data,
-                        file_name=new_file_name,
+                        file_name=os.path.basename(new_file_path),
                         file_path=new_file_path,
                         player_names=player_names,
                     )
@@ -310,6 +319,19 @@ async def handle_mat_file(
                         i18n.auto.analyze.complete(),
                         reply_markup=keyboard.as_markup(),
                     )
+                else:
+                    # Single player
+                    formatted_analysis, new_file_path = result
+                    await waiting_manager.stop()
+                    await message.answer(
+                        f"{formatted_analysis}\n\n",
+                        parse_mode="HTML",
+                        reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
+                    )
+                    await message.answer(
+                        i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'solo')
+                    )
+                    await session_without_commit.commit()
 
             except Exception as e:
                 await session_without_commit.rollback()

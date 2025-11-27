@@ -29,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.hint_viewer import (
+    extract_match_length,
     process_mat_file,
     random_filename,
     extract_player_names,
@@ -38,7 +39,10 @@ from bot.common.func.func import (
     format_detailed_analysis,
     get_analysis_data as get_data,
 )
+from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
+from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.db.redis import redis_client
+from bot.routers.autoanalize.autoanaliz import analyze_file_by_path
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.general_states import GeneralStates
@@ -49,7 +53,7 @@ from bot.config import translator_hub
 from typing import TYPE_CHECKING
 
 from bot.db.dao import UserDAO
-from bot.db.models import User
+from bot.db.models import ServiceType, User
 from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
@@ -337,41 +341,56 @@ async def handle_show_stats(
 ):
     game_id = callback.data.split(":")[1]
     mat_path = await redis_client.get(f"mat_path:{game_id}")
+
     if not mat_path:
         await callback.answer("Файл не найден.")
         return
 
     try:
-        # Анализируем файл
-        loop = asyncio.get_running_loop()
-        duration, analysis_result = await loop.run_in_executor(
-            None, analyze_mat_file, mat_path, "mat"
-        )
-        analysis_data = await loop.run_in_executor(None, json_module.loads, analysis_result)
-
-        # Получаем имена игроков
-        player_names = list(analysis_data["chequerplay"].keys())
-        if len(player_names) != 2:
-            await callback.answer("Ошибка в данных анализа.")
+        with open(mat_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        match_length = extract_match_length(content)
+        dao = UserDAO(session_without_commit)
+        if match_length == 0:
+            balance = await dao.get_total_analiz_balance(
+                user_info.id, service_type=ServiceType.MONEYGAME
+            )
+            analysis_type = "moneygame"
+        else:
+            balance = await dao.get_total_analiz_balance(
+                user_info.id, service_type=ServiceType.MATCH
+            )
+            analysis_type = "match"
+        if balance == 0:
+            await callback.message.answer(
+                i18n.auto.analyze.not_ebought_balance(),
+                reply_markup=get_activate_promo_keyboard(i18n),
+            )
             return
 
-        # Выбираем игрока
-        selected_player = user_info.player_username if user_info.player_username in player_names else player_names[0]
+        await callback.answer()
 
-        # Форматируем анализ
-        formatted_analysis = format_detailed_analysis(
-            get_data(analysis_data), i18n
+        result = await analyze_file_by_path(
+            mat_path, "mat", user_info, session_without_commit, i18n, callback, analysis_type, forward_message=False
         )
 
-        await callback.message.answer(
-            f"{formatted_analysis}\n\n",
-            parse_mode="HTML",
-            reply_markup=MainKeyboard.build(user_info.role, i18n),
-        )
+        if isinstance(result, tuple) and len(result) == 3:
+            # Multiple players
+            analysis_data, new_file_path, player_names = result
+            # Handle multiple players if needed, but for simplicity, assume single
+            await callback.message.answer("Статистика готова, но требуется выбор игрока.")
+        else:
+            # Single player
+            formatted_analysis, new_file_path = result
+            await callback.message.answer(
+                f"{formatted_analysis}\n\n",
+                parse_mode="HTML",
+                reply_markup=MainKeyboard.build(user_info.role, i18n),
+            )
 
         # Удаляем файл
-        if os.path.exists(mat_path):
-            os.remove(mat_path)
+        if os.path.exists(new_file_path):
+            os.remove(new_file_path)
         await redis_client.delete(f"mat_path:{game_id}")
 
     except Exception as e:
