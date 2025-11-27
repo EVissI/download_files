@@ -1156,9 +1156,7 @@
                 console.log(nextGame)
                 let finalRedScore, finalBlackScore;
                 if (nextGame) {
-                    // Берем счет из следующей игры
-                    const nextGameInfo = nextGame.game_info || {};
-                    const nextScores = nextGameInfo.scores || {};
+                    const nextScores = nextGame.scores || {};
                     finalRedScore = nextScores.Red || 0;
                     finalBlackScore = nextScores.Black || 0;
                 } else {
