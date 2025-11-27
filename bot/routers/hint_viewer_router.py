@@ -36,7 +36,7 @@ from bot.common.func.hint_viewer import (
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.common.func.func import (
     format_detailed_analysis,
-    get_analysis_data,
+    get_analysis_data as get_data,
 )
 from bot.db.redis import redis_client
 from bot.common.func.waiting_message import WaitingMessageManager
@@ -360,7 +360,7 @@ async def handle_show_stats(
 
         # Форматируем анализ
         formatted_analysis = format_detailed_analysis(
-            get_analysis_data(analysis_data), i18n
+            await get_data(analysis_data), i18n
         )
 
         await callback.message.answer(
