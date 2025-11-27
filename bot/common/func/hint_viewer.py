@@ -299,6 +299,7 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
                         tokens.append(
                             {"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i}
                         )
+                    score_flag = not score_flag
             # Добавляем ходы, если есть
             if moves:
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
