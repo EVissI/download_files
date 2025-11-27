@@ -130,7 +130,6 @@ async def handle_batch_stop(
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
         await state.clear()
-        await state.set_state(GeneralStates.admin_panel)
         return
     await message.answer(
             "Начинаю обработку",
@@ -327,16 +326,14 @@ async def hint_viewer_menu(
             await waiting_manager.stop()
             # Файл удаляется в handler show_stats или остается
             await state.clear()
-            await state.set_state(GeneralStates.admin_panel)
 
     except Exception:
         logger.exception("Ошибка при обработке hint viewer")
         await message.reply("Ошибка при обработке файла.")
         await state.clear()
-        await state.set_state(GeneralStates.admin_panel)
 
 
-@hint_viewer_router.callback_query(F.data.startswith("show_stats:"), UserInfo(), StateFilter(HintViewerStates.waiting_file))
+@hint_viewer_router.callback_query(F.data.startswith("show_stats:"), UserInfo())
 async def handle_show_stats(
     callback: CallbackQuery,
     state: FSMContext,
@@ -383,7 +380,6 @@ async def handle_show_stats(
         if isinstance(result, tuple) and len(result) == 3:
             # Multiple players
             analysis_data, new_file_path, player_names = result
-            await state.set_state(HintViewerStates.stats_player_selection)
             await state.update_data(
                 analysis_data=analysis_data,
                 file_name=os.path.basename(new_file_path),
@@ -419,7 +415,7 @@ async def handle_show_stats(
         await callback.answer("Ошибка при обработке статистики.")
 
 
-@hint_viewer_router.callback_query(F.data.startswith("hint_player:"), StateFilter(HintViewerStates.stats_player_selection), UserInfo())
+@hint_viewer_router.callback_query(F.data.startswith("hint_player:"), UserInfo())
 async def handle_hint_player_selection(
     callback: CallbackQuery,
     state: FSMContext,
@@ -482,7 +478,6 @@ async def handle_hint_player_selection(
             os.remove(file_path)
         await redis_client.delete(f"mat_path:{game_id}")
         await state.clear()
-        await state.set_state(GeneralStates.admin_panel)
 
     except Exception as e:
         await session_without_commit.rollback()
@@ -700,7 +695,6 @@ async def process_batch_hint_files(
     finally:
         await waiting_manager.stop()
         await state.clear()
-        await state.set_state(GeneralStates.admin_panel)
 
 
 async def process_single_hint_file(mat_path: str, user_id: str, session_without_commit):
