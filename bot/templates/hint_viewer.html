@@ -1151,12 +1151,23 @@
             }else if (item.action === 'take') {
                 info = `Take`;
             } else if (item.action === 'win') {
-                let finalRedScore = gameRedScore;
-                let finalBlackScore = gameBlackScore;
-                if (item.player_name === redPlayer) {
-                    finalRedScore += item.points;
-                } else if (item.player_name === blackPlayer) {
-                    finalBlackScore += item.points;
+                // Найти следующую игру для счета
+                const nextGame = availableGames.find(g => g.game_number > currentGameNum);
+                let finalRedScore, finalBlackScore;
+                if (nextGame) {
+                    // Берем счет из следующей игры
+                    const nextScores = nextGame.scores || {};
+                    finalRedScore = nextScores.Red || 0;
+                    finalBlackScore = nextScores.Black || 0;
+                } else {
+                    // Если следующей игры нет, используем текущую логику
+                    finalRedScore = gameRedScore;
+                    finalBlackScore = gameBlackScore;
+                    if (item.player_name === redPlayer) {
+                        finalRedScore += item.points;
+                    } else if (item.player_name === blackPlayer) {
+                        finalBlackScore += item.points;
+                    }
                 }
                 const larger = Math.max(finalRedScore, finalBlackScore);
                 const smaller = Math.min(finalRedScore, finalBlackScore);
