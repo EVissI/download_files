@@ -4,6 +4,8 @@ from typing import Optional
 from fluentogram import TranslatorRunner
 from typing import TYPE_CHECKING
 
+from loguru import logger
+
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
@@ -126,8 +128,8 @@ class ProgressBarMessageManager:
                 
                 try:
                     await self.message.edit_text(new_text)
-                except Exception:
-                    # Игнорируем ошибки редактирования
+                except Exception as e:
+                    logger.error(f"Ошибка при обновлении прогресс-бара {e}")
                     pass
                 
                 # Если прогресс завершен, выходим из цикла
