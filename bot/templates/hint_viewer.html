@@ -576,7 +576,7 @@
                         gameRedScore = gameScores.Red || 0;
                         gameBlackScore = gameScores.Black || 0;
                         if (matchLength === 0) {
-                            playersInfoDiv.innerHTML = "Манигейм. Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
+                            playersInfoDiv.innerHTML = "Манигейм<br> Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
                         } else {
                             playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                         }
