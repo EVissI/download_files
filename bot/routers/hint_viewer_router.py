@@ -512,7 +512,17 @@ def take_json_info(game_id: str, game_num: str = None):
             raise FileNotFoundError(f"JSON файл для {game_id} не найден")
 
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+
+        # Добавить scores в games из соответствующих файлов
+        for game in data.get("games", []):
+            game_file = game.get("result_file")
+            if game_file and os.path.exists(game_file):
+                with open(game_file, "r", encoding="utf-8") as gf:
+                    game_data = json.load(gf)
+                    game["scores"] = game_data.get("game_info", {}).get("scores", {})
+
+        return data
 
 
 @hint_viewer_api_router.get("/hint-viewer")

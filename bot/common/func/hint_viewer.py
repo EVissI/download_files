@@ -1166,8 +1166,7 @@ def process_mat_file(input_file, output_file, chat_id):
                     result_file = future.result()
                     game_results.append({
                         'game_number': game_number,
-                        'result_file': result_file,
-                        'scores': {'Red': red_score, 'Black': black_score}
+                        'result_file': result_file
                     })
                     logger.info(f"Game {game_number} processing completed")
                 except Exception as e:
