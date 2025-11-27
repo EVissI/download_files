@@ -305,7 +305,7 @@ async def hint_viewer_menu(
                         ]
                     )
                     await message.answer(
-                        f"Анализ завершен!\n {red_player}-{black_player}\nНажмите кнопку ниже для просмотра интерактивной визуализации первой игры:",
+                        f"Анализ завершен!\n{red_player}-{black_player}\nНажмите кнопку ниже для просмотра интерактивной визуализации первой игры:",
                         reply_markup=keyboard,
                     )
                     await UserDAO(session_without_commit).decrease_analiz_balance(
@@ -360,7 +360,7 @@ async def handle_show_stats(
 
         # Форматируем анализ
         formatted_analysis = format_detailed_analysis(
-            await get_data(analysis_data), i18n
+            get_data(analysis_data), i18n
         )
 
         await callback.message.answer(
