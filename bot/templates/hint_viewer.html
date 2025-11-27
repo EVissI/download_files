@@ -1153,12 +1153,35 @@
             } else if (item.action === 'win') {
                 // Найти следующую игру для счета
                 const nextGame = availableGames.find(g => g.game_number > currentGameNum);
-                console.log(nextGame)
                 let finalRedScore, finalBlackScore;
                 if (nextGame) {
-                    const nextScores = nextGame.scores || {};
-                    finalRedScore = nextScores.Red || 0;
-                    finalBlackScore = nextScores.Black || 0;
+                    // Загрузить scores из файла следующей игры
+                    fetch(`/api/analysis/${gameId}?game_num=${nextGame.game_number}`)
+                        .then(response => response.json())
+                        .then(json => {
+                            const nextScores = json.game_info.scores || {};
+                            finalRedScore = nextScores.Red || 0;
+                            finalBlackScore = nextScores.Black || 0;
+                            const larger = Math.max(finalRedScore, finalBlackScore);
+                            const smaller = Math.min(finalRedScore, finalBlackScore);
+                            const winInfo = `${item.player_name} победил. Счёт ${larger} - ${smaller}`;
+                            document.getElementById('move-info').innerHTML = winInfo;
+                        })
+                        .catch(error => {
+                            console.error('Error loading next game scores:', error);
+                            // Fallback to current logic
+                            finalRedScore = gameRedScore;
+                            finalBlackScore = gameBlackScore;
+                            if (item.player_name === redPlayer) {
+                                finalRedScore += item.points;
+                            } else if (item.player_name === blackPlayer) {
+                                finalBlackScore += item.points;
+                            }
+                            const larger = Math.max(finalRedScore, finalBlackScore);
+                            const smaller = Math.min(finalRedScore, finalBlackScore);
+                            info = `${item.player_name} победил. Счёт ${larger} - ${smaller}`;
+                        });
+                    return; // Exit early, info will be set asynchronously
                 } else {
                     // Если следующей игры нет, используем текущую логику
                     finalRedScore = gameRedScore;
