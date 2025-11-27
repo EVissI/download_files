@@ -107,7 +107,7 @@ class ProgressBarMessageManager:
 
     async def _update_loop(self):
         """Основной цикл обновления прогресс-бара."""
-        update_interval = 2 # Обновляем каждые 0.5 секунды
+        update_interval = 0.5 # Обновляем каждые 0.5 секунды
         
         while self.active:
             try:
