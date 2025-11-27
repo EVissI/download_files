@@ -423,7 +423,7 @@ async def handle_hint_player_selection(
     state: FSMContext,
     session_without_commit: AsyncSession,
     user_info: User,
-    i18n: TranslatorRunner,
+    i18n
 ):
     try:
         data = await state.get_data()
