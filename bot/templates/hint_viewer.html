@@ -1,6 +1,5 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -231,6 +230,10 @@
             margin: 5px 0;
         }
 
+        .board-container {
+            position: relative;
+        }
+
         .board-footer {
             position: relative;
             margin-top: -20px;
@@ -246,7 +249,7 @@
         .pips-below-board {
             position: absolute;
             right: 0;
-            top: 0;
+            top: 780px;
             margin: 0;
         }
 
@@ -432,9 +435,11 @@
         <h1>Backgammon Game Analysis</h1>
         <div id="players-info"></div>
         <div id="top-bar"></div>
-        <canvas id="boardCanvas" width="800" height="800"></canvas>
-        <div class="board-footer">
-            <div id="move-info" class="move-info"></div>
+        <div class="board-container">
+            <canvas id="boardCanvas" width="800" height="800"></canvas>
+            <div class="board-footer">
+                <div id="move-info" class="move-info"></div>
+            </div>
             <div id="red-pips" class="pips-below-board">0</div>
         </div>
 
