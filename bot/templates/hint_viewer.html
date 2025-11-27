@@ -382,6 +382,30 @@
             width: fit-content;
         }
 
+        .pips-above-board-inverted {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-below-board-inverted {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
         .pips-below-board {
             background-color: #ffffff;
             color: #000000;
@@ -988,22 +1012,27 @@
             const redPips = calculatePips(redPositions, 'red', invertColors);
             const blackPips = calculatePips(blackPositions, 'black', invertColors);
 
-            document.getElementById('black-pips').innerText = `${blackPips}`;
-            document.getElementById('red-pips').innerText = `${redPips}`;
             if (invertColors) {
+                document.getElementById('black-pips').innerText = `${redPips}`;
+                document.getElementById('red-pips').innerText = `${blackPips}`;
+                document.getElementById('black-pips').className = 'pips-above-board-inverted';
+                document.getElementById('red-pips').className = 'pips-below-board-inverted';
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(650, 800, 150, 50);
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 20px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText(`${blackPips}`, 725, -20);
+                ctx.fillText(`${redPips}`, 725, -20);
 
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(650, -50, 150, 50);
                 ctx.fillStyle = '#000000';
-                ctx.fillText(`${redPips}`, 725, 830);
-            }
-            if (!invertColors) {
+                ctx.fillText(`${blackPips}`, 725, 830);
+            } else {
+                document.getElementById('black-pips').innerText = `${blackPips}`;
+                document.getElementById('red-pips').innerText = `${redPips}`;
+                document.getElementById('black-pips').className = 'pips-above-board';
+                document.getElementById('red-pips').className = 'pips-below-board';
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(650, -50, 150, 50);
                 ctx.fillStyle = '#ffffff';
