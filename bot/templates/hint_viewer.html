@@ -1153,6 +1153,7 @@
             } else if (item.action === 'win') {
                 // Найти следующую игру для счета
                 const nextGame = availableGames.find(g => g.game_number > currentGameNum);
+                console.log(nextGame)
                 let finalRedScore, finalBlackScore;
                 if (nextGame) {
                     // Берем счет из следующей игры
