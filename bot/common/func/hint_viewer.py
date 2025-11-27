@@ -605,7 +605,7 @@ class HintOutputParser:
                 equities.append({
                     "idx": int(match.group(1)),
                     "action": match.group(2).strip(),
-                    "equity": float(match.group(3)),
+                    "eq": float(match.group(3)),
                 })
             
             if "Proper cube action:" in line:
@@ -651,8 +651,8 @@ class HintOutputParser:
                     "type": "move",
                     "idx": idx,
                     "move": move,
-                    "equity": equity,
-                    "probabilities": probs,
+                    "eq": equity,
+                    "probs": probs[:6],
                 })
                 i = j
             else:
