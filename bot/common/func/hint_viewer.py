@@ -31,7 +31,6 @@ def parse_backgammon_mat(content):
             break
 
     moves_list = []
-    previous_player_moved = None
 
     for line in lines[start_idx:]:
         line = line.strip()
@@ -44,6 +43,7 @@ def parse_backgammon_mat(content):
             points = int(win_match.group(1))
             # Определяем победителя по количеству ведущих пробелов
             leading_spaces = len(line) - len(line.strip())
+            logger.info(line)
             logger.info(f'ledding space: {leading_spaces}')
             winner = "Red" if leading_spaces > 5 else "Black"
             moves_list.append(
@@ -75,7 +75,6 @@ def parse_backgammon_mat(content):
                     red_move = parse_side(red_part, "Black") 
                     if red_move:
                         moves_list.append(red_move)
-                        previous_player_moved = "Black"
                 else:
                     double_player = "Black"
 
@@ -299,7 +298,7 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
                         tokens.append(
                             {"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i}
                         )
-                    score_flag = not score_flag
+                    score_flag = True
             # Добавляем ходы, если есть
             if moves:
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
