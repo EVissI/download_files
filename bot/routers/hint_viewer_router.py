@@ -247,24 +247,42 @@ async def hint_viewer_menu(
                 # Кнопка для открытия в мини-приложении (если есть хотя бы одна игра)
                 game_files = [f for f in os.listdir(games_dir) if f.endswith(".json")]
                 if game_files:
-                    mini_app_url_1 = (
+                    mini_app_url_all = (
                         f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
                     )
-                    mini_app_url_2 = (
+                    mini_app_url_both_errors = (
                         f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+                    )
+                    mini_app_url_red_errors = (
+                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+                    )
+                    mini_app_url_black_errors = (
+                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
                     )
                     keyboard = InlineKeyboardMarkup(
                         inline_keyboard=[
                             [
                                 InlineKeyboardButton(
-                                    text="Полная интерактиваная визуализация",
-                                    web_app=WebAppInfo(url=mini_app_url_1),
+                                    text="Просмотр всех ходов",
+                                    web_app=WebAppInfo(url=mini_app_url_all),
                                 )
                             ],
                             [
                                 InlineKeyboardButton(
-                                    text="Только ошибки",
-                                    web_app=WebAppInfo(url=mini_app_url_2),
+                                    text="Только ошибки (оба игрока)",
+                                    web_app=WebAppInfo(url=mini_app_url_both_errors),
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    text=f"Только ошибки ({red_player})",
+                                    web_app=WebAppInfo(url=mini_app_url_red_errors),
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    text=f"Только ошибки ({black_player})",
+                                    web_app=WebAppInfo(url=mini_app_url_black_errors),
                                 )
                             ],
                         ]
@@ -437,30 +455,48 @@ async def process_batch_hint_files(
                     f"Ошибка при обработке файла {os.path.basename(file_paths[idx])}: {result}"
                 )
             else:
-                game_id, has_games = result
+                game_id, has_games, red_player, black_player = result
                 mat_path = file_paths[idx]
                 fname = os.path.basename(mat_path)
 
                 # Отправляем сообщение с ссылкой на веб-приложение
                 if has_games:
-                    mini_app_url_1 = (
+                    mini_app_url_all = (
                         f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
                     )
-                    mini_app_url_2 = (
+                    mini_app_url_both_errors = (
                         f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+                    )
+                    mini_app_url_red_errors = (
+                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+                    )
+                    mini_app_url_black_errors = (
+                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
                     )
                     keyboard = InlineKeyboardMarkup(
                         inline_keyboard=[
                             [
                                 InlineKeyboardButton(
-                                    text="Полная интерактиваная визуализация",
-                                    web_app=WebAppInfo(url=mini_app_url_1),
+                                    text="Просмотр всех ходов",
+                                    web_app=WebAppInfo(url=mini_app_url_all),
                                 )
                             ],
                             [
                                 InlineKeyboardButton(
-                                    text="Только ошибки",
-                                    web_app=WebAppInfo(url=mini_app_url_2),
+                                    text="Только ошибки (оба игрока)",
+                                    web_app=WebAppInfo(url=mini_app_url_both_errors),
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    text=f"Только ошибки ({red_player})",
+                                    web_app=WebAppInfo(url=mini_app_url_red_errors),
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    text=f"Только ошибки ({black_player})",
+                                    web_app=WebAppInfo(url=mini_app_url_black_errors),
                                 )
                             ],
                         ]
@@ -487,11 +523,16 @@ async def process_batch_hint_files(
 
 
 async def process_single_hint_file(mat_path: str, user_id: str, session_without_commit):
-    """Обрабатывает один файл и возвращает game_id и флаг наличия игр"""
+    """Обрабатывает один файл и возвращает game_id, флаг наличия игр и имена игроков"""
     game_id = random_filename(ext="")
     json_path = f"files/{game_id}.json"
 
     try:
+        # Извлекаем имена игроков перед обработкой
+        with open(mat_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        red_player, black_player = extract_player_names(content)
+
         await asyncio.to_thread(process_mat_file, mat_path, json_path, user_id)
 
         # Проверяем наличие игр
@@ -502,7 +543,7 @@ async def process_single_hint_file(mat_path: str, user_id: str, session_without_
         await UserDAO(session_without_commit).decrease_analiz_balance(
             user_id=user_id, service_type="HINTS"
         )
-        return game_id, has_games
+        return game_id, has_games, red_player, black_player
     except Exception as e:
         logger.error(f"Error processing {mat_path}: {e}")
         raise
