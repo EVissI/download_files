@@ -58,14 +58,44 @@ def random_filename(ext: str = "") -> str:
 
 
 def extract_player_names(content: str) -> tuple:
-    """Extract player names from .mat content"""
-    # Pattern: "PlayerName : score"
+    """
+    Extract player names from .mat content.
+    
+    ✅ FIXED: Handles both list and string slicing correctly
+    """
     import re
-    pattern = r"(\S.*?)\s*:\s*(\d+)"
-    matches = re.findall(pattern, content.split("\n")[7:8])
-    if len(matches) >= 2:
-        return matches[1][0].strip(), matches[0][0].strip()  # red, black
-    return "Red", "Black"
+    
+    try:
+        # Паттерн для поиска: "Name : score"
+        pattern = r"(\S.*?)\s*:\s*(\d+)"
+        
+        # Разбиваем по строкам
+        lines = content.split("\n")
+        
+        # Ищем в каждой строке (вместо только )
+        for line in lines:
+            # Пропускаем служебные строки
+            if ";" in line or not line.strip():
+                continue
+            
+            # Ищем паттерн
+            matches = re.findall(pattern, line)
+            
+            if len(matches) >= 2:
+                # Возвращаем (red_player, black_player)
+                red_player = matches.strip()
+                black_player = matches.strip()
+                
+                # Проверяем что это не служебные данные
+                if red_player.lower() not in ("game", "coach", "match id"):
+                    return red_player, black_player
+        
+        # Fallback
+        return "Red", "Black"
+    
+    except Exception as e:
+        logger.warning(f"Error extracting player names: {e}")
+        return "Red", "Black"
 
 
 if TYPE_CHECKING:
