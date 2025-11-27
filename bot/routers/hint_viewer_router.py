@@ -40,6 +40,7 @@ from bot.common.func.func import (
     get_analysis_data as get_data,
 )
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
+from bot.common.kbds.inline.autoanalize import get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.db.redis import redis_client
 from bot.routers.autoanalize.autoanaliz import analyze_file_by_path
@@ -52,9 +53,11 @@ from bot.config import settings
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 
-from bot.db.dao import UserDAO
+from bot.db.dao import UserDAO, DetailedAnalysisDAO
 from bot.db.models import ServiceType, User
+from bot.db.schemas import SDetailedAnalysis
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
 
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -72,6 +75,7 @@ class HintViewerStates(StatesGroup):
     choose_type = State()
     waiting_file = State()
     uploading_sequential = State()
+    stats_player_selection = State()
 
 
 @hint_viewer_router.message(
@@ -332,9 +336,10 @@ async def hint_viewer_menu(
         await state.set_state(GeneralStates.admin_panel)
 
 
-@hint_viewer_router.callback_query(F.data.startswith("show_stats:"), UserInfo())
+@hint_viewer_router.callback_query(F.data.startswith("show_stats:"), UserInfo(), StateFilter(HintViewerStates.waiting_file))
 async def handle_show_stats(
     callback: CallbackQuery,
+    state: FSMContext,
     user_info: User,
     i18n,
     session_without_commit: AsyncSession,
@@ -377,8 +382,23 @@ async def handle_show_stats(
         if isinstance(result, tuple) and len(result) == 3:
             # Multiple players
             analysis_data, new_file_path, player_names = result
-            # Handle multiple players if needed, but for simplicity, assume single
-            await callback.message.answer("Статистика готова, но требуется выбор игрока.")
+            await state.set_state(HintViewerStates.stats_player_selection)
+            await state.update_data(
+                analysis_data=analysis_data,
+                file_name=os.path.basename(new_file_path),
+                file_path=new_file_path,
+                player_names=player_names,
+                game_id=game_id,
+            )
+
+            keyboard = InlineKeyboardBuilder()
+            for player in player_names:
+                keyboard.button(text=player, callback_data=f"hint_player:{player}")
+            keyboard.adjust(1)
+            await callback.message.answer(
+                i18n.auto.analyze.complete(),
+                reply_markup=keyboard.as_markup(),
+            )
         else:
             # Single player
             formatted_analysis, new_file_path = result
@@ -387,15 +407,85 @@ async def handle_show_stats(
                 parse_mode="HTML",
                 reply_markup=MainKeyboard.build(user_info.role, i18n),
             )
-
-        # Удаляем файл
-        if os.path.exists(new_file_path):
-            os.remove(new_file_path)
-        await redis_client.delete(f"mat_path:{game_id}")
+            # Удаляем файл
+            if os.path.exists(new_file_path):
+                os.remove(new_file_path)
+            await redis_client.delete(f"mat_path:{game_id}")
 
     except Exception as e:
         logger.error(f"Ошибка при показе статистики: {e}")
         await callback.answer("Ошибка при обработке статистики.")
+
+
+@hint_viewer_router.callback_query(F.data.startswith("hint_player:"), StateFilter(HintViewerStates.stats_player_selection), UserInfo())
+async def handle_hint_player_selection(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session_without_commit: AsyncSession,
+    user_info: User,
+    i18n: TranslatorRunner,
+):
+    try:
+        data = await state.get_data()
+        analysis_data = data["analysis_data"]
+        file_name = data["file_name"]
+        file_path = data["file_path"]
+        game_id = data["game_id"]
+
+        selected_player = callback.data.split(":")[1]
+        user_dao = UserDAO(session_without_commit)
+        if (
+            not user_info.player_username
+            or user_info.player_username != selected_player
+        ):
+            await user_dao.update(user_info.id, {"player_username": selected_player})
+            logger.info(
+                f"Updated player_username for user {user_info.id} to {selected_player}"
+            )
+
+        game_id_new = (
+            f"auto_{user_info.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
+
+        dao = DetailedAnalysisDAO(session_without_commit)
+
+        player_data = {
+            "user_id": user_info.id,
+            "player_name": selected_player,
+            "file_name": file_name,
+            "file_path": file_path,
+            "game_id": game_id_new,
+            **get_data(analysis_data, selected_player),
+        }
+
+        await dao.add(SDetailedAnalysis(**player_data))
+
+        formatted_analysis = format_detailed_analysis(
+            get_data(analysis_data), i18n
+        )
+
+        await callback.message.delete()
+        await callback.message.answer(
+            f"{formatted_analysis}\n\n",
+            parse_mode="HTML",
+            reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
+        )
+        await callback.message.answer(
+            i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'solo')
+        )
+        await session_without_commit.commit()
+
+        # Удаляем файл
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        await redis_client.delete(f"mat_path:{game_id}")
+        await state.clear()
+        await state.set_state(GeneralStates.admin_panel)
+
+    except Exception as e:
+        await session_without_commit.rollback()
+        logger.error(f"Ошибка при сохранении выбора игрока: {e}")
+        await callback.message.answer(i18n.auto.analyze.error.save())
 
 
 # --- FastAPI часть ---
