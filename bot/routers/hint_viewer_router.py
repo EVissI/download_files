@@ -609,18 +609,20 @@ async def process_batch_hint_files(
     user_info: User,
     session_without_commit,
 ):
-    waiting_manager = WaitingMessageManager(chat_id, message.bot, i18n)
-    await waiting_manager.start()
-
     try:
         # Обрабатываем все файлы параллельно
         tasks = []
+        max_time = 0
         for mat_path in file_paths:
+            estimated_time = estimate_processing_time(mat_path)
+            if estimated_time > max_time:
+                max_time = estimated_time
             task = asyncio.create_task(
                 process_single_hint_file(mat_path, chat_id, session_without_commit)
             )
             tasks.append(task)
-
+        waiting_manager = ProgressBarMessageManager(chat_id, message.bot, max_time)
+        await waiting_manager.start()
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Отправляем сообщения для каждого успешно обработанного файла

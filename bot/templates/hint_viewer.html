@@ -113,6 +113,11 @@
             word-spacing: 16px;
         }
 
+        td:nth-child(2),
+        td:nth-child(3) {
+            text-align: center;
+        }
+
         th {
             background-color: #444;
             font-weight: bold;
@@ -1275,9 +1280,9 @@
             }
 
             // Generate move hints table
-            let moveTableHtml = '<table><tr><th>Ход</th><th>Вероятности, %</th><th>Эквити</th></tr>';
+            let moveTableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr>';
             if (item.action === 'win') {
-                moveTableHtml += `<tr class="hint-best"><td>Победа ${item.player_name} (${item.points} очков)</td><td>-</td><td>-</td></tr>`;
+                moveTableHtml += `<tr class="hint-best"><td>Победа ${item.player_name} (${item.points} очков)</td><td>-</td><td>-</td><td>-</td></tr>`;
             } else {
                 (item.hints || []).forEach((hint, index) => {
                     if (hint.probs && hint.probs.length >= 2) {
@@ -1295,7 +1300,7 @@
                                 rowClass = 'hint-poor';
                             }
                         }
-                        moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1} ${prob2}</td><td>${eq}</td></tr>`;
+                        moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td></tr>`;
                     }
                 });
             }
