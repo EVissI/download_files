@@ -280,7 +280,7 @@ def json_to_gnubg_commands(
     match_length=0,
     black_score=0,
     red_score=0,
-    game_number=1,
+
     enable_crawford=False,
 ):
     """
@@ -1036,7 +1036,6 @@ def process_single_game(game_data, output_dir, game_number):
         game_data["match_length"],
         game_data["black_score"],
         game_data["red_score"],
-        game_number,
         game_data["enable_crawford"],
     )
     logger.info(f"Game {game_number} tokens: {[t['cmd'] for t in gnubg_tokens]}")
