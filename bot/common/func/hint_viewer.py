@@ -290,6 +290,8 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
             )
             if not score_flag:
                 if black_score > 0 or red_score > 0:
+                    if black_score == match_length - 1 or red_score == match_length - 1:
+                        tokens.append({"cmd": f"set crawford on", "type": "cmd", "target": None})
                     tokens.append({"cmd": f"set score {black_score} {red_score}", "type": "cmd", "target": None})
                     tokens.append({"cmd": f"y", "type": "cmd", "target": None})
                     if skip_flag:
@@ -298,6 +300,7 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
                             {"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i}
                         )
                     score_flag = True
+                
             # Добавляем ходы, если есть
             if moves:
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
