@@ -645,6 +645,19 @@
                             if (current >= data.length) {
                                 current = 0; // fallback
                             }
+                            // Если нет видимых ходов, загрузить следующую игру
+                            if (current >= data.length || !data[current].is_visible) {
+                                const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
+                                if (currentIndex !== -1 && currentIndex < availableGames.length - 1) {
+                                    const nextGameNum = availableGames[currentIndex + 1].game_number;
+                                    loadGame(nextGameNum);
+                                    return;
+                                } else {
+                                    infoDiv.innerHTML = '<div class="error">No games with visible moves.</div>';
+                                    dataLoaded = false;
+                                    return;
+                                }
+                            }
                             // Reset hints display
                             moveHintsTable.classList.remove('active');
                             cubeHintsTable.classList.remove('active');
