@@ -252,11 +252,9 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
 
 
     i = 0
-    score_flag = False
     skip_flag = False
     while i < len(data):
         action = data[i]
-        player = action.get("player")
         dice = action.get("dice")
         moves = action.get("moves", [])
         act = action.get("action")
@@ -288,18 +286,17 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
             tokens.append(
                 {"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i}
             )
-            if not score_flag:
-                if black_score > 0 or red_score > 0:
+            if black_score > 0 or red_score > 0:
+                if match_length > 0:
                     if black_score == match_length - 1 or red_score == match_length - 1:
                         tokens.append({"cmd": f"set crawford on", "type": "cmd", "target": None})
-                    tokens.append({"cmd": f"set score {black_score} {red_score}", "type": "cmd", "target": None})
-                    tokens.append({"cmd": f"y", "type": "cmd", "target": None})
-                    if skip_flag:
-                        tokens.append({"cmd": "roll", "type": "cmd", "target": i})
-                        tokens.append(
-                            {"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i}
-                        )
-                    score_flag = True
+                tokens.append({"cmd": f"set score {black_score} {red_score}", "type": "cmd", "target": None})
+                tokens.append({"cmd": f"y", "type": "cmd", "target": None})
+                if skip_flag:
+                    tokens.append({"cmd": "roll", "type": "cmd", "target": i})
+                    tokens.append(
+                        {"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i}
+                    )
                 
             # Добавляем ходы, если есть
             if moves:
