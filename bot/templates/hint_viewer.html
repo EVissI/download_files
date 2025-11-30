@@ -1341,9 +1341,23 @@
                     while (current >= 0 && !data[current].is_visible) {
                         current--;
                     }
-                    if (current >= 0) {
+                    if (current >= 0 && data[current].is_visible) {
                         render(current, invertColors);
                         updateButtons();
+                    } else {
+                        // No visible moves in this game, load previous
+                        if (currentIndex > 1) {
+                            const prevPrevGameNum = availableGames[currentIndex - 2].game_number;
+                            await loadGame(prevPrevGameNum);
+                            current = data.length - 1;
+                            while (current >= 0 && !data[current].is_visible) {
+                                current--;
+                            }
+                            if (current >= 0) {
+                                render(current, invertColors);
+                                updateButtons();
+                            }
+                        }
                     }
                 }
             }
