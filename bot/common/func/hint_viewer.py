@@ -252,15 +252,14 @@ def json_to_gnubg_commands(data, jacobi_rule=True, match_length=0, black_score=0
 
 
     i = 0
+    score_flag = False
+    skip_flag = False
     while i < len(data):
         action = data[i]
         player = action.get("player")
         dice = action.get("dice")
         moves = action.get("moves", [])
         act = action.get("action")
-        score_flag = False
-        skip_flag = False
-
 
         if act == "skip":
             skip_flag = True

@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -194,7 +195,10 @@
             padding: 5px;
         }
 
-        #prevBtn, #nextBtn, #invertBtn, #screenshotBtn {
+        #prevBtn,
+        #nextBtn,
+        #invertBtn,
+        #screenshotBtn {
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
@@ -207,11 +211,17 @@
         }
 
 
-        #prevBtn:hover, #nextBtn:hover, #invertBtn:hover, #screenshotBtn:hover {
+        #prevBtn:hover,
+        #nextBtn:hover,
+        #invertBtn:hover,
+        #screenshotBtn:hover {
             background-color: transparent;
         }
 
-        #prevBtn:disabled, #nextBtn:disabled, #invertBtn:disabled, #screenshotBtn:disabled {
+        #prevBtn:disabled,
+        #nextBtn:disabled,
+        #invertBtn:disabled,
+        #screenshotBtn:disabled {
             opacity: 0.5;
             background-color: transparent;
         }
@@ -370,6 +380,12 @@
             align-items: center;
         }
 
+        #gameSelect {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
         .pips-above-board {
             background-color: #000000;
             color: #ffffff;
@@ -430,7 +446,7 @@
         const error = urlParams.get('error') || '0';
 
         // Add cache-busting to CSS background images
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
             const invertBtn = document.getElementById('invertBtn');
@@ -1148,7 +1164,7 @@
             let prefix = (turn > 0 && data[turn - 1].action === 'double') ? '<strong>Take</strong>  <br>' : '';
             if (item.action === 'double') {
                 info = `Double (${item.cube})`;
-            }else if (item.action === 'take') {
+            } else if (item.action === 'take') {
                 info = `Take`;
             } else if (item.action === 'win') {
                 // Найти следующую игру для счета
@@ -1228,7 +1244,7 @@
                             rowClass = 'hint-best';
                         } else if (index === 1) {
                             rowClass = 'hint-good';
-                        } else if (index === 2){
+                        } else if (index === 2) {
                             rowClass = 'hint-poor';
                         }
                     }
@@ -1237,7 +1253,7 @@
                             rowClass = 'hint-best';
                         } else if (index === 1) {
                             rowClass = 'hint-good';
-                        } else if (index === 0){
+                        } else if (index === 0) {
                             rowClass = 'hint-poor';
                         }
                     }
@@ -1246,7 +1262,7 @@
                             rowClass = 'hint-best';
                         } else if (index === 1) {
                             rowClass = 'hint-good';
-                        } else if (index === 2){
+                        } else if (index === 2) {
                             rowClass = 'hint-poor';
                         }
                     }
