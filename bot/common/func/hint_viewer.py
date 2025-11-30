@@ -280,7 +280,6 @@ def json_to_gnubg_commands(
     match_length=0,
     black_score=0,
     red_score=0,
-
     enable_crawford=False,
 ):
     """
@@ -1206,7 +1205,7 @@ def estimate_processing_time(mat_file_path):
         for game_data in games:
             game_data["match_length"] = match_length
             game_data["jacobi_rule"] = jacobi_rule
-
+            
             # Парсим ходы игры
             parsed_moves = parse_backgammon_mat(game_data["content"])
             tracker = BackgammonPositionTracker()
@@ -1299,6 +1298,7 @@ def process_mat_file(input_file, output_file, chat_id):
             for game_data in games:
                 game_data["match_length"] = match_length
                 game_data["jacobi_rule"] = jacobi_rule
+                game_data['enable_crawford'] = (game_data['game_number'] == crawford_game)
                 future = executor.submit(
                     process_single_game, game_data, output_dir, game_data["game_number"]
                 )
