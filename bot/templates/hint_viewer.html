@@ -1363,7 +1363,7 @@
             }
         }
 
-        function nextTurn() {
+        async function nextTurn() {
             if (dataLoaded && current < data.length - 1) {
                 let newCurrent = current + 1;
                 while (newCurrent < data.length && !data[newCurrent].is_visible) {
@@ -1378,7 +1378,7 @@
                 const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
                 if (currentIndex !== -1 && currentIndex < availableGames.length - 1) {
                     const nextGameNum = availableGames[currentIndex + 1].game_number;
-                    loadGame(nextGameNum);
+                    await loadGame(nextGameNum);
                 }
             }
         }
