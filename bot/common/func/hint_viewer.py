@@ -1291,6 +1291,7 @@ def process_mat_file(input_file, output_file, chat_id):
         import concurrent.futures
 
         game_results = []
+        enable_crawford_game_number = None
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=min(len(games), 4)
         ) as executor:
@@ -1299,6 +1300,8 @@ def process_mat_file(input_file, output_file, chat_id):
                 game_data["match_length"] = match_length
                 game_data["jacobi_rule"] = jacobi_rule
                 game_data['enable_crawford'] = (game_data['game_number'] == crawford_game)
+                if game_data['enable_crawford']:
+                    enable_crawford_game_number = game_data['game_number']
                 future = executor.submit(
                     process_single_game, game_data, output_dir, game_data["game_number"]
                 )
@@ -1314,6 +1317,8 @@ def process_mat_file(input_file, output_file, chat_id):
                 except Exception as e:
                     logger.error(f"Failed to process game {game_number}: {e}")
 
+        
+        enable_crawford = enable_crawford_game_number == crawford_game
         # Создаем общий результат
         game_info = {
             "red_player": red_player,
@@ -1321,6 +1326,7 @@ def process_mat_file(input_file, output_file, chat_id):
             "scores": {"Red": red_score, "Black": black_score},
             "match_length": match_length,
             "jacobi_rule": jacobi_rule,
+            'enable_crawford': enable_crawford,
             "chat_id": str(chat_id),
             "total_games": len(games),
             "processed_games": len(game_results),
