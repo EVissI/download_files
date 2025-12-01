@@ -1406,14 +1406,17 @@
             const invertBtn = document.getElementById('invertBtn');
             const screenshotBtn = document.getElementById('screenshotBtn');
             const gameSelect = document.getElementById('gameSelect');
+            const hintsButtons = document.querySelector('.hints-buttons');
             const originalControlsDisplay = controls.style.display;
             const originalInvertDisplay = invertBtn.style.display;
             const originalScreenshotDisplay = screenshotBtn.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
+            const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : 'none';
             controls.style.display = 'none';
             invertBtn.style.display = 'none';
             screenshotBtn.style.display = 'none';
             if (gameSelect) gameSelect.style.display = 'none';
+            if (hintsButtons) hintsButtons.style.display = 'none';
 
             // Create a canvas to capture the entire page
             html2canvas(document.body, {
@@ -1426,6 +1429,7 @@
                 invertBtn.style.display = originalInvertDisplay;
                 screenshotBtn.style.display = originalScreenshotDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
+                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
                     // Create a file from the blob
