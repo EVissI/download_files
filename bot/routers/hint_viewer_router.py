@@ -134,9 +134,9 @@ async def handle_batch_stop(
         await state.clear()
         return
     await message.answer(
-            "Начинаю обработку",
-            reply_markup=MainKeyboard.build(user_info.role, i18n),
-        )
+        "Начинаю обработку",
+        reply_markup=MainKeyboard.build(user_info.role, i18n),
+    )
     await process_batch_hint_files(
         message,
         state,
@@ -227,7 +227,9 @@ async def hint_viewer_menu(
         estimated_time = estimate_processing_time(mat_path)
 
         # Начинаем обработку сразу
-        waiting_manager = ProgressBarMessageManager(message.from_user.id, message.bot, estimated_time)
+        waiting_manager = ProgressBarMessageManager(
+            message.from_user.id, message.bot, estimated_time
+        )
         await waiting_manager.start()
 
         try:
@@ -379,7 +381,14 @@ async def handle_show_stats(
         await callback.answer()
 
         result = await analyze_file_by_path(
-            mat_path, "mat", user_info, session_without_commit, i18n, callback, analysis_type, forward_message=False
+            mat_path,
+            "mat",
+            user_info,
+            session_without_commit,
+            i18n,
+            callback,
+            analysis_type,
+            forward_message=False,
         )
 
         if isinstance(result, tuple) and len(result) == 3:
@@ -426,7 +435,7 @@ async def handle_hint_player_selection(
     state: FSMContext,
     session_without_commit: AsyncSession,
     user_info: User,
-    i18n
+    i18n,
 ):
     try:
         data = await state.get_data()
@@ -446,9 +455,7 @@ async def handle_hint_player_selection(
                 f"Updated player_username for user {user_info.id} to {selected_player}"
             )
 
-        game_id_new = (
-            f"auto_{user_info.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        )
+        game_id_new = f"auto_{user_info.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         dao = DetailedAnalysisDAO(session_without_commit)
 
@@ -463,9 +470,7 @@ async def handle_hint_player_selection(
 
         await dao.add(SDetailedAnalysis(**player_data))
 
-        formatted_analysis = format_detailed_analysis(
-            get_data(analysis_data), i18n
-        )
+        formatted_analysis = format_detailed_analysis(get_data(analysis_data), i18n)
 
         await callback.message.delete()
         await callback.message.answer(
@@ -474,7 +479,7 @@ async def handle_hint_player_selection(
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
         )
         await callback.message.answer(
-            i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'solo')
+            i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, "solo")
         )
         await session_without_commit.commit()
 
@@ -598,6 +603,104 @@ async def send_screenshot(request: Request):
             f"Error sending screenshot to chat_id {chat_id if 'chat_id' in locals() else 'unknown'}: {e}"
         )
         raise HTTPException(status_code=500, detail="Error sending screenshot")
+
+
+@hint_viewer_api_router.post("/api/save_screenshot")
+async def save_screenshot(request: Request):
+    """
+    Сохраняет скриншот в буфер для пользователя.
+    """
+    try:
+        form_data = await request.form()
+        photo = form_data.get("photo")
+
+        if not photo:
+            logger.warning("Save screenshot request received without photo")
+            raise HTTPException(status_code=400, detail="No photo provided")
+
+        chat_id = request.query_params.get("chat_id")
+        if not chat_id:
+            chat_id = form_data.get("chat_id")
+
+        if not chat_id:
+            logger.warning("Save screenshot request received without chat_id")
+            raise HTTPException(status_code=400, detail="No chat_id provided")
+
+        # Создаем директорию для буфера скриншотов
+        buffer_dir = f"files/screenshots/{chat_id}"
+        os.makedirs(buffer_dir, exist_ok=True)
+
+        # Сохраняем файл с timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"screenshot_{timestamp}.png"
+        filepath = os.path.join(buffer_dir, filename)
+
+        photo_bytes = await photo.read()
+        with open(filepath, "wb") as f:
+            f.write(photo_bytes)
+
+        logger.info(f"Screenshot saved to buffer: {filepath}")
+        return {"status": "success"}
+
+    except Exception as e:
+        logger.error(
+            f"Error saving screenshot for chat_id {chat_id if 'chat_id' in locals() else 'unknown'}: {e}"
+        )
+        raise HTTPException(status_code=500, detail="Error saving screenshot")
+
+
+@hint_viewer_api_router.post("/api/upload_screenshots")
+async def upload_screenshots(request: Request):
+    """
+    Создает ZIP архив из буфера скриншотов и отправляет в Telegram.
+    """
+    try:
+        chat_id = request.query_params.get("chat_id")
+        if not chat_id:
+            raise HTTPException(status_code=400, detail="No chat_id provided")
+
+        buffer_dir = f"files/screenshots/{chat_id}"
+        if not os.path.exists(buffer_dir):
+            raise HTTPException(status_code=404, detail="No screenshots in buffer")
+
+        screenshots = [f for f in os.listdir(buffer_dir) if f.endswith(".png")]
+        if not screenshots:
+            raise HTTPException(status_code=404, detail="No screenshots in buffer")
+
+        # Создаем ZIP архив
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for screenshot in screenshots:
+                filepath = os.path.join(buffer_dir, screenshot)
+                zip_file.write(filepath, screenshot)
+
+        zip_buffer.seek(0)
+        zip_data = zip_buffer.getvalue()
+
+        # Отправляем ZIP в Telegram
+        from aiogram.types import BufferedInputFile
+        from bot.config import bot
+
+        zip_file = BufferedInputFile(zip_data, filename="screenshots.zip")
+        await bot.send_document(
+            chat_id=int(chat_id),
+            document=zip_file,
+            caption=f"Архив с {len(screenshots)} скриншотами",
+        )
+
+        # Очищаем буфер
+        shutil.rmtree(buffer_dir)
+
+        logger.info(
+            f"Screenshots ZIP sent to chat_id: {chat_id}, {len(screenshots)} files"
+        )
+        return {"status": "success"}
+
+    except Exception as e:
+        logger.error(
+            f"Error uploading screenshots for chat_id {chat_id if 'chat_id' in locals() else 'unknown'}: {e}"
+        )
+        raise HTTPException(status_code=500, detail="Error uploading screenshots")
 
 
 async def process_batch_hint_files(

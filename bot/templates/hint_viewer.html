@@ -503,9 +503,9 @@
 
         <div id="top-row">
             <div id="controls">
-                <button onclick="toggleInvert()" id="invertBtn"></button>
                 <button id="screenSaveBtn"></button>
                 <button id="screenUploadBtn"></button>
+                <button onclick="toggleInvert()" id="invertBtn"></button>
                 <button onclick="prevTurn()" id="prevBtn"></button>
                 <span id="turnLabel">0</span>
                 <button onclick="nextTurn()" id="nextBtn"></button>
@@ -860,7 +860,7 @@
         ChangeColor.onload = checkImagesLoaded;
 
         // Обработка ошибок загрузки изображений
-        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64, LeftArrow, RightArrow, ScreenShot, ChangeColor, ScreenSave, ScreenUpload, ].forEach(img => {
+        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64, LeftArrow, RightArrow, ScreenShot, ChangeColor, ScreenSave, ScreenUpload,].forEach(img => {
             img.onerror = () => {
                 console.error(`Failed to load image: ${img.src}`);
                 infoDiv.innerHTML = '<div class="error">Error loading game assets. Please try again later.</div>';
@@ -1398,6 +1398,44 @@
         function toggleInvert() {
             invertColors = !invertColors;
             render(current, invertColors);
+        }
+
+        function saveScreenshot() {
+            html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
+                canvas.toBlob(blob => {
+                    const formData = new FormData();
+                    formData.append('photo', blob);
+                    fetch(`/api/save_screenshot?chat_id=${chatId}`, {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => {
+                        if (response.ok) {
+                            alert('Скриншот сохранен в буфер');
+                        } else {
+                            alert('Ошибка при сохранении скриншота');
+                        }
+                    }).catch(error => {
+                        console.error('Error saving screenshot:', error);
+                        alert('Ошибка при сохранении скриншота: ' + error);
+                    });
+                });
+            }).catch(error => {
+                console.error('Error creating screenshot:', error);
+                alert('Ошибка при создании скриншота: ' + error.message);
+            });
+        }
+
+        function uploadScreenshots() {
+            fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(response => {
+                if (response.ok) {
+                    alert('Скриншоты отправлены');
+                } else {
+                    alert('Ошибка при отправке скриншотов');
+                }
+            }).catch(error => {
+                console.error('Error uploading screenshots:', error);
+                alert('Ошибка при отправке скриншотов: ' + error);
+            });
         }
 
         function updateButtons() {
