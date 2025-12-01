@@ -1422,7 +1422,99 @@
         }
 
         function saveScreenshot() {
+            // Hide controls and game selector before taking screenshot
+            const controls = document.getElementById('controls');
+            const invertBtn = document.getElementById('invertBtn');
+            const screenshotBtn = document.getElementById('screenshotBtn');
+            const gameSelect = document.getElementById('gameSelect');
+            const hintsButtons = document.querySelector('.hints-buttons');
+            const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+            const playersInfo = document.getElementById('players-info');
+            const screenSaveBtn = document.getElementById('screenSaveBtn');
+            const screenUploadBtn = document.getElementById('screenUploadBtn');
+            const originalControlsDisplay = controls.style.display;
+            const originalInvertDisplay = invertBtn.style.display;
+            const originalScreenshotDisplay = screenshotBtn.style.display;
+            const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
+            const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : 'none';
+            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
+            const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
+            const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
+            const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
+            const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
+            controls.style.display = 'none';
+            invertBtn.style.display = 'none';
+            screenshotBtn.style.display = 'none';
+            if (gameSelect) gameSelect.style.display = 'none';
+            if (hintsButtons) hintsButtons.style.display = 'none';
+            if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
+            if (screenSaveBtn) screenSaveBtn.style.display = 'none';
+            if (screenUploadBtn) screenUploadBtn.style.display = 'none';
+            if (hideInfoCheckbox && hideInfoCheckbox.checked) {
+                if (playersInfo) {
+                    playersInfo.style.display = 'none';
+                    // Extract match and score
+                    const originalHTML = playersInfo.innerHTML;
+                    const matchDiv = originalHTML.match(/(<div[^>]*>.*?<\/div>)/);
+                    if (matchDiv) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = matchDiv[1];
+                        const spans = tempDiv.querySelectorAll('span');
+                        if (spans.length >= 3) {
+                            // Match, Game, Score
+                            const matchText = spans[0].textContent;
+                            const scoreText = spans[2].textContent;
+                            // Add overlay text
+                            const overlayDiv = document.createElement('div');
+                            overlayDiv.style.position = 'absolute';
+                            overlayDiv.style.top = '10px';
+                            overlayDiv.style.left = '10px';
+                            overlayDiv.style.color = 'white';
+                            overlayDiv.style.fontSize = '16px';
+                            overlayDiv.style.fontFamily = 'Arial, sans-serif';
+                            overlayDiv.style.zIndex = '1000';
+                            overlayDiv.innerHTML = matchText;
+                            document.body.appendChild(overlayDiv);
+
+                            const scoreDiv = document.createElement('div');
+                            scoreDiv.style.position = 'absolute';
+                            scoreDiv.style.top = '10px';
+                            scoreDiv.style.left = '50%';
+                            scoreDiv.style.transform = 'translateX(-50%)';
+                            scoreDiv.style.color = 'white';
+                            scoreDiv.style.fontSize = '16px';
+                            scoreDiv.style.fontFamily = 'Arial, sans-serif';
+                            scoreDiv.style.zIndex = '1000';
+                            scoreDiv.innerHTML = scoreText;
+                            document.body.appendChild(scoreDiv);
+
+                            // Store for removal
+                            window.screenshotOverlays = [overlayDiv, scoreDiv];
+                        }
+                    }
+                }
+                if (gameSelect) gameSelect.style.display = 'none';
+            }
+
             html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
+                // Restore controls and game selector after taking screenshot
+                controls.style.display = originalControlsDisplay;
+                invertBtn.style.display = originalInvertDisplay;
+                screenshotBtn.style.display = originalScreenshotDisplay;
+                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
+                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
+                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (playersInfo) {
+                    playersInfo.style.display = originalPlayersInfoDisplay;
+                    playersInfo.innerHTML = originalPlayersInfoHTML;
+                }
+                if (window.screenshotOverlays) {
+                    window.screenshotOverlays.forEach(el => el.remove());
+                    window.screenshotOverlays = null;
+                }
+
                 canvas.toBlob(blob => {
                     const formData = new FormData();
                     formData.append('photo', blob);
