@@ -1400,6 +1400,27 @@
             render(current, invertColors);
         }
 
+        function showFadingMessage(message) {
+            const msgDiv = document.createElement('div');
+            msgDiv.style.position = 'fixed';
+            msgDiv.style.top = '50%';
+            msgDiv.style.left = '50%';
+            msgDiv.style.transform = 'translate(-50%, -50%)';
+            msgDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            msgDiv.style.color = 'white';
+            msgDiv.style.padding = '10px 20px';
+            msgDiv.style.borderRadius = '5px';
+            msgDiv.style.fontSize = '16px';
+            msgDiv.style.zIndex = '10000';
+            msgDiv.innerHTML = message;
+            document.body.appendChild(msgDiv);
+            setTimeout(() => {
+                msgDiv.style.transition = 'opacity 1s';
+                msgDiv.style.opacity = '0';
+                setTimeout(() => msgDiv.remove(), 1000);
+            }, 1000);
+        }
+
         function saveScreenshot() {
             html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
                 canvas.toBlob(blob => {
@@ -1410,31 +1431,31 @@
                         body: formData
                     }).then(response => {
                         if (response.ok) {
-                            alert('Скриншот сохранен в буфер');
+                            showFadingMessage('Скриншот сохранен в буфер');
                         } else {
-                            alert('Ошибка при сохранении скриншота');
+                            showFadingMessage('Ошибка при сохранении скриншота');
                         }
                     }).catch(error => {
                         console.error('Error saving screenshot:', error);
-                        alert('Ошибка при сохранении скриншота: ' + error);
+                        showFadingMessage('Ошибка при сохранении скриншота');
                     });
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
-                alert('Ошибка при создании скриншота: ' + error.message);
+                showFadingMessage('Ошибка при создании скриншота');
             });
         }
 
         function uploadScreenshots() {
             fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(response => {
                 if (response.ok) {
-                    alert('Скриншоты отправлены');
+                    showFadingMessage('Скриншоты отправлены');
                 } else {
-                    alert('Ошибка при отправке скриншотов');
+                    showFadingMessage('Ошибка при отправке скриншотов');
                 }
             }).catch(error => {
                 console.error('Error uploading screenshots:', error);
-                alert('Ошибка при отправке скриншотов: ' + error);
+                showFadingMessage('Ошибка при отправке скриншотов');
             });
         }
 
