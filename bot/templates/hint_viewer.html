@@ -1429,11 +1429,45 @@
             if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
-                    // Hide only game number and players, keep match and score
+                    playersInfo.style.display = 'none';
+                    // Extract match and score
                     const originalHTML = playersInfo.innerHTML;
-                    const match = originalHTML.match(/(<div[^>]*>.*?<\/div>)/);
-                    if (match) {
-                        playersInfo.innerHTML = match[1];
+                    const matchDiv = originalHTML.match(/(<div[^>]*>.*?<\/div>)/);
+                    if (matchDiv) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = matchDiv[1];
+                        const spans = tempDiv.querySelectorAll('span');
+                        if (spans.length >= 3) {
+                            // Match, Game, Score
+                            const matchText = spans[0].textContent;
+                            const scoreText = spans[2].textContent;
+                            // Add overlay text
+                            const overlayDiv = document.createElement('div');
+                            overlayDiv.style.position = 'absolute';
+                            overlayDiv.style.top = '10px';
+                            overlayDiv.style.left = '10px';
+                            overlayDiv.style.color = 'white';
+                            overlayDiv.style.fontSize = '18px';
+                            overlayDiv.style.fontWeight = 'bold';
+                            overlayDiv.style.zIndex = '1000';
+                            overlayDiv.innerHTML = matchText;
+                            document.body.appendChild(overlayDiv);
+
+                            const scoreDiv = document.createElement('div');
+                            scoreDiv.style.position = 'absolute';
+                            scoreDiv.style.top = '10px';
+                            scoreDiv.style.left = '50%';
+                            scoreDiv.style.transform = 'translateX(-50%)';
+                            scoreDiv.style.color = 'white';
+                            scoreDiv.style.fontSize = '18px';
+                            scoreDiv.style.fontWeight = 'bold';
+                            scoreDiv.style.zIndex = '1000';
+                            scoreDiv.innerHTML = scoreText;
+                            document.body.appendChild(scoreDiv);
+
+                            // Store for removal
+                            window.screenshotOverlays = [overlayDiv, scoreDiv];
+                        }
                     }
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
@@ -1455,6 +1489,10 @@
                 if (playersInfo) {
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
+                }
+                if (window.screenshotOverlays) {
+                    window.screenshotOverlays.forEach(el => el.remove());
+                    window.screenshotOverlays = null;
                 }
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
