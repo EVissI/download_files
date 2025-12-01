@@ -160,7 +160,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
             width: 100%;
         }
 
@@ -203,12 +203,14 @@
         #prevBtn,
         #nextBtn,
         #invertBtn,
-        #screenshotBtn {
+        #screenshotBtn,
+        #screenSaveBtn,
+        #screenUploadBtn {
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             padding: 0;
             color: transparent;
             background-color: transparent;
@@ -219,14 +221,18 @@
         #prevBtn:hover,
         #nextBtn:hover,
         #invertBtn:hover,
-        #screenshotBtn:hover {
+        #screenshotBtn:hover,
+        #screenSaveBtn:hover,
+        #screenUploadBtn:hover {
             background-color: transparent;
         }
 
         #prevBtn:disabled,
         #nextBtn:disabled,
         #invertBtn:disabled,
-        #screenshotBtn:disabled {
+        #screenshotBtn:disabled,
+        #screenSaveBtn:disabled,
+        #screenUploadBtn:disabled {
             opacity: 0.5;
             background-color: transparent;
         }
@@ -460,6 +466,8 @@
             const nextBtn = document.getElementById('nextBtn');
             const invertBtn = document.getElementById('invertBtn');
             const screenshotBtn = document.getElementById('screenshotBtn');
+            const screenSaveBtn = document.getElementById('screenSaveBtn');
+            const screenUploadBtn = document.getElementById('screenUploadBtn');
             if (prevBtn) {
                 prevBtn.style.backgroundImage = "url('/static/left.png?t=" + Date.now() + "')";
             }
@@ -471,6 +479,12 @@
             }
             if (screenshotBtn) {
                 screenshotBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
+            }
+            if (screenSaveBtn) {
+                screenSaveBtn.style.backgroundImage = "url('/static/ScreenSave.png?t=" + Date.now() + "')";
+            }
+            if (screenUploadBtn) {
+                screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.png?t=" + Date.now() + "')";
             }
         });
     </script>
@@ -490,6 +504,8 @@
         <div id="top-row">
             <button onclick="toggleInvert()" id="invertBtn"></button>
             <div id="controls">
+                <button id="screenSaveBtn"></button>
+                <button id="screenUploadBtn"></button>
                 <button onclick="prevTurn()" id="prevBtn"></button>
                 <span id="turnLabel">0</span>
                 <button onclick="nextTurn()" id="nextBtn"></button>
@@ -659,7 +675,7 @@
                             cubeHintsTable.classList.remove('active');
                             moveHintsBtn.classList.remove('active');
                             cubeHintsBtn.classList.remove('active');
-                            if (imagesLoaded === 25) {
+                            if (imagesLoaded === 27) {
                                 render(current, invertColors);
                                 updateButtons();
                                 infoDiv.innerHTML = '';
@@ -795,6 +811,10 @@
 
         const ScreenShot = new Image();
         ScreenShot.src = '/static/Screen.png?t=' + Date.now();
+        const ScreenSave = new Image();
+        ScreenShot.src = '/static/Screen_Save.png?t=' + Date.now();
+        const ScreenUpload = new Image();
+        ScreenShot.src = '/static/Screen_Upload.png?t=' + Date.now();
 
         const ChangeColor = new Image();
         ChangeColor.src = '/static/change_color.png?t=' + Date.now();
@@ -803,7 +823,7 @@
         const checkImagesLoaded = () => {
             imagesLoaded++;
             console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 25 && dataLoaded) {
+            if (imagesLoaded === 27 && dataLoaded) {
                 console.log('All images and data loaded, rendering turn', current);
                 render(current, invertColors);
                 updateButtons();
@@ -835,10 +855,12 @@
         LeftArrow.onload = checkImagesLoaded;
         RightArrow.onload = checkImagesLoaded;
         ScreenShot.onload = checkImagesLoaded;
+        ScreenSave.onload = checkImagesLoaded;
+        ScreenUpload.onload = checkImagesLoaded;
         ChangeColor.onload = checkImagesLoaded;
 
         // Обработка ошибок загрузки изображений
-        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64, LeftArrow, RightArrow, ScreenShot, ChangeColor].forEach(img => {
+        [ScreenSave, ScreenUpload, boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64, LeftArrow, RightArrow, ScreenShot, ChangeColor].forEach(img => {
             img.onerror = () => {
                 console.error(`Failed to load image: ${img.src}`);
                 infoDiv.innerHTML = '<div class="error">Error loading game assets. Please try again later.</div>';
@@ -1413,6 +1435,8 @@
             const hintsButtons = document.querySelector('.hints-buttons');
             const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
             const playersInfo = document.getElementById('players-info');
+            const screenSaveBtn = document.getElementById('screenSaveBtn');
+            const screenUploadBtn = document.getElementById('screenUploadBtn');
             const originalControlsDisplay = controls.style.display;
             const originalInvertDisplay = invertBtn.style.display;
             const originalScreenshotDisplay = screenshotBtn.style.display;
@@ -1420,6 +1444,8 @@
             const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : 'none';
             const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
             const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
+            const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
+            const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             controls.style.display = 'none';
             invertBtn.style.display = 'none';
@@ -1427,6 +1453,8 @@
             if (gameSelect) gameSelect.style.display = 'none';
             if (hintsButtons) hintsButtons.style.display = 'none';
             if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
+            if (screenSaveBtn) screenSaveBtn.style.display = 'none';
+            if (screenUploadBtn) screenUploadBtn.style.display = 'none';
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
                     playersInfo.style.display = 'none';
@@ -1447,8 +1475,8 @@
                             overlayDiv.style.top = '10px';
                             overlayDiv.style.left = '10px';
                             overlayDiv.style.color = 'white';
-                            overlayDiv.style.fontSize = '18px';
-                            overlayDiv.style.fontWeight = 'bold';
+                            overlayDiv.style.fontSize = '16px';
+                            overlayDiv.style.fontFamily = 'Arial, sans-serif';
                             overlayDiv.style.zIndex = '1000';
                             overlayDiv.innerHTML = matchText;
                             document.body.appendChild(overlayDiv);
@@ -1459,8 +1487,8 @@
                             scoreDiv.style.left = '50%';
                             scoreDiv.style.transform = 'translateX(-50%)';
                             scoreDiv.style.color = 'white';
-                            scoreDiv.style.fontSize = '18px';
-                            scoreDiv.style.fontWeight = 'bold';
+                            scoreDiv.style.fontSize = '16px';
+                            scoreDiv.style.fontFamily = 'Arial, sans-serif';
                             scoreDiv.style.zIndex = '1000';
                             scoreDiv.innerHTML = scoreText;
                             document.body.appendChild(scoreDiv);
@@ -1486,6 +1514,8 @@
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
                 if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
+                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (playersInfo) {
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
