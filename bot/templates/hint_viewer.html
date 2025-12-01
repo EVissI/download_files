@@ -860,7 +860,7 @@
         ChangeColor.onload = checkImagesLoaded;
 
         // Обработка ошибок загрузки изображений
-        [ScreenSave, ScreenUpload, boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64, LeftArrow, RightArrow, ScreenShot, ChangeColor].forEach(img => {
+        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, Double2, Double4, Double8, Double16, Double32, Double64, LeftArrow, RightArrow, ScreenShot, ChangeColor, ScreenSave, ScreenUpload, ].forEach(img => {
             img.onerror = () => {
                 console.error(`Failed to load image: ${img.src}`);
                 infoDiv.innerHTML = '<div class="error">Error loading game assets. Please try again later.</div>';
