@@ -1420,6 +1420,7 @@
             const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : 'none';
             const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
             const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
+            const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             controls.style.display = 'none';
             invertBtn.style.display = 'none';
             screenshotBtn.style.display = 'none';
@@ -1427,7 +1428,14 @@
             if (hintsButtons) hintsButtons.style.display = 'none';
             if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
-                if (playersInfo) playersInfo.style.display = 'none';
+                if (playersInfo) {
+                    // Hide only game number and players, keep match and score
+                    const originalHTML = playersInfo.innerHTML;
+                    const match = originalHTML.match(/(<div[^>]*>.*?<\/div>)/);
+                    if (match) {
+                        playersInfo.innerHTML = match[1];
+                    }
+                }
                 if (gameSelect) gameSelect.style.display = 'none';
             }
 
@@ -1444,7 +1452,10 @@
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
                 if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (playersInfo) playersInfo.style.display = originalPlayersInfoDisplay;
+                if (playersInfo) {
+                    playersInfo.style.display = originalPlayersInfoDisplay;
+                    playersInfo.innerHTML = originalPlayersInfoHTML;
+                }
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
                     // Create a file from the blob
