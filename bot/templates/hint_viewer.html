@@ -385,6 +385,10 @@
             align-items: center;
         }
 
+        #hideInfoCheckbox {
+            margin-right: 10px;
+        }
+
         #gameSelect {
             position: absolute;
             left: 50%;
@@ -556,19 +560,19 @@
                     gameRedScore = scores.Red || 0;
                     gameBlackScore = scores.Black || 0;
                     playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
-                    topBar.innerHTML = selectHtml + '<div id="black-pips" class="pips-above-board">0</div>';
+                    topBar.innerHTML = selectHtml + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     // Автоматически загружаем первую игру
                     if (availableGames.length > 0) {
                         loadGame(availableGames[0].game_number);
                     }
                 } else if (availableGames.length > 0) {
-                    topBar.innerHTML = '<div id="black-pips" class="pips-above-board">0</div>';
+                    topBar.innerHTML = '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     // Автоматически загружаем единственную игру
                     loadGame(availableGames[0].game_number);
                 } else {
-                    topBar.innerHTML = '<div id="black-pips" class="pips-above-board">0</div>';
+                    topBar.innerHTML = '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
                     infoDiv.innerHTML = '<div class="error">No games found in this analysis.</div>';
                 }
             })
@@ -628,7 +632,7 @@
                         } else {
                             playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                         }
-                        topBar.innerHTML = (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div>';
+                        topBar.innerHTML = (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div>';
 
                         // Найти все индексы ходов с удвоением
                         doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
@@ -1407,16 +1411,25 @@
             const screenshotBtn = document.getElementById('screenshotBtn');
             const gameSelect = document.getElementById('gameSelect');
             const hintsButtons = document.querySelector('.hints-buttons');
+            const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+            const playersInfo = document.getElementById('players-info');
             const originalControlsDisplay = controls.style.display;
             const originalInvertDisplay = invertBtn.style.display;
             const originalScreenshotDisplay = screenshotBtn.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : 'none';
+            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
+            const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
             controls.style.display = 'none';
             invertBtn.style.display = 'none';
             screenshotBtn.style.display = 'none';
             if (gameSelect) gameSelect.style.display = 'none';
             if (hintsButtons) hintsButtons.style.display = 'none';
+            if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
+            if (hideInfoCheckbox && hideInfoCheckbox.checked) {
+                if (playersInfo) playersInfo.style.display = 'none';
+                if (gameSelect) gameSelect.style.display = 'none';
+            }
 
             // Create a canvas to capture the entire page
             html2canvas(document.body, {
@@ -1430,6 +1443,8 @@
                 screenshotBtn.style.display = originalScreenshotDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (playersInfo) playersInfo.style.display = originalPlayersInfoDisplay;
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
                     // Create a file from the blob
