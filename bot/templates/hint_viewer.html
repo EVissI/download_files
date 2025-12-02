@@ -1322,7 +1322,7 @@
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (item.gnu_move.trim() === 'Double') {
+                    if (item.gnu_move.trim() === 'Double' && hint.action_1 === 'Double' && hint.action_2 === nextGnuMove) {
                         if (noDoubleEq !== null && hint.eq !== undefined) {
                             if (hint.eq > noDoubleEq) {
                                 rowClass = 'hint-best';
