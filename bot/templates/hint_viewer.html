@@ -583,6 +583,17 @@
                     playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                     topBar.innerHTML = selectHtml + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
+                    const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                    if (hideInfoCheckbox) {
+                        const savedState = localStorage.getItem('hideInfoCheckbox');
+                        if (savedState === 'true') {
+                            hideInfoCheckbox.checked = true;
+                        }
+                        hideInfoCheckbox.addEventListener('change', () => {
+                            localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                        });
+                    }
+
                     // Автоматически загружаем первую игру
                     if (availableGames.length > 0) {
                         loadGame(availableGames[0].game_number);
@@ -590,10 +601,33 @@
                 } else if (availableGames.length > 0) {
                     topBar.innerHTML = '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
+                    const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                    if (hideInfoCheckbox) {
+                        const savedState = localStorage.getItem('hideInfoCheckbox');
+                        if (savedState === 'true') {
+                            hideInfoCheckbox.checked = true;
+                        }
+                        hideInfoCheckbox.addEventListener('change', () => {
+                            localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                        });
+                    }
+
                     // Автоматически загружаем единственную игру
                     loadGame(availableGames[0].game_number);
                 } else {
                     topBar.innerHTML = '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+
+                    const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                    if (hideInfoCheckbox) {
+                        const savedState = localStorage.getItem('hideInfoCheckbox');
+                        if (savedState === 'true') {
+                            hideInfoCheckbox.checked = true;
+                        }
+                        hideInfoCheckbox.addEventListener('change', () => {
+                            localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                        });
+                    }
+
                     infoDiv.innerHTML = '<div class="error">No games found in this analysis.</div>';
                 }
             })
@@ -654,6 +688,17 @@
                             playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                         }
                         topBar.innerHTML = (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div>';
+
+                        const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                        if (hideInfoCheckbox) {
+                            const savedState = localStorage.getItem('hideInfoCheckbox');
+                            if (savedState === 'true') {
+                                hideInfoCheckbox.checked = true;
+                            }
+                            hideInfoCheckbox.addEventListener('change', () => {
+                                localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                            });
+                        }
 
                         // Найти все индексы ходов с удвоением
                         doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
