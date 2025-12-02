@@ -1149,12 +1149,6 @@ def process_single_game(game_data, output_dir, game_number):
             except Exception:
                 pass
 
-        try:
-            remaining = child.read_nonblocking(size=65536, timeout=0.1)
-        except Exception:
-            remaining = ""
-        # logger.debug(f"Game {game_number} gnubg final remaining: {remaining}")
-
     finally:
         try:
             if child.isalive():
@@ -1326,7 +1320,6 @@ def process_mat_file(input_file, output_file, chat_id):
             "scores": {"Red": red_score, "Black": black_score},
             "match_length": match_length,
             "jacobi_rule": jacobi_rule,
-            'enable_crawford': enable_crawford,
             "chat_id": str(chat_id),
             "total_games": len(games),
             "processed_games": len(game_results),
