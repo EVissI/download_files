@@ -544,6 +544,7 @@
         let matchLength = 0;
         let gameRedScore = 0;
         let gameBlackScore = 0;
+        let enable_crawford_game_number = null;
         const infoDiv = document.getElementById('move-info');
         const playersInfoDiv = document.getElementById('players-info');
         const topBar = document.getElementById('top-bar');
@@ -564,6 +565,7 @@
                 blackPlayer = gameInfo.black_player || 'Unknown';
                 invertColors = gameInfo.invert_colors || false;
                 matchLength = gameInfo.match_length || 0;
+                enable_crawford_game_number = gameInfo.enable_crawford_game_number || null;
                 const scores = gameInfo.scores || {};
                 const redScore = scores.Red || 0;
                 const blackScore = scores.Black || 0;
@@ -581,7 +583,8 @@
                     gameRedScore = scores.Red || 0;
                     gameBlackScore = scores.Black || 0;
                     playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
-                    topBar.innerHTML = selectHtml + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+                    let crawfordHtml = (enable_crawford_game_number && currentGameNum == enable_crawford_game_number) ? '<span id="crawfordLabel">Кроуфорд</span>' : '';
+                    topBar.innerHTML = crawfordHtml + selectHtml + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -682,12 +685,14 @@
                         const gameScores = gameInfo.scores || {};
                         gameRedScore = gameScores.Red || 0;
                         gameBlackScore = gameScores.Black || 0;
+                        enable_crawford_game_number = gameInfo.enable_crawford_game_number || null;
                         if (matchLength === 0) {
                             playersInfoDiv.innerHTML = "Манигейм<br> Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
                         } else {
                             playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                         }
-                        topBar.innerHTML = (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div>';
+                        let crawfordHtml = (enable_crawford_game_number && currentGameNum == enable_crawford_game_number) ? '<span id="crawfordLabel">Кроуфорд</span>' : '';
+                        topBar.innerHTML = crawfordHtml + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div>';
 
                         const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                         if (hideInfoCheckbox) {
@@ -1494,6 +1499,8 @@
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
+            const crawfordLabel = document.getElementById('crawfordLabel');
+            const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
             controls.style.display = 'none';
             invertBtn.style.display = 'none';
             screenshotBtn.style.display = 'none';
@@ -1502,6 +1509,7 @@
             if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
             if (screenSaveBtn) screenSaveBtn.style.display = 'none';
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
+            if (crawfordLabel) crawfordLabel.style.display = 'none';
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
                     playersInfo.style.display = 'none';
@@ -1562,6 +1570,7 @@
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
                 }
+                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
                 if (window.screenshotOverlays) {
                     window.screenshotOverlays.forEach(el => el.remove());
                     window.screenshotOverlays = null;
@@ -1650,6 +1659,8 @@
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
+            const crawfordLabel = document.getElementById('crawfordLabel');
+            const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
             controls.style.display = 'none';
             invertBtn.style.display = 'none';
             screenshotBtn.style.display = 'none';
@@ -1658,6 +1669,7 @@
             if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
             if (screenSaveBtn) screenSaveBtn.style.display = 'none';
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
+            if (crawfordLabel) crawfordLabel.style.display = 'none';
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
                     playersInfo.style.display = 'none';
@@ -1723,6 +1735,7 @@
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
                 }
+                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
                 if (window.screenshotOverlays) {
                     window.screenshotOverlays.forEach(el => el.remove());
                     window.screenshotOverlays = null;
