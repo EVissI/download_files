@@ -1313,6 +1313,8 @@
                 const bestAction1 = bestAction ? bestAction.action_1 : '';
                 const bestAction2 = bestAction ? bestAction.action_2 : '';
                 let nextGnuMove = (data[turn + 1] && data[turn + 1].gnu_move) ? data[turn + 1].gnu_move.trim() : 'pass';
+                const noDoubleHint = (item.cube_hints[0].cubeful_equities || []).find(h => h.action_1 === 'No double');
+                const noDoubleEq = noDoubleHint && noDoubleHint.eq ? noDoubleHint.eq : null;
                 (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1;
@@ -1320,16 +1322,15 @@
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (item.gnu_move.trim() === 'Double' && hint.action_1 === 'Double' && hint.action_2 === nextGnuMove) {
-                        if (index === 0) {
-                            rowClass = 'hint-best';
-                        } else if (index === 1) {
-                            rowClass = 'hint-good';
-                        } else if (index === 2) {
-                            rowClass = 'hint-poor';
+                    if (item.gnu_move.trim() === 'Double') {
+                        if (noDoubleEq !== null && hint.eq !== undefined) {
+                            if (hint.eq > noDoubleEq) {
+                                rowClass = 'hint-best';
+                            } else {
+                                rowClass = 'hint-poor';
+                            }
                         }
-                    }
-                    if (item.gnu_move.trim() === 'take' && hint.action_2 === 'take') {
+                    } else if (item.gnu_move.trim() === 'take' && hint.action_2 === 'take') {
                         if (index === 2) {
                             rowClass = 'hint-best';
                         } else if (index === 1) {
@@ -1337,8 +1338,7 @@
                         } else if (index === 0) {
                             rowClass = 'hint-poor';
                         }
-                    }
-                    if (item.gnu_move.trim() !== 'take' && item.gnu_move.trim() !== 'Double' && hint.action_1 === 'No double') {
+                    } else if (item.gnu_move.trim() !== 'take' && item.gnu_move.trim() !== 'Double' && hint.action_1 === 'No double') {
                         if (index === 0) {
                             rowClass = 'hint-best';
                         } else if (index === 1) {
