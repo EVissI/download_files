@@ -387,12 +387,18 @@
 
         #top-bar {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
         }
 
         #hideInfoCheckbox {
             margin-right: 10px;
+        }
+
+        .right-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         /* #gameSelect {
@@ -582,8 +588,8 @@
                     gameRedScore = scores.Red || 0;
                     gameBlackScore = scores.Black || 0;
                     playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
-                    let crawfordHtml = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? '<span id="crawfordLabel">Кроуфорд</span>' : '';
-                    topBar.innerHTML = crawfordHtml + selectHtml + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+                    let crawfordDisplay = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'inline' : 'none';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="display: ' + crawfordDisplay + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div></div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -601,7 +607,7 @@
                         loadGame(availableGames[0].game_number);
                     }
                 } else if (availableGames.length > 0) {
-                    topBar.innerHTML = '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="display: none;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -617,7 +623,7 @@
                     // Автоматически загружаем единственную игру
                     loadGame(availableGames[0].game_number);
                 } else {
-                    topBar.innerHTML = '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="display: none;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -690,10 +696,9 @@
                         } else {
                             playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                         }
-                        let crawfordHtml = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? '<span id="crawfordLabel">Кроуфорд</span>' : '';
-                        console.log('loadGame currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordHtml:', crawfordHtml);
-                        console.log('currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordHtml:', crawfordHtml);
-                        topBar.innerHTML = crawfordHtml + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div>';
+                        let crawfordDisplay = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'inline' : 'none';
+                        console.log('loadGame currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordDisplay:', crawfordDisplay);
+                        topBar.innerHTML = '<span id="crawfordLabel" style="display: ' + crawfordDisplay + ';">Кроуфорд</span>' + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div class="right-group">' + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div></div>';
 
                         const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                         if (hideInfoCheckbox) {
