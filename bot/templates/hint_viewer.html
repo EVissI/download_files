@@ -1521,6 +1521,8 @@
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
+            const matchInfo = document.getElementById('match-info');
+            const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
             controls.style.display = 'none';
@@ -1535,6 +1537,9 @@
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
                     playersInfo.style.display = 'none';
+                }
+                if (matchInfo && matchLength > 0) {
+                    matchInfo.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
             }
@@ -1552,6 +1557,9 @@
                 if (playersInfo) {
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfo) {
+                    matchInfo.innerHTML = originalMatchInfoHTML;
                 }
                 if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
 
@@ -1638,6 +1646,8 @@
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
+            const matchInfo = document.getElementById('match-info');
+            const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
             controls.style.display = 'none';
@@ -1652,6 +1662,9 @@
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
                     playersInfo.style.display = 'none';
+                }
+                if (matchInfo && matchLength > 0) {
+                    matchInfo.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
             }
@@ -1674,6 +1687,9 @@
                 if (playersInfo) {
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfo) {
+                    matchInfo.innerHTML = originalMatchInfoHTML;
                 }
                 if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
                 // Convert canvas to blob
