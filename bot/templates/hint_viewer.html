@@ -565,7 +565,7 @@
                 blackPlayer = gameInfo.black_player || 'Unknown';
                 invertColors = gameInfo.invert_colors || false;
                 matchLength = gameInfo.match_length || 0;
-                enable_crawford_game_number = gameInfo.enable_crawford_game_number || null;
+                enable_crawford_game_number = gameInfo.enable_crawford_game || null;
                 console.log(enable_crawford_game_number)
                 const scores = gameInfo.scores || {};
                 const redScore = scores.Red || 0;
@@ -686,7 +686,7 @@
                         const gameScores = gameInfo.scores || {};
                         gameRedScore = gameScores.Red || 0;
                         gameBlackScore = gameScores.Black || 0;
-                        enable_crawford_game_number = gameInfo.enable_crawford_game_number || null;
+                        enable_crawford_game_number = gameInfo.enable_crawford_game || null;
                         if (matchLength === 0) {
                             playersInfoDiv.innerHTML = "Манигейм<br> Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
                         } else {
