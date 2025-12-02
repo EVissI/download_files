@@ -686,7 +686,7 @@
                         const gameScores = gameInfo.scores || {};
                         gameRedScore = gameScores.Red || 0;
                         gameBlackScore = gameScores.Black || 0;
-                        enable_crawford_game_number = parseInt(gameInfo.enable_crawford_game) || null;
+                        // enable_crawford_game_number is set only in initial load
                         if (matchLength === 0) {
                             playersInfoDiv.innerHTML = "Манигейм<br> Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
                         } else {
