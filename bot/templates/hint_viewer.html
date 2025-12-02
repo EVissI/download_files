@@ -385,6 +385,11 @@
             margin: 10px 0;
         }
 
+        .header {
+            display: flex;
+            flex-direction: column;
+        }
+
         #top-bar {
             display: flex;
             justify-content: space-between;
@@ -502,8 +507,11 @@
 <body>
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
-        <div id="players-info"></div>
-        <div id="top-bar"></div>
+        <div class="header">
+            <div id="match-info"></div>
+            <div id="players-info"></div>
+            <div id="top-bar"></div>
+        </div>
         <canvas id="boardCanvas" width="800" height="800"></canvas>
         <div class="board-footer">
             <div id="move-info" class="move-info"></div>
@@ -550,6 +558,7 @@
         let gameBlackScore = 0;
         let enable_crawford_game_number = null;
         const infoDiv = document.getElementById('move-info');
+        const matchInfoDiv = document.getElementById('match-info');
         const playersInfoDiv = document.getElementById('players-info');
         const topBar = document.getElementById('top-bar');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
@@ -587,7 +596,8 @@
                     currentGameNum = parseInt(availableGames[0].game_number);
                     gameRedScore = scores.Red || 0;
                     gameBlackScore = scores.Black || 0;
-                    playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                     let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                     console.log('currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
                     topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div></div>';
@@ -608,6 +618,8 @@
                         loadGame(availableGames[0].game_number);
                     }
                 } else if (availableGames.length > 0) {
+                    matchInfoDiv.innerHTML = "Манигейм";
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                     topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
@@ -624,6 +636,8 @@
                     // Автоматически загружаем единственную игру
                     loadGame(availableGames[0].game_number);
                 } else {
+                    matchInfoDiv.innerHTML = "";
+                    playersInfoDiv.innerHTML = "";
                     topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
@@ -695,7 +709,8 @@
                         if (matchLength === 0) {
                             playersInfoDiv.innerHTML = "Манигейм<br> Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
                         } else {
-                            playersInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                            playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                         }
                         let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                         console.log('loadGame currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
@@ -1520,45 +1535,6 @@
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
                     playersInfo.style.display = 'none';
-                    // Extract match and score
-                    const originalHTML = playersInfo.innerHTML;
-                    const matchDiv = originalHTML.match(/(<div[^>]*>.*?<\/div>)/);
-                    if (matchDiv) {
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = matchDiv[1];
-                        const spans = tempDiv.querySelectorAll('span');
-                        if (spans.length >= 3) {
-                            // Match, Game, Score
-                            const matchText = spans[0].textContent;
-                            const scoreText = spans[2].textContent;
-                            // Add overlay text
-                            const overlayDiv = document.createElement('div');
-                            overlayDiv.style.position = 'absolute';
-                            overlayDiv.style.top = '10px';
-                            overlayDiv.style.left = 'calc(50vw - 400px - 100px)';
-                            overlayDiv.style.color = 'white';
-                            overlayDiv.style.fontSize = '16px';
-                            overlayDiv.style.fontFamily = 'Arial, sans-serif';
-                            overlayDiv.style.zIndex = '1000';
-                            overlayDiv.innerHTML = matchText;
-                            document.body.appendChild(overlayDiv);
-
-                            const scoreDiv = document.createElement('div');
-                            scoreDiv.style.position = 'absolute';
-                            scoreDiv.style.top = '10px';
-                            scoreDiv.style.left = '50%';
-                            scoreDiv.style.transform = 'translateX(-50%)';
-                            scoreDiv.style.color = 'white';
-                            scoreDiv.style.fontSize = '16px';
-                            scoreDiv.style.fontFamily = 'Arial, sans-serif';
-                            scoreDiv.style.zIndex = '1000';
-                            scoreDiv.innerHTML = scoreText;
-                            document.body.appendChild(scoreDiv);
-
-                            // Store for removal
-                            window.screenshotOverlays = [overlayDiv, scoreDiv];
-                        }
-                    }
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
             }
@@ -1578,10 +1554,6 @@
                     playersInfo.innerHTML = originalPlayersInfoHTML;
                 }
                 if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
-                if (window.screenshotOverlays) {
-                    window.screenshotOverlays.forEach(el => el.remove());
-                    window.screenshotOverlays = null;
-                }
 
                 canvas.toBlob(blob => {
                     const formData = new FormData();
@@ -1680,45 +1652,6 @@
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
                     playersInfo.style.display = 'none';
-                    // Extract match and score
-                    const originalHTML = playersInfo.innerHTML;
-                    const matchDiv = originalHTML.match(/(<div[^>]*>.*?<\/div>)/);
-                    if (matchDiv) {
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = matchDiv[1];
-                        const spans = tempDiv.querySelectorAll('span');
-                        if (spans.length >= 3) {
-                            // Match, Game, Score
-                            const matchText = spans[0].textContent;
-                            const scoreText = spans[2].textContent;
-                            // Add overlay text
-                            const overlayDiv = document.createElement('div');
-                            overlayDiv.style.position = 'absolute';
-                            overlayDiv.style.top = '10px';
-                            overlayDiv.style.left = '10px';
-                            overlayDiv.style.color = 'white';
-                            overlayDiv.style.fontSize = '16px';
-                            overlayDiv.style.fontFamily = 'Arial, sans-serif';
-                            overlayDiv.style.zIndex = '1000';
-                            overlayDiv.innerHTML = matchText;
-                            document.body.appendChild(overlayDiv);
-
-                            const scoreDiv = document.createElement('div');
-                            scoreDiv.style.position = 'absolute';
-                            scoreDiv.style.top = '10px';
-                            scoreDiv.style.left = '50%';
-                            scoreDiv.style.transform = 'translateX(-50%)';
-                            scoreDiv.style.color = 'white';
-                            scoreDiv.style.fontSize = '16px';
-                            scoreDiv.style.fontFamily = 'Arial, sans-serif';
-                            scoreDiv.style.zIndex = '1000';
-                            scoreDiv.innerHTML = scoreText;
-                            document.body.appendChild(scoreDiv);
-
-                            // Store for removal
-                            window.screenshotOverlays = [overlayDiv, scoreDiv];
-                        }
-                    }
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
             }
@@ -1743,10 +1676,6 @@
                     playersInfo.innerHTML = originalPlayersInfoHTML;
                 }
                 if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
-                if (window.screenshotOverlays) {
-                    window.screenshotOverlays.forEach(el => el.remove());
-                    window.screenshotOverlays = null;
-                }
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
                     // Create a file from the blob
