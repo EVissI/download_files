@@ -1286,7 +1286,7 @@ def process_mat_file(input_file, output_file, chat_id):
 
         game_results = []
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=min(len(games), 4)
+            max_workers=len(games)
         ) as executor:
             futures = []
             for game_data in games:
