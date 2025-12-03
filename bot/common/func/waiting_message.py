@@ -36,7 +36,7 @@ class WaitingMessageManager:
         idx = 1
         while self.active:
             try:
-                await asyncio.sleep(1.5)
+                await asyncio.sleep(3)
                 if not self.active:
                     break
                 new_text = getattr(self.i18n.waiting, f"think{idx % 3 + 1}")()
