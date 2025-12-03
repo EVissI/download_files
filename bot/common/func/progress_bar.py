@@ -138,5 +138,5 @@ class ProgressBarMessageManager:
                     
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except Exception as e:
                 logger.error(f"Ошибка при обновлении прогресс-бара {e}")
