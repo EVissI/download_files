@@ -1,4 +1,5 @@
-﻿from aiogram import Router, F
+﻿import asyncio
+from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
@@ -40,3 +41,4 @@ async def view_active_promos(message: Message, session_without_commit):
         await message.answer(
             text, parse_mode="HTML", reply_markup=PromoKeyboard.build()
         )
+        await asyncio.sleep(0.3) 
