@@ -47,7 +47,6 @@ if TYPE_CHECKING:
 
 batch_auto_analyze_router = Router()
 
-message_lock = asyncio.Lock()
 
 class BatchAnalyzeDialog(StatesGroup):
     choose_type = State()
@@ -202,9 +201,8 @@ async def handle_sequential_file(
                 logger.error(f"Failed to update state for user {user_info.id}: {e}")
                 await message.answer("Ошибка при обработке файла. Попробуйте снова.")
                 return
-            with message_lock:
-                await message.answer(i18n.auto.batch.added(count=len(file_paths)))
-                await asyncio.sleep(0.3)  # slight delay to avoid message flooding
+            await message.answer(i18n.auto.batch.added(count=len(file_paths)))
+            await asyncio.sleep(0.3)  # slight delay to avoid message flooding
         except Exception as e:
             logger.error(f"Unexpected error in handle_sequential_file for user {user_info.id}: {e}")
             await message.answer("Произошла ошибка при обработке файла. Попробуйте снова.")
