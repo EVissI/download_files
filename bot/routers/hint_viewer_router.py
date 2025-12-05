@@ -71,7 +71,7 @@ hint_viewer_router = Router()
 # FastAPI router for web interface
 hint_viewer_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
-
+message_lock = asyncio.Lock()
 
 class HintViewerStates(StatesGroup):
     choose_type = State()
@@ -152,49 +152,50 @@ async def handle_batch_stop(
     F.document, StateFilter(HintViewerStates.uploading_sequential)
 )
 async def handle_sequential_hint_file(message: Message, state: FSMContext):
-    doc = message.document
-    fname = doc.file_name
-    if not (fname.lower().endswith(".mat") or fname.lower().endswith(".zip")):
-        await message.reply("Пожалуйста, пришлите .mat файл или .zip архив.")
-        return
-
-    # Скачиваем файл
-    temp_path = f"files/{fname}"
-    os.makedirs("files", exist_ok=True)
-    file = await message.bot.get_file(doc.file_id)
-    with open(temp_path, "wb") as f:
-        await message.bot.download_file(file.file_path, f)
-
-    data = await state.get_data()
-    file_paths = data.get("file_paths", [])
-
-    if fname.lower().endswith(".zip"):
-        # Распаковываем ZIP архив
-        try:
-            with zipfile.ZipFile(temp_path, "r") as zip_ref:
-                zip_ref.extractall("files")
-                # Добавляем все .mat файлы из распакованного архива
-                for extracted_file in zip_ref.namelist():
-                    if extracted_file.lower().endswith(".mat"):
-                        extracted_path = f"files/{extracted_file}"
-                        if os.path.exists(extracted_path):
-                            file_paths.append(extracted_path)
-            # Удаляем временный ZIP файл
-            os.remove(temp_path)
-            await message.answer(
-                f"Архив распакован. Добавлено файлов: {len([p for p in file_paths if p.endswith('.mat')])}"
-            )
-        except Exception as e:
-            logger.error(f"Error extracting ZIP: {e}")
-            await message.reply("Ошибка при распаковке архива.")
-            os.remove(temp_path)
+    async with message_lock:
+        doc = message.document
+        fname = doc.file_name
+        if not (fname.lower().endswith(".mat") or fname.lower().endswith(".zip")):
+            await message.reply("Пожалуйста, пришлите .mat файл или .zip архив.")
             return
-    else:
-        # Обычный .mat файл
-        file_paths.append(temp_path)
-        await message.answer(f"Файл добавлен. Всего файлов: {len(file_paths)}")
 
-    await state.update_data(file_paths=file_paths)
+        # Скачиваем файл
+        temp_path = f"files/{fname}"
+        os.makedirs("files", exist_ok=True)
+        file = await message.bot.get_file(doc.file_id)
+        with open(temp_path, "wb") as f:
+            await message.bot.download_file(file.file_path, f)
+
+        data = await state.get_data()
+        file_paths = data.get("file_paths", [])
+
+        if fname.lower().endswith(".zip"):
+            # Распаковываем ZIP архив
+            try:
+                with zipfile.ZipFile(temp_path, "r") as zip_ref:
+                    zip_ref.extractall("files")
+                    # Добавляем все .mat файлы из распакованного архива
+                    for extracted_file in zip_ref.namelist():
+                        if extracted_file.lower().endswith(".mat"):
+                            extracted_path = f"files/{extracted_file}"
+                            if os.path.exists(extracted_path):
+                                file_paths.append(extracted_path)
+                # Удаляем временный ZIP файл
+                os.remove(temp_path)
+                await message.answer(
+                    f"Архив распакован. Добавлено файлов: {len([p for p in file_paths if p.endswith('.mat')])}"
+                )
+            except Exception as e:
+                logger.error(f"Error extracting ZIP: {e}")
+                await message.reply("Ошибка при распаковке архива.")
+                os.remove(temp_path)
+                return
+        else:
+            # Обычный .mat файл
+            file_paths.append(temp_path)
+            await message.answer(f"Файл добавлен. Всего файлов: {len(file_paths)}")
+
+        await state.update_data(file_paths=file_paths)
 
 
 @hint_viewer_router.message(F.document, StateFilter(HintViewerStates.waiting_file))
