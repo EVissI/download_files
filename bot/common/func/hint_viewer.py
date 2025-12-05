@@ -56,6 +56,94 @@ def parse_backgammon_mat(content):
         turn = int(num_match.group(1))
         rest = num_match.group(2)  # keep spaces
 
+        def parse_side(side_str, player):
+            if not side_str:
+                return None
+
+            # Проверяем простые действия: Takes, Drops (независимо от регистра)
+            action_match = re.match(r"(Takes|Drops|Take|Drop)", side_str, re.I)
+            if action_match:
+                act = action_match.group(1).lower()
+                if act in ["take", "takes"]:
+                    act = "take"
+                    gnu_move = "take "
+                elif act in ["drop", "drops"]:
+                    act = "drop"
+                    gnu_move = "pass"
+                return {
+                    "turn": turn,
+                    "player": player,
+                    "action": act,
+                    "gnu_move": gnu_move,
+                }
+
+            # Проверяем удвоение
+            double_match = re.match(
+                r"Doubles => (\d+)(?:\s*(Takes|Drops|Take|Drop))?", side_str, re.I
+            )
+            if double_match:
+                value = int(double_match.group(1))
+                res = {
+                    "turn": turn,
+                    "player": player,
+                    "action": "double",
+                    "cube": value,
+                    "gnu_move": "Double",
+                }
+                response = double_match.group(2)
+                if response:
+                    resp_act = response.lower()
+                    if resp_act in ["take", "takes"]:
+                        resp_act = "take"
+                        gnu_move_resp = "take "
+                    elif resp_act in ["drop", "drops"]:
+                        resp_act = "drop"
+                        gnu_move_resp = "pass"
+                    # Добавляем ответ для противоположного игрока
+                    resp_player = "Black" if player == "Red" else "Red"
+                    actions = resp_act.split(",")
+                    moves_list.append(
+                        {
+                            "turn": turn,
+                            "player": resp_player,
+                            "action": resp_act,
+                            "cube": value,
+                            "gnu_move": gnu_move_resp,
+                        }
+                    )
+                return res
+
+            # Иначе парсим обычный ход
+            dice_match = re.match(r"(\d)(\d):(?:\s*(.*))?", side_str)
+            if dice_match:
+                dice = [int(dice_match.group(1)), int(dice_match.group(2))]
+                moves_str = dice_match.group(3) or ""
+                move_list = []
+                for m in moves_str.split():
+                    hit = False
+                    if "*" in m:
+                        hit = True
+                        m = m.replace("*", "")
+                    fr_to = m.split("/")
+                    if len(fr_to) < 2:  # Требуем from/to
+                        continue
+                    try:
+                        fr_str = fr_to[0]
+                        fr = 25 if fr_str.lower() == "bar" else int(fr_str)
+                        to_str = fr_to[1]
+                        to = 0 if to_str.lower() == "off" else int(to_str)
+                    except (ValueError, IndexError):
+                        continue
+                    move_list.append({"from": fr, "to": to, "hit": hit})
+                return {
+                    "turn": turn,
+                    "player": player,
+                    "dice": dice,
+                    "moves": move_list,
+                }
+
+            return None
+
         # Check for double in the line
         double_pos = rest.find("Doubles =>")
         if double_pos != -1:
@@ -159,94 +247,6 @@ def parse_backgammon_mat(content):
                         else:
                             left = post
                             right = ""
-
-        def parse_side(side_str, player):
-            if not side_str:
-                return None
-
-            # Проверяем простые действия: Takes, Drops (независимо от регистра)
-            action_match = re.match(r"(Takes|Drops|Take|Drop)", side_str, re.I)
-            if action_match:
-                act = action_match.group(1).lower()
-                if act in ["take", "takes"]:
-                    act = "take"
-                    gnu_move = "take "
-                elif act in ["drop", "drops"]:
-                    act = "drop"
-                    gnu_move = "pass"
-                return {
-                    "turn": turn,
-                    "player": player,
-                    "action": act,
-                    "gnu_move": gnu_move,
-                }
-
-            # Проверяем удвоение
-            double_match = re.match(
-                r"Doubles => (\d+)(?:\s*(Takes|Drops|Take|Drop))?", side_str, re.I
-            )
-            if double_match:
-                value = int(double_match.group(1))
-                res = {
-                    "turn": turn,
-                    "player": player,
-                    "action": "double",
-                    "cube": value,
-                    "gnu_move": "Double",
-                }
-                response = double_match.group(2)
-                if response:
-                    resp_act = response.lower()
-                    if resp_act in ["take", "takes"]:
-                        resp_act = "take"
-                        gnu_move_resp = "take "
-                    elif resp_act in ["drop", "drops"]:
-                        resp_act = "drop"
-                        gnu_move_resp = "pass"
-                    # Добавляем ответ для противоположного игрока
-                    resp_player = "Black" if player == "Red" else "Red"
-                    actions = resp_act.split(",")
-                    moves_list.append(
-                        {
-                            "turn": turn,
-                            "player": resp_player,
-                            "action": resp_act,
-                            "cube": value,
-                            "gnu_move": gnu_move_resp,
-                        }
-                    )
-                return res
-
-            # Иначе парсим обычный ход
-            dice_match = re.match(r"(\d)(\d):(?:\s*(.*))?", side_str)
-            if dice_match:
-                dice = [int(dice_match.group(1)), int(dice_match.group(2))]
-                moves_str = dice_match.group(3) or ""
-                move_list = []
-                for m in moves_str.split():
-                    hit = False
-                    if "*" in m:
-                        hit = True
-                        m = m.replace("*", "")
-                    fr_to = m.split("/")
-                    if len(fr_to) < 2:  # Требуем from/to
-                        continue
-                    try:
-                        fr_str = fr_to[0]
-                        fr = 25 if fr_str.lower() == "bar" else int(fr_str)
-                        to_str = fr_to[1]
-                        to = 0 if to_str.lower() == "off" else int(to_str)
-                    except (ValueError, IndexError):
-                        continue
-                    move_list.append({"from": fr, "to": to, "hit": hit})
-                return {
-                    "turn": turn,
-                    "player": player,
-                    "dice": dice,
-                    "moves": move_list,
-                }
-
-            return None
 
         black_move = parse_side(left, "Black")
         if black_move:
@@ -1199,7 +1199,7 @@ def estimate_processing_time(mat_file_path):
         for game_data in games:
             game_data["match_length"] = match_length
             game_data["jacobi_rule"] = jacobi_rule
-            
+
             # Парсим ходы игры
             parsed_moves = parse_backgammon_mat(game_data["content"])
             tracker = BackgammonPositionTracker()
@@ -1285,16 +1285,14 @@ def process_mat_file(input_file, output_file, chat_id):
         import concurrent.futures
 
         game_results = []
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(games)
-        ) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(games)) as executor:
             futures = []
             for game_data in games:
                 game_data["match_length"] = match_length
                 game_data["jacobi_rule"] = jacobi_rule
-                game_data['enable_crawford'] = (game_data['game_number'] == crawford_game)
-                if game_data['enable_crawford']:
-                    enable_crawford_game_number = game_data['game_number']
+                game_data["enable_crawford"] = game_data["game_number"] == crawford_game
+                if game_data["enable_crawford"]:
+                    enable_crawford_game_number = game_data["game_number"]
                 future = executor.submit(
                     process_single_game, game_data, output_dir, game_data["game_number"]
                 )
@@ -1310,14 +1308,15 @@ def process_mat_file(input_file, output_file, chat_id):
                 except Exception as e:
                     logger.error(f"Failed to process game {game_number}: {e}")
 
-        
         # Создаем общий результат
         game_info = {
             "red_player": red_player,
             "black_player": black_player,
             "scores": {"Red": red_score, "Black": black_score},
             "match_length": match_length,
-            "enable_crawford_game": enable_crawford_game_number if crawford_game else None,
+            "enable_crawford_game": (
+                enable_crawford_game_number if crawford_game else None
+            ),
             "jacobi_rule": jacobi_rule,
             "chat_id": str(chat_id),
             "total_games": len(games),
