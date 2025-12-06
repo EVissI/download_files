@@ -717,33 +717,30 @@ async def process_batch_hint_files(
     user_info: User,
     session_without_commit,
 ):
+    waiting_manager = None
     try:
-        # Обрабатываем все файлы параллельно
-        tasks = []
-        max_time = 0
-        for mat_path in file_paths:
-            estimated_time = estimate_processing_time(mat_path)
-            if estimated_time > max_time:
-                max_time = estimated_time
-            task = asyncio.create_task(
-                process_single_hint_file(mat_path, chat_id, session_without_commit)
-            )
-            tasks.append(task)
-        waiting_manager = ProgressBarMessageManager(chat_id, message.bot, max_time)
-        await waiting_manager.start()
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        total_files = len(file_paths)
 
-        # Отправляем сообщения для каждого успешно обработанного файла
-        for idx, result in enumerate(results):
-            if isinstance(result, Exception):
-                logger.error(f"Error processing {file_paths[idx]}: {result}")
-                await message.reply(
-                    f"Ошибка при обработке файла {os.path.basename(file_paths[idx])}: {result}"
+        # Обрабатываем файлы последовательно
+        for idx, mat_path in enumerate(file_paths):
+            fname = os.path.basename(mat_path)
+
+            # Оцениваем время для текущего файла
+            estimated_time = estimate_processing_time(mat_path)
+
+            # Уведомляем о начале обработки файла
+            await message.answer(f"Обработка файла {idx + 1}/{total_files}: {fname}")
+
+            waiting_manager = ProgressBarMessageManager(
+                chat_id, message.bot, estimated_time
+            )
+            await waiting_manager.start()
+
+            try:
+                result = await process_single_hint_file(
+                    mat_path, chat_id, session_without_commit
                 )
-            else:
                 game_id, has_games, red_player, black_player = result
-                mat_path = file_paths[idx]
-                fname = os.path.basename(mat_path)
 
                 # Отправляем сообщение с ссылкой на веб-приложение
                 if has_games:
@@ -801,7 +798,19 @@ async def process_batch_hint_files(
                     await message.answer(
                         f"Анализ файла {fname} завершен, но игр не найдено."
                     )
+
+            except Exception as e:
+                logger.error(f"Error processing {mat_path}: {e}")
+                await message.reply(f"Ошибка при обработке файла {fname}: {e}")
+            finally:
+                await waiting_manager.stop()
+                waiting_manager = None
+
         await session_without_commit.commit()
+        await message.answer(
+            f"Пакетная обработка завершена. Обработано файлов: {total_files}"
+        )
+
     except Exception as e:
         logger.exception("Ошибка при пакетной обработке hint viewer")
         await message.reply(
@@ -809,7 +818,8 @@ async def process_batch_hint_files(
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
     finally:
-        await waiting_manager.stop()
+        if waiting_manager:
+            await waiting_manager.stop()
         await state.clear()
 
 

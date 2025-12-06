@@ -3,6 +3,8 @@ from aiogram import BaseMiddleware, Bot
 from aiogram.types import Message, CallbackQuery, TelegramObject
 import asyncio
 
+from loguru import logger
+
 # Глобальная блокировка для hint_viewer роутера
 _hint_viewer_lock = asyncio.Lock()
 _current_user_id: int | None = None
@@ -90,6 +92,5 @@ class SingleUserMiddleware(BaseMiddleware):
         for user_id in users_to_notify:
             try:
                 await _bot_instance.send_message(user_id, self.free_message)
-            except Exception:
-                # Игнорируем ошибки отправки (пользователь заблокировал бота и т.д.)
-                pass
+            except Exception as e:
+                logger.error(f"Не удалось уведомить пользователя {user_id}: {e}")
