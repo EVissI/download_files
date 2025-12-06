@@ -64,12 +64,12 @@ from datetime import datetime
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 from bot.config import admins
-from bot.common.middlewares.single_user_middleware import SingleUserMiddleware
+from bot.common.middlewares.single_user_middleware import LimitedUsersMiddleware
 
 # Telegram router
 hint_viewer_router = Router()
-hint_viewer_router.message.middleware(SingleUserMiddleware())
-hint_viewer_router.callback_query.middleware(SingleUserMiddleware())
+hint_viewer_router.message.middleware(LimitedUsersMiddleware(max_users=3))
+hint_viewer_router.callback_query.middleware(LimitedUsersMiddleware(max_users=3))
 
 # FastAPI router for web interface
 hint_viewer_api_router = APIRouter()
