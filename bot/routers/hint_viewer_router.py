@@ -64,14 +64,18 @@ from datetime import datetime
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 from bot.config import admins
+from bot.common.middlewares.single_user_middleware import SingleUserMiddleware
 
 # Telegram router
 hint_viewer_router = Router()
+hint_viewer_router.message.middleware(SingleUserMiddleware())
+hint_viewer_router.callback_query.middleware(SingleUserMiddleware())
 
 # FastAPI router for web interface
 hint_viewer_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
 message_lock = asyncio.Lock()
+
 
 class HintViewerStates(StatesGroup):
     choose_type = State()
