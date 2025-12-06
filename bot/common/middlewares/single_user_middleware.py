@@ -28,8 +28,6 @@ class LimitedUsersMiddleware(BaseMiddleware):
         self.free_message = free_message
         self.instance_name = instance_name
 
-        # Используем семафор вместо Lock для поддержки нескольких пользователей
-        self._semaphore = asyncio.Semaphore(max_users)
         self._active_users: Set[int] = set()
         self._waiting_users: Set[int] = set()
         self._bot_instance: Bot | None = None
@@ -60,37 +58,45 @@ class LimitedUsersMiddleware(BaseMiddleware):
         if bot and self._bot_instance is None:
             self._bot_instance = bot
 
-        # Если пользователь уже активен, пропускаем проверку
         async with self._lock:
+            # Если пользователь уже активен, пропускаем проверку
             if user_id in self._active_users:
-                return await handler(event, data)
-
-        # Проверяем, есть ли свободные слоты
-        if self._semaphore.locked() and len(self._active_users) >= self.max_users:
-            # Все слоты заняты
-            async with self._lock:
+                # Освобождаем lock перед вызовом handler
+                pass
+            # Проверяем, есть ли свободные слоты
+            elif len(self._active_users) >= self.max_users:
+                # Все слоты заняты
                 if user_id not in self._waiting_users:
                     self._waiting_users.add(user_id)
+                    logger.info(
+                        f"User {user_id} added to waiting list. Active: {len(self._active_users)}, Waiting: {len(self._waiting_users)}"
+                    )
 
-            if isinstance(event, Message):
-                await event.answer(self.busy_message)
-            elif isinstance(event, CallbackQuery):
-                await event.answer(self.busy_message, show_alert=True)
-            return None
-
-        # Пробуем захватить слот
-        async with self._semaphore:
-            async with self._lock:
+                if isinstance(event, Message):
+                    await event.answer(self.busy_message)
+                elif isinstance(event, CallbackQuery):
+                    await event.answer(self.busy_message, show_alert=True)
+                return None
+            else:
+                # Есть свободный слот - добавляем пользователя
                 self._active_users.add(user_id)
                 self._waiting_users.discard(user_id)
+                logger.info(
+                    f"User {user_id} acquired slot. Active: {len(self._active_users)}"
+                )
 
-            try:
-                return await handler(event, data)
-            finally:
-                async with self._lock:
+        # Выполняем handler
+        try:
+            return await handler(event, data)
+        finally:
+            async with self._lock:
+                if user_id in self._active_users:
                     self._active_users.discard(user_id)
-                # Уведомляем ожидающих пользователей
-                await self._notify_waiting_users()
+                    logger.info(
+                        f"User {user_id} released slot. Active: {len(self._active_users)}"
+                    )
+                    # Уведомляем ожидающих пользователей
+                    await self._notify_waiting_users()
 
     async def _notify_waiting_users(self):
         """Уведомляет ожидающих пользователей об освобождении слота"""
@@ -98,15 +104,15 @@ class LimitedUsersMiddleware(BaseMiddleware):
             return
 
         # Уведомляем только одного пользователя (первого в очереди)
-        async with self._lock:
-            if self._waiting_users:
-                user_id = next(iter(self._waiting_users))
-                self._waiting_users.discard(user_id)
+        if self._waiting_users:
+            user_id = next(iter(self._waiting_users))
+            self._waiting_users.discard(user_id)
+            logger.info(f"Notifying user {user_id} about free slot")
 
-        try:
-            await self._bot_instance.send_message(user_id, self.free_message)
-        except Exception as e:
-            logger.error(f"Не удалось уведомить пользователя {user_id}: {e}")
+            try:
+                await self._bot_instance.send_message(user_id, self.free_message)
+            except Exception as e:
+                logger.error(f"Не удалось уведомить пользователя {user_id}: {e}")
 
 
 # Алиас для обратной совместимости
