@@ -80,7 +80,7 @@ templates = Jinja2Templates(directory="bot/templates")
 message_lock = asyncio.Lock()
 
 redis_rq = Redis.from_url(settings.REDIS_URL, decode_responses=False)
-task_queue = Queue("backgammon_analysis", connection=redis_rq)
+task_queue = Queue("backgammon_analysis", connection=redis_rq,default_timeout=1800)
 
 
 class HintViewerStates(StatesGroup):
@@ -244,7 +244,7 @@ async def hint_viewer_menu(
         job = task_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_job",
             mat_path, json_path, str(message.from_user.id),
-            job_id=job_id, timeout=timeout
+            job_id=job_id
         )
 
         # === Сохраняем информацию о задаче в Redis ===
