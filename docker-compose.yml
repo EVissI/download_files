@@ -62,7 +62,7 @@ services:
   worker-1:
     build: .
     container_name: backgammon_worker_1
-    command: python -m bot.workers.hint_viewer_worker
+    command: python -m bot.workers.hint_worker
     depends_on:
       redis:
         condition: service_healthy
@@ -83,7 +83,7 @@ services:
   worker-2:
     build: .
     container_name: backgammon_worker_2
-    command: python -m bot.workers.hint_viewer_worker
+    command: python -m bot.workers.hint_worker
     depends_on:
       redis:
         condition: service_healthy
