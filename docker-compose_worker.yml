@@ -1,8 +1,4 @@
-﻿# docker-compose.worker.yml (для других серверов)
-# Используй этот файл на Server 2, Server 3, Server 4
-
-version: '3.8'
-
+﻿
 services:
   # === Worker #1 ===
   worker-1:

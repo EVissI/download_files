@@ -825,7 +825,7 @@ async def check_job_status(
         # Начинаем проверку
         while True:
             try:
-                job = Job.fetch(job_id, connection=redis_client)
+                job = Job.fetch(job_id, connection=sync_redis_client)
 
                 if job.is_finished:
                     # === ЗАДАЧА ЗАВЕРШЕНА ===
