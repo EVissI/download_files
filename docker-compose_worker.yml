@@ -4,7 +4,7 @@ services:
   worker-1:
     build: .
     container_name: backgammon_worker_1
-    command: python -m bot.workers.hint_viewer_worker
+    command: python -m bot.workers.hint_worker
     environment:
       - REDIS_HOST=${REMOTE_REDIS_HOST}  # IP основного сервера
       - REDIS_PORT=6379
