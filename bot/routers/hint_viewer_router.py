@@ -78,7 +78,9 @@ hint_viewer_router = Router()
 hint_viewer_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
 message_lock = asyncio.Lock()
-task_queue = Queue("backgammon_analysis", connection=sync_redis_client)
+
+redis_rq = Redis.from_url(settings.REDIS_URL, decode_responses=False)
+task_queue = Queue("backgammon_analysis", connection=redis_rq)
 
 
 class HintViewerStates(StatesGroup):
@@ -241,12 +243,8 @@ async def hint_viewer_menu(
         # === СТАВИМ ЗАДАЧУ В ОЧЕРЕДЬ ===
         job = task_queue.enqueue(
             "bot.workers.hint_viewer_worker.analyze_backgammon_job",
-            mat_path,
-            json_path,
-            str(message.from_user.id),
-            job_id=job_id,
-            timeout=600,  # 10 минут максимум
-            result_ttl=3600,  # Результат хранится 1 час
+            mat_path, json_path, str(message.from_user.id),
+            job_id=job_id, timeout=600, result_ttl=3600
         )
 
         # === Сохраняем информацию о задаче в Redis ===

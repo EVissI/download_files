@@ -37,7 +37,7 @@ else:
 
 logger.info(f"Redis URL: redis://<user>:<pass>@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
 
-redis_conn = Redis.from_url(redis_url, decode_responses=True)
+redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 
 def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
@@ -85,23 +85,18 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
 
 if __name__ == '__main__':
     try:
-        # Проверяем подключение к Redis
         redis_conn.ping()
         logger.info(f"✅ Connected to Redis: {REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
     except Exception as e:
         logger.error(f"❌ Failed to connect to Redis: {e}")
         sys.exit(1)
-    
-    # ✅ ИСПРАВЛЕНО: убран with Connection(...), используем connection напрямую
+
+    # Queue и Worker используют тот же connection с decode_responses=False
     try:
         queue = Queue('backgammon_analysis', connection=redis_conn)
         worker = Worker([queue], connection=redis_conn)
         logger.info(f"🚀 Starting Worker on queue 'backgammon_analysis'...")
-        logger.info(f"   Connected to: {REDIS_HOST}:{REDIS_PORT} (user: {REDIS_USER or 'default'})")
         worker.work()
-    except KeyboardInterrupt:
-        logger.info("Worker stopped by user (Ctrl+C)")
-        sys.exit(0)
     except Exception as e:
         logger.exception("Worker crashed with error")
         sys.exit(1)
