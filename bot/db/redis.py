@@ -77,61 +77,15 @@ class RedisClient:
 
 redis_client = RedisClient()
 
-class RQRedisWrapper:
-    """
-    Обёртка вокруг sync Redis для RQ.
-    Автоматически декодирует bytes в strings ДЛЯ ВСЕХ МЕТОДОВ.
-    """
-    
-    def __init__(self, redis_instance):
-        self._redis = redis_instance
-    
-    def _decode_bytes(self, obj: Any) -> Any:
-        """Рекурсивно декодирует bytes во всех структурах данных"""
-        if isinstance(obj, bytes):
-            try:
-                return obj.decode('utf-8')
-            except (UnicodeDecodeError, AttributeError):
-                # Если не UTF-8, возвращаем как есть
-                return obj
-        elif isinstance(obj, dict):
-            return {self._decode_bytes(k): self._decode_bytes(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [self._decode_bytes(item) for item in obj]
-        elif isinstance(obj, tuple):
-            return tuple(self._decode_bytes(item) for item in obj)
-        elif isinstance(obj, set):
-            return {self._decode_bytes(item) for item in obj}
-        return obj
-    
-    def __getattr__(self, name: str):
-        """Перехватывает ВСЕ атрибуты и методы"""
-        attr = getattr(self._redis, name)
-        
-        # Если это метод - оборачиваем его для декодирования результата
-        if callable(attr):
-            @wraps(attr)
-            def wrapper(*args, **kwargs):
-                result = attr(*args, **kwargs)
-                return self._decode_bytes(result)
-            return wrapper
-        
-        # Если это не метод - возвращаем как есть
-        return attr
-    
-    def __setattr__(self, name: str, value: Any) -> None:
-        """Позволяет сохранять атрибуты wrapper-а"""
-        if name.startswith('_'):
-            super().__setattr__(name, value)
-        else:
-            setattr(self._redis, name, value)
 
-
-_raw_sync_redis = Redis.from_url(
+sync_redis_client = Redis.from_url(
     settings.REDIS_URL,
-    decode_responses=False,  
-    socket_keepalive=True
+    decode_responses=True,  # ✅ Оба работают со strings
+    socket_keepalive=True,
+    socket_keepalive_options={
+        1: 1,  # TCP_KEEPIDLE
+        2: 1,  # TCP_KEEPINTVL
+        3: 1,  # TCP_KEEPCNT
+    }
 )
 
-
-sync_redis_client = RQRedisWrapper(_raw_sync_redis)
