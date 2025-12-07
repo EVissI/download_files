@@ -244,7 +244,7 @@ async def hint_viewer_menu(
         job = task_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_job",
             mat_path, json_path, str(message.from_user.id),
-            job_id=job_id, timeout=600, result_ttl=3600
+            job_id=job_id
         )
 
         # === Сохраняем информацию о задаче в Redis ===
