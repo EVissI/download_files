@@ -815,7 +815,7 @@ async def check_job_status(
     """
     try:
         # Получаем информацию о задаче
-        job_info_json = await redis_client.get(f"job_info:{job_id}")
+        job_info_json = sync_redis_client.get(f"job_info:{job_id}")
         if not job_info_json:
             await message.answer("❌ Информация о задаче не найдена")
             return
