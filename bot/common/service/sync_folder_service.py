@@ -2,12 +2,12 @@
 import asyncio
 import os
 from loguru import logger
-
+from bot.config import settings
 class SyncthingSync:
     """Управление синхронизацией Syncthing"""
     
     def __init__(self):
-        self.api_key = os.getenv("SYNCTHING_API_KEY")
+        self.api_key = settings.SYNCTHING_API_KEY
         self.host = os.getenv("SYNCTHING_HOST", "localhost:8384")
         self.folder_id = os.getenv("SYNCTHING_FOLDER", "backgammon-files")
         
