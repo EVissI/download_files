@@ -104,23 +104,19 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   # === RQ Dashboard для мониторинга (опционально) ===
-  rq-dashboard:
-    image: eoranged/rq-dashboard:latest
-    container_name: backgammon_rq_dashboard
-    ports:
-      - "9181:9181"
-    environment:
-      - RQ_DASHBOARD_REDIS_URL=redis://{REDIS_USER}:${REDIS_PASSWORD}@redis:6379
-    depends_on:
-      - redis
-    restart: unless-stopped
+  # rq-dashboard:
+  #   image: eoranged/rq-dashboard:latest
+  #   container_name: backgammon_rq_dashboard
+  #   ports:
+  #     - "9181:9181"
+  #   environment:
+  #     - RQ_DASHBOARD_REDIS_URL=redis://{REDIS_USER}:${REDIS_PASSWORD}@redis:6379
+  #   depends_on:
+  #     - redis
+  #   restart: unless-stopped
 
 volumes:
   pgdata:
     driver: local
   redisdata:
     driver: local
-
-networks:
-  backgammon_network:
-    driver: bridge
