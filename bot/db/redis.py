@@ -1,17 +1,18 @@
-﻿import redis
-import redis.asyncio as aioredis
+﻿import redis.asyncio as aioredis
 from redis import Redis
 from redis.asyncio.connection import ConnectionPool
-from typing import Optional, List, Tuple, Any
-from functools import wraps
+from typing import Optional, List, Tuple
 from loguru import logger
 from bot.config import settings
 
+
 class RedisClient:
-    def __init__(self, url: str = settings.REDIS_URL):  
+    """Async Redis клиент для обычных операций"""
+    
+    def __init__(self, url: str = settings.REDIS_URL):
         self.url = url
         self.pool: Optional[ConnectionPool] = None
-        self.redis: Optional[redis.Redis] = None
+        self.redis: Optional[aioredis.Redis] = None
         self._connected = False
 
     async def ensure_connection(self):
@@ -23,7 +24,7 @@ class RedisClient:
                     decode_responses=True,
                     max_connections=10
                 )
-                self.redis = redis.Redis(connection_pool=self.pool)
+                self.redis = aioredis.Redis(connection_pool=self.pool)
                 self._connected = True
                 logger.info("Successfully connected to Redis with connection pool")
             except Exception as e:
@@ -36,9 +37,9 @@ class RedisClient:
     async def close(self):
         if self.redis:
             await self.redis.close()
-            if self.pool:
-                await self.pool.disconnect()
-            self._connected = False
+        if self.pool:
+            await self.pool.disconnect()
+        self._connected = False
 
     async def set(self, key: str, value: str, expire: int = None):
         await self.ensure_connection()
@@ -75,12 +76,17 @@ class RedisClient:
         result = await self.redis.delete(key)
         return bool(result)
 
+    def ping(self):
+        """Sync метод для проверки соединения"""
+        return self.redis.ping() if self.redis else False
+
+
 redis_client = RedisClient()
 
 
 sync_redis_client = Redis.from_url(
     settings.REDIS_URL,
-    decode_responses=True,  # ✅ Оба работают со strings
+    decode_responses=True,  
     socket_keepalive=True,
     socket_keepalive_options={
         1: 1,  # TCP_KEEPIDLE
@@ -88,4 +94,3 @@ sync_redis_client = Redis.from_url(
         3: 1,  # TCP_KEEPCNT
     }
 )
-
