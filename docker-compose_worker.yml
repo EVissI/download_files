@@ -1,0 +1,69 @@
+﻿# docker-compose.worker.yml (для других серверов)
+# Используй этот файл на Server 2, Server 3, Server 4
+
+version: '3.8'
+
+services:
+  # === Worker #1 ===
+  worker-1:
+    build: .
+    container_name: backgammon_worker_1
+    command: python -m bot.workers.hint_viewer_worker
+    environment:
+      - REDIS_HOST=${REMOTE_REDIS_HOST}  # IP основного сервера
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./bot:/app/bot
+      - ./files:/app/files
+      - ./log:/app/log
+    restart: unless-stopped
+
+  # === Worker #2 ===
+  worker-2:
+    build: .
+    container_name: backgammon_worker_2
+    command: python -m bot.workers.hint_viewer_worker
+    environment:
+      - REDIS_HOST=${REMOTE_REDIS_HOST}
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./bot:/app/bot
+      - ./files:/app/files
+      - ./log:/app/log
+    restart: unless-stopped
+
+  # === Worker #3 ===
+  worker-3:
+    build: .
+    container_name: backgammon_worker_3
+    command: python -m bot.workers.hint_viewer_worker
+    environment:
+      - REDIS_HOST=${REMOTE_REDIS_HOST}
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./bot:/app/bot
+      - ./files:/app/files
+      - ./log:/app/log
+    restart: unless-stopped
+
+  # === Worker #4 ===
+  worker-4:
+    build: .
+    container_name: backgammon_worker_4
+    command: python -m bot.workers.hint_viewer_worker
+    environment:
+      - REDIS_HOST=${REMOTE_REDIS_HOST}
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./bot:/app/bot
+      - ./files:/app/files
+      - ./log:/app/log
+    restart: unless-stopped

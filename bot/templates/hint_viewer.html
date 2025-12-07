@@ -739,7 +739,7 @@
                         gameBlackScore = gameScores.Black || 0;
                         // enable_crawford_game_number is set only in initial load
                         if (matchLength === 0) {
-                            playersInfoDiv.innerHTML = "Манигейм<br> Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
+                            playersInfoDiv.innerHTML = "Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
                         } else {
                             matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                             playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;

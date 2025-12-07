@@ -1,16 +1,12 @@
-﻿services:
-  # test:
-  #   build: .
-  #   container_name: backgammon_test
-  #   command: /bin/sh -c "python test.py test3.mat out/output.json"
-  #   volumes:
-  #     - ./out:/app/out
-  #   restart: "no"
-    
+﻿# docker-compose.yml (обновленный с Redis + RQ workers)
+
+version: '3.8'
+
+services:
+  # === Основной бот (без изменений) ===
   backgammon-bot:
     build: .
-    command: /bin/sh -c "alembic upgrade head && python -m bot.init "
-    # command: /bin/sh -c "python -m bot.common.func.analiz_func"
+    command: /bin/sh -c "alembic upgrade head && python -m bot.init"
     container_name: backgammon_bot
     volumes:
       - ./bot:/app/bot
@@ -21,41 +17,93 @@
     env_file:
       - .env
     restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_started
+    networks:
+      - backgammon_network
 
-
+  # === Redis (обновлен для доступа с других серверов) ===
   redis:
-    image: redis:latest
+    image: redis:7-alpine
     container_name: redis
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_USER=${REDIS_USER}
       - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
     ports:
-      - "6379:6379"
+      - "0.0.0.0:6379:6379"  # ⚠️ Доступен с других хостов
     volumes:
       - ./redisdata:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
     command: >
-      sh -c '0
-        mkdir -p /usr/local/etc/redis &&
-        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
-        echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
-        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
-        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
-        echo "user default on >$REDIS_PASSWORD ~* +@all" > /usr/local/etc/redis/users.acl &&
-        echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
-        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      sh -c '
+      mkdir -p /usr/local/etc/redis &&
+      echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+      echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+      echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+      echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+      echo "maxmemory 2gb" >> /usr/local/etc/redis/redis.conf &&
+      echo "maxmemory-policy allkeys-lru" >> /usr/local/etc/redis/redis.conf &&
+      redis-server /usr/local/etc/redis/redis.conf
       '
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping"]
-      interval: 30s
-      timeout: 10s
+      interval: 10s
+      timeout: 5s
       retries: 5
     restart: unless-stopped
-    tty: true
-    stdin_open: true
+    networks:
+      - backgammon_network
 
+  # === Worker #1 для обработки анализов ===
+  worker-1:
+    build: .
+    container_name: backgammon_worker_1
+    command: python -m bot.workers.hint_viewer_worker
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./bot:/app/bot
+      - ./files:/app/files
+      - ./log:/app/log
+    restart: unless-stopped
+    networks:
+      - backgammon_network
+
+  # === Worker #2 для обработки анализов ===
+  worker-2:
+    build: .
+    container_name: backgammon_worker_2
+    command: python -m bot.workers.hint_viewer_worker
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./bot:/app/bot
+      - ./files:/app/files
+      - ./log:/app/log
+    restart: unless-stopped
+    networks:
+      - backgammon_network
+
+  # === PostgreSQL (без изменений) ===
   db:
-    image: postgres
+    image: postgres:15-alpine
+    container_name: backgammon_db
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -63,7 +111,28 @@
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - backgammon_network
 
+  # === RQ Dashboard для мониторинга (опционально) ===
+  rq-dashboard:
+    image: eoranged/rq-dashboard:latest
+    container_name: backgammon_rq_dashboard
+    ports:
+      - "9181:9181"
+    command: rq-dashboard -u redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - backgammon_network
 
 volumes:
   pgdata:
+    driver: local
+  redisdata:
+    driver: local
+
+networks:
+  backgammon_network:
+    driver: bridge
