@@ -17,13 +17,6 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    depends_on:
-      redis:
-        condition: service_healthy
-      db:
-        condition: service_started
-    networks:
-      - backgammon_network
 
   redis:
     image: redis:latest
@@ -63,7 +56,7 @@ services:
     container_name: backgammon_worker_1
     command: python -m bot.workers.hint_worker
     environment:
-      - REDIS_HOST=redis
+      - REDIS_HOST=root
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - PYTHONUNBUFFERED=1
@@ -72,8 +65,6 @@ services:
       - ./files:/app/files
       - ./log:/app/log
     restart: unless-stopped
-    networks:
-      - backgammon_network
 
   # === Worker #2 для обработки анализов ===
   worker-2:
@@ -81,7 +72,7 @@ services:
     container_name: backgammon_worker_2
     command: python -m bot.workers.hint_worker
     environment:
-      - REDIS_HOST=redis
+      - REDIS_HOST=root
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - PYTHONUNBUFFERED=1
@@ -90,13 +81,10 @@ services:
       - ./files:/app/files
       - ./log:/app/log
     restart: unless-stopped
-    networks:
-      - backgammon_network
 
   # === PostgreSQL (без изменений) ===
   db:
-    image: postgres:15-alpine
-    container_name: backgammon_db
+    image: postgres
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -104,8 +92,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    networks:
-      - backgammon_network
 
   # === RQ Dashboard для мониторинга (опционально) ===
   rq-dashboard:
@@ -113,12 +99,11 @@ services:
     container_name: backgammon_rq_dashboard
     ports:
       - "9181:9181"
-    command: rq-dashboard -u redis://:${REDIS_PASSWORD}@redis:6379
+    environment:
+      - RQ_DASHBOARD_REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
     depends_on:
       - redis
     restart: unless-stopped
-    networks:
-      - backgammon_network
 
 volumes:
   pgdata:
