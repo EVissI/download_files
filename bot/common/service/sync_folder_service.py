@@ -8,8 +8,8 @@ class SyncthingSync:
     
     def __init__(self):
         self.api_key = settings.SYNCTHING_API_KEY
-        self.host = os.getenv("SYNCTHING_HOST", "localhost:8384")
-        self.folder_id = os.getenv("SYNCTHING_FOLDER", "backgammon-files")
+        self.host = settings.SYNCTHING_HOST
+        self.folder_id =  settings.SYNCTHING_FOLDER
         
         if not self.api_key:
             logger.warning("⚠️ SYNCTHING_API_KEY не установлен!")
