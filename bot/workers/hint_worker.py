@@ -4,7 +4,6 @@ import logging
 from redis import Redis  # ✅ Правильный импорт
 from rq import Worker, Queue  # ✅ БЕЗ Connection
 from bot.common.func.hint_viewer import process_mat_file
-from bot.db.redis import sync_redis_client
 
 # Логирование
 logging.basicConfig(
@@ -26,8 +25,19 @@ REDIS_USER_PASSWORD = os.getenv('REDIS_USER_PASSWORD')
 # 2. Если используешь default пароль
 REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
 
+# Выбираем какой использовать
+if REDIS_USER and REDIS_USER_PASSWORD:
+    # С ACL-пользователем
+    redis_url = f'redis://{REDIS_USER}:{REDIS_USER_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}'
+    logger.info(f"Connecting to Redis with ACL user: {REDIS_USER}")
+else:
+    # С default пользователем (только пароль)
+    redis_url = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}'
+    logger.info(f"Connecting to Redis with default user")
 
-redis_conn = sync_redis_client
+logger.info(f"Redis URL: redis://<user>:<pass>@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
+
+redis_conn = Redis.from_url(redis_url, decode_responses=True)
 
 
 def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
