@@ -3,7 +3,7 @@ from redis.asyncio.connection import ConnectionPool
 from typing import Optional, List, Tuple
 from loguru import logger
 from bot.config import settings  
-
+from redis import Redis
 class RedisClient:
     def __init__(self, url: str = settings.REDIS_URL):  
         self.url = url
@@ -74,8 +74,56 @@ class RedisClient:
 
 redis_client = RedisClient()
 
-from redis import Redis
-sync_redis_client = Redis.from_url(
+class RQRedisWrapper:
+    """
+    Обёртка вокруг sync Redis для RQ.
+    Автоматически декодирует bytes в strings где нужно.
+    """
+    
+    def __init__(self, redis_instance):
+        self._redis = redis_instance
+    
+    def __getattr__(self, name):
+        """Проксирует все методы к реальному Redis"""
+        return getattr(self._redis, name)
+    
+    def _decode_if_bytes(self, value):
+        """Декодирует bytes в string если нужно"""
+        if isinstance(value, bytes):
+            try:
+                return value.decode('utf-8')
+            except Exception:
+                return value
+        return value
+    
+    def get(self, key):
+        """Декодирует result"""
+        result = self._redis.get(key)
+        return self._decode_if_bytes(result)
+    
+    def lrange(self, key, start, end):
+        """Декодирует весь list"""
+        result = self._redis.lrange(key, start, end)
+        return [self._decode_if_bytes(item) for item in result]
+    
+    def hgetall(self, key):
+        """Декодирует весь hash"""
+        result = self._redis.hgetall(key)
+        return {
+            self._decode_if_bytes(k): self._decode_if_bytes(v)
+            for k, v in result.items()
+        }
+    
+    def pipeline(self):
+        """Возвращает pipeline для RQ"""
+        return self._redis.pipeline()
+
+
+_raw_sync_redis = Redis.from_url(
     settings.REDIS_URL,
-    decode_responses=False
+    decode_responses=False,  
+    socket_keepalive=True
 )
+
+
+sync_redis_client = RQRedisWrapper(_raw_sync_redis)
