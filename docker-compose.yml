@@ -1,8 +1,4 @@
-﻿# docker-compose.yml (обновленный с Redis + RQ workers)
-
-version: '3.8'
-
-services:
+﻿services:
   # === Основной бот (без изменений) ===
   backgammon-bot:
     build: .
