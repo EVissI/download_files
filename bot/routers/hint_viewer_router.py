@@ -1,4 +1,5 @@
-﻿from aiogram import Router, F
+﻿import time
+from aiogram import Router, F
 from aiogram.filters import Command, CommandObject
 from aiogram.types import (
     Message,
@@ -19,7 +20,7 @@ import zipfile
 import io
 import shutil
 import uuid
-
+import requests
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import StateFilter
@@ -89,6 +90,47 @@ class HintViewerStates(StatesGroup):
     uploading_sequential = State()
     stats_player_selection = State()
 
+
+async def sync_files_before_processing(mat_path: str) -> bool:
+    """Убедиться что файл синхронизирован перед обработкой"""
+    
+    try:
+        # 1. Пересканировать папку
+        logger.info("🔄 Синхронизирую файлы Syncthing...")
+        response = requests.post(
+            "http://localhost:8384/rest/db/scan",
+            params={"folder": "backgammon-files"},
+            timeout=5
+        )
+        
+        if response.status_code != 200:
+            logger.warning(f"⚠️ Ошибка пересканирования: {response.status_code}")
+            return False
+        
+        # 2. Ждём завершения
+        max_wait = 30
+        start_time = time.time()
+        
+        while time.time() - start_time < max_wait:
+            status_response = requests.get(
+                "http://localhost:8384/rest/db/status",
+                params={"folder": "backgammon-files"},
+                timeout=5
+            )
+            status = status_response.json()
+            
+            if not status.get("syncing", False):
+                logger.info(f"✅ Файлы синхронизированы ({status.get('filesInSync', 0)} файлов)")
+                return True
+            
+            await asyncio.sleep(1)
+        
+        logger.warning("⚠️ Timeout синхронизации")
+        return False
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка Syncthing: {e}")
+        return False
 
 @hint_viewer_router.message(
     F.text.in_(
@@ -233,14 +275,18 @@ async def hint_viewer_menu(
         os.makedirs("files", exist_ok=True)
         with open(mat_path, "wb") as f:
             await message.bot.download_file(file.file_path, f)
-
+        if not await sync_files_before_processing(mat_path):
+            await message.reply("⚠️ Ошибка синхронизации файлов")
+            return
+        
+        if not os.path.exists(mat_path):
+            await message.reply("❌ Файл не найден после синхронизации")
+            return
         # === Извлекаем информацию перед постановкой в очередь ===
         with open(mat_path, "r", encoding="utf-8") as f:
             content = f.read()
         red_player, black_player = extract_player_names(content)
         estimated_time = estimate_processing_time(mat_path)
-        timeout = max(estimated_time * 1.5 + 60, 900)
-        # === СТАВИМ ЗАДАЧУ В ОЧЕРЕДЬ ===
         job = task_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_job",
             mat_path, json_path, str(message.from_user.id),
