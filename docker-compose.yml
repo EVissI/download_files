@@ -25,19 +25,17 @@ services:
     networks:
       - backgammon_network
 
-  # === Redis (обновлен для доступа с других серверов) ===
   redis:
-    image: redis:7-alpine
+    image: redis:latest
     container_name: redis
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_USER=${REDIS_USER}
       - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
     ports:
-      - "0.0.0.0:6379:6379" 
+      - "6379:6379"
     volumes:
       - ./redisdata:/data
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
     command: >
       sh -c '0
         mkdir -p /usr/local/etc/redis &&
@@ -51,12 +49,13 @@ services:
       '
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
     restart: unless-stopped
-    networks:
-      - backgammon_network
+    tty: true
+    stdin_open: true
+
 
   # === Worker #1 для обработки анализов ===
   worker-1:
