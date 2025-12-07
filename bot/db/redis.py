@@ -73,3 +73,9 @@ class RedisClient:
         return bool(result)
 
 redis_client = RedisClient()
+
+from redis import Redis
+sync_redis_client = Redis.from_url(
+    settings.REDIS_URL,
+    decode_responses=True
+)

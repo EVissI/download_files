@@ -31,7 +31,7 @@ from fastapi.staticfiles import StaticFiles
 from rq import Queue
 from rq.job import Job
 from redis import Redis
-from bot.db.redis import redis_client
+from bot.db.redis import sync_redis_client, redis_client
 
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.hint_viewer import (
@@ -78,7 +78,7 @@ hint_viewer_router = Router()
 hint_viewer_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
 message_lock = asyncio.Lock()
-task_queue = Queue("backgammon_analysis", connection=redis_client)
+task_queue = Queue("backgammon_analysis", connection=sync_redis_client)
 
 
 class HintViewerStates(StatesGroup):
