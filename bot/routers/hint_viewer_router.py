@@ -32,6 +32,7 @@ from fastapi.staticfiles import StaticFiles
 from rq import Queue
 from rq.job import Job
 from redis import Redis
+from bot.common.service.sync_folder_service import SyncthingSync
 from bot.db.redis import sync_redis_client, redis_client
 
 from bot.common.filters.user_info import UserInfo
@@ -91,46 +92,7 @@ class HintViewerStates(StatesGroup):
     stats_player_selection = State()
 
 
-async def sync_files_before_processing(mat_path: str) -> bool:
-    """Убедиться что файл синхронизирован перед обработкой"""
-    
-    try:
-        # 1. Пересканировать папку
-        logger.info("🔄 Синхронизирую файлы Syncthing...")
-        response = requests.post(
-            "http://localhost:8384/rest/db/scan",
-            params={"folder": "backgammon-files"},
-            timeout=5
-        )
-        
-        if response.status_code != 200:
-            logger.warning(f"⚠️ Ошибка пересканирования: {response.status_code}")
-            return False
-        
-        # 2. Ждём завершения
-        max_wait = 30
-        start_time = time.time()
-        
-        while time.time() - start_time < max_wait:
-            status_response = requests.get(
-                "http://localhost:8384/rest/db/status",
-                params={"folder": "backgammon-files"},
-                timeout=5
-            )
-            status = status_response.json()
-            
-            if not status.get("syncing", False):
-                logger.info(f"✅ Файлы синхронизированы ({status.get('filesInSync', 0)} файлов)")
-                return True
-            
-            await asyncio.sleep(1)
-        
-        logger.warning("⚠️ Timeout синхронизации")
-        return False
-        
-    except Exception as e:
-        logger.error(f"❌ Ошибка Syncthing: {e}")
-        return False
+syncthing_sync = SyncthingSync()
 
 @hint_viewer_router.message(
     F.text.in_(
@@ -275,8 +237,8 @@ async def hint_viewer_menu(
         os.makedirs("files", exist_ok=True)
         with open(mat_path, "wb") as f:
             await message.bot.download_file(file.file_path, f)
-        if not await sync_files_before_processing(mat_path):
-            await message.reply("⚠️ Ошибка синхронизации файлов")
+        if not await syncthing_sync.sync_and_wait(max_wait=30):
+            logger.warning("⚠️ Ошибка на сервере, попробуйте позже.")
             return
         
         if not os.path.exists(mat_path):

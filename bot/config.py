@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     ROOT_ADMIN_IDS: List[int]
     YA_API_TOKEN: str
     YO_KASSA_TEL_API_KEY: str
+    SYNCTHING_API_KEY: str
     MINI_APP_URL:str
     
     POSTGRES_USER:str
