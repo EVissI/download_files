@@ -1,5 +1,5 @@
 ﻿from aiogram import Router, F
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.types import (
     Message,
     WebAppInfo,
@@ -50,7 +50,6 @@ from bot.common.func.progress_bar import ProgressBarMessageManager
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.kbds.inline.autoanalize import get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
-from bot.db.redis import redis_client
 from bot.routers.autoanalize.autoanaliz import analyze_file_by_path
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
@@ -79,7 +78,8 @@ hint_viewer_router = Router()
 hint_viewer_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
 message_lock = asyncio.Lock()
-task_queue = Queue('backgammon_analysis', connection=redis_client)
+task_queue = Queue("backgammon_analysis", connection=redis_client)
+
 
 class HintViewerStates(StatesGroup):
     choose_type = State()
@@ -211,58 +211,60 @@ async def hint_viewer_menu(
     message: Message, state: FSMContext, i18n, session_without_commit
 ):
     """Обработка загруженного .mat файла"""
-    
+
     doc = message.document
     fname = doc.file_name
-    
+
     if not fname.lower().endswith(".mat"):
         await message.reply("Пожалуйста, пришлите .mat файл.")
         return
-    
+
     # === Генерируем уникальный ID для этой задачи ===
     game_id = random_filename(ext="")
     mat_path = f"files/{fname}"
     json_path = f"files/{game_id}.json"
     job_id = f"hint_{message.from_user.id}_{uuid.uuid4().hex[:8]}"
-    
+
     try:
         # === Скачиваем файл ===
         file = await message.bot.get_file(doc.file_id)
         os.makedirs("files", exist_ok=True)
         with open(mat_path, "wb") as f:
             await message.bot.download_file(file.file_path, f)
-        
+
         # === Извлекаем информацию перед постановкой в очередь ===
         with open(mat_path, "r", encoding="utf-8") as f:
             content = f.read()
         red_player, black_player = extract_player_names(content)
         estimated_time = estimate_processing_time(mat_path)
-        
+
         # === СТАВИМ ЗАДАЧУ В ОЧЕРЕДЬ ===
         job = task_queue.enqueue(
-            'bot.workers.hint_viewer_worker.analyze_backgammon_job',
+            "bot.workers.hint_viewer_worker.analyze_backgammon_job",
             mat_path,
             json_path,
             str(message.from_user.id),
             job_id=job_id,
             timeout=600,  # 10 минут максимум
-            result_ttl=3600  # Результат хранится 1 час
+            result_ttl=3600,  # Результат хранится 1 час
         )
-        
+
         # === Сохраняем информацию о задаче в Redis ===
         await redis_client.set(
             f"job_info:{job_id}",
-            json.dumps({
-                "game_id": game_id,
-                "mat_path": mat_path,
-                "json_path": json_path,
-                "red_player": red_player,
-                "black_player": black_player,
-                "user_id": message.from_user.id
-            }),
-            expire=3600  # 1 час
+            json.dumps(
+                {
+                    "game_id": game_id,
+                    "mat_path": mat_path,
+                    "json_path": json_path,
+                    "red_player": red_player,
+                    "black_player": black_player,
+                    "user_id": message.from_user.id,
+                }
+            ),
+            expire=3600,  # 1 час
         )
-        
+
         # === Отправляем пользователю уведомление ===
         status_text = (
             f"✅ Файл принят!\n"
@@ -270,9 +272,9 @@ async def hint_viewer_menu(
             f"Примерное время: ~{estimated_time} сек\n"
             f"Статус: /status {job_id}"
         )
-        
+
         await message.answer(status_text, parse_mode="Markdown")
-        
+
         # === Сохраняем данные в состояние для проверки статуса ===
         await state.update_data(
             job_id=job_id,
@@ -280,14 +282,14 @@ async def hint_viewer_menu(
             mat_path=mat_path,
             json_path=json_path,
             red_player=red_player,
-            black_player=black_player
+            black_player=black_player,
         )
-        
+
         # === Запускаем фоновую проверку статуса ===
         asyncio.create_task(
             check_job_status(message, job_id, state, i18n, session_without_commit)
         )
-        
+
     except Exception as e:
         logger.exception(f"Error processing hint viewer file: {e}")
         await message.reply(f"❌ Ошибка при обработке файла: {e}")
@@ -802,12 +804,10 @@ async def process_single_hint_file(mat_path: str, user_id: str, session_without_
     finally:
         # Файл удаляется в handler show_stats или остается для статистики
         pass
+
+
 async def check_job_status(
-    message: Message,
-    job_id: str,
-    state: FSMContext,
-    i18n,
-    session_without_commit
+    message: Message, job_id: str, state: FSMContext, i18n, session_without_commit
 ):
     """
     Фоновая задача для проверки статуса анализа.
@@ -819,36 +819,33 @@ async def check_job_status(
         if not job_info_json:
             await message.answer("❌ Информация о задаче не найдена")
             return
-        
+
         job_info = json.loads(job_info_json)
-        
+
         # Начинаем проверку
         while True:
             try:
                 job = Job.fetch(job_id, connection=redis_client)
-                
+
                 if job.is_finished:
                     # === ЗАДАЧА ЗАВЕРШЕНА ===
                     result = job.result
-                    
+
                     if result["status"] == "success":
                         logger.info(f"Job {job_id} completed successfully")
-                        
+
                         # Уменьшаем баланс пользователя
                         await UserDAO(session_without_commit).decrease_analiz_balance(
-                            user_id=message.from_user.id,
-                            service_type="HINTS"
+                            user_id=message.from_user.id, service_type="HINTS"
                         )
                         await session_without_commit.commit()
-                        
+
                         # Сохраняем mat_path для статистики
                         game_id = job_info["game_id"]
                         await redis_client.set(
-                            f"mat_path:{game_id}",
-                            result["mat_path"],
-                            expire=3600
+                            f"mat_path:{game_id}", result["mat_path"], expire=3600
                         )
-                        
+
                         # Создаём ZIP архив если есть игры
                         games_dir = result["games_dir"]
                         if os.path.exists(games_dir) and result["has_games"]:
@@ -860,38 +857,30 @@ async def check_job_status(
                                         file_path = os.path.join(root, file)
                                         arcname = os.path.relpath(file_path, games_dir)
                                         zip_file.write(file_path, arcname)
-                            
+
                             zip_buffer.seek(0)
-                            
+
                             # Отправляем ZIP если пользователь админ
                             if message.from_user.id in admins:
                                 from aiogram.types import BufferedInputFile
+
                                 zip_file = BufferedInputFile(
                                     zip_buffer.getvalue(),
-                                    filename=f"{game_id}_analysis.zip"
+                                    filename=f"{game_id}_analysis.zip",
                                 )
                                 await message.answer_document(
-                                    document=zip_file,
-                                    caption="Архив с анализом игр"
+                                    document=zip_file, caption="Архив с анализом игр"
                                 )
-                            
+
                             # Отправляем кнопки для просмотра
                             red_player = job_info["red_player"]
                             black_player = job_info["black_player"]
-                            
-                            mini_app_url_all = (
-                                f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
-                            )
-                            mini_app_url_both_errors = (
-                                f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
-                            )
-                            mini_app_url_red_errors = (
-                                f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
-                            )
-                            mini_app_url_black_errors = (
-                                f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
-                            )
-                            
+
+                            mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
+                            mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+                            mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+                            mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
+
                             keyboard = InlineKeyboardMarkup(
                                 inline_keyboard=[
                                     [
@@ -903,19 +892,25 @@ async def check_job_status(
                                     [
                                         InlineKeyboardButton(
                                             text="Только ошибки (оба игрока)",
-                                            web_app=WebAppInfo(url=mini_app_url_both_errors),
+                                            web_app=WebAppInfo(
+                                                url=mini_app_url_both_errors
+                                            ),
                                         ),
                                     ],
                                     [
                                         InlineKeyboardButton(
                                             text=f"Только ошибки ({red_player})",
-                                            web_app=WebAppInfo(url=mini_app_url_red_errors),
+                                            web_app=WebAppInfo(
+                                                url=mini_app_url_red_errors
+                                            ),
                                         ),
                                     ],
                                     [
                                         InlineKeyboardButton(
                                             text=f"Только ошибки ({black_player})",
-                                            web_app=WebAppInfo(url=mini_app_url_black_errors),
+                                            web_app=WebAppInfo(
+                                                url=mini_app_url_black_errors
+                                            ),
                                         ),
                                     ],
                                     [
@@ -926,66 +921,69 @@ async def check_job_status(
                                     ],
                                 ]
                             )
-                            
+
                             await message.answer(
                                 f"✅ Анализ завершен!\n{red_player} vs {black_player}\n"
                                 f"Выберите вариант просмотра ошибок:",
                                 reply_markup=keyboard,
                             )
                         else:
-                            await message.answer("✅ Анализ завершен, но игр не найдено.")
-                    
+                            await message.answer(
+                                "✅ Анализ завершен, но игр не найдено."
+                            )
+
                     else:
                         # === ОШИБКА ===
                         error_msg = result.get("error", "Неизвестная ошибка")
                         await message.answer(f"❌ Ошибка при анализе: {error_msg}")
-                    
+
                     await state.clear()
                     break
-                
+
                 elif job.is_failed:
                     # === ЗАДАЧА ПРОВАЛИЛАСЬ ===
                     await message.answer("❌ Анализ завершился с критической ошибкой")
                     await state.clear()
                     break
-                
+
                 elif job.is_queued:
                     # === ЗАДАЧА В ОЧЕРЕДИ ===
                     position = job.get_position()
                     await asyncio.sleep(3)
                     continue
-                
+
                 elif job.is_started:
                     # === ЗАДАЧА ВЫПОЛНЯЕТСЯ ===
                     await asyncio.sleep(5)  # Проверяем чаще когда выполняется
                     continue
-                
+
                 else:
                     await asyncio.sleep(3)
                     continue
-                    
+
             except Exception as e:
                 logger.warning(f"Error checking job status: {e}")
                 await asyncio.sleep(5)
                 continue
-    
+
     except Exception as e:
         logger.exception(f"Error in check_job_status for {job_id}")
         await message.answer("❌ Ошибка при проверке статуса задачи")
 
+
 @hint_viewer_router.message(Command("status"))
-async def cmd_status(message: Message, command: Command.CommandObject):
+async def cmd_status(message: Message, command: CommandObject):
     """Проверить статус задачи анализа"""
-    
+
     if not command.args:
         await message.answer("Использование: /status <job_id>")
         return
-    
+
     job_id = command.args.strip()
-    
+
     try:
         job = Job.fetch(job_id, connection=redis_client)
-        
+
         if job.is_finished:
             if job.is_successful:
                 await message.answer(
@@ -993,19 +991,19 @@ async def cmd_status(message: Message, command: Command.CommandObject):
                 )
             else:
                 await message.answer(f"❌ Анализ завершился с ошибкой: {job.exc_info}")
-        
+
         elif job.is_failed:
             await message.answer("❌ Анализ завершился с критической ошибкой")
-        
+
         elif job.is_queued:
             position = job.get_position()
             await message.answer(f"⏳ В очереди. Позиция: {position}")
-        
+
         elif job.is_started:
             await message.answer("⏳ Выполняется...")
-        
+
         else:
             await message.answer("❓ Статус неизвестен")
-    
+
     except Exception as e:
         await message.answer(f"❌ Ошибка: Задача {job_id} не найдена")
