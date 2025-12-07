@@ -239,12 +239,12 @@ async def hint_viewer_menu(
             content = f.read()
         red_player, black_player = extract_player_names(content)
         estimated_time = estimate_processing_time(mat_path)
-
+        timeout = max(estimated_time * 1.5 + 60, 900)
         # === СТАВИМ ЗАДАЧУ В ОЧЕРЕДЬ ===
         job = task_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_job",
             mat_path, json_path, str(message.from_user.id),
-            job_id=job_id
+            job_id=job_id, timeout=timeout
         )
 
         # === Сохраняем информацию о задаче в Redis ===
