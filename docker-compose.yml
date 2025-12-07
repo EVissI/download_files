@@ -13,6 +13,7 @@
     env_file:
       - .env
     restart: unless-stopped
+    network_mode: "host" 
 
   redis:
     image: redis:latest
@@ -66,28 +67,8 @@
       - ./files:/app/files
       - ./log:/app/log
     restart: unless-stopped
+    network_mode: "host" 
 
-  # worker-2:
-  #   build: .
-  #   container_name: backgammon_worker_2
-  #   command: python -m bot.workers.hint_worker
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #   environment:
-  #     - REDIS_HOST=redis
-  #     - REDIS_PORT=6379
-  #     - REDIS_PASSWORD=${REDIS_PASSWORD}
-  #     - REDIS_USER=${REDIS_USER}
-  #     - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
-  #     - PYTHONUNBUFFERED=1
-  #   volumes:
-  #     - ./bot:/app/bot
-  #     - ./files:/app/files
-  #     - ./log:/app/log
-  #   restart: unless-stopped
-
-  # === PostgreSQL (без изменений) ===
   db:
     image: postgres
     restart: always
@@ -115,3 +96,4 @@ volumes:
     driver: local
   redisdata:
     driver: local
+
