@@ -87,10 +87,4 @@ redis_client = RedisClient()
 sync_redis_client = Redis.from_url(
     settings.REDIS_URL,
     decode_responses=True,  
-    socket_keepalive=True,
-    socket_keepalive_options={
-        1: 1,  # TCP_KEEPIDLE
-        2: 1,  # TCP_KEEPINTVL
-        3: 1,  # TCP_KEEPCNT
-    }
 )
