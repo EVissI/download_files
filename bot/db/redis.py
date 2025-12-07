@@ -1,9 +1,12 @@
-﻿import redis.asyncio as redis
-from redis.asyncio.connection import ConnectionPool
-from typing import Optional, List, Tuple
-from loguru import logger
-from bot.config import settings  
+﻿import redis
+import redis.asyncio as aioredis
 from redis import Redis
+from redis.asyncio.connection import ConnectionPool
+from typing import Optional, List, Tuple, Any
+from functools import wraps
+from loguru import logger
+from bot.config import settings
+
 class RedisClient:
     def __init__(self, url: str = settings.REDIS_URL):  
         self.url = url
@@ -77,46 +80,51 @@ redis_client = RedisClient()
 class RQRedisWrapper:
     """
     Обёртка вокруг sync Redis для RQ.
-    Автоматически декодирует bytes в strings где нужно.
+    Автоматически декодирует bytes в strings ДЛЯ ВСЕХ МЕТОДОВ.
     """
     
     def __init__(self, redis_instance):
         self._redis = redis_instance
     
-    def __getattr__(self, name):
-        """Проксирует все методы к реальному Redis"""
-        return getattr(self._redis, name)
-    
-    def _decode_if_bytes(self, value):
-        """Декодирует bytes в string если нужно"""
-        if isinstance(value, bytes):
+    def _decode_bytes(self, obj: Any) -> Any:
+        """Рекурсивно декодирует bytes во всех структурах данных"""
+        if isinstance(obj, bytes):
             try:
-                return value.decode('utf-8')
-            except Exception:
-                return value
-        return value
+                return obj.decode('utf-8')
+            except (UnicodeDecodeError, AttributeError):
+                # Если не UTF-8, возвращаем как есть
+                return obj
+        elif isinstance(obj, dict):
+            return {self._decode_bytes(k): self._decode_bytes(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._decode_bytes(item) for item in obj]
+        elif isinstance(obj, tuple):
+            return tuple(self._decode_bytes(item) for item in obj)
+        elif isinstance(obj, set):
+            return {self._decode_bytes(item) for item in obj}
+        return obj
     
-    def get(self, key):
-        """Декодирует result"""
-        result = self._redis.get(key)
-        return self._decode_if_bytes(result)
+    def __getattr__(self, name: str):
+        """Перехватывает ВСЕ атрибуты и методы"""
+        attr = getattr(self._redis, name)
+        
+        # Если это метод - оборачиваем его для декодирования результата
+        if callable(attr):
+            @wraps(attr)
+            def wrapper(*args, **kwargs):
+                result = attr(*args, **kwargs)
+                return self._decode_bytes(result)
+            return wrapper
+        
+        # Если это не метод - возвращаем как есть
+        return attr
     
-    def lrange(self, key, start, end):
-        """Декодирует весь list"""
-        result = self._redis.lrange(key, start, end)
-        return [self._decode_if_bytes(item) for item in result]
-    
-    def hgetall(self, key):
-        """Декодирует весь hash"""
-        result = self._redis.hgetall(key)
-        return {
-            self._decode_if_bytes(k): self._decode_if_bytes(v)
-            for k, v in result.items()
-        }
-    
-    def pipeline(self):
-        """Возвращает pipeline для RQ"""
-        return self._redis.pipeline()
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Позволяет сохранять атрибуты wrapper-а"""
+        if name.startswith('_'):
+            super().__setattr__(name, value)
+        else:
+            setattr(self._redis, name, value)
 
 
 _raw_sync_redis = Redis.from_url(
