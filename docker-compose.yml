@@ -46,26 +46,6 @@
     stdin_open: true
 
 
-  # === Worker #1 для обработки анализов ===
-  worker-1:
-    build: .
-    container_name: backgammon_worker_1
-    command: python -m bot.workers.hint_worker
-    depends_on:
-      redis:
-        condition: service_healthy
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_USER=${REDIS_USER}
-      - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./bot:/app/bot
-      - ./files:/app/files
-      - ./log:/app/log
-    restart: unless-stopped
 
   db:
     image: postgres
