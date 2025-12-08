@@ -1,19 +1,32 @@
-﻿
+﻿version: '3.8'
+
+x-worker-config: &worker-config
+  build: .
+  container_name: backgammon_worker_${WORKERS_COUNT:-1}
+  command: python -m bot.workers.hint_worker
+  environment:
+    - REDIS_HOST=${REDIS_HOST}
+    - REDIS_PORT=6379
+    - REDIS_PASSWORD=${REDIS_PASSWORD}
+    - REDIS_USER=${REDIS_USER}
+    - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
+    - PYTHONUNBUFFERED=1
+  volumes:
+    - ./bot:/app/bot
+    - ./files:/app/files
+    - ./log:/app/log
+  restart: unless-stopped
+  networks:
+    - backgammon-net
+
 services:
-  # === Worker #1 ===
-  worker-1:
-    build: .
-    container_name: backgammon_worker_1
-    command: python -m bot.workers.hint_worker
-    environment:
-      - REDIS_HOST=${REMOTE_REDIS_HOST}  # IP основного сервера
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_USER=${REDIS_USER}
-      - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./bot:/app/bot
-      - ./files:/app/files
-      - ./log:/app/log
-    restart: unless-stopped
+  # Динамическое создание WORKERS_COUNT контейнеров
+  worker:
+    <<: *worker-config
+    profiles: ["worker"]
+    deploy:
+      replicas: ${WORKERS_COUNT:-1}
+
+networks:
+  backgammon-net:
+    driver: bridge
