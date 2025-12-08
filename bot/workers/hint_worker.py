@@ -40,63 +40,71 @@ logger.info(f"Redis URL: redis://<user>:<pass>@{REDIS_HOST}:{REDIS_PORT}/{REDIS_
 redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 
-def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
+logger.info(f"Worker started in: {os.getcwd()}")
+logger.info(f"Files directory: {os.path.abspath('files')}")
+logger.info(f"Contents of files/: {os.listdir('files') if os.path.exists('files') else 'NOT EXISTS'}")
+
+def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str, job_id: str = None):
     """
     Анализирует один .mat файл (запускается в worker-е).
-    
-    Args:
-        mat_path: Путь к исходному .mat файлу
-        json_path: Путь для сохранения результата .json
-        user_id: ID пользователя (для логирования)
-    
-    Returns:
-        dict: Результат анализа (success/error)
     """
+    # ✅ Добавить детальное логирование путей
+    abs_mat_path = os.path.abspath(mat_path)
+    abs_json_path = os.path.abspath(json_path)
+    
+    logger.info(f"[Job Start] job_id={job_id}")
+    logger.info(f"Original mat_path: {mat_path}")
+    logger.info(f"Absolute mat_path: {abs_mat_path}")
+    logger.info(f"Current working directory: {os.getcwd()}")
+    logger.info(f"Exists? {os.path.exists(abs_mat_path)}")
+    
+    if os.path.exists(abs_mat_path):
+        logger.info(f"File size: {os.path.getsize(abs_mat_path)} bytes")
+    else:
+        logger.error(f"File NOT FOUND: {abs_mat_path}")
+        # Попробуем найти в текущей директории
+        alternative_path = os.path.join(os.getcwd(), mat_path)
+        logger.info(f"Trying alternative path: {alternative_path}")
+        logger.info(f"Alternative exists? {os.path.exists(alternative_path)}")
+    
     try:
-        logger.info(f"[Job Start] mat_path={mat_path}, user_id={user_id}")
+        if not os.path.exists(abs_mat_path):
+            raise FileNotFoundError(f"Файл не найден: {abs_mat_path}")
         
-        # Запускаем твою существующую функцию
-        process_mat_file(mat_path, json_path, user_id)
+        process_mat_file(abs_mat_path, abs_json_path, user_id)
         
-        # Проверяем что результат создан
-        games_dir = json_path.rsplit(".", 1)[0] + "_games"
+        games_dir = abs_json_path.rsplit(".", 1)[0] + "_games"
         has_games = os.path.exists(games_dir) and any(
             f.endswith(".json") for f in os.listdir(games_dir)
         )
         
-        logger.info(f"[Job Completed] {mat_path} -> {json_path} (has_games={has_games})")
-        
-        return {
-            "status": "success",
-            "mat_path": mat_path,
-            "json_path": json_path,
-            "games_dir": games_dir,
-            "has_games": has_games
-        }
-        
+        logger.info(f"[Job Success] {abs_mat_path} -> {abs_json_path}")
+        return {"status": "success", "mat_path": abs_mat_path, "has_games": has_games}
+    
     except Exception as e:
-        logger.exception(f"[Job Failed] {mat_path}")
-        return {
-            "status": "error",
-            "error": str(e),
-            "mat_path": mat_path
-        }
-
+        logger.exception(f"[Job Failed] {abs_mat_path}")
+        return {"status": "error", "error": str(e), "mat_path": abs_mat_path}
 
 if __name__ == '__main__':
+    # ✅ Установить явную рабочую директорию
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_dir = os.path.dirname(os.path.dirname(script_dir))
+    os.chdir(project_dir)
+    logger.info(f"Working directory set to: {os.getcwd()}")
+    
+    # Проверка подключения к Redis
     try:
         redis_conn.ping()
-        logger.info(f"✅ Connected to Redis: {REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
+        logger.info(f"✅ Connected to Redis")
     except Exception as e:
-        logger.error(f"❌ Failed to connect to Redis: {e}")
+        logger.error(f"❌ Redis connection failed: {e}")
         sys.exit(1)
-
-    # Queue и Worker используют тот же connection с decode_responses=False
+    
     try:
         queue = Queue('backgammon_analysis', connection=redis_conn)
         worker = Worker([queue], connection=redis_conn)
-        logger.info(f"🚀 Starting Worker on queue 'backgammon_analysis'...")
+        logger.info(f"🚀 Starting Worker...")
         worker.work()
     except Exception as e:
-        logger.exception("Worker crashed with error")
+        logger.exception("Worker crashed")
         sys.exit(1)
