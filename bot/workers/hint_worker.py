@@ -4,6 +4,7 @@ import logging
 from redis import Redis  # ✅ Правильный импорт
 from rq import Worker, Queue  # ✅ БЕЗ Connection
 from bot.common.func.hint_viewer import process_mat_file
+from bot.common.service.sync_folder_service import SyncthingSync
 
 # Логирование
 logging.basicConfig(
@@ -40,48 +41,41 @@ logger.info(f"Redis URL: redis://<user>:<pass>@{REDIS_HOST}:{REDIS_PORT}/{REDIS_
 redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 
-def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
-    """
-    Анализирует один .mat файл (запускается в worker-е).
-    
-    Args:
-        mat_path: Путь к исходному .mat файлу
-        json_path: Путь для сохранения результата .json
-        user_id: ID пользователя (для логирования)
-    
-    Returns:
-        dict: Результат анализа (success/error)
-    """
+syncthing_sync = SyncthingSync()  # ← Глобальный экземпляр
+
+def analyzebackgammonjob(matpath: str, jsonpath: str, userid: str):
+    """ .mat worker- . """
     try:
-        logger.info(f"[Job Start] mat_path={mat_path}, user_id={user_id}")
+        logger.info(f"Job Start matpath={matpath}, userid={userid}")
         
-        # Запускаем твою существующую функцию
-        process_mat_file(mat_path, json_path, user_id)
+        process_mat_file(matpath, jsonpath, userid)
         
-        # Проверяем что результат создан
-        games_dir = json_path.rsplit(".", 1)[0] + "_games"
-        has_games = os.path.exists(games_dir) and any(
-            f.endswith(".json") for f in os.listdir(games_dir)
-        )
+        logger.info(f"Starting Syncthing sync for {matpath}")
+        sync_success = syncthing_sync.syncandwait(max_wait=30)
+        if not sync_success:
+            logger.warning(f"Syncthing sync failed/timeout for {matpath}")
+        gamesdir = jsonpath.rsplit('.', 1)[0] + '/games'
+        hasgames = (os.path.exists(gamesdir) and 
+                   any(f.endswith('.json') for f in os.listdir(gamesdir)))
         
-        logger.info(f"[Job Completed] {mat_path} -> {json_path} (has_games={has_games})")
+        logger.info(f"Job Completed matpath={matpath} -> jsonpath={jsonpath} hasgames={hasgames}")
         
         return {
-            "status": "success",
-            "mat_path": mat_path,
-            "json_path": json_path,
-            "games_dir": games_dir,
-            "has_games": has_games
+            'status': 'success',
+            'matpath': matpath,
+            'jsonpath': jsonpath,
+            'gamesdir': gamesdir,
+            'hasgames': hasgames,
+            'syncthing_sync': sync_success  
         }
         
     except Exception as e:
-        logger.exception(f"[Job Failed] {mat_path}")
+        logger.exception(f"Job Failed matpath={matpath}")
         return {
-            "status": "error",
-            "error": str(e),
-            "mat_path": mat_path
+            'status': 'error',
+            'error': str(e),
+            'matpath': matpath
         }
-
 
 if __name__ == '__main__':
     try:
