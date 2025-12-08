@@ -232,19 +232,27 @@ async def hint_viewer_menu(
     job_id = f"hint_{message.from_user.id}_{uuid.uuid4().hex[:8]}"
 
     try:
-        # === Скачиваем файл ===
         file = await message.bot.get_file(doc.file_id)
         os.makedirs("files", exist_ok=True)
+        
         with open(mat_path, "wb") as f:
             await message.bot.download_file(file.file_path, f)
-        if not await syncthing_sync.sync_and_wait(max_wait=30):
-            logger.warning("⚠️ Ошибка на сервере, попробуйте позже.")
-            return
         
-        if not os.path.exists(mat_path):
+        logger.info(f"📥 Файл скачан локально: {mat_path}")
+        
+        # === Синхронизируем через Syncthing ===
+        if not await syncthing_sync.sync_and_wait(max_wait=30):
+            logger.warning("⚠️ Ошибка синхронизации Syncthing")
+            # Продолжаем, если локальный файл есть
+        
+        # === Ждём физического появления файла ===
+        if not await syncthing_sync.wait_for_file(mat_path, max_wait=30):
             await message.reply("❌ Файл не найден после синхронизации")
             return
-        # === Извлекаем информацию перед постановкой в очередь ===
+        
+        logger.info(f"✅ Файл готов к обработке: {mat_path}")
+        
+        # === Извлекаем информацию ===
         with open(mat_path, "r", encoding="utf-8") as f:
             content = f.read()
         red_player, black_player = extract_player_names(content)
