@@ -39,8 +39,6 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379       
     REDIS_DB: int = 0
 
-    RQ_DASHBOARD_USERNAME: str
-    RQ_DASHBOARD_PASSWORD: str
 
     @property
     def DB_URL(self):

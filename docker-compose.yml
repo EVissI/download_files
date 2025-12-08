@@ -57,21 +57,7 @@
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  # === RQ Dashboard для мониторинга ===
-  rq-dashboard:
-    image: eoranged/rq-dashboard:latest
-    container_name: backgammon_rq_dashboard
-    ports:
-      - "9181:9181"
-    environment:
-      - RQ_DASHBOARD_REDIS_URL=redis://${REDIS_USER}:${REDIS_PASSWORD}@redis:6379/0
-      - RQ_DASHBOARD_HIDE_SUMMARY=true
-      - RQ_DASHBOARD_USERNAME=${RQ_DASHBOARD_USERNAME}
-      - RQ_DASHBOARD_PASSWORD=${RQ_DASHBOARD_PASSWORD}
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
+
 
 volumes:
   pgdata:
