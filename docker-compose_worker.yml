@@ -5,7 +5,7 @@ x-worker-config: &worker-config
   container_name: backgammon_worker_${WORKERS_COUNT:-1}
   command: python -m bot.workers.hint_worker
   environment:
-    - REDIS_HOST=${REDIS_HOST}
+    - REDIS_HOST=${REMOTE_REDIS_HOST}}
     - REDIS_PORT=6379
     - REDIS_PASSWORD=${REDIS_PASSWORD}
     - REDIS_USER=${REDIS_USER}
