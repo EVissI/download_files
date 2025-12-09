@@ -1,5 +1,5 @@
 ﻿from collections import defaultdict
-from copy import copy
+import copy
 import os
 import random
 import re
