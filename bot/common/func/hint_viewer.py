@@ -380,12 +380,16 @@ def json_to_gnubg_commands(
         
         elif dice:
             tokens.append({"cmd": "roll", "type": "cmd", "target": i})
-            tokens.append({"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i})
+            tokens.append(
+                {"cmd": f"set dice {dice}{dice}", "type": "cmd", "target": i}
+            )
             
             if black_score > 0 or red_score > 0:
                 if match_length > 0:
                     if enable_crawford:
-                        tokens.append({"cmd": f"set crawford on", "type": "cmd", "target": None})
+                        tokens.append(
+                            {"cmd": f"set crawford on", "type": "cmd", "target": None}
+                        )
                     
                     tokens.append({
                         "cmd": f"set score {black_score} {red_score}",
@@ -397,7 +401,7 @@ def json_to_gnubg_commands(
             if skip_flag:
                 tokens.append({"cmd": "roll", "type": "cmd", "target": i})
                 tokens.append({
-                    "cmd": f"set dice {dice[0]}{dice[1]}",
+                    "cmd": f"set dice {dice}{dice}",
                     "type": "cmd",
                     "target": i,
                 })
@@ -416,6 +420,7 @@ def json_to_gnubg_commands(
         i += 1
     
     return tokens
+
 
 
 def random_filename(ext=".gnubg", length=16):
