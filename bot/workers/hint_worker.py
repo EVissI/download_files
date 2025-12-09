@@ -43,38 +43,38 @@ redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 syncthing_sync = SyncthingSync()  # ← Глобальный экземпляр
 
-def analyze_backgammon_job(matpath: str, jsonpath: str, userid: str):
+def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
     """ .mat worker- . """
     try:
-        logger.info(f"Job Start matpath={matpath}, userid={userid}")
+        logger.info(f"Job Start matpath={mat_path}, userid={user_id}")
         
-        process_mat_file(matpath, jsonpath, userid)
+        process_mat_file(mat_path, json_path, user_id)
         
-        logger.info(f"Starting Syncthing sync for {matpath}")
+        logger.info(f"Starting Syncthing sync for {mat_path}")
         sync_success = syncthing_sync.sync_and_wait(max_wait=30)
         if not sync_success:
-            logger.warning(f"Syncthing sync failed/timeout for {matpath}")
-        gamesdir = jsonpath.rsplit('.', 1)[0] + '/games'
-        hasgames = (os.path.exists(gamesdir) and 
+            logger.warning(f"Syncthing sync failed/timeout for {mat_path}")
+        gamesdir = json_path.rsplit('.', 1)[0] + '/games'
+        has_games = (os.path.exists(gamesdir) and 
                    any(f.endswith('.json') for f in os.listdir(gamesdir)))
         
-        logger.info(f"Job Completed matpath={matpath} -> jsonpath={jsonpath} hasgames={hasgames}")
+        logger.info(f"Job Completed matpath={mat_path} -> jsonpath={json_path} hasgames={has_games}")
         
         return {
-            'status': 'success',
-            'matpath': matpath,
-            'jsonpath': jsonpath,
-            'gamesdir': gamesdir,
-            'hasgames': hasgames,
+            "status": "success",
+            "mat_path": mat_path,
+            "json_path": json_path,
+            "games_dir": gamesdir,
+            "has_games": has_games,
             'syncthing_sync': sync_success  
         }
         
     except Exception as e:
-        logger.exception(f"Job Failed matpath={matpath}")
+        logger.exception(f"Job Failed matpath={mat_path}")
         return {
-            'status': 'error',
-            'error': str(e),
-            'matpath': matpath
+            "status": "error",
+            "error": str(e),
+            "mat_path": mat_path
         }
 
 if __name__ == '__main__':
