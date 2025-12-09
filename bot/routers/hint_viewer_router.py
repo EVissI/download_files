@@ -81,10 +81,8 @@ hint_viewer_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
 message_lock = asyncio.Lock()
 
-redis_rq_sync = Redis.from_url(settings.REDIS_URL, decode_responses=False)
-task_queue = Queue(
-    "backgammon_analysis", connection=redis_rq_sync, default_timeout=1800
-)
+redis_rq = Redis.from_url(settings.REDIS_URL, decode_responses=False)
+task_queue = Queue("backgammon_analysis", connection=redis_rq,default_timeout=1800)
 
 
 class HintViewerStates(StatesGroup):
@@ -95,7 +93,6 @@ class HintViewerStates(StatesGroup):
 
 
 syncthing_sync = SyncthingSync()
-
 
 @hint_viewer_router.message(
     F.text.in_(
@@ -237,20 +234,22 @@ async def hint_viewer_menu(
     try:
         file = await message.bot.get_file(doc.file_id)
         os.makedirs("files", exist_ok=True)
-
+        
         with open(mat_path, "wb") as f:
             await message.bot.download_file(file.file_path, f)
-
+        
         logger.info(f"Файл скачан локально: {mat_path}")
-
+        
         if not await syncthing_sync.sync_and_wait(max_wait=30):
             logger.warning("Ошибка синхронизации Syncthing")
+
 
         if not await syncthing_sync.wait_for_file(mat_path, max_wait=30):
             await message.reply("❌ Файл не найден после синхронизации")
             return
-
+        
         logger.info(f"✅ Файл готов к обработке: {mat_path}")
+        
 
         with open(mat_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -258,10 +257,8 @@ async def hint_viewer_menu(
         estimated_time = estimate_processing_time(mat_path)
         job = task_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_job",
-            mat_path,
-            json_path,
-            str(message.from_user.id),
-            job_id=job_id,
+            mat_path, json_path, str(message.from_user.id),
+            job_id=job_id
         )
 
         # === Сохраняем информацию о задаче в Redis ===
@@ -683,82 +680,109 @@ async def process_batch_hint_files(
     user_info: User,
     session_without_commit,
 ):
+    waiting_manager = None
     try:
         total_files = len(file_paths)
-        batch_id = uuid.uuid4().hex[:8]
-        batch_job_ids = []
 
-        for mat_path in file_paths:
+        # Обрабатываем файлы последовательно
+        for idx, mat_path in enumerate(file_paths):
             fname = os.path.basename(mat_path)
-            game_id = random_filename(ext="")
-            json_path = f"files/{game_id}.json"
-            job_id = (
-                f"hint_batch_{batch_id}_{len(batch_job_ids)}_{uuid.uuid4().hex[:8]}"
+
+            # Оцениваем время для текущего файла
+            estimated_time = estimate_processing_time(mat_path)
+
+            # Уведомляем о начале обработки файла
+            await message.answer(f"Обработка файла {idx + 1}/{total_files}: {fname}")
+
+            waiting_manager = ProgressBarMessageManager(
+                chat_id, message.bot, estimated_time
             )
+            await waiting_manager.start()
 
-            # Извлекаем имена игроков
-            with open(mat_path, "r", encoding="utf-8") as f:
-                content = f.read()
-            red_player, black_player = extract_player_names(content)
+            try:
+                result = await process_single_hint_file(
+                    mat_path, chat_id, session_without_commit
+                )
+                game_id, has_games, red_player, black_player = result
 
-            # Ставим задачу в очередь
-            job = task_queue.enqueue(
-                "bot.workers.hint_worker.analyze_backgammon_job",
-                mat_path,
-                json_path,
-                str(chat_id),
-                job_id=job_id,
-            )
+                # Отправляем сообщение с ссылкой на веб-приложение
+                if has_games:
+                    mini_app_url_all = (
+                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
+                    )
+                    mini_app_url_both_errors = (
+                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+                    )
+                    mini_app_url_red_errors = (
+                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+                    )
+                    mini_app_url_black_errors = (
+                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
+                    )
+                    keyboard = InlineKeyboardMarkup(
+                        inline_keyboard=[
+                            [
+                                InlineKeyboardButton(
+                                    text="Просмотр всех ходов",
+                                    web_app=WebAppInfo(url=mini_app_url_all),
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    text="Только ошибки (оба игрока)",
+                                    web_app=WebAppInfo(url=mini_app_url_both_errors),
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    text=f"Только ошибки ({red_player})",
+                                    web_app=WebAppInfo(url=mini_app_url_red_errors),
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    text=f"Только ошибки ({black_player})",
+                                    web_app=WebAppInfo(url=mini_app_url_black_errors),
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    text="Показать статистику игры",
+                                    callback_data=f"show_stats:{game_id}",
+                                )
+                            ],
+                        ]
+                    )
+                    await message.answer(
+                        f"Анализ файла {fname} завершен! Выберите вариант просмотра ошибок:",
+                        reply_markup=keyboard,
+                    )
+                else:
+                    await message.answer(
+                        f"Анализ файла {fname} завершен, но игр не найдено."
+                    )
 
-            # Сохраняем информацию о задаче
-            await redis_client.set(
-                f"job_info:{job_id}",
-                json.dumps(
-                    {
-                        "game_id": game_id,
-                        "mat_path": mat_path,
-                        "json_path": json_path,
-                        "red_player": red_player,
-                        "black_player": black_player,
-                        "user_id": chat_id,
-                        "batch_id": batch_id,
-                    }
-                ),
-                expire=3600,
-            )
-            batch_job_ids.append(job_id)
+            except Exception as e:
+                logger.error(f"Error processing {mat_path}: {e}")
+                await message.reply(f"Ошибка при обработке файла {fname}: {e}")
+            finally:
+                await waiting_manager.stop()
+                waiting_manager = None
 
-        # Сохраняем информацию о батче
-        await redis_client.set(
-            f"batch_info:{batch_id}",
-            json.dumps(
-                {
-                    "job_ids": batch_job_ids,
-                    "user_id": chat_id,
-                    "total_files": total_files,
-                }
-            ),
-            expire=3600,
-        )
-
-        # Отправляем уведомление
+        await session_without_commit.commit()
         await message.answer(
-            f"Начинаю обработку батча. Job IDs: {', '.join(batch_job_ids)}"
-        )
-
-        # Запускаем проверку статуса батча
-        asyncio.create_task(
-            check_batch_job_status(
-                message, batch_id, state, i18n, session_without_commit
-            )
+            f"Пакетная обработка завершена. Обработано файлов: {total_files}"
         )
 
     except Exception as e:
-        logger.exception("Ошибка при постановке задач батчевого анализа")
+        logger.exception("Ошибка при пакетной обработке hint viewer")
         await message.reply(
             "Ошибка при обработке файлов.",
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
+    finally:
+        if waiting_manager:
+            await waiting_manager.stop()
         await state.clear()
 
 
@@ -803,7 +827,7 @@ async def check_job_status(
     """
     try:
         # Получаем информацию о задаче
-        job_info_json = await redis_client.get(f"job_info:{job_id}")
+        job_info_json = redis_rq.get(f"job_info:{job_id}")
         if not job_info_json:
             await message.answer("❌ Информация о задаче не найдена")
             return
@@ -813,7 +837,7 @@ async def check_job_status(
         # Начинаем проверку
         while True:
             try:
-                job = Job.fetch(job_id, connection=redis_rq_sync)
+                job = Job.fetch(job_id, connection=redis_rq)
 
                 if job.is_finished:
                     # === ЗАДАЧА ЗАВЕРШЕНА ===
@@ -959,136 +983,6 @@ async def check_job_status(
         await message.answer("❌ Ошибка при проверке статуса задачи")
 
 
-async def check_batch_job_status(
-    message: Message, batch_id: str, state: FSMContext, i18n, session_without_commit
-):
-    """
-    Фоновая задача для проверки статуса батчевого анализа.
-    Проверяет все job_ids в батче и отправляет результаты по мере завершения.
-    """
-    try:
-        batch_info_json = await redis_client.get(f"batch_info:{batch_id}")
-        if not batch_info_json:
-            await message.answer("❌ Информация о батче не найдена")
-            return
-
-        batch_info = json.loads(batch_info_json)
-        job_ids = batch_info["job_ids"]
-        completed_jobs = set()
-
-        while len(completed_jobs) < len(job_ids):
-            for job_id in job_ids:
-                if job_id in completed_jobs:
-                    continue
-                try:
-                    job = Job.fetch(job_id, connection=redis_rq_sync)
-
-                    if job.is_finished:
-                        result = job.result
-
-                        if result["status"] == "success":
-                            logger.info(f"Job {job_id} completed successfully")
-
-                            # Уменьшаем баланс пользователя
-                            await UserDAO(
-                                session_without_commit
-                            ).decrease_analiz_balance(
-                                user_id=message.from_user.id, service_type="HINTS"
-                            )
-
-                            # Получаем информацию о задаче
-                            job_info_json = await redis_client.get(f"job_info:{job_id}")
-                            job_info = json.loads(job_info_json)
-                            game_id = job_info["game_id"]
-
-                            # Сохраняем mat_path для статистики
-                            await redis_client.set(
-                                f"mat_path:{game_id}", result["mat_path"], expire=3600
-                            )
-
-                            # Отправляем кнопки для просмотра
-                            red_player = job_info["red_player"]
-                            black_player = job_info["black_player"]
-
-                            mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
-                            mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
-                            mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
-                            mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
-
-                            keyboard = InlineKeyboardMarkup(
-                                inline_keyboard=[
-                                    [
-                                        InlineKeyboardButton(
-                                            text="Просмотр всех ходов",
-                                            web_app=WebAppInfo(url=mini_app_url_all),
-                                        ),
-                                    ],
-                                    [
-                                        InlineKeyboardButton(
-                                            text="Только ошибки (оба игрока)",
-                                            web_app=WebAppInfo(
-                                                url=mini_app_url_both_errors
-                                            ),
-                                        ),
-                                    ],
-                                    [
-                                        InlineKeyboardButton(
-                                            text=f"Только ошибки ({red_player})",
-                                            web_app=WebAppInfo(
-                                                url=mini_app_url_red_errors
-                                            ),
-                                        ),
-                                    ],
-                                    [
-                                        InlineKeyboardButton(
-                                            text=f"Только ошибки ({black_player})",
-                                            web_app=WebAppInfo(
-                                                url=mini_app_url_black_errors
-                                            ),
-                                        ),
-                                    ],
-                                    [
-                                        InlineKeyboardButton(
-                                            text="Показать статистику игры",
-                                            callback_data=f"show_stats:{game_id}",
-                                        ),
-                                    ],
-                                ]
-                            )
-
-                            await message.answer(
-                                f"✅ Анализ файла завершен!\n{red_player} vs {black_player}\n"
-                                f"Выберите вариант просмотра ошибок:",
-                                reply_markup=keyboard,
-                            )
-                        else:
-                            error_msg = result.get("error", "Неизвестная ошибка")
-                            await message.answer(
-                                f"❌ Ошибка при анализе файла {job_id}: {error_msg}"
-                            )
-
-                        completed_jobs.add(job_id)
-
-                    elif job.is_failed:
-                        await message.answer(f"❌ Задача {job_id} провалилась")
-                        completed_jobs.add(job_id)
-
-                except Exception as e:
-                    logger.warning(f"Error checking job {job_id}: {e}")
-
-            await asyncio.sleep(3)
-
-        await session_without_commit.commit()
-        await message.answer(
-            f"Пакетная обработка завершена. Обработано файлов: {len(job_ids)}"
-        )
-        await state.clear()
-
-    except Exception as e:
-        logger.exception(f"Error in check_batch_job_status for {batch_id}")
-        await message.answer("❌ Ошибка при проверке статуса батча")
-
-
 @hint_viewer_router.message(Command("status"))
 async def cmd_status(message: Message, command: CommandObject):
     """Проверить статус задачи анализа"""
@@ -1100,7 +994,7 @@ async def cmd_status(message: Message, command: CommandObject):
     job_id = command.args.strip()
 
     try:
-        job = Job.fetch(job_id, connection=redis_rq_sync)
+        job = Job.fetch(job_id, connection=redis_client)
 
         if job.is_finished:
             if job.is_successful:
