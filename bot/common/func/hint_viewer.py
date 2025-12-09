@@ -1006,23 +1006,13 @@ def wait_for_hint_completion(child, timeout=30, check_interval=0.1):
     """
     Динамически ожидает завершения вывода подсказки от gnubg.
     
-    Логика:
-    1. Ждет появления строки с "Considering"
-    2. Ждет исчезновения "Considering" и появления результатов
-    3. Ждет стабилизации вывода (когда новые данные перестают поступать)
-    
-    Args:
-        child: pexpect процесс
-        timeout: максимальное время ожидания
-        check_interval: интервал проверки новых данных
-        
-    Returns:
-        str: накопленный вывод
+    Возвращает только новый вывод подсказки, без предыдущих данных.
     """
     output = ""
     considering_seen = False
+    results_seen = False
     stable_count = 0
-    stable_threshold = 3  # Сколько раз подряд не должно быть новых данных
+    stable_threshold = 3
     start_time = time.time()
     
     while time.time() - start_time < timeout:
@@ -1030,36 +1020,30 @@ def wait_for_hint_completion(child, timeout=30, check_interval=0.1):
             chunk = child.read_nonblocking(size=4096, timeout=check_interval)
             if chunk:
                 output += chunk
-                stable_count = 0  # Сбрасываем счетчик стабильности
+                stable_count = 0
                 
-                # Проверяем наличие "Considering" в выводе
+                # Проверяем наличие "Considering"
                 if "Considering" in chunk or "considering" in chunk.lower():
                     considering_seen = True
                     
-                # Если видели "Considering" и теперь есть строки с результатами
-                # (номера вариантов 1., 2., 3. или "Cubeful equities:")
+                # Проверяем появление результатов
                 if considering_seen and (
                     re.search(r'^\s*\d+\.\s+', chunk, re.MULTILINE) or
                     "Cubeful equities:" in chunk or
-                    "Proper cube action:" in chunk
+                    "Proper cube action:" in chunk or
+                    "ply" in chunk.lower()
                 ):
-                    # Продолжаем собирать данные еще немного
-                    pass
+                    results_seen = True
             else:
-                # Нет новых данных
                 stable_count += 1
                 
-                # Если мы видели "Considering" и вывод стабилизировался
-                if considering_seen and stable_count >= stable_threshold:
+                # Выходим только если видели и "Considering" и результаты
+                if considering_seen and results_seen and stable_count >= stable_threshold:
                     break
-                    
-                # Если мы еще не видели "Considering", продолжаем ждать
-                if not considering_seen:
-                    time.sleep(check_interval)
                     
         except pexpect.TIMEOUT:
             stable_count += 1
-            if considering_seen and stable_count >= stable_threshold:
+            if considering_seen and results_seen and stable_count >= stable_threshold:
                 break
         except pexpect.EOF:
             break
@@ -1124,10 +1108,10 @@ def process_single_game(game_data, output_dir, game_number):
 
         for token in gnubg_tokens:
             line = token["cmd"]
-            # logger.debug(f"Game {game_number} send: {line}")
             child.sendline(line)
             time.sleep(command_delay)
-
+            
+            # Читаем обычный вывод после команды
             out = ""
             while True:
                 try:
@@ -1141,19 +1125,17 @@ def process_single_game(game_data, output_dir, game_number):
                     break
                 except Exception:
                     break
-
-            if out:
-                pass
-                # logger.debug(f"Game {game_number} gnubg output after '{line}':\n{out}")
-
+            
+            # Обработка подсказок - парсим ТОЛЬКО новый вывод
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
                 
-                # Динамическое ожидание вывода подсказки
-                hint_output = wait_for_hint_completion(child, timeout=5, check_interval=0.1)
-                out += hint_output
+                # Получаем ТОЛЬКО вывод текущей подсказки
+                hint_output = wait_for_hint_completion(child, timeout=30, check_interval=0.1)
                 
-                hints = parse_hint_output(out)
+                # Парсим только новый вывод подсказки (не весь накопленный)
+                hints = parse_hint_output(hint_output)
+                
                 if hints:
                     for h in hints:
                         match token["type"]:
@@ -1162,10 +1144,12 @@ def process_single_game(game_data, output_dir, game_number):
                             case "hint":
                                 aug[target_idx]["hints"].append(h)
                 else:
-                    pass
-                    # logger.debug(
-                    #     f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
-                    # )
+                    # Для отладки - показываем длину вывода
+                    logger.debug(
+                        f"Game {game_number} no hints parsed for target {target_idx}, "
+                        f"hint output length={len(hint_output)}, "
+                        f"first 200 chars: {hint_output[:200]}"
+                    )
 
         # Сравниваем ходы с подсказками
         for entry in aug:
