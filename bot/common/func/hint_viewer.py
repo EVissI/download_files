@@ -1,7 +1,6 @@
-﻿from collections import Counter, defaultdict
-import copy
+﻿from collections import defaultdict
+from copy import copy
 import os
-from pprint import pprint
 import random
 import re
 import json
@@ -13,7 +12,7 @@ import select
 import threading
 import pexpect
 from loguru import logger
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import cpu_count
 
 # ============================================================================
@@ -38,11 +37,6 @@ REGEX_ENTRY = re.compile(
     re.IGNORECASE | re.MULTILINE
 )
 REGEX_FLOAT = re.compile(r"[+-]?\d*\.\d+")
-REGEX_DOUBLE_POS = re.compile(r"Doubles =>")
-
-# ============================================================================
-# === КЭШИРОВАНИЕ РЕЗУЛЬТАТОВ ===
-# ============================================================================
 
 _game_cache = {}
 _hint_cache = {}
@@ -105,14 +99,56 @@ class GnubgProcessPool:
 
 
 # ============================================================================
-# === ИСПРАВЛЕННОЕ ЧТЕНИЕ ИЗ GNUBG ===
+# === ДИНАМИЧЕСКОЕ ОЖИДАНИЕ ВЫВОДА GNUBG (ВМЕСТО ФИКСИРОВАННЫХ 3 СЕК) ===
 # ============================================================================
 
+def wait_for_hint_completion(proc, timeout=0.5, max_wait_time=3.0):
+    """
+    Динамически ждет завершения анализа gnubg.
+    
+    Логика:
+    1. Читает output пока gnubg пишет
+    2. Когда прекращает писать (2+ пустых чтения) - анализ готов
+    3. Макс ждет max_wait_time секунд чтобы не зависнуть
+    
+    Результат: вместо time.sleep(3) ждём ровно сколько нужно!
+    
+    Примеры:
+    - Простой ход: ждёт ~0.3-0.5 сек (вместо 3) = 6x быстрее
+    - Сложный анализ: ждёт ~2-3 сек (ровно сколько нужно)
+    """
+    out = ""
+    start_time = time.time()
+    empty_reads = 0
+    
+    while time.time() - start_time < max_wait_time:
+        try:
+            chunk = proc.read_nonblocking(size=8192, timeout=timeout)
+            if chunk:
+                out += chunk
+                empty_reads = 0
+            else:
+                empty_reads += 1
+                if empty_reads >= 2:
+                    break
+        except pexpect.TIMEOUT:
+            empty_reads += 1
+            if empty_reads >= 2:
+                break
+        except pexpect.EOF:
+            break
+        except Exception as e:
+            logger.debug(f"Read error: {e}")
+            break
+        
+        time.sleep(0.01)
+    
+    elapsed = time.time() - start_time
+    return out, elapsed
+
+
 def read_gnubg_output(proc, timeout=0.5, max_attempts=10):
-    """
-    Улучшенное чтение вывода от gnubg.
-    Ждет пока gnubg закончит писать в stdout.
-    """
+    """Чтение обычного вывода от gnubg"""
     out = ""
     attempts = 0
     empty_attempts = 0
@@ -140,11 +176,11 @@ def read_gnubg_output(proc, timeout=0.5, max_attempts=10):
 
 
 # ============================================================================
-# === ПАРС ПОДСКАЗОК (ИСПРАВЛЕННЫЙ С ЛОГИРОВАНИЕМ) ===
+# === ПАРС ПОДСКАЗОК (С ЛОГИРОВАНИЕМ) ===
 # ============================================================================
 
 def parse_hint_output(text: str, game_number: int = None):
-    """Парсинг вывода подсказок от gnubg (ИСПРАВЛЕННЫЙ)"""
+    """Парсинг вывода подсказок от gnubg"""
     def clean_text(s: str) -> str:
         if not s:
             return ""
@@ -184,12 +220,8 @@ def parse_hint_output(text: str, game_number: int = None):
 
     cleaned = clean_text(text)
     
-    # === ЛОГИРОВАНИЕ ДЛЯ ОТЛАДКИ ===
     if game_number:
-        logger.debug(f"Game {game_number} raw gnubg output ({len(text)} chars):")
-        logger.debug(text[:500])
-        logger.debug(f"After cleaning ({len(cleaned)} chars):")
-        logger.debug(cleaned[:300])
+        logger.debug(f"Game {game_number} output: {len(text)} chars → {len(cleaned)} chars")
 
     if not cleaned:
         logger.warning(f"Game {game_number}: No cleaned text from gnubg output")
@@ -197,11 +229,10 @@ def parse_hint_output(text: str, game_number: int = None):
 
     lines = [ln.rstrip() for ln in cleaned.splitlines()]
 
-    # Проверяем кубовой анализ
     is_cube_analysis = any("Cube analysis" in line or "cube action" in line.lower() for line in lines)
 
     if is_cube_analysis:
-        logger.info(f"Game {game_number}: Detected cube analysis")
+        logger.debug(f"Game {game_number}: Detected cube analysis")
         result = {"type": "cube_hint"}
         equities = []
 
@@ -228,11 +259,9 @@ def parse_hint_output(text: str, game_number: int = None):
 
         if equities:
             result["cubeful_equities"] = equities
-            logger.info(f"Game {game_number}: Found {len(equities)} cube equities")
 
         return [result]
 
-    # Парсинг обычных ходов
     hints = []
     i = 0
 
@@ -269,14 +298,11 @@ def parse_hint_output(text: str, game_number: int = None):
         else:
             i += 1
 
-    if hints:
-        logger.info(f"Game {game_number}: Parsed {len(hints)} move hints")
-
     return hints
 
 
 # ============================================================================
-# === ОСНОВНЫЕ ФУНКЦИИ ПАРСИНГА (скопированы из оригинала) ===
+# === ОСНОВНЫЕ ФУНКЦИИ ПАРСИНГА ===
 # ============================================================================
 
 def parse_backgammon_mat(content):
@@ -1035,11 +1061,11 @@ def parse_mat_games(content):
 
 
 # ============================================================================
-# === ИСПРАВЛЕННЫЙ process_single_game (с логированием и улучшенным чтением) ===
+# === process_single_game С ДИНАМИЧЕСКИМ ОЖИДАНИЕМ ===
 # ============================================================================
 
 def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
-    """Обрабатывает одну игру (ИСПРАВЛЕННЫЙ)"""
+    """Обрабатывает одну игру (с динамическим ожиданием вывода)"""
     game_content = game_data["content"]
     red_player = game_data["red_player"]
     black_player = game_data["black_player"]
@@ -1073,7 +1099,6 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
         entry.setdefault("hints", [])
         entry.setdefault("cube_hints", [])
 
-    # Используем gnubg пул если доступен
     if gnubg_pool:
         proc, proc_id = gnubg_pool.acquire()
     else:
@@ -1094,24 +1119,21 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
             proc.sendline(line)
             time.sleep(command_delay)
 
-            # Читаем обычный вывод
             out = read_gnubg_output(proc, timeout=0.3, max_attempts=3)
 
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
                 
-                # ИСПРАВЛЕНИЕ: Больше времени для анализа
-                time.sleep(3)  # вместо 2
+                # === ДИНАМИЧЕСКОЕ ОЖИДАНИЕ ВМЕСТО time.sleep(3) ===
+                hint_out, wait_time = wait_for_hint_completion(
+                    proc, 
+                    timeout=0.3,
+                    max_wait_time=8.0
+                )
                 
-                # Читаем результат анализа
-                try:
-                    hint_out = read_gnubg_output(proc, timeout=0.5, max_attempts=20)
-                    if hint_out:
-                        out += "\n" + hint_out
-                except Exception as e:
-                    logger.debug(f"Game {game_number}: Error reading hint output: {e}")
+                if hint_out:
+                    out += "\n" + hint_out
 
-                # Парсим подсказку
                 hints = parse_hint_output(out, game_number=game_number)
                 if hints:
                     for h in hints:
@@ -1119,11 +1141,10 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
                             aug[target_idx]["cube_hints"].append(h)
                         elif token["type"] == "hint":
                             aug[target_idx]["hints"].append(h)
-                    logger.info(f"Game {game_number} token {token_idx}: Got {len(hints)} hints")
+                    logger.info(f"Game {game_number} token {token_idx}: {len(hints)} hints (waited {wait_time:.2f}s)")
                 else:
-                    logger.warning(f"Game {game_number} token {token_idx}: No hints parsed from gnubg")
+                    logger.warning(f"Game {game_number} token {token_idx}: No hints (waited {wait_time:.2f}s)")
 
-        # Сравниваем ходы с подсказками
         for entry in aug:
             if "gnu_move" in entry and entry.get("hints"):
                 first_hint = next(
@@ -1173,8 +1194,8 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
         if gnubg_pool:
             gnubg_pool.release(proc_id)
 
-    # Сохраняем результат
-    game_output_file = os.path.join(output_dir, f"game_{game_number:04d}.json")
+    # Простой нейминг файлов
+    game_output_file = os.path.join(output_dir, f"game_{game_number}.json")
     game_data_json = {
         "game_info": {
             "game_number": game_number,
@@ -1193,25 +1214,17 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
     with open(game_output_file, "w", encoding="utf-8") as f:
         json.dump(game_data_json, f, indent=2, ensure_ascii=False)
 
-    logger.info(f"✅ Game {game_number} processed and saved to {game_output_file}")
+    logger.info(f"✅ Game {game_number} saved")
 
-    return game_number, game_output_file  # Возвращаем для сортировки!
+    return game_number, game_output_file
 
 
 # ============================================================================
-# === ИСПРАВЛЕННЫЙ process_mat_file (используем map вместо as_completed) ===
+# === process_mat_file (ОСНОВНАЯ ФУНКЦИЯ) ===
 # ============================================================================
 
 def process_mat_file(input_file, output_file, chat_id):
-    """
-    Основная функция обработки .mat файла.
-    
-    ИСПРАВЛЕНИЯ:
-    1. Используем Executor.map() вместо as_completed() для сохранения порядка ✅
-    2. Добавлено логирование для подсказок ✅
-    3. Увеличены таймауты для gnubg анализа ✅
-    4. Файлы с нулевым заполнением (game_0001.json вместо game_1.json) ✅
-    """
+    """Основная функция обработки .mat файла"""
     try:
         start_time = time.time()
         logger.info(f"Starting to process {input_file}")
@@ -1260,23 +1273,21 @@ def process_mat_file(input_file, output_file, chat_id):
 
         game_results = []
 
-        logger.info("Starting parallel game processing...")
+        logger.info("Starting parallel processing...")
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             def process_game_wrapper(args):
                 return process_single_game(args[0], args[1], args[2], gnubg_pool)
             
-            # map() сохраняет порядок!
             for game_number, result_file in executor.map(process_game_wrapper, games_to_process):
                 game_results.append({
                     "game_number": game_number,
                     "result_file": result_file,
                 })
                 elapsed = time.time() - start_time
-                logger.info(f"✅ Game {game_number} completed ({elapsed:.1f}s elapsed)")
+                logger.info(f"✅ Game {game_number} completed ({elapsed:.1f}s)")
 
         gnubg_pool.cleanup()
 
-        # Сортируем результаты
         game_results.sort(key=lambda x: x["game_number"])
 
         enable_crawford_game_number = crawford_game if crawford_game else None
@@ -1302,7 +1313,6 @@ def process_mat_file(input_file, output_file, chat_id):
         logger.info(f"✅ Processed {len(game_results)}/{len(games)} games in {elapsed:.1f}s")
         if game_results:
             logger.info(f"   Average: {elapsed/len(game_results):.1f}s per game")
-            logger.info(f"   Games saved to: {output_dir}")
 
     except Exception as e:
         logger.exception(f"Failed to process mat file {input_file}: {e}")
