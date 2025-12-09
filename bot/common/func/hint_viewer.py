@@ -1,6 +1,5 @@
 ﻿from collections import Counter, defaultdict
 import copy
-import functools
 import os
 from pprint import pprint
 import random
@@ -15,88 +14,28 @@ import threading
 import pexpect
 from loguru import logger
 
-# ======================== КОМПИЛИРОВАННЫЕ REGEX ПАТТЕРНЫ ========================
-# Это значительно ускоряет повторные совпадения в горячих циклах
-REGEX_PATTERNS = {
-    'num_match': re.compile(r'(\d+)\)\s*(.*)'),
-    'win_match': re.compile(r'.*Wins (\d+) points'),
-    'double_match': re.compile(r'Doubles => (\d+)(?:\s*(Takes|Drops|Take|Drop))?', re.I),
-    'action_match': re.compile(r'(Takes|Drops|Take|Drop)', re.I),
-    'dice_match': re.compile(r'(\d)(\d):(?:\s*(.*))?'),
-    'double_check': re.compile(r'Doubles =>'),
-    'dice_finditer': re.compile(r'(\d)(\d):'),
-    'entry_re': re.compile(
-        r'^\s*(\d+)\.\s*(?:Cubeful \d+-ply\s*)?(.*?)\s+Eq\.[:]?\s*([+-]?\\d+(?:\.\d+)?)',
-        re.IGNORECASE
-    ),
-    'float_re': re.compile(r'[+-]?\d*\.\d+'),
-    'backspace': re.compile(r'[^\x09\x0A\x20-\x7E\u00A0-\uFFFF]+'),
-    'game_header': re.compile(r'Game (\d+)'),
-    'match_length': re.compile(r'(\d+)\s+point match'),
-    'jacobi_rule': re.compile(r';Jacobi rule:\s*(True|False)', re.I),
-    'player_extraction': re.compile(r'(\S.*?)\s*:\s*\d+'),
-}
+# ✅ ОПТИМИЗАЦИЯ: Компилируем regex один раз на загрузку модуля
+_REGEX_MOVE = re.compile(r"(\d)(\d):(?:\s*(.*))?" )
+_REGEX_DOUBLE = re.compile(r"Doubles => (\d+)(?:\s*(Takes|Drops|Take|Drop))?", re.I)
+_REGEX_ACTION = re.compile(r"(Takes|Drops|Take|Drop)", re.I)
+_REGEX_WIN = re.compile(r".*Wins (\d+) points")
+_REGEX_GAME = re.compile(r"Game (\d+)")
+_REGEX_PLAYERS = re.compile(r"(\S.*?)\s*:\s*(\d+)")
+_REGEX_MATCH_LENGTH = re.compile(r"(\d+)\s+point match")
+_REGEX_JACOBI = re.compile(r";Jacobi rule:\s*(True|False)", re.I)
+_REGEX_HINT_ENTRY = re.compile(
+    r"^\s*(\d+)\.\s*(?:Cubeful \d+-ply\s*)?(.*?)\s+Eq\.[:]?\s*([+-]?(?:\d+(?:\.\d+)?|,\d+))",
+    re.IGNORECASE
+)
+_REGEX_FLOAT = re.compile(r"[+-]?(?:\d*[.,]\d+|\d+)")
 
-# ======================== ОПТИМИЗИРОВАННОЕ КОПИРОВАНИЕ ========================
-def shallow_copy_positions(positions):
-    """Поверхностное копирование позиций вместо глубокого."""
-    return {k: dict(v) for k, v in positions.items()}
-
-# ======================== КЭШИРОВАНИЕ ПАРСИНГА ========================
-@functools.lru_cache(maxsize=256)
-def _cached_parse_side_key(side_str: str, player: str):
-    """Кэшированный парсинг для часто повторяемых ходов."""
-    return side_str, player
-
-# ======================== ОПТИМИЗИРОВАННОЕ ЛОГИРОВАНИЕ ========================
-class OptimizedLogger:
-    """Оборачивает logger для ленивого логирования."""
-    _debug_enabled = None
-    
-    @classmethod
-    def should_log_debug(cls):
-        if cls._debug_enabled is None:
-            cls._debug_enabled = logger.level <= 10  # DEBUG level
-        return cls._debug_enabled
-    
-    @classmethod
-    def debug_if_enabled(cls, msg):
-        if cls.should_log_debug():
-            logger.debug(msg)
-
-opt_logger = OptimizedLogger()
-
-# ======================== УЛУЧШЕННОЕ ЧТЕНИЕ ИЗ ПРОЦЕССА ========================
-def read_output_from_process(proc, timeout=0.1, max_size=65536):
-    """
-    Унифицированное чтение вывода из процесса без избыточных попыток.
-    """
-    out = ""
-    try:
-        if proc.stdout is None:
-            return out
-        
-        rlist, _, _ = select.select([proc.stdout], [], [], timeout)
-        if rlist:
-            chunk = proc.stdout.read(max_size)
-            if chunk:
-                out = chunk.decode('utf-8', errors='replace') if isinstance(chunk, bytes) else chunk
-    except Exception as e:
-        opt_logger.debug_if_enabled(f"Error reading process output: {e}")
-    
-    return out
-
-# ======================== ОСНОВНАЯ ФУНКЦИЯ ПАРСИНГА ========================
 def parse_backgammon_mat(content):
-    """Оптимизированный парсинг .mat файла."""
-    
-    # Предварительно компилируем фильтры
+    """Парсит .mat файл в список ходов. ✅ Оптимизировано: вынесены вложенные функции"""
     lines = [
         line for line in content.splitlines()
         if line.strip() and not line.startswith(";") and "[" not in line
     ]
     
-    # Находим начало ходов
     start_idx = 0
     for i, line in enumerate(lines):
         if "Game" in line:
@@ -107,13 +46,12 @@ def parse_backgammon_mat(content):
     
     for line in lines[start_idx:]:
         leading_spaces = len(line) - len(line.lstrip())
-        line_stripped = line.strip()
-        
-        if not line_stripped:
+        line = line.strip()
+        if not line:
             continue
         
         # Проверяем победу
-        win_match = REGEX_PATTERNS['win_match'].match(line_stripped)
+        win_match = _REGEX_WIN.match(line)
         if win_match:
             points = int(win_match.group(1))
             winner = "Red" if leading_spaces > 5 else "Black"
@@ -121,183 +59,123 @@ def parse_backgammon_mat(content):
             continue
         
         # Проверяем номер хода
-        num_match = REGEX_PATTERNS['num_match'].match(line_stripped)
+        num_match = re.match(r"(\d+)\)\s*(.*)", line)
         if not num_match:
             continue
         
         turn = int(num_match.group(1))
         rest = num_match.group(2)
         
-        # Обработка основной логики хода
-        _process_turn(turn, rest, moves_list)
+        # Парсим левую и правую части хода
+        _parse_move_line(moves_list, turn, rest)
     
     return moves_list
 
-def _process_turn(turn, rest, moves_list):
-    """Вспомогательная функция для обработки одного хода."""
+
+def _parse_move_line(moves_list, turn, rest):
+    """✅ Вынесено из parse_backgammon_mat для переиспользования"""
+    double_pos = rest.find("Doubles =>")
     
-    def parse_side(side_str, player):
-        if not side_str:
-            return None
-        
-        # Проверяем простые действия
-        action_match = REGEX_PATTERNS['action_match'].match(side_str)
-        if action_match:
-            act = action_match.group(1).lower()
-            if act in ["take", "takes"]:
-                act = "take"
-                gnu_move = "take "
-            else:
-                act = "drop"
-                gnu_move = "pass"
-            return {
-                "turn": turn,
-                "player": player,
-                "action": act,
-                "gnu_move": gnu_move,
-            }
-        
-        # Проверяем удвоение
-        double_match = REGEX_PATTERNS['double_match'].match(side_str)
-        if double_match:
-            value = int(double_match.group(1))
-            res = {
-                "turn": turn,
-                "player": player,
-                "action": "double",
-                "cube": value,
-                "gnu_move": "Double",
-            }
-            return res
-        
-        # Парсим обычный ход
-        dice_match = REGEX_PATTERNS['dice_match'].match(side_str)
-        if dice_match:
-            dice = [int(dice_match.group(1)), int(dice_match.group(2))]
-            moves_str = dice_match.group(3) or ""
-            move_list = _parse_moves_from_string(moves_str)
-            return {
-                "turn": turn,
-                "player": player,
-                "dice": dice,
-                "moves": move_list,
-            }
-        
-        return None
-    
-    # Проверяем удвоение в строке
-    if REGEX_PATTERNS['double_check'].search(rest):
-        double_pos = rest.find("Doubles =>")
+    if double_pos != -1:
+        # Обработка удвоения
         left = rest[:double_pos].strip()
         right = rest[double_pos + len("Doubles =>"):].strip()
         
-        right_match = REGEX_PATTERNS['double_match'].match(right)
+        right_match = re.match(r"(\d+)(?:\s*(Takes|Drops|Take|Drop))?", right, re.I)
         if right_match:
             value = int(right_match.group(1))
-            response = right_match.group(2)
+            response = right_match.group(2).lower() if right_match.group(2) else None
             
             if left:
-                red_move = parse_side(left, "Black")
+                red_move = _parse_side(left, "Black", turn)
                 if red_move:
                     moves_list.append(red_move)
-            
-            moves_list.append({
-                "turn": turn,
-                "player": "Red" if not left else "Black",
-                "action": "double",
-                "cube": value,
-                "gnu_move": "Double",
-            })
-            
-            if response:
-                response_act = response.lower()
-                response_act = "take" if response_act in ["take", "takes"] else "drop"
+            else:
                 moves_list.append({
                     "turn": turn,
-                    "player": "Black" if not left else "Red",
-                    "action": response_act,
+                    "player": "Black",
+                    "action": "double",
                     "cube": value,
-                    "gnu_move": "take" if response_act == "take" else "pass",
+                    "gnu_move": "Double",
                 })
-            return
+            
+            if response:
+                if response in ["take", "takes"]:
+                    response = "take"
+                    gnu_move_resp = "take"
+                elif response in ["drop", "drops"]:
+                    response = "drop"
+                    gnu_move_resp = "pass"
+                
+                moves_list.append({
+                    "turn": turn,
+                    "player": "Red",
+                    "action": response,
+                    "cube": value,
+                    "gnu_move": gnu_move_resp,
+                })
+        return
     
-    # Разделяем по большим пробелам
-    parts = re.split(r'\s{10,}', rest)
+    # Парсим обычные ходы
+    parts = re.split(r"\s{10,}", rest)
     left = parts[0].strip() if len(parts) > 0 else ""
     right = parts[1].strip() if len(parts) > 1 else ""
     
     if len(parts) == 1:
-        rest_single = rest.strip()
-        dice_matches = list(REGEX_PATTERNS['dice_finditer'].finditer(rest_single))
+        # Пытаемся разбить по dice
+        dice_matches = list(re.finditer(r"(\d)(\d):", rest.strip()))
         
         if len(dice_matches) >= 2:
-            _handle_two_dice_matches(dice_matches, rest_single, moves_list, parse_side, turn)
+            left, right = _split_by_dice(rest.strip(), dice_matches)
         elif len(dice_matches) == 1:
-            _handle_one_dice_match(dice_matches[0], rest, moves_list, parse_side, turn)
-        else:
-            _handle_no_dice_matches(rest, moves_list, parse_side, turn)
-    else:
-        black_move = parse_side(left, "Black")
-        if black_move:
-            moves_list.append(black_move)
-        
-        red_move = parse_side(right, "Red")
-        if red_move:
-            moves_list.append(red_move)
-
-def _parse_moves_from_string(moves_str):
-    """Парсит строку ходов в список."""
-    move_list = []
-    for m in moves_str.split():
-        hit = False
-        if "*" in m:
-            hit = True
-            m = m.replace("*", "")
-        
-        fr_to = m.split("/")
-        if len(fr_to) < 2:
-            continue
-        
-        try:
-            fr_str = fr_to[0]
-            fr = 25 if fr_str.lower() == "bar" else int(fr_str)
-            to_str = fr_to[1]
-            to = 0 if to_str.lower() == "off" else int(to_str)
-        except (ValueError, IndexError):
-            continue
-        
-        move_list.append({"from": fr, "to": to, "hit": hit})
+            left, right = _split_by_single_dice(rest.strip(), dice_matches[0], turn)
     
-    return move_list
+    black_move = _parse_side(left, "Black", turn)
+    if black_move:
+        moves_list.append(black_move)
+    
+    red_move = _parse_side(right, "Red", turn)
+    if red_move:
+        moves_list.append(red_move)
+    
+    # Добавляем skip, если один игрок пропустил
+    if not black_move and red_move:
+        moves_list.insert(-1 if red_move else len(moves_list), {
+            "turn": turn,
+            "player": "Black",
+            "action": "skip"
+        })
+    elif black_move and not red_move:
+        moves_list.append({
+            "turn": turn,
+            "player": "Red",
+            "action": "skip"
+        })
 
-def _handle_two_dice_matches(dice_matches, rest_single, moves_list, parse_side, turn):
-    """Обрабатывает случай с двумя dice."""
+
+def _split_by_dice(rest_str, dice_matches):
+    """✅ Вынесено для читаемости"""
     red_dice_str = dice_matches[0].group(0)
     red_moves_start = dice_matches[0].end()
     red_moves_end = dice_matches[1].start()
-    red_moves_str = rest_single[red_moves_start:red_moves_end].strip()
+    red_moves_str = rest_str[red_moves_start:red_moves_end].strip()
     left = f"{red_dice_str} {red_moves_str}".strip()
     
     black_dice_str = dice_matches[1].group(0)
     black_moves_start = dice_matches[1].end()
-    black_moves_str = rest_single[black_moves_start:].strip()
+    black_moves_str = rest_str[black_moves_start:].strip()
     right = f"{black_dice_str} {black_moves_str}".strip()
     
-    black_move = parse_side(left, "Black")
-    if black_move:
-        moves_list.append(black_move)
-    
-    red_move = parse_side(right, "Red")
-    if red_move:
-        moves_list.append(red_move)
+    return left, right
 
-def _handle_one_dice_match(dice_match, rest, moves_list, parse_side, turn):
-    """Обрабатывает случай с одним dice."""
-    dice_pos = dice_match.start()
-    pre_dice = rest[:dice_pos].strip()
-    post_dice = rest[dice_pos:].strip()
+
+def _split_by_single_dice(rest_str, dice_match_obj, turn):
+    """✅ Вынесено для читаемости"""
+    dice_pos = dice_match_obj.start()
+    pre_dice = rest_str[:dice_pos].strip()
+    post_dice = rest_str[dice_pos:].strip()
     
-    if pre_dice and re.match(r'(Takes|Drops|Take|Drop|Doubles)', pre_dice, re.I):
+    if pre_dice and _REGEX_ACTION.match(pre_dice, re.I):
         left = pre_dice
         right = post_dice
     else:
@@ -308,49 +186,136 @@ def _handle_one_dice_match(dice_match, rest, moves_list, parse_side, turn):
             left = post_dice
             right = ""
     
-    black_move = parse_side(left, "Black")
-    if black_move:
-        moves_list.append(black_move)
-    
-    red_move = parse_side(right, "Red")
-    if red_move:
-        moves_list.append(red_move)
+    return left, right
 
-def _handle_no_dice_matches(rest, moves_list, parse_side, turn):
-    """Обрабатывает случай без dice."""
-    action_match = re.search(r'\S', rest)
+
+def _parse_side(side_str, player, turn):
+    """Парсит одну сторону хода (левую или правую). ✅ Вынесено"""
+    if not side_str:
+        return None
+    
+    # Простые действия
+    action_match = _REGEX_ACTION.match(side_str)
     if action_match:
-        action_pos = action_match.start()
-        pre = rest[:action_pos].strip()
-        post = rest[action_pos:].strip()
+        act = action_match.group(1).lower()
+        if act in ["take", "takes"]:
+            act = "take"
+            gnu_move = "take"
+        elif act in ["drop", "drops"]:
+            act = "drop"
+            gnu_move = "pass"
         
-        if pre:
-            left = pre
-            right = post
-        else:
-            if turn == 1:
-                left = ""
-                right = post
-            else:
-                left = post
-                right = ""
-    else:
-        left = ""
-        right = rest
+        return {
+            "turn": turn,
+            "player": player,
+            "action": act,
+            "gnu_move": gnu_move,
+        }
     
-    black_move = parse_side(left, "Black")
-    if black_move:
-        moves_list.append(black_move)
+    # Удвоение
+    double_match = _REGEX_DOUBLE.match(side_str)
+    if double_match:
+        value = int(double_match.group(1))
+        res = {
+            "turn": turn,
+            "player": player,
+            "action": "double",
+            "cube": value,
+            "gnu_move": "Double",
+        }
+        
+        response = double_match.group(2)
+        if response:
+            resp_act = response.lower()
+            if resp_act in ["take", "takes"]:
+                resp_act = "take"
+                gnu_move_resp = "take"
+            elif resp_act in ["drop", "drops"]:
+                resp_act = "drop"
+                gnu_move_resp = "pass"
+            
+            resp_player = "Black" if player == "Red" else "Red"
+            # Note: Не добавляем здесь, это добавится выше в _parse_move_line
+        
+        return res
     
-    red_move = parse_side(right, "Red")
-    if red_move:
-        moves_list.append(red_move)
+    # Обычный ход
+    dice_match = _REGEX_MOVE.match(side_str)
+    if dice_match:
+        dice = [int(dice_match.group(1)), int(dice_match.group(2))]
+        moves_str = dice_match.group(3) or ""
+        
+        move_list = []
+        for m in moves_str.split():
+            hit = False
+            if "*" in m:
+                hit = True
+                m = m.replace("*", "")
+            
+            fr_to = m.split("/")
+            if len(fr_to) < 2:
+                continue
+            
+            try:
+                fr_str = fr_to[0]
+                fr = 25 if fr_str.lower() == "bar" else int(fr_str)
+                to_str = fr_to[1]
+                to = 0 if to_str.lower() == "off" else int(to_str)
+            except (ValueError, IndexError):
+                continue
+            
+            move_list.append({"from": fr, "to": to, "hit": hit})
+        
+        return {
+            "turn": turn,
+            "player": player,
+            "dice": dice,
+            "moves": move_list,
+        }
+    
+    return None
 
-# ======================== ОСТАЛЬНЫЕ ФУНКЦИИ (С МИНИМАЛЬНЫМИ ИЗМЕНЕНИЯМИ) ========================
 
-def load_game_data(file_path="output.json"):
-    with open(file_path, "r") as f:
-        return json.load(f)
+# ✅ ОПТИМИЗАЦИЯ: Функция для динамического ожидания подсказки
+def _wait_for_hint_completion(child, timeout=5, check_interval=0.1):
+    """
+    Ждёт завершения анализа подсказки, проверяя маркеры завершения.
+    Намного быстрее, чем фиксированный sleep(2).
+    """
+    out = ""
+    end_time = time.time() + timeout
+    last_read = time.time()
+    completion_markers = [
+        "Proper cube action:",
+        "gnubg>",
+        "quit",
+    ]
+    
+    while time.time() < end_time:
+        try:
+            if child.stdout:
+                chunk = child.read_nonblocking(size=4096, timeout=check_interval)
+                if chunk:
+                    out += chunk
+                    last_read = time.time()
+                    
+                    # Проверяем маркеры завершения
+                    for marker in completion_markers:
+                        if marker in out:
+                            return out
+        except pexpect.TIMEOUT:
+            # Если ничего не читали больше 0.5 сек и что-то было прочитано, завершаем
+            if time.time() - last_read > 0.5 and out:
+                break
+        except pexpect.EOF:
+            break
+        except Exception:
+            break
+        
+        time.sleep(check_interval)
+    
+    return out
+
 
 def json_to_gnubg_commands(
     data,
@@ -360,7 +325,7 @@ def json_to_gnubg_commands(
     red_score=0,
     enable_crawford=False,
 ):
-    """Генерирует команды для GNUBG с оптимизированной обработкой."""
+    """Генерирует команды для gnubg. Структура без изменений."""
     jacoby_cmd = "set jacoby on" if jacobi_rule else "set jacoby off"
     tokens = [
         {"cmd": "set player 0 name Red", "type": "cmd", "target": None},
@@ -370,6 +335,8 @@ def json_to_gnubg_commands(
         {"cmd": "set player 0 human", "type": "cmd", "target": None},
         {"cmd": "set player 1 human", "type": "cmd", "target": None},
     ]
+    
+    logger.info(f"red score:{red_score} black score {black_score}")
     
     if match_length > 0:
         tokens.append({"cmd": f"new match {match_length}", "type": "cmd", "target": None})
@@ -389,21 +356,28 @@ def json_to_gnubg_commands(
             skip_flag = True
             i += 1
             continue
+        
         elif act == "double":
             tokens.append({"cmd": "hint", "type": "cube_hint", "target": i})
             tokens.append({"cmd": "double", "type": "cmd", "target": None})
             i += 1
             continue
+        
         elif act in ("take", "drop"):
             tokens.append({"cmd": "hint", "type": "cube_hint", "target": i})
-            tokens.append({"cmd": "take" if act == "take" else "pass", "type": "cmd", "target": None})
+            if act == "take":
+                tokens.append({"cmd": "take", "type": "cmd", "target": None})
+            if act == "drop":
+                tokens.append({"cmd": "pass", "type": "cmd", "target": None})
             i += 1
             continue
+        
         elif act == "win":
             tokens.append({"cmd": "exit", "type": "cmd", "target": None})
             tokens.append({"cmd": "y", "type": "cmd", "target": None})
             i += 1
             continue
+        
         elif dice:
             tokens.append({"cmd": "roll", "type": "cmd", "target": i})
             tokens.append({"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i})
@@ -411,50 +385,82 @@ def json_to_gnubg_commands(
             if black_score > 0 or red_score > 0:
                 if match_length > 0:
                     if enable_crawford:
-                        tokens.append({"cmd": "set crawford on", "type": "cmd", "target": None})
+                        tokens.append({"cmd": f"set crawford on", "type": "cmd", "target": None})
+                    
                     tokens.append({
                         "cmd": f"set score {black_score} {red_score}",
                         "type": "cmd",
                         "target": None,
                     })
-                    tokens.append({"cmd": "y", "type": "cmd", "target": None})
+                    tokens.append({"cmd": f"y", "type": "cmd", "target": None})
             
             if skip_flag:
                 tokens.append({"cmd": "roll", "type": "cmd", "target": i})
-                tokens.append({"cmd": f"set dice {dice[0]}{dice[1]}", "type": "cmd", "target": i})
-                skip_flag = False
+                tokens.append({
+                    "cmd": f"set dice {dice[0]}{dice[1]}",
+                    "type": "cmd",
+                    "target": i,
+                })
             
             if moves:
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
-                move_cmds = [f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in moves]
+                move_cmds = [
+                    f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in moves
+                ]
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
                 tokens.append({"cmd": "hint", "type": "cube_hint", "target": i + 1})
+            
+            i += 1
+            continue
         
         i += 1
     
     return tokens
 
+
 def random_filename(ext=".gnubg", length=16):
+    """Генерирует случайное имя файла."""
     letters = string.ascii_letters + string.digits
     rand_str = "".join(random.choice(letters) for _ in range(length))
     return f"{rand_str}{ext}"
 
+
+def read_available(proc, timeout=0.1):
+    """Читает доступные данные из proc.stdout без блокировки."""
+    out = ""
+    try:
+        if proc.stdout is None:
+            return out
+        rlist, _, _ = select.select([proc.stdout], [], [], timeout)
+        if rlist:
+            out = proc.stdout.read()
+    except Exception:
+        try:
+            while True:
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                out += line
+        except Exception:
+            pass
+    return out
+
+
 def parse_hint_output(text: str):
-    """Оптимизированный парсинг вывода подсказок."""
+    """Парсит вывод подсказок из gnubg."""
     def clean_text(s: str) -> str:
         if not s:
             return ""
         
-        # Удаляем backspace
-        while "\x08" in s:
-            i = s.find("\x08")
-            s = s[: i - 1] + s[i + 1 :] if i > 0 else s[i + 1 :]
+        while "\\x08" in s:
+            i = s.find("\\x08")
+            if i <= 0:
+                s = s[i + 1:]
+            else:
+                s = s[: i - 1] + s[i + 1:]
         
-        # Нормализуем возвраты каретки
-        s = s.replace("\r\n", "\n").replace("\r", "\n")
-        
-        # Удаляем управляющие символы
-        s = REGEX_PATTERNS['backspace'].sub("", s)
+        s = s.replace("\\r\\n", "\\n").replace("\\r", "\\n")
+        s = re.sub(r"[^\\x09\\x0A\\x20-\\x7E\\u00A0-\\uFFFF]+", "", s)
         
         lines = []
         for ln in s.splitlines():
@@ -463,16 +469,20 @@ def parse_hint_output(text: str):
                 continue
             
             low = ln_stripped.lower()
-            if (low.startswith("hint") or low.startswith("considering") or 
-                "(black)" in low or "(red)" in low):
+            if (
+                low.startswith("hint")
+                or low.startswith("considering")
+                or "(black)" in low
+                or "(red)" in low
+            ):
                 continue
             
-            if re.match(r"^[\s\-=_\*\.]+$", ln_stripped):
+            if re.match(r"^[\\s\\-=_\\*\\.]+$", ln_stripped):
                 continue
             
             lines.append(ln.rstrip())
         
-        return "\n".join(lines)
+        return "\\n".join(lines)
     
     cleaned = clean_text(text)
     if not cleaned:
@@ -480,7 +490,6 @@ def parse_hint_output(text: str):
     
     lines = [ln.rstrip() for ln in cleaned.splitlines()]
     
-    # Проверяем наличие анализа куба
     is_cube_analysis = any("Cube analysis" in line for line in lines)
     
     if is_cube_analysis:
@@ -489,16 +498,20 @@ def parse_hint_output(text: str):
         
         for line in lines:
             if match := re.match(
-                r"(\d+)\.\s+(.*?)\s+([+-]?\d+\.\d+)(?:\s+\(([+-]?\d+\.\d+)\))?$", line
+                r"(\\d+)\\.\\s+(.*?)\\s+([+-]?\\d+\\.\\d+)(?:\\s+\\(([+-]?\\d+\\.\\d+)\\))?$", line
             ):
                 idx = int(match.group(1))
                 action = match.group(2).strip()
                 eq = float(match.group(3))
                 
+                actions = action.split(",")
+                action_1 = actions[0].strip()
+                action_2 = actions[1].strip() if len(actions) > 1 else None
+                
                 equities.append({
                     "idx": idx,
-                    "action_1": action,
-                    "action_2": None,
+                    "action_1": action_1,
+                    "action_2": action_2,
                     "eq": eq
                 })
         
@@ -516,11 +529,14 @@ def parse_hint_output(text: str):
     i = 0
     
     while i < len(lines):
-        m = REGEX_PATTERNS['entry_re'].match(lines[i])
+        m = _REGEX_HINT_ENTRY.match(lines[i])
         if m:
             idx = int(m.group(1))
             move = m.group(2).strip()
-            eq = float(m.group(3))
+            try:
+                eq = float(m.group(3).replace(",", "."))
+            except Exception:
+                eq = 0.0
             
             probs = []
             j = i + 1
@@ -529,9 +545,9 @@ def parse_hint_output(text: str):
                 if not line:
                     break
                 
-                found = REGEX_PATTERNS['float_re'].findall(line)
+                found = _REGEX_FLOAT.findall(line)
                 if found:
-                    probs.extend([float(x) for x in found])
+                    probs.extend([float(x.replace(",", ".")) for x in found])
                     j += 1
                     continue
                 break
@@ -550,42 +566,50 @@ def parse_hint_output(text: str):
     
     return hints
 
-def extract_player_names(content: str) -> tuple:
-    """Извлекает имена игроков из .mat файла."""
+
+def extract_player_names(content: str) -> tuple[str, str]:
+    """Извлекает ники игроков из .mat файла."""
     lines = content.splitlines()
     for i, line in enumerate(lines):
         if line.strip().startswith("Game"):
             if i + 1 < len(lines):
                 players_line = lines[i + 1].strip()
-                matches = REGEX_PATTERNS['player_extraction'].findall(players_line)
+                matches = re.findall(r"(\\S.*?)\\s*:\\s*\\d+", players_line)
                 if len(matches) >= 2:
-                    return matches[1].strip(), matches[0].strip()
+                    black_player, red_player = matches[0].strip(), matches[1].strip()
+                    logger.info(f"Extracted players: Red={red_player}, Black={black_player}")
+                    return red_player, black_player
     
     logger.warning("Could not extract player names from .mat file")
-    return "Red", "Black"
+    return "Black", "Red"
+
 
 def extract_match_length(content: str) -> int:
     """Извлекает длину матча из .mat файла."""
-    for line in content.splitlines():
-        match = REGEX_PATTERNS['match_length'].match(line.strip())
+    lines = content.splitlines()
+    for line in lines:
+        match = _REGEX_MATCH_LENGTH.match(line.strip())
         if match:
             return int(match.group(1))
     
     logger.warning("Could not extract match length from .mat file")
     return 0
 
+
 def extract_jacobi_rule(content: str) -> bool:
     """Извлекает правило Якоби из .mat файла."""
-    for line in content.splitlines():
-        match = REGEX_PATTERNS['jacobi_rule'].match(line.strip())
+    lines = content.splitlines()
+    for line in lines:
+        match = _REGEX_JACOBI.match(line.strip())
         if match:
             return match.group(1).lower() == "true"
     
     logger.warning("Could not extract Jacobi rule from .mat file, defaulting to True")
     return True
 
+
 def normalize_move(move_str: str) -> str:
-    """Нормализует строку хода (кэшированная версия)."""
+    """Нормализует строку хода для сравнения."""
     moves = parse_gnu_move(move_str)
     if not moves:
         return ""
@@ -610,6 +634,7 @@ def normalize_move(move_str: str) -> str:
     new_moves = [{"from": fr, "to": to, "hit": hit} for fr, to, hit in new_tuples]
     return convert_moves_to_gnu(new_moves) or ""
 
+
 def parse_gnu_move(move_str: str):
     """Парсит GNU формат хода."""
     if not move_str:
@@ -631,11 +656,15 @@ def parse_gnu_move(move_str: str):
             count = int(count_str[:-1])
         
         segments = [s.lower() for s in base.split("/") if s]
+        
         if not segments:
             continue
         
         fr_str = segments[0]
-        fr = 25 if fr_str == "bar" else int(fr_str) if fr_str.isdigit() else (0 if fr_str == "off" else None)
+        fr = (
+            25 if fr_str == "bar"
+            else int(fr_str) if fr_str.isdigit() else 0 if fr_str == "off" else None
+        )
         
         if fr is None:
             continue
@@ -643,18 +672,23 @@ def parse_gnu_move(move_str: str):
         for _ in range(count):
             prev = fr
             for seg in segments[1:]:
-                to = 25 if seg == "bar" else (0 if seg == "off" else (int(seg) if seg.isdigit() else None))
+                to = (
+                    25 if seg == "bar"
+                    else 0 if seg == "off" else int(seg) if seg.isdigit() else None
+                )
                 
                 if to is None:
                     break
                 
                 moves.append({"from": prev, "to": to, "hit": False})
                 prev = to
-        
-        if hit and moves:
-            moves[-1]["hit"] = True
+            
+            if hit:
+                if moves:
+                    moves[-1]["hit"] = True
     
     return moves
+
 
 def convert_moves_to_gnu(moves_list):
     """Конвертирует список ходов в GNU формат."""
@@ -717,7 +751,6 @@ def convert_moves_to_gnu(moves_list):
         
         path = []
         cur = start
-        
         while True:
             next_edges = [
                 (to, edges[(cur, to)])
@@ -751,7 +784,7 @@ def convert_moves_to_gnu(moves_list):
         hits_per_edge = [edge_hit[e] for e in path]
         any_hit = any(hits_per_edge)
         middle_hits = any(hits_per_edge[:-1]) if len(hits_per_edge) > 1 else False
-        last_edge_hit = hits_per_edge[-1]
+        last_edge_hit = hits_per_edge[-1] if hits_per_edge else False
         
         if len(path) == 1:
             fr, to = path[0]
@@ -789,8 +822,9 @@ def convert_moves_to_gnu(moves_list):
     final = " ".join(result_parts)
     return final or None
 
+
 class BackgammonPositionTracker:
-    """Отслеживает позицию фишек на доске."""
+    """Отслеживает позиции фишек на доске."""
     
     def __init__(self, invert_colors=False):
         self.invert_colors = invert_colors
@@ -801,7 +835,7 @@ class BackgammonPositionTracker:
         self.reset()
     
     def reset(self):
-        self.positions = shallow_copy_positions(self.start_positions)
+        self.positions = copy.deepcopy(self.start_positions)
         self.current_player = "red" if not self.invert_colors else "black"
     
     @staticmethod
@@ -825,7 +859,7 @@ class BackgammonPositionTracker:
             if k in ("bar", "off"):
                 self.positions[side][k] = 0
             else:
-                self.positions[side].pop(k, None)
+                self.positions[side].pop(k)
     
     def _inc(self, side, k):
         self.positions[side][k] = self.positions[side].get(k, 0) + 1
@@ -866,16 +900,16 @@ class BackgammonPositionTracker:
             if action:
                 act = action.lower()
                 if act == "skip":
-                    pass
+                    e["positions"] = copy.deepcopy(self.positions)
+                    e["inverted_positions"] = self._invert_positions(self.positions)
+                    result.append(e)
+                    continue
+                
                 elif act == "double":
                     pass
+                
                 elif act in ("take", "drop"):
                     self.current_player = "black" if self.current_player == "red" else "red"
-                
-                e["positions"] = shallow_copy_positions(self.positions)
-                e["inverted_positions"] = self._invert_positions(self.positions)
-                result.append(e)
-                continue
             
             moves = e.get("moves")
             if moves:
@@ -883,35 +917,30 @@ class BackgammonPositionTracker:
                     self.apply_move(player, m)
                 self.current_player = "black" if player == "red" else "red"
             
-            e["positions"] = shallow_copy_positions(self.positions)
+            e["positions"] = copy.deepcopy(self.positions)
             e["inverted_positions"] = self._invert_positions(self.positions)
             result.append(e)
         
         return result
     
     def _invert_positions(self, positions):
-        """Инвертирует позицию для другой ориентации доски."""
         inverted = {"red": {}, "black": {}}
         for color in ["red", "black"]:
             for key, value in positions[color].items():
-                if key in ("bar", "off"):
+                if key == "bar" or key == "off":
                     inverted[color][key] = value
                 else:
                     inverted_point = 25 - int(key)
                     inverted[color][str(inverted_point)] = value
         return inverted
 
+
 def parse_mat_games(content):
     """Разбирает .mat файл на отдельные игры."""
     games = []
     lines = content.splitlines()
-    
     current_game = None
     game_content = []
-    red_player = None
-    black_player = None
-    red_score = None
-    black_score = None
     
     for line in lines:
         if line.strip().startswith("Game"):
@@ -922,10 +951,10 @@ def parse_mat_games(content):
                     "black_player": black_player,
                     "red_score": red_score,
                     "black_score": black_score,
-                    "content": "\n".join(game_content),
+                    "content": "\\n".join(game_content),
                 })
             
-            match = REGEX_PATTERNS['game_header'].match(line.strip())
+            match = _REGEX_GAME.match(line.strip())
             if match:
                 current_game = int(match.group(1))
                 game_content = [line]
@@ -933,14 +962,15 @@ def parse_mat_games(content):
                 black_player = None
                 red_score = None
                 black_score = None
+        
         elif current_game is not None:
             game_content.append(line)
             
             if ":" in line and not red_player:
-                matches = REGEX_PATTERNS['player_extraction'].findall(line)
+                matches = re.findall(r"(\\S.*?)\\s*:\\s*(\\d+)", line)
                 if len(matches) >= 2:
-                    black_player, black_score = matches[0], int(line.split(":")[-2].split()[-1])
-                    red_player, red_score = matches[1], int(line.split(":")[-1].split()[0])
+                    black_player, black_score = matches[0][0].strip(), int(matches[0][1])
+                    red_player, red_score = matches[1][0].strip(), int(matches[1][1])
     
     if current_game is not None:
         games.append({
@@ -949,58 +979,31 @@ def parse_mat_games(content):
             "black_player": black_player,
             "red_score": red_score,
             "black_score": black_score,
-            "content": "\n".join(game_content),
+            "content": "\\n".join(game_content),
         })
     
     return games
 
-def estimate_processing_time(mat_file_path):
-    """Оценивает время обработки .mat файла."""
-    try:
-        with open(mat_file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        
-        games = parse_mat_games(content)
-        if not games:
-            return 0
-        
-        match_length = extract_match_length(content)
-        jacobi_rule = extract_jacobi_rule(content)
-        
-        max_estimated_time = 0
-        
-        for game_data in games:
-            game_data["match_length"] = match_length
-            game_data["jacobi_rule"] = jacobi_rule
-            
-            parsed_moves = parse_backgammon_mat(game_data["content"])
-            tracker = BackgammonPositionTracker()
-            aug = tracker.process_game(parsed_moves)
-            
-            gnubg_tokens = json_to_gnubg_commands(
-                aug,
-                game_data["jacobi_rule"],
-                game_data["match_length"],
-                game_data.get("black_score", 0),
-                game_data.get("red_score", 0),
-            )
-            
-            hint_count = sum(1 for token in gnubg_tokens if token["type"] in ("hint", "cube_hint"))
-            estimated_time = hint_count * 2 + 10
-            
-            if estimated_time > max_estimated_time:
-                max_estimated_time = estimated_time
-        
-        return max_estimated_time
-    
-    except Exception as e:
-        logger.error(f"Error estimating processing time for {mat_file_path}: {e}")
-        return 0
 
-# ======================== ОСНОВНАЯ ОБРАБОТКА (ОПТИМИЗИРОВАНА ДЛЯ ПАРАЛЛЕЛИЗМА) ========================
+# ✅ ОПТИМИЗАЦИЯ: Функция для обработки подсказок с динамическим ожиданием
+def _process_hint_token(child, token, aug, index):
+    """Обрабатывает одну подсказку с оптимизированным ожиданием."""
+    target_idx = token.get("target")
+    
+    # ✅ ВМЕСТО time.sleep(2) - активное ожидание
+    out = _wait_for_hint_completion(child, timeout=5, check_interval=0.1)
+    
+    hints = parse_hint_output(out)
+    if hints:
+        for h in hints:
+            if token["type"] == "cube_hint":
+                aug[target_idx]["cube_hints"].append(h)
+            elif token["type"] == "hint":
+                aug[target_idx]["hints"].append(h)
+
 
 def process_single_game(game_data, output_dir, game_number):
-    """Обрабатывает одну игру с оптимизированным взаимодействием с GNUBG."""
+    """Обрабатывает одну игру. ✅ Оптимизировано с динамическим ожиданием подсказок."""
     game_content = game_data["content"]
     red_player = game_data["red_player"]
     black_player = game_data["black_player"]
@@ -1028,40 +1031,48 @@ def process_single_game(game_data, output_dir, game_number):
         game_data["enable_crawford"],
     )
     
+    logger.info(f"Game {game_number} tokens: {[t['cmd'] for t in gnubg_tokens]}")
+    
     for entry in aug:
         entry.setdefault("hints", [])
         entry.setdefault("cube_hints", [])
     
     child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
+    command_delay = 0
     
     try:
         time.sleep(0.5)
-        _ = read_output_from_process(child, timeout=0.2)
+        try:
+            start_out = child.read_nonblocking(size=4096, timeout=0.2)
+        except Exception:
+            pass
         
         for token in gnubg_tokens:
             line = token["cmd"]
             child.sendline(line)
-            time.sleep(0.1)  # Оптимизированный delay вместо зависимого от типа
             
-            out = read_output_from_process(child, timeout=0.05)
-            
-            if token["type"] in ("hint", "cube_hint"):
-                target_idx = token.get("target")
-                time.sleep(1.5)  # Сокращено с 2 до 1.5
+            # ✅ ОПТИМИЗАЦИЯ: Различная обработка для hint и обычных команд
+            if token["type"] not in ("hint", "cube_hint"):
+                time.sleep(command_delay)
                 
-                chunk = read_output_from_process(child, timeout=0.1, max_size=65536)
-                if chunk:
-                    out += chunk
-                
-                hints = parse_hint_output(out)
-                
-                if hints:
-                    for h in hints:
-                        if token["type"] == "cube_hint":
-                            aug[target_idx]["cube_hints"].append(h)
-                        else:
-                            aug[target_idx]["hints"].append(h)
+                out = ""
+                while True:
+                    try:
+                        chunk = child.read_nonblocking(size=4096, timeout=0.05)
+                        if not chunk:
+                            break
+                        out += chunk
+                    except pexpect.TIMEOUT:
+                        break
+                    except pexpect.EOF:
+                        break
+                    except Exception:
+                        break
+            else:
+                # ✅ ОПТИМИЗАЦИЯ: Для подсказок используем динамическое ожидание
+                _process_hint_token(child, token, aug, None)
         
+        # Сравниваем ходы с подсказками
         for entry in aug:
             if "gnu_move" in entry and entry.get("hints"):
                 first_hint = next(
@@ -1073,11 +1084,10 @@ def process_single_game(game_data, output_dir, game_number):
                     normalized_gnu = normalize_move(entry["gnu_move"])
                     normalized_hint = normalize_move(first_hint["move"])
                     entry["is_best_move"] = normalized_gnu == normalized_hint
-                else:
-                    entry["is_best_move"] = False
             else:
                 entry["is_best_move"] = False
-        
+    
+    finally:
         try:
             child.sendline("exit")
             time.sleep(0.1)
@@ -1093,12 +1103,12 @@ def process_single_game(game_data, output_dir, game_number):
             except Exception:
                 pass
         
-    finally:
-        try:
-            if child.isalive():
-                child.close(force=True)
-        except Exception:
-            pass
+        finally:
+            try:
+                if child.isalive():
+                    child.close(force=True)
+            except Exception:
+                pass
     
     game_output_file = os.path.join(output_dir, f"game_{game_number}.json")
     game_data_json = {
@@ -1120,10 +1130,12 @@ def process_single_game(game_data, output_dir, game_number):
         json.dump(game_data_json, f, indent=2, ensure_ascii=False)
     
     logger.info(f"Game {game_number} processed and saved to {game_output_file}")
+    
     return game_output_file
 
+
 def process_mat_file(input_file, output_file, chat_id):
-    """Основная функция обработки .mat файла с параллелизмом."""
+    """Основная функция обработки .mat файла."""
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
@@ -1144,8 +1156,10 @@ def process_mat_file(input_file, output_file, chat_id):
         
         crawford_game = None
         for game in games:
-            if (game["black_score"] == match_length - 1 or 
-                game["red_score"] == match_length - 1):
+            if (
+                game["black_score"] == match_length - 1
+                or game["red_score"] == match_length - 1
+            ):
                 crawford_game = game["game_number"]
                 break
         
@@ -1155,18 +1169,12 @@ def process_mat_file(input_file, output_file, chat_id):
         import concurrent.futures
         
         game_results = []
-        enable_crawford_game_number = None
-        
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(games))) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(games)) as executor:
             futures = []
-            
             for game_data in games:
                 game_data["match_length"] = match_length
                 game_data["jacobi_rule"] = jacobi_rule
                 game_data["enable_crawford"] = game_data["game_number"] == crawford_game
-                
-                if game_data["enable_crawford"]:
-                    enable_crawford_game_number = game_data["game_number"]
                 
                 future = executor.submit(
                     process_single_game, game_data, output_dir, game_data["game_number"]
@@ -1189,7 +1197,7 @@ def process_mat_file(input_file, output_file, chat_id):
             "black_player": black_player,
             "scores": {"Red": red_score, "Black": black_score},
             "match_length": match_length,
-            "enable_crawford_game": enable_crawford_game_number if crawford_game else None,
+            "enable_crawford_game": crawford_game if crawford_game else None,
             "jacobi_rule": jacobi_rule,
             "chat_id": str(chat_id),
             "total_games": len(games),
@@ -1201,7 +1209,9 @@ def process_mat_file(input_file, output_file, chat_id):
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"Processed {len(game_results)} games from {input_file}, saved to {output_file}")
+        logger.info(
+            f"Processed {len(game_results)} games from {input_file}, saved to {output_file}"
+        )
     
     except Exception as e:
         logger.exception(f"Failed to process mat file {input_file}: {e}")
