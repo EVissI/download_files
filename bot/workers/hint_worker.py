@@ -43,7 +43,7 @@ redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 syncthing_sync = SyncthingSync()  # ← Глобальный экземпляр
 
-def analyzebackgammonjob(matpath: str, jsonpath: str, userid: str):
+def analyze_backgammon_job(matpath: str, jsonpath: str, userid: str):
     """ .mat worker- . """
     try:
         logger.info(f"Job Start matpath={matpath}, userid={userid}")
