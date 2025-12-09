@@ -66,7 +66,7 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
             "json_path": json_path,
             "games_dir": gamesdir,
             "has_games": has_games,
-            'syncthing_sync': sync_success  
+            'syncthing_sync': sync_success
         }
         
     except Exception as e:
