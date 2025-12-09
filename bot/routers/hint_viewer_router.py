@@ -912,6 +912,13 @@ async def process_batch_hint_files(
                 # Извлекаем имена игроков
                 with open(mat_path, "r", encoding="utf-8") as f:
                     content = f.read()
+                if not await syncthing_sync.sync_and_wait(max_wait=30):
+                    logger.warning("Ошибка синхронизации Syncthing")
+
+
+                if not await syncthing_sync.wait_for_file(mat_path, max_wait=30):
+                    await message.reply("❌ Файл не найден после синхронизации")
+                    return
                 
                 red_player, black_player = extract_player_names(content)
                 

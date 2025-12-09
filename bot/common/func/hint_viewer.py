@@ -1048,7 +1048,7 @@ def process_single_game(game_data, output_dir, game_number):
     child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
     command_delay = 0
     try:
-        time.sleep(0.5)
+        time.sleep(0.2)
         try:
             start_out = child.read_nonblocking(size=4096, timeout=0.2)
             # logger.debug(f"Game {game_number} gnubg start output: {start_out}")
@@ -1081,7 +1081,7 @@ def process_single_game(game_data, output_dir, game_number):
 
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
-                time.sleep(2)
+                time.sleep(1.5)
                 try:
                     chunk = child.read_nonblocking(size=65536, timeout=0.1)
                     if chunk:
