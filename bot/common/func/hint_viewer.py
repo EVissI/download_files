@@ -1002,57 +1002,6 @@ def parse_mat_games(content):
     return games
 
 
-def wait_for_hint_completion(child, timeout=30, check_interval=0.1):
-    """
-    Динамически ожидает завершения вывода подсказки от gnubg.
-    
-    Возвращает только новый вывод подсказки, без предыдущих данных.
-    """
-    output = ""
-    considering_seen = False
-    results_seen = False
-    stable_count = 0
-    stable_threshold = 3
-    start_time = time.time()
-    
-    while time.time() - start_time < timeout:
-        try:
-            chunk = child.read_nonblocking(size=4096, timeout=check_interval)
-            if chunk:
-                output += chunk
-                stable_count = 0
-                
-                # Проверяем наличие "Considering"
-                if "Considering" in chunk or "considering" in chunk.lower():
-                    considering_seen = True
-                    
-                # Проверяем появление результатов
-                if considering_seen and (
-                    re.search(r'^\s*\d+\.\s+', chunk, re.MULTILINE) or
-                    "Cubeful equities:" in chunk or
-                    "Proper cube action:" in chunk or
-                    "ply" in chunk.lower()
-                ):
-                    results_seen = True
-            else:
-                stable_count += 1
-                
-                # Выходим только если видели и "Considering" и результаты
-                if considering_seen and results_seen and stable_count >= stable_threshold:
-                    break
-                    
-        except pexpect.TIMEOUT:
-            stable_count += 1
-            if considering_seen and results_seen and stable_count >= stable_threshold:
-                break
-        except pexpect.EOF:
-            break
-        except Exception:
-            break
-    
-    return output
-
-
 def process_single_game(game_data, output_dir, game_number):
     """
     Обрабатывает одну игру и сохраняет результат в отдельный файл.
@@ -1108,10 +1057,10 @@ def process_single_game(game_data, output_dir, game_number):
 
         for token in gnubg_tokens:
             line = token["cmd"]
+            # logger.debug(f"Game {game_number} send: {line}")
             child.sendline(line)
             time.sleep(command_delay)
-            
-            # Читаем обычный вывод после команды
+
             out = ""
             while True:
                 try:
@@ -1125,17 +1074,22 @@ def process_single_game(game_data, output_dir, game_number):
                     break
                 except Exception:
                     break
-            
-            # Обработка подсказок - парсим ТОЛЬКО новый вывод
+
+            if out:
+                pass
+                # logger.debug(f"Game {game_number} gnubg output after '{line}':\n{out}")
+
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
-                
-                # Получаем ТОЛЬКО вывод текущей подсказки
-                hint_output = wait_for_hint_completion(child, timeout=30, check_interval=0.1)
-                
-                # Парсим только новый вывод подсказки (не весь накопленный)
-                hints = parse_hint_output(hint_output)
-                
+                time.sleep(2)
+                try:
+                    chunk = child.read_nonblocking(size=65536, timeout=0.1)
+                    if chunk:
+                        out += chunk
+                except Exception:
+                    pass
+
+                hints = parse_hint_output(out)
                 if hints:
                     for h in hints:
                         match token["type"]:
@@ -1144,12 +1098,10 @@ def process_single_game(game_data, output_dir, game_number):
                             case "hint":
                                 aug[target_idx]["hints"].append(h)
                 else:
-                    # Для отладки - показываем длину вывода
-                    logger.debug(
-                        f"Game {game_number} no hints parsed for target {target_idx}, "
-                        f"hint output length={len(hint_output)}, "
-                        f"first 200 chars: {hint_output[:200]}"
-                    )
+                    pass
+                    # logger.debug(
+                    #     f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
+                    # )
 
         # Сравниваем ходы с подсказками
         for entry in aug:
