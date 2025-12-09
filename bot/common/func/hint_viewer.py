@@ -993,8 +993,11 @@ def parse_mat_games(content):
                 # Формат: "Black_name : score1     Red_name : score2"
                 player_matches = re.findall(r"(\S.*?)\s*:\s*(\d+)", player_line)
                 if len(player_matches) >= 2:
-                    black_player, black_score = player_matches.strip(), int(player_matches)
-                    red_player, red_score = player_matches.strip(), int(player_matches)
+                    # ✅ ИСПРАВЛЕНИЕ: Правильно распаковать кортежи из списка
+                    black_player = player_matches.strip()
+                    black_score = int(player_matches)
+                    red_player = player_matches.strip()
+                    red_score = int(player_matches)
                     logger.debug(f"Game {current_game}: Black={black_player} ({black_score}), Red={red_player} ({red_score})")
         
         elif current_game is not None:
