@@ -838,10 +838,17 @@ async def check_job_status(
         while True:
             try:
                 job = Job.fetch(job_id, connection=redis_rq)
-
                 if job.is_finished:
-                    # === ЗАДАЧА ЗАВЕРШЕНА ===
+
                     result = job.result
+                    
+                    if isinstance(result, str):
+                        result = json.loads(result)
+                    elif isinstance(result, bytes):
+                        result = json.loads(result.decode('utf-8'))
+                    
+                    if result["status"] == "success":
+                        logger.info(f"Job {job_id} completed successfully")
 
                     if result["status"] == "success":
                         logger.info(f"Job {job_id} completed successfully")
