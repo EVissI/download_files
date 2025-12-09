@@ -671,6 +671,208 @@ async def upload_screenshots(request: Request):
         raise HTTPException(status_code=500, detail="Error uploading screenshots")
 
 
+async def check_batch_job_status(
+    message: Message, 
+    job_ids: list,  # Список ID задач
+    batch_id: str,  # ID батча для отслеживания
+    i18n, 
+    session_without_commit
+):
+    """
+    Фоновая задача для проверки статуса анализа батча файлов.
+    Проверяет все задачи и отправляет результаты по мере завершения.
+    """
+    completed_jobs = {}
+    failed_jobs = {}
+    total_jobs = len(job_ids)
+    
+    try:
+        logger.info(f"Starting batch monitor for {total_jobs} files, batch_id={batch_id}")
+        
+        while True:
+            try:
+                all_finished = True
+                finished_count = 0
+                failed_count = 0
+                
+                for job_id in job_ids:
+                    if job_id in completed_jobs or job_id in failed_jobs:
+                        finished_count += 1
+                        if job_id in failed_jobs:
+                            failed_count += 1
+                        continue
+                    
+                    try:
+                        job = Job.fetch(job_id, connection=redis_rq)
+                        
+                        if job.is_finished:
+                            # Получаем информацию о задаче
+                            job_info_json = redis_rq.get(f"job_info:{job_id}")
+                            if job_info_json:
+                                if isinstance(job_info_json, bytes):
+                                    job_info_json = job_info_json.decode('utf-8')
+                                job_info = json.loads(job_info_json)
+                            else:
+                                job_info = {}
+                            
+                            # Получаем результат с правильной обработкой
+                            result_raw = job.result
+                            
+                            if result_raw is None:
+                                logger.error(f"Job {job_id} returned None result")
+                                failed_jobs[job_id] = "Пустой результат"
+                                finished_count += 1
+                                failed_count += 1
+                                continue
+                            
+                            # Преобразуем в строку если нужно
+                            if isinstance(result_raw, bytes):
+                                result_raw = result_raw.decode('utf-8')
+                            
+                            # Проверяем что строка не пустая
+                            if not result_raw or not result_raw.strip():
+                                logger.error(f"Job {job_id} returned empty result")
+                                failed_jobs[job_id] = "Пустой результат"
+                                finished_count += 1
+                                failed_count += 1
+                                continue
+                            
+                            try:
+                                result = json.loads(result_raw)
+                            except json.JSONDecodeError as e:
+                                logger.error(f"Failed to parse job result: {e}, raw: {result_raw[:100]}")
+                                failed_jobs[job_id] = f"Ошибка обработки: {str(e)[:50]}"
+                                finished_count += 1
+                                failed_count += 1
+                                continue
+                            
+                            if result.get("status") == "success":
+                                logger.info(f"Batch job {job_id} completed successfully")
+                                completed_jobs[job_id] = {
+                                    "result": result,
+                                    "job_info": job_info
+                                }
+                                finished_count += 1
+                                
+                                # Отправляем результат пользователю
+                                game_id = job_info.get("game_id", "unknown")
+                                red_player = job_info.get("red_player", "Red")
+                                black_player = job_info.get("black_player", "Black")
+                                fname = os.path.basename(job_info.get("mat_path", "unknown"))
+                                
+                                if result.get("has_games"):
+                                    mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
+                                    mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+                                    mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+                                    mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
+                                    
+                                    keyboard = InlineKeyboardMarkup(
+                                        inline_keyboard=[
+                                            [
+                                                InlineKeyboardButton(
+                                                    text="Просмотр всех ходов",
+                                                    web_app=WebAppInfo(url=mini_app_url_all),
+                                                ),
+                                            ],
+                                            [
+                                                InlineKeyboardButton(
+                                                    text="Только ошибки (оба игрока)",
+                                                    web_app=WebAppInfo(url=mini_app_url_both_errors),
+                                                ),
+                                            ],
+                                            [
+                                                InlineKeyboardButton(
+                                                    text=f"Только ошибки ({red_player})",
+                                                    web_app=WebAppInfo(url=mini_app_url_red_errors),
+                                                ),
+                                            ],
+                                            [
+                                                InlineKeyboardButton(
+                                                    text=f"Только ошибки ({black_player})",
+                                                    web_app=WebAppInfo(url=mini_app_url_black_errors),
+                                                ),
+                                            ],
+                                            [
+                                                InlineKeyboardButton(
+                                                    text="Показать статистику игры",
+                                                    callback_data=f"show_stats:{game_id}",
+                                                ),
+                                            ],
+                                        ]
+                                    )
+                                    
+                                    await message.answer(
+                                        f"✅ **{fname}** обработан!\n{red_player} vs {black_player}",
+                                        parse_mode="Markdown",
+                                    )
+                                    await message.answer(
+                                        "Выберите вариант просмотра ошибок:",
+                                        reply_markup=keyboard,
+                                    )
+                                else:
+                                    await message.answer(
+                                        f"✅ **{fname}** обработан, но игр не найдено.",
+                                        parse_mode="Markdown",
+                                    )
+                            else:
+                                # Ошибка при обработке
+                                error_msg = result.get("error", "Неизвестная ошибка")
+                                failed_jobs[job_id] = error_msg
+                                finished_count += 1
+                                failed_count += 1
+                                
+                                fname = os.path.basename(job_info.get("mat_path", "unknown"))
+                                await message.answer(f"❌ **{fname}**: {error_msg}", parse_mode="Markdown")
+                        
+                        elif job.is_failed:
+                            logger.error(f"Batch job {job_id} failed: {job.exc_info}")
+                            failed_jobs[job_id] = "Критическая ошибка"
+                            finished_count += 1
+                            failed_count += 1
+                            
+                            job_info_json = redis_rq.get(f"job_info:{job_id}")
+                            if job_info_json:
+                                if isinstance(job_info_json, bytes):
+                                    job_info_json = job_info_json.decode('utf-8')
+                                job_info = json.loads(job_info_json)
+                                fname = os.path.basename(job_info.get("mat_path", "unknown"))
+                                await message.answer(f"❌ **{fname}**: Критическая ошибка обработки", parse_mode="Markdown")
+                        else:
+                            all_finished = False
+                    
+                    except Exception as e:
+                        logger.warning(f"Error checking batch job {job_id}: {e}")
+                        all_finished = False
+                
+                # Проверяем прогресс
+                progress = f"{finished_count}/{total_jobs} файлов обработано"
+                logger.info(f"Batch progress: {progress} (failed: {failed_count})")
+                
+                # Если все задачи завершены
+                if all_finished:
+                    logger.info(f"Batch {batch_id} completed. Finished: {finished_count}, Failed: {failed_count}")
+                    
+                    summary_msg = (
+                        f"🎉 **Пакетная обработка завершена!**\n\n"
+                        f"✅ Успешно: {finished_count - failed_count}\n"
+                        f"❌ Ошибок: {failed_count}\n"
+                        f"📊 Всего: {total_jobs}"
+                    )
+                    await message.answer(summary_msg, parse_mode="Markdown")
+                    break
+                
+                await asyncio.sleep(5)  # Проверяем каждые 5 секунд
+            
+            except Exception as e:
+                logger.warning(f"Error in batch monitor loop: {e}", exc_info=True)
+                await asyncio.sleep(5)
+                continue
+    
+    except Exception as e:
+        logger.exception(f"Error in check_batch_job_status for batch {batch_id}")
+        await message.answer("❌ Ошибка при мониторинге батча")
+
+
 async def process_batch_hint_files(
     message: Message,
     state: FSMContext,
@@ -680,142 +882,90 @@ async def process_batch_hint_files(
     user_info: User,
     session_without_commit,
 ):
-    waiting_manager = None
+    """
+    Обрабатывает пакет файлов, отправляя каждый на анализ в RQ queue.
+    """
+    batch_id = f"batch_{chat_id}_{uuid.uuid4().hex[:8]}"
+    job_ids = []
+    
     try:
         total_files = len(file_paths)
-
-        # Обрабатываем файлы последовательно
+        await message.answer(f"📋 Начинаю отправку {total_files} файлов на анализ...")
+        
+        # Отправляем все файлы в очередь
         for idx, mat_path in enumerate(file_paths):
             fname = os.path.basename(mat_path)
-
-            # Оцениваем время для текущего файла
-            estimated_time = estimate_processing_time(mat_path)
-
-            # Уведомляем о начале обработки файла
-            await message.answer(f"Обработка файла {idx + 1}/{total_files}: {fname}")
-
-            waiting_manager = ProgressBarMessageManager(
-                chat_id, message.bot, estimated_time
-            )
-            await waiting_manager.start()
-
+            
             try:
-                result = await process_single_hint_file(
-                    mat_path, chat_id, session_without_commit
+                # === Генерируем уникальный ID для этой задачи ===
+                game_id = random_filename(ext="")
+                json_path = f"files/{game_id}.json"
+                job_id = f"batch_{batch_id}_{idx}_{uuid.uuid4().hex[:8]}"
+                
+                # Извлекаем имена игроков
+                with open(mat_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                
+                red_player, black_player = extract_player_names(content)
+                
+                # === Отправляем задачу в очередь ===
+                job = task_queue.enqueue(
+                    "bot.workers.hint_worker.analyze_backgammon_job",
+                    mat_path, json_path, str(message.from_user.id),
+                    job_id=job_id
                 )
-                game_id, has_games, red_player, black_player = result
-
-                # Отправляем сообщение с ссылкой на веб-приложение
-                if has_games:
-                    mini_app_url_all = (
-                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
-                    )
-                    mini_app_url_both_errors = (
-                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
-                    )
-                    mini_app_url_red_errors = (
-                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
-                    )
-                    mini_app_url_black_errors = (
-                        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
-                    )
-                    keyboard = InlineKeyboardMarkup(
-                        inline_keyboard=[
-                            [
-                                InlineKeyboardButton(
-                                    text="Просмотр всех ходов",
-                                    web_app=WebAppInfo(url=mini_app_url_all),
-                                )
-                            ],
-                            [
-                                InlineKeyboardButton(
-                                    text="Только ошибки (оба игрока)",
-                                    web_app=WebAppInfo(url=mini_app_url_both_errors),
-                                )
-                            ],
-                            [
-                                InlineKeyboardButton(
-                                    text=f"Только ошибки ({red_player})",
-                                    web_app=WebAppInfo(url=mini_app_url_red_errors),
-                                )
-                            ],
-                            [
-                                InlineKeyboardButton(
-                                    text=f"Только ошибки ({black_player})",
-                                    web_app=WebAppInfo(url=mini_app_url_black_errors),
-                                )
-                            ],
-                            [
-                                InlineKeyboardButton(
-                                    text="Показать статистику игры",
-                                    callback_data=f"show_stats:{game_id}",
-                                )
-                            ],
-                        ]
-                    )
-                    await message.answer(
-                        f"Анализ файла {fname} завершен! Выберите вариант просмотра ошибок:",
-                        reply_markup=keyboard,
-                    )
-                else:
-                    await message.answer(
-                        f"Анализ файла {fname} завершен, но игр не найдено."
-                    )
-
+                
+                job_ids.append(job_id)
+                
+                # === Сохраняем информацию о задаче в Redis ===
+                await redis_client.set(
+                    f"job_info:{job_id}",
+                    json.dumps({
+                        "batch_id": batch_id,
+                        "game_id": game_id,
+                        "mat_path": mat_path,
+                        "json_path": json_path,
+                        "red_player": red_player,
+                        "black_player": black_player,
+                        "user_id": message.from_user.id,
+                        "file_index": idx + 1,
+                        "total_files": total_files,
+                    }),
+                    expire=3600,  # 1 час
+                )
+                
+                logger.info(f"Batch file {idx + 1}/{total_files} queued: {fname} (job_id={job_id})")
+                
             except Exception as e:
-                logger.error(f"Error processing {mat_path}: {e}")
-                await message.reply(f"Ошибка при обработке файла {fname}: {e}")
-            finally:
-                await waiting_manager.stop()
-                waiting_manager = None
-
-        await session_without_commit.commit()
-        await message.answer(
-            f"Пакетная обработка завершена. Обработано файлов: {total_files}"
+                logger.error(f"Error queuing batch file {fname}: {e}")
+                await message.answer(f"⚠️ Ошибка при отправке файла **{fname}**: {e}", parse_mode="Markdown")
+                continue
+        
+        if not job_ids:
+            await message.answer("❌ Не удалось отправить ни один файл на анализ")
+            await state.clear()
+            return
+        
+        # === Отправляем сводку ===
+        summary = f"📤 Отправлено на анализ: **{len(job_ids)}/{total_files}** файлов\n\n"
+        summary += "⏳ Мониторю прогресс...\n"
+        summary += "💡 Результаты будут отправлены по мере готовности"
+        
+        await message.answer(summary, parse_mode="Markdown")
+        
+        # === Запускаем фоновый мониторинг статуса ===
+        asyncio.create_task(
+            check_batch_job_status(message, job_ids, batch_id, i18n, session_without_commit)
         )
-
+        
+        await state.clear()
+    
     except Exception as e:
-        logger.exception("Ошибка при пакетной обработке hint viewer")
-        await message.reply(
-            "Ошибка при обработке файлов.",
-            reply_markup=MainKeyboard.build(user_info.role, i18n),
-        )
-    finally:
-        if waiting_manager:
-            await waiting_manager.stop()
+        logger.exception(f"Error in process_batch_hint_files: {e}")
+        await message.answer(f"❌ Ошибка при обработке батча: {e}")
         await state.clear()
 
 
-async def process_single_hint_file(mat_path: str, user_id: str, session_without_commit):
-    """Обрабатывает один файл и возвращает game_id, флаг наличия игр и имена игроков"""
-    game_id = random_filename(ext="")
-    json_path = f"files/{game_id}.json"
-
-    try:
-        # Извлекаем имена игроков перед обработкой
-        with open(mat_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        red_player, black_player = extract_player_names(content)
-
-        await asyncio.to_thread(process_mat_file, mat_path, json_path, user_id)
-
-        # Проверяем наличие игр
-        games_dir = json_path.rsplit(".", 1)[0] + "_games"
-        has_games = os.path.exists(games_dir) and any(
-            f.endswith(".json") for f in os.listdir(games_dir)
-        )
-        await UserDAO(session_without_commit).decrease_analiz_balance(
-            user_id=user_id, service_type="HINTS"
-        )
-        # Сохраняем mat_path для статистики
-        await redis_client.set(f"mat_path:{game_id}", mat_path, expire=3600)
-        return game_id, has_games, red_player, black_player
-    except Exception as e:
-        logger.error(f"Error processing {mat_path}: {e}")
-        raise
-    finally:
-        # Файл удаляется в handler show_stats или остается для статистики
-        pass
 
 
 async def check_job_status(
