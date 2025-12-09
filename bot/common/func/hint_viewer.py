@@ -944,8 +944,7 @@ class BackgammonPositionTracker:
 
 def parse_mat_games(content):
     """
-    ✅ ИСПРАВЛЕННАЯ: Разбирает .mat файл на отдельные игры.
-    Правильно распознаёт границы игр и извлекает данные.
+    ✅ ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ: Разбирает .mat файл на отдельные игры.
     """
     games = []
     lines = content.splitlines()
@@ -983,17 +982,16 @@ def parse_mat_games(content):
             red_score = None
             black_score = None
             
-            # ВАЖНО: Следующая строка обычно содержит имена игроков и скоры
+            # Следующая строка содержит имена игроков и скоры
             i += 1
             if i < len(lines):
                 player_line = lines[i]
                 game_content.append(player_line)
                 
                 # Извлекаем имена игроков и скоры
-                # Формат: "Black_name : score1     Red_name : score2"
                 player_matches = re.findall(r"(\S.*?)\s*:\s*(\d+)", player_line)
                 if len(player_matches) >= 2:
-                    # ✅ ИСПРАВЛЕНИЕ: Правильно распаковать кортежи из списка
+                    # ✅ ПРАВИЛЬНО: Распаковать кортежи из списка
                     black_player = player_matches.strip()
                     black_score = int(player_matches)
                     red_player = player_matches.strip()
@@ -1001,7 +999,6 @@ def parse_mat_games(content):
                     logger.debug(f"Game {current_game}: Black={black_player} ({black_score}), Red={red_player} ({red_score})")
         
         elif current_game is not None:
-            # Добавляем строку в текущую игру
             game_content.append(line)
         
         i += 1
