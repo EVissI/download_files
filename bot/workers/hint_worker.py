@@ -1,10 +1,12 @@
 ﻿import os
 import sys
 import logging
-from redis import Redis  # ✅ Правильный импорт
+import json
+import requests
+from redis import Redis  
 from rq import Worker, Queue  # ✅ БЕЗ Connection
 from bot.common.func.hint_viewer import process_mat_file
-
+from bot.config import settings
 # Логирование
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -79,14 +81,19 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
         return {"status": "error", "error": str(e), "mat_path": mat_path}
 
 
-def analyze_backgammon_batch_job(file_paths: list, user_id: str, batch_id: str):
+def analyze_backgammon_batch_job(
+    file_paths: list, user_id: str, batch_id: str, chat_id: str
+):
     """
     Анализирует пакет .mat файлов последовательно (запускается в worker-е).
+    Отправляет результаты по мере обработки каждого файла.
 
     Args:
         file_paths: Список путей к .mat файлам
         user_id: ID пользователя
         batch_id: ID батча для группировки
+        chat_id: ID чата для отправки сообщений
+        bot_token: Токен бота для Telegram API
 
     Returns:
         dict: Результаты анализа для каждого файла
@@ -95,8 +102,19 @@ def analyze_backgammon_batch_job(file_paths: list, user_id: str, batch_id: str):
     total_files = len(file_paths)
 
     logger.info(
-        f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
+        f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}, chat_id={chat_id}"
     )
+
+    def send_telegram_message(text, parse_mode="Markdown"):
+        """Отправляет сообщение в Telegram через API"""
+        try:
+            url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
+            data = {"chat_id": chat_id, "text": text, "parse_mode": parse_mode}
+            response = requests.post(url, data=data, timeout=10)
+            if response.status_code != 200:
+                logger.warning(f"Failed to send Telegram message: {response.text}")
+        except Exception as e:
+            logger.warning(f"Error sending Telegram message: {e}")
 
     for idx, mat_path in enumerate(file_paths):
         fname = os.path.basename(mat_path)
@@ -120,6 +138,83 @@ def analyze_backgammon_batch_job(file_paths: list, user_id: str, batch_id: str):
                 f"[Batch File Completed] {fname} -> {json_path} (has_games={has_games})"
             )
 
+            # Отправляем результат пользователю
+            if has_games:
+                # Извлекаем имена игроков
+                try:
+                    with open(mat_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    from bot.common.func.hint_viewer import extract_player_names
+
+                    red_player, black_player = extract_player_names(content)
+                except Exception:
+                    red_player, black_player = "Red", "Black"
+
+                # Создаем inline клавиатуру (упрощенная версия)
+                keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "Просмотр всех ходов",
+                                "web_app": {
+                                    "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
+                                },
+                            }
+                        ],
+                        [
+                            {
+                                "text": "Только ошибки (оба игрока)",
+                                "web_app": {
+                                    "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+                                },
+                            }
+                        ],
+                        [
+                            {
+                                "text": f"Только ошибки ({red_player})",
+                                "web_app": {
+                                    "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+                                },
+                            }
+                        ],
+                        [
+                            {
+                                "text": f"Только ошибки ({black_player})",
+                                "web_app": {
+                                    "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
+                                },
+                            }
+                        ],
+                        [
+                            {
+                                "text": "Показать статистику игры",
+                                "callback_data": f"show_stats:{game_id}",
+                            }
+                        ],
+                    ]
+                }
+
+                send_telegram_message(
+                    f"✅ **{fname}** обработан!\n{red_player} vs {black_player}",
+                    parse_mode="Markdown",
+                )
+                # Отправляем клавиатуру отдельно (упрощенная версия)
+                try:
+                    url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
+                    data = {
+                        "chat_id": chat_id,
+                        "text": "Выберите вариант просмотра ошибок:",
+                        "reply_markup": json.dumps(keyboard),
+                    }
+                    requests.post(url, data=data, timeout=10)
+                except Exception as e:
+                    logger.warning(f"Error sending keyboard: {e}")
+            else:
+                send_telegram_message(
+                    f"✅ **{fname}** обработан, но игр не найдено.",
+                    parse_mode="Markdown",
+                )
+
             results.append(
                 {
                     "file_index": idx + 1,
@@ -133,6 +228,9 @@ def analyze_backgammon_batch_job(file_paths: list, user_id: str, batch_id: str):
 
         except Exception as e:
             logger.exception(f"[Batch File Failed] {fname}")
+            send_telegram_message(
+                f"❌ **{fname}**: {str(e)[:100]}", parse_mode="Markdown"
+            )
             results.append(
                 {
                     "file_index": idx + 1,
@@ -144,6 +242,14 @@ def analyze_backgammon_batch_job(file_paths: list, user_id: str, batch_id: str):
 
     logger.info(
         f"[Batch Job Completed] batch_id={batch_id}, processed={len(results)}/{total_files}"
+    )
+
+    # Отправляем итоговое сообщение
+    successful = sum(1 for r in results if r["status"] == "success")
+    failed = len(results) - successful
+    send_telegram_message(
+        f"🎉 **Пакетная обработка завершена!**\n\n✅ Успешно: {successful}\n❌ Ошибок: {failed}\n📊 Всего: {total_files}",
+        parse_mode="Markdown",
     )
 
     return {
