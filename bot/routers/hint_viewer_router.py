@@ -715,7 +715,7 @@ async def check_batch_job_status(
                             else:
                                 job_info = {}
                             
-                            # Получаем результат с правильной обработкой
+                            # === FIX: Правильная обработка результата ===
                             result_raw = job.result
                             
                             if result_raw is None:
@@ -725,27 +725,35 @@ async def check_batch_job_status(
                                 failed_count += 1
                                 continue
                             
-                            # Преобразуем в строку если нужно
-                            if isinstance(result_raw, bytes):
-                                result_raw = result_raw.decode('utf-8')
-                            
-                            # Проверяем что строка не пустая
-                            if not result_raw or not result_raw.strip():
-                                logger.error(f"Job {job_id} returned empty result")
-                                failed_jobs[job_id] = "Пустой результат"
+                            # Преобразуем результат в dict если нужно
+                            if isinstance(result_raw, dict):
+                                result = result_raw
+                            elif isinstance(result_raw, bytes):
+                                try:
+                                    result = json.loads(result_raw.decode('utf-8'))
+                                except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                                    logger.error(f"Failed to parse job result bytes: {e}")
+                                    failed_jobs[job_id] = f"Ошибка обработки: {str(e)[:50]}"
+                                    finished_count += 1
+                                    failed_count += 1
+                                    continue
+                            elif isinstance(result_raw, str):
+                                try:
+                                    result = json.loads(result_raw)
+                                except json.JSONDecodeError as e:
+                                    logger.error(f"Failed to parse job result string: {e}")
+                                    failed_jobs[job_id] = f"Ошибка обработки: {str(e)[:50]}"
+                                    finished_count += 1
+                                    failed_count += 1
+                                    continue
+                            else:
+                                logger.error(f"Unexpected result type: {type(result_raw)}")
+                                failed_jobs[job_id] = "Неожиданный тип результата"
                                 finished_count += 1
                                 failed_count += 1
                                 continue
                             
-                            try:
-                                result = json.loads(result_raw)
-                            except json.JSONDecodeError as e:
-                                logger.error(f"Failed to parse job result: {e}, raw: {result_raw[:100]}")
-                                failed_jobs[job_id] = f"Ошибка обработки: {str(e)[:50]}"
-                                finished_count += 1
-                                failed_count += 1
-                                continue
-                            
+                            # Теперь result гарантированно dict
                             if result.get("status") == "success":
                                 logger.info(f"Batch job {job_id} completed successfully")
                                 completed_jobs[job_id] = {
@@ -841,7 +849,7 @@ async def check_batch_job_status(
                             all_finished = False
                     
                     except Exception as e:
-                        logger.warning(f"Error checking batch job {job_id}: {e}")
+                        logger.warning(f"Error checking batch job {job_id}: {e}", exc_info=True)
                         all_finished = False
                 
                 # Проверяем прогресс
@@ -871,7 +879,6 @@ async def check_batch_job_status(
     except Exception as e:
         logger.exception(f"Error in check_batch_job_status for batch {batch_id}")
         await message.answer("❌ Ошибка при мониторинге батча")
-
 
 async def process_batch_hint_files(
     message: Message,
@@ -1133,39 +1140,3 @@ async def check_job_status(
         await message.answer("❌ Ошибка при проверке статуса задачи")
 
 
-@hint_viewer_router.message(Command("status"))
-async def cmd_status(message: Message, command: CommandObject):
-    """Проверить статус задачи анализа"""
-
-    if not command.args:
-        await message.answer("Использование: /status <job_id>")
-        return
-
-    job_id = command.args.strip()
-
-    try:
-        job = Job.fetch(job_id, connection=redis_client)
-
-        if job.is_finished:
-            if job.is_successful:
-                await message.answer(
-                    "✅ Анализ завершен. Результат должен был быть отправлен ранее."
-                )
-            else:
-                await message.answer(f"❌ Анализ завершился с ошибкой: {job.exc_info}")
-
-        elif job.is_failed:
-            await message.answer("❌ Анализ завершился с критической ошибкой")
-
-        elif job.is_queued:
-            position = job.get_position()
-            await message.answer(f"⏳ В очереди. Позиция: {position}")
-
-        elif job.is_started:
-            await message.answer("⏳ Выполняется...")
-
-        else:
-            await message.answer("❓ Статус неизвестен")
-
-    except Exception as e:
-        await message.answer(f"❌ Ошибка: Задача {job_id} не найдена")
