@@ -1002,6 +1002,73 @@ def parse_mat_games(content):
     return games
 
 
+def wait_for_hint_completion(child, timeout=30, check_interval=0.1):
+    """
+    Динамически ожидает завершения вывода подсказки от gnubg.
+    
+    Логика:
+    1. Ждет появления строки с "Considering"
+    2. Ждет исчезновения "Considering" и появления результатов
+    3. Ждет стабилизации вывода (когда новые данные перестают поступать)
+    
+    Args:
+        child: pexpect процесс
+        timeout: максимальное время ожидания
+        check_interval: интервал проверки новых данных
+        
+    Returns:
+        str: накопленный вывод
+    """
+    output = ""
+    considering_seen = False
+    stable_count = 0
+    stable_threshold = 3  # Сколько раз подряд не должно быть новых данных
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout:
+        try:
+            chunk = child.read_nonblocking(size=4096, timeout=check_interval)
+            if chunk:
+                output += chunk
+                stable_count = 0  # Сбрасываем счетчик стабильности
+                
+                # Проверяем наличие "Considering" в выводе
+                if "Considering" in chunk or "considering" in chunk.lower():
+                    considering_seen = True
+                    
+                # Если видели "Considering" и теперь есть строки с результатами
+                # (номера вариантов 1., 2., 3. или "Cubeful equities:")
+                if considering_seen and (
+                    re.search(r'^\s*\d+\.\s+', chunk, re.MULTILINE) or
+                    "Cubeful equities:" in chunk or
+                    "Proper cube action:" in chunk
+                ):
+                    # Продолжаем собирать данные еще немного
+                    pass
+            else:
+                # Нет новых данных
+                stable_count += 1
+                
+                # Если мы видели "Considering" и вывод стабилизировался
+                if considering_seen and stable_count >= stable_threshold:
+                    break
+                    
+                # Если мы еще не видели "Considering", продолжаем ждать
+                if not considering_seen:
+                    time.sleep(check_interval)
+                    
+        except pexpect.TIMEOUT:
+            stable_count += 1
+            if considering_seen and stable_count >= stable_threshold:
+                break
+        except pexpect.EOF:
+            break
+        except Exception:
+            break
+    
+    return output
+
+
 def process_single_game(game_data, output_dir, game_number):
     """
     Обрабатывает одну игру и сохраняет результат в отдельный файл.
@@ -1081,14 +1148,11 @@ def process_single_game(game_data, output_dir, game_number):
 
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
-                time.sleep(2)
-                try:
-                    chunk = child.read_nonblocking(size=65536, timeout=0.1)
-                    if chunk:
-                        out += chunk
-                except Exception:
-                    pass
-
+                
+                # Динамическое ожидание вывода подсказки
+                hint_output = wait_for_hint_completion(child, timeout=5, check_interval=0.1)
+                out += hint_output
+                
                 hints = parse_hint_output(out)
                 if hints:
                     for h in hints:
