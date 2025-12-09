@@ -941,14 +941,28 @@ class BackgammonPositionTracker:
 
 
 def parse_mat_games(content):
-    """Разбирает .mat файл на отдельные игры."""
+    """
+    ✅ ИСПРАВЛЕННАЯ: Разбирает .mat файл на отдельные игры.
+    Правильно распознаёт границы игр и извлекает данные.
+    """
     games = []
     lines = content.splitlines()
     current_game = None
     game_content = []
+    red_player = None
+    black_player = None
+    red_score = None
+    black_score = None
     
-    for line in lines:
-        if line.strip().startswith("Game"):
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        
+        # Проверяем, это ли начало новой игры (точно "Game N")
+        game_match = re.match(r"^Game\s+(\d+)\s*$", line.strip())
+        
+        if game_match:
+            # Сохраняем предыдущую игру, если она есть
             if current_game is not None:
                 games.append({
                     "game_number": current_game,
@@ -956,27 +970,38 @@ def parse_mat_games(content):
                     "black_player": black_player,
                     "red_score": red_score,
                     "black_score": black_score,
-                    "content": "\\n".join(game_content),
+                    "content": "\n".join(game_content),
                 })
             
-            match = _REGEX_GAME.match(line.strip())
-            if match:
-                current_game = int(match.group(1))
-                game_content = [line]
-                red_player = None
-                black_player = None
-                red_score = None
-                black_score = None
+            # Начинаем новую игру
+            current_game = int(game_match.group(1))
+            game_content = [line]
+            red_player = None
+            black_player = None
+            red_score = None
+            black_score = None
+            
+            # ВАЖНО: Следующая строка обычно содержит имена игроков и скоры
+            i += 1
+            if i < len(lines):
+                player_line = lines[i]
+                game_content.append(player_line)
+                
+                # Извлекаем имена игроков и скоры
+                # Формат: "Black_name : score1     Red_name : score2"
+                player_matches = re.findall(r"(\S.*?)\s*:\s*(\d+)", player_line)
+                if len(player_matches) >= 2:
+                    black_player, black_score = player_matches.strip(), int(player_matches)
+                    red_player, red_score = player_matches.strip(), int(player_matches)
+                    logger.debug(f"Game {current_game}: Black={black_player} ({black_score}), Red={red_player} ({red_score})")
         
         elif current_game is not None:
+            # Добавляем строку в текущую игру
             game_content.append(line)
-            
-            if ":" in line and not red_player:
-                matches = re.findall(r"(\\S.*?)\\s*:\\s*(\\d+)", line)
-                if len(matches) >= 2:
-                    black_player, black_score = matches[0][0].strip(), int(matches[0][1])
-                    red_player, red_score = matches[1][0].strip(), int(matches[1][1])
+        
+        i += 1
     
+    # Сохраняем последнюю игру
     if current_game is not None:
         games.append({
             "game_number": current_game,
@@ -984,11 +1009,11 @@ def parse_mat_games(content):
             "black_player": black_player,
             "red_score": red_score,
             "black_score": black_score,
-            "content": "\\n".join(game_content),
+            "content": "\n".join(game_content),
         })
     
+    logger.info(f"Extracted {len(games)} games from .mat file")
     return games
-
 
 # ✅ ОПТИМИЗАЦИЯ: Функция для обработки подсказок с динамическим ожиданием
 def _process_hint_token(child, token, aug, index):
