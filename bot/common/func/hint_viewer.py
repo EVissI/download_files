@@ -17,10 +17,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
 
 # ============================================================================
-# === ОПТИМИЗАЦИЯ #1: КОМПИЛИРУЕМ REGEX ОДИН РАЗ ===
+# === КОМПИЛИРУЕМ REGEX ОДИН РАЗ ===
 # ============================================================================
-# Это огромное ускорение - вместо компиляции regex тысячи раз,
-# компилируем один раз и переиспользуем
 
 REGEX_GAME = re.compile(r"^Game\s+(\d+)", re.MULTILINE)
 REGEX_GAME_HEADER = re.compile(r"Game\s+(\d+)")
@@ -43,23 +41,18 @@ REGEX_FLOAT = re.compile(r"[+-]?\d*\.\d+")
 REGEX_DOUBLE_POS = re.compile(r"Doubles =>")
 
 # ============================================================================
-# === ОПТИМИЗАЦИЯ #2: КЭШИРОВАНИЕ РЕЗУЛЬТАТОВ ===
+# === КЭШИРОВАНИЕ РЕЗУЛЬТАТОВ ===
 # ============================================================================
 
 _game_cache = {}
 _hint_cache = {}
 
 # ============================================================================
-# === ОПТИМИЗАЦИЯ #3: ПЕРЕИСПОЛЬЗУЕМЫЙ ПУЛgnubg ПРОЦЕССОВ ===
+# === ПЕРЕИСПОЛЬЗУЕМЫЙ ПУЛ GNUBG ПРОЦЕССОВ ===
 # ============================================================================
+
 class GnubgProcessPool:
-    """
-    Пул переиспользуемых gnubg процессов.
-    Вместо создания нового процесса для каждой игры (100+ сек overhead),
-    переиспользуем небольшое количество процессов.
-    
-    Результат: +2 сек на инициализацию вместо 100+ сек на запуск/закрытие
-    """
+    """Пул переиспользуемых gnubg процессов"""
     def __init__(self, pool_size=2):
         self.pool_size = pool_size
         self.processes = []
@@ -84,13 +77,11 @@ class GnubgProcessPool:
                 logger.error(f"Failed to spawn gnubg: {e}")
     
     def acquire(self):
-        """Получить процесс из пула"""
         with self.lock:
             for i, avail in enumerate(self.available):
                 if avail:
                     self.available[i] = False
                     return self.processes[i], i
-        # Fallback: создать новый процесс если пул исчерпан
         try:
             proc = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
             time.sleep(0.5)
@@ -100,13 +91,11 @@ class GnubgProcessPool:
             return None, -1
     
     def release(self, proc_id):
-        """Вернуть процесс в пул"""
         if proc_id >= 0 and proc_id < len(self.available):
             with self.lock:
                 self.available[proc_id] = True
     
     def cleanup(self):
-        """Очистить пул"""
         for proc in self.processes:
             try:
                 proc.close(force=True)
@@ -116,11 +105,182 @@ class GnubgProcessPool:
 
 
 # ============================================================================
-# === ОПТИМИЗИРОВАННЫЕ ФУНКЦИИ ===
+# === ИСПРАВЛЕННОЕ ЧТЕНИЕ ИЗ GNUBG ===
+# ============================================================================
+
+def read_gnubg_output(proc, timeout=0.5, max_attempts=10):
+    """
+    Улучшенное чтение вывода от gnubg.
+    Ждет пока gnubg закончит писать в stdout.
+    """
+    out = ""
+    attempts = 0
+    empty_attempts = 0
+    
+    while attempts < max_attempts and empty_attempts < 2:
+        try:
+            chunk = proc.read_nonblocking(size=8192, timeout=timeout)
+            if chunk:
+                out += chunk
+                empty_attempts = 0
+            else:
+                empty_attempts += 1
+        except pexpect.TIMEOUT:
+            empty_attempts += 1
+        except pexpect.EOF:
+            break
+        except Exception as e:
+            logger.debug(f"Read error: {e}")
+            break
+        
+        attempts += 1
+        time.sleep(0.05)
+    
+    return out
+
+
+# ============================================================================
+# === ПАРС ПОДСКАЗОК (ИСПРАВЛЕННЫЙ С ЛОГИРОВАНИЕМ) ===
+# ============================================================================
+
+def parse_hint_output(text: str, game_number: int = None):
+    """Парсинг вывода подсказок от gnubg (ИСПРАВЛЕННЫЙ)"""
+    def clean_text(s: str) -> str:
+        if not s:
+            return ""
+
+        while "\x08" in s:
+            i = s.find("\x08")
+            if i <= 0:
+                s = s[i + 1 :]
+            else:
+                s = s[: i - 1] + s[i + 1 :]
+
+        s = s.replace("\r\n", "\n").replace("\r", "\n")
+        s = REGEX_CLEAN_BACKSPACE.sub("", s)
+
+        lines = []
+        for ln in s.splitlines():
+            ln_stripped = ln.strip()
+            if not ln_stripped:
+                continue
+
+            low = ln_stripped.lower()
+
+            if (
+                low.startswith("hint")
+                or low.startswith("considering")
+                or "(black)" in low
+                or "(red)" in low
+            ):
+                continue
+
+            if re.match(r"^[\s\-=_\*\.]+$", ln_stripped):
+                continue
+
+            lines.append(ln.rstrip())
+
+        return "\n".join(lines)
+
+    cleaned = clean_text(text)
+    
+    # === ЛОГИРОВАНИЕ ДЛЯ ОТЛАДКИ ===
+    if game_number:
+        logger.debug(f"Game {game_number} raw gnubg output ({len(text)} chars):")
+        logger.debug(text[:500])
+        logger.debug(f"After cleaning ({len(cleaned)} chars):")
+        logger.debug(cleaned[:300])
+
+    if not cleaned:
+        logger.warning(f"Game {game_number}: No cleaned text from gnubg output")
+        return []
+
+    lines = [ln.rstrip() for ln in cleaned.splitlines()]
+
+    # Проверяем кубовой анализ
+    is_cube_analysis = any("Cube analysis" in line or "cube action" in line.lower() for line in lines)
+
+    if is_cube_analysis:
+        logger.info(f"Game {game_number}: Detected cube analysis")
+        result = {"type": "cube_hint"}
+        equities = []
+
+        for line in lines:
+            if match := re.match(
+                r"(\d+)\.\s+(.*?)\s+([+-]?\d+\.\d+)(?:\s+\(([+-]?\d+\.\d+)\))?$", line
+            ):
+                idx = int(match.group(1))
+                action = match.group(2).strip()
+                eq = float(match.group(3))
+
+                actions = action.split(",")
+                action_1 = actions[0].strip()
+                action_2 = actions[1].strip() if len(actions) > 1 else None
+
+                equities.append(
+                    {"idx": idx, "action_1": action_1, "action_2": action_2, "eq": eq}
+                )
+
+        for line in lines:
+            if "Proper cube action:" in line or "proper" in line.lower():
+                result["prefer_action"] = line.split(":", 1)[1].strip() if ":" in line else ""
+                break
+
+        if equities:
+            result["cubeful_equities"] = equities
+            logger.info(f"Game {game_number}: Found {len(equities)} cube equities")
+
+        return [result]
+
+    # Парсинг обычных ходов
+    hints = []
+    i = 0
+
+    while i < len(lines):
+        m = REGEX_ENTRY.match(lines[i])
+        if m:
+            idx = int(m.group(1))
+            move = m.group(2).strip()
+
+            try:
+                eq = float(m.group(3))
+            except Exception:
+                eq = 0.0
+
+            probs = []
+            j = i + 1
+
+            while j < len(lines) and j < i + 5:
+                line = lines[j].strip()
+                if not line:
+                    j += 1
+                    continue
+
+                found = REGEX_FLOAT.findall(line)
+                if found:
+                    probs.extend([float(x) for x in found])
+                    j += 1
+                else:
+                    break
+
+            hints.append({"type": "move", "idx": idx, "move": move, "eq": eq, "probs": probs})
+
+            i = j
+        else:
+            i += 1
+
+    if hints:
+        logger.info(f"Game {game_number}: Parsed {len(hints)} move hints")
+
+    return hints
+
+
+# ============================================================================
+# === ОСНОВНЫЕ ФУНКЦИИ ПАРСИНГА (скопированы из оригинала) ===
 # ============================================================================
 
 def parse_backgammon_mat(content):
-    """Парсинг ходов из .mat файла (оптимизирован)"""
+    """Парсинг ходов из .mat файла"""
     lines = [
         line
         for line in content.splitlines()
@@ -141,7 +301,6 @@ def parse_backgammon_mat(content):
         if not line:
             continue
 
-        # Проверяем победу
         win_match = REGEX_WIN.match(line)
         if win_match:
             points = int(win_match.group(1))
@@ -149,7 +308,6 @@ def parse_backgammon_mat(content):
             moves_list.append({"action": "win", "player": winner, "points": points})
             continue
 
-        # Проверяем номер хода
         num_match = re.match(r"(\d+)\)\s*(.*)", line)
         if not num_match:
             continue
@@ -161,7 +319,6 @@ def parse_backgammon_mat(content):
             if not side_str:
                 return None
 
-            # Простые действия: Takes, Drops
             action_match = REGEX_ACTION.match(side_str)
             if action_match:
                 act = action_match.group(1).lower()
@@ -178,7 +335,6 @@ def parse_backgammon_mat(content):
                     "gnu_move": gnu_move,
                 }
 
-            # Удвоение
             double_match = REGEX_DOUBLE_MATCH.search(side_str)
             if double_match:
                 value = int(double_match.group(1))
@@ -211,7 +367,6 @@ def parse_backgammon_mat(content):
 
                 return res
 
-            # Обычный ход с кубиком
             dice_match = REGEX_DICE.match(side_str)
             if dice_match:
                 dice = [int(dice_match.group(1)), int(dice_match.group(2))]
@@ -250,7 +405,6 @@ def parse_backgammon_mat(content):
 
             return None
 
-        # Проверяем удвоение в строке
         double_pos = rest.find("Doubles =>")
         if double_pos != -1:
             left = rest[:double_pos].strip()
@@ -297,7 +451,6 @@ def parse_backgammon_mat(content):
 
                 continue
 
-        # Разделяем по большим пробелам
         parts = re.split(r"\s{10,}", rest)
         left = parts[0].strip() if len(parts) > 0 else ""
         right = parts[1].strip() if len(parts) > 1 else ""
@@ -344,7 +497,6 @@ def parse_backgammon_mat(content):
         if red_move:
             moves_list.append(red_move)
 
-        # Добавляем пропущенные ходы
         if not black_move and red_move:
             skip_entry = {"turn": turn, "player": "Black", "action": "skip"}
             moves_list.insert(-1 if red_move else len(moves_list), skip_entry)
@@ -439,7 +591,6 @@ def json_to_gnubg_commands(
                 })
                 skip_flag = False
 
-            # Добавляем ходы если есть
             if moves:
                 tokens.append({"cmd": "hint", "type": "hint", "target": i})
                 move_cmds = [f"{m['from']}/{m['to']}{'*' if m['hit'] else ''}" for m in moves]
@@ -458,129 +609,6 @@ def random_filename(ext=".gnubg", length=16):
     letters = string.ascii_letters + string.digits
     rand_str = "".join(random.choice(letters) for _ in range(length))
     return f"{rand_str}{ext}"
-
-
-def parse_hint_output(text: str):
-    """Парсинг вывода подсказок от gnubg"""
-    def clean_text(s: str) -> str:
-        if not s:
-            return ""
-
-        # Удаляем backspace
-        while "\x08" in s:
-            i = s.find("\x08")
-            if i <= 0:
-                s = s[i + 1 :]
-            else:
-                s = s[: i - 1] + s[i + 1 :]
-
-        # Нормализуем переводы строк
-        s = s.replace("\r\n", "\n").replace("\r", "\n")
-
-        # Удаляем управляющие символы
-        s = REGEX_CLEAN_BACKSPACE.sub("", s)
-
-        # Фильтруем строки
-        lines = []
-        for ln in s.splitlines():
-            ln_stripped = ln.strip()
-            if not ln_stripped:
-                continue
-
-            low = ln_stripped.lower()
-
-            if (
-                low.startswith("hint")
-                or low.startswith("considering")
-                or "(black)" in low
-                or "(red)" in low
-            ):
-                continue
-
-            if re.match(r"^[\s\-=_\*\.]+$", ln_stripped):
-                continue
-
-            lines.append(ln.rstrip())
-
-        return "\n".join(lines)
-
-    cleaned = clean_text(text)
-
-    if not cleaned:
-        return []
-
-    lines = [ln.rstrip() for ln in cleaned.splitlines()]
-
-    # Проверяем кубовой анализ
-    is_cube_analysis = any("Cube analysis" in line for line in lines)
-
-    if is_cube_analysis:
-        result = {"type": "cube_hint"}
-        equities = []
-
-        for line in lines:
-            if match := re.match(
-                r"(\d+)\.\s+(.*?)\s+([+-]?\d+\.\d+)(?:\s+\(([+-]?\d+\.\d+)\))?$", line
-            ):
-                idx = int(match.group(1))
-                action = match.group(2).strip()
-                eq = float(match.group(3))
-
-                actions = action.split(",")
-                action_1 = actions[0].strip()
-                action_2 = actions[1].strip() if len(actions) > 1 else None
-
-                equities.append(
-                    {"idx": idx, "action_1": action_1, "action_2": action_2, "eq": eq}
-                )
-
-        for line in lines:
-            if "Proper cube action:" in line:
-                result["prefer_action"] = line.split("Proper cube action:", 1)[1].strip()
-                break
-
-        if equities:
-            result["cubeful_equities"] = equities
-
-        return [result]
-
-    hints = []
-    i = 0
-
-    while i < len(lines):
-        m = REGEX_ENTRY.match(lines[i])
-        if m:
-            idx = int(m.group(1))
-            move = m.group(2).strip()
-
-            try:
-                eq = float(m.group(3))
-            except Exception:
-                eq = 0.0
-
-            probs = []
-            j = i + 1
-
-            while j < len(lines):
-                line = lines[j].strip()
-                if not line:
-                    break
-
-                found = REGEX_FLOAT.findall(line)
-                if found:
-                    probs.extend([float(x) for x in found])
-                    j += 1
-                    continue
-
-                break
-
-            hints.append({"type": "move", "idx": idx, "move": move, "eq": eq, "probs": probs})
-
-            i = j
-        else:
-            i += 1
-
-    return hints
 
 
 def extract_player_names(content: str) -> tuple:
@@ -1006,8 +1034,12 @@ def parse_mat_games(content):
     return games
 
 
+# ============================================================================
+# === ИСПРАВЛЕННЫЙ process_single_game (с логированием и улучшенным чтением) ===
+# ============================================================================
+
 def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
-    """Обрабатывает одну игру"""
+    """Обрабатывает одну игру (ИСПРАВЛЕННЫЙ)"""
     game_content = game_data["content"]
     red_player = game_data["red_player"]
     black_player = game_data["black_player"]
@@ -1035,7 +1067,7 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
         game_data["enable_crawford"],
     )
 
-    logger.info(f"Game {game_number} tokens: {[t['cmd'] for t in gnubg_tokens]}")
+    logger.info(f"Game {game_number}: Generated {len(gnubg_tokens)} tokens")
 
     for entry in aug:
         entry.setdefault("hints", [])
@@ -1057,43 +1089,39 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
         except Exception:
             pass
 
-        for token in gnubg_tokens:
+        for token_idx, token in enumerate(gnubg_tokens):
             line = token["cmd"]
             proc.sendline(line)
             time.sleep(command_delay)
 
-            out = ""
-            while True:
-                try:
-                    chunk = proc.read_nonblocking(size=4096, timeout=0.05)
-                    if not chunk:
-                        break
-                    out += chunk
-                except pexpect.TIMEOUT:
-                    break
-                except pexpect.EOF:
-                    break
-                except Exception:
-                    break
+            # Читаем обычный вывод
+            out = read_gnubg_output(proc, timeout=0.3, max_attempts=3)
 
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
-                time.sleep(2)
-
+                
+                # ИСПРАВЛЕНИЕ: Больше времени для анализа
+                time.sleep(3)  # вместо 2
+                
+                # Читаем результат анализа
                 try:
-                    chunk = proc.read_nonblocking(size=65536, timeout=0.1)
-                    if chunk:
-                        out += chunk
-                except Exception:
-                    pass
+                    hint_out = read_gnubg_output(proc, timeout=0.5, max_attempts=20)
+                    if hint_out:
+                        out += "\n" + hint_out
+                except Exception as e:
+                    logger.debug(f"Game {game_number}: Error reading hint output: {e}")
 
-                hints = parse_hint_output(out)
+                # Парсим подсказку
+                hints = parse_hint_output(out, game_number=game_number)
                 if hints:
                     for h in hints:
                         if token["type"] == "cube_hint":
                             aug[target_idx]["cube_hints"].append(h)
                         elif token["type"] == "hint":
                             aug[target_idx]["hints"].append(h)
+                    logger.info(f"Game {game_number} token {token_idx}: Got {len(hints)} hints")
+                else:
+                    logger.warning(f"Game {game_number} token {token_idx}: No hints parsed from gnubg")
 
         # Сравниваем ходы с подсказками
         for entry in aug:
@@ -1108,9 +1136,13 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
                 )
 
                 if first_hint and "move" in first_hint:
-                    normalized_gnu = normalize_move(entry["gnu_move"])
-                    normalized_hint = normalize_move(first_hint["move"])
-                    entry["is_best_move"] = normalized_gnu == normalized_hint
+                    try:
+                        normalized_gnu = normalize_move(entry["gnu_move"])
+                        normalized_hint = normalize_move(first_hint["move"])
+                        entry["is_best_move"] = normalized_gnu == normalized_hint
+                    except Exception as e:
+                        logger.warning(f"Game {game_number}: Error comparing moves: {e}")
+                        entry["is_best_move"] = False
                 else:
                     entry["is_best_move"] = False
             else:
@@ -1138,12 +1170,11 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
         except Exception:
             pass
 
-        # Освобождаем процесс в пул
         if gnubg_pool:
             gnubg_pool.release(proc_id)
 
     # Сохраняем результат
-    game_output_file = os.path.join(output_dir, f"game_{game_number}.json")
+    game_output_file = os.path.join(output_dir, f"game_{game_number:04d}.json")
     game_data_json = {
         "game_info": {
             "game_number": game_number,
@@ -1162,75 +1193,24 @@ def process_single_game(game_data, output_dir, game_number, gnubg_pool=None):
     with open(game_output_file, "w", encoding="utf-8") as f:
         json.dump(game_data_json, f, indent=2, ensure_ascii=False)
 
-    logger.info(f"Game {game_number} processed and saved to {game_output_file}")
+    logger.info(f"✅ Game {game_number} processed and saved to {game_output_file}")
 
-    return game_output_file
+    return game_number, game_output_file  # Возвращаем для сортировки!
 
 
-def estimate_processing_time(mat_file_path):
-    """Оценивает время обработки файла"""
-    try:
-        with open(mat_file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        games = parse_mat_games(content)
-
-        if not games:
-            return 0
-
-        match_length = extract_match_length(content)
-        jacobi_rule = extract_jacobi_rule(content)
-
-        max_estimated_time = 0
-
-        for game_data in games:
-            game_data["match_length"] = match_length
-            game_data["jacobi_rule"] = jacobi_rule
-
-            parsed_moves = parse_backgammon_mat(game_data["content"])
-            tracker = BackgammonPositionTracker()
-            aug = tracker.process_game(parsed_moves)
-
-            for entry in aug:
-                if entry.get("player") == "Red":
-                    entry["player_name"] = game_data["red_player"]
-                elif entry.get("player") == "Black":
-                    entry["player_name"] = game_data["black_player"]
-
-            for entry in aug:
-                if "moves" in entry:
-                    entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
-
-            gnubg_tokens = json_to_gnubg_commands(
-                aug,
-                game_data["jacobi_rule"],
-                game_data["match_length"],
-                game_data["black_score"],
-                game_data["red_score"],
-            )
-
-            hint_count = sum(1 for token in gnubg_tokens if token["type"] in ("hint", "cube_hint"))
-            estimated_time = hint_count * 2 + 10
-
-            if estimated_time > max_estimated_time:
-                max_estimated_time = estimated_time
-
-        return max_estimated_time
-
-    except Exception as e:
-        logger.error(f"Error estimating processing time for {mat_file_path}: {e}")
-        return 0
-
+# ============================================================================
+# === ИСПРАВЛЕННЫЙ process_mat_file (используем map вместо as_completed) ===
+# ============================================================================
 
 def process_mat_file(input_file, output_file, chat_id):
     """
-    Основная функция обработки .mat файла (ОПТИМИЗИРОВАНА).
+    Основная функция обработки .mat файла.
     
-    Оптимизации:
-    1. max_workers=4 вместо len(games)
-    2. GnubgProcessPool для переиспользования процессов
-    3. Скомпилированные regex
-    4. as_completed() для обработки по готовности
+    ИСПРАВЛЕНИЯ:
+    1. Используем Executor.map() вместо as_completed() для сохранения порядка ✅
+    2. Добавлено логирование для подсказок ✅
+    3. Увеличены таймауты для gnubg анализа ✅
+    4. Файлы с нулевым заполнением (game_0001.json вместо game_1.json) ✅
     """
     try:
         start_time = time.time()
@@ -1253,7 +1233,6 @@ def process_mat_file(input_file, output_file, chat_id):
         match_length = extract_match_length(content)
         jacobi_rule = extract_jacobi_rule(content)
 
-        # Находим Crawford game
         crawford_game = None
         for game in games:
             if (
@@ -1263,54 +1242,43 @@ def process_mat_file(input_file, output_file, chat_id):
                 crawford_game = game["game_number"]
                 break
 
-        # === ОПТИМИЗАЦИЯ: max_workers=4 ===
         max_workers = min(4, len(games), cpu_count())
         logger.info(f"Using {max_workers} workers for {len(games)} games")
 
-        # === ОПТИМИЗАЦИЯ: Пул gnubg процессов ===
         gnubg_pool_size = max(1, max_workers // 2)
         gnubg_pool = GnubgProcessPool(pool_size=gnubg_pool_size)
 
         output_dir = output_file.rsplit(".", 1)[0] + "_games"
         os.makedirs(output_dir, exist_ok=True)
 
+        games_to_process = []
+        for game_data in games:
+            game_data["match_length"] = match_length
+            game_data["jacobi_rule"] = jacobi_rule
+            game_data["enable_crawford"] = game_data["game_number"] == crawford_game
+            games_to_process.append((game_data, output_dir, game_data["game_number"]))
+
         game_results = []
 
-        # === ПАРАЛЛЕЛЬНАЯ ОБРАБОТКА С ЛИМИТОМ ===
+        logger.info("Starting parallel game processing...")
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {}
+            def process_game_wrapper(args):
+                return process_single_game(args[0], args[1], args[2], gnubg_pool)
+            
+            # map() сохраняет порядок!
+            for game_number, result_file in executor.map(process_game_wrapper, games_to_process):
+                game_results.append({
+                    "game_number": game_number,
+                    "result_file": result_file,
+                })
+                elapsed = time.time() - start_time
+                logger.info(f"✅ Game {game_number} completed ({elapsed:.1f}s elapsed)")
 
-            for game_data in games:
-                game_data["match_length"] = match_length
-                game_data["jacobi_rule"] = jacobi_rule
-                game_data["enable_crawford"] = game_data["game_number"] == crawford_game
-
-                future = executor.submit(
-                    process_single_game,
-                    game_data,
-                    output_dir,
-                    game_data["game_number"],
-                    gnubg_pool,
-                )
-                futures[future] = game_data["game_number"]
-
-            # === Обрабатываем по готовности ===
-            for future in as_completed(futures):
-                game_number = futures[future]
-                try:
-                    result_file = future.result()
-                    game_results.append({
-                        "game_number": game_number,
-                        "result_file": result_file,
-                    })
-                    logger.info(f"✅ Game {game_number} completed")
-                except Exception as e:
-                    logger.error(f"❌ Game {game_number} failed: {e}")
-
-        # Очищаем пул gnubg
         gnubg_pool.cleanup()
 
-        # Создаем общий результат
+        # Сортируем результаты
+        game_results.sort(key=lambda x: x["game_number"])
+
         enable_crawford_game_number = crawford_game if crawford_game else None
 
         game_info = {
@@ -1332,7 +1300,9 @@ def process_mat_file(input_file, output_file, chat_id):
 
         elapsed = time.time() - start_time
         logger.info(f"✅ Processed {len(game_results)}/{len(games)} games in {elapsed:.1f}s")
-        logger.info(f"   Average: {elapsed/len(game_results):.1f}s per game" if game_results else "No games processed")
+        if game_results:
+            logger.info(f"   Average: {elapsed/len(game_results):.1f}s per game")
+            logger.info(f"   Games saved to: {output_dir}")
 
     except Exception as e:
         logger.exception(f"Failed to process mat file {input_file}: {e}")
