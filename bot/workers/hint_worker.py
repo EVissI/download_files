@@ -51,7 +51,7 @@ def analyze_backgammon_job(matpath: str, jsonpath: str, userid: str):
         process_mat_file(matpath, jsonpath, userid)
         
         logger.info(f"Starting Syncthing sync for {matpath}")
-        sync_success = syncthing_sync.syncandwait(max_wait=30)
+        sync_success = syncthing_sync.sync_and_wait(max_wait=30)
         if not sync_success:
             logger.warning(f"Syncthing sync failed/timeout for {matpath}")
         gamesdir = jsonpath.rsplit('.', 1)[0] + '/games'
