@@ -768,98 +768,140 @@ async def check_batch_job_status(
                                 continue
 
                             # Теперь result гарантированно dict
-                            if result.get("status") == "success":
+                            if result.get("status") == "completed":
+                                # Батч-задача завершена, обрабатываем результаты для каждого файла
                                 logger.info(
                                     f"Batch job {job_id} completed successfully"
                                 )
+                                batch_results = result.get("results", [])
                                 completed_jobs[job_id] = {
                                     "result": result,
                                     "job_info": job_info,
                                 }
                                 finished_count += 1
 
-                                # Отправляем результат пользователю
-                                game_id = job_info.get("game_id", "unknown")
-                                red_player = job_info.get("red_player", "Red")
-                                black_player = job_info.get("black_player", "Black")
-                                fname = os.path.basename(
-                                    job_info.get("mat_path", "unknown")
-                                )
+                                # Обрабатываем каждый файл в батче
+                                for file_result in batch_results:
+                                    if file_result.get("status") == "success":
+                                        # Уменьшаем баланс за каждый успешный файл
+                                        await UserDAO(
+                                            session_without_commit
+                                        ).decrease_analiz_balance(
+                                            user_id=message.from_user.id,
+                                            service_type="HINTS",
+                                        )
 
-                                if result.get("has_games"):
-                                    mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
-                                    mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
-                                    mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
-                                    mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
+                                        # Сохраняем mat_path для статистики
+                                        game_id = f"{result['batch_id']}_{file_result['file_index'] - 1}"
+                                        await redis_client.set(
+                                            f"mat_path:{game_id}",
+                                            file_result["mat_path"],
+                                            expire=3600,
+                                        )
 
-                                    keyboard = InlineKeyboardMarkup(
-                                        inline_keyboard=[
-                                            [
-                                                InlineKeyboardButton(
-                                                    text="Просмотр всех ходов",
-                                                    web_app=WebAppInfo(
-                                                        url=mini_app_url_all
-                                                    ),
-                                                ),
-                                            ],
-                                            [
-                                                InlineKeyboardButton(
-                                                    text="Только ошибки (оба игрока)",
-                                                    web_app=WebAppInfo(
-                                                        url=mini_app_url_both_errors
-                                                    ),
-                                                ),
-                                            ],
-                                            [
-                                                InlineKeyboardButton(
-                                                    text=f"Только ошибки ({red_player})",
-                                                    web_app=WebAppInfo(
-                                                        url=mini_app_url_red_errors
-                                                    ),
-                                                ),
-                                            ],
-                                            [
-                                                InlineKeyboardButton(
-                                                    text=f"Только ошибки ({black_player})",
-                                                    web_app=WebAppInfo(
-                                                        url=mini_app_url_black_errors
-                                                    ),
-                                                ),
-                                            ],
-                                            [
-                                                InlineKeyboardButton(
-                                                    text="Показать статистику игры",
-                                                    callback_data=f"show_stats:{game_id}",
-                                                ),
-                                            ],
-                                        ]
-                                    )
+                                        # Извлекаем имена игроков из файла
+                                        try:
+                                            with open(
+                                                file_result["mat_path"],
+                                                "r",
+                                                encoding="utf-8",
+                                            ) as f:
+                                                content = f.read()
+                                            red_player, black_player = (
+                                                extract_player_names(content)
+                                            )
+                                        except Exception:
+                                            red_player, black_player = "Red", "Black"
 
-                                    await message.answer(
-                                        f"✅ **{fname}** обработан!\n{red_player} vs {black_player}",
-                                        parse_mode="Markdown",
-                                    )
-                                    await message.answer(
-                                        "Выберите вариант просмотра ошибок:",
-                                        reply_markup=keyboard,
-                                    )
-                                else:
-                                    await message.answer(
-                                        f"✅ **{fname}** обработан, но игр не найдено.",
-                                        parse_mode="Markdown",
-                                    )
+                                        fname = os.path.basename(
+                                            file_result["mat_path"]
+                                        )
+
+                                        if file_result.get("has_games"):
+                                            mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
+                                            mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+                                            mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+                                            mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
+
+                                            keyboard = InlineKeyboardMarkup(
+                                                inline_keyboard=[
+                                                    [
+                                                        InlineKeyboardButton(
+                                                            text="Просмотр всех ходов",
+                                                            web_app=WebAppInfo(
+                                                                url=mini_app_url_all
+                                                            ),
+                                                        ),
+                                                    ],
+                                                    [
+                                                        InlineKeyboardButton(
+                                                            text="Только ошибки (оба игрока)",
+                                                            web_app=WebAppInfo(
+                                                                url=mini_app_url_both_errors
+                                                            ),
+                                                        ),
+                                                    ],
+                                                    [
+                                                        InlineKeyboardButton(
+                                                            text=f"Только ошибки ({red_player})",
+                                                            web_app=WebAppInfo(
+                                                                url=mini_app_url_red_errors
+                                                            ),
+                                                        ),
+                                                    ],
+                                                    [
+                                                        InlineKeyboardButton(
+                                                            text=f"Только ошибки ({black_player})",
+                                                            web_app=WebAppInfo(
+                                                                url=mini_app_url_black_errors
+                                                            ),
+                                                        ),
+                                                    ],
+                                                    [
+                                                        InlineKeyboardButton(
+                                                            text="Показать статистику игры",
+                                                            callback_data=f"show_stats:{game_id}",
+                                                        ),
+                                                    ],
+                                                ]
+                                            )
+
+                                            await message.answer(
+                                                f"✅ **{fname}** обработан!\n{red_player} vs {black_player}",
+                                                parse_mode="Markdown",
+                                            )
+                                            await message.answer(
+                                                "Выберите вариант просмотра ошибок:",
+                                                reply_markup=keyboard,
+                                            )
+                                        else:
+                                            await message.answer(
+                                                f"✅ **{fname}** обработан, но игр не найдено.",
+                                                parse_mode="Markdown",
+                                            )
+                                    else:
+                                        # Ошибка для файла
+                                        error_msg = file_result.get(
+                                            "error", "Неизвестная ошибка"
+                                        )
+                                        failed_count += 1
+                                        fname = os.path.basename(
+                                            file_result.get("mat_path", "unknown")
+                                        )
+                                        await message.answer(
+                                            f"❌ **{fname}**: {error_msg}",
+                                            parse_mode="Markdown",
+                                        )
                             else:
-                                # Ошибка при обработке
+                                # Ошибка всей батч-задачи
                                 error_msg = result.get("error", "Неизвестная ошибка")
                                 failed_jobs[job_id] = error_msg
                                 finished_count += 1
-                                failed_count += 1
-
-                                fname = os.path.basename(
-                                    job_info.get("mat_path", "unknown")
-                                )
+                                failed_count += result.get(
+                                    "total_files", 1
+                                )  # Все файлы в батче считаем ошибками
                                 await message.answer(
-                                    f"❌ **{fname}**: {error_msg}",
+                                    f"❌ Ошибка батч-обработки: {error_msg}",
                                     parse_mode="Markdown",
                                 )
 
@@ -887,10 +929,6 @@ async def check_batch_job_status(
                             f"Error checking batch job {job_id}: {e}", exc_info=True
                         )
                         all_finished = False
-
-                # Проверяем прогресс
-                progress = f"{finished_count}/{total_jobs} файлов обработано"
-                logger.info(f"Batch progress: {progress} (failed: {failed_count})")
 
                 # Если все задачи завершены
                 if all_finished:
@@ -929,97 +967,64 @@ async def process_batch_hint_files(
     session_without_commit,
 ):
     """
-    Обрабатывает пакет файлов, отправляя каждый на анализ в RQ queue.
+    Обрабатывает пакет файлов, отправляя весь батч на анализ в одну RQ задачу.
     """
     batch_id = f"batch_{chat_id}_{uuid.uuid4().hex[:8]}"
-    job_ids = []
+    job_id = f"batch_job_{batch_id}"
 
     try:
         total_files = len(file_paths)
-        await message.answer(f"📋 Начинаю отправку {total_files} файлов на анализ...")
+        await message.answer(f"📋 Отправляю батч из {total_files} файлов на анализ...")
 
-        # Отправляем все файлы в очередь
-        for idx, mat_path in enumerate(file_paths):
-            fname = os.path.basename(mat_path)
-
-            try:
-                # === Генерируем уникальный ID для этой задачи ===
-                game_id = random_filename(ext="")
-                json_path = f"files/{game_id}.json"
-                job_id = f"batch_{batch_id}_{idx}_{uuid.uuid4().hex[:8]}"
-
-                # Извлекаем имена игроков
-                with open(mat_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                if not await syncthing_sync.sync_and_wait(max_wait=30):
-                    logger.warning("Ошибка синхронизации Syncthing")
-
-                if not await syncthing_sync.wait_for_file(mat_path, max_wait=30):
-                    await message.reply("❌ Файл не найден после синхронизации")
-                    return
-
-                red_player, black_player = extract_player_names(content)
-
-                # === Отправляем задачу в очередь ===
-                job = batch_queue.enqueue(
-                    "bot.workers.hint_worker.analyze_backgammon_job",
-                    mat_path,
-                    json_path,
-                    str(message.from_user.id),
-                    job_id=job_id,
+        # Синхронизируем все файлы перед отправкой
+        for mat_path in file_paths:
+            if not await syncthing_sync.sync_and_wait(max_wait=30):
+                logger.warning("Ошибка синхронизации Syncthing")
+            if not await syncthing_sync.wait_for_file(mat_path, max_wait=30):
+                await message.reply(
+                    f"❌ Файл {os.path.basename(mat_path)} не найден после синхронизации"
                 )
+                return
 
-                job_ids.append(job_id)
+        # === Отправляем одну задачу для всего батча ===
+        job = batch_queue.enqueue(
+            "bot.workers.hint_worker.analyze_backgammon_batch_job",
+            file_paths,
+            str(message.from_user.id),
+            batch_id,
+            job_id=job_id,
+        )
 
-                # === Сохраняем информацию о задаче в Redis ===
-                await redis_client.set(
-                    f"job_info:{job_id}",
-                    json.dumps(
-                        {
-                            "batch_id": batch_id,
-                            "game_id": game_id,
-                            "mat_path": mat_path,
-                            "json_path": json_path,
-                            "red_player": red_player,
-                            "black_player": black_player,
-                            "user_id": message.from_user.id,
-                            "file_index": idx + 1,
-                            "total_files": total_files,
-                        }
-                    ),
-                    expire=3600,  # 1 час
-                )
+        # === Сохраняем информацию о батче в Redis ===
+        batch_info = {
+            "batch_id": batch_id,
+            "job_id": job_id,
+            "file_paths": file_paths,
+            "user_id": message.from_user.id,
+            "total_files": total_files,
+            "status": "queued",
+        }
+        await redis_client.set(
+            f"batch_info:{batch_id}",
+            json.dumps(batch_info),
+            expire=3600,  # 1 час
+        )
 
-                logger.info(
-                    f"Batch file {idx + 1}/{total_files} queued: {fname} (job_id={job_id})"
-                )
-
-            except Exception as e:
-                logger.error(f"Error queuing batch file {fname}: {e}")
-                await message.answer(
-                    f"⚠️ Ошибка при отправке файла **{fname}**: {e}",
-                    parse_mode="Markdown",
-                )
-                continue
-
-        if not job_ids:
-            await message.answer("❌ Не удалось отправить ни один файл на анализ")
-            await state.clear()
-            return
+        logger.info(
+            f"Batch {batch_id} queued with {total_files} files (job_id={job_id})"
+        )
 
         # === Отправляем сводку ===
-        summary = (
-            f"📤 Отправлено на анализ: **{len(job_ids)}/{total_files}** файлов\n\n"
-        )
+        summary = f"📤 Батч отправлен на анализ: **{total_files}** файлов\n\n"
         summary += "⏳ Мониторю прогресс...\n"
-        summary += "💡 Результаты будут отправлены по мере готовности"
+        summary += "💡 Результаты будут отправлены после завершения"
 
         await message.answer(summary, parse_mode="Markdown")
 
         # === Запускаем фоновый мониторинг статуса ===
         asyncio.create_task(
             check_batch_job_status(
-                message, job_ids, batch_id, i18n, session_without_commit
+                message, [job_id], batch_id, i18n, session_without_commit
             )
         )
 

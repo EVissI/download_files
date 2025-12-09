@@ -54,7 +54,6 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
     try:
         logger.info(f"[Job Start] mat_path={mat_path}, user_id={user_id}")
 
-        # Запускаем твою существующую функцию
         process_mat_file(mat_path, json_path, user_id)
 
         # Проверяем что результат создан
@@ -78,6 +77,81 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
     except Exception as e:
         logger.exception(f"[Job Failed] {mat_path}")
         return {"status": "error", "error": str(e), "mat_path": mat_path}
+
+
+def analyze_backgammon_batch_job(file_paths: list, user_id: str, batch_id: str):
+    """
+    Анализирует пакет .mat файлов последовательно (запускается в worker-е).
+
+    Args:
+        file_paths: Список путей к .mat файлам
+        user_id: ID пользователя
+        batch_id: ID батча для группировки
+
+    Returns:
+        dict: Результаты анализа для каждого файла
+    """
+    results = []
+    total_files = len(file_paths)
+
+    logger.info(
+        f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
+    )
+
+    for idx, mat_path in enumerate(file_paths):
+        fname = os.path.basename(mat_path)
+        logger.info(f"[Batch Processing] {idx + 1}/{total_files}: {fname}")
+
+        try:
+            # Генерируем уникальный ID для файла
+            game_id = f"{batch_id}_{idx}"
+            json_path = f"files/{game_id}.json"
+
+            # Обрабатываем файл
+            process_mat_file(mat_path, json_path, user_id)
+
+            # Проверяем результат
+            games_dir = json_path.rsplit(".", 1)[0] + "_games"
+            has_games = os.path.exists(games_dir) and any(
+                f.endswith(".json") for f in os.listdir(games_dir)
+            )
+
+            logger.info(
+                f"[Batch File Completed] {fname} -> {json_path} (has_games={has_games})"
+            )
+
+            results.append(
+                {
+                    "file_index": idx + 1,
+                    "mat_path": mat_path,
+                    "json_path": json_path,
+                    "games_dir": games_dir,
+                    "has_games": has_games,
+                    "status": "success",
+                }
+            )
+
+        except Exception as e:
+            logger.exception(f"[Batch File Failed] {fname}")
+            results.append(
+                {
+                    "file_index": idx + 1,
+                    "mat_path": mat_path,
+                    "status": "error",
+                    "error": str(e),
+                }
+            )
+
+    logger.info(
+        f"[Batch Job Completed] batch_id={batch_id}, processed={len(results)}/{total_files}"
+    )
+
+    return {
+        "batch_id": batch_id,
+        "total_files": total_files,
+        "results": results,
+        "status": "completed",
+    }
 
 
 if __name__ == "__main__":
