@@ -832,64 +832,33 @@ async def check_job_status(
             await message.answer("❌ Информация о задаче не найдена")
             return
 
-        if isinstance(job_info_json, bytes):
-            job_info_json = job_info_json.decode('utf-8')
-        
         job_info = json.loads(job_info_json)
 
         # Начинаем проверку
         while True:
             try:
                 job = Job.fetch(job_id, connection=redis_rq)
-                
+
                 if job.is_finished:
                     # === ЗАДАЧА ЗАВЕРШЕНА ===
-                    
-                    # Получаем результат с правильной обработкой
-                    result_raw = job.result
-                    
-                    # FIX: Правильная десериализация результата
-                    if result_raw is None:
-                        logger.error(f"Job {job_id} returned None result")
-                        await message.answer("❌ Результат задачи пуст")
-                        await state.clear()
-                        break
-                    
-                    # Преобразуем в строку если нужно
-                    if isinstance(result_raw, bytes):
-                        result_raw = result_raw.decode('utf-8')
-                    
-                    # Проверяем что строка не пустая
-                    if not result_raw or not result_raw.strip():
-                        logger.error(f"Job {job_id} returned empty result")
-                        await message.answer("❌ Результат задачи пуст")
-                        await state.clear()
-                        break
-                    
-                    try:
-                        result = json.loads(result_raw)
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Failed to parse job result: {e}, raw: {result_raw[:100]}")
-                        await message.answer("❌ Ошибка при обработке результата")
-                        await state.clear()
-                        break
-                    
-                    if result.get("status") == "success":
+                    result = job.result
+
+                    if result["status"] == "success":
                         logger.info(f"Job {job_id} completed successfully")
-                        
+
                         # Уменьшаем баланс пользователя
                         await UserDAO(session_without_commit).decrease_analiz_balance(
                             user_id=message.from_user.id, service_type="HINTS"
                         )
                         await session_without_commit.commit()
-                        
+
                         # Сохраняем mat_path для статистики
                         game_id = job_info["game_id"]
                         await redis_client.set(
                             f"mat_path:{game_id}", result["mat_path"], expire=3600
                         )
-                        
-                        # === Создаём ZIP архив если есть игры ===
+
+                        # Создаём ZIP архив если есть игры
                         games_dir = result["games_dir"]
                         if os.path.exists(games_dir) and result["has_games"]:
                             # Создаём ZIP
@@ -900,81 +869,91 @@ async def check_job_status(
                                         file_path = os.path.join(root, file)
                                         arcname = os.path.relpath(file_path, games_dir)
                                         zip_file.write(file_path, arcname)
-                            
+
                             zip_buffer.seek(0)
-                            
+
                             # Отправляем ZIP если пользователь админ
                             if message.from_user.id in admins:
                                 from aiogram.types import BufferedInputFile
-                                
-                                zip_file_data = BufferedInputFile(
+
+                                zip_file = BufferedInputFile(
                                     zip_buffer.getvalue(),
                                     filename=f"{game_id}_analysis.zip",
                                 )
                                 await message.answer_document(
-                                    document=zip_file_data, caption="Архив с анализом игр"
+                                    document=zip_file, caption="Архив с анализом игр"
                                 )
-                        
-                        # Отправляем кнопки для просмотра
-                        red_player = job_info["red_player"]
-                        black_player = job_info["black_player"]
-                        
-                        mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
-                        mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
-                        mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
-                        mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
-                        
-                        keyboard = InlineKeyboardMarkup(
-                            inline_keyboard=[
-                                [
-                                    InlineKeyboardButton(
-                                        text="Просмотр всех ходов",
-                                        web_app=WebAppInfo(url=mini_app_url_all),
-                                    ),
-                                ],
-                                [
-                                    InlineKeyboardButton(
-                                        text="Только ошибки (оба игрока)",
-                                        web_app=WebAppInfo(url=mini_app_url_both_errors),
-                                    ),
-                                ],
-                                [
-                                    InlineKeyboardButton(
-                                        text=f"Только ошибки ({red_player})",
-                                        web_app=WebAppInfo(url=mini_app_url_red_errors),
-                                    ),
-                                ],
-                                [
-                                    InlineKeyboardButton(
-                                        text=f"Только ошибки ({black_player})",
-                                        web_app=WebAppInfo(url=mini_app_url_black_errors),
-                                    ),
-                                ],
-                                [
-                                    InlineKeyboardButton(
-                                        text="Показать статистику игры",
-                                        callback_data=f"show_stats:{game_id}",
-                                    ),
-                                ],
-                            ]
-                        )
-                        
-                        await message.answer(
-                            f"✅ Анализ завершен!\n{red_player} vs {black_player}\n"
-                            f"Выберите вариант просмотра ошибок:",
-                            reply_markup=keyboard,
-                        )
+
+                            # Отправляем кнопки для просмотра
+                            red_player = job_info["red_player"]
+                            black_player = job_info["black_player"]
+
+                            mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
+                            mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+                            mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+                            mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
+
+                            keyboard = InlineKeyboardMarkup(
+                                inline_keyboard=[
+                                    [
+                                        InlineKeyboardButton(
+                                            text="Просмотр всех ходов",
+                                            web_app=WebAppInfo(url=mini_app_url_all),
+                                        ),
+                                    ],
+                                    [
+                                        InlineKeyboardButton(
+                                            text="Только ошибки (оба игрока)",
+                                            web_app=WebAppInfo(
+                                                url=mini_app_url_both_errors
+                                            ),
+                                        ),
+                                    ],
+                                    [
+                                        InlineKeyboardButton(
+                                            text=f"Только ошибки ({red_player})",
+                                            web_app=WebAppInfo(
+                                                url=mini_app_url_red_errors
+                                            ),
+                                        ),
+                                    ],
+                                    [
+                                        InlineKeyboardButton(
+                                            text=f"Только ошибки ({black_player})",
+                                            web_app=WebAppInfo(
+                                                url=mini_app_url_black_errors
+                                            ),
+                                        ),
+                                    ],
+                                    [
+                                        InlineKeyboardButton(
+                                            text="Показать статистику игры",
+                                            callback_data=f"show_stats:{game_id}",
+                                        ),
+                                    ],
+                                ]
+                            )
+
+                            await message.answer(
+                                f"✅ Анализ завершен!\n{red_player} vs {black_player}\n"
+                                f"Выберите вариант просмотра ошибок:",
+                                reply_markup=keyboard,
+                            )
+                        else:
+                            await message.answer(
+                                "✅ Анализ завершен, но игр не найдено."
+                            )
+
                     else:
                         # === ОШИБКА ===
                         error_msg = result.get("error", "Неизвестная ошибка")
                         await message.answer(f"❌ Ошибка при анализе: {error_msg}")
-                    
+
                     await state.clear()
                     break
 
                 elif job.is_failed:
                     # === ЗАДАЧА ПРОВАЛИЛАСЬ ===
-                    logger.error(f"Job {job_id} failed: {job.exc_info}")
                     await message.answer("❌ Анализ завершился с критической ошибкой")
                     await state.clear()
                     break
@@ -995,7 +974,7 @@ async def check_job_status(
                     continue
 
             except Exception as e:
-                logger.warning(f"Error checking job status: {e}", exc_info=True)
+                logger.warning(f"Error checking job status: {e}")
                 await asyncio.sleep(5)
                 continue
 
