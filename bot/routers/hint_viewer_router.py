@@ -81,8 +81,10 @@ hint_viewer_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
 message_lock = asyncio.Lock()
 
-redis_rq = Redis.from_url(settings.REDIS_URL, decode_responses=False)
-task_queue = Queue("backgammon_analysis", connection=redis_rq, default_timeout=1800)
+redis_rq_sync = Redis.from_url(settings.REDIS_URL, decode_responses=False)
+task_queue = Queue(
+    "backgammon_analysis", connection=redis_rq_sync, default_timeout=1800
+)
 
 
 class HintViewerStates(StatesGroup):
@@ -801,7 +803,7 @@ async def check_job_status(
     """
     try:
         # Получаем информацию о задаче
-        job_info_json = redis_rq.get(f"job_info:{job_id}")
+        job_info_json = await redis_client.get(f"job_info:{job_id}")
         if not job_info_json:
             await message.answer("❌ Информация о задаче не найдена")
             return
@@ -811,7 +813,7 @@ async def check_job_status(
         # Начинаем проверку
         while True:
             try:
-                job = Job.fetch(job_id, connection=redis_rq)
+                job = Job.fetch(job_id, connection=redis_rq_sync)
 
                 if job.is_finished:
                     # === ЗАДАЧА ЗАВЕРШЕНА ===
@@ -979,7 +981,7 @@ async def check_batch_job_status(
                 if job_id in completed_jobs:
                     continue
                 try:
-                    job = Job.fetch(job_id, connection=redis_rq)
+                    job = Job.fetch(job_id, connection=redis_rq_sync)
 
                     if job.is_finished:
                         result = job.result
@@ -1098,7 +1100,7 @@ async def cmd_status(message: Message, command: CommandObject):
     job_id = command.args.strip()
 
     try:
-        job = Job.fetch(job_id, connection=redis_client)
+        job = Job.fetch(job_id, connection=redis_rq_sync)
 
         if job.is_finished:
             if job.is_successful:
