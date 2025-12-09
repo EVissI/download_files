@@ -38,10 +38,12 @@ def parse_backgammon_mat(content):
     
     start_idx = 0
     for i, line in enumerate(lines):
-        if "Game" in line:
-            start_idx = i + 2
+        # Формат хода: " 1) 52: ..." (номер в скобках в начале)
+        if re.match(r"^\s*\d+\)", line.strip()):
+            start_idx = i
+            logger.debug(f"Found start of moves at line {i}: {line[:50]}")
             break
-    
+        
     moves_list = []
     
     for line in lines[start_idx:]:
