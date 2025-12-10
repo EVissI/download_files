@@ -1157,9 +1157,9 @@ def process_single_game(game_data, output_dir, game_number):
                         )
 
                         # Если нет данных по эквити, мы не можем оценить ход
-                        if not cubeful_equities or not no_double_record:
+                        if not no_double_record:
                             logger.warning(
-                                f"Game {game_number}: No equity data for Double evaluation"
+                                f"Game {game_number}: No 'no double' equity data for Double evaluation"
                             )
                             continue
 
@@ -1227,35 +1227,48 @@ def process_single_game(game_data, output_dir, game_number):
                             f"Game {game_number} error evaluating double: {e}",
                             exc_info=True,
                         )
-                elif entry.get("cube_hints") and entry.get("gnu_move").lower() == "take":
+                elif (
+                    entry.get("cube_hints") and entry.get("gnu_move").lower() == "take"
+                ):
                     cubeful_equities = (entry.get("cube_hints") or [{}])[0].get(
                         "cubeful_equities"
                     )
-                    take_record = next(
-                        (
-                            item
-                            for item in cubeful_equities
-                            if item.get("action_2").lower() == "take"
-                        ),
-                        None,
-                    )
-                    pass_record = next(
-                        (
-                            item
-                            for item in cubeful_equities
-                            if item.get("action_2").lower() == "pass"
-                        ),
-                        None,
-                    )
-                    if take_record.get("eq") > pass_record.get("eq"):
-                        entry["is_best_move"] = True
+                    if cubeful_equities:
+                        take_record = next(
+                            (
+                                item
+                                for item in cubeful_equities
+                                if item.get("action_2")
+                                and item.get("action_2").lower() == "take"
+                            ),
+                            None,
+                        )
+                        pass_record = next(
+                            (
+                                item
+                                for item in cubeful_equities
+                                if item.get("action_2")
+                                and item.get("action_2").lower() == "pass"
+                            ),
+                            None,
+                        )
+                        if (
+                            take_record
+                            and pass_record
+                            and take_record.get("eq") is not None
+                            and pass_record.get("eq") is not None
+                        ):
+                            entry["is_best_move"] = take_record.get(
+                                "eq"
+                            ) > pass_record.get("eq")
+                        else:
+                            entry["is_best_move"] = False
                     else:
                         entry["is_best_move"] = False
                 else:
                     entry["is_best_move"] = False
             else:
                 entry["is_best_move"] = False
-            
 
         # logger.debug(f"Game {game_number} send: exit / y")
         try:

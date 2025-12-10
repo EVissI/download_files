@@ -355,7 +355,7 @@ async def hint_viewer_menu(
                 try:
                     await message.bot.send_message(
                         chat_id=admin.id,
-                        text=f'Пользователь в очереди на анализ подсказок. Его сообщение:{queue_warning}\n'
+                        text=f'Пользователь в очереди на анализ ошибок. Его сообщение:{queue_warning}\n'
                     )
                 except Exception as e:
                     logger.error(f"Не удалось отправить уведомление админу {admin.id}: {e}")
@@ -811,7 +811,7 @@ async def process_batch_hint_files(
                 try:
                     await message.bot.send_message(
                         chat_id=admin.id,
-                        text=f'Пользователь в очереди на анализ подсказок. Его сообщение:{queue_warning}\n'
+                        text=f'Пользователь в очереди на анализ ошибок. Его сообщение:{queue_warning}\n'
                     )
                 except Exception as e:
                     logger.error(f"Не удалось отправить уведомление админу {admin.id}: {e}")
@@ -826,13 +826,6 @@ async def process_batch_hint_files(
         summary += "💡 Результаты будут отправлены по мере завершения"
 
         await message.answer(summary, parse_mode="Markdown")
-
-        # # === Запускаем фоновый мониторинг статуса (только для завершения) ===
-        # asyncio.create_task(
-        #     check_batch_job_status(
-        #         message, [job_id], batch_id, i18n, session_without_commit
-        #     )
-        # )
 
         await state.clear()
 
