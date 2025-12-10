@@ -505,7 +505,14 @@ def is_hint_complete(output, hint_type):
         if not hint_lines:
             return False
 
-        # Проверяем, что после последнего хода идут вероятности (числа с плавающей точкой)
+        # Проверяем наличие маркера конца подсказки (Black) или (Red)
+        has_player_marker = any("(Black)" in line or "(Red)" in line for line in lines)
+
+        # Если есть маркер игрока, подсказка завершена
+        if has_player_marker:
+            return True
+
+        # Альтернативная проверка: проверяем, что после последнего хода идут вероятности
         last_hint_idx = None
         for i, line in enumerate(lines):
             if re.match(r"^\d+\.\s+.*\s+Eq\.:\s*[+-]?\d+", line):
@@ -528,6 +535,7 @@ def is_hint_complete(output, hint_type):
                 prob_lines.append(line)
 
         # Должно быть хотя бы несколько строк с вероятностями
+        # Также проверяем, что нет незаконченных строк (без вероятностей после Eq.:)
         return len(prob_lines) >= 2
 
     return False
