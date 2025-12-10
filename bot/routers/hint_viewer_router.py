@@ -104,10 +104,9 @@ WORKER_CACHE_TTL = 600
 
 async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
     """
-    Получает количество воркеров.
-    Работает с СИНХРОННЫМ клиентом Redis (который нужен для RQ).
+    Версия для синхронного Redis клиента (redis-py).
     """
-    cached_count = await asyncio.to_thread(redis_conn.get, WORKER_COUNT_CACHE_KEY)
+    cached_count = redis_conn.get(WORKER_COUNT_CACHE_KEY)
     
     if cached_count is not None:
         return int(cached_count)
@@ -115,10 +114,10 @@ async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
     def fetch_workers():
         q = Queue(queue_name, connection=redis_conn)
         return len(Worker.all(queue=q))
-    
+
     count = await asyncio.to_thread(fetch_workers)
 
-    await asyncio.to_thread(redis_conn.set, WORKER_COUNT_CACHE_KEY, count, ex=WORKER_CACHE_TTL)
+    redis_conn.set(WORKER_COUNT_CACHE_KEY, count, ex=WORKER_CACHE_TTL)
     
     return count
 
@@ -346,7 +345,7 @@ async def hint_viewer_menu(
             expire=3600,  # 1 час
         )
         queue_warning = await get_queue_position_message(
-            redis_client, ["backgammon_analysis", "backgammon_batch_analysis"]
+            sync_redis_client, ["backgammon_analysis", "backgammon_batch_analysis"]
         )
         if queue_warning:
             await message.answer(queue_warning, parse_mode="Markdown")
@@ -792,7 +791,7 @@ async def process_batch_hint_files(
             expire=3600,  # 1 час
         )
         queue_warning = await get_queue_position_message(
-            redis_client, ["backgammon_analysis", "backgammon_batch_analysis"]
+            sync_redis_client, ["backgammon_analysis", "backgammon_batch_analysis"]
         )
         if queue_warning:
             await message.answer(queue_warning, parse_mode="Markdown")
