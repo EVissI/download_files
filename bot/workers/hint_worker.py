@@ -198,7 +198,8 @@ def analyze_backgammon_batch_job(
                         ],
                     ]
                 }
-
+                if not asyncio.run(syncthing_sync.sync_and_wait(max_wait=30)):
+                    logger.warning("Ошибка синхронизации Syncthing")
                 send_telegram_message(
                     f"✅ **{fname}** обработан!\n{red_player} vs {black_player}",
                     parse_mode="Markdown",
