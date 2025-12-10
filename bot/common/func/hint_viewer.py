@@ -408,6 +408,121 @@ def read_available(proc, timeout=0.1):
     return out
 
 
+def read_hint_output(child, hint_type, max_wait=10.0):
+    """
+    Динамически читает вывод подсказки от gnubg до тех пор,
+    пока не будет получен полный ответ.
+
+    Args:
+        child: pexpect процесс gnubg
+        hint_type: тип подсказки ('hint' или 'cube_hint')
+        max_wait: максимальное время ожидания в секундах
+
+    Returns:
+        str: полный вывод подсказки
+    """
+    output = ""
+    start_time = time.time()
+    chunk_timeout = 0.05
+    last_read_time = start_time
+
+    while time.time() - start_time < max_wait:
+        try:
+            # Читаем следующий chunk
+            chunk = child.read_nonblocking(size=4096, timeout=chunk_timeout)
+            if chunk:
+                output += chunk
+                last_read_time = time.time()
+
+                # Проверяем завершение подсказки
+                if is_hint_complete(output, hint_type):
+                    # Даем еще немного времени на дозавершение вывода
+                    time.sleep(0.1)
+                    try:
+                        final_chunk = child.read_nonblocking(size=4096, timeout=0.05)
+                        if final_chunk:
+                            output += final_chunk
+                    except:
+                        pass
+                    return output
+            else:
+                # Если долго нет новых данных, возможно подсказка завершена
+                if time.time() - last_read_time > 0.5 and output.strip():
+                    if is_hint_complete(output, hint_type):
+                        return output
+
+        except pexpect.TIMEOUT:
+            # Таймаут чтения - проверяем, не завершена ли подсказка
+            if time.time() - last_read_time > 0.5 and output.strip():
+                if is_hint_complete(output, hint_type):
+                    return output
+            continue
+        except pexpect.EOF:
+            # Процесс завершился
+            break
+        except Exception as e:
+            logger.warning(f"Error reading hint output: {e}")
+            break
+
+    logger.warning(f"Timeout waiting for {hint_type} completion, got partial output")
+    return output
+
+
+def is_hint_complete(output, hint_type):
+    """
+    Проверяет, является ли вывод gnubg завершенной подсказкой.
+
+    Args:
+        output: накопленный вывод
+        hint_type: тип подсказки ('hint' или 'cube_hint')
+
+    Returns:
+        bool: True если подсказка завершена
+    """
+    lines = output.strip().split("\n")
+    lines = [line.strip() for line in lines if line.strip()]
+
+    if hint_type == "cube_hint":
+        # Для кубовых подсказок проверяем наличие "Proper cube action:"
+        return any("Proper cube action:" in line for line in lines)
+
+    elif hint_type == "hint":
+        # Для обычных подсказок проверяем наличие завершенных ходов с equity
+        # Ищем строки вида "1. Cubeful 2-ply    24/22 13/8                   Eq.: +0,008"
+        hint_lines = [
+            line for line in lines if re.match(r"^\d+\.\s+.*\s+Eq\.:\s*[+-]?\d+", line)
+        ]
+        if not hint_lines:
+            return False
+
+        # Проверяем, что после последнего хода идут вероятности (числа с плавающей точкой)
+        last_hint_idx = None
+        for i, line in enumerate(lines):
+            if re.match(r"^\d+\.\s+.*\s+Eq\.:\s*[+-]?\d+", line):
+                last_hint_idx = i
+
+        if last_hint_idx is None:
+            return False
+
+        # После последнего хода должны быть строки с вероятностями
+        remaining_lines = lines[last_hint_idx + 1 :]
+        if not remaining_lines:
+            return False
+
+        # Ищем строки с числами (вероятностями)
+        prob_lines = []
+        for line in remaining_lines:
+            # Ищем числа с плавающей точкой в строке
+            floats = re.findall(r"[+-]?\d*\.\d+", line)
+            if floats:
+                prob_lines.append(line)
+
+        # Должно быть хотя бы несколько строк с вероятностями
+        return len(prob_lines) >= 2
+
+    return False
+
+
 def parse_hint_output(text: str):
     def clean_text(s: str) -> str:
         if not s:
@@ -1081,27 +1196,13 @@ def process_single_game(game_data, output_dir, game_number):
 
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
-                
-                # 1. Надежное ожидание завершения команды
-                try:
-                    # Ждем промпт. Регулярка ищет '>' в конце строки (игнорируя цвета ANSI перед ним)
-                    # timeout=60, так как анализ 2-ply может быть долгим на 4 потоках
-                    child.expect(r"> ", timeout=60) 
-                    
-                    # Забираем весь вывод до промпта
-                    out = child.before 
-                except pexpect.TIMEOUT:
-                    logger.error(f"Game {game_number}: Timeout waiting for hint output")
-                    out = ""
-                except Exception as e:
-                    logger.error(f"Game {game_number}: Error reading hint: {e}")
-                    out = ""
 
-                # 2. Парсим
+                # Динамическое чтение вывода подсказки
+                hint_output = read_hint_output(child, token["type"])
+                out += hint_output
+
                 hints = parse_hint_output(out)
-                
                 if hints:
-                    # ... (ваш код добавления hints в aug)
                     for h in hints:
                         match token["type"]:
                             case "cube_hint":
@@ -1109,7 +1210,10 @@ def process_single_game(game_data, output_dir, game_number):
                             case "hint":
                                 aug[target_idx]["hints"].append(h)
                 else:
-                    logger.warning(f"Game {game_number}: Output captured but no hints parsed. Output snippet: {out[:100]}...")
+                    pass
+                    # logger.debug(
+                    #     f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
+                    # )
 
         # Сравниваем ходы с подсказками
         for idx, entry in enumerate(aug):
