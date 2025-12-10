@@ -29,7 +29,8 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from rq import Queue
+from rq import Queue, Worker
+from rq.registry import StartedJobRegistry
 from rq.job import Job
 from redis import Redis
 from bot.common.service.sync_folder_service import SyncthingSync
@@ -96,6 +97,68 @@ class HintViewerStates(StatesGroup):
 
 
 syncthing_sync = SyncthingSync()
+
+
+WORKER_COUNT_CACHE_KEY = "cache:worker_count"
+WORKER_CACHE_TTL = 2
+
+
+async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
+    """
+    Получает количество воркеров с кэшированием в Redis.
+    """
+    cached_count = await redis_conn.get(WORKER_COUNT_CACHE_KEY)
+    if cached_count is not None:
+        return int(cached_count)
+
+    def fetch_workers():
+        q = Queue(queue_name, connection=redis_conn)
+        return len(Worker.all(queue=q))
+
+    count = await asyncio.to_thread(fetch_workers)
+    await redis_conn.set(WORKER_COUNT_CACHE_KEY, count, ex=WORKER_CACHE_TTL)
+
+    return count
+
+
+async def get_queue_position_message(
+    redis_conn: Redis, queue_names: list[str]
+) -> str | None:
+    """
+    Проверяет нагрузку и возвращает сообщение о позиции в очереди.
+    Использует кэшированное количество воркеров.
+    """
+    try:
+        total_waiting = 0
+        total_active = 0
+
+        for q_name in queue_names:
+            q = Queue(q_name, connection=redis_conn)
+            registry = StartedJobRegistry(queue=q)
+
+            total_waiting += q.count
+            total_active += len(registry)
+
+        worker_count = await get_worker_count_cached(redis_conn, queue_names[0])
+
+        if worker_count == 0:
+            return "⚠️ Сервера временно недоступны. Ваша задача будет обработана с задержкой."
+
+        if (total_waiting + total_active) >= worker_count:
+
+            position = total_waiting + 1
+
+            return (
+                f"⚠️ **Высокая нагрузка на сервера**\n"
+                f"Сейчас в очереди задач: {total_waiting}\n"
+                f"Вы {position}-й в очереди."
+            )
+
+        return None
+
+    except Exception as e:
+        logger.error(f"Error checking queue: {e}")
+        return None
 
 
 @hint_viewer_router.message(
@@ -280,7 +343,11 @@ async def hint_viewer_menu(
             ),
             expire=3600,  # 1 час
         )
-
+        queue_warning = await get_queue_position_message(
+            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
+        )
+        if queue_warning:
+            await message.answer(queue_warning, parse_mode="Markdown")
         # === Отправляем пользователю уведомление ===
         status_text = (
             f"✅ Файл принят!\n"
@@ -722,7 +789,11 @@ async def process_batch_hint_files(
             json.dumps(batch_info),
             expire=3600,  # 1 час
         )
-
+        queue_warning = await get_queue_position_message(
+            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
+        )
+        if queue_warning:
+            await message.answer(queue_warning, parse_mode="Markdown")
         logger.info(
             f"Batch {batch_id} queued with {total_files} files (job_id={job_id})"
         )
