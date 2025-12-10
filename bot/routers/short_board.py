@@ -40,6 +40,7 @@ class ShortBoardDialog(StatesGroup):
 
 short_board_router = Router()
 
+
 @short_board_router.message(
     F.text.in_(
         get_all_locales_for_key(translator_hub, "keyboard-user-reply-short_board_view")
@@ -49,14 +50,17 @@ short_board_router = Router()
 async def short_board_command(
     message: Message,
     state: FSMContext,
-
 ):
     await message.answer("Отправьте файл с игрой для обработки.")
     await state.set_state(ShortBoardDialog.file)
 
 
 @short_board_router.message(F.document, StateFilter(ShortBoardDialog.file), UserInfo())
-async def handle_document(message: Message, state: FSMContext, user_info: User,):
+async def handle_document(
+    message: Message,
+    state: FSMContext,
+    user_info: User,
+):
     try:
         file = message.document
         chat_id = message.chat.id
@@ -88,10 +92,13 @@ async def handle_document(message: Message, state: FSMContext, user_info: User,)
         new_file_path = os.path.join(files_dir, new_file_name)
         try:
             import shutil
+
             shutil.copy(file_path, new_file_path)
         except Exception as e:
             logger.error(f"Failed to copy file {file_path} to {new_file_path}: {e}")
-            await bot.send_message(chat_id, "Ошибка при копировании файла. Попробуйте снова.")
+            await bot.send_message(
+                chat_id, "Ошибка при копировании файла. Попробуйте снова."
+            )
             return
 
         # сохранение файла на яндекс диск
@@ -101,8 +108,16 @@ async def handle_document(message: Message, state: FSMContext, user_info: User,)
             logger.error(f"Error saving file to Yandex Disk: {e}")
 
         buttons = [
-            [InlineKeyboardButton(text=f"За {names[0]}", callback_data=f"choose_first_{dir_name}")],
-            [InlineKeyboardButton(text=f"За {names[1]}", callback_data=f"choose_second_{dir_name}")]
+            [
+                InlineKeyboardButton(
+                    text=f"За {names[0]}", callback_data=f"choose_first_{dir_name}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=f"За {names[1]}", callback_data=f"choose_second_{dir_name}"
+                )
+            ],
         ]
         keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -113,13 +128,19 @@ async def handle_document(message: Message, state: FSMContext, user_info: User,)
         )
 
         await state.set_state(ShortBoardDialog.choose_side)
-        await state.update_data(file_content=file_content, dir_name=dir_name, names=names)
+        await state.update_data(
+            file_content=file_content, dir_name=dir_name, names=names
+        )
         # Send notification to admin
         try:
-            user_name = f'{user_info.admin_insert_name} @{user_info.username or user_info.id}' if user_info.admin_insert_name else f'@{user_info.username or user_info.id}'
+            user_name = (
+                f"{user_info.admin_insert_name} @{user_info.username or user_info.id}"
+                if user_info.admin_insert_name
+                else f"@{user_info.username or user_info.id}"
+            )
             await bot.send_message(
                 chat_id=826161194,
-                text=f"Просмотр игры: {names[0]} - {names[1]}\nПользователь <b>{user_name}</b> "
+                text=f"Просмотр игры: {names[0]} - {names[1]}\nПользователь <b>{user_name}</b> ",
             )
         except Exception as e:
             logger.error(f"Failed to send notification to admin: {e}")
@@ -131,8 +152,12 @@ async def handle_document(message: Message, state: FSMContext, user_info: User,)
         await state.clear()
 
 
-@short_board_router.callback_query(F.data.startswith("choose_"), StateFilter(ShortBoardDialog.choose_side))
-async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session_without_commit: AsyncSession):
+@short_board_router.callback_query(
+    F.data.startswith("choose_"), StateFilter(ShortBoardDialog.choose_side)
+)
+async def handle_choose_side(
+    callback: CallbackQuery, state: FSMContext, session_without_commit: AsyncSession
+):
     await callback.message.delete()
     try:
         data = await state.get_data()
@@ -140,8 +165,8 @@ async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session
         dir_name = data["dir_name"]
         names = data["names"]
 
-        _, side, _ = callback.data.split('_')
-        is_inverse = side == 'second'
+        _, side, _ = callback.data.split("_")
+        is_inverse = side == "second"
 
         await parse_file(file_content, dir_name, is_inverse)
 
@@ -149,7 +174,7 @@ async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session
         button = InlineKeyboardButton(
             text="Открыть игру 📲",
             web_app=WebAppInfo(
-                url=f"{settings.MINI_APP_URL}?game={dir_name}"
+                url=f"{settings.MINI_APP_URL}?game={dir_name}&chat_id={callback.message.chat.id}"
             ),
         )
         keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
@@ -160,8 +185,7 @@ async def handle_choose_side(callback: CallbackQuery, state: FSMContext, session
             reply_markup=keyboard,
         )
         await UserDAO(session_without_commit).decrease_analiz_balance(
-            user_id=callback.from_user.id,
-            service_type="SHORT_BOARD"
+            user_id=callback.from_user.id, service_type="SHORT_BOARD"
         )
         logger.info(f"Пользователь {callback.from_user.id} использовал Short Board")
         await session_without_commit.commit()

@@ -408,7 +408,7 @@ def read_available(proc, timeout=0.1):
     return out
 
 
-def read_hint_output(child, hint_type, max_wait=3.0):
+def read_hint_output(child, hint_type, max_wait=2.0):
     """
     Динамически читает вывод подсказки от gnubg до тех пор,
     пока не будет получен полный ответ.
@@ -1404,6 +1404,7 @@ def process_single_game(game_data, output_dir, game_number):
             child.sendline("exit")
             time.sleep(0.1)
             child.sendline("y")
+            time.sleep(0.5)
         except Exception:
             pass
 
@@ -1551,7 +1552,7 @@ def process_mat_file(input_file, output_file, chat_id):
         import concurrent.futures
 
         game_results = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
             futures = []
             for game_data in games:
                 game_data["match_length"] = match_length
