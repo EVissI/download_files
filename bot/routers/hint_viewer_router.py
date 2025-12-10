@@ -112,6 +112,7 @@ async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
         return int(cached_count)
 
     def fetch_workers():
+        q = Queue(queue_name, connection=redis_conn)
         return len(Worker.all(connection=redis_conn))
 
     count = await asyncio.to_thread(fetch_workers)
@@ -344,7 +345,7 @@ async def hint_viewer_menu(
             expire=3600,  # 1 час
         )
         queue_warning = await get_queue_position_message(
-            sync_redis_client, ["backgammon_analysis", "backgammon_batch_analysis"]
+            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
         )
         if queue_warning:
             await message.answer(queue_warning, parse_mode="Markdown")
@@ -790,7 +791,7 @@ async def process_batch_hint_files(
             expire=3600,  # 1 час
         )
         queue_warning = await get_queue_position_message(
-            sync_redis_client, ["backgammon_analysis", "backgammon_batch_analysis"]
+            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
         )
         if queue_warning:
             await message.answer(queue_warning, parse_mode="Markdown")
