@@ -344,7 +344,7 @@ async def hint_viewer_menu(
             expire=3600,  # 1 час
         )
         queue_warning = await get_queue_position_message(
-            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
+            redis_client, ["backgammon_analysis", "backgammon_batch_analysis"]
         )
         if queue_warning:
             await message.answer(queue_warning, parse_mode="Markdown")
@@ -790,7 +790,7 @@ async def process_batch_hint_files(
             expire=3600,  # 1 час
         )
         queue_warning = await get_queue_position_message(
-            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
+            redis_client, ["backgammon_analysis", "backgammon_batch_analysis"]
         )
         if queue_warning:
             await message.answer(queue_warning, parse_mode="Markdown")
