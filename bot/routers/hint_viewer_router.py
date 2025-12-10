@@ -147,17 +147,16 @@ async def get_queue_position_message(
         )
         if worker_count == 0:
             return "⚠️ Сервера временно недоступны. Ваша задача будет обработана с задержкой."
-
-        if (total_waiting + total_active) >= worker_count:
+        total_q = total_waiting + total_active
+        if total_q >= worker_count:
 
             position = total_waiting + 1
-
-            return (
-                f"⚠️ **Высокая нагрузка на сервера**\n"
-                f"Сейчас в очереди задач: {total_waiting}\n"
+            msg = (
+                f"⚠️Высокая нагрузка на сервера\n"
                 f"Вы {position}-й в очереди."
             )
-
+            logger.info(f"User queue position message: {msg}")
+            return msg
         return None
 
     except Exception as e:
@@ -351,7 +350,7 @@ async def hint_viewer_menu(
             redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
         )
         if queue_warning:
-            await message.answer(queue_warning, parse_mode="Markdown")
+            await message.answer(queue_warning)
         # === Отправляем пользователю уведомление ===
         status_text = (
             f"✅ Файл принят!\n"
