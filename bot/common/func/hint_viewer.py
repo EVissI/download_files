@@ -1082,16 +1082,13 @@ def process_single_game(game_data, output_dir, game_number):
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
                 
-                # 1. Отправляем команду
-                # child.sendline(line) уже было выше
-                
-                # 2. Ждем появления промпта (любого вида: (gnubg), (Red), (Black) и т.д.)
-                # Регулярка ищет скобки с текстом и знак '>', например "(gnubg) > "
-                # timeout=30 дает gnubg достаточно времени даже на медленном CPU
+                # 1. Надежное ожидание завершения команды
                 try:
-                    child.expect(r"\([\w\s]+\)\s?>\s?", timeout=30) 
+                    # Ждем промпт. Регулярка ищет '>' в конце строки (игнорируя цвета ANSI перед ним)
+                    # timeout=60, так как анализ 2-ply может быть долгим на 4 потоках
+                    child.expect(r"> ", timeout=60) 
                     
-                    # 3. Забираем все, что было выведено ДО промпта
+                    # Забираем весь вывод до промпта
                     out = child.before 
                 except pexpect.TIMEOUT:
                     logger.error(f"Game {game_number}: Timeout waiting for hint output")
@@ -1100,7 +1097,7 @@ def process_single_game(game_data, output_dir, game_number):
                     logger.error(f"Game {game_number}: Error reading hint: {e}")
                     out = ""
 
-                # 4. Парсим полученный полный вывод
+                # 2. Парсим
                 hints = parse_hint_output(out)
                 
                 if hints:
