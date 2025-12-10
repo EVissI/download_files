@@ -408,7 +408,7 @@ def read_available(proc, timeout=0.1):
     return out
 
 
-def read_hint_output(child, hint_type, max_wait=3.0):
+def read_hint_output(child, hint_type, max_wait=4.0):
     """
     Динамически читает вывод подсказки от gnubg до тех пор,
     пока не будет получен полный ответ.
@@ -419,7 +419,7 @@ def read_hint_output(child, hint_type, max_wait=3.0):
         max_wait: максимальное время ожидания в секундах
 
     Returns:
-        str: полный вывод подсказки
+        str: полный вывод подсказки или пустая строка если gnubg ожидает ввода костей
     """
     output = ""
     start_time = time.time()
@@ -433,6 +433,16 @@ def read_hint_output(child, hint_type, max_wait=3.0):
             if chunk:
                 output += chunk
                 last_read_time = time.time()
+                logger.debug(f"Read chunk for {hint_type}: {chunk}")
+                # Проверяем на сообщение об ожидании ввода костей
+                if (
+                    "Вам следует ввести два числа от 1 до 6" in output
+                    or "You should enter two numbers from 1 to 6" in output
+                ):
+                    logger.warning(
+                        f"gnubg is waiting for dice input, aborting hint reading"
+                    )
+                    return ""  # Возвращаем пустую строку
 
                 # Проверяем завершение подсказки
                 if is_hint_complete(output, hint_type):
@@ -1200,6 +1210,13 @@ def process_single_game(game_data, output_dir, game_number):
                 # Динамическое чтение вывода подсказки
                 hint_output = read_hint_output(child, token["type"])
                 out += hint_output
+
+                # Если hint_output пустая, значит gnubg ожидает ввода костей - пропускаем
+                if not hint_output.strip():
+                    logger.warning(
+                        f"Game {game_number} hint aborted - gnubg waiting for dice input"
+                    )
+                    continue
 
                 hints = parse_hint_output(out)
                 if hints:
