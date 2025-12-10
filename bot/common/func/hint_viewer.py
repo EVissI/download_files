@@ -434,9 +434,12 @@ def read_hint_output(child, hint_type, max_wait=3.0):
                 output += chunk
                 last_read_time = time.time()
 
-                if output.strip().endswith("(Red)") or output.strip().endswith(
-                    "(Black)"
-                ) or output.strip().endswith("(root)") or output.strip().endswith("(gnubg)"):
+                if (
+                    output.strip().endswith("(Red)")
+                    or output.strip().endswith("(Black)")
+                    or output.strip().endswith("(root)")
+                    or output.strip().endswith("(gnubg)")
+                ):
                     return output
 
                 # Проверяем завершение подсказки
@@ -1278,7 +1281,8 @@ def process_single_game(game_data, output_dir, game_number):
                             (
                                 item
                                 for item in cubeful_equities
-                                if item.get("action_1", "").lower() == "no double"
+                                if str(item.get("action_1") or "").lower()
+                                == "no double"
                             ),
                             None,
                         )
@@ -1304,7 +1308,7 @@ def process_single_game(game_data, output_dir, game_number):
                                 (
                                     item
                                     for item in cubeful_equities
-                                    if item.get("action_2", "").lower() == "take"
+                                    if str(item.get("action_2") or "").lower() == "take"
                                 ),
                                 None,
                             )
@@ -1313,7 +1317,7 @@ def process_single_game(game_data, output_dir, game_number):
                                 (
                                     item
                                     for item in cubeful_equities
-                                    if item.get("action_2", "").lower() == "pass"
+                                    if str(item.get("action_2") or "").lower() == "pass"
                                 ),
                                 None,
                             )
@@ -1325,7 +1329,7 @@ def process_single_game(game_data, output_dir, game_number):
                                 (
                                     item
                                     for item in cubeful_equities
-                                    if item.get("action_2", "").lower() == "take"
+                                    if str(item.get("action_2") or "").lower() == "take"
                                 ),
                                 None,
                             )
@@ -1365,8 +1369,7 @@ def process_single_game(game_data, output_dir, game_number):
                             (
                                 item
                                 for item in cubeful_equities
-                                if item.get("action_2")
-                                and item.get("action_2").lower() == "take"
+                                if str(item.get("action_2") or "").lower() == "take"
                             ),
                             None,
                         )
@@ -1374,8 +1377,7 @@ def process_single_game(game_data, output_dir, game_number):
                             (
                                 item
                                 for item in cubeful_equities
-                                if item.get("action_2")
-                                and item.get("action_2").lower() == "pass"
+                                if str(item.get("action_2") or "").lower() == "pass"
                             ),
                             None,
                         )
