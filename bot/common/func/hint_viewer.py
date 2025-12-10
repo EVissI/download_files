@@ -1105,7 +1105,7 @@ def process_single_game(game_data, output_dir, game_number):
 
         # Сравниваем ходы с подсказками
         for idx, entry in enumerate(aug):
-            if "gnu_move" in entry and entry.get("hints"):
+            if "gnu_move" in entry and entry.get("hints") and entry.get("gnu_move").lower() not in ('double', 'take', 'pass'):
                 first_hint = next(
                     (
                         hint
@@ -1135,7 +1135,10 @@ def process_single_game(game_data, output_dir, game_number):
                     if aug[idx + 1].get('gnu_move').lower() == 'take':
                         cubeful_equities = (entry.get("cube_hints") or [{}])[0].get("cubeful_equities")
                         take_record = next((item for item in cubeful_equities if item.get("action_2").lower() == "take"), None)
-                        no_double_record = next((item for item in cubeful_equities if item.get("action_1").lower() == "no double"), None)
+                        logger.info(f"Game {game_number} take_record: {take_record}")
+                        no_double_record = next((item for item in cubeful_equities if item.get("action_1") == "No double"), None)
+                        logger.info(f"Game {game_number} no_double_record: {no_double_record}")
+                        logger.info(f"Game {game_number} comparing eq: {take_record.get('eq') > no_double_record.get('eq')}")
                         if take_record.get('eq') > no_double_record.get('eq'):
                             entry["is_best_move"] = True
                         else:
@@ -1143,7 +1146,10 @@ def process_single_game(game_data, output_dir, game_number):
                     if aug[idx + 1].get('gnu_move').lower() == 'pass':
                         cubeful_equities = (entry.get("cube_hints") or [{}])[0].get("cubeful_equities")
                         pass_record = next((item for item in cubeful_equities if item.get("action_2").lower() == "pass"), None)
-                        no_double_record = next((item for item in cubeful_equities if item.get("action_1").lower() == "no double"), None)
+                        logger.info(f"Game {game_number} pass_record: {pass_record}")
+                        no_double_record = next((item for item in cubeful_equities if item.get("action_1") == "No double"), None)
+                        logger.info(f"Game {game_number} no_double_record: {no_double_record}")
+                        logger.info(f"Game {game_number} comparing eq: {pass_record.get('eq') > no_double_record.get('eq')}")
                         if pass_record.get('eq') > no_double_record.get('eq'):
                             entry["is_best_move"] = True
                         else:
