@@ -408,7 +408,7 @@ def read_available(proc, timeout=0.1):
     return out
 
 
-def read_hint_output(child, hint_type, max_wait=10.0):
+def read_hint_output(child, hint_type, max_wait=3.0):
     """
     Динамически читает вывод подсказки от gnubg до тех пор,
     пока не будет получен полный ответ.
