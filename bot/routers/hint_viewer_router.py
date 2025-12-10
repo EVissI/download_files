@@ -383,14 +383,12 @@ async def handle_show_stats(
                 reply_markup=keyboard.as_markup(),
             )
         else:
-            # Single player
             formatted_analysis, new_file_path = result
             await callback.message.answer(
                 f"{formatted_analysis}\n\n",
                 parse_mode="HTML",
                 reply_markup=MainKeyboard.build(user_info.role, i18n),
             )
-            # Удаляем файл
             if os.path.exists(new_file_path):
                 os.remove(new_file_path)
             await redis_client.delete(f"mat_path:{game_id}")
@@ -483,15 +481,12 @@ def take_json_info(game_id: str, game_num: str = None):
                 f"JSON файл для игры {game_num} в {game_id} не найден"
             )
     else:
-        # Загружаем общий файл с информацией о всех играх
         path = f"files/{game_id}.json"
         if not os.path.exists(path):
             raise FileNotFoundError(f"JSON файл для {game_id} не найден")
 
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-
-        # Scores будут загружаться по требованию в JavaScript
 
         return data
 
@@ -675,288 +670,6 @@ async def upload_screenshots(request: Request):
         raise HTTPException(status_code=500, detail="Error uploading screenshots")
 
 
-async def check_batch_job_status(
-    message: Message,
-    job_ids: list,  # Список ID задач
-    batch_id: str,  # ID батча для отслеживания
-    i18n,
-    session_without_commit,
-):
-    """
-    Фоновая задача для проверки статуса анализа батча файлов.
-    Проверяет все задачи и отправляет результаты по мере завершения.
-    """
-    completed_jobs = {}
-    failed_jobs = {}
-    total_jobs = len(job_ids)
-
-    try:
-        logger.info(
-            f"Starting batch monitor for {total_jobs} files, batch_id={batch_id}"
-        )
-
-        while True:
-            try:
-                all_finished = True
-                finished_count = 0
-                failed_count = 0
-
-                for job_id in job_ids:
-                    if job_id in completed_jobs or job_id in failed_jobs:
-                        finished_count += 1
-                        if job_id in failed_jobs:
-                            failed_count += 1
-                        continue
-
-                    try:
-                        job = Job.fetch(job_id, connection=redis_rq)
-
-                        if job.is_finished:
-                            # Получаем информацию о задаче
-                            job_info_json = await redis_client.get(f"job_info:{job_id}")
-                            if job_info_json:
-                                job_info = json.loads(job_info_json)
-                            else:
-                                job_info = {}
-
-                            # === FIX: Правильная обработка результата ===
-                            result_raw = job.result
-
-                            if result_raw is None:
-                                logger.error(f"Job {job_id} returned None result")
-                                failed_jobs[job_id] = "Пустой результат"
-                                finished_count += 1
-                                failed_count += 1
-                                continue
-
-                            # Преобразуем результат в dict если нужно
-                            if isinstance(result_raw, dict):
-                                result = result_raw
-                            elif isinstance(result_raw, bytes):
-                                try:
-                                    result = json.loads(result_raw.decode("utf-8"))
-                                except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                                    logger.error(
-                                        f"Failed to parse job result bytes: {e}"
-                                    )
-                                    failed_jobs[job_id] = (
-                                        f"Ошибка обработки: {str(e)[:50]}"
-                                    )
-                                    finished_count += 1
-                                    failed_count += 1
-                                    continue
-                            elif isinstance(result_raw, str):
-                                try:
-                                    result = json.loads(result_raw)
-                                except json.JSONDecodeError as e:
-                                    logger.error(
-                                        f"Failed to parse job result string: {e}"
-                                    )
-                                    failed_jobs[job_id] = (
-                                        f"Ошибка обработки: {str(e)[:50]}"
-                                    )
-                                    finished_count += 1
-                                    failed_count += 1
-                                    continue
-                            else:
-                                logger.error(
-                                    f"Unexpected result type: {type(result_raw)}"
-                                )
-                                failed_jobs[job_id] = "Неожиданный тип результата"
-                                finished_count += 1
-                                failed_count += 1
-                                continue
-
-                            # Теперь result гарантированно dict
-                            if result.get("status") == "completed":
-                                # Батч-задача завершена, обрабатываем результаты для каждого файла
-                                logger.info(
-                                    f"Batch job {job_id} completed successfully"
-                                )
-                                batch_results = result.get("results", [])
-                                completed_jobs[job_id] = {
-                                    "result": result,
-                                    "job_info": job_info,
-                                }
-                                finished_count += 1
-
-                                # Обрабатываем каждый файл в батче
-                                for file_result in batch_results:
-                                    if file_result.get("status") == "success":
-                                        # Уменьшаем баланс за каждый успешный файл
-                                        await UserDAO(
-                                            session_without_commit
-                                        ).decrease_analiz_balance(
-                                            user_id=message.from_user.id,
-                                            service_type="HINTS",
-                                        )
-
-                                        # Сохраняем mat_path для статистики
-                                        game_id = f"{result['batch_id']}_{file_result['file_index'] - 1}"
-                                        await redis_client.set(
-                                            f"mat_path:{game_id}",
-                                            file_result["mat_path"],
-                                            expire=3600,
-                                        )
-
-                                        # Извлекаем имена игроков из файла
-                                        try:
-                                            with open(
-                                                file_result["mat_path"],
-                                                "r",
-                                                encoding="utf-8",
-                                            ) as f:
-                                                content = f.read()
-                                            red_player, black_player = (
-                                                extract_player_names(content)
-                                            )
-                                        except Exception:
-                                            red_player, black_player = "Red", "Black"
-
-                                        fname = os.path.basename(
-                                            file_result["mat_path"]
-                                        )
-
-                                        if file_result.get("has_games"):
-                                            mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
-                                            mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
-                                            mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
-                                            mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
-
-                                            keyboard = InlineKeyboardMarkup(
-                                                inline_keyboard=[
-                                                    [
-                                                        InlineKeyboardButton(
-                                                            text="Просмотр всех ходов",
-                                                            web_app=WebAppInfo(
-                                                                url=mini_app_url_all
-                                                            ),
-                                                        ),
-                                                    ],
-                                                    [
-                                                        InlineKeyboardButton(
-                                                            text="Только ошибки (оба игрока)",
-                                                            web_app=WebAppInfo(
-                                                                url=mini_app_url_both_errors
-                                                            ),
-                                                        ),
-                                                    ],
-                                                    [
-                                                        InlineKeyboardButton(
-                                                            text=f"Только ошибки ({red_player})",
-                                                            web_app=WebAppInfo(
-                                                                url=mini_app_url_red_errors
-                                                            ),
-                                                        ),
-                                                    ],
-                                                    [
-                                                        InlineKeyboardButton(
-                                                            text=f"Только ошибки ({black_player})",
-                                                            web_app=WebAppInfo(
-                                                                url=mini_app_url_black_errors
-                                                            ),
-                                                        ),
-                                                    ],
-                                                    [
-                                                        InlineKeyboardButton(
-                                                            text="Показать статистику игры",
-                                                            callback_data=f"show_stats:{game_id}",
-                                                        ),
-                                                    ],
-                                                ]
-                                            )
-
-                                            await message.answer(
-                                                f"✅ **{fname}** обработан!\n{red_player} vs {black_player}",
-                                                parse_mode="Markdown",
-                                            )
-                                            await message.answer(
-                                                "Выберите вариант просмотра ошибок:",
-                                                reply_markup=keyboard,
-                                            )
-                                        else:
-                                            await message.answer(
-                                                f"✅ **{fname}** обработан, но игр не найдено.",
-                                                parse_mode="Markdown",
-                                            )
-                                    else:
-                                        # Ошибка для файла
-                                        error_msg = file_result.get(
-                                            "error", "Неизвестная ошибка"
-                                        )
-                                        failed_count += 1
-                                        fname = os.path.basename(
-                                            file_result.get("mat_path", "unknown")
-                                        )
-                                        await message.answer(
-                                            f"❌ **{fname}**: {error_msg}",
-                                            parse_mode="Markdown",
-                                        )
-                            else:
-                                # Ошибка всей батч-задачи
-                                error_msg = result.get("error", "Неизвестная ошибка")
-                                failed_jobs[job_id] = error_msg
-                                finished_count += 1
-                                failed_count += result.get(
-                                    "total_files", 1
-                                )  # Все файлы в батче считаем ошибками
-                                await message.answer(
-                                    f"❌ Ошибка батч-обработки: {error_msg}",
-                                    parse_mode="Markdown",
-                                )
-
-                        elif job.is_failed:
-                            logger.error(f"Batch job {job_id} failed: {job.exc_info}")
-                            failed_jobs[job_id] = "Критическая ошибка"
-                            finished_count += 1
-                            failed_count += 1
-
-                            job_info_json = await redis_client.get(f"job_info:{job_id}")
-                            if job_info_json:
-                                job_info = json.loads(job_info_json)
-                                fname = os.path.basename(
-                                    job_info.get("mat_path", "unknown")
-                                )
-                                await message.answer(
-                                    f"❌ **{fname}**: Критическая ошибка обработки",
-                                    parse_mode="Markdown",
-                                )
-                        else:
-                            all_finished = False
-
-                    except Exception as e:
-                        logger.warning(
-                            f"Error checking batch job {job_id}: {e}", exc_info=True
-                        )
-                        all_finished = False
-
-                # Если все задачи завершены
-                if all_finished:
-                    logger.info(
-                        f"Batch {batch_id} completed. Finished: {finished_count}, Failed: {failed_count}"
-                    )
-
-                    summary_msg = (
-                        f"🎉 **Пакетная обработка завершена!**\n\n"
-                        f"✅ Успешно: {finished_count - failed_count}\n"
-                        f"❌ Ошибок: {failed_count}\n"
-                        f"📊 Всего: {total_jobs}"
-                    )
-                    await message.answer(summary_msg, parse_mode="Markdown")
-                    break
-
-                await asyncio.sleep(5)  # Проверяем каждые 5 секунд
-
-            except Exception as e:
-                logger.warning(f"Error in batch monitor loop: {e}", exc_info=True)
-                await asyncio.sleep(5)
-                continue
-
-    except Exception as e:
-        logger.exception(f"Error in check_batch_job_status for batch {batch_id}")
-        await message.answer("❌ Ошибка при мониторинге батча")
-
-
 async def process_batch_hint_files(
     message: Message,
     state: FSMContext,
@@ -974,7 +687,7 @@ async def process_batch_hint_files(
 
     try:
         total_files = len(file_paths)
-        await message.answer(f"📋 Отправляю батч из {total_files} файлов на анализ...")
+        await message.answer(f"📋 Отправляю пакет из {total_files} файлов на анализ...")
 
         # Синхронизируем все файлы перед отправкой
         for mat_path in file_paths:
@@ -1015,9 +728,9 @@ async def process_batch_hint_files(
         )
 
         # === Отправляем сводку ===
-        summary = f"📤 Батч отправлен на анализ: **{total_files}** файлов\n\n"
+        summary = f"📤Пакет отправлен на анализ: **{total_files}** файлов\n\n"
         summary += "⏳ Мониторю прогресс...\n"
-        summary += "💡 Результаты будут отправлены после завершения"
+        summary += "💡 Результаты будут отправлены по мере завершения"
 
         await message.answer(summary, parse_mode="Markdown")
 
