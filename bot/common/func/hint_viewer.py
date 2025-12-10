@@ -66,7 +66,7 @@ def parse_backgammon_mat(content):
                 act = action_match.group(1).lower()
                 if act in ["take", "takes"]:
                     act = "take"
-                    gnu_move = "take "
+                    gnu_move = "take"
                 elif act in ["drop", "drops"]:
                     act = "drop"
                     gnu_move = "pass"
@@ -95,7 +95,7 @@ def parse_backgammon_mat(content):
                     resp_act = response.lower()
                     if resp_act in ["take", "takes"]:
                         resp_act = "take"
-                        gnu_move_resp = "take "
+                        gnu_move_resp = "take"
                     elif resp_act in ["drop", "drops"]:
                         resp_act = "drop"
                         gnu_move_resp = "pass"
