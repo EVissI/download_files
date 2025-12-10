@@ -436,7 +436,7 @@ def read_hint_output(child, hint_type, max_wait=3.0):
 
                 if output.strip().endswith("(Red)") or output.strip().endswith(
                     "(Black)"
-                ):
+                ) or output.strip().endswith("(root)") or output.strip().endswith("(gnubg)"):
                     return output
 
                 # Проверяем завершение подсказки
