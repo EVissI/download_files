@@ -440,7 +440,7 @@ def read_hint_output(child, hint_type, max_wait=4.0):
                     or "You should enter two numbers from 1 to 6" in output
                 ):
                     logger.warning(
-                        f"gnubg is waiting for dice input, aborting hint reading"
+                        f"gnubg is waiting for dice input, aborting hint reading: {output}"
                     )
                     return ""  # Возвращаем пустую строку
 
@@ -463,6 +463,7 @@ def read_hint_output(child, hint_type, max_wait=4.0):
 
         except pexpect.TIMEOUT:
             # Таймаут чтения - проверяем, не завершена ли подсказка
+            logger.debug(f"Timeout reading hint output for {hint_type}: {output}")
             if time.time() - last_read_time > 0.5 and output.strip():
                 if is_hint_complete(output, hint_type):
                     return output
