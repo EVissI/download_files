@@ -102,24 +102,26 @@ syncthing_sync = SyncthingSync()
 WORKER_COUNT_CACHE_KEY = "cache:worker_count"
 WORKER_CACHE_TTL = 10
 
+
 async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
     """
     Версия для синхронного Redis клиента (redis-py).
     """
     cached_count = redis_conn.get(WORKER_COUNT_CACHE_KEY)
-    
+
     if cached_count is not None:
         return int(cached_count)
 
     def fetch_workers():
         q = Queue(queue_name, connection=redis_conn)
         return len(Worker.all(queue=q))
-    
+
     count = await asyncio.to_thread(fetch_workers)
 
     redis_conn.set(WORKER_COUNT_CACHE_KEY, count, ex=WORKER_CACHE_TTL)
-    
+
     return count
+
 
 async def get_queue_position_message(
     redis_conn: Redis, queue_names: list[str]
@@ -140,7 +142,9 @@ async def get_queue_position_message(
             total_active += len(registry)
 
         worker_count = await get_worker_count_cached(redis_conn, queue_names[0])
-
+        logger.debug(
+            f"Queue status - Waiting: {total_waiting}, Active: {total_active}, Workers: {worker_count}"
+        )
         if worker_count == 0:
             return "⚠️ Сервера временно недоступны. Ваша задача будет обработана с задержкой."
 
@@ -184,7 +188,7 @@ async def handle_hint_type_selection(callback: CallbackQuery, state: FSMContext)
     if hint_type == "single":
         await state.set_state(HintViewerStates.waiting_file)
         await callback.message.answer("Пришлите .mat файл для анализа.")
-    else:  
+    else:
         await state.set_state(HintViewerStates.uploading_sequential)
         await state.update_data(file_paths=[])
         keyboard = ReplyKeyboardBuilder()
@@ -341,7 +345,7 @@ async def hint_viewer_menu(
                     "user_id": message.from_user.id,
                 }
             ),
-            expire=3600,  # 1 час
+            expire=3600,
         )
         queue_warning = await get_queue_position_message(
             redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
