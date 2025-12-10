@@ -7,6 +7,7 @@ from redis import Redis
 from rq import Worker, Queue  # ✅ БЕЗ Connection
 from bot.common.func.hint_viewer import process_mat_file
 from bot.config import settings
+from bot.common.func.hint_viewer import extract_player_names
 # Логирование
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -109,7 +110,7 @@ def analyze_backgammon_batch_job(
         """Отправляет сообщение в Telegram через API"""
         try:
             url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
-            data = {"chat_id": user_id, "text": text, "parse_mode": parse_mode}
+            data = {"chat_id": int(user_id), "text": text, "parse_mode": parse_mode}
             response = requests.post(url, data=data, timeout=10)
             if response.status_code != 200:
                 logger.warning(f"Failed to send Telegram message: {response.text}")
@@ -144,7 +145,7 @@ def analyze_backgammon_batch_job(
                 try:
                     with open(mat_path, "r", encoding="utf-8") as f:
                         content = f.read()
-                    from bot.common.func.hint_viewer import extract_player_names
+
 
                     red_player, black_player = extract_player_names(content)
                 except Exception:
@@ -202,7 +203,7 @@ def analyze_backgammon_batch_job(
                 try:
                     url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
                     data = {
-                        "chat_id": user_id,
+                        "chat_id": int(user_id),
                         "text": "Выберите вариант просмотра ошибок:",
                         "reply_markup": json.dumps(keyboard),
                     }
