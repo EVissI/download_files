@@ -102,22 +102,24 @@ syncthing_sync = SyncthingSync()
 WORKER_COUNT_CACHE_KEY = "cache:worker_count"
 WORKER_CACHE_TTL = 2
 
-
 async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
     """
-    Получает количество воркеров с кэшированием в Redis.
+    Получает количество воркеров.
+    Работает с СИНХРОННЫМ клиентом Redis (который нужен для RQ).
     """
-    cached_count = await redis_conn.get(WORKER_COUNT_CACHE_KEY)
+    cached_count = await asyncio.to_thread(redis_conn.get, WORKER_COUNT_CACHE_KEY)
+    
     if cached_count is not None:
         return int(cached_count)
 
     def fetch_workers():
         q = Queue(queue_name, connection=redis_conn)
         return len(Worker.all(queue=q))
-
+    
     count = await asyncio.to_thread(fetch_workers)
-    await redis_conn.set(WORKER_COUNT_CACHE_KEY, count, ex=WORKER_CACHE_TTL)
 
+    await asyncio.to_thread(redis_conn.set, WORKER_COUNT_CACHE_KEY, count, ex=WORKER_CACHE_TTL)
+    
     return count
 
 
@@ -184,7 +186,7 @@ async def handle_hint_type_selection(callback: CallbackQuery, state: FSMContext)
     if hint_type == "single":
         await state.set_state(HintViewerStates.waiting_file)
         await callback.message.answer("Пришлите .mat файл для анализа.")
-    else:  # batch
+    else:  
         await state.set_state(HintViewerStates.uploading_sequential)
         await state.update_data(file_paths=[])
         keyboard = ReplyKeyboardBuilder()
