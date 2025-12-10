@@ -100,7 +100,7 @@ syncthing_sync = SyncthingSync()
 
 
 WORKER_COUNT_CACHE_KEY = "cache:worker_count"
-WORKER_CACHE_TTL = 600
+WORKER_CACHE_TTL = 10
 
 async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
     """
@@ -113,14 +113,13 @@ async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
 
     def fetch_workers():
         q = Queue(queue_name, connection=redis_conn)
-        return len(Worker.all(connection=redis_conn))
-
+        return len(Worker.all(queue=q))
+    
     count = await asyncio.to_thread(fetch_workers)
 
     redis_conn.set(WORKER_COUNT_CACHE_KEY, count, ex=WORKER_CACHE_TTL)
     
     return count
-
 
 async def get_queue_position_message(
     redis_conn: Redis, queue_names: list[str]
