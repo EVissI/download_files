@@ -1129,7 +1129,7 @@ def process_single_game(game_data, output_dir, game_number):
                     logger.warning(
                         f"Game {game_number} no valid first hint for entry: {entry}"
                     )
-            elif entry.get("cuber_hints") and entry.get("gnu_move") == 'Double':
+            elif entry.get("cube_hints") and entry.get("gnu_move") == 'Double':
                 logger.info(f"Game {game_number} evaluating double move for entry: {entry}")
                 try:
                     if entry[idx + 1].get('gnu_move').lower() == 'take':
@@ -1150,7 +1150,7 @@ def process_single_game(game_data, output_dir, game_number):
                             entry["is_best_move"] = False
                 except Exception:
                     logger.warning(f"Game {game_number} error evaluating double/take for entry: {entry}")
-            elif entry.get("cuber_hints") and entry.get("gnu_move").lower() == 'take':
+            elif entry.get("cube_hints") and entry.get("gnu_move").lower() == 'take':
                 cubeful_equities = (entry.get("cube_hints") or [{}])[0].get("cubeful_equities")
                 take_record = next((item for item in cubeful_equities if item.get("action_2").lower() == "take"), None)
                 pass_record = next((item for item in cubeful_equities if item.get("action_2").lower() == "pass"), None)
