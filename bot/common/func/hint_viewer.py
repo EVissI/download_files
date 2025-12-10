@@ -1105,155 +1105,157 @@ def process_single_game(game_data, output_dir, game_number):
 
         # Сравниваем ходы с подсказками
         for idx, entry in enumerate(aug):
-            if (
-                "gnu_move" in entry
-                and entry.get("hints")
-                and entry.get("gnu_move")
-                and entry.get("gnu_move").lower() not in ("double", "take", "pass")
-            ):
-                first_hint = next(
-                    (
-                        hint
-                        for hint in entry["hints"]
-                        if hint.get("idx") == 1 and hint.get("type") == "move"
-                    ),
-                    None,
-                )
-                if first_hint and "move" in first_hint:
-                    normalized_gnu = normalize_move(entry["gnu_move"])
-                    normalized_hint = normalize_move(first_hint["move"])
-                    entry["is_best_move"] = normalized_gnu == normalized_hint
-
-                    if not entry["is_best_move"]:
-                        pass
-                        # logger.debug(
-                        #     f"Game {game_number} move mismatch: gnu_move='{entry['gnu_move']}' (normalized: '{normalized_gnu}') vs hint='{first_hint['move']}' (normalized: '{normalized_hint}')"
-                        # )
-                else:
-                    entry["is_best_move"] = False
-                    logger.warning(
-                        f"Game {game_number} no valid first hint for entry: {entry}"
-                    )
-            elif entry.get("cube_hints") and entry.get("gnu_move") == "Double":
-                logger.info(
-                    f"Game {game_number} evaluating double move for entry idx {idx}"
-                )
-
-                # Сразу ставим False, чтобы ключ гарантированно существовал
-                entry["is_best_move"] = False
-
-                try:
-                    # 1. Безопасно получаем эквити текущей позиции
-                    cubeful_equities = (entry.get("cube_hints") or [{}])[0].get(
-                        "cubeful_equities", []
-                    )
-                    no_double_record = next(
+            if entry.get("gnu_move"):
+                if (
+                    "gnu_move" in entry
+                    and entry.get("hints")
+                    and entry.get("gnu_move").lower() not in ("double", "take", "pass")
+                ):
+                    first_hint = next(
                         (
-                            item
-                            for item in cubeful_equities
-                            if item.get("action_1", "").lower() == "no double"
+                            hint
+                            for hint in entry["hints"]
+                            if hint.get("idx") == 1 and hint.get("type") == "move"
                         ),
                         None,
                     )
+                    if first_hint and "move" in first_hint:
+                        normalized_gnu = normalize_move(entry["gnu_move"])
+                        normalized_hint = normalize_move(first_hint["move"])
+                        entry["is_best_move"] = normalized_gnu == normalized_hint
 
-                    # Если нет данных по эквити, мы не можем оценить ход
-                    if not cubeful_equities or not no_double_record:
-                        logger.warning(
-                            f"Game {game_number}: No equity data for Double evaluation"
-                        )
-                        continue
-
-                    next_action = "unknown"
-                    if idx + 1 < len(aug):
-                        next_move_raw = aug[idx + 1].get("gnu_move")
-                        if next_move_raw:
-                            next_action = next_move_raw.lower()
-
-                    # 3. Выбираем с чем сравнивать
-                    compare_record = None
-
-                    if next_action == "take":
-                        compare_record = next(
-                            (
-                                item
-                                for item in cubeful_equities
-                                if item.get("action_2", "").lower() == "take"
-                            ),
-                            None,
-                        )
-                    elif next_action == "pass":
-                        compare_record = next(
-                            (
-                                item
-                                for item in cubeful_equities
-                                if item.get("action_2", "").lower() == "pass"
-                            ),
-                            None,
-                        )
+                        if not entry["is_best_move"]:
+                            pass
+                            # logger.debug(
+                            #     f"Game {game_number} move mismatch: gnu_move='{entry['gnu_move']}' (normalized: '{normalized_gnu}') vs hint='{first_hint['move']}' (normalized: '{normalized_hint}')"
+                            # )
                     else:
+                        entry["is_best_move"] = False
                         logger.warning(
-                            f"Game {game_number}: Next move '{next_action}' not recognized or missing. Using 'take' equity for comparison."
+                            f"Game {game_number} no valid first hint for entry: {entry}"
                         )
-                        compare_record = next(
-                            (
-                                item
-                                for item in cubeful_equities
-                                if item.get("action_2", "").lower() == "take"
-                            ),
-                            None,
-                        )
-
-                    # 4. Финальное сравнение
-                    if (
-                        compare_record
-                        and compare_record.get("eq") is not None
-                        and no_double_record.get("eq") is not None
-                    ):
-                        if compare_record["eq"] > no_double_record["eq"]:
-                            entry["is_best_move"] = True
-                        else:
-                            entry["is_best_move"] = False
-
-                        logger.info(
-                            f"Result: {entry['is_best_move']} (Double Eq: {compare_record['eq']} vs NoDouble Eq: {no_double_record['eq']})"
-                        )
-                    else:
-                        logger.warning(
-                            f"Game {game_number}: Could not find equity records to compare"
-                        )
-
-                except Exception as e:
-                    logger.warning(
-                        f"Game {game_number} error evaluating double: {e}",
-                        exc_info=True,
+                elif entry.get("cube_hints") and entry.get("gnu_move") == "Double":
+                    logger.info(
+                        f"Game {game_number} evaluating double move for entry idx {idx}"
                     )
-            elif entry.get("cube_hints") and entry.get("gnu_move").lower() == "take":
-                cubeful_equities = (entry.get("cube_hints") or [{}])[0].get(
-                    "cubeful_equities"
-                )
-                take_record = next(
-                    (
-                        item
-                        for item in cubeful_equities
-                        if item.get("action_2").lower() == "take"
-                    ),
-                    None,
-                )
-                pass_record = next(
-                    (
-                        item
-                        for item in cubeful_equities
-                        if item.get("action_2").lower() == "pass"
-                    ),
-                    None,
-                )
-                if take_record.get("eq") > pass_record.get("eq"):
-                    entry["is_best_move"] = True
+
+                    # Сразу ставим False, чтобы ключ гарантированно существовал
+                    entry["is_best_move"] = False
+
+                    try:
+                        # 1. Безопасно получаем эквити текущей позиции
+                        cubeful_equities = (entry.get("cube_hints") or [{}])[0].get(
+                            "cubeful_equities", []
+                        )
+                        no_double_record = next(
+                            (
+                                item
+                                for item in cubeful_equities
+                                if item.get("action_1", "").lower() == "no double"
+                            ),
+                            None,
+                        )
+
+                        # Если нет данных по эквити, мы не можем оценить ход
+                        if not cubeful_equities or not no_double_record:
+                            logger.warning(
+                                f"Game {game_number}: No equity data for Double evaluation"
+                            )
+                            continue
+
+                        next_action = "unknown"
+                        if idx + 1 < len(aug):
+                            next_move_raw = aug[idx + 1].get("gnu_move")
+                            if next_move_raw:
+                                next_action = next_move_raw.lower()
+
+                        # 3. Выбираем с чем сравнивать
+                        compare_record = None
+
+                        if next_action == "take":
+                            compare_record = next(
+                                (
+                                    item
+                                    for item in cubeful_equities
+                                    if item.get("action_2", "").lower() == "take"
+                                ),
+                                None,
+                            )
+                        elif next_action == "pass":
+                            compare_record = next(
+                                (
+                                    item
+                                    for item in cubeful_equities
+                                    if item.get("action_2", "").lower() == "pass"
+                                ),
+                                None,
+                            )
+                        else:
+                            logger.warning(
+                                f"Game {game_number}: Next move '{next_action}' not recognized or missing. Using 'take' equity for comparison."
+                            )
+                            compare_record = next(
+                                (
+                                    item
+                                    for item in cubeful_equities
+                                    if item.get("action_2", "").lower() == "take"
+                                ),
+                                None,
+                            )
+
+                        # 4. Финальное сравнение
+                        if (
+                            compare_record
+                            and compare_record.get("eq") is not None
+                            and no_double_record.get("eq") is not None
+                        ):
+                            if compare_record["eq"] > no_double_record["eq"]:
+                                entry["is_best_move"] = True
+                            else:
+                                entry["is_best_move"] = False
+
+                            logger.info(
+                                f"Result: {entry['is_best_move']} (Double Eq: {compare_record['eq']} vs NoDouble Eq: {no_double_record['eq']})"
+                            )
+                        else:
+                            logger.warning(
+                                f"Game {game_number}: Could not find equity records to compare"
+                            )
+
+                    except Exception as e:
+                        logger.warning(
+                            f"Game {game_number} error evaluating double: {e}",
+                            exc_info=True,
+                        )
+                elif entry.get("cube_hints") and entry.get("gnu_move").lower() == "take":
+                    cubeful_equities = (entry.get("cube_hints") or [{}])[0].get(
+                        "cubeful_equities"
+                    )
+                    take_record = next(
+                        (
+                            item
+                            for item in cubeful_equities
+                            if item.get("action_2").lower() == "take"
+                        ),
+                        None,
+                    )
+                    pass_record = next(
+                        (
+                            item
+                            for item in cubeful_equities
+                            if item.get("action_2").lower() == "pass"
+                        ),
+                        None,
+                    )
+                    if take_record.get("eq") > pass_record.get("eq"):
+                        entry["is_best_move"] = True
+                    else:
+                        entry["is_best_move"] = False
                 else:
                     entry["is_best_move"] = False
             else:
                 entry["is_best_move"] = False
-                # logger.debug(f"Game {game_number} skipping comparison for entry without gnu_move or hints: {entry}")
+            
 
         # logger.debug(f"Game {game_number} send: exit / y")
         try:
