@@ -1132,7 +1132,7 @@ def process_single_game(game_data, output_dir, game_number):
             elif entry.get("cube_hints") and entry.get("gnu_move") == 'Double':
                 logger.info(f"Game {game_number} evaluating double move for entry: {entry}")
                 try:
-                    if entry[idx + 1].get('gnu_move').lower() == 'take':
+                    if aug[idx + 1].get('gnu_move').lower() == 'take':
                         cubeful_equities = (entry.get("cube_hints") or [{}])[0].get("cubeful_equities")
                         take_record = next((item for item in cubeful_equities if item.get("action_2").lower() == "take"), None)
                         no_double_record = next((item for item in cubeful_equities if item.get("action_1").lower() == "no double"), None)
@@ -1140,7 +1140,7 @@ def process_single_game(game_data, output_dir, game_number):
                             entry["is_best_move"] = True
                         else:
                             entry["is_best_move"] = False
-                    if entry[idx + 1].get('gnu_move').lower() == 'pass':
+                    if aug[idx + 1].get('gnu_move').lower() == 'pass':
                         cubeful_equities = (entry.get("cube_hints") or [{}])[0].get("cubeful_equities")
                         pass_record = next((item for item in cubeful_equities if item.get("action_2").lower() == "pass"), None)
                         no_double_record = next((item for item in cubeful_equities if item.get("action_1").lower() == "no double"), None)
