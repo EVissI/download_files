@@ -2,10 +2,12 @@
 import sys
 import logging
 import json
+import asyncio
 import requests
 from redis import Redis  
 from rq import Worker, Queue  # ✅ БЕЗ Connection
 from bot.common.func.hint_viewer import process_mat_file
+from bot.common.service.sync_folder_service import SyncthingSync
 from bot.config import settings
 from bot.common.func.hint_viewer import extract_player_names
 # Логирование
@@ -14,7 +16,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ✅ Подключение к Redis с ACL-пользователем
+syncthing_sync = SyncthingSync()
+
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
@@ -68,7 +71,8 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
         logger.info(
             f"[Job Completed] {mat_path} -> {json_path} (has_games={has_games})"
         )
-
+        if not asyncio.run(syncthing_sync.sync_and_wait(max_wait=30)):
+            logger.warning("Ошибка синхронизации Syncthing")
         return {
             "status": "success",
             "mat_path": mat_path,
