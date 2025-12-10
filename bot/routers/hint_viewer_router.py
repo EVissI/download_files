@@ -100,7 +100,7 @@ syncthing_sync = SyncthingSync()
 
 
 WORKER_COUNT_CACHE_KEY = "cache:worker_count"
-WORKER_CACHE_TTL = 2
+WORKER_CACHE_TTL = 600
 
 async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
     """
