@@ -464,7 +464,7 @@ def read_hint_output(child, hint_type, max_wait=3.0):
             logger.warning(f"Error reading hint output: {e}")
             break
 
-    logger.warning(f"Timeout waiting for {hint_type} completion, got partial output")
+    logger.warning(f"Timeout waiting for {hint_type} completion, got partial output: {output}")
     return output
 
 
