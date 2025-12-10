@@ -434,6 +434,11 @@ def read_hint_output(child, hint_type, max_wait=3.0):
                 output += chunk
                 last_read_time = time.time()
 
+                if output.strip().endswith("(Red)") or output.strip().endswith(
+                    "(Black)"
+                ):
+                    return output
+
                 # Проверяем завершение подсказки
                 if is_hint_complete(output, hint_type):
                     # Даем еще немного времени на дозавершение вывода
@@ -448,12 +453,20 @@ def read_hint_output(child, hint_type, max_wait=3.0):
             else:
                 # Если долго нет новых данных, возможно подсказка завершена
                 if time.time() - last_read_time > 0.5 and output.strip():
+                    if output.strip().endswith("(Red)") or output.strip().endswith(
+                        "(Black)"
+                    ):
+                        return output
                     if is_hint_complete(output, hint_type):
                         return output
 
         except pexpect.TIMEOUT:
             # Таймаут чтения - проверяем, не завершена ли подсказка
             if time.time() - last_read_time > 0.5 and output.strip():
+                if output.strip().endswith("(Red)") or output.strip().endswith(
+                    "(Black)"
+                ):
+                    return output
                 if is_hint_complete(output, hint_type):
                     return output
             continue
@@ -464,7 +477,9 @@ def read_hint_output(child, hint_type, max_wait=3.0):
             logger.warning(f"Error reading hint output: {e}")
             break
 
-    logger.warning(f"Timeout waiting for {hint_type} completion, got partial output: {output}")
+    logger.warning(
+        f"Timeout waiting for {hint_type} completion, got partial output: {output}"
+    )
     return output
 
 
