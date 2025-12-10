@@ -408,7 +408,7 @@ def read_available(proc, timeout=0.1):
     return out
 
 
-def read_hint_output(child, hint_type, max_wait=4.0):
+def read_hint_output(child, hint_type, max_wait=3.0):
     """
     Динамически читает вывод подсказки от gnubg до тех пор,
     пока не будет получен полный ответ.
@@ -419,7 +419,7 @@ def read_hint_output(child, hint_type, max_wait=4.0):
         max_wait: максимальное время ожидания в секундах
 
     Returns:
-        str: полный вывод подсказки или пустая строка если gnubg ожидает ввода костей
+        str: полный вывод подсказки
     """
     output = ""
     start_time = time.time()
@@ -433,16 +433,6 @@ def read_hint_output(child, hint_type, max_wait=4.0):
             if chunk:
                 output += chunk
                 last_read_time = time.time()
-                logger.debug(f"Read chunk for {hint_type}: {chunk}")
-                # Проверяем на сообщение об ожидании ввода костей
-                if (
-                    "Вам следует ввести два числа от 1 до 6" in output
-                    or "You should enter two numbers from 1 to 6" in output
-                ):
-                    logger.warning(
-                        f"gnubg is waiting for dice input, aborting hint reading: {output}"
-                    )
-                    return ""  # Возвращаем пустую строку
 
                 # Проверяем завершение подсказки
                 if is_hint_complete(output, hint_type):
@@ -463,7 +453,6 @@ def read_hint_output(child, hint_type, max_wait=4.0):
 
         except pexpect.TIMEOUT:
             # Таймаут чтения - проверяем, не завершена ли подсказка
-            logger.debug(f"Timeout reading hint output for {hint_type}: {output}")
             if time.time() - last_read_time > 0.5 and output.strip():
                 if is_hint_complete(output, hint_type):
                     return output
@@ -506,14 +495,7 @@ def is_hint_complete(output, hint_type):
         if not hint_lines:
             return False
 
-        # Проверяем наличие маркера конца подсказки (Black) или (Red)
-        has_player_marker = any("(Black)" in line or "(Red)" in line for line in lines)
-
-        # Если есть маркер игрока, подсказка завершена
-        if has_player_marker:
-            return True
-
-        # Альтернативная проверка: проверяем, что после последнего хода идут вероятности
+        # Проверяем, что после последнего хода идут вероятности (числа с плавающей точкой)
         last_hint_idx = None
         for i, line in enumerate(lines):
             if re.match(r"^\d+\.\s+.*\s+Eq\.:\s*[+-]?\d+", line):
@@ -536,7 +518,6 @@ def is_hint_complete(output, hint_type):
                 prob_lines.append(line)
 
         # Должно быть хотя бы несколько строк с вероятностями
-        # Также проверяем, что нет незаконченных строк (без вероятностей после Eq.:)
         return len(prob_lines) >= 2
 
     return False
@@ -1219,13 +1200,6 @@ def process_single_game(game_data, output_dir, game_number):
                 # Динамическое чтение вывода подсказки
                 hint_output = read_hint_output(child, token["type"])
                 out += hint_output
-
-                # Если hint_output пустая, значит gnubg ожидает ввода костей - пропускаем
-                if not hint_output.strip():
-                    logger.warning(
-                        f"Game {game_number} hint aborted - gnubg waiting for dice input"
-                    )
-                    continue
 
                 hints = parse_hint_output(out)
                 if hints:
