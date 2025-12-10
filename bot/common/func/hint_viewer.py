@@ -1108,6 +1108,7 @@ def process_single_game(game_data, output_dir, game_number):
             if (
                 "gnu_move" in entry
                 and entry.get("hints")
+                and entry.get("gnu_move")
                 and entry.get("gnu_move").lower() not in ("double", "take", "pass")
             ):
                 first_hint = next(
