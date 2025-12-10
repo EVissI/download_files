@@ -992,7 +992,6 @@ async def process_batch_hint_files(
             file_paths,
             str(message.from_user.id),
             batch_id,
-            str(chat_id),
             job_id=job_id,
         )
 
@@ -1022,12 +1021,12 @@ async def process_batch_hint_files(
 
         await message.answer(summary, parse_mode="Markdown")
 
-        # === Запускаем фоновый мониторинг статуса (только для завершения) ===
-        asyncio.create_task(
-            check_batch_job_status(
-                message, [job_id], batch_id, i18n, session_without_commit
-            )
-        )
+        # # === Запускаем фоновый мониторинг статуса (только для завершения) ===
+        # asyncio.create_task(
+        #     check_batch_job_status(
+        #         message, [job_id], batch_id, i18n, session_without_commit
+        #     )
+        # )
 
         await state.clear()
 

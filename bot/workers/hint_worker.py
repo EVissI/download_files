@@ -82,7 +82,7 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
 
 
 def analyze_backgammon_batch_job(
-    file_paths: list, user_id: str, batch_id: str, chat_id: str
+    file_paths: list, user_id: str, batch_id: str
 ):
     """
     Анализирует пакет .mat файлов последовательно (запускается в worker-е).
@@ -102,14 +102,14 @@ def analyze_backgammon_batch_job(
     total_files = len(file_paths)
 
     logger.info(
-        f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}, chat_id={chat_id}"
+        f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
     )
 
     def send_telegram_message(text, parse_mode="Markdown"):
         """Отправляет сообщение в Telegram через API"""
         try:
             url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
-            data = {"chat_id": chat_id, "text": text, "parse_mode": parse_mode}
+            data = {"chat_id": user_id, "text": text, "parse_mode": parse_mode}
             response = requests.post(url, data=data, timeout=10)
             if response.status_code != 200:
                 logger.warning(f"Failed to send Telegram message: {response.text}")
@@ -202,7 +202,7 @@ def analyze_backgammon_batch_job(
                 try:
                     url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
                     data = {
-                        "chat_id": chat_id,
+                        "chat_id": user_id,
                         "text": "Выберите вариант просмотра ошибок:",
                         "reply_markup": json.dumps(keyboard),
                     }
