@@ -35,7 +35,7 @@ from rq.job import Job
 from redis import Redis
 from bot.common.service.sync_folder_service import SyncthingSync
 from bot.db.redis import sync_redis_client, redis_client
-
+from bot.db.schemas import SUser
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.hint_viewer import (
     extract_match_length,
@@ -155,7 +155,6 @@ async def get_queue_position_message(
                 f"⚠️Высокая нагрузка на сервера\n"
                 f"Вы {position}-й в очереди."
             )
-            logger.info(f"User queue position message: {msg}")
             return msg
         return None
 
@@ -350,6 +349,16 @@ async def hint_viewer_menu(
             redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
         )
         if queue_warning:
+            user_dao = UserDAO(session_without_commit)
+            admins = await user_dao.find_all(filters=SUser(role=User.Role.ADMIN.value))
+            for admin in admins:
+                try:
+                    await message.bot.send_message(
+                        chat_id=admin.id,
+                        text=f'Пользователь в очереди на анализ подсказок. Его сообщение:{queue_warning}\n'
+                    )
+                except Exception as e:
+                    logger.error(f"Не удалось отправить уведомление админу {admin.id}: {e}")
             await message.answer(queue_warning)
         # === Отправляем пользователю уведомление ===
         status_text = (
@@ -796,6 +805,16 @@ async def process_batch_hint_files(
             redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
         )
         if queue_warning:
+            user_dao = UserDAO(session_without_commit)
+            admins = await user_dao.find_all(filters=SUser(role=User.Role.ADMIN.value))
+            for admin in admins:
+                try:
+                    await message.bot.send_message(
+                        chat_id=admin.id,
+                        text=f'Пользователь в очереди на анализ подсказок. Его сообщение:{queue_warning}\n'
+                    )
+                except Exception as e:
+                    logger.error(f"Не удалось отправить уведомление админу {admin.id}: {e}")
             await message.answer(queue_warning, parse_mode="Markdown")
         logger.info(
             f"Batch {batch_id} queued with {total_files} files (job_id={job_id})"
