@@ -1148,8 +1148,8 @@ def process_single_game(game_data, output_dir, game_number):
                             entry["is_best_move"] = True
                         else:
                             entry["is_best_move"] = False
-                except Exception:
-                    logger.warning(f"Game {game_number} error evaluating double/take for entry: {entry}")
+                except Exception as e:
+                    logger.warning(f"Game {game_number} error evaluating double/take for entry: {entry} Error: {e}")
             elif entry.get("cube_hints") and entry.get("gnu_move").lower() == 'take':
                 cubeful_equities = (entry.get("cube_hints") or [{}])[0].get("cubeful_equities")
                 take_record = next((item for item in cubeful_equities if item.get("action_2").lower() == "take"), None)
