@@ -1130,6 +1130,7 @@ def process_single_game(game_data, output_dir, game_number):
                         f"Game {game_number} no valid first hint for entry: {entry}"
                     )
             elif entry.get("cuber_hints") and entry.get("gnu_move") == 'Double':
+                logger.info(f"Game {game_number} evaluating double move for entry: {entry}")
                 try:
                     if entry[idx + 1].get('gnu_move').lower() == 'take':
                         cubeful_equities = (entry.get("cube_hints") or [{}])[0].get("cubeful_equities")
