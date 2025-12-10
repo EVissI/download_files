@@ -1081,16 +1081,30 @@ def process_single_game(game_data, output_dir, game_number):
 
             if token["type"] in ("hint", "cube_hint"):
                 target_idx = token.get("target")
-                time.sleep(1.5)
+                
+                # 1. Отправляем команду
+                # child.sendline(line) уже было выше
+                
+                # 2. Ждем появления промпта (любого вида: (gnubg), (Red), (Black) и т.д.)
+                # Регулярка ищет скобки с текстом и знак '>', например "(gnubg) > "
+                # timeout=30 дает gnubg достаточно времени даже на медленном CPU
                 try:
-                    chunk = child.read_nonblocking(size=65536, timeout=0.1)
-                    if chunk:
-                        out += chunk
-                except Exception:
-                    pass
+                    child.expect(r"\([\w\s]+\)\s?>\s?", timeout=30) 
+                    
+                    # 3. Забираем все, что было выведено ДО промпта
+                    out = child.before 
+                except pexpect.TIMEOUT:
+                    logger.error(f"Game {game_number}: Timeout waiting for hint output")
+                    out = ""
+                except Exception as e:
+                    logger.error(f"Game {game_number}: Error reading hint: {e}")
+                    out = ""
 
+                # 4. Парсим полученный полный вывод
                 hints = parse_hint_output(out)
+                
                 if hints:
+                    # ... (ваш код добавления hints в aug)
                     for h in hints:
                         match token["type"]:
                             case "cube_hint":
@@ -1098,10 +1112,7 @@ def process_single_game(game_data, output_dir, game_number):
                             case "hint":
                                 aug[target_idx]["hints"].append(h)
                 else:
-                    pass
-                    # logger.debug(
-                    #     f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
-                    # )
+                    logger.warning(f"Game {game_number}: Output captured but no hints parsed. Output snippet: {out[:100]}...")
 
         # Сравниваем ходы с подсказками
         for idx, entry in enumerate(aug):
