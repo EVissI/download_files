@@ -1130,14 +1130,14 @@ def process_single_game(game_data, output_dir, game_number):
                         f"Game {game_number} no valid first hint for entry: {entry}"
                     )
             elif entry.get("cuber_hints") and entry.get("gnu_move") == 'Double':
-                cubeful_equities = entry.get("cube_hints", [None])[0].get("cubeful_equities")
+                cubeful_equities = (entry.get("cube_hints") or [{}])[0].get("cubeful_equities")
                 best_record = max(cubeful_equities, key=lambda x: x['eq'])
                 if best_record and best_record.get("action_1") == "Double":
                     entry["is_best_move"] = True
                 else:
                     entry["is_best_move"] = False
             elif entry.get("cuber_hints") and entry.get("gnu_move").lower() == 'take':
-                cubeful_equities = entry.get("cube_hints", [None])[0].get("cubeful_equities")
+                cubeful_equities = (entry.get("cube_hints") or [{}])[0].get("cubeful_equities")
                 best_record = max(cubeful_equities, key=lambda x: x['eq'])
                 if best_record and best_record.get("action_2").lower() == "take":
                     entry["is_best_move"] = True
