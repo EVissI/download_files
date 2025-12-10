@@ -112,8 +112,7 @@ async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
         return int(cached_count)
 
     def fetch_workers():
-        q = Queue(queue_name, connection=redis_conn)
-        return len(Worker.all(queue=q))
+        return len(Worker.all(connection=redis_conn))
 
     count = await asyncio.to_thread(fetch_workers)
 
