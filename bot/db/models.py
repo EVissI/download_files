@@ -138,7 +138,7 @@ class Promocode(Base):
 class ServiceType(str, enum.Enum):
         MATCH = "Матч"
         MONEYGAME = "Moneygame"
-        # SHORT_BOARD = "Плеер"
+        SHORT_BOARD = "Плеер"
         HINTS = "Ошибки"
 
 service_type_enum = Enum(ServiceType, name="servicetype", metadata=Base.metadata)
