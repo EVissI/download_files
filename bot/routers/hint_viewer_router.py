@@ -160,27 +160,27 @@ async def get_queue_position_message(
         return None
 
 
-async def can_enqueue_job(user_id: int) -> bool:
+def can_enqueue_job(user_id: int) -> bool:
     """
     Проверяет, может ли пользователь добавить новую задачу в очередь.
     """
-    active_jobs = await redis_client.smembers(f"user_active_jobs:{user_id}")
+    active_jobs = sync_redis_client.smembers(f"user_active_jobs:{user_id}")
     return len(active_jobs) == 0
 
 
-async def add_active_job(user_id: int, job_id: str):
+def add_active_job(user_id: int, job_id: str):
     """
     Добавляет job_id в активные задачи пользователя.
     """
-    await redis_client.sadd(f"user_active_jobs:{user_id}", job_id)
-    await redis_client.expire(f"user_active_jobs:{user_id}", 3600)
+    sync_redis_client.sadd(f"user_active_jobs:{user_id}", job_id)
+    sync_redis_client.expire(f"user_active_jobs:{user_id}", 3600)
 
 
-async def remove_active_job(user_id: int, job_id: str):
+def remove_active_job(user_id: int, job_id: str):
     """
     Удаляет job_id из активных задач пользователя.
     """
-    await redis_client.srem(f"user_active_jobs:{user_id}", job_id)
+    sync_redis_client.srem(f"user_active_jobs:{user_id}", job_id)
 
 
 @hint_viewer_router.message(
@@ -322,7 +322,7 @@ async def hint_viewer_menu(
 
     try:
         # Проверяем, может ли пользователь добавить задачу
-        if not await can_enqueue_job(message.from_user.id):
+        if not can_enqueue_job(message.from_user.id):
             await message.answer(
                 "У вас уже есть активная задача в очереди. Дождитесь завершения."
             )
@@ -358,8 +358,7 @@ async def hint_viewer_menu(
             job_id=job_id,
         )
 
-        # Добавляем задачу в активные
-        await add_active_job(message.from_user.id, job_id)
+        add_active_job(message.from_user.id, job_id)
 
         # === Сохраняем информацию о задаче в Redis ===
         await redis_client.set(
@@ -799,7 +798,7 @@ async def process_batch_hint_files(
 
     try:
         # Проверяем, может ли пользователь добавить задачу
-        if not await can_enqueue_job(message.from_user.id):
+        if not can_enqueue_job(message.from_user.id):
             await message.answer(
                 "У вас уже есть активная задача в очереди. Дождитесь завершения."
             )
@@ -828,8 +827,7 @@ async def process_batch_hint_files(
             job_id=job_id,
         )
 
-        # Добавляем задачу в активные
-        await add_active_job(message.from_user.id, job_id)
+        add_active_job(message.from_user.id, job_id)
 
         # === Сохраняем информацию о батче в Redis ===
         batch_info = {
@@ -1012,7 +1010,7 @@ async def check_job_status(
                         error_msg = result.get("error", "Неизвестная ошибка")
                         await message.answer(f"❌ Ошибка при анализе: {error_msg}")
 
-                    await remove_active_job(message.from_user.id, job_id)
+                    remove_active_job(message.from_user.id, job_id)
                     await state.clear()
                     break
 

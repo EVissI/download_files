@@ -10,6 +10,7 @@ from bot.common.func.hint_viewer import process_mat_file
 from bot.common.service.sync_folder_service import SyncthingSync
 from bot.config import settings
 from bot.common.func.hint_viewer import extract_player_names
+from bot.routers.hint_viewer_router import remove_active_job
 # Логирование
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -257,7 +258,7 @@ def analyze_backgammon_batch_job(
         f"🎉 **Пакетная обработка завершена!**\n\n✅ Успешно: {successful}\n❌ Ошибок: {failed}\n📊 Всего: {total_files}",
         parse_mode="Markdown",
     )
-
+    remove_active_job(user_id, batch_id)
     return {
         "batch_id": batch_id,
         "total_files": total_files,
