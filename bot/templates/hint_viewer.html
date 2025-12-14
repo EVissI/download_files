@@ -554,11 +554,11 @@
             <div id="controls">
                 <button onclick="saveScreenshot()" id="screenSaveBtn"></button>
                 <button onclick="uploadScreenshots()" id="screenUploadBtn"></button>
+                <button onclick="takeScreenshot()" id="screenshotBtn"></button>
                 <button onclick="toggleInvert()" id="invertBtn"></button>
                 <button onclick="prevTurn()" id="prevBtn"></button>
                 <span id="turnLabel">0</span>
                 <button onclick="nextTurn()" id="nextBtn"></button>
-                <button onclick="takeScreenshot()" id="screenshotBtn"></button>
             </div>
         </div>
 
@@ -733,11 +733,9 @@
                         });
 
 
-                        // Обновить счет для текущей игры
                         const gameScores = gameInfo.scores || {};
                         gameRedScore = gameScores.Red || 0;
                         gameBlackScore = gameScores.Black || 0;
-                        // enable_crawford_game_number is set only in initial load
                         if (matchLength === 0) {
                             playersInfoDiv.innerHTML = "Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
                         } else {
