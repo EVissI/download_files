@@ -1,5 +1,5 @@
 ﻿import os
-import uuid  # Добавляем для генерации уникального имени директории
+import uuid  
 import asyncio
 from datetime import datetime
 import pytz

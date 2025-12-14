@@ -151,16 +151,36 @@ async def get_queue_position_message(
         if total_q >= worker_count:
 
             position = total_waiting + 1
-            msg = (
-                f"⚠️Высокая нагрузка на сервера\n"
-                f"Вы {position}-й в очереди."
-            )
+            msg = f"⚠️Высокая нагрузка на сервера\n" f"Вы {position}-й в очереди."
             return msg
         return None
 
     except Exception as e:
         logger.error(f"Error checking queue: {e}")
         return None
+
+
+async def can_enqueue_job(user_id: int) -> bool:
+    """
+    Проверяет, может ли пользователь добавить новую задачу в очередь.
+    """
+    active_jobs = await redis_client.smembers(f"user_active_jobs:{user_id}")
+    return len(active_jobs) == 0
+
+
+async def add_active_job(user_id: int, job_id: str):
+    """
+    Добавляет job_id в активные задачи пользователя.
+    """
+    await redis_client.sadd(f"user_active_jobs:{user_id}", job_id)
+    await redis_client.expire(f"user_active_jobs:{user_id}", 3600)
+
+
+async def remove_active_job(user_id: int, job_id: str):
+    """
+    Удаляет job_id из активных задач пользователя.
+    """
+    await redis_client.srem(f"user_active_jobs:{user_id}", job_id)
 
 
 @hint_viewer_router.message(
@@ -301,6 +321,14 @@ async def hint_viewer_menu(
     job_id = f"hint_{message.from_user.id}_{uuid.uuid4().hex[:8]}"
 
     try:
+        # Проверяем, может ли пользователь добавить задачу
+        if not await can_enqueue_job(message.from_user.id):
+            await message.answer(
+                "У вас уже есть активная задача в очереди. Дождитесь завершения."
+            )
+            await state.clear()
+            return
+
         file = await message.bot.get_file(doc.file_id)
         os.makedirs("files", exist_ok=True)
 
@@ -330,6 +358,9 @@ async def hint_viewer_menu(
             job_id=job_id,
         )
 
+        # Добавляем задачу в активные
+        await add_active_job(message.from_user.id, job_id)
+
         # === Сохраняем информацию о задаче в Redis ===
         await redis_client.set(
             f"job_info:{job_id}",
@@ -355,10 +386,12 @@ async def hint_viewer_menu(
                 try:
                     await message.bot.send_message(
                         chat_id=admin.id,
-                        text=f'Пользователь в очереди на анализ ошибок. Его сообщение:{queue_warning}\n'
+                        text=f"Пользователь в очереди на анализ ошибок. Его сообщение:{queue_warning}\n",
                     )
                 except Exception as e:
-                    logger.error(f"Не удалось отправить уведомление админу {admin.id}: {e}")
+                    logger.error(
+                        f"Не удалось отправить уведомление админу {admin.id}: {e}"
+                    )
             await message.answer(queue_warning)
         # === Отправляем пользователю уведомление ===
         status_text = (
@@ -765,6 +798,14 @@ async def process_batch_hint_files(
     job_id = f"batch_job_{batch_id}"
 
     try:
+        # Проверяем, может ли пользователь добавить задачу
+        if not await can_enqueue_job(message.from_user.id):
+            await message.answer(
+                "У вас уже есть активная задача в очереди. Дождитесь завершения."
+            )
+            await state.clear()
+            return
+
         total_files = len(file_paths)
         await message.answer(f"📋 Отправляю пакет из {total_files} файлов на анализ...")
 
@@ -786,6 +827,9 @@ async def process_batch_hint_files(
             batch_id,
             job_id=job_id,
         )
+
+        # Добавляем задачу в активные
+        await add_active_job(message.from_user.id, job_id)
 
         # === Сохраняем информацию о батче в Redis ===
         batch_info = {
@@ -811,10 +855,12 @@ async def process_batch_hint_files(
                 try:
                     await message.bot.send_message(
                         chat_id=admin.id,
-                        text=f'Пользователь в очереди на анализ ошибок. Его сообщение:{queue_warning}\n'
+                        text=f"Пользователь в очереди на анализ ошибок. Его сообщение:{queue_warning}\n",
                     )
                 except Exception as e:
-                    logger.error(f"Не удалось отправить уведомление админу {admin.id}: {e}")
+                    logger.error(
+                        f"Не удалось отправить уведомление админу {admin.id}: {e}"
+                    )
             await message.answer(queue_warning, parse_mode="Markdown")
         logger.info(
             f"Batch {batch_id} queued with {total_files} files (job_id={job_id})"
@@ -966,6 +1012,7 @@ async def check_job_status(
                         error_msg = result.get("error", "Неизвестная ошибка")
                         await message.answer(f"❌ Ошибка при анализе: {error_msg}")
 
+                    await remove_active_job(message.from_user.id, job_id)
                     await state.clear()
                     break
 
