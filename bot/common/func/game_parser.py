@@ -192,7 +192,7 @@ async def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
     game_type = extract_game_type(split_file[0])
     games_raw = split_file[1:]
 
-    dir_path = Path("./front/public/json") / dir_name
+    dir_path = Path("./files") / dir_name
     dir_path.mkdir(parents=True, exist_ok=True)
     file_path = dir_path / "games.json"
 
