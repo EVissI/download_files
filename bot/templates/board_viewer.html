@@ -244,7 +244,7 @@
             </select>
         </div>
 
-        <canvas id="boardCanvas" width="800" height="600"></canvas>
+        <canvas id="boardCanvas" width="800" height="800"></canvas>
 
         <div class="board-footer">
             <div class="move-info" id="moveInfo">Initial Position</div>
@@ -264,6 +264,7 @@
         let current = 0;
         let currentGameNum = 1;
         let inverted = false;
+        let invertColors = false;
         let dataLoaded = false;
 
         const canvas = document.getElementById('boardCanvas');
@@ -343,63 +344,116 @@
 
             const positions = inverted ? data[current].inverted_positions : data[current].positions;
 
-            // Draw checkers
-            drawCheckers(positions);
+            invertColors = inverted;
+            const currentPlayer = data[current].player === 'White' ? 'first' : 'second';
+            drawCheckers('first', whiteChecker, positions.first, currentPlayer);
+            drawCheckers('second', blackChecker, positions.second, currentPlayer);
         }
 
-        function drawCheckers(positions) {
-            const pointWidth = canvas.width / 26; // 26 points + bar
-            const checkerRadius = pointWidth / 2 - 2;
+        function drawCheckers(player, img, positions, currentPlayer) {
+            ctx.font = 'bold 30px Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
 
-            for (let point = 1; point <= 24; point++) {
-                const x = getPointX(point);
-                const y = getPointY(point);
+            if (player === currentPlayer) {
+                for (let point = 1; point <= 24; point++) {
+                    const x = getX(point);
+                    let y = getBaseY(point);
+                    const dy = getDy(point);
 
-                // Draw white checkers (first player)
-                const whiteCount = positions.first[String(point)] || 0;
-                for (let i = 0; i < whiteCount; i++) {
-                    const checkerY = y - (i * (checkerRadius * 2 + 2));
-                    ctx.drawImage(whiteChecker, x - checkerRadius, checkerY - checkerRadius, checkerRadius * 2, checkerRadius * 2);
+                    let displayPoint = point;
+                    if (invertColors) {
+                        if (player === 'first') {
+                            displayPoint = 25 - point;
+                        } else if (player === 'second') {
+                            displayPoint = point;
+                        }
+                    } else {
+                        if (player === 'second') {
+                            displayPoint = 25 - point;
+                        } else if (player === 'first') {
+                            displayPoint = point;
+                        }
+                    }
+                    let numberY;
+                    if (point > 12) {
+                        numberY = y - 50;
+                    } else {
+                        numberY = y + 60;
+                    }
+                    ctx.fillText(displayPoint, x, numberY);
+                }
+            }
+
+            for (let pointStr in positions) {
+                if (pointStr === 'bar' || pointStr === 'off') continue;
+                const point = parseInt(pointStr);
+                let count = positions[pointStr];
+                const x = getX(point);
+                let y = getBaseY(point);
+                const dy = getDy(point);
+
+                for (let i = 0; i < Math.min(count, 6); i++) {
+                    ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
 
-                // Draw black checkers (second player)
-                const blackCount = positions.second[String(point)] || 0;
-                for (let i = 0; i < blackCount; i++) {
-                    const checkerY = y + (i * (checkerRadius * 2 + 2));
-                    ctx.drawImage(blackChecker, x - checkerRadius, checkerY - checkerRadius, checkerRadius * 2, checkerRadius * 2);
+                if (count > 6) {
+                    const lastCheckerY = y + (5 * dy);
+                    ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
                 }
             }
 
-            // Draw bar checkers
-            const barX = canvas.width / 2;
-            const barYTop = canvas.height / 2 - 50;
-            const barYBottom = canvas.height / 2 + 50;
-
-            const barWhite = positions.first.bar || 0;
-            for (let i = 0; i < barWhite; i++) {
-                ctx.drawImage(whiteChecker, barX - checkerRadius, barYTop - (i * (checkerRadius * 2 + 2)) - checkerRadius, checkerRadius * 2, checkerRadius * 2);
+            const barX = 400;
+            const barY = (player === 'second') ? 220 : 520;
+            if (positions.bar && positions.bar !== 0) {
+                let y = barY;
+                const dy = (player === 'second') ? 55 : -55;
+                for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
+                    ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
+                }
+                if (Math.abs(positions.bar) > 6) {
+                    const lastCheckerY = y + (5 * dy);
+                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
+                }
             }
 
-            const barBlack = positions.second.bar || 0;
-            for (let i = 0; i < barBlack; i++) {
-                ctx.drawImage(blackChecker, barX - checkerRadius, barYBottom + (i * (checkerRadius * 2 + 2)) - checkerRadius, checkerRadius * 2, checkerRadius * 2);
+            let offX = 783;
+            let offY;
+            if (invertColors) {
+                offY = (player === 'second') ? 440 : 340;
+            } else {
+                offY = (player === 'second') ? 340 : 440;
+            }
+            if (positions.off && positions.off !== 0) {
+                const originalFont = ctx.font;
+                ctx.font = 'bold 32px Arial';
+                ctx.fillText(`${positions.off}`, offX, offY);
+                ctx.font = originalFont;
             }
         }
 
-        function getPointX(point) {
-            if (point <= 12) {
-                return (13 - point) * (canvas.width / 13);
-            } else {
-                return (point - 12) * (canvas.width / 13);
+        function getX(point) {
+            if (point >= 13 && point <= 18) {
+                const baseX = 50 + (point - 13) * 60;
+                return baseX - (point === 13 ? 8 : 0);
+            } else if (point >= 19 && point <= 24) {
+                return 450 + (point - 19) * 60;
+            } else if (point >= 7 && point <= 12) {
+                const baseX = 50 + (12 - point) * 60;
+                return baseX - (point === 12 ? 4 : 0);
+            } else if (point >= 1 && point <= 6) {
+                return 450 + (6 - point) * 60;
             }
+            return 0;
         }
 
-        function getPointY(point) {
-            if (point <= 12) {
-                return canvas.height - 50;
-            } else {
-                return 50;
-            }
+        function getBaseY(point) {
+            return (point > 12) ? 70 : 690;
+        }
+
+        function getDy(point) {
+            return (point > 12) ? 55 : -55;
         }
 
         function updateButtons() {
@@ -491,7 +545,7 @@
         boardImg.onload = imageLoaded;
         whiteChecker.onload = imageLoaded;
         blackChecker.onload = imageLoaded;
-    
+
     </script>
 </body>
 
