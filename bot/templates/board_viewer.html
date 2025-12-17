@@ -295,6 +295,9 @@
                     gamesArray = jsonData;
                 } else if (jsonData.games && Array.isArray(jsonData.games)) {
                     gamesArray = jsonData.games;
+                } else if (jsonData.detail) {
+                    alert('Error: ' + jsonData.detail);
+                    return;
                 } else {
                     console.error('Unexpected data format:', jsonData);
                     return;
@@ -316,6 +319,7 @@
             })
             .catch(error => {
                 console.error('Error loading games data:', error);
+                alert('Error loading games data: ' + error.message);
             });
 
         function updateGameSelect() {
