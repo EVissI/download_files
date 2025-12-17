@@ -227,53 +227,104 @@ def take_games_json_info(game_id: str, game_num: str = None):
         logger.error(f"Invalid JSON in {path}: {e}")
         raise HTTPException(status_code=500, detail=f"Invalid JSON file: {e}")
 
+    # Если запросили конкретную игру
     if game_num:
-        # Ищем конкретную игру в массиве
         game_num_int = int(game_num)
         for game in data:
-            if game.get("game_info", {}).get("game_number") == game_num_int:
+            game_number = (
+                game.get("game_info", {}).get("game_number")
+                or game.get("game_number")
+            )
+            if game_number == game_num_int:
                 return game
         raise FileNotFoundError(f"Игра {game_num} не найдена в {game_id}")
-    else:
-        # Возвращаем список игр
-        try:
-            games_list = [game["game_info"]["game_number"] for game in data]
-            game_info = data[0]["game_info"] if data else {}
-            return {
-                "games": games_list,
-                "game_info": game_info,
-            }
-        except KeyError as e:
-            logger.error(f"Missing key in game data: {e}")
-            raise HTTPException(
-                status_code=500, detail=f"Invalid game data structure: {e}"
+
+    # Если game_num не передан — возвращаем список игр и общую инфу
+    try:
+        games_list = []
+        for idx, game in enumerate(data):
+            game_info = game.get("game_info", {})
+
+            # Если game_info нет — собираем его из first/second
+            if not game_info:
+                game_info = {
+                    "game_number": game.get("game_number", idx + 1),
+                    "first_player": game.get("first", {}).get("name", "Player 1"),
+                    "second_player": game.get("second", {}).get("name", "Player 2"),
+                }
+
+            games_list.append(
+                {
+                    "game_number": game_info.get("game_number", idx + 1),
+                    "first_player": game_info.get(
+                        "first_player",
+                        game.get("first", {}).get("name", "Player 1"),
+                    ),
+                    "second_player": game_info.get(
+                        "second_player",
+                        game.get("second", {}).get("name", "Player 2"),
+                    ),
+                }
             )
 
+        main_game_info = data[0].get("game_info", {}) if data else {}
+        return {
+            "games": games_list,
+            "game_info": main_game_info,
+        }
+    except KeyError as e:
+        logger.error(f"Missing key in game data: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Invalid game data structure: {e}"
+        )
 
 @short_board_api_router.get("/board-viewer")
 async def get_board_viewer_web(request: Request, game_id: str = None):
     """
     Возвращает HTML-страницу интерактивного просмотра доски.
+
+    Параметры:
+    - game_id: ID игры (обязателен)
+
+    Пример:
+    GET /board-viewer?game_id=abc123
     """
     if not game_id:
         raise HTTPException(status_code=400, detail="game_id parameter is required")
 
     return templates.TemplateResponse(
-        "board_viewer.html", {"request": request, "game_id": game_id}
+        "board_viewer.html",
+        {
+            "request": request,
+            "game_id": game_id,
+        },
     )
-
 
 @short_board_api_router.get("/api/games/{game_id}")
 async def get_games_data(game_id: str, game_num: str = None):
     """
-    Возвращает JSON-данные игр из game_parser для указанного game_id и номера игры.
-    Если game_num не указан, возвращает список всех игр.
+    Возвращает JSON-данные игр из game_parser для указанного game_id.
+
+    Параметры:
+    - game_id (path): ID игры (обязательный)
+    - game_num (query): номер конкретной игры (опциональный)
+
+    Возвращает:
+    - При наличии game_num: данные конкретной игры (со всеми turns)
+    - Без game_num: список всех игр + общая информация
+
+    Примеры:
+    - GET /api/games/abc123
+    - GET /api/games/abc123?game_num=1
     """
     try:
         data = take_games_json_info(game_id, game_num)
         return data
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Game {game_id} not found")
+    except FileNotFoundError as e:
+        # сюда попадают:
+        # - нет JSON файла
+        # - нет такой игры game_num
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error fetching games data for {game_id}: {e}")
         raise HTTPException(status_code=500, detail="Error generating games data")
