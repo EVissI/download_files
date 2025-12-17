@@ -223,7 +223,6 @@
 
 <body>
     <div class="container">
-        <h1>Backgammon Board Viewer</h1>
 
         <div id="top-row">
             <div id="controls">
@@ -281,46 +280,55 @@
         const urlParams = new URLSearchParams(window.location.search);
         const game_id = urlParams.get('game_id');
 
-        if (!game_id) {
-            console.error('No game_id provided in URL');
-            alert('No game_id provided in URL');
+        // Function to process games data (works with both API and JSON)
+        function processGamesData(jsonData) {
+            let gamesArray;
+            if (Array.isArray(jsonData)) {
+                gamesArray = jsonData;
+            } else if (jsonData.games && Array.isArray(jsonData.games)) {
+                gamesArray = jsonData.games;
+            } else if (jsonData.detail) {
+                alert('Error: ' + jsonData.detail);
+                return false;
+            } else {
+                console.error('Unexpected data format:', jsonData);
+                return false;
+            }
+
+            data = gamesArray[0].turns;
+            availableGames = gamesArray.map((game, index) => ({
+                game_number: index + 1,
+                turns: game.turns,
+                first_player: game.first.name,
+                second_player: game.second.name,
+                first_score: game.first.score,
+                second_score: game.second.score
+            }));
+            dataLoaded = true;
+            updateGameSelect();
+            updateButtons();
+            drawBoard();
+            updateInfo();
+            return true;
         }
 
-        // Load data
-        fetch(`/api/games/${game_id}`)
-            .then(response => response.json())
-            .then(jsonData => {
-                let gamesArray;
-                if (Array.isArray(jsonData)) {
-                    gamesArray = jsonData;
-                } else if (jsonData.games && Array.isArray(jsonData.games)) {
-                    gamesArray = jsonData.games;
-                } else if (jsonData.detail) {
-                    alert('Error: ' + jsonData.detail);
-                    return;
-                } else {
-                    console.error('Unexpected data format:', jsonData);
-                    return;
-                }
-                data = gamesArray[0].turns; // Default to first game
-                availableGames = gamesArray.map((game, index) => ({
-                    game_number: index + 1,
-                    turns: game.turns,
-                    first_player: game.first.name,
-                    second_player: game.second.name,
-                    first_score: game.first.score,
-                    second_score: game.second.score
-                }));
-                dataLoaded = true;
-                updateGameSelect();
-                updateButtons();
-                drawBoard();
-                updateInfo();
-            })
-            .catch(error => {
-                console.error('Error loading games data:', error);
-                alert('Error loading games data: ' + error.message);
-            });
+        // Try to load from API first, then from JSON if URL param exists
+        if (game_id) {
+            fetch(`/api/games/${game_id}`)
+                .then(response => response.json())
+                .then(processGamesData)
+                .catch(error => {
+                    console.error('Error loading from API:', error);
+                    alert('Error loading games data: ' + error.message);
+                });
+        } else {
+            console.log('No game_id in URL - waiting for JSON data to be loaded');
+        }
+
+        // Allow external JSON to be loaded
+        window.loadGamesFromJSON = function(jsonData) {
+            processGamesData(jsonData);
+        };
 
         function updateGameSelect() {
             const gameSelect = document.getElementById('gameSelect');
@@ -348,7 +356,7 @@
         }
 
         function drawCheckers(positions) {
-            const pointWidth = canvas.width / 26; // 26 points + bar
+            const pointWidth = canvas.width / 26;
             const checkerRadius = pointWidth / 2 - 2;
 
             for (let point = 1; point <= 24; point++) {
