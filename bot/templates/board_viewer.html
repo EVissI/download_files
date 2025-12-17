@@ -283,21 +283,21 @@
 
         if (!game_id) {
             console.error('No game_id provided in URL');
-            return;
+            alert('No game_id provided in URL');
         }
 
         // Load data
         fetch(`/api/games/${game_id}`)
             .then(response => response.json())
             .then(jsonData => {
-                data = jsonData[0].moves; // Default to first game
+                data = jsonData[0].turns; // Default to first game
                 availableGames = jsonData.map((game, index) => ({
                     game_number: index + 1,
-                    turns: game.moves,
-                    first_player: game.game_info.red_player,
-                    second_player: game.game_info.black_player,
-                    first_score: game.game_info.scores.Red,
-                    second_score: game.game_info.scores.Black
+                    turns: game.turns,
+                    first_player: game.first.name,
+                    second_player: game.second.name,
+                    first_score: game.first.score,
+                    second_score: game.second.score
                 }));
                 dataLoaded = true;
                 updateGameSelect();
@@ -482,7 +482,3 @@
 </body>
 
 </html>
-</content>
-</xai:function_call">\
-<xai:function_call name="attempt_completion">
-    <parameter name="result">
