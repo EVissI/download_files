@@ -100,6 +100,33 @@
             padding: 5px;
         }
 
+        #prevBtn,
+        #nextBtn,
+        #invertBtn {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            color: transparent;
+            background-color: transparent;
+            border: none;
+        }
+
+        #prevBtn:hover,
+        #nextBtn:hover,
+        #invertBtn:hover {
+            background-color: transparent;
+        }
+
+        #prevBtn:disabled,
+        #nextBtn:disabled,
+        #invertBtn:disabled {
+            opacity: 0.5;
+            background-color: transparent;
+        }
+
         #turnLabel {
             font-size: 18px;
             font-weight: bold;
@@ -191,708 +218,175 @@
                 padding: 0 10px;
             }
         }
-
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 1.5rem;
-            }
-
-            canvas {
-                width: 100%;
-                height: 100%;
-            }
-
-            button {
-                width: 60px;
-                padding: 8px 16px;
-                font-size: 14px;
-            }
-        }
-
-        @media (min-width: 1200px) {
-
-            #prevBtn,
-            #nextBtn,
-            #invertBtn {
-                width: 100px;
-                height: 100px;
-            }
-        }
-
-        .loading {
-            color: #007bff;
-            font-style: italic;
-        }
-
-        .error {
-            color: #dc3545;
-            background-color: #2d1b1b;
-            border: 1px solid #dc3545;
-            border-radius: 4px;
-            padding: 10px;
-            margin: 10px 0;
-        }
-
-        .header {
-            display: flex;
-            flex-direction: column;
-        }
-
-        #top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        #players-info {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .pips-above-board {
-            background-color: #000000;
-            color: #ffffff;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
-        }
-
-        .pips-above-board-inverted {
-            background-color: #ffffff;
-            color: #000000;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
-        }
-
-        .pips-below-board-inverted {
-            background-color: #000000;
-            color: #ffffff;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
-            position: absolute;
-            right: 0;
-            top: 0;
-            margin: 0;
-        }
-
-        .pips-below-board {
-            background-color: #ffffff;
-            color: #000000;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
-        }
     </style>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('game_id') || 'default';
-
-        // Add cache-busting to CSS background images
-        document.addEventListener('DOMContentLoaded', function () {
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            const invertBtn = document.getElementById('invertBtn');
-            if (prevBtn) {
-                prevBtn.style.backgroundImage = "url('/static/left.png?t=" + Date.now() + "')";
-            }
-            if (nextBtn) {
-                nextBtn.style.backgroundImage = "url('/static/right.png?t=" + Date.now() + "')";
-            }
-            if (invertBtn) {
-                invertBtn.style.backgroundImage = "url('/static/change_color.png?t=" + Date.now() + "')";
-            }
-        });
-    </script>
 </head>
 
 <body>
     <div class="container">
         <h1>Backgammon Board Viewer</h1>
-        <div class="header">
-            <div id="match-info"></div>
-            <div id="players-info"></div>
-            <div id="top-bar"></div>
-        </div>
-        <canvas id="boardCanvas" width="800" height="800"></canvas>
-        <div class="board-footer">
-            <div id="move-info" class="move-info"></div>
-            <div id="red-pips" class="pips-below-board">0</div>
-        </div>
 
         <div id="top-row">
             <div id="controls">
-                <button onclick="toggleInvert()" id="invertBtn"></button>
-                <button onclick="prevTurn()" id="prevBtn"></button>
-                <span id="turnLabel">0</span>
-                <button onclick="nextTurn()" id="nextBtn"></button>
+                <button id="prevBtn" title="Previous Move">
+                    <img src="/static/left.png" alt="Previous" style="width: 100%; height: 100%;">
+                </button>
+                <div class="turn-display">
+                    <span id="turnLabel">1</span>
+                </div>
+                <button id="nextBtn" title="Next Move">
+                    <img src="/static/right.png" alt="Next" style="width: 100%; height: 100%;">
+                </button>
+                <button id="invertBtn" title="Invert Board">
+                    <img src="/static/change_color.png" alt="Invert" style="width: 100%; height: 100%;">
+                </button>
+            </div>
+            <select id="gameSelect">
+                <option value="0">Game 1</option>
+            </select>
+        </div>
+
+        <canvas id="boardCanvas" width="800" height="600"></canvas>
+
+        <div class="board-footer">
+            <div class="move-info" id="moveInfo">Initial Position</div>
+            <div class="pips-below-board">
+                <div class="game-info" id="players-info">
+                    <div>White: Player 1 (0)</div>
+                    <div>Black: Player 2 (0)</div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        if (window.Telegram) {
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand();
-        }
-
         let data = [];
-        let dataLoaded = false;
-        let redPlayer = 'Unknown';
-        let blackPlayer = 'Unknown';
-        let invertColors = false;
         let availableGames = [];
-        let currentGameNum = null;
-        let matchLength = 0;
-        let gameRedScore = 0;
-        let gameBlackScore = 0;
-        const infoDiv = document.getElementById('move-info');
-        const matchInfoDiv = document.getElementById('match-info');
-        const playersInfoDiv = document.getElementById('players-info');
-        const topBar = document.getElementById('top-bar');
-        infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
-
-        // Загружаем список доступных игр
-        fetch(`/api/games/${gameId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(json => {
-                const gameInfo = json.game_info;
-                availableGames = json.games || [];
-                redPlayer = gameInfo.red_player || 'Unknown';
-                blackPlayer = gameInfo.black_player || 'Unknown';
-                invertColors = gameInfo.invert_colors || false;
-                matchLength = gameInfo.match_length || 0;
-                const scores = gameInfo.scores || {};
-                const redScore = scores.Red || 0;
-                const blackScore = scores.Black || 0;
-
-                // Создаем выпадающий список для выбора игры только если это матч
-                if (availableGames.length > 0 && matchLength > 0) {
-                    let selectHtml = '<select id="gameSelect" onchange="loadGame(this.value)">';
-                    selectHtml += '<option value="">Выберите игру</option>';
-                    availableGames.forEach(game => {
-                        selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
-                    });
-                    selectHtml += '</select>';
-                    currentGameNum = parseInt(availableGames[0].game_number);
-                    gameRedScore = scores.Red || 0;
-                    gameBlackScore = scores.Black || 0;
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
-                    topBar.innerHTML = selectHtml;
-
-                    // Автоматически загружаем первую игру
-                    if (availableGames.length > 0) {
-                        loadGame(availableGames[0].game_number);
-                    }
-                } else if (availableGames.length > 0) {
-                    matchInfoDiv.innerHTML = "Манигейм";
-                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
-                    topBar.innerHTML = '';
-
-                    // Автоматически загружаем единственную игру
-                    loadGame(availableGames[0].game_number);
-                } else {
-                    matchInfoDiv.innerHTML = "";
-                    playersInfoDiv.innerHTML = "";
-                    topBar.innerHTML = '';
-                    infoDiv.innerHTML = '<div class="error">No games found in this analysis.</div>';
-                }
-            })
-            .catch(error => {
-                console.error('Error loading games list:', error);
-                infoDiv.innerHTML = '<div class="error">Error loading game data. Please check the game ID and try again.</div>';
-            });
-
-        function loadGame(gameNum) {
-            return new Promise((resolve, reject) => {
-                if (!gameNum) {
-                    data = [];
-                    dataLoaded = false;
-                    infoDiv.innerHTML = '<div class="loading">Select a game to view</div>';
-                    resolve();
-                    return;
-                }
-
-                currentGameNum = parseInt(gameNum);
-                // Update the select dropdown
-                const gameSelect = document.getElementById('gameSelect');
-                if (gameSelect) {
-                    gameSelect.value = gameNum;
-                }
-                infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
-
-                fetch(`/api/games/${gameId}?game_num=${gameNum}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(json => {
-                        const gameInfo = json.game_info;
-
-                        data = json.moves.filter(item => item.turn !== undefined || item.action === 'win');
-
-                        const gameScores = gameInfo.scores || {};
-                        gameRedScore = gameScores.Red || 0;
-                        gameBlackScore = gameScores.Black || 0;
-                        if (matchLength === 0) {
-                            playersInfoDiv.innerHTML = "Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
-                        } else {
-                            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-                            playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
-                        }
-
-                        if (data.length > 0) {
-                            dataLoaded = true;
-                            console.log('Data loaded:', data);
-                            console.log('First turn data:', data[0]);
-                            current = 0;
-                            if (data[0]?.action === 'skip') {
-                                current = 1;
-                            }
-                            if (imagesLoaded === 15) {
-                                render(current, invertColors);
-                                updateButtons();
-                                infoDiv.innerHTML = '';
-                            } else {
-                                console.log('Waiting for images to load before rendering');
-                            }
-                        } else {
-                            infoDiv.innerHTML = '<div class="error">No game data found for this game.</div>';
-                        }
-                        resolve();
-                    })
-                    .catch(error => {
-                        console.error('Error loading game:', error);
-                        infoDiv.innerHTML = '<div class="error">Error loading game data. Please try again.</div>';
-                        reject(error);
-                    });
-            });
-        }
-
         let current = 0;
-
-        function updateCurrentCube(turn) {
-            // Simplified, no cube handling
-        }
+        let currentGameNum = 1;
+        let inverted = false;
+        let dataLoaded = false;
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
 
+        // Load images
         const boardImg = new Image();
-        boardImg.src = '/static/board.png?t=' + Date.now();
+        boardImg.src = '/static/board.png';
+        const whiteChecker = new Image();
+        whiteChecker.src = '/static/white_checker.png';
+        const blackChecker = new Image();
+        blackChecker.src = '/static/black_checker.png';
 
-        const blackImg = new Image();
-        blackImg.src = '/static/black_checker.png?t=' + Date.now();
+        // Get game_id from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const game_id = urlParams.get('game_id');
 
-        const whiteImg = new Image();
-        whiteImg.src = '/static/white_checker.png?t=' + Date.now();
+        if (!game_id) {
+            console.error('No game_id provided in URL');
+            return;
+        }
 
-        const Dice1w = new Image();
-        Dice1w.src = '/static/1w.png?t=' + Date.now();
-        const Dice2w = new Image();
-        Dice2w.src = '/static/2w.png?t=' + Date.now();
-        const Dice3w = new Image();
-        Dice3w.src = '/static/3w.png?t=' + Date.now();
-        const Dice4w = new Image();
-        Dice4w.src = '/static/4w.png?t=' + Date.now();
-        const Dice5w = new Image();
-        Dice5w.src = '/static/5w.png?t=' + Date.now();
-        const Dice6w = new Image();
-        Dice6w.src = '/static/6w.png?t=' + Date.now();
-
-        const Dice1b = new Image();
-        Dice1b.src = '/static/1b.png?t=' + Date.now();
-        const Dice2b = new Image();
-        Dice2b.src = '/static/2b.png?t=' + Date.now();
-        const Dice3b = new Image();
-        Dice3b.src = '/static/3b.png?t=' + Date.now();
-        const Dice4b = new Image();
-        Dice4b.src = '/static/4b.png?t=' + Date.now();
-        const Dice5b = new Image();
-        Dice5b.src = '/static/5b.png?t=' + Date.now();
-        const Dice6b = new Image();
-        Dice6b.src = '/static/6b.png?t=' + Date.now();
-
-        const LeftArrow = new Image();
-        LeftArrow.src = '/static/left.png?t=' + Date.now();
-        const RightArrow = new Image();
-        RightArrow.src = '/static/right.png?t=' + Date.now();
-
-        const ChangeColor = new Image();
-        ChangeColor.src = '/static/change_color.png?t=' + Date.now();
-
-        let imagesLoaded = 0;
-        const checkImagesLoaded = () => {
-            imagesLoaded++;
-            console.log('Images loaded:', imagesLoaded);
-            if (imagesLoaded === 15 && dataLoaded) {
-                console.log('All images and data loaded, rendering turn', current);
-                render(current, invertColors);
+        // Load data
+        fetch(`/api/games/${game_id}`)
+            .then(response => response.json())
+            .then(jsonData => {
+                data = jsonData[0].moves; // Default to first game
+                availableGames = jsonData.map((game, index) => ({
+                    game_number: index + 1,
+                    turns: game.moves,
+                    first_player: game.game_info.red_player,
+                    second_player: game.game_info.black_player,
+                    first_score: game.game_info.scores.Red,
+                    second_score: game.game_info.scores.Black
+                }));
+                dataLoaded = true;
+                updateGameSelect();
                 updateButtons();
-                infoDiv.innerHTML = '';
-            }
-        };
+                drawBoard();
+                updateInfo();
+            })
+            .catch(error => {
+                console.error('Error loading games data:', error);
+            });
 
-        boardImg.onload = checkImagesLoaded;
-        blackImg.onload = checkImagesLoaded;
-        whiteImg.onload = checkImagesLoaded;
-        Dice1w.onload = checkImagesLoaded;
-        Dice2w.onload = checkImagesLoaded;
-        Dice3w.onload = checkImagesLoaded;
-        Dice4w.onload = checkImagesLoaded;
-        Dice5w.onload = checkImagesLoaded;
-        Dice6w.onload = checkImagesLoaded;
-        Dice1b.onload = checkImagesLoaded;
-        Dice2b.onload = checkImagesLoaded;
-        Dice3b.onload = checkImagesLoaded;
-        Dice4b.onload = checkImagesLoaded;
-        Dice5b.onload = checkImagesLoaded;
-        Dice6b.onload = checkImagesLoaded;
-        LeftArrow.onload = checkImagesLoaded;
-        RightArrow.onload = checkImagesLoaded;
-        ChangeColor.onload = checkImagesLoaded;
-
-        // Обработка ошибок загрузки изображений
-        [boardImg, blackImg, whiteImg, Dice1w, Dice2w, Dice3w, Dice4w, Dice5w, Dice6w, Dice1b, Dice2b, Dice3b, Dice4b, Dice5b, Dice6b, LeftArrow, RightArrow, ChangeColor].forEach(img => {
-            img.onerror = () => {
-                console.error(`Failed to load image: ${img.src}`);
-                infoDiv.innerHTML = '<div class="error">Error loading game assets. Please try again later.</div>';
-            };
-        });
-
-        const diceImages = {
-            white: {
-                1: Dice1w,
-                2: Dice2w,
-                3: Dice3w,
-                4: Dice4w,
-                5: Dice5w,
-                6: Dice6w
-            },
-            black: {
-                1: Dice1b,
-                2: Dice2b,
-                3: Dice3b,
-                4: Dice4b,
-                5: Dice5b,
-                6: Dice6b
-            }
-        };
-
-        function getX(point) {
-            if (point >= 13 && point <= 18) {
-                const baseX = 50 + (point - 13) * 60;
-                return baseX - (point === 13 ? 8 : 0);
-            } else if (point >= 19 && point <= 24) {
-                return 450 + (point - 19) * 60;
-            } else if (point >= 7 && point <= 12) {
-                const baseX = 50 + (12 - point) * 60;
-                return baseX - (point === 12 ? 4 : 0);
-            } else if (point >= 1 && point <= 6) {
-                return 450 + (6 - point) * 60;
-            }
-            return 0;
+        function updateGameSelect() {
+            const gameSelect = document.getElementById('gameSelect');
+            gameSelect.innerHTML = '';
+            availableGames.forEach(game => {
+                const option = document.createElement('option');
+                option.value = game.game_number - 1;
+                option.textContent = `Game ${game.game_number}`;
+                gameSelect.appendChild(option);
+            });
         }
 
-        function getBaseY(point) {
-            return (point > 12) ? 70 : 690;
+        function drawBoard() {
+            if (!dataLoaded) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw board
+            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+
+            const positions = inverted ? data[current].inverted_positions : data[current].positions;
+
+            // Draw checkers
+            drawCheckers(positions);
         }
 
-        function getDy(point) {
-            return (point > 12) ? 55 : -55;
+        function drawCheckers(positions) {
+            const pointWidth = canvas.width / 26; // 26 points + bar
+            const checkerRadius = pointWidth / 2 - 2;
+
+            for (let point = 1; point <= 24; point++) {
+                const x = getPointX(point);
+                const y = getPointY(point);
+
+                // Draw white checkers (first player)
+                const whiteCount = positions.first[point] || 0;
+                for (let i = 0; i < whiteCount; i++) {
+                    const checkerY = y - (i * (checkerRadius * 2 + 2));
+                    ctx.drawImage(whiteChecker, x - checkerRadius, checkerY - checkerRadius, checkerRadius * 2, checkerRadius * 2);
+                }
+
+                // Draw black checkers (second player)
+                const blackCount = positions.second[point] || 0;
+                for (let i = 0; i < blackCount; i++) {
+                    const checkerY = y + (i * (checkerRadius * 2 + 2));
+                    ctx.drawImage(blackChecker, x - checkerRadius, checkerY - checkerRadius, checkerRadius * 2, checkerRadius * 2);
+                }
+            }
+
+            // Draw bar checkers
+            const barX = canvas.width / 2;
+            const barYTop = canvas.height / 2 - 50;
+            const barYBottom = canvas.height / 2 + 50;
+
+            const barWhite = positions.first.bar || 0;
+            for (let i = 0; i < barWhite; i++) {
+                ctx.drawImage(whiteChecker, barX - checkerRadius, barYTop - (i * (checkerRadius * 2 + 2)) - checkerRadius, checkerRadius * 2, checkerRadius * 2);
+            }
+
+            const barBlack = positions.second.bar || 0;
+            for (let i = 0; i < barBlack; i++) {
+                ctx.drawImage(blackChecker, barX - checkerRadius, barYBottom + (i * (checkerRadius * 2 + 2)) - checkerRadius, checkerRadius * 2, checkerRadius * 2);
+            }
         }
 
-        function calculatePips(positions, player, invertColors = false) {
-            let totalPips = 0;
-            for (let pointStr in positions) {
-                if (pointStr === 'bar') {
-                    totalPips += Math.abs(positions[pointStr]) * 25;
-                } else if (pointStr === 'off') {
-                } else {
-                    const point = parseInt(pointStr);
-                    const count = positions[pointStr];
-                    let effectivePoint = point;
-                    if (invertColors) {
-                        if (player === 'first') {
-                            effectivePoint = 25 - point;
-                        } else if (player === 'second') {
-                            effectivePoint = point;
-                        }
-                    } else {
-                        if (player === 'second') {
-                            effectivePoint = 25 - point;
-                        } else if (player === 'first') {
-                            effectivePoint = point;
-                        }
-                    }
-                    totalPips += count * effectivePoint;
-                }
-            }
-            return totalPips;
-        }
-
-        function drawCheckers(player, img, positions, currentPlayer) {
-            ctx.font = 'bold 30px Arial';
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            if (player === currentPlayer) {
-                for (let point = 1; point <= 24; point++) {
-                    const x = getX(point);
-                    let y = getBaseY(point);
-                    const dy = getDy(point);
-
-                    let displayPoint = point;
-                    if (invertColors) {
-                        if (player === 'first') {
-                            displayPoint = 25 - point; // first sees points inverted when colors are inverted
-                        } else if (player === 'second') {
-                            displayPoint = point; // second sees points normally when colors are inverted
-                        }
-                    } else {
-                        if (player === 'second') {
-                            displayPoint = 25 - point; // second sees points inverted (24 at top-right, 1 at bottom-left)
-                        } else if (player === 'first') {
-                            displayPoint = point; // first sees points starting from bottom-left (1 at bottom-left, 24 at top-right)
-                        }
-                    }
-                    let numberY;
-                    if (point > 12) {
-                        numberY = y - 50; // Above for upper half
-                    } else {
-                        numberY = y + 60; // Below for lower half
-                    }
-                    ctx.fillText(displayPoint, x, numberY);
-                }
-            }
-
-            for (let pointStr in positions) {
-                if (pointStr === 'bar' || pointStr === 'off') continue;
-                const point = parseInt(pointStr);
-                let count = positions[pointStr];
-                const x = getX(point);
-                let y = getBaseY(point);
-                const dy = getDy(point);
-
-                for (let i = 0; i < Math.min(count, 6); i++) {
-                    ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
-                }
-
-                if (count > 6) {
-                    const lastCheckerY = y + (5 * dy);
-                    ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
-                }
-            }
-
-            const barX = 400;
-            const barY = (player === 'second') ? 220 : 520;
-            if (positions.bar && positions.bar !== 0) {
-                let y = barY;
-                const dy = (player === 'second') ? 55 : -55;
-                for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
-                    ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
-                }
-                if (Math.abs(positions.bar) > 6) {
-                    const lastCheckerY = y + (5 * dy);
-                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
-                }
-            }
-
-            let offX = 783;
-            // объявляем offY вне блоков, затем назначаем значение в зависимости от invertColors и player
-            let offY;
-            if (invertColors) {
-                offY = (player === 'second') ? 440 : 340;
+        function getPointX(point) {
+            if (point <= 12) {
+                return (13 - point) * (canvas.width / 13);
             } else {
-                offY = (player === 'second') ? 340 : 440;
-            }
-            if (positions.off && positions.off !== 0) {
-                const originalFont = ctx.font;
-                ctx.font = 'bold 32px Arial';
-                ctx.fillText(`${positions.off}`, offX, offY);
-                ctx.font = originalFont;
+                return (point - 12) * (canvas.width / 13);
             }
         }
 
-        function render(turn, invertColors = false) {
-            if (!data || !data[turn]) {
-                console.error('No data for turn:', turn);
-                document.getElementById('move-info').innerHTML = '<div class="error">No data available for this turn.</div>';
-                return;
-            }
-
-            current = turn;
-            updateCurrentCube(turn);
-            document.getElementById('turnLabel').innerText = `${data[turn].turn || 'End'}`;
-            console.log('Rendering turn:', turn, 'Data:', data[turn]);
-
-            ctx.clearRect(0, 0, 800, 800);
-            ctx.drawImage(boardImg, 0, 0, 800, 800);
-
-            let firstPositions, secondPositions;
-            if (turn === 0) {
-                if (invertColors) {
-                    firstPositions = { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 };
-                    secondPositions = { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 };
-                } else {
-                    firstPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
-                    secondPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
-                }
+        function getPointY(point) {
+            if (point <= 12) {
+                return canvas.height - 50;
             } else {
-                const prevTurn = turn - 1;
-                if (invertColors) {
-                    firstPositions = data[prevTurn].inverted_positions['first'];
-                    secondPositions = data[prevTurn].inverted_positions['second'];
-                } else {
-                    firstPositions = data[prevTurn].positions['first'];
-                    secondPositions = data[prevTurn].positions['second'];
-                }
+                return 50;
             }
-            const currentPlayer = data[turn].turn;
-            drawCheckers('first', whiteImg, firstPositions, currentPlayer);
-            drawCheckers('second', blackImg, secondPositions, currentPlayer);
-
-            const firstPips = calculatePips(firstPositions, 'first', invertColors);
-            const secondPips = calculatePips(secondPositions, 'second', invertColors);
-
-            if (invertColors) {
-                document.getElementById('black-pips').innerText = `${firstPips}`;
-                document.getElementById('red-pips').innerText = `${secondPips}`;
-                document.getElementById('black-pips').className = 'pips-above-board-inverted';
-                document.getElementById('red-pips').className = 'pips-below-board-inverted';
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(650, 800, 150, 50);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${firstPips}`, 725, -20);
-
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(650, -50, 150, 50);
-                ctx.fillStyle = '#000000';
-                ctx.fillText(`${secondPips}`, 725, 830);
-            } else {
-                document.getElementById('black-pips').innerText = `${secondPips}`;
-                document.getElementById('red-pips').innerText = `${firstPips}`;
-                document.getElementById('black-pips').className = 'pips-above-board';
-                document.getElementById('red-pips').className = 'pips-below-board';
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(650, -50, 150, 50);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${secondPips}`, 725, -20);
-
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(650, 800, 150, 50);
-                ctx.fillStyle = '#000000';
-                ctx.fillText(`${firstPips}`, 725, 830);
-            }
-
-            const item = data[turn];
-            if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
-                const [d1, d2] = item.dice;
-                const diceY = 350;
-
-                let diceX1, diceX2;
-                let diceSet;
-                if (invertColors) {
-                    if (item.player === 'Red') {
-                        diceX1 = 130; // кубики слева для красных при инверсии
-                        diceX2 = 220;
-                        diceSet = diceImages.white;
-                    } else {
-                        diceX1 = 530; // кубики справа для черных при инверсии
-                        diceX2 = 620;
-                        diceSet = diceImages.black;
-                    }
-                } else {
-                    if (item.player === 'Red') {
-                        diceX1 = 530; // кубики справа для красных
-                        diceX2 = 620;
-                        diceSet = diceImages.white;
-                    } else {
-                        diceX1 = 130; // кубики слева для черных
-                        diceX2 = 220;
-                        diceSet = diceImages.black;
-                    }
-                }
-
-                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
-                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
-            }
-
-            let info = '';
-            if (item.action === 'double') {
-                info = `Double (${item.cube})`;
-            } else if (item.action === 'take') {
-                info = `Take`;
-            } else if (item.action === 'win') {
-                info = `${item.player_name} победил`;
-            } else if (item.moves && item.moves.length > 0) {
-                info = `${item.gnu_move.trim()}`;
-            } else if (item.moves && item.moves.length === 0) {
-                info = `Пропуск`;
-            } else {
-                info = '<div class="info-text">No moves available for this turn.</div>';
-                console.warn('No moves for turn:', turn, item);
-            }
-            setTimeout(() => {
-                document.getElementById('move-info').innerHTML = info;
-                console.log('Info set to:', info);
-            }, 0);
-        }
-
-        function prevTurn() {
-            if (dataLoaded) {
-                if (current > 0) {
-                    current--;
-                    render(current, invertColors);
-                    updateButtons();
-                }
-            }
-        }
-
-        function nextTurn() {
-            if (dataLoaded) {
-                if (current < data.length - 1) {
-                    current++;
-                    render(current, invertColors);
-                    updateButtons();
-                }
-            }
-        }
-
-        function toggleInvert() {
-            invertColors = !invertColors;
-            render(current, invertColors);
         }
 
         function updateButtons() {
@@ -900,14 +394,97 @@
             const nextBtn = document.getElementById('nextBtn');
 
             if (dataLoaded) {
-                prevBtn.disabled = current <= 0;
-                nextBtn.disabled = current >= data.length - 1;
+                prevBtn.disabled = current === 0;
+                nextBtn.disabled = current === data.length - 1;
             } else {
                 prevBtn.disabled = true;
                 nextBtn.disabled = true;
             }
         }
+
+        function updateInfo() {
+            if (!dataLoaded) return;
+
+            const turnLabel = document.getElementById('turnLabel');
+            turnLabel.textContent = current + 1;
+
+            const moveInfo = document.getElementById('moveInfo');
+            const turn = data[current];
+            if (turn.moves && turn.moves.length > 0) {
+                const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
+                moveInfo.textContent = `${turn.turn}: ${movesStr}`;
+            } else if (turn.action) {
+                moveInfo.textContent = `${turn.turn}: ${turn.action}`;
+            } else {
+                moveInfo.textContent = 'Initial Position';
+            }
+
+            const playersInfo = document.getElementById('players-info');
+            const game = availableGames.find(g => g.game_number === currentGameNum);
+            if (game) {
+                playersInfo.innerHTML = `
+                    <div>White: ${game.first_player} (${game.first_score})</div>
+                    <div>Black: ${game.second_player} (${game.second_score})</div>
+                `;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            if (current > 0) {
+                current--;
+                drawBoard();
+                updateButtons();
+                updateInfo();
+            }
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (current < data.length - 1) {
+                current++;
+                drawBoard();
+                updateButtons();
+                updateInfo();
+            }
+        });
+
+        document.getElementById('invertBtn').addEventListener('click', () => {
+            inverted = !inverted;
+            drawBoard();
+        });
+
+        document.getElementById('gameSelect').addEventListener('change', (e) => {
+            const gameIndex = parseInt(e.target.value);
+            currentGameNum = gameIndex + 1;
+            data = availableGames[gameIndex].turns;
+            current = 0;
+            inverted = false;
+            drawBoard();
+            updateButtons();
+            updateInfo();
+        });
+
+        // Draw board when images are loaded
+        let imagesLoaded = 0;
+        const totalImages = 3;
+
+        function imageLoaded() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages && dataLoaded) {
+                drawBoard();
+            }
+        }
+
+        boardImg.onload = imageLoaded;
+        whiteChecker.onload = imageLoaded;
+        blackChecker.onload = imageLoaded;
     </script>
 </body>
 
 </html>
+</content>
+</xai:function_call">\
+<xai:function_call name="attempt_completion">
+    <parameter name="result">Создал веб-приложение `board_viewer.html` для интерактивного отображения доски на основе
+        данных из `games.json`. Оно использует те же assets из `bot/static/`, включая изображения доски и шашек.
+        Приложение позволяет навигировать по ходам, инвертировать доску и выбирать игру из списка.

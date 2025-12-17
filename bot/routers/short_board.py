@@ -42,7 +42,6 @@ import json
 
 class ShortBoardDialog(StatesGroup):
     file = State()
-    choose_side = State()
 
 
 short_board_router = Router()
@@ -71,6 +70,7 @@ async def handle_document(
     message: Message,
     state: FSMContext,
     user_info: User,
+    session_without_commit
 ):
     try:
         file = message.document
@@ -117,20 +117,6 @@ async def handle_document(
             asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
         except Exception as e:
             logger.error(f"Error saving file to Yandex Disk: {e}")
-
-        buttons = [
-            [
-                InlineKeyboardButton(
-                    text=f"За {names[0]}", callback_data=f"choose_first_{dir_name}"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text=f"За {names[1]}", callback_data=f"choose_second_{dir_name}"
-                )
-            ],
-        ]
-        keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
         try:
             # Парсим файл и создаем JSON для всех игр
@@ -180,16 +166,27 @@ async def handle_document(
             await bot.send_message(
                 chat_id=455205382, text=f"❌ Ошибка при создании архива JSON: {e}"
             )
+
+        # Создаем кнопку с веб-приложением
+        button = InlineKeyboardButton(
+            text="Открыть игру 📲",
+            web_app=WebAppInfo(
+                url=f"{settings.MINI_APP_URL}/board-viewer?game_id={dir_name}&chat_id={chat_id}"
+            ),
+        )
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
+
         await bot.send_message(
             chat_id,
-            "Выбери, за кого просматривать матч:",
+            "Готово! Нажми кнопку ниже, чтобы открыть игру и просмотреть ходы.",
             reply_markup=keyboard,
         )
 
-        await state.set_state(ShortBoardDialog.choose_side)
-        await state.update_data(
-            file_content=file_content, dir_name=dir_name, names=names
+        await UserDAO(session_without_commit).decrease_analiz_balance(
+            user_id=user_info.id, service_type="SHORT_BOARD"
         )
+        logger.info(f"Пользователь {user_info.id} использовал Short Board")
+        await session_without_commit.commit()
         # Send notification to admin
         try:
             user_name = (
@@ -207,52 +204,6 @@ async def handle_document(
         logger.error(f"Ошибка при обработке файла: {e}")
         await bot.send_message(
             message.chat.id, f"Произошла ошибка при обработке файла: {e}"
-        )
-        await state.clear()
-
-
-@short_board_router.callback_query(
-    F.data.startswith("choose_"), StateFilter(ShortBoardDialog.choose_side)
-)
-async def handle_choose_side(
-    callback: CallbackQuery, state: FSMContext, session_without_commit: AsyncSession
-):
-    await callback.message.delete()
-    try:
-        data = await state.get_data()
-        file_content = data["file_content"]
-        dir_name = data["dir_name"]
-        names = data["names"]
-
-        _, side, _ = callback.data.split("_")
-        is_inverse = side == "second"
-
-        await parse_file(file_content, dir_name, is_inverse)
-
-        # Создаем кнопку с веб-приложением
-        button = InlineKeyboardButton(
-            text="Открыть игру 📲",
-            web_app=WebAppInfo(
-                url=f"{settings.MINI_APP_URL}/board-viewer?game_id={dir_name}&chat_id={callback.message.chat.id}"
-            ),
-        )
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
-
-        await bot.send_message(
-            callback.message.chat.id,
-            "Готово! Нажми кнопку ниже, чтобы открыть игру и просмотреть ходы.",
-            reply_markup=keyboard,
-        )
-        await UserDAO(session_without_commit).decrease_analiz_balance(
-            user_id=callback.from_user.id, service_type="SHORT_BOARD"
-        )
-        logger.info(f"Пользователь {callback.from_user.id} использовал Short Board")
-        await session_without_commit.commit()
-
-    except Exception as e:
-        logger.error(f"Ошибка при обработке выбора стороны: {e}")
-        await bot.send_message(
-            callback.message.chat.id, f"Произошла ошибка при обработке файла: {e}"
         )
     finally:
         await state.clear()
