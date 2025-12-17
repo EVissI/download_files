@@ -290,8 +290,17 @@
         fetch(`/api/games/${game_id}`)
             .then(response => response.json())
             .then(jsonData => {
-                data = jsonData[0].turns; // Default to first game
-                availableGames = jsonData.map((game, index) => ({
+                let gamesArray;
+                if (Array.isArray(jsonData)) {
+                    gamesArray = jsonData;
+                } else if (jsonData.games && Array.isArray(jsonData.games)) {
+                    gamesArray = jsonData.games;
+                } else {
+                    console.error('Unexpected data format:', jsonData);
+                    return;
+                }
+                data = gamesArray[0].turns; // Default to first game
+                availableGames = gamesArray.map((game, index) => ({
                     game_number: index + 1,
                     turns: game.turns,
                     first_player: game.first.name,
