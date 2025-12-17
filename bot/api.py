@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
 from bot.routers.hint_viewer_router import hint_viewer_api_router
+from bot.routers.short_board import short_board_api_router
+
 
 class NoCacheStaticFiles(StaticFiles):
     def __init__(self, *args, **kwargs):
@@ -14,6 +16,7 @@ class NoCacheStaticFiles(StaticFiles):
         response = await super().get_response(path, scope)
         response.headers["Cache-Control"] = "no-cache"
         return response
+
 
 app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
 
@@ -31,3 +34,4 @@ templates = Jinja2Templates(directory="bot/templates")
 
 # Include routers
 app.include_router(hint_viewer_api_router, prefix="")
+app.include_router(short_board_api_router, prefix="")

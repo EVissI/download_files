@@ -34,6 +34,11 @@ from bot.config import bot
 from bot.common.func.game_parser import parse_file, get_names
 from bot.common.func.yadisk import save_file_to_yandex_disk
 
+# FastAPI imports
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.templating import Jinja2Templates
+import json
+
 
 class ShortBoardDialog(StatesGroup):
     file = State()
@@ -41,6 +46,10 @@ class ShortBoardDialog(StatesGroup):
 
 
 short_board_router = Router()
+
+# FastAPI router for web interface
+short_board_api_router = APIRouter()
+templates = Jinja2Templates(directory="bot/templates")
 
 
 @short_board_router.message(
@@ -247,3 +256,73 @@ async def handle_choose_side(
         )
     finally:
         await state.clear()
+
+
+# --- FastAPI часть ---
+
+
+def take_games_json_info(game_id: str, game_num: str = None):
+    """
+    Загружает и возвращает JSON с играми из game_parser для указанного game_id и номера игры.
+    """
+    path = f"files/{game_id}/games.json"
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"JSON файл для {game_id} не найден")
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in {path}: {e}")
+        raise HTTPException(status_code=500, detail=f"Invalid JSON file: {e}")
+
+    if game_num:
+        # Ищем конкретную игру в массиве
+        game_num_int = int(game_num)
+        for game in data:
+            if game.get("game_info", {}).get("game_number") == game_num_int:
+                return game
+        raise FileNotFoundError(f"Игра {game_num} не найдена в {game_id}")
+    else:
+        # Возвращаем список игр
+        try:
+            games_list = [game["game_info"]["game_number"] for game in data]
+            game_info = data[0]["game_info"] if data else {}
+            return {
+                "games": games_list,
+                "game_info": game_info,
+            }
+        except KeyError as e:
+            logger.error(f"Missing key in game data: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"Invalid game data structure: {e}"
+            )
+
+
+@short_board_api_router.get("/board-viewer")
+async def get_board_viewer_web(request: Request, game_id: str = None):
+    """
+    Возвращает HTML-страницу интерактивного просмотра доски.
+    """
+    if not game_id:
+        raise HTTPException(status_code=400, detail="game_id parameter is required")
+
+    return templates.TemplateResponse(
+        "board_viewer.html", {"request": request, "game_id": game_id}
+    )
+
+
+@short_board_api_router.get("/api/games/{game_id}")
+async def get_games_data(game_id: str, game_num: str = None):
+    """
+    Возвращает JSON-данные игр из game_parser для указанного game_id и номера игры.
+    Если game_num не указан, возвращает список всех игр.
+    """
+    try:
+        data = take_games_json_info(game_id, game_num)
+        return data
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Game {game_id} not found")
+    except Exception as e:
+        logger.error(f"Error fetching games data for {game_id}: {e}")
+        raise HTTPException(status_code=500, detail="Error generating games data")

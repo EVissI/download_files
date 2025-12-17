@@ -602,32 +602,6 @@ def take_json_info(game_id: str, game_num: str = None):
         return data
 
 
-def take_games_json_info(game_id: str, game_num: str = None):
-    """
-    Загружает и возвращает JSON с играми из game_parser для указанного game_id и номера игры.
-    """
-    path = f"files/{game_id}/games.json"
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"JSON файл для {game_id} не найден")
-
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    if game_num:
-        # Ищем конкретную игру в массиве
-        game_num_int = int(game_num)
-        for game in data:
-            if game.get("game_info", {}).get("game_number") == game_num_int:
-                return game
-        raise FileNotFoundError(f"Игра {game_num} не найдена в {game_id}")
-    else:
-        # Возвращаем список игр
-        return {
-            "games": [game["game_info"]["game_number"] for game in data],
-            "game_info": data[0]["game_info"] if data else {},
-        }
-
-
 @hint_viewer_api_router.get("/hint-viewer")
 async def get_hint_viewer_web(request: Request, game_id: str = None):
     """
@@ -638,19 +612,6 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
 
     return templates.TemplateResponse(
         "hint_viewer.html", {"request": request, "game_id": game_id}
-    )
-
-
-@hint_viewer_api_router.get("/board-viewer")
-async def get_board_viewer_web(request: Request, game_id: str = None):
-    """
-    Возвращает HTML-страницу интерактивного просмотра доски.
-    """
-    if not game_id:
-        raise HTTPException(status_code=400, detail="game_id parameter is required")
-
-    return templates.TemplateResponse(
-        "board_viewer.html", {"request": request, "game_id": game_id}
     )
 
 
@@ -668,22 +629,6 @@ async def get_analysis_data(game_id: str, game_num: str = None):
     except Exception as e:
         logger.error(f"Error fetching analysis data for {game_id}: {e}")
         raise HTTPException(status_code=500, detail="Error generating analysis data")
-
-
-@hint_viewer_api_router.get("/api/games/{game_id}")
-async def get_games_data(game_id: str, game_num: str = None):
-    """
-    Возвращает JSON-данные игр из game_parser для указанного game_id и номера игры.
-    Если game_num не указан, возвращает список всех игр.
-    """
-    try:
-        data = take_games_json_info(game_id, game_num)
-        return data
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Game {game_id} not found")
-    except Exception as e:
-        logger.error(f"Error fetching games data for {game_id}: {e}")
-        raise HTTPException(status_code=500, detail="Error generating games data")
 
 
 @hint_viewer_api_router.post("/api/send_screenshot")
