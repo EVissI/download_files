@@ -356,14 +356,14 @@
                 const y = getPointY(point);
 
                 // Draw white checkers (first player)
-                const whiteCount = positions.first[point] || 0;
+                const whiteCount = positions.first[String(point)] || 0;
                 for (let i = 0; i < whiteCount; i++) {
                     const checkerY = y - (i * (checkerRadius * 2 + 2));
                     ctx.drawImage(whiteChecker, x - checkerRadius, checkerY - checkerRadius, checkerRadius * 2, checkerRadius * 2);
                 }
 
                 // Draw black checkers (second player)
-                const blackCount = positions.second[point] || 0;
+                const blackCount = positions.second[String(point)] || 0;
                 for (let i = 0; i < blackCount; i++) {
                     const checkerY = y + (i * (checkerRadius * 2 + 2));
                     ctx.drawImage(blackChecker, x - checkerRadius, checkerY - checkerRadius, checkerRadius * 2, checkerRadius * 2);
