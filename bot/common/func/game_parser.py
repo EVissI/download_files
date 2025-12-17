@@ -1,6 +1,7 @@
 ﻿import os
 import json
 import re
+import copy
 from pathlib import Path
 from typing import List, Dict, Union, Optional
 
@@ -9,8 +10,96 @@ Move = Dict[str, Union[int, str, List[int]]]
 GameData = Dict[str, Union[Dict[str, Union[str, int]], int, List[Dict]]]
 
 
+class BackgammonPositionTracker:
+    def __init__(self, invert_colors=False, is_long_game=False):
+        self.invert_colors = invert_colors
+        self.is_long_game = is_long_game
+        # Set positions based on game type
+        if self.is_long_game:
+            self.start_positions = {
+                "first": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
+                "second": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
+            }
+        else:
+            self.start_positions = {
+                "first": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
+                "second": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
+            }
+        self.reset()
+
+    def reset(self):
+        self.positions = copy.deepcopy(self.start_positions)
+        self.current_player = (
+            "first" if not self.invert_colors else "second"
+        )  # first начинает, если не инвертировано
+
+    @staticmethod
+    def invert_point(point: int) -> int:
+        if point in (0, 25):
+            return point
+        return 25 - point
+
+    def _key(self, n):
+        if n == 0:
+            return "off"
+        if n == 25:
+            return "bar"
+        return n
+
+    def _dec(self, side, k):
+        cur = self.positions[side].get(k, 0)
+        if cur > 1:
+            self.positions[side][k] = cur - 1
+        elif cur == 1:
+            if k in ("bar", "off"):
+                self.positions[side][k] = 0
+            else:
+                self.positions[side].pop(k)
+        else:
+            pass
+            # logger.debug("warning: removing empty point %s %s", side, k)
+
+    def _inc(self, side, k):
+        self.positions[side][k] = self.positions[side].get(k, 0) + 1
+
+    def apply_move(self, player, move):
+        fr, to, hit = move.get("from"), move.get("to"), move.get("hit", False)
+        if self.invert_colors:
+            if player == "first":
+                fr = self.invert_point(fr)
+                to = self.invert_point(to)
+        else:
+            if player == "second":
+                fr = self.invert_point(fr)
+                to = self.invert_point(to)
+
+        key_fr, key_to = self._key(fr), self._key(to)
+        opp = "first" if player == "second" else "second"
+
+        self._dec(player, key_fr)
+
+        if hit and key_to != "off":
+            if self.positions[opp].get(key_to, 0) > 0:
+                self._dec(opp, key_to)
+                self._inc(opp, "bar")
+
+        self._inc(player, key_to)
+
+    def _invert_positions(self, positions):
+        """Invert the positions for the board"""
+        inverted = {"first": {}, "second": {}}
+        for color in ["first", "second"]:
+            for key, value in positions[color].items():
+                if key == "bar" or key == "off":
+                    inverted[color][key] = value
+                else:
+                    inverted_point = 25 - int(key)
+                    inverted[color][str(inverted_point)] = value
+        return inverted
+
+
 def toggle_player(player: Player) -> Player:
-    return 'second' if player == 'first' else 'first'
+    return "second" if player == "first" else "first"
 
 
 def parse_move_table(lines: List[str]) -> List[Move]:
@@ -36,13 +125,15 @@ def parse_move_table(lines: List[str]) -> List[Move]:
         dice1 = extract_dice(player1_text)
         dice2 = extract_dice(player2_text)
 
-        result.append({
-            "move": move_number,
-            "player1": player1_text,
-            "player2": player2_text,
-            "dice1": dice1,
-            "dice2": dice2,
-        })
+        result.append(
+            {
+                "move": move_number,
+                "player1": player1_text,
+                "player2": player2_text,
+                "dice1": dice1,
+                "dice2": dice2,
+            }
+        )
 
     return result
 
@@ -76,7 +167,7 @@ def extract_game_type(text: str) -> bool:
     return bool(re.search(r"Game type: Backgammon\s+\+1", text, re.IGNORECASE))
 
 
-def extract_moves(player_moves: str) -> List[Dict[str, Union[str, bool]]]:
+def extract_moves(player_moves: str) -> List[Dict[str, Union[int, bool]]]:
     moves_list = []
     split_moves = player_moves.split(": ")
     if len(split_moves) == 1:
@@ -86,16 +177,20 @@ def extract_moves(player_moves: str) -> List[Dict[str, Union[str, bool]]]:
         if "/" not in move:
             continue
         start, end = move.split("/")
-        captured = False
+        hit = False
         if end.endswith("*"):
-            captured = True
+            hit = True
             end = end[:-1]
-        moves_list.append({"from": start, "to": end, "captured": captured})
+        fr = 25 if start.lower() == "bar" else int(start)
+        to = 0 if end.lower() == "off" else int(end)
+        moves_list.append({"from": fr, "to": to, "hit": hit})
 
     return moves_list
 
 
-def parse_game(text: str, points_match: Optional[int], is_long_game: bool, is_inverse: bool = False) -> GameData:
+def parse_game(
+    text: str, points_match: Optional[int], is_long_game: bool, is_inverse: bool = False
+) -> GameData:
     lines = text.strip().split("\n")
     header_data = extract_names_and_scores(lines)
 
@@ -103,11 +198,19 @@ def parse_game(text: str, points_match: Optional[int], is_long_game: bool, is_in
 
     game_data = {
         first: {"name": header_data["first_name"], "score": header_data["first_score"]},
-        second: {"name": header_data["second_name"], "score": header_data["second_score"]},
+        second: {
+            "name": header_data["second_name"],
+            "score": header_data["second_score"],
+        },
         "point_match": points_match,
         "is_long_game": is_long_game,
         "turns": [],
     }
+
+    tracker = BackgammonPositionTracker(
+        invert_colors=is_inverse, is_long_game=is_long_game
+    )
+    tracker.reset()
 
     cube_owner = None
     cube_value = 1
@@ -126,54 +229,94 @@ def parse_game(text: str, points_match: Optional[int], is_long_game: bool, is_in
                 cube_value = int(text_move.split("=>")[1].strip())
                 cube_owner = toggle_player(player)
                 cube_location = "center"
-                game_data["turns"].append({
-                    "turn": player,
-                    "dice": [0, 0],
-                    "cube_owner": cube_owner,
-                    "cube_value": cube_value,
-                    "cube_location": cube_location,
-                    "moves": [],
-                    "action": "double",
-                })
+                game_data["turns"].append(
+                    {
+                        "turn": player,
+                        "dice": [0, 0],
+                        "cube_owner": cube_owner,
+                        "cube_value": cube_value,
+                        "cube_location": cube_location,
+                        "moves": [],
+                        "action": "double",
+                    }
+                )
+                turn = game_data["turns"][-1]
+                turn["positions"] = copy.deepcopy(tracker.positions)
+                turn["inverted_positions"] = tracker._invert_positions(
+                    tracker.positions
+                )
                 continue
 
             if "Takes" in text_move:
                 cube_location = player
-                game_data["turns"].append({
-                    "turn": player,
-                    "dice": [0, 0],
-                    "cube_owner": cube_owner,
-                    "cube_value": cube_value,
-                    "cube_location": cube_location,
-                    "moves": [],
-                    "action": "take",
-                })
+                game_data["turns"].append(
+                    {
+                        "turn": player,
+                        "dice": [0, 0],
+                        "cube_owner": cube_owner,
+                        "cube_value": cube_value,
+                        "cube_location": cube_location,
+                        "moves": [],
+                        "action": "take",
+                    }
+                )
+                turn = game_data["turns"][-1]
+                if turn["action"] in ("take", "drop"):
+                    tracker.current_player = (
+                        "second" if tracker.current_player == "first" else "first"
+                    )
+                turn["positions"] = copy.deepcopy(tracker.positions)
+                turn["inverted_positions"] = tracker._invert_positions(
+                    tracker.positions
+                )
                 continue
 
             if "Drops" in text_move:
                 cube_location = None
-                game_data["turns"].append({
-                    "turn": player,
-                    "dice": [0, 0],
-                    "cube_owner": cube_owner,
-                    "cube_value": cube_value,
-                    "cube_location": cube_location,
-                    "moves": [],
-                    "action": "drop",
-                })
+                game_data["turns"].append(
+                    {
+                        "turn": player,
+                        "dice": [0, 0],
+                        "cube_owner": cube_owner,
+                        "cube_value": cube_value,
+                        "cube_location": cube_location,
+                        "moves": [],
+                        "action": "drop",
+                    }
+                )
+                turn = game_data["turns"][-1]
+                if turn["action"] in ("take", "drop"):
+                    tracker.current_player = (
+                        "second" if tracker.current_player == "first" else "first"
+                    )
+                turn["positions"] = copy.deepcopy(tracker.positions)
+                turn["inverted_positions"] = tracker._invert_positions(
+                    tracker.positions
+                )
                 continue
 
             dice = move["dice1"] if player_key == "player1" else move["dice2"]
             moves_list = extract_moves(text_move)
 
-            game_data["turns"].append({
-                "turn": player,
-                "dice": dice,
-                "cube_owner": cube_owner,
-                "cube_value": cube_value,
-                "cube_location": cube_location,
-                "moves": moves_list,
-            })
+            game_data["turns"].append(
+                {
+                    "turn": player,
+                    "dice": dice,
+                    "cube_owner": cube_owner,
+                    "cube_value": cube_value,
+                    "cube_location": cube_location,
+                    "moves": moves_list,
+                }
+            )
+            turn = game_data["turns"][-1]
+            if "moves" in turn and turn["moves"]:
+                for m in turn["moves"]:
+                    tracker.apply_move(turn["turn"], m)
+                tracker.current_player = (
+                    "second" if turn["turn"] == "first" else "first"
+                )
+            turn["positions"] = copy.deepcopy(tracker.positions)
+            turn["inverted_positions"] = tracker._invert_positions(tracker.positions)
 
     return game_data
 

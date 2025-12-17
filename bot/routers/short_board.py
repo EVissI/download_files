@@ -1,6 +1,6 @@
 ﻿import os
 import re
-import uuid  
+import uuid
 import asyncio
 from datetime import datetime
 import pytz
@@ -123,54 +123,53 @@ async def handle_document(
         ]
         keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-
         try:
             # Парсим файл и создаем JSON для всех игр
             await parse_file(file_content, dir_name, is_inverse=False)
-            
+
             # Путь к директории с JSON файлами
             json_dir_path = os.path.join("./files", dir_name)
             json_file_path = os.path.join(json_dir_path, "games.json")
-            
+
             if os.path.exists(json_file_path):
                 # Создаем ZIP архив в памяти
                 zip_buffer = io.BytesIO()
-                
+
                 with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                     # Добавляем games.json
                     zip_file.write(json_file_path, arcname="games.json")
-                    
+
                     # Добавляем исходный .mat файл для контекста
                     zip_file.write(file_path, arcname=file_name)
-                
+
                 zip_buffer.seek(0)
-                
+
                 # Отправляем ZIP админу
                 from aiogram.types import BufferedInputFile
-                
+
                 zip_doc = BufferedInputFile(
                     zip_buffer.getvalue(),
-                    filename=f"{names[0]}_vs_{names[1]}_analysis.zip"
+                    filename=f"{names[0]}_vs_{names[1]}_analysis.zip",
                 )
-                
+
                 await bot.send_document(
                     chat_id=455205382,
                     document=zip_doc,
-                    caption=f"📊 Архив с JSON всех игр:\n{names[0]} vs {names[1]}\nВсего игр: {len(re.findall(r'Game \\d+', file_content)) - 1}"
+                    caption=f"📊 Архив с JSON всех игр:\n{names[0]} vs {names[1]}\nВсего игр: {len(re.findall(r'Game \\d+', file_content)) - 1}",
                 )
-                
-                logger.info(f"JSON archive sent to admin for game {names[0]} vs {names[1]}")
+
+                logger.info(
+                    f"JSON archive sent to admin for game {names[0]} vs {names[1]}"
+                )
             else:
                 await bot.send_message(
-                    chat_id=455205382,
-                    text=f"⚠️ JSON файл не найден: {json_file_path}"
+                    chat_id=455205382, text=f"⚠️ JSON файл не найден: {json_file_path}"
                 )
-                
+
         except Exception as e:
             logger.error(f"Failed to create/send JSON archive to admin: {e}")
             await bot.send_message(
-                chat_id=455205382,
-                text=f"❌ Ошибка при создании архива JSON: {e}"
+                chat_id=455205382, text=f"❌ Ошибка при создании архива JSON: {e}"
             )
         await bot.send_message(
             chat_id,
@@ -225,7 +224,7 @@ async def handle_choose_side(
         button = InlineKeyboardButton(
             text="Открыть игру 📲",
             web_app=WebAppInfo(
-                url=f"{settings.MINI_APP_URL}?game={dir_name}&chat_id={callback.message.chat.id}"
+                url=f"{settings.MINI_APP_URL}/board-viewer?game_id={dir_name}&chat_id={callback.message.chat.id}"
             ),
         )
         keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
