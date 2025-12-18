@@ -225,6 +225,15 @@
     <div class="container">
 
         <div id="top-row">
+            <select id="gameSelect">
+                <option value="0">Game 1</option>
+            </select>
+        </div>
+
+        <canvas id="boardCanvas" width="800" height="800"></canvas>
+
+        <div class="board-footer">
+            <div class="move-info" id="moveInfo">Initial Position</div>
             <div id="controls">
                 <button id="prevBtn" title="Previous Move">
                     <img src="/static/left.png" alt="Previous" style="width: 100%; height: 100%;">
@@ -237,22 +246,7 @@
                 </button>
                 <button id="invertBtn" title="Invert Board">
                     <img src="/static/change_color.png" alt="Invert" style="width: 100%; height: 100%;">
-                </button>
-            </div>
-            <select id="gameSelect">
-                <option value="0">Game 1</option>
-            </select>
-        </div>
-
-        <canvas id="boardCanvas" width="800" height="800"></canvas>
-
-        <div class="board-footer">
-            <div class="move-info" id="moveInfo">Initial Position</div>
-            <div class="pips-below-board">
-                <div class="game-info" id="players-info">
-                    <div>White: Player 1 (0)</div>
-                    <div>Black: Player 2 (0)</div>
-                </div>
+            </button>
             </div>
         </div>
     </div>
