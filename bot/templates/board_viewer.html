@@ -493,7 +493,7 @@
             let offY = (player === 'second')
                 ? (invertColors ? 340 : 440)
                 : (invertColors ? 440 : 340);
-                        if (positions.off && positions.off !== 0) {
+            if (positions.off && positions.off !== 0) {
                 const originalFont = ctx.font;
                 ctx.font = 'bold 32px Arial';
                 ctx.fillText(`${positions.off}`, offX, offY);
@@ -589,7 +589,7 @@
             }
 
             let progress = 0;
-            const duration = 800; // Duration for smooth animation
+            const duration = 267; // Duration for smooth animation
             const startTime = Date.now();
 
             const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
@@ -644,7 +644,7 @@
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
             let progress = 0;
-            const duration = 200;
+            const duration = 67;
             const startTime = Date.now();
 
             const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
@@ -717,14 +717,14 @@
 
             let moves = nextTurn.moves || [];
             const toScreenPoint = (p) => {
-            if (p === 'bar' || p === 'off') return p;
+                if (p === 'bar' || p === 'off') return p;
 
-            const n = Number(p);
-            if (!Number.isFinite(n)) return p;
+                const n = Number(p);
+                if (!Number.isFinite(n)) return p;
 
-            const boardP = (playerType === 'second') ? (25 - n) : n;
+                const boardP = (playerType === 'second') ? (25 - n) : n;
 
-            return inverted ? (25 - boardP) : boardP;
+                return inverted ? (25 - boardP) : boardP;
             };
             moves = moves.map(m => ({
                 ...m,
@@ -734,7 +734,7 @@
             const timeoutId = setTimeout(() => {
                 animating = false;
                 updateButtons();
-            }, 15000);
+            }, 5000);
 
             if (moves.length > 0) {
                 let moveIndex = 0;
@@ -745,11 +745,11 @@
                             if (hasHit) {
                                 animateHit(move, playerType, temp_positions, () => {
                                     moveIndex++;
-                                    setTimeout(animateMoves, 300);
+                                    setTimeout(animateMoves, 100);
                                 });
                             } else {
                                 moveIndex++;
-                                setTimeout(animateMoves, 300);
+                                setTimeout(animateMoves, 100);
                             }
                         });
                     } else {
