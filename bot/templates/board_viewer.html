@@ -552,10 +552,10 @@
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
 
 
-            const item = data[current]; 
+            const item = data[current+1]; 
             
             
-            const turnData = data[current];
+            const turnData = data[current+1];
             if (turnData && turnData.dice && turnData.dice.length === 2 && 
                 !['double', 'take', 'win'].includes(turnData.action)) {
                 
