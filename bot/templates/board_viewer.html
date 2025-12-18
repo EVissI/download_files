@@ -238,6 +238,7 @@
         let inverted = false;
         let invertColors = false;
         let dataLoaded = false;
+        let animating = false;
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -522,13 +523,149 @@
             return (point > 12) ? 55 : -55;
         }
 
+        function drawBoardForAnimation() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+
+            let positions;
+            if (current === 0) {
+                if (inverted) {
+                    positions = {
+                        first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                        second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
+                    };
+                } else {
+                    positions = {
+                        first: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
+                        second: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
+                    };
+                }
+            } else {
+                const prevTurn = current - 1;
+                positions = inverted ? data[prevTurn].inverted_positions : data[prevTurn].positions;
+            }
+
+            invertColors = inverted;
+            const game = availableGames.find(g => g.game_number === currentGameNum);
+            const currentPlayerType = current === 0 ? null : (data[current].turn === 'first' ? 'first' : 'second');
+            drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
+            drawCheckers('second', blackChecker, positions.second, currentPlayerType);
+        }
+
+        function animateSingleMove(move, playerType, callback) {
+            const img = playerType === 'first' ? whiteChecker : blackChecker;
+            const fromX = getX(move.from);
+            const fromY = getBaseY(move.from) + (getDy(move.from) * 0); // верхняя шашка
+            const toX = getX(move.to);
+            const toY = getBaseY(move.to) + (getDy(move.to) * 0);
+
+            let progress = 0;
+            const duration = 800;
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                progress = Math.min(elapsed / duration, 1);
+                const currentX = fromX + (toX - fromX) * progress;
+                const currentY = fromY + (toY - fromY) * progress;
+
+                drawBoardForAnimation();
+                ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    if (move.hit) {
+                        animateHit(move.to, playerType === 'first' ? 'second' : 'first', callback);
+                    } else {
+                        callback();
+                    }
+                }
+            };
+            animate();
+        }
+
+        function animateHit(hitPoint, hitPlayerType, callback) {
+            const img = hitPlayerType === 'first' ? whiteChecker : blackChecker;
+            const fromX = getX(hitPoint);
+            const fromY = getBaseY(hitPoint) + (getDy(hitPoint) * 0);
+            const barX = 400;
+            const barY = hitPlayerType === 'second' ? 220 : 520;
+
+            let progress = 0;
+            const duration = 600;
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                progress = Math.min(elapsed / duration, 1);
+                const currentX = fromX + (barX - fromX) * progress;
+                const currentY = fromY + (barY - fromY) * progress;
+
+                drawBoardForAnimation();
+                ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    callback();
+                }
+            };
+            animate();
+        }
+
+        function animateToNext() {
+            if (current >= data.length - 1 || animating) return;
+            animating = true;
+            updateButtons();
+            const nextTurn = data[current + 1];
+            const playerType = nextTurn.turn === 'first' ? 'first' : 'second';
+
+            if (nextTurn.moves && nextTurn.moves.length > 0) {
+                let moveIndex = 0;
+                const animateMoves = () => {
+                    if (moveIndex < nextTurn.moves.length) {
+                        animateSingleMove(nextTurn.moves[moveIndex], playerType, () => {
+                            moveIndex++;
+                            setTimeout(animateMoves, 300);
+                        });
+                    } else {
+                        current++;
+                        drawBoard();
+                        updateButtons();
+                        updateInfo();
+                        animating = false;
+                    }
+                };
+                animateMoves();
+            } else {
+                current++;
+                drawBoard();
+                updateButtons();
+                updateInfo();
+                animating = false;
+            }
+        }
+
+        function animateToPrev() {
+            if (current <= 0 || animating) return;
+            animating = true;
+            updateButtons();
+            // Для prev, просто мгновенно, или можно анимировать в обратном порядке
+            current--;
+            drawBoard();
+            updateButtons();
+            updateInfo();
+            animating = false;
+        }
+
         function updateButtons() {
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
 
             if (dataLoaded) {
-                prevBtn.disabled = current === 0;
-                nextBtn.disabled = current === data.length - 1;
+                prevBtn.disabled = current === 0 || animating;
+                nextBtn.disabled = current === data.length - 1 || animating;
             } else {
                 prevBtn.disabled = true;
                 nextBtn.disabled = true;
@@ -560,21 +697,11 @@
 
         // Event listeners
         document.getElementById('prevBtn').addEventListener('click', () => {
-            if (current > 0) {
-                current--;
-                drawBoard();
-                updateButtons();
-                updateInfo();
-            }
+            animateToPrev();
         });
 
         document.getElementById('nextBtn').addEventListener('click', () => {
-            if (current < data.length - 1) {
-                current++;
-                drawBoard();
-                updateButtons();
-                updateInfo();
-            }
+            animateToNext();
         });
 
         document.getElementById('invertBtn').addEventListener('click', () => {

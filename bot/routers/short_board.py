@@ -120,7 +120,7 @@ async def handle_document(
 
         try:
             # Парсим файл и создаем JSON для всех игр
-            await parse_file(file_content, dir_name, is_inverse=False)
+            await parse_file(file_content, dir_name)
 
             # Путь к директории с JSON файлами
             json_dir_path = os.path.join("./files", dir_name)
