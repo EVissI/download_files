@@ -491,15 +491,15 @@
 
         // Get gameid from URL
         const urlParams = new URLSearchParams(window.location.search);
-        const gameid = urlParams.get('gameid');
+        const game_id = urlParams.get('game_id');
 
-        if (!gameid) {
+        if (!game_id) {
             console.error('No gameid provided in URL');
             alert('No gameid provided in URL');
         }
 
         // Load data
-        fetch(`api/games/${gameid}`)
+        fetch(`api/games/${game_id}`)
             .then(response => response.json())
             .then(jsonData => {
                 let gamesArray;
