@@ -240,7 +240,7 @@
         let dataLoaded = false;
         let animating = false;
         let skipAnimation = false;
-        let animationSpeed = 0.5; 
+        let animationSpeed = 0.5;
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -641,8 +641,6 @@
             const duration = 200 / animationSpeed; // Duration for smooth animation
             const startTime = Date.now();
 
-            const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
-
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 progress = Math.min(elapsed / duration, 1);
@@ -651,7 +649,7 @@
                 const currentX = fromX + (toX - fromX) * easedProgress;
                 const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation(temp_positions, nextPlayerType);
+                drawBoardForAnimation(temp_positions, playerType);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
@@ -696,8 +694,6 @@
             const duration = 200 / animationSpeed;
             const startTime = Date.now();
 
-            const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
-
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 progress = Math.min(elapsed / duration, 1);
@@ -706,7 +702,7 @@
                 const currentX = fromX + (barX - fromX) * easedProgress;
                 const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation(temp_positions, nextPlayerType);
+                drawBoardForAnimation(temp_positions, playerType);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
