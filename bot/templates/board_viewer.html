@@ -379,7 +379,7 @@
 
             invertColors = inverted;
             const game = availableGames.find(g => g.game_number === currentGameNum);
-            const currentPlayerType = current === 0 ? null : (current % 2 === 1 ? 'first' : 'second');
+            const currentPlayerType = current === 0 ? null : (data[current].turn === 'first' ? 'first' : 'second');
             const currentPlayerName = currentPlayerType ? (currentPlayerType === 'first' ? game.first_player : game.second_player) : null;
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
