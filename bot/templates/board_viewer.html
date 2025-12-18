@@ -544,11 +544,15 @@
             // Handle from
             let fromX, fromY;
             const fromStr = move.from.toString();
-            if (fromStr === 'bar') {
+            const isBar = (fromStr === 'bar' || fromStr === '25' || fromStr === '0');
+            if (isBar) {
                 fromX = 400;
+                
                 const barY = (playerType === 'second') ? 220 : 520;
                 const barDy = (playerType === 'second') ? 55 : -55;
-                const barCount = player_pos['bar'] || 0;
+                
+                const barCount = playerpos.bar || 0;
+                
                 fromY = barY + (barCount - 1) * barDy;
             } else {
                 const fromPoint = parseInt(fromStr);
@@ -696,10 +700,6 @@
             } else {
                 player_pos[toStr] = (player_pos[toStr] || 0) + 1;
             }
-        }
-
-        function invertPoint(p) {
-            return typeof p === 'number' ? 25 - p : p;
         }
 
         function animateToNext() {
