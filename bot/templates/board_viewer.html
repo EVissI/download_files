@@ -694,13 +694,6 @@
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
             let moves = nextTurn.moves || [];
-            if (inverted) {
-                moves = moves.map(move => ({
-                    from: move.from === 'bar' ? 'bar' : move.from === 'off' ? 'off' : (25 - parseInt(move.from)).toString(),
-                    to: move.to === 'bar' ? 'bar' : move.to === 'off' ? 'off' : (25 - parseInt(move.to)).toString(),
-                    hit: move.hit
-                }));
-            }
 
             // Timeout to reset animating in case of error
             const timeoutId = setTimeout(() => {
