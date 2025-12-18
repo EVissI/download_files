@@ -505,10 +505,13 @@
         }
 
         function getX(point, playerType = null) {
-            // Для анимации второго игрока в инвертированном состоянии нужна дополнительная инвертация
+            // Дополнительная инвертация для второго игрока в зависимости от состояния доски
             let actualPoint = point;
-            if (inverted && playerType === 'second') {
-                actualPoint = invertPoint(point);
+            if (playerType === 'second') {
+                // Если состояние доски не соответствует типу игрока, нужна дополнительная инвертация
+                if (!(inverted === (playerType === 'second'))) {
+                    actualPoint = invertPoint(point);
+                }
             }
 
             if (actualPoint >= 13 && actualPoint <= 18) {
