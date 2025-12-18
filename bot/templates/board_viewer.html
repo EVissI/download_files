@@ -573,8 +573,9 @@
             const toStr = move.to.toString();
             if (toStr === 'off') {
                 toX = 783;
-                toY = invertColors ? (playerType === 'second' ? 440 : 340) : (playerType === 'second' ? 340 : 440);
-                // No stacking for off, fixed position
+                toY = (playerType === 'second')
+                    ? (invertColors ? 340 : 440)
+                    : (invertColors ? 440 : 340);
             } else {
                 const toPoint = parseInt(toStr);
                 toX = getX(toPoint, playerType);
