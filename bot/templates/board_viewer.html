@@ -620,7 +620,7 @@
             let toX, toY;
             const toStr = move.to.toString();
             if (toStr === 'off') {
-                toX = 850;
+                toX = fromX + 100;
                 toY = (playerType === 'second')
                     ? (invertColors ? 440 : 340)
                     : (invertColors ? 340 : 440);
