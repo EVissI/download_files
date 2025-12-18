@@ -230,7 +230,6 @@
     </div>
 
     <script>
-
         let data = [];
         let availableGames = [];
         let current = 0;
@@ -366,6 +365,22 @@
             }
         }
 
+        function getBarParams(player, inverted) {
+            const topBarY = 220;
+            const topBarDy = 55; // Stack down from top
+            const bottomBarY = 520;
+            const bottomBarDy = -55; // Stack up from bottom
+            const isTop = inverted ? (player === 'first') : (player === 'second');
+            return isTop ? { barY: topBarY, barDy: topBarDy } : { barY: bottomBarY, barDy: bottomBarDy };
+        }
+
+        function getOffY(player, inverted) {
+            const topOffY = 340;
+            const bottomOffY = 440;
+            const isTop = inverted ? (player === 'first') : (player === 'second');
+            return isTop ? topOffY : bottomOffY;
+        }
+
         function drawBoard() {
             if (!dataLoaded) return;
 
@@ -397,22 +412,22 @@
                 let diceSet;
                 if (invertColors) {
                     if (currentPlayerType === 'first') {
-                        diceX1 = 530;
-                        diceX2 = 620;
-                        diceSet = diceImages.white;
-                    } else {
                         diceX1 = 130;
                         diceX2 = 220;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 530;
+                        diceX2 = 620;
                         diceSet = diceImages.black;
                     }
                 } else {
                     if (currentPlayerType === 'first') {
-                        diceX1 = 130;
-                        diceX2 = 220;
-                        diceSet = diceImages.white;
-                    } else {
                         diceX1 = 530;
                         diceX2 = 620;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 130;
+                        diceX2 = 220;
                         diceSet = diceImages.black;
                     }
                 }
@@ -421,13 +436,13 @@
             }
         }
 
-        function drawCheckers(player, img, positions, currentPlayer) {
+        function drawCheckers(player, img, positions, currentPlayerType) {
             ctx.font = 'bold 30px Arial';
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            if (player === currentPlayer) {
+            if (player === currentPlayerType) {
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
                     let y = getBaseY(point);
@@ -438,7 +453,7 @@
                         if (player === 'first') {
                             displayPoint = 25 - point;
                         } else if (player === 'second') {
-                            displayPoint = 25 - point;
+                            displayPoint = point;
                         }
                     } else {
                         if (player === 'second') {
@@ -476,8 +491,7 @@
             }
 
             const barX = 400;
-            const barY = (player === 'second') ? 220 : 520;
-            const barDy = (player === 'second') ? 55 : -55;
+            const { barY, barDy } = getBarParams(player, invertColors);
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
                 for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
@@ -490,12 +504,7 @@
             }
 
             let offX = 783;
-            let offY;
-            if (invertColors) {
-                offY = (player === 'second') ? 440 : 340;
-            } else {
-                offY = (player === 'second') ? 340 : 440;
-            }
+            let offY = getOffY(player, invertColors);
             if (positions.off && positions.off !== 0) {
                 const originalFont = ctx.font;
                 ctx.font = 'bold 32px Arial';
@@ -546,8 +555,7 @@
             const fromStr = move.from.toString();
             if (fromStr === 'bar') {
                 fromX = 400;
-                const barY = (playerType === 'second') ? 220 : 520;
-                const barDy = (playerType === 'second') ? 55 : -55;
+                const { barY, barDy } = getBarParams(playerType, inverted);
                 const barCount = player_pos['bar'] || 0;
                 fromY = barY + (barCount - 1) * barDy;
             } else {
@@ -573,7 +581,7 @@
             const toStr = move.to.toString();
             if (toStr === 'off') {
                 toX = 783;
-                toY = invertColors ? (playerType === 'second' ? 440 : 340) : (playerType === 'second' ? 340 : 440);
+                toY = getOffY(playerType, inverted);
                 // No stacking for off, fixed position
             } else {
                 const toPoint = parseInt(toStr);
@@ -637,8 +645,7 @@
             let fromY = fromBaseY + (hitCount - 1) * fromDy;
 
             const barX = 400;
-            const barY = (hitPlayerType === 'second') ? 220 : 520;
-            const barDy = (hitPlayerType === 'second') ? 55 : -55;
+            const { barY, barDy } = getBarParams(hitPlayerType, inverted);
             const barCount = opp_pos['bar'] || 0;
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
@@ -865,7 +872,6 @@
         Dice4b.onload = imageLoaded;
         Dice5b.onload = imageLoaded;
         Dice6b.onload = imageLoaded;
-
     </script>
 </body>
 
