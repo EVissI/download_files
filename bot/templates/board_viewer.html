@@ -702,7 +702,7 @@
         }
 
         function animateToNext() {
-            if (current >= data.length - 1 || animating) return;
+            if (current >= data.length - 1) return;
             animating = true;
             updateButtons();
 
@@ -770,7 +770,7 @@
         }
 
         function animateToPrev() {
-            if (current <= 0 || animating) return;
+            if (current <= 0) return;
             animating = true;
             updateButtons();
             current--;
@@ -785,8 +785,8 @@
             const nextBtn = document.getElementById('nextBtn');
 
             if (dataLoaded) {
-                prevBtn.disabled = current === 0 || animating;
-                nextBtn.disabled = current === data.length - 1 || animating;
+                prevBtn.disabled = current === 0;
+                nextBtn.disabled = current === data.length - 1;
             } else {
                 prevBtn.disabled = true;
                 nextBtn.disabled = true;
