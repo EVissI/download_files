@@ -355,13 +355,13 @@
         function getInitialPositions(inverted) {
             if (inverted) {
                 return {
-                    first: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 },
-                    second: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 }
+                    first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                    second: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
                 };
             } else {
                 return {
                     first: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
-                    second: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
+                    second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
                 };
             }
         }
@@ -379,11 +379,7 @@
                 positions = getInitialPositions(inverted);
             } else {
                 const prevTurn = current - 1;
-                if (inverted) {
-                    positions = { first: data[prevTurn].inverted_positions.second, second: data[prevTurn].inverted_positions.first };
-                } else {
-                    positions = data[prevTurn].positions;
-                }
+                positions = inverted ? data[prevTurn].inverted_positions : data[prevTurn].positions;
             }
 
             invertColors = inverted;
@@ -480,12 +476,8 @@
             }
 
             const barX = 400;
-            let barY = (player === 'second') ? 220 : 520;
-            let barDy = (player === 'second') ? 55 : -55;
-            if (invertColors) {
-                barY = (player === 'second') ? 520 : 220;
-                barDy = (player === 'second') ? -55 : 55;
-            }
+            const barY = (player === 'second') ? 220 : 520;
+            const barDy = (player === 'second') ? 55 : -55;
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
                 for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
@@ -557,12 +549,8 @@
             const fromStr = move.from.toString();
             if (fromStr === 'bar') {
                 fromX = 400;
-                let barY = (playerType === 'second') ? 220 : 520;
-                let barDy = (playerType === 'second') ? 55 : -55;
-                if (inverted) {
-                    barY = (playerType === 'second') ? 520 : 220;
-                    barDy = (playerType === 'second') ? -55 : 55;
-                }
+                const barY = (playerType === 'second') ? 220 : 520;
+                const barDy = (playerType === 'second') ? 55 : -55;
                 const barCount = player_pos['bar'] || 0;
                 fromY = barY + (barCount - 1) * barDy;
             } else {
@@ -590,16 +578,6 @@
                 toX = 783;
                 toY = invertColors ? (playerType === 'second' ? 440 : 340) : (playerType === 'second' ? 340 : 440);
                 // No stacking for off, fixed position
-            } else if (toStr === 'bar') {
-                toX = 400;
-                let barY = (playerType === 'second') ? 220 : 520;
-                let barDy = (playerType === 'second') ? 55 : -55;
-                if (inverted) {
-                    barY = (playerType === 'second') ? 520 : 220;
-                    barDy = (playerType === 'second') ? -55 : 55;
-                }
-                const barCount = player_pos['bar'] || 0;
-                toY = barY + barCount * barDy;
             } else {
                 const toPoint = parseInt(toStr);
                 toX = getX(toPoint, playerType);
@@ -662,12 +640,8 @@
             let fromY = fromBaseY + (hitCount - 1) * fromDy;
 
             const barX = 400;
-            let barY = (hitPlayerType === 'second') ? 220 : 520;
-            let barDy = (hitPlayerType === 'second') ? 55 : -55;
-            if (inverted) {
-                barY = (hitPlayerType === 'second') ? 520 : 220;
-                barDy = (hitPlayerType === 'second') ? -55 : 55;
-            }
+            const barY = (hitPlayerType === 'second') ? 220 : 520;
+            const barDy = (hitPlayerType === 'second') ? 55 : -55;
             const barCount = opp_pos['bar'] || 0;
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
@@ -742,11 +716,7 @@
             if (current === 0) {
                 prev_positions = getInitialPositions(inverted);
             } else {
-                if (inverted) {
-                    prev_positions = { first: data[current - 1].inverted_positions.second, second: data[current - 1].inverted_positions.first };
-                } else {
-                    prev_positions = data[current - 1].positions;
-                }
+                prev_positions = inverted ? data[current - 1].inverted_positions : data[current - 1].positions;
             }
 
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
