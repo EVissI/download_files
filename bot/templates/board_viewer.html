@@ -434,19 +434,11 @@
                     const dy = getDy(point);
 
                     let displayPoint = point;
-                    if (invertColors) {
-                        if (player === 'first') {
-                            displayPoint = point;
-                        } else if (player === 'second') {
-                            displayPoint = 25 - point;
-                        }
-                    } else {
-                        if (player === 'second') {
-                            displayPoint = point;
-                        } else if (player === 'first') {
-                            displayPoint = 25 - point;
-                        }
+                    // Инвертировать отображение номеров при анимации без инвертирования
+                    if (!inverted) {
+                        displayPoint = 25 - point;
                     }
+
                     let numberY;
                     if (point > 12) {
                         numberY = y - 50;
@@ -505,7 +497,11 @@
         }
 
         function getX(point, playerType = null) {
+            // Для анимации второго игрока в инвертированном состоянии нужна дополнительная инвертация
             let actualPoint = point;
+            if (inverted && playerType === 'second') {
+                actualPoint = invertPoint(point);
+            }
 
             if (actualPoint >= 13 && actualPoint <= 18) {
                 const baseX = 50 + (actualPoint - 13) * 60;
