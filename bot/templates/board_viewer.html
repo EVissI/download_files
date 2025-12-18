@@ -406,7 +406,7 @@
             }
 
             invertColors = inverted;
-            const currentPlayer = data[current].player === 'White' ? 'first' : 'second';
+            const currentPlayer = current === 0 ? null : (current % 2 === 1 ? 'first' : 'second');
             drawCheckers('first', whiteChecker, positions.first, currentPlayer);
             drawCheckers('second', blackChecker, positions.second, currentPlayer);
 
