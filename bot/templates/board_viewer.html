@@ -240,6 +240,7 @@
         let dataLoaded = false;
         let animating = false;
         let skipAnimation = false;
+        let animationSpeed = 2; // 1 = normal, 0.5 = faster, 2 = slower
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -620,7 +621,7 @@
             let toX, toY;
             const toStr = move.to.toString();
             if (toStr === 'off') {
-                toX = 20; 
+                toX = 20;
                 toY = playerType === 'second'
                     ? (invertColors ? 440 : 340)
                     : (invertColors ? 340 : 440);
@@ -637,7 +638,7 @@
             }
 
             let progress = 0;
-            const duration = 267; // Duration for smooth animation
+            const duration = 267 / animationSpeed; // Duration for smooth animation
             const startTime = Date.now();
 
             const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
@@ -692,7 +693,7 @@
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
             let progress = 0;
-            const duration = 1000;
+            const duration = 67 / animationSpeed;
             const startTime = Date.now();
 
             const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
@@ -821,11 +822,11 @@
                             if (hasHit) {
                                 animateHit(move, playerType, temp_positions, () => {
                                     moveIndex++;
-                                    setTimeout(animateMoves, 100);
+                                    setTimeout(animateMoves, 100 / animationSpeed);
                                 });
                             } else {
                                 moveIndex++;
-                                setTimeout(animateMoves, 100);
+                                setTimeout(animateMoves, 100 / animationSpeed);
                             }
                         });
                     } else {
