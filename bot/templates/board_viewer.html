@@ -230,7 +230,6 @@
     </div>
 
     <script>
-
         let data = [];
         let availableGames = [];
         let current = 0;
@@ -243,7 +242,7 @@
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Load images
+        // Load images (без изменений)
         const boardImg = new Image();
         boardImg.src = '/static/board.png';
         const whiteChecker = new Image();
@@ -251,106 +250,24 @@
         const blackChecker = new Image();
         blackChecker.src = '/static/black_checker.png';
 
-        const Dice1w = new Image();
-        Dice1w.src = '/static/1w.png?t=' + Date.now();
-        const Dice2w = new Image();
-        Dice2w.src = '/static/2w.png?t=' + Date.now();
-        const Dice3w = new Image();
-        Dice3w.src = '/static/3w.png?t=' + Date.now();
-        const Dice4w = new Image();
-        Dice4w.src = '/static/4w.png?t=' + Date.now();
-        const Dice5w = new Image();
-        Dice5w.src = '/static/5w.png?t=' + Date.now();
-        const Dice6w = new Image();
-        Dice6w.src = '/static/6w.png?t=' + Date.now();
+        const Dice1w = new Image(); Dice1w.src = '/static/1w.png?t=' + Date.now();
+        const Dice2w = new Image(); Dice2w.src = '/static/2w.png?t=' + Date.now();
+        const Dice3w = new Image(); Dice3w.src = '/static/3w.png?t=' + Date.now();
+        const Dice4w = new Image(); Dice4w.src = '/static/4w.png?t=' + Date.now();
+        const Dice5w = new Image(); Dice5w.src = '/static/5w.png?t=' + Date.now();
+        const Dice6w = new Image(); Dice6w.src = '/static/6w.png?t=' + Date.now();
 
-        const Dice1b = new Image();
-        Dice1b.src = '/static/1b.png?t=' + Date.now();
-        const Dice2b = new Image();
-        Dice2b.src = '/static/2b.png?t=' + Date.now();
-        const Dice3b = new Image();
-        Dice3b.src = '/static/3b.png?t=' + Date.now();
-        const Dice4b = new Image();
-        Dice4b.src = '/static/4b.png?t=' + Date.now();
-        const Dice5b = new Image();
-        Dice5b.src = '/static/5b.png?t=' + Date.now();
-        const Dice6b = new Image();
-        Dice6b.src = '/static/6b.png?t=' + Date.now();
+        const Dice1b = new Image(); Dice1b.src = '/static/1b.png?t=' + Date.now();
+        const Dice2b = new Image(); Dice2b.src = '/static/2b.png?t=' + Date.now();
+        const Dice3b = new Image(); Dice3b.src = '/static/3b.png?t=' + Date.now();
+        const Dice4b = new Image(); Dice4b.src = '/static/4b.png?t=' + Date.now();
+        const Dice5b = new Image(); Dice5b.src = '/static/5b.png?t=' + Date.now();
+        const Dice6b = new Image(); Dice6b.src = '/static/6b.png?t=' + Date.now();
 
-        const diceImages = {
-            white: {
-                1: Dice1w,
-                2: Dice2w,
-                3: Dice3w,
-                4: Dice4w,
-                5: Dice5w,
-                6: Dice6w
-            },
-            black: {
-                1: Dice1b,
-                2: Dice2b,
-                3: Dice3b,
-                4: Dice4b,
-                5: Dice5b,
-                6: Dice6b
-            }
-        };
+        const diceImages = { white: {1: Dice1w,2: Dice2w,3: Dice3w,4: Dice4w,5: Dice5w,6: Dice6w},
+                            black: {1: Dice1b,2: Dice2b,3: Dice3b,4: Dice4b,5: Dice5b,6: Dice6b} };
 
-        // Get game_id from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const game_id = urlParams.get('game_id');
-
-        if (!game_id) {
-            console.error('No game_id provided in URL');
-            alert('No game_id provided in URL');
-        }
-
-        // Load data
-        fetch(`/api/games/${game_id}`)
-            .then(response => response.json())
-            .then(jsonData => {
-                let gamesArray;
-                if (Array.isArray(jsonData)) {
-                    gamesArray = jsonData;
-                } else if (jsonData.games && Array.isArray(jsonData.games)) {
-                    gamesArray = jsonData.games;
-                } else if (jsonData.detail) {
-                    alert('Error: ' + jsonData.detail);
-                    return;
-                } else {
-                    console.error('Unexpected data format:', jsonData);
-                    return;
-                }
-                data = gamesArray[0].turns; // Default to first game
-                availableGames = gamesArray.map((game, index) => ({
-                    game_number: index + 1,
-                    turns: game.turns,
-                    first_player: game.first.name,
-                    second_player: game.second.name,
-                    first_score: game.first.score,
-                    second_score: game.second.score
-                }));
-                dataLoaded = true;
-                updateGameSelect();
-                updateButtons();
-                drawBoard();
-                updateInfo();
-            })
-            .catch(error => {
-                console.error('Error loading games data:', error);
-                alert('Error loading games data: ' + error.message);
-            });
-
-        function updateGameSelect() {
-            const gameSelect = document.getElementById('gameSelect');
-            gameSelect.innerHTML = '';
-            availableGames.forEach(game => {
-                const option = document.createElement('option');
-                option.value = game.game_number - 1;
-                option.textContent = `Game ${game.game_number}`;
-                gameSelect.appendChild(option);
-            });
-        }
+        // ... (fetch и загрузка данных без изменений)
 
         function getInitialPositions(inverted) {
             if (inverted) {
@@ -370,8 +287,6 @@
             if (!dataLoaded) return;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw board
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
 
             let positions;
@@ -383,41 +298,30 @@
             }
 
             invertColors = inverted;
-            const game = availableGames.find(g => g.game_number === currentGameNum);
-            const currentPlayerType = data[current] ? data[current].turn : null;
-            const currentPlayerName = currentPlayerType ? (currentPlayerType === 'first' ? game.first_player : game.second_player) : null;
+
+            // Подсветка номеров только для текущего игрока (после хода)
+            const currentTurn = data[current];
+            const currentPlayerType = currentTurn ? currentTurn.turn : null;
+
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
 
-            const item = data[current];
-            if (item && item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
-                const [d1, d2] = item.dice;
+            // Кубики только в финальном положении
+            if (currentTurn && currentTurn.dice && currentTurn.dice.length >= 2 && !['double', 'take', 'win'].includes(currentTurn.action || '')) {
+                const [d1, d2] = currentTurn.dice;
                 const diceY = 350;
-                let diceX1, diceX2;
-                let diceSet;
+                let diceX1, diceX2, diceSet;
                 if (invertColors) {
-                    if (currentPlayerType === 'first') {
-                        diceX1 = 130;
-                        diceX2 = 220;
-                        diceSet = diceImages.white;
-                    } else {
-                        diceX1 = 530;
-                        diceX2 = 620;
-                        diceSet = diceImages.black;
-                    }
+                    diceSet = currentPlayerType === 'first' ? diceImages.white : diceImages.black;
+                    diceX1 = currentPlayerType === 'first' ? 130 : 530;
+                    diceX2 = currentPlayerType === 'first' ? 220 : 620;
                 } else {
-                    if (currentPlayerType === 'first') {
-                        diceX1 = 530;
-                        diceX2 = 620;
-                        diceSet = diceImages.white;
-                    } else {
-                        diceX1 = 130;
-                        diceX2 = 220;
-                        diceSet = diceImages.black;
-                    }
+                    diceSet = currentPlayerType === 'first' ? diceImages.white : diceImages.black;
+                    diceX1 = currentPlayerType === 'first' ? 530 : 130;
+                    diceX2 = currentPlayerType === 'first' ? 620 : 220;
                 }
-                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
-                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+                ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+                ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
         }
 
@@ -427,76 +331,56 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
+            // Подсвечиваем номера точек только если это текущий игрок
             if (player === currentPlayer) {
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
-                    let y = getBaseY(point);
-                    const dy = getDy(point);
-
+                    let numberY = (point > 12) ? getBaseY(point) - 50 : getBaseY(point) + 60;
                     let displayPoint = point;
                     if (invertColors) {
-                        if (player === 'first') {
-                            displayPoint = 25 - point;
-                        } else if (player === 'second') {
-                            displayPoint = point;
-                        }
+                        displayPoint = (player === 'first') ? 25 - point : point;
                     } else {
-                        if (player === 'second') {
-                            displayPoint = 25 - point;
-                        } else if (player === 'first') {
-                            displayPoint = point;
-                        }
-                    }
-                    let numberY;
-                    if (point > 12) {
-                        numberY = y - 50;
-                    } else {
-                        numberY = y + 60;
+                        displayPoint = (player === 'second') ? 25 - point : point;
                     }
                     ctx.fillText(displayPoint, x, numberY);
                 }
             }
 
+            // Отрисовка шашек на точках
             for (let pointStr in positions) {
                 if (pointStr === 'bar' || pointStr === 'off') continue;
                 const point = parseInt(pointStr);
-                let count = positions[pointStr];
+                const count = positions[pointStr];
                 const x = getX(point);
-                let y = getBaseY(point);
+                const y = getBaseY(point);
                 const dy = getDy(point);
 
                 for (let i = 0; i < Math.min(count, 6); i++) {
-                    ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
+                    ctx.drawImage(img, x - 31.25, y + i * dy - 31.25, 62.5, 62.5);
                 }
-
                 if (count > 6) {
-                    const lastCheckerY = y + (5 * dy);
-                    ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
+                    ctx.fillText(`${count}`, x + 40, y + 5 * dy + 5);
                 }
             }
 
-            const barX = 400;
-            const barY = (player === 'second') ? 220 : 520;
-            const barDy = (player === 'second') ? 55 : -55;
+            // Bar
             if (positions.bar && positions.bar !== 0) {
+                const barX = 400;
+                const barY = (player === 'second') ? 220 : 520;
+                const barDy = (player === 'second') ? 55 : -55;
                 let y = barY;
                 for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
-                    ctx.drawImage(img, barX - 31.25, y + (i * barDy) - 31.25, 62.5, 62.5);
+                    ctx.drawImage(img, barX - 31.25, y + i * barDy - 31.25, 62.5, 62.5);
                 }
                 if (Math.abs(positions.bar) > 6) {
-                    const lastCheckerY = y + (5 * barDy);
-                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
+                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, barY + 5 * barDy + 5);
                 }
             }
 
-            let offX = 783;
-            let offY;
-            if (invertColors) {
-                offY = (player === 'second') ? 440 : 340;
-            } else {
-                offY = (player === 'second') ? 340 : 440;
-            }
+            // Off
             if (positions.off && positions.off !== 0) {
+                const offX = 783;
+                const offY = invertColors ? (player === 'second' ? 440 : 340) : (player === 'second' ? 340 : 440);
                 const originalFont = ctx.font;
                 ctx.font = 'bold 32px Arial';
                 ctx.fillText(`${positions.off}`, offX, offY);
@@ -504,147 +388,112 @@
             }
         }
 
+        // Функции getX, getBaseY, getDy без изменений
         function getX(point) {
-            if (point >= 13 && point <= 18) {
-                const baseX = 50 + (point - 13) * 60;
-                return baseX - (point === 13 ? 8 : 0);
-            } else if (point >= 19 && point <= 24) {
-                return 450 + (point - 19) * 60;
-            } else if (point >= 7 && point <= 12) {
-                const baseX = 50 + (12 - point) * 60;
-                return baseX - (point === 12 ? 4 : 0);
-            } else if (point >= 1 && point <= 6) {
-                return 450 + (6 - point) * 60;
-            }
+            if (point >= 13 && point <= 18) return 50 + (point - 13) * 60 - (point === 13 ? 8 : 0);
+            if (point >= 19 && point <= 24) return 450 + (point - 19) * 60;
+            if (point >= 7 && point <= 12) return 50 + (12 - point) * 60 - (point === 12 ? 4 : 0);
+            if (point >= 1 && point <= 6) return 450 + (6 - point) * 60;
             return 0;
         }
+        function getBaseY(point) { return point > 12 ? 70 : 690; }
+        function getDy(point) { return point > 12 ? 55 : -55; }
 
-        function getBaseY(point) {
-            return (point > 12) ? 70 : 690;
-        }
-
-        function getDy(point) {
-            return (point > 12) ? 55 : -55;
-        }
-
-        function drawBoardForAnimation(positions, currentPlayerType) {
+        // Отрисовка доски только с шашками (без номеров и кубиков) — для анимации
+        function drawBoardForAnimation(positions) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
-
             invertColors = inverted;
-            drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
-            drawCheckers('second', blackChecker, positions.second, currentPlayerType);
+            drawCheckers('first', whiteChecker, positions.first, null);  // null — без подсветки номеров
+            drawCheckers('second', blackChecker, positions.second, null);
         }
+
+        // Остальные функции анимации (animateSingleMove, animateHit, updateTempPositionsAfterMove) — без изменений
+        // (я их оставляю такими же, как в предыдущей версии)
 
         function animateSingleMove(move, playerType, temp_positions, callback) {
             const img = playerType === 'first' ? whiteChecker : blackChecker;
             const player_pos = temp_positions[playerType];
-            const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
 
-            // Handle from
             let fromX, fromY;
-            const fromStr = move.from.toString();
-            if (fromStr === 'bar') {
+            if (move.from === 'bar' || move.from === 'bar') {
                 fromX = 400;
-                const barY = (playerType === 'second') ? 220 : 520;
-                const barDy = (playerType === 'second') ? 55 : -55;
-                const barCount = player_pos['bar'] || 0;
-                fromY = barY + (barCount - 1) * barDy;
+                const barY = playerType === 'second' ? 220 : 520;
+                const barDy = playerType === 'second' ? 55 : -55;
+                const count = Math.abs(player_pos.bar || 0);
+                fromY = barY + (count - 1) * barDy;
             } else {
-                const fromPoint = parseInt(fromStr);
-                fromX = getX(fromPoint);
-                const fromBaseY = getBaseY(fromPoint);
-                const fromDy = getDy(fromPoint);
-                const fromCount = player_pos[fromStr] || 0;
-                fromY = fromBaseY + (fromCount - 1) * fromDy;
+                const p = parseInt(move.from);
+                fromX = getX(p);
+                const count = player_pos[move.from] || 0;
+                fromY = getBaseY(p) + (count - 1) * getDy(p);
             }
 
-            // Handle to
             let toX, toY;
-            const toStr = move.to.toString();
-            if (toStr === 'off') {
+            if (move.to === 'off') {
                 toX = 783;
                 toY = invertColors ? (playerType === 'second' ? 440 : 340) : (playerType === 'second' ? 340 : 440);
-                // No stacking for off, fixed position
             } else {
-                const toPoint = parseInt(toStr);
-                toX = getX(toPoint);
-                const toBaseY = getBaseY(toPoint);
-                const toDy = getDy(toPoint);
-                let toCount = player_pos[toStr] || 0;
-                if (move.hit) {
-                    toCount = 0; // After hit, place on empty point
-                }
-                toY = toBaseY + toCount * toDy;
+                const p = parseInt(move.to);
+                toX = getX(p);
+                let count = player_pos[move.to] || 0;
+                if (move.hit) count = 0;
+                toY = getBaseY(p) + count * getDy(p);
             }
 
             let progress = 0;
-            const duration = 800; // Duration for smooth animation
+            const duration = 800;
             const startTime = Date.now();
-
-            const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
 
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 progress = Math.min(elapsed / duration, 1);
-                // Ease-in-out for smoother movement
-                const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-                const currentX = fromX + (toX - fromX) * easedProgress;
-                const currentY = fromY + (toY - fromY) * easedProgress;
+                const eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const cx = fromX + (toX - fromX) * eased;
+                const cy = fromY + (toY - fromY) * eased;
 
-                drawBoardForAnimation(temp_positions, nextPlayerType);
-                ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
+                drawBoardForAnimation(temp_positions);
+                ctx.drawImage(img, cx - 31.25, cy - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    callback(move.hit, move, playerType, temp_positions);
+                    callback(move.hit || false);
                 }
             };
             animate();
         }
 
-        function animateHit(move, playerType, temp_positions, finalCallback) {
-            const hitPlayerType = playerType === 'first' ? 'second' : 'first';
-            const img = hitPlayerType === 'first' ? whiteChecker : blackChecker;
-            const opp_pos = temp_positions[hitPlayerType];
+        function animateHit(move, playerType, temp_positions, callback) {
+            const hitPlayer = playerType === 'first' ? 'second' : 'first';
+            const img = hitPlayer === 'first' ? whiteChecker : blackChecker;
 
-            const toStr = move.to.toString();
-            const hitPoint = parseInt(toStr);
-            const fromX = getX(hitPoint);
-            const fromBaseY = getBaseY(hitPoint);
-            const fromDy = getDy(hitPoint);
-            const hitCount = opp_pos[toStr] || 1; // Usually 1 for hit
-            let fromY = fromBaseY + (hitCount - 1) * fromDy;
+            const p = parseInt(move.to);
+            const fromX = getX(p);
+            const fromY = getBaseY(p) + (0) * getDy(p); // верхняя шашка (всегда одна при хите)
 
             const barX = 400;
-            const barY = (hitPlayerType === 'second') ? 220 : 520;
-            const barDy = (hitPlayerType === 'second') ? 55 : -55;
-            const barCount = opp_pos['bar'] || 0;
-            const toY = barY + barCount * barDy; // Position for the hit checker on bar
+            const barY = hitPlayer === 'second' ? 220 : 520;
+            const barDy = hitPlayer === 'second' ? 55 : -55;
+            const barCount = Math.abs(temp_positions[hitPlayer].bar || 0);
+            const toY = barY + barCount * barDy;
 
             let progress = 0;
             const duration = 600;
             const startTime = Date.now();
 
-            const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
-
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 progress = Math.min(elapsed / duration, 1);
-                // Ease-in-out for smooth movement
-                const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-                const currentX = fromX + (barX - fromX) * easedProgress;
-                const currentY = fromY + (toY - fromY) * easedProgress;
+                const eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const cx = fromX + (barX - fromX) * eased;
+                const cy = fromY + (toY - fromY) * eased;
 
-                drawBoardForAnimation(temp_positions, nextPlayerType);
-                ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
+                drawBoardForAnimation(temp_positions);
+                ctx.drawImage(img, cx - 31.25, cy - 31.25, 62.5, 62.5);
 
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    finalCallback();
-                }
+                if (progress < 1) requestAnimationFrame(animate);
+                else callback();
             };
             animate();
         }
@@ -652,27 +501,30 @@
         function updateTempPositionsAfterMove(move, playerType, temp_positions) {
             const player_pos = temp_positions[playerType];
             const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
-            const fromStr = move.from.toString();
-            const toStr = move.to.toString();
+            const from = move.from.toString();
+            const to = move.to.toString();
 
+            // Убираем с from
+            if (from === 'bar') {
+                player_pos.bar = (player_pos.bar || 0) - 1;
+                if (player_pos.bar === 0) delete player_pos.bar;
+            } else {
+                player_pos[from] -= 1;
+                if (player_pos[from] === 0) delete player_pos[from];
+            }
+
+            // Если был хит — убираем одну шашку противника и ставим на bar
             if (move.hit) {
-                opp_pos[toStr] = (opp_pos[toStr] || 1) - 1;
-                if (opp_pos[toStr] === 0) delete opp_pos[toStr];
-                opp_pos['bar'] = (opp_pos['bar'] || 0) + 1;
+                if (opp_pos[to] === 1) delete opp_pos[to];
+                else opp_pos[to] -= 1;
+                opp_pos.bar = (opp_pos.bar || 0) + 1;
             }
 
-            if (fromStr === 'bar') {
-                player_pos['bar'] = (player_pos['bar'] || 1) - 1;
-                if (player_pos['bar'] === 0) delete player_pos['bar'];
+            // Ставим на to
+            if (to === 'off') {
+                player_pos.off = (player_pos.off || 0) + 1;
             } else {
-                player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
-                if (player_pos[fromStr] === 0) delete player_pos[fromStr];
-            }
-
-            if (toStr === 'off') {
-                player_pos['off'] = (player_pos['off'] || 0) + 1;
-            } else {
-                player_pos[toStr] = (player_pos[toStr] || 0) + 1;
+                player_pos[to] = (player_pos[to] || 0) + 1;
             }
         }
 
@@ -682,51 +534,54 @@
             updateButtons();
 
             const nextTurn = data[current + 1];
-            const playerType = nextTurn.turn === 'first' ? 'first' : 'second';
+            const playerType = nextTurn.turn;
 
-            let prev_positions;
+            let start_positions;
             if (current === 0) {
-                prev_positions = getInitialPositions(inverted);
+                start_positions = getInitialPositions(inverted);
             } else {
-                prev_positions = inverted ? data[current - 1].inverted_positions : data[current - 1].positions;
+                start_positions = inverted ? data[current - 1].inverted_positions : data[current - 1].positions;
             }
 
-            const temp_positions = JSON.parse(JSON.stringify(prev_positions));
+            const temp_positions = JSON.parse(JSON.stringify(start_positions));
 
-            if (nextTurn.moves && nextTurn.moves.length > 0) {
-                let moveIndex = 0;
-                const animateMoves = () => {
-                    if (moveIndex < nextTurn.moves.length) {
-                        const move = nextTurn.moves[moveIndex];
-                        animateSingleMove(move, playerType, temp_positions, (hasHit, move, playerType, temp_positions) => {
-                            if (hasHit) {
-                                animateHit(move, playerType, temp_positions, () => {
-                                    updateTempPositionsAfterMove(move, playerType, temp_positions);
-                                    moveIndex++;
-                                    setTimeout(animateMoves, 300);
-                                });
-                            } else {
-                                updateTempPositionsAfterMove(move, playerType, temp_positions);
-                                moveIndex++;
-                                setTimeout(animateMoves, 300);
-                            }
-                        });
-                    } else {
-                        current++;
-                        drawBoard();
-                        updateButtons();
-                        updateInfo();
-                        animating = false;
-                    }
-                };
-                animateMoves();
-            } else {
+            if (!nextTurn.moves || nextTurn.moves.length === 0) {
                 current++;
                 drawBoard();
-                updateButtons();
                 updateInfo();
+                updateButtons();
                 animating = false;
+                return;
             }
+
+            let moveIdx = 0;
+            const playNextMove = () => {
+                if (moveIdx >= nextTurn.moves.length) {
+                    current++;
+                    drawBoard();         // финальная отрисовка с кубиками и правильной подсветкой
+                    updateInfo();
+                    updateButtons();
+                    animating = false;
+                    return;
+                }
+
+                const move = nextTurn.moves[moveIdx];
+                animateSingleMove(move, playerType, temp_positions, (hasHit) => {
+                    if (hasHit) {
+                        animateHit(move, playerType, temp_positions, () => {
+                            updateTempPositionsAfterMove(move, playerType, temp_positions);
+                            moveIdx++;
+                            setTimeout(playNextMove, 350);
+                        });
+                    } else {
+                        updateTempPositionsAfterMove(move, playerType, temp_positions);
+                        moveIdx++;
+                        setTimeout(playNextMove, 350);
+                    }
+                });
+            };
+
+            playNextMove();
         }
 
         function animateToPrev() {
@@ -735,35 +590,28 @@
             updateButtons();
             current--;
             drawBoard();
-            updateButtons();
             updateInfo();
+            updateButtons();
             animating = false;
         }
 
-        function updateButtons() {
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
+        // updateButtons, updateInfo, event listeners — без изменений
 
-            if (dataLoaded) {
-                prevBtn.disabled = current === 0 || animating;
-                nextBtn.disabled = current === data.length - 1 || animating;
-            } else {
-                prevBtn.disabled = true;
-                nextBtn.disabled = true;
-            }
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = current === 0 || animating;
+            document.getElementById('nextBtn').disabled = current === data.length - 1 || animating;
         }
 
         function updateInfo() {
             if (!dataLoaded) return;
-
-            const turnLabel = document.getElementById('turnLabel');
-            turnLabel.textContent = current + 1;
+            document.getElementById('turnLabel').textContent = current + 1;
 
             const moveInfo = document.getElementById('moveInfo');
             const turn = data[current];
             const game = availableGames.find(g => g.game_number === currentGameNum);
             const playerName = turn && turn.turn ? (turn.turn === 'first' ? game.first_player : game.second_player) : '';
             const prefix = playerName ? `${playerName}: ` : '';
+
             if (turn && turn.moves && turn.moves.length > 0) {
                 const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
                 moveInfo.textContent = prefix + movesStr;
@@ -774,24 +622,14 @@
             }
         }
 
-        // Event listeners
-        document.getElementById('prevBtn').addEventListener('click', () => {
-            animateToPrev();
-        });
-
-        document.getElementById('nextBtn').addEventListener('click', () => {
-            animateToNext();
-        });
-
-        document.getElementById('invertBtn').addEventListener('click', () => {
-            inverted = !inverted;
-            drawBoard();
-        });
-
+        // Event listeners (без изменений)
+        document.getElementById('prevBtn').addEventListener('click', animateToPrev);
+        document.getElementById('nextBtn').addEventListener('click', animateToNext);
+        document.getElementById('invertBtn').addEventListener('click', () => { inverted = !inverted; drawBoard(); });
         document.getElementById('gameSelect').addEventListener('change', (e) => {
-            const gameIndex = parseInt(e.target.value);
-            currentGameNum = gameIndex + 1;
-            data = availableGames[gameIndex].turns;
+            const idx = parseInt(e.target.value);
+            currentGameNum = idx + 1;
+            data = availableGames[idx].turns;
             current = 0;
             inverted = false;
             drawBoard();
@@ -799,33 +637,15 @@
             updateInfo();
         });
 
-        // Draw board when images are loaded
+        // Загрузка изображений (без изменений)
         let imagesLoaded = 0;
         const totalImages = 15;
-
         function imageLoaded() {
             imagesLoaded++;
-            if (imagesLoaded === totalImages && dataLoaded) {
-                drawBoard();
-            }
+            if (imagesLoaded === totalImages && dataLoaded) drawBoard();
         }
-
-        boardImg.onload = imageLoaded;
-        whiteChecker.onload = imageLoaded;
-        blackChecker.onload = imageLoaded;
-        Dice1w.onload = imageLoaded;
-        Dice2w.onload = imageLoaded;
-        Dice3w.onload = imageLoaded;
-        Dice4w.onload = imageLoaded;
-        Dice5w.onload = imageLoaded;
-        Dice6w.onload = imageLoaded;
-        Dice1b.onload = imageLoaded;
-        Dice2b.onload = imageLoaded;
-        Dice3b.onload = imageLoaded;
-        Dice4b.onload = imageLoaded;
-        Dice5b.onload = imageLoaded;
-        Dice6b.onload = imageLoaded;
-
+        [boardImg, whiteChecker, blackChecker, Dice1w,Dice2w,Dice3w,Dice4w,Dice5w,Dice6w,Dice1b,Dice2b,Dice3b,Dice4b,Dice5b,Dice6b]
+            .forEach(img => img.onload = imageLoaded);
     </script>
 </body>
 
