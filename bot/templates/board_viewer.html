@@ -552,7 +552,7 @@
             const moveInfo = document.getElementById('moveInfo');
             const turn = data[current];
             const game = availableGames.find(g => g.game_number === currentGameNum);
-            const playerName = current === 0 ? '' : (current % 2 === 1 ? game?.first_player : game?.second_player);
+            const playerName = current === 0 ? '' : (turn.turn === 'first' ? game.first_player : game.second_player);
             const prefix = playerName ? `${playerName}: ` : '';
             console.log('updateInfo current:', current, 'currentGameNum:', currentGameNum, 'game:', game, 'playerName:', playerName, 'turn:', turn);
             if (turn.moves && turn.moves.length > 0) {
