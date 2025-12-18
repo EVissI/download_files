@@ -541,9 +541,18 @@
             const player_pos = temp_positions[playerType];
             const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
 
+            // Temporarily remove checker from from position
+            const fromStr = move.from.toString();
+            if (fromStr === 'bar') {
+                player_pos['bar'] = (player_pos['bar'] || 1) - 1;
+                if (player_pos['bar'] === 0) delete player_pos['bar'];
+            } else {
+                player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
+                if (player_pos[fromStr] === 0) delete player_pos[fromStr];
+            }
+
             // Handle from
             let fromX, fromY;
-            const fromStr = move.from.toString();
             if (fromStr === 'bar') {
                 fromX = 400;
                 const barY = (playerType === 'second') ? 220 : 520;
@@ -598,6 +607,12 @@
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
+                    // Add checker to to position
+                    if (toStr === 'off') {
+                        player_pos['off'] = (player_pos['off'] || 0) + 1;
+                    } else {
+                        player_pos[toStr] = (player_pos[toStr] || 0) + 1;
+                    }
                     callback(move.hit, move, playerType, temp_positions);
                 }
             };
@@ -610,11 +625,15 @@
             const opp_pos = temp_positions[hitPlayerType];
 
             const toStr = move.to.toString();
+            // Temporarily remove hit checker from to position
+            opp_pos[toStr] = (opp_pos[toStr] || 1) - 1;
+            if (opp_pos[toStr] === 0) delete opp_pos[toStr];
+
             const hitPoint = parseInt(toStr);
             const fromX = getX(hitPoint);
             const fromBaseY = getBaseY(hitPoint);
             const fromDy = getDy(hitPoint);
-            const hitCount = opp_pos[toStr] || 1; // Usually 1 for hit
+            const hitCount = opp_pos[toStr] || 0; // Now 0
             let fromY = fromBaseY + (hitCount - 1) * fromDy;
 
             const barX = 400;
@@ -632,7 +651,7 @@
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 progress = Math.min(elapsed / duration, 1);
-                // Ease-in-out for smooth movement
+                // Ease-in-out for smoother movement
                 const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
                 const currentX = fromX + (barX - fromX) * easedProgress;
                 const currentY = fromY + (toY - fromY) * easedProgress;
@@ -643,6 +662,8 @@
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
+                    // Add hit checker to bar
+                    opp_pos['bar'] = (opp_pos['bar'] || 0) + 1;
                     finalCallback();
                 }
             };
@@ -720,12 +741,10 @@
                         animateSingleMove(move, playerType, temp_positions, (hasHit, move, playerType, temp_positions) => {
                             if (hasHit) {
                                 animateHit(move, playerType, temp_positions, () => {
-                                    updateTempPositionsAfterMove(move, playerType, temp_positions);
                                     moveIndex++;
                                     setTimeout(animateMoves, 300);
                                 });
                             } else {
-                                updateTempPositionsAfterMove(move, playerType, temp_positions);
                                 moveIndex++;
                                 setTimeout(animateMoves, 300);
                             }
