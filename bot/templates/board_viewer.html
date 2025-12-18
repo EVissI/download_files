@@ -479,9 +479,10 @@
                 if (pointStr === 'bar' || pointStr === 'off') continue;
                 const point = parseInt(pointStr);
                 let count = positions[pointStr];
-                const x = getX(point);
-                let y = getBaseY(point);
-                const dy = getDy(point);
+                let actualPoint = invertColors ? (25 - point) : point;
+                const x = getX(actualPoint);
+                let y = getBaseY(actualPoint);
+                const dy = getDy(actualPoint);
 
                 for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
@@ -638,8 +639,10 @@
             }
 
             let progress = 0;
-            const duration = 200 / animationSpeed; // Duration for smooth animation
+            const duration = 267 / animationSpeed; // Duration for smooth animation
             const startTime = Date.now();
+
+            const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
 
             const animate = () => {
                 const elapsed = Date.now() - startTime;
@@ -649,7 +652,7 @@
                 const currentX = fromX + (toX - fromX) * easedProgress;
                 const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation(temp_positions, playerType);
+                drawBoardForAnimation(temp_positions, nextPlayerType);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
@@ -691,8 +694,10 @@
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
             let progress = 0;
-            const duration = 200 / animationSpeed;
+            const duration = 67 / animationSpeed;
             const startTime = Date.now();
+
+            const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
 
             const animate = () => {
                 const elapsed = Date.now() - startTime;
@@ -702,7 +707,7 @@
                 const currentX = fromX + (barX - fromX) * easedProgress;
                 const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation(temp_positions, playerType);
+                drawBoardForAnimation(temp_positions, nextPlayerType);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
