@@ -550,8 +550,39 @@
             invertColors = inverted;
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
-        }
 
+
+            const item = data[current]; 
+            
+            
+            const turnData = data[current];
+            if (turnData && turnData.dice && turnData.dice.length === 2 && 
+                !['double', 'take', 'win'].includes(turnData.action)) {
+                
+                const [d1, d2] = turnData.dice;
+                const diceY = 350;
+                let diceX1, diceX2;
+                let diceSet;
+
+                // Логика позиций кубиков (та же, что в drawBoard)
+                if (invertColors) {
+                    if (currentPlayerType === 'first') {
+                        diceX1 = 130; diceX2 = 220; diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 530; diceX2 = 620; diceSet = diceImages.black;
+                    }
+                } else {
+                    if (currentPlayerType === 'first') {
+                        diceX1 = 530; diceX2 = 620; diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 130; diceX2 = 220; diceSet = diceImages.black;
+                    }
+                }
+
+                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+            }
+        }
         function animateSingleMove(move, playerType, temp_positions, callback) {
             const img = playerType === 'first' ? whiteChecker : blackChecker;
             const player_pos = temp_positions[playerType];
@@ -718,6 +749,7 @@
             if (current >= data.length - 1) return;
             animating = true;
             updateButtons();
+            updateInfo(); 
 
             const nextTurn = data[current];
             const playerType = nextTurn.turn === 'first' ? 'first' : 'second';
