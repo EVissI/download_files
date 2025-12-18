@@ -342,7 +342,23 @@
             // Draw board
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
 
-            const positions = inverted ? data[current].inverted_positions : data[current].positions;
+            let positions;
+            if (current === 0) {
+                if (inverted) {
+                    positions = {
+                        first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                        second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
+                    };
+                } else {
+                    positions = {
+                        first: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
+                        second: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
+                    };
+                }
+            } else {
+                const prevTurn = current - 1;
+                positions = inverted ? data[prevTurn].inverted_positions : data[prevTurn].positions;
+            }
 
             invertColors = inverted;
             const currentPlayer = data[current].player === 'White' ? 'first' : 'second';
