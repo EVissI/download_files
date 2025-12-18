@@ -230,6 +230,7 @@
     </div>
 
     <script>
+
         let data = [];
         let availableGames = [];
         let current = 0;
@@ -365,22 +366,6 @@
             }
         }
 
-        function getBarParams(player, inverted) {
-            const topBarY = 220;
-            const topBarDy = 55; // Stack down from top
-            const bottomBarY = 520;
-            const bottomBarDy = -55; // Stack up from bottom
-            const isTop = inverted ? (player === 'first') : (player === 'second');
-            return isTop ? { barY: topBarY, barDy: topBarDy } : { barY: bottomBarY, barDy: bottomBarDy };
-        }
-
-        function getOffY(player, inverted) {
-            const topOffY = 340;
-            const bottomOffY = 440;
-            const isTop = inverted ? (player === 'first') : (player === 'second');
-            return isTop ? topOffY : bottomOffY;
-        }
-
         function drawBoard() {
             if (!dataLoaded) return;
 
@@ -436,15 +421,13 @@
             }
         }
 
-        function drawCheckers(player, img, positions, currentPlayerType) {
+        function drawCheckers(player, img, positions, currentPlayer) {
             ctx.font = 'bold 30px Arial';
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            console.log('drawCheckers called for player:', player, 'currentPlayerType:', currentPlayerType, 'invertColors:', invertColors);
-
-            if (player === currentPlayerType) {
+            if (player === currentPlayer) {
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
                     let y = getBaseY(point);
@@ -455,7 +438,7 @@
                         if (player === 'first') {
                             displayPoint = 25 - point;
                         } else if (player === 'second') {
-                            displayPoint = 25 - point;
+                            displayPoint = point;
                         }
                     } else {
                         if (player === 'second') {
@@ -464,7 +447,6 @@
                             displayPoint = point;
                         }
                     }
-                    console.log('Player:', player, 'Point:', point, 'DisplayPoint:', displayPoint);
                     let numberY;
                     if (point > 12) {
                         numberY = y - 50;
@@ -494,7 +476,8 @@
             }
 
             const barX = 400;
-            const { barY, barDy } = getBarParams(player, invertColors);
+            const barY = (player === 'second') ? 220 : 520;
+            const barDy = (player === 'second') ? 55 : -55;
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
                 for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
@@ -507,7 +490,12 @@
             }
 
             let offX = 783;
-            let offY = getOffY(player, invertColors);
+            let offY;
+            if (invertColors) {
+                offY = (player === 'second') ? 440 : 340;
+            } else {
+                offY = (player === 'second') ? 340 : 440;
+            }
             if (positions.off && positions.off !== 0) {
                 const originalFont = ctx.font;
                 ctx.font = 'bold 32px Arial';
@@ -558,7 +546,8 @@
             const fromStr = move.from.toString();
             if (fromStr === 'bar') {
                 fromX = 400;
-                const { barY, barDy } = getBarParams(playerType, inverted);
+                const barY = (playerType === 'second') ? 220 : 520;
+                const barDy = (playerType === 'second') ? 55 : -55;
                 const barCount = player_pos['bar'] || 0;
                 fromY = barY + (barCount - 1) * barDy;
             } else {
@@ -584,7 +573,7 @@
             const toStr = move.to.toString();
             if (toStr === 'off') {
                 toX = 783;
-                toY = getOffY(playerType, inverted);
+                toY = invertColors ? (playerType === 'second' ? 440 : 340) : (playerType === 'second' ? 340 : 440);
                 // No stacking for off, fixed position
             } else {
                 const toPoint = parseInt(toStr);
@@ -648,7 +637,8 @@
             let fromY = fromBaseY + (hitCount - 1) * fromDy;
 
             const barX = 400;
-            const { barY, barDy } = getBarParams(hitPlayerType, inverted);
+            const barY = (hitPlayerType === 'second') ? 220 : 520;
+            const barDy = (hitPlayerType === 'second') ? 55 : -55;
             const barCount = opp_pos['bar'] || 0;
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
@@ -716,20 +706,14 @@
             animating = true;
             updateButtons();
 
-            console.log('animateToNext called, inverted:', inverted);
-
             const nextTurn = data[current];
             const playerType = nextTurn.turn === 'first' ? 'first' : 'second';
-
-            console.log('Current player type:', playerType);
 
             let prev_positions;
             if (current === 0) {
                 prev_positions = getInitialPositions(inverted);
-                console.log('Initial positions:', prev_positions);
             } else {
                 prev_positions = inverted ? data[current - 1].inverted_positions : data[current - 1].positions;
-                console.log('Previous positions:', prev_positions);
             }
 
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
@@ -881,6 +865,7 @@
         Dice4b.onload = imageLoaded;
         Dice5b.onload = imageLoaded;
         Dice6b.onload = imageLoaded;
+
     </script>
 </body>
 
