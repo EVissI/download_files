@@ -534,9 +534,9 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
 
-            invertColors = inverted;
+            invertColors = !inverted;
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
-            drawCheckers('second', blackChecker, positions.first, currentPlayerType);
+            drawCheckers('second', blackChecker, positions.second, currentPlayerType);
         }
 
         function animateSingleMove(move, playerType, temp_positions, callback) {
