@@ -22,8 +22,8 @@ class BackgammonPositionTracker:
             }
         else:
             self.start_positions = {
-                "first": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
-                "second": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
+                "first": {"bar": 0, "off": 0, 1: 2, 12: 5, 17: 3, 19: 5},
+                "second": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 24: 2},
             }
         self.reset()
 
