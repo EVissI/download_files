@@ -552,10 +552,9 @@
                 fromY = barY + (barCount - 1) * barDy;
             } else {
                 const fromPoint = parseInt(fromStr);
-                const adjustedFromPoint = inverted ? (playerType === 'first' ? 25 - fromPoint : fromPoint) : (playerType === 'second' ? 25 - fromPoint : fromPoint);
-                fromX = getX(adjustedFromPoint);
-                const fromBaseY = getBaseY(adjustedFromPoint);
-                const fromDy = getDy(adjustedFromPoint);
+                fromX = getX(fromPoint);
+                const fromBaseY = getBaseY(fromPoint);
+                const fromDy = getDy(fromPoint);
                 const fromCount = player_pos[fromStr] || 0;
                 fromY = fromBaseY + (fromCount - 1) * fromDy;
             }
@@ -578,10 +577,9 @@
                 // No stacking for off, fixed position
             } else {
                 const toPoint = parseInt(toStr);
-                const adjustedToPoint = inverted ? (playerType === 'first' ? 25 - toPoint : toPoint) : (playerType === 'second' ? 25 - toPoint : toPoint);
-                toX = getX(adjustedToPoint);
-                const toBaseY = getBaseY(adjustedToPoint);
-                const toDy = getDy(adjustedToPoint);
+                toX = getX(toPoint);
+                const toBaseY = getBaseY(toPoint);
+                const toDy = getDy(toPoint);
                 let toCount = player_pos[toStr] || 0;
                 if (move.hit) {
                     toCount = 0; // After hit, place on empty point
@@ -632,10 +630,9 @@
             if (opp_pos[toStr] === 0) delete opp_pos[toStr];
 
             const hitPoint = parseInt(toStr);
-            const adjustedHitPoint = inverted ? (hitPlayerType === 'first' ? 25 - hitPoint : hitPoint) : (hitPlayerType === 'second' ? 25 - hitPoint : hitPoint);
-            const fromX = getX(adjustedHitPoint);
-            const fromBaseY = getBaseY(adjustedHitPoint);
-            const fromDy = getDy(adjustedHitPoint);
+            const fromX = getX(hitPoint);
+            const fromBaseY = getBaseY(hitPoint);
+            const fromDy = getDy(hitPoint);
             const hitCount = opp_pos[toStr] || 0; // Now 0
             let fromY = fromBaseY + (hitCount - 1) * fromDy;
 
