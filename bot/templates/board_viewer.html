@@ -429,34 +429,26 @@
 
             if (player === currentPlayer) {
                 for (let point = 1; point <= 24; point++) {
-                    // При инвертировании доски инвертируем координаты для второго игрока
-                    let displayPoint = point;
-                    let actualPoint = point;
+                    const x = getX(point);
+                    let y = getBaseY(point);
+                    const dy = getDy(point);
 
+                    let displayPoint = point;
                     if (invertColors) {
                         if (player === 'first') {
                             displayPoint = point;
-                            actualPoint = point;
                         } else if (player === 'second') {
                             displayPoint = 25 - point;
-                            actualPoint = 25 - point;
                         }
                     } else {
                         if (player === 'second') {
                             displayPoint = point;
-                            actualPoint = point;
                         } else if (player === 'first') {
                             displayPoint = 25 - point;
-                            actualPoint = 25 - point;
                         }
                     }
-
-                    const x = getX(actualPoint);
-                    let y = getBaseY(actualPoint);
-                    const dy = getDy(actualPoint);
-
                     let numberY;
-                    if (actualPoint > 12) {
+                    if (point > 12) {
                         numberY = y - 50;
                     } else {
                         numberY = y + 60;
@@ -469,18 +461,9 @@
                 if (pointStr === 'bar' || pointStr === 'off') continue;
                 const point = parseInt(pointStr);
                 let count = positions[pointStr];
-
-                // При инвертировании доски инвертируем координаты для второго игрока
-                let actualPoint = point;
-                if (invertColors && player === 'second') {
-                    actualPoint = 25 - point;
-                } else if (!invertColors && player === 'first') {
-                    actualPoint = 25 - point;
-                }
-
-                const x = getX(actualPoint);
-                let y = getBaseY(actualPoint);
-                const dy = getDy(actualPoint);
+                const x = getX(point);
+                let y = getBaseY(point);
+                const dy = getDy(point);
 
                 for (let i = 0; i < Math.min(count, 6); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
@@ -572,17 +555,9 @@
                 fromY = barY + (barCount - 1) * barDy;
             } else {
                 const fromPoint = parseInt(fromStr);
-                // При инвертировании доски для второго игрока нужно инвертировать координаты
-                let actualFromPoint = fromPoint;
-                if (inverted && playerType === 'second') {
-                    actualFromPoint = invertPoint(fromPoint);
-                } else if (!inverted && playerType === 'first') {
-                    actualFromPoint = invertPoint(fromPoint);
-                }
-
-                fromX = getX(actualFromPoint);
-                const fromBaseY = getBaseY(actualFromPoint);
-                const fromDy = getDy(actualFromPoint);
+                fromX = getX(fromPoint, playerType);
+                const fromBaseY = getBaseY(fromPoint);
+                const fromDy = getDy(fromPoint);
                 const fromCount = player_pos[fromStr] || 0;
                 fromY = fromBaseY + (fromCount - 1) * fromDy;
             }
@@ -605,17 +580,9 @@
                 // No stacking for off, fixed position
             } else {
                 const toPoint = parseInt(toStr);
-                // При инвертировании доски для второго игрока нужно инвертировать координаты
-                let actualToPoint = toPoint;
-                if (inverted && playerType === 'second') {
-                    actualToPoint = invertPoint(toPoint);
-                } else if (!inverted && playerType === 'first') {
-                    actualToPoint = invertPoint(toPoint);
-                }
-
-                toX = getX(actualToPoint);
-                const toBaseY = getBaseY(actualToPoint);
-                const toDy = getDy(actualToPoint);
+                toX = getX(toPoint, playerType);
+                const toBaseY = getBaseY(toPoint);
+                const toDy = getDy(toPoint);
                 let toCount = player_pos[toStr] || 0;
                 if (move.hit) {
                     toCount = 0; // After hit, place on empty point
@@ -666,17 +633,9 @@
             if (opp_pos[toStr] === 0) delete opp_pos[toStr];
 
             const hitPoint = parseInt(toStr);
-            // При инвертировании доски для второго игрока нужно инвертировать координаты
-            let actualHitPoint = hitPoint;
-            if (inverted && hitPlayerType === 'second') {
-                actualHitPoint = invertPoint(hitPoint);
-            } else if (!inverted && hitPlayerType === 'first') {
-                actualHitPoint = invertPoint(hitPoint);
-            }
-
-            const fromX = getX(actualHitPoint);
-            const fromBaseY = getBaseY(actualHitPoint);
-            const fromDy = getDy(actualHitPoint);
+            const fromX = getX(hitPoint, hitPlayerType);
+            const fromBaseY = getBaseY(hitPoint);
+            const fromDy = getDy(hitPoint);
             const hitCount = opp_pos[toStr] || 0; // Now 0
             let fromY = fromBaseY + (hitCount - 1) * fromDy;
 
