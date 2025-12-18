@@ -240,7 +240,7 @@
         let dataLoaded = false;
         let animating = false;
         let skipAnimation = false;
-        let animationSpeed = 0.5; // 1 = normal, 0.5 = faster, 2 = slower
+        let animationSpeed = 0.5; 
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -693,7 +693,7 @@
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
             let progress = 0;
-            const duration = 67 / animationSpeed;
+            const duration = 67 * animationSpeed;
             const startTime = Date.now();
 
             const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
