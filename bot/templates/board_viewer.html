@@ -544,15 +544,11 @@
             // Handle from
             let fromX, fromY;
             const fromStr = move.from.toString();
-            const isBar = (fromStr === 'bar' || fromStr === '25' || fromStr === '0');
-            if (isBar) {
+            if (fromStr === 'bar') {
                 fromX = 400;
-                
                 const barY = (playerType === 'second') ? 220 : 520;
                 const barDy = (playerType === 'second') ? 55 : -55;
-                
-                const barCount = playerpos.bar || 0;
-                
+                const barCount = player_pos['bar'] || 0;
                 fromY = barY + (barCount - 1) * barDy;
             } else {
                 const fromPoint = parseInt(fromStr);
@@ -648,7 +644,7 @@
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
             let progress = 0;
-            const duration = 600;
+            const duration = 200;
             const startTime = Date.now();
 
             const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
