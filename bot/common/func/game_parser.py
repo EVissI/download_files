@@ -17,7 +17,7 @@ class BackgammonPositionTracker:
         # Set positions based on game type
         if self.is_long_game:
             self.start_positions = {
-                "first": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 23:2, 24: 1},
+                "first": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 23: 2, 24: 1},
                 "second": {"bar": 0, "off": 0, 1: 1, 2:2, 12: 5, 17: 3, 19: 5},
             }
         else:
@@ -241,7 +241,6 @@ def parse_game(
                     }
                 )
                 turn = game_data["turns"][-1]
-                player_color = "red" if turn["turn"] == "first" else "black"
                 turn["positions"] = copy.deepcopy(tracker.positions)
                 turn["inverted_positions"] = tracker._invert_positions(
                     tracker.positions
@@ -262,10 +261,9 @@ def parse_game(
                     }
                 )
                 turn = game_data["turns"][-1]
-                player_color = "red" if turn["turn"] == "first" else "black"
                 if turn["action"] in ("take", "drop"):
                     tracker.current_player = (
-                        "black" if tracker.current_player == "red" else "red"
+                        "second" if tracker.current_player == "first" else "first"
                     )
                 turn["positions"] = copy.deepcopy(tracker.positions)
                 turn["inverted_positions"] = tracker._invert_positions(
@@ -287,10 +285,9 @@ def parse_game(
                     }
                 )
                 turn = game_data["turns"][-1]
-                player_color = "red" if turn["turn"] == "first" else "black"
                 if turn["action"] in ("take", "drop"):
                     tracker.current_player = (
-                        "black" if tracker.current_player == "red" else "red"
+                        "second" if tracker.current_player == "first" else "first"
                     )
                 turn["positions"] = copy.deepcopy(tracker.positions)
                 turn["inverted_positions"] = tracker._invert_positions(
@@ -312,11 +309,12 @@ def parse_game(
                 }
             )
             turn = game_data["turns"][-1]
-            player_color = "red" if turn["turn"] == "first" else "black"
             if "moves" in turn and turn["moves"]:
                 for m in turn["moves"]:
-                    tracker.apply_move(player_color, m)
-                tracker.current_player = "black" if player_color == "red" else "red"
+                    tracker.apply_move(turn["turn"], m)
+                tracker.current_player = (
+                    "second" if turn["turn"] == "first" else "first"
+                )
             turn["positions"] = copy.deepcopy(tracker.positions)
             turn["inverted_positions"] = tracker._invert_positions(tracker.positions)
 
@@ -361,4 +359,3 @@ async def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
         file.write("]")
 
     return count
-
