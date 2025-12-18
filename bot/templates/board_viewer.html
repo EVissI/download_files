@@ -239,6 +239,7 @@
         let invertColors = false;
         let dataLoaded = false;
         let animating = false;
+        let skipAnimation = false;
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -746,10 +747,18 @@
         }
 
         function animateToNext() {
+            // Если уже идет анимация - устанавливаем флаг пропуска
+            if (animating) {
+                skipAnimation = true;
+                return;
+            }
+            
             if (current >= data.length - 1) return;
+            
             animating = true;
+            skipAnimation = false; // Сбрасываем флаг
             updateButtons();
-            updateInfo(); 
+            updateInfo(); // Обновляем инфо сразу
 
             const nextTurn = data[current];
             const playerType = nextTurn.turn === 'first' ? 'first' : 'second';
@@ -767,19 +776,18 @@
             let moves = nextTurn.moves || [];
             const toScreenPoint = (p) => {
                 if (p === 'bar' || p === 'off') return p;
-
                 const n = Number(p);
                 if (!Number.isFinite(n)) return p;
-
                 const boardP = (playerType === 'second') ? (25 - n) : n;
-
                 return inverted ? (25 - boardP) : boardP;
             };
+            
             moves = moves.map(m => ({
                 ...m,
                 from: toScreenPoint(m.from),
                 to: toScreenPoint(m.to),
             }));
+
             const timeoutId = setTimeout(() => {
                 animating = false;
                 updateButtons();
@@ -788,6 +796,25 @@
             if (moves.length > 0) {
                 let moveIndex = 0;
                 const animateMoves = () => {
+                    // Проверяем флаг пропуска
+                    if (skipAnimation) {
+                        // Применяем все оставшиеся ходы мгновенно
+                        while (moveIndex < moves.length) {
+                            const move = moves[moveIndex];
+                            updateTempPositionsAfterMove(move, playerType, temp_positions);
+                            moveIndex++;
+                        }
+                        // Завершаем анимацию
+                        clearTimeout(timeoutId);
+                        current++;
+                        drawBoard();
+                        updateButtons();
+                        updateInfo();
+                        animating = false;
+                        skipAnimation = false;
+                        return;
+                    }
+                    
                     if (moveIndex < moves.length) {
                         const move = moves[moveIndex];
                         animateSingleMove(move, playerType, temp_positions, (hasHit, move, playerType, temp_positions) => {
@@ -822,14 +849,25 @@
         }
 
         function animateToPrev() {
-            if (current <= 0) return;
-            animating = true;
-            updateButtons();
+            if (animating) {
+                skipAnimation = true;
+                setTimeout(() => {
+                    if (current > 0) {
+                        current--;
+                        drawBoard();
+                        updateButtons();
+                        updateInfo();
+                    }
+                }, 50);
+                return;
+            }
+            
+            if (current === 0) return;
+            
             current--;
             drawBoard();
             updateButtons();
             updateInfo();
-            animating = false;
         }
 
         function updateButtons() {
