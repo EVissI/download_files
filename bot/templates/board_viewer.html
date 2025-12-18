@@ -722,6 +722,13 @@
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
             let moves = nextTurn.moves || [];
+            if (inverted) {
+                moves = moves.map(move => ({
+                    from: invertPoint(move.from),
+                    to: invertPoint(move.to),
+                    hit: move.hit
+                }));
+            }
             // Timeout to reset animating in case of error
             const timeoutId = setTimeout(() => {
                 animating = false;
