@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,7 +36,8 @@
             margin: 0 auto 20px;
         }
 
-        .top-row {
+
+        #top-row {
             margin: 0px 0;
             display: flex;
             justify-content: space-between;
@@ -44,7 +46,7 @@
             width: 100%;
         }
 
-        .controls {
+        #controls {
             display: flex;
             justify-content: center;
             align-items: center;
@@ -89,7 +91,9 @@
             padding: 5px;
         }
 
-        #prevBtn, #nextBtn, #invertBtn {
+        #prevBtn,
+        #nextBtn,
+        #invertBtn {
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
@@ -101,11 +105,15 @@
             border: none;
         }
 
-        #prevBtn:hover, #nextBtn:hover, #invertBtn:hover {
+        #prevBtn:hover,
+        #nextBtn:hover,
+        #invertBtn:hover {
             background-color: transparent;
         }
 
-        #prevBtn:disabled, #nextBtn:disabled, #invertBtn:disabled {
+        #prevBtn:disabled,
+        #nextBtn:disabled,
+        #invertBtn:disabled {
             opacity: 0.5;
             background-color: transparent;
         }
@@ -136,20 +144,6 @@
             text-align: center;
         }
 
-        #debug-info {
-            background-color: #2d2d2d;
-            color: #00ff00;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-            text-align: left;
-            max-height: 100px;
-            overflow-y: auto;
-            border: 1px solid #444;
-        }
-
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -164,7 +158,7 @@
                 height: 100%;
             }
 
-            .top-row {
+            #top-row {
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
@@ -172,7 +166,7 @@
                 width: 100%;
             }
 
-            .controls {
+            #controls {
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
@@ -183,6 +177,14 @@
             #turnLabel {
                 margin: 5px 0;
                 font-size: 16px;
+            }
+
+            #top-row {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                justify-content: space-between;
+                width: 100%;
             }
 
             button {
@@ -196,237 +198,219 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
+
         <div id="top-row">
             <select id="gameSelect">
                 <option value="0">Game 1</option>
             </select>
         </div>
+
         <canvas id="boardCanvas" width="800" height="800"></canvas>
+
         <div class="board-footer">
             <div class="move-info" id="moveInfo">Initial Position</div>
-        </div>
-        <div id="controls">
-            <button id="prevBtn" title="Previous Move">
-                <img src="static/left.png" alt="Previous" style="width: 100%; height: 100%;">
-            </button>
-            <div class="turn-display">
-                <span id="turnLabel">1</span>
+            <div id="controls">
+                <button id="prevBtn" title="Previous Move">
+                    <img src="/static/left.png" alt="Previous" style="width: 100%; height: 100%;">
+                </button>
+                <div class="turn-display">
+                    <span id="turnLabel">1</span>
+                </div>
+                <button id="nextBtn" title="Next Move">
+                    <img src="/static/right.png" alt="Next" style="width: 100%; height: 100%;">
+                </button>
+                <button id="invertBtn" title="Invert Board">
+                    <img src="/static/change_color.png" alt="Invert" style="width: 100%; height: 100%;">
+                </button>
             </div>
-            <button id="nextBtn" title="Next Move">
-                <img src="static/right.png" alt="Next" style="width: 100%; height: 100%;">
-            </button>
-            <button id="invertBtn" title="Invert Board">
-                <img src="static/changecolor.png" alt="Invert" style="width: 100%; height: 100%;">
-            </button>
         </div>
-        <div id="debug-info">Ждем загрузки...</div>
     </div>
 
     <script>
-        let data;
+
+
+        let data = [];
         let availableGames = [];
         let current = 0;
         let currentGameNum = 1;
-
-        function debugLog(msg) {
-            const debugDiv = document.getElementById('debug-info');
-            const timestamp = new Date().toLocaleTimeString();
-            debugDiv.innerHTML += `<div>[${timestamp}] ${msg}</div>`;
-            debugDiv.scrollTop = debugDiv.scrollHeight;
-            console.log(msg);
-        }
-
-        // === АНИМАЦИЯ ШАШЕК ===
         let animState = {
-            isAnimating: false,
-            animations: [],
-            startTime: 0,
-            duration: 500,
-            lastTurn: -1
+        isAnimating: false,
+        animations: [],
+        startTime: 0,
+        duration: 1000,
+        lastTurn: -1
         };
 
         function easeInOutQuad(t) {
-            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
         }
 
         function lerp(start, end, t) {
-            return start + (end - start) * t;
+        return start + (end - start) * t;
         }
 
         function animationFrame(currentTime) {
-            const elapsed = currentTime - animState.startTime;
-            const progress = Math.min(elapsed / animState.duration, 1);
-            const easedProgress = easeInOutQuad(progress);
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
-
-            let positions;
-            if (current === 0) {
-                if (inverted) {
-                    positions = {
-                        first: { 1: 2, 12: 5, 17: 3, 19: 5, bar: 0, off: 0 },
-                        second: { 6: 5, 8: 3, 13: 5, 24: 2, bar: 0, off: 0 }
-                    };
-                } else {
-                    positions = {
-                        first: { 24: 2, 6: 5, 8: 3, 13: 5, bar: 0, off: 0 },
-                        second: { 1: 2, 19: 5, 17: 3, 12: 5, bar: 0, off: 0 }
-                    };
-                }
+        const elapsed = currentTime - animState.startTime;
+        const progress = Math.min(elapsed / animState.duration, 1);
+        const easedProgress = easeInOutQuad(progress);
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+        
+        let positions;
+        if (current === 0) {
+            if (inverted) {
+            positions = {
+                first: { 1: 2, 12: 5, 17: 3, 19: 5, bar: 0, off: 0 },
+                second: { 6: 5, 8: 3, 13: 5, 24: 2, bar: 0, off: 0 }
+            };
             } else {
-                const prevTurn = current - 1;
-                positions = inverted ? data[prevTurn].invertedpositions : data[prevTurn].positions;
+            positions = {
+                first: { 24: 2, 6: 5, 8: 3, 13: 5, bar: 0, off: 0 },
+                second: { 1: 2, 19: 5, 17: 3, 12: 5, bar: 0, off: 0 }
+            };
             }
-
-            const game = availableGames.find(g => g.gamenumber === currentGameNum);
-            const currentPlayerType = data[current].turn === 'first' ? 'first' : 'second';
-
-            drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
-            drawCheckers('second', blackChecker, positions.second, currentPlayerType);
-
-            // Рисуем анимирующиеся шашки
-            for (let anim of animState.animations) {
-                const x = lerp(anim.x_start, anim.x_end, easedProgress);
-                const y = lerp(anim.y_start, anim.y_end, easedProgress);
-                ctx.drawImage(anim.img, x - 31.25, y - 31.25, 62.5, 62.5);
-            }
-
-            // Рисуем кубики
-            const item = data[current];
-            if (item.dice && item.dice.length === 2 && !['double', 'take', 'win'].includes(item.action)) {
-                const [d1, d2] = item.dice;
-                const diceY = 350;
-                let diceX1, diceX2, diceSet;
-
-                if (invertColors) {
-                    if (currentPlayerType === 'first') {
-                        diceX1 = 130;
-                        diceX2 = 220;
-                        diceSet = diceImages.white;
-                    } else {
-                        diceX1 = 530;
-                        diceX2 = 620;
-                        diceSet = diceImages.black;
-                    }
-                } else {
-                    if (currentPlayerType === 'first') {
-                        diceX1 = 530;
-                        diceX2 = 620;
-                        diceSet = diceImages.white;
-                    } else {
-                        diceX1 = 130;
-                        diceX2 = 220;
-                        diceSet = diceImages.black;
-                    }
-                }
-
-                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
-                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
-            }
-
-            if (progress < 1) {
-                requestAnimationFrame(animationFrame);
+        } else {
+            const prevTurn = current - 1;
+            positions = inverted ? data[prevTurn].invertedpositions : data[prevTurn].positions;
+        }
+        
+        const game = availableGames.find(g => g.gamenumber === currentGameNum);
+        const currentPlayerType = data[current].turn === 'first' ? 'first' : 'second';
+        
+        drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
+        drawCheckers('second', blackChecker, positions.second, currentPlayerType);
+        
+        for (let anim of animState.animations) {
+            const x = lerp(anim.x_start, anim.x_end, easedProgress);
+            const y = lerp(anim.y_start, anim.y_end, easedProgress);
+            ctx.drawImage(anim.img, x - 31.25, y - 31.25, 62.5, 62.5);
+        }
+        
+        const item = data[current];
+        if (item.dice && item.dice.length === 2 && !['double', 'take', 'win'].includes(item.action)) {
+            const [d1, d2] = item.dice;
+            const diceY = 350;
+            let diceX1, diceX2, diceSet;
+            
+            if (invertColors) {
+            if (currentPlayerType === 'first') {
+                diceX1 = 130;
+                diceX2 = 220;
+                diceSet = diceImages.white;
             } else {
-                animState.isAnimating = false;
-                animState.animations = [];
-                debugLog('✓ Анимация завершена');
-                drawBoard();
+                diceX1 = 530;
+                diceX2 = 620;
+                diceSet = diceImages.black;
             }
+            } else {
+            if (currentPlayerType === 'first') {
+                diceX1 = 530;
+                diceX2 = 620;
+                diceSet = diceImages.white;
+            } else {
+                diceX1 = 130;
+                diceX2 = 220;
+                diceSet = diceImages.black;
+            }
+            }
+            
+            if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+            if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+        }
+        
+        if (progress < 1) {
+            requestAnimationFrame(animationFrame);
+        } else {
+            animState.isAnimating = false;
+            animState.animations = [];
+            startMoveAnimation();
+        }
         }
 
         function createAnimationsForMove(newPositions, oldPositions, img, playerType) {
-            animState.animations = [];
-
-            for (let point = 1; point <= 24; point++) {
-                const pointStr = point.toString();
-                const oldCount = oldPositions[pointStr] || 0;
-                const newCount = newPositions[pointStr] || 0;
-
-                if (oldCount > newCount) {
-                    const movedCount = oldCount - newCount;
-
-                    for (let target = 1; target <= 24; target++) {
-                        const targetStr = target.toString();
-                        const oldTargetCount = oldPositions[targetStr] || 0;
-                        const newTargetCount = newPositions[targetStr] || 0;
-
-                        if (newTargetCount > oldTargetCount) {
-                            const arrivedCount = newTargetCount - oldTargetCount;
-
-                            if (arrivedCount === movedCount) {
-                                for (let i = 0; i < arrivedCount; i++) {
-                                    const startX = getXpoint(point);
-                                    const startY = getBaseYpoint(point);
-                                    const endX = getXpoint(target);
-                                    const endY = getBaseYpoint(target);
-
-                                    animState.animations.push({
-                                        x_start: startX,
-                                        y_start: startY,
-                                        x_end: endX,
-                                        y_end: endY,
-                                        img: img,
-                                        playerType: playerType
-                                    });
-                                }
-                                debugLog(`Анимация: точка ${point} → ${target} (${arrivedCount} шашек)`);
-                                break;
-                            }
-                        }
+        animState.animations = [];
+        
+        for (let point = 1; point <= 24; point++) {
+            const pointStr = point.toString();
+            const oldCount = oldPositions[pointStr] || 0;
+            const newCount = newPositions[pointStr] || 0;
+            
+            if (oldCount > newCount) {
+            const movedCount = oldCount - newCount;
+            
+            for (let target = 1; target <= 24; target++) {
+                const targetStr = target.toString();
+                const oldTargetCount = oldPositions[targetStr] || 0;
+                const newTargetCount = newPositions[targetStr] || 0;
+                
+                if (newTargetCount > oldTargetCount) {
+                const arrivedCount = newTargetCount - oldTargetCount;
+                
+                if (arrivedCount === movedCount) {
+                    for (let i = 0; i < arrivedCount; i++) {
+                    const startX = getXpoint(point);
+                    const startY = getBaseYpoint(point);
+                    const endX = getXpoint(target);
+                    const endY = getBaseYpoint(target);
+                    
+                    animState.animations.push({
+                        x_start: startX,
+                        y_start: startY,
+                        x_end: endX,
+                        y_end: endY,
+                        img: img,
+                        playerType: playerType
+                    });
                     }
+                    break;
+                }
                 }
             }
+            }
+        }
         }
 
         function startMoveAnimation() {
-            if (animState.lastTurn === current) {
-                debugLog('Ход уже анимирован, рисуем доску');
-                drawBoard();
-                return;
-            }
-            animState.lastTurn = current;
-
-            if (current === 0) {
-                debugLog('Первый ход, рисуем доску');
-                drawBoard();
-                return;
-            }
-
-            const prevTurn = current - 1;
-            const oldPositions = inverted ? 
-                data[prevTurn].invertedpositions : 
-                data[prevTurn].positions;
-
-            const newPositions = inverted ? 
-                data[current].invertedpositions : 
-                data[current].positions;
-
-            const currentPlayerType = data[current].turn === 'first' ? 'first' : 'second';
-
-            debugLog(`Начинаем анимацию хода ${current + 1}, игрок: ${currentPlayerType}`);
-
-            if (currentPlayerType === 'first') {
-                createAnimationsForMove(newPositions.first, oldPositions.first, whiteChecker, 'first');
-            } else {
-                createAnimationsForMove(newPositions.second, oldPositions.second, blackChecker, 'second');
-            }
-
-            debugLog(`Всего анимаций: ${animState.animations.length}`);
-
-            if (animState.animations.length > 0) {
-                animState.isAnimating = true;
-                animState.startTime = performance.now();
-                debugLog('▶ Запуск requestAnimationFrame');
-                requestAnimationFrame(animationFrame);
-            } else {
-                debugLog('⚠ Нет анимаций для этого хода');
-                drawBoard();
-            }
+        if (animState.lastTurn === current) {
+            startMoveAnimation()();
+            return;
         }
-
+        animState.lastTurn = current;
+        
+        if (current === 0) {
+            startMoveAnimation()();
+            return;
+        }
+        
+        const prevTurn = current - 1;
+        const oldPositions = inverted ? 
+            data[prevTurn].invertedpositions : 
+            data[prevTurn].positions;
+        
+        const newPositions = inverted ? 
+            data[current].invertedpositions : 
+            data[current].positions;
+        
+        const currentPlayerType = data[current].turn === 'first' ? 'first' : 'second';
+        
+        if (currentPlayerType === 'first') {
+            createAnimationsForMove(newPositions.first, oldPositions.first, whiteChecker, 'first');
+        } else {
+            createAnimationsForMove(newPositions.second, oldPositions.second, blackChecker, 'second');
+        }
+        
+        if (animState.animations.length > 0) {
+            animState.isAnimating = true;
+            animState.startTime = performance.now();
+            requestAnimationFrame(animationFrame);
+        } else {
+            startMoveAnimation();
+        }
+        }
         let inverted = false;
         let invertColors = false;
         let dataLoaded = false;
@@ -436,39 +420,37 @@
 
         // Load images
         const boardImg = new Image();
-        boardImg.src = 'static/board.png';
-
+        boardImg.src = '/static/board.png';
         const whiteChecker = new Image();
-        whiteChecker.src = 'static/white_checker.png';
-
+        whiteChecker.src = '/static/white_checker.png';
         const blackChecker = new Image();
-        blackChecker.src = 'static/black_checker.png';
+        blackChecker.src = '/static/black_checker.png';
 
         const Dice1w = new Image();
-        Dice1w.src = 'static/1w.png?' + Date.now();
+        Dice1w.src = '/static/1w.png?t=' + Date.now();
         const Dice2w = new Image();
-        Dice2w.src = 'static/2w.png?' + Date.now();
+        Dice2w.src = '/static/2w.png?t=' + Date.now();
         const Dice3w = new Image();
-        Dice3w.src = 'static/3w.png?' + Date.now();
+        Dice3w.src = '/static/3w.png?t=' + Date.now();
         const Dice4w = new Image();
-        Dice4w.src = 'static/4w.png?' + Date.now();
+        Dice4w.src = '/static/4w.png?t=' + Date.now();
         const Dice5w = new Image();
-        Dice5w.src = 'static/5w.png?' + Date.now();
+        Dice5w.src = '/static/5w.png?t=' + Date.now();
         const Dice6w = new Image();
-        Dice6w.src = 'static/6w.png?' + Date.now();
+        Dice6w.src = '/static/6w.png?t=' + Date.now();
 
         const Dice1b = new Image();
-        Dice1b.src = 'static/1b.png?' + Date.now();
+        Dice1b.src = '/static/1b.png?t=' + Date.now();
         const Dice2b = new Image();
-        Dice2b.src = 'static/2b.png?' + Date.now();
+        Dice2b.src = '/static/2b.png?t=' + Date.now();
         const Dice3b = new Image();
-        Dice3b.src = 'static/3b.png?' + Date.now();
+        Dice3b.src = '/static/3b.png?t=' + Date.now();
         const Dice4b = new Image();
-        Dice4b.src = 'static/4b.png?' + Date.now();
+        Dice4b.src = '/static/4b.png?t=' + Date.now();
         const Dice5b = new Image();
-        Dice5b.src = 'static/5b.png?' + Date.now();
+        Dice5b.src = '/static/5b.png?t=' + Date.now();
         const Dice6b = new Image();
-        Dice6b.src = 'static/6b.png?' + Date.now();
+        Dice6b.src = '/static/6b.png?t=' + Date.now();
 
         const diceImages = {
             white: {
@@ -489,54 +471,49 @@
             }
         };
 
+        // Get game_id from URL
         const urlParams = new URLSearchParams(window.location.search);
         const game_id = urlParams.get('game_id');
 
         if (!game_id) {
-            console.error('No gameid provided in URL');
-            alert('No gameid provided in URL');
+            console.error('No game_id provided in URL');
+            alert('No game_id provided in URL');
         }
 
-        fetch(`api/games/${game_id}`)
+        // Load data
+        fetch(`/api/games/${game_id}`)
             .then(response => response.json())
             .then(jsonData => {
                 let gamesArray;
-
                 if (Array.isArray(jsonData)) {
                     gamesArray = jsonData;
                 } else if (jsonData.games && Array.isArray(jsonData.games)) {
                     gamesArray = jsonData.games;
                 } else if (jsonData.detail) {
-                    alert(`Error: ${jsonData.detail}`);
+                    alert('Error: ' + jsonData.detail);
                     return;
                 } else {
                     console.error('Unexpected data format:', jsonData);
                     return;
                 }
-
-                data = gamesArray[0].turns;
-
-                // Default to first game
+                data = gamesArray[0].turns; // Default to first game
                 availableGames = gamesArray.map((game, index) => ({
-                    gamenumber: index + 1,
+                    game_number: index + 1,
                     turns: game.turns,
-                    firstplayer: game.first.name,
-                    secondplayer: game.second.name,
-                    firstscore: game.first.score,
-                    secondscore: game.second.score
+                    first_player: game.first.name,
+                    second_player: game.second.name,
+                    first_score: game.first.score,
+                    second_score: game.second.score
                 }));
-
                 dataLoaded = true;
-                debugLog(`✓ Данные загружены, всего игр: ${gamesArray.length}`);
                 updateGameSelect();
                 updateButtons();
                 startMoveAnimation();
                 updateInfo();
             })
             .catch(error => {
-                debugLog(`✗ Ошибка загрузки: ${error.message}`);
                 console.error('Error loading games data:', error);
-                alert(`Error loading games data: ${error.message}`);
+                alert('Error loading games data: ' + error.message);
             });
 
         function updateGameSelect() {
@@ -544,51 +521,51 @@
             gameSelect.innerHTML = '';
             availableGames.forEach(game => {
                 const option = document.createElement('option');
-                option.value = game.gamenumber - 1;
-                option.textContent = `Game ${game.gamenumber}`;
+                option.value = game.game_number - 1;
+                option.textContent = `Game ${game.game_number}`;
                 gameSelect.appendChild(option);
             });
         }
 
-        function drawBoard() {
+        function startMoveAnimation() {
             if (!dataLoaded) return;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw board
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
 
             let positions;
             if (current === 0) {
                 if (inverted) {
                     positions = {
-                        first: { 1: 2, 12: 5, 17: 3, 19: 5, bar: 0, off: 0 },
-                        second: { 6: 5, 8: 3, 13: 5, 24: 2, bar: 0, off: 0 }
+                        first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                        second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
                     };
                 } else {
                     positions = {
-                        first: { 24: 2, 6: 5, 8: 3, 13: 5, bar: 0, off: 0 },
-                        second: { 1: 2, 19: 5, 17: 3, 12: 5, bar: 0, off: 0 }
+                        first: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
+                        second: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
                     };
                 }
             } else {
                 const prevTurn = current - 1;
-                positions = inverted ? data[prevTurn].invertedpositions : data[prevTurn].positions;
+                positions = inverted ? data[prevTurn].inverted_positions : data[prevTurn].positions;
             }
 
             invertColors = inverted;
-
-            const game = availableGames.find(g => g.gamenumber === currentGameNum);
+            const game = availableGames.find(g => g.game_number === currentGameNum);
             const currentPlayerType = data[current].turn === 'first' ? 'first' : 'second';
-            const currentPlayerName = currentPlayerType ? (currentPlayerType === 'first' ? game.firstplayer : game.secondplayer) : null;
-
+            const currentPlayerName = currentPlayerType ? (currentPlayerType === 'first' ? game.first_player : game.second_player) : null;
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
 
             const item = data[current];
-            if (item.dice && item.dice.length === 2 && !['double', 'take', 'win'].includes(item.action)) {
+            if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
                 const [d1, d2] = item.dice;
                 const diceY = 350;
-                let diceX1, diceX2, diceSet;
-
+                let diceX1, diceX2;
+                let diceSet;
                 if (invertColors) {
                     if (currentPlayerType === 'first') {
                         diceX1 = 130;
@@ -610,7 +587,6 @@
                         diceSet = diceImages.black;
                     }
                 }
-
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
@@ -624,11 +600,11 @@
 
             if (player === currentPlayer) {
                 for (let point = 1; point <= 24; point++) {
-                    const x = getXpoint(point);
-                    let y = getBaseYpoint(point);
-                    const dy = getDypoint(point);
-                    let displayPoint = point;
+                    const x = getX(point);
+                    let y = getBaseY(point);
+                    const dy = getDy(point);
 
+                    let displayPoint = point;
                     if (invertColors) {
                         if (player === 'first') {
                             displayPoint = 25 - point;
@@ -642,92 +618,84 @@
                             displayPoint = point;
                         }
                     }
-
                     let numberY;
-                    if (point <= 12) {
+                    if (point > 12) {
                         numberY = y - 50;
                     } else {
                         numberY = y + 60;
                     }
-
                     ctx.fillText(displayPoint, x, numberY);
                 }
             }
 
             for (let pointStr in positions) {
                 if (pointStr === 'bar' || pointStr === 'off') continue;
-
                 const point = parseInt(pointStr);
                 let count = positions[pointStr];
-                const x = getXpoint(point);
-                let y = getBaseYpoint(point);
-                const dy = getDypoint(point);
+                const x = getX(point);
+                let y = getBaseY(point);
+                const dy = getDy(point);
 
                 for (let i = 0; i < Math.min(count, 6); i++) {
-                    ctx.drawImage(img, x - 31.25, y + i * dy - 31.25, 62.5, 62.5);
+                    ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
 
                 if (count > 6) {
-                    const lastCheckerY = y + 5 * dy;
-                    ctx.fillText(count, x + 40, lastCheckerY + 5);
+                    const lastCheckerY = y + (5 * dy);
+                    ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
                 }
             }
 
             const barX = 400;
-            const barY = player === 'second' ? 220 : 520;
-
+            const barY = (player === 'second') ? 220 : 520;
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
-                const dy = player === 'second' ? 55 : -55;
-
+                const dy = (player === 'second') ? 55 : -55;
                 for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
-                    ctx.drawImage(img, barX - 31.25, y + i * dy - 31.25, 62.5, 62.5);
+                    ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
-
                 if (Math.abs(positions.bar) > 6) {
-                    const lastCheckerY = y + 5 * dy;
-                    ctx.fillText(Math.abs(positions.bar), barX + 30, lastCheckerY + 5);
+                    const lastCheckerY = y + (5 * dy);
+                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
                 }
             }
 
             let offX = 783;
             let offY;
-
             if (invertColors) {
-                offY = player === 'second' ? 440 : 340;
+                offY = (player === 'second') ? 440 : 340;
             } else {
-                offY = player === 'second' ? 340 : 440;
+                offY = (player === 'second') ? 340 : 440;
             }
-
             if (positions.off && positions.off !== 0) {
                 const originalFont = ctx.font;
                 ctx.font = 'bold 32px Arial';
-                ctx.fillText(positions.off, offX, offY);
+                ctx.fillText(`${positions.off}`, offX, offY);
                 ctx.font = originalFont;
             }
         }
 
-        function getXpoint(point) {
+        function getX(point) {
             if (point >= 13 && point <= 18) {
-                const baseX = 50;
-                return baseX + (point - 13) * 60;
+                const baseX = 50 + (point - 13) * 60;
+                return baseX - (point === 13 ? 8 : 0);
             } else if (point >= 19 && point <= 24) {
                 return 450 + (point - 19) * 60;
             } else if (point >= 7 && point <= 12) {
                 const baseX = 50 + (12 - point) * 60;
-                return baseX - (point <= 12 ? 4 : 0);
+                return baseX - (point === 12 ? 4 : 0);
             } else if (point >= 1 && point <= 6) {
                 return 450 + (6 - point) * 60;
             }
             return 0;
         }
 
-        function getBaseYpoint(point) {
-            return point <= 12 ? 70 : 690;
+        function getBaseY(point) {
+            return (point > 12) ? 70 : 690;
         }
 
-        function getDypoint(point) {
-            return point <= 12 ? 55 : -55;
+        function getDy(point) {
+            return (point > 12) ? 55 : -55;
         }
 
         function updateButtons() {
@@ -751,16 +719,14 @@
 
             const moveInfo = document.getElementById('moveInfo');
             const turn = data[current];
-            const game = availableGames.find(g => g.gamenumber === currentGameNum);
-            const playerName = turn.turn === 'first' ? game.firstplayer : game.secondplayer;
-
-            const prefix = playerName ? playerName : '';
-
+            const game = availableGames.find(g => g.game_number === currentGameNum);
+            const playerName = turn.turn === 'first' ? game.first_player : game.second_player;
+            const prefix = playerName ? `${playerName}: ` : '';
             if (turn.moves && turn.moves.length > 0) {
                 const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
-                moveInfo.textContent = prefix + ': ' + movesStr;
+                moveInfo.textContent = prefix + movesStr;
             } else if (turn.action) {
-                moveInfo.textContent = prefix + ': ' + turn.action;
+                moveInfo.textContent = prefix + turn.action;
             } else {
                 moveInfo.textContent = 'Initial Position';
             }
@@ -772,7 +738,6 @@
         document.getElementById('prevBtn').addEventListener('click', () => {
             if (current > 0) {
                 current--;
-                debugLog(`← Предыдущий ход (${current + 1})`);
                 startMoveAnimation();
                 updateButtons();
                 updateInfo();
@@ -782,7 +747,6 @@
         document.getElementById('nextBtn').addEventListener('click', () => {
             if (current < data.length - 1) {
                 current++;
-                debugLog(`→ Следующий ход (${current + 1})`);
                 startMoveAnimation();
                 updateButtons();
                 updateInfo();
@@ -791,7 +755,6 @@
 
         document.getElementById('invertBtn').addEventListener('click', () => {
             inverted = !inverted;
-            debugLog(`🔄 Инверсия доски (${inverted ? 'ON' : 'OFF'})`);
             startMoveAnimation();
         });
 
@@ -801,7 +764,6 @@
             data = availableGames[gameIndex].turns;
             current = 0;
             inverted = false;
-            debugLog(`📋 Игра ${currentGameNum} выбрана`);
             startMoveAnimation();
             updateButtons();
             updateInfo();
@@ -814,7 +776,6 @@
         function imageLoaded() {
             imagesLoaded++;
             if (imagesLoaded === totalImages && dataLoaded) {
-                debugLog(`✓ Все ${totalImages} изображений загружены`);
                 startMoveAnimation();
             }
         }
@@ -834,6 +795,8 @@
         Dice4b.onload = imageLoaded;
         Dice5b.onload = imageLoaded;
         Dice6b.onload = imageLoaded;
+
     </script>
 </body>
+
 </html>
