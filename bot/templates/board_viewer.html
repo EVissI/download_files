@@ -352,6 +352,20 @@
             });
         }
 
+        function getInitialPositions(inverted) {
+            if (inverted) {
+                return {
+                    first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                    second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
+                };
+            } else {
+                return {
+                    first: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
+                    second: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
+                };
+            }
+        }
+
         function drawBoard() {
             if (!dataLoaded) return;
 
@@ -362,17 +376,7 @@
 
             let positions;
             if (current === 0) {
-                if (inverted) {
-                    positions = {
-                        first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
-                        second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
-                    };
-                } else {
-                    positions = {
-                        first: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
-                        second: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
-                    };
-                }
+                positions = getInitialPositions(inverted);
             } else {
                 const prevTurn = current - 1;
                 positions = inverted ? data[prevTurn].inverted_positions : data[prevTurn].positions;
@@ -380,13 +384,13 @@
 
             invertColors = inverted;
             const game = availableGames.find(g => g.game_number === currentGameNum);
-            const currentPlayerType = data[current].turn === 'first' ? 'first' : 'second';
+            const currentPlayerType = data[current] ? data[current].turn : null;
             const currentPlayerName = currentPlayerType ? (currentPlayerType === 'first' ? game.first_player : game.second_player) : null;
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
 
             const item = data[current];
-            if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
+            if (item && item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
                 const [d1, d2] = item.dice;
                 const diceY = 350;
                 let diceX1, diceX2;
@@ -473,14 +477,14 @@
 
             const barX = 400;
             const barY = (player === 'second') ? 220 : 520;
+            const barDy = (player === 'second') ? 55 : -55;
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
-                const dy = (player === 'second') ? 55 : -55;
                 for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
-                    ctx.drawImage(img, barX - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
+                    ctx.drawImage(img, barX - 31.25, y + (i * barDy) - 31.25, 62.5, 62.5);
                 }
                 if (Math.abs(positions.bar) > 6) {
-                    const lastCheckerY = y + (5 * dy);
+                    const lastCheckerY = y + (5 * barDy);
                     ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
                 }
             }
@@ -523,111 +527,189 @@
             return (point > 12) ? 55 : -55;
         }
 
-        function drawBoardForAnimation() {
+        function drawBoardForAnimation(positions, currentPlayerType) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
 
-            let positions;
-            if (current === 0) {
-                if (inverted) {
-                    positions = {
-                        first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
-                        second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
-                    };
-                } else {
-                    positions = {
-                        first: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
-                        second: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
-                    };
-                }
-            } else {
-                const prevTurn = current - 1;
-                positions = inverted ? data[prevTurn].inverted_positions : data[prevTurn].positions;
-            }
-
             invertColors = inverted;
-            const game = availableGames.find(g => g.game_number === currentGameNum);
-            const currentPlayerType = current === 0 ? null : (data[current].turn === 'first' ? 'first' : 'second');
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
         }
 
-        function animateSingleMove(move, playerType, callback) {
+        function animateSingleMove(move, playerType, temp_positions, callback) {
             const img = playerType === 'first' ? whiteChecker : blackChecker;
-            const fromX = getX(move.from);
-            const fromY = getBaseY(move.from) + (getDy(move.from) * 0); // верхняя шашка
-            const toX = getX(move.to);
-            const toY = getBaseY(move.to) + (getDy(move.to) * 0);
+            const player_pos = temp_positions[playerType];
+            const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
+
+            // Handle from
+            let fromX, fromY;
+            const fromStr = move.from.toString();
+            if (fromStr === 'bar') {
+                fromX = 400;
+                const barY = (playerType === 'second') ? 220 : 520;
+                const barDy = (playerType === 'second') ? 55 : -55;
+                const barCount = player_pos['bar'] || 0;
+                fromY = barY + (barCount - 1) * barDy;
+            } else {
+                const fromPoint = parseInt(fromStr);
+                fromX = getX(fromPoint);
+                const fromBaseY = getBaseY(fromPoint);
+                const fromDy = getDy(fromPoint);
+                const fromCount = player_pos[fromStr] || 0;
+                fromY = fromBaseY + (fromCount - 1) * fromDy;
+            }
+
+            // Handle to
+            let toX, toY;
+            const toStr = move.to.toString();
+            if (toStr === 'off') {
+                toX = 783;
+                toY = invertColors ? (playerType === 'second' ? 440 : 340) : (playerType === 'second' ? 340 : 440);
+                // No stacking for off, fixed position
+            } else {
+                const toPoint = parseInt(toStr);
+                toX = getX(toPoint);
+                const toBaseY = getBaseY(toPoint);
+                const toDy = getDy(toPoint);
+                let toCount = player_pos[toStr] || 0;
+                if (move.hit) {
+                    toCount = 0; // After hit, place on empty point
+                }
+                toY = toBaseY + toCount * toDy;
+            }
 
             let progress = 0;
-            const duration = 800;
+            const duration = 800; // Duration for smooth animation
             const startTime = Date.now();
+
+            const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
 
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 progress = Math.min(elapsed / duration, 1);
-                const currentX = fromX + (toX - fromX) * progress;
-                const currentY = fromY + (toY - fromY) * progress;
+                // Ease-in-out for smoother movement
+                const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const currentX = fromX + (toX - fromX) * easedProgress;
+                const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation();
+                drawBoardForAnimation(temp_positions, nextPlayerType);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    if (move.hit) {
-                        animateHit(move.to, playerType === 'first' ? 'second' : 'first', callback);
-                    } else {
-                        callback();
-                    }
+                    callback(move.hit, move, playerType, temp_positions);
                 }
             };
             animate();
         }
 
-        function animateHit(hitPoint, hitPlayerType, callback) {
+        function animateHit(move, playerType, temp_positions, finalCallback) {
+            const hitPlayerType = playerType === 'first' ? 'second' : 'first';
             const img = hitPlayerType === 'first' ? whiteChecker : blackChecker;
+            const opp_pos = temp_positions[hitPlayerType];
+
+            const toStr = move.to.toString();
+            const hitPoint = parseInt(toStr);
             const fromX = getX(hitPoint);
-            const fromY = getBaseY(hitPoint) + (getDy(hitPoint) * 0);
+            const fromBaseY = getBaseY(hitPoint);
+            const fromDy = getDy(hitPoint);
+            const hitCount = opp_pos[toStr] || 1; // Usually 1 for hit
+            let fromY = fromBaseY + (hitCount - 1) * fromDy;
+
             const barX = 400;
-            const barY = hitPlayerType === 'second' ? 220 : 520;
+            const barY = (hitPlayerType === 'second') ? 220 : 520;
+            const barDy = (hitPlayerType === 'second') ? 55 : -55;
+            const barCount = opp_pos['bar'] || 0;
+            const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
             let progress = 0;
             const duration = 600;
             const startTime = Date.now();
 
+            const nextPlayerType = data[current + 1] ? data[current + 1].turn : null;
+
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 progress = Math.min(elapsed / duration, 1);
-                const currentX = fromX + (barX - fromX) * progress;
-                const currentY = fromY + (barY - fromY) * progress;
+                // Ease-in-out for smooth movement
+                const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const currentX = fromX + (barX - fromX) * easedProgress;
+                const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation();
+                drawBoardForAnimation(temp_positions, nextPlayerType);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    callback();
+                    finalCallback();
                 }
             };
             animate();
+        }
+
+        function updateTempPositionsAfterMove(move, playerType, temp_positions) {
+            const player_pos = temp_positions[playerType];
+            const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
+            const fromStr = move.from.toString();
+            const toStr = move.to.toString();
+
+            if (move.hit) {
+                opp_pos[toStr] = (opp_pos[toStr] || 1) - 1;
+                if (opp_pos[toStr] === 0) delete opp_pos[toStr];
+                opp_pos['bar'] = (opp_pos['bar'] || 0) + 1;
+            }
+
+            if (fromStr === 'bar') {
+                player_pos['bar'] = (player_pos['bar'] || 1) - 1;
+                if (player_pos['bar'] === 0) delete player_pos['bar'];
+            } else {
+                player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
+                if (player_pos[fromStr] === 0) delete player_pos[fromStr];
+            }
+
+            if (toStr === 'off') {
+                player_pos['off'] = (player_pos['off'] || 0) + 1;
+            } else {
+                player_pos[toStr] = (player_pos[toStr] || 0) + 1;
+            }
         }
 
         function animateToNext() {
             if (current >= data.length - 1 || animating) return;
             animating = true;
             updateButtons();
+
             const nextTurn = data[current + 1];
             const playerType = nextTurn.turn === 'first' ? 'first' : 'second';
+
+            let prev_positions;
+            if (current === 0) {
+                prev_positions = getInitialPositions(inverted);
+            } else {
+                prev_positions = inverted ? data[current - 1].inverted_positions : data[current - 1].positions;
+            }
+
+            const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
             if (nextTurn.moves && nextTurn.moves.length > 0) {
                 let moveIndex = 0;
                 const animateMoves = () => {
                     if (moveIndex < nextTurn.moves.length) {
-                        animateSingleMove(nextTurn.moves[moveIndex], playerType, () => {
-                            moveIndex++;
-                            setTimeout(animateMoves, 300);
+                        const move = nextTurn.moves[moveIndex];
+                        animateSingleMove(move, playerType, temp_positions, (hasHit, move, playerType, temp_positions) => {
+                            if (hasHit) {
+                                animateHit(move, playerType, temp_positions, () => {
+                                    updateTempPositionsAfterMove(move, playerType, temp_positions);
+                                    moveIndex++;
+                                    setTimeout(animateMoves, 300);
+                                });
+                            } else {
+                                updateTempPositionsAfterMove(move, playerType, temp_positions);
+                                moveIndex++;
+                                setTimeout(animateMoves, 300);
+                            }
                         });
                     } else {
                         current++;
@@ -651,7 +733,6 @@
             if (current <= 0 || animating) return;
             animating = true;
             updateButtons();
-            // Для prev, просто мгновенно, или можно анимировать в обратном порядке
             current--;
             drawBoard();
             updateButtons();
@@ -681,18 +762,16 @@
             const moveInfo = document.getElementById('moveInfo');
             const turn = data[current];
             const game = availableGames.find(g => g.game_number === currentGameNum);
-            const playerName = turn.turn === 'first' ? game.first_player : game.second_player;
+            const playerName = turn && turn.turn ? (turn.turn === 'first' ? game.first_player : game.second_player) : '';
             const prefix = playerName ? `${playerName}: ` : '';
-            if (turn.moves && turn.moves.length > 0) {
+            if (turn && turn.moves && turn.moves.length > 0) {
                 const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
                 moveInfo.textContent = prefix + movesStr;
-            } else if (turn.action) {
+            } else if (turn && turn.action) {
                 moveInfo.textContent = prefix + turn.action;
             } else {
                 moveInfo.textContent = 'Initial Position';
             }
-
-            const playersInfo = document.getElementById('players-info');
         }
 
         // Event listeners
