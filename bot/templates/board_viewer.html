@@ -439,10 +439,10 @@
         boardImg.src = 'static/board.png';
 
         const whiteChecker = new Image();
-        whiteChecker.src = 'static/whitechecker.png';
+        whiteChecker.src = 'static/white_checker.png';
 
         const blackChecker = new Image();
-        blackChecker.src = 'static/blackchecker.png';
+        blackChecker.src = 'static/black_checker.png';
 
         const Dice1w = new Image();
         Dice1w.src = 'static/1w.png?' + Date.now();
@@ -489,7 +489,6 @@
             }
         };
 
-        // Get gameid from URL
         const urlParams = new URLSearchParams(window.location.search);
         const game_id = urlParams.get('game_id');
 
@@ -498,7 +497,6 @@
             alert('No gameid provided in URL');
         }
 
-        // Load data
         fetch(`api/games/${game_id}`)
             .then(response => response.json())
             .then(jsonData => {
