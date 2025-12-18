@@ -719,7 +719,7 @@
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
             let moves = nextTurn.moves || [];
-            if (inverted && playerType === 'first') {
+            if (inverted && playerType === 'second') {
                 moves = moves.map(m => ({
                     ...m,
                     from: invertPoint(m.from),
