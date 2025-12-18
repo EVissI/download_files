@@ -406,9 +406,11 @@
             }
 
             invertColors = inverted;
-            const currentPlayer = current === 0 ? null : (current % 2 === 1 ? 'first' : 'second');
-            drawCheckers('first', whiteChecker, positions.first, currentPlayer);
-            drawCheckers('second', blackChecker, positions.second, currentPlayer);
+            const game = availableGames.find(g => g.game_number === currentGameNum);
+            const currentPlayerType = current === 0 ? null : (current % 2 === 1 ? 'first' : 'second');
+            const currentPlayerName = currentPlayerType ? (currentPlayerType === 'first' ? game.first_player : game.second_player) : null;
+            drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
+            drawCheckers('second', blackChecker, positions.second, currentPlayerType);
 
             const item = data[current];
             console.log('Drawing dice for current:', current, 'currentPlayer:', currentPlayer, 'invertColors:', invertColors, 'item.player:', item.player, 'item.dice:', item.dice, 'item.action:', item.action);
@@ -577,17 +579,19 @@
 
             const moveInfo = document.getElementById('moveInfo');
             const turn = data[current];
+            const game = availableGames.find(g => g.game_number === currentGameNum);
+            const playerName = current === 0 ? '' : (current % 2 === 1 ? game.first_player : game.second_player);
+            const prefix = playerName ? `${playerName}: ` : '';
             if (turn.moves && turn.moves.length > 0) {
                 const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
-                moveInfo.textContent = `${turn.turn}: ${movesStr}`;
+                moveInfo.textContent = prefix + movesStr;
             } else if (turn.action) {
-                moveInfo.textContent = `${turn.turn}: ${turn.action}`;
+                moveInfo.textContent = prefix + turn.action;
             } else {
                 moveInfo.textContent = 'Initial Position';
             }
 
             const playersInfo = document.getElementById('players-info');
-            const game = availableGames.find(g => g.game_number === currentGameNum);
             if (game) {
                 playersInfo.innerHTML = `
                     <div>White: ${game.first_player} (${game.first_score})</div>
