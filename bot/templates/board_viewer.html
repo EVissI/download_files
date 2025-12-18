@@ -36,15 +36,6 @@
             margin: 0 auto 20px;
         }
 
-        .game-info {
-            background-color: #2d2d2d;
-            border-radius: 8px;
-            padding: 10px;
-            margin: 0;
-            border: 1px solid #444;
-            width: 30%;
-            display: block;
-        }
 
         #top-row {
             margin: 0px 0;
@@ -153,13 +144,6 @@
             text-align: center;
         }
 
-        .pips-below-board {
-            position: absolute;
-            right: 0;
-            top: 0;
-            margin: 0;
-        }
-
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -167,12 +151,6 @@
 
             h1 {
                 font-size: 2rem;
-            }
-
-            .pips-above-board,
-            .pips-below-board {
-                font-size: 16px;
-                padding: 8px 16px;
             }
 
             canvas {
@@ -234,10 +212,6 @@
 
         <div class="board-footer">
             <div class="move-info" id="moveInfo">Initial Position</div>
-            <div class="pips-below-board">
-                <div class="game-info" id="players-info">
-                </div>
-            </div>
             <div id="controls">
                 <button id="prevBtn" title="Previous Move">
                     <img src="/static/left.png" alt="Previous" style="width: 100%; height: 100%;">
