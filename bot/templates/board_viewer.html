@@ -541,18 +541,9 @@
             const player_pos = temp_positions[playerType];
             const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
 
-            // Temporarily remove checker from from position
-            const fromStr = move.from.toString();
-            if (fromStr === 'bar') {
-                player_pos['bar'] = (player_pos['bar'] || 1) - 1;
-                if (player_pos['bar'] === 0) delete player_pos['bar'];
-            } else {
-                player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
-                if (player_pos[fromStr] === 0) delete player_pos[fromStr];
-            }
-
             // Handle from
             let fromX, fromY;
+            const fromStr = move.from.toString();
             if (fromStr === 'bar') {
                 fromX = 400;
                 const barY = (playerType === 'second') ? 220 : 520;
@@ -566,6 +557,15 @@
                 const fromDy = getDy(fromPoint);
                 const fromCount = player_pos[fromStr] || 0;
                 fromY = fromBaseY + (fromCount - 1) * fromDy;
+            }
+
+            // Temporarily remove checker from from position
+            if (fromStr === 'bar') {
+                player_pos['bar'] = (player_pos['bar'] || 1) - 1;
+                if (player_pos['bar'] === 0) delete player_pos['bar'];
+            } else {
+                player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
+                if (player_pos[fromStr] === 0) delete player_pos[fromStr];
             }
 
             // Handle to
