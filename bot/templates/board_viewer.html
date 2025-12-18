@@ -720,14 +720,21 @@
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
             let moves = nextTurn.moves || [];
-            if (inverted) {
-                moves = moves.map(move => ({
-                    from: invertPoint(move.from),
-                    to: invertPoint(move.to),
-                    hit: move.hit
-                }));
-            }
-            // Timeout to reset animating in case of error
+            const toScreenPoint = (p) => {
+            if (p === 'bar' || p === 'off') return p;
+
+            const n = Number(p);
+            if (!Number.isFinite(n)) return p;
+
+            const boardP = (playerType === 'second') ? (25 - n) : n;
+
+            return inverted ? (25 - boardP) : boardP;
+            };
+            moves = moves.map(m => ({
+                ...m,
+                from: toScreenPoint(m.from),
+                to: toScreenPoint(m.to),
+            }));
             const timeoutId = setTimeout(() => {
                 animating = false;
                 updateButtons();
