@@ -490,13 +490,10 @@
             }
 
             let offX = 783;
-            let offY;
-            if (invertColors) {
-                offY = (player === 'second') ? 440 : 340;
-            } else {
-                offY = (player === 'second') ? 340 : 440;
-            }
-            if (positions.off && positions.off !== 0) {
+            let offY = (player === 'second')
+                ? (invertColors ? 340 : 440)
+                : (invertColors ? 440 : 340);
+                        if (positions.off && positions.off !== 0) {
                 const originalFont = ctx.font;
                 ctx.font = 'bold 32px Arial';
                 ctx.fillText(`${positions.off}`, offX, offY);
@@ -710,10 +707,7 @@
             updateButtons();
 
             const nextTurn = data[current];
-            let playerType = nextTurn.turn === 'first' ? 'first' : 'second';
-            if (inverted) {
-                playerType = playerType === 'first' ? 'second' : 'first';
-            }
+            const playerType = nextTurn.turn === 'first' ? 'first' : 'second';
 
             let prev_positions;
             if (current === 0) {
@@ -722,12 +716,16 @@
                 prev_positions = inverted ? data[current - 1].inverted_positions : data[current - 1].positions;
             }
 
-            let temp_positions = JSON.parse(JSON.stringify(prev_positions));
-            if (playerType === 'second') {
-                temp_positions = { first: temp_positions.second, second: temp_positions.first };
-            }
+            const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
             let moves = nextTurn.moves || [];
+            if (inverted) {
+                moves = moves.map(move => ({
+                    from: invertPoint(move.from),
+                    to: invertPoint(move.to),
+                    hit: move.hit
+                }));
+            }
             // Timeout to reset animating in case of error
             const timeoutId = setTimeout(() => {
                 animating = false;
