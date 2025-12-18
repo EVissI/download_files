@@ -434,11 +434,19 @@
                     const dy = getDy(point);
 
                     let displayPoint = point;
-                    // Инвертировать отображение номеров при анимации без инвертирования
-                    if (!inverted) {
-                        displayPoint = 25 - point;
+                    if (invertColors) {
+                        if (player === 'first') {
+                            displayPoint = point;
+                        } else if (player === 'second') {
+                            displayPoint = 25 - point;
+                        }
+                    } else {
+                        if (player === 'second') {
+                            displayPoint = point;
+                        } else if (player === 'first') {
+                            displayPoint = 25 - point;
+                        }
                     }
-
                     let numberY;
                     if (point > 12) {
                         numberY = y - 50;
@@ -717,8 +725,8 @@
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
             let moves = nextTurn.moves || [];
-            // Применять инвертацию для обоих игроков при инвертированном виде
-            if (inverted) {
+            // Применять инвертацию только для первого игрока
+            if (inverted && playerType === 'first') {
                 moves = moves.map(m => ({
                     ...m,
                     from: invertPoint(m.from),
