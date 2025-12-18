@@ -278,6 +278,51 @@
         const blackChecker = new Image();
         blackChecker.src = '/static/black_checker.png';
 
+        const Dice1w = new Image();
+        Dice1w.src = '/static/1w.png?t=' + Date.now();
+        const Dice2w = new Image();
+        Dice2w.src = '/static/2w.png?t=' + Date.now();
+        const Dice3w = new Image();
+        Dice3w.src = '/static/3w.png?t=' + Date.now();
+        const Dice4w = new Image();
+        Dice4w.src = '/static/4w.png?t=' + Date.now();
+        const Dice5w = new Image();
+        Dice5w.src = '/static/5w.png?t=' + Date.now();
+        const Dice6w = new Image();
+        Dice6w.src = '/static/6w.png?t=' + Date.now();
+
+        const Dice1b = new Image();
+        Dice1b.src = '/static/1b.png?t=' + Date.now();
+        const Dice2b = new Image();
+        Dice2b.src = '/static/2b.png?t=' + Date.now();
+        const Dice3b = new Image();
+        Dice3b.src = '/static/3b.png?t=' + Date.now();
+        const Dice4b = new Image();
+        Dice4b.src = '/static/4b.png?t=' + Date.now();
+        const Dice5b = new Image();
+        Dice5b.src = '/static/5b.png?t=' + Date.now();
+        const Dice6b = new Image();
+        Dice6b.src = '/static/6b.png?t=' + Date.now();
+
+        const diceImages = {
+            white: {
+                1: Dice1w,
+                2: Dice2w,
+                3: Dice3w,
+                4: Dice4w,
+                5: Dice5w,
+                6: Dice6w
+            },
+            black: {
+                1: Dice1b,
+                2: Dice2b,
+                3: Dice3b,
+                4: Dice4b,
+                5: Dice5b,
+                6: Dice6b
+            }
+        };
+
         // Get game_id from URL
         const urlParams = new URLSearchParams(window.location.search);
         const game_id = urlParams.get('game_id');
@@ -364,6 +409,37 @@
             const currentPlayer = data[current].player === 'White' ? 'first' : 'second';
             drawCheckers('first', whiteChecker, positions.first, currentPlayer);
             drawCheckers('second', blackChecker, positions.second, currentPlayer);
+
+            const item = data[current];
+            if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
+                const [d1, d2] = item.dice;
+                const diceY = 350;
+                let diceX1, diceX2;
+                let diceSet;
+                if (invertColors) {
+                    if (item.player === 'White') {
+                        diceX1 = 130;
+                        diceX2 = 220;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 530;
+                        diceX2 = 620;
+                        diceSet = diceImages.black;
+                    }
+                } else {
+                    if (item.player === 'White') {
+                        diceX1 = 530;
+                        diceX2 = 620;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 130;
+                        diceX2 = 220;
+                        diceSet = diceImages.black;
+                    }
+                }
+                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+            }
         }
 
         function drawCheckers(player, img, positions, currentPlayer) {
@@ -549,7 +625,7 @@
 
         // Draw board when images are loaded
         let imagesLoaded = 0;
-        const totalImages = 3;
+        const totalImages = 15;
 
         function imageLoaded() {
             imagesLoaded++;
@@ -561,6 +637,18 @@
         boardImg.onload = imageLoaded;
         whiteChecker.onload = imageLoaded;
         blackChecker.onload = imageLoaded;
+        Dice1w.onload = imageLoaded;
+        Dice2w.onload = imageLoaded;
+        Dice3w.onload = imageLoaded;
+        Dice4w.onload = imageLoaded;
+        Dice5w.onload = imageLoaded;
+        Dice6w.onload = imageLoaded;
+        Dice1b.onload = imageLoaded;
+        Dice2b.onload = imageLoaded;
+        Dice3b.onload = imageLoaded;
+        Dice4b.onload = imageLoaded;
+        Dice5b.onload = imageLoaded;
+        Dice6b.onload = imageLoaded;
 
     </script>
 </body>
