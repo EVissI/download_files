@@ -505,11 +505,8 @@
         }
 
         function getX(point, playerType = null) {
-            // Для анимации второго игрока в инвертированном состоянии нужна дополнительная инвертация
+            // Инвертирование уже обрабатывается в drawCheckers, не нужно дублировать
             let actualPoint = point;
-            if (inverted && playerType === 'second') {
-                actualPoint = invertPoint(point);
-            }
 
             if (actualPoint >= 13 && actualPoint <= 18) {
                 const baseX = 50 + (actualPoint - 13) * 60;
