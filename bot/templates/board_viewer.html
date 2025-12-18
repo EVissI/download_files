@@ -328,7 +328,8 @@
                     first_player: game.first.name,
                     second_player: game.second.name,
                     first_score: game.first.score,
-                    second_score: game.second.score
+                    second_score: game.second.score,
+                    is_long_game: game.is_long_game
                 }));
                 dataLoaded = true;
                 updateGameSelect();
@@ -352,17 +353,31 @@
             });
         }
 
-        function getInitialPositions(inverted) {
-            if (inverted) {
-                return {
-                    first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
-                    second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
-                };
+        function getInitialPositions(inverted, is_long_game) {
+            if (is_long_game) {
+                if (inverted) {
+                    return {
+                        first: { '1': 1, '2': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                        second: { '6': 5, '8': 3, '13': 5, '23': 2, '24': 1, 'bar': 0, 'off': 0 }
+                    };
+                } else {
+                    return {
+                        first: { '6': 5, '8': 3, '13': 5, '23': 2, '24': 1, 'bar': 0, 'off': 0 },
+                        second: { '1': 1, '2': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                    };
+                }
             } else {
-                return {
-                    first: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
-                    second: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
-                };
+                if (inverted) {
+                    return {
+                        first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                        second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
+                    };
+                } else {
+                    return {
+                        first: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
+                        second: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                    };
+                }
             }
         }
 
@@ -376,7 +391,8 @@
 
             let positions;
             if (current === 0) {
-                positions = getInitialPositions(inverted);
+                const game = availableGames.find(g => g.game_number === currentGameNum);
+                positions = getInitialPositions(inverted, game.is_long_game);
             } else {
                 const prevTurn = current - 1;
                 positions = inverted ? data[prevTurn].inverted_positions : data[prevTurn].positions;
@@ -708,7 +724,8 @@
 
             let prev_positions;
             if (current === 0) {
-                prev_positions = getInitialPositions(inverted);
+                const game = availableGames.find(g => g.game_number === currentGameNum);
+                prev_positions = getInitialPositions(inverted, game.is_long_game);
             } else {
                 prev_positions = inverted ? data[current - 1].inverted_positions : data[current - 1].positions;
             }
