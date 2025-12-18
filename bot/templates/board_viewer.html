@@ -137,6 +137,85 @@
             margin-top: -20px;
         }
 
+        .header {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #hideInfoCheckbox {
+            margin-right: 10px;
+        }
+
+        .right-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+
+        #players-info {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .pips-above-board {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-above-board-inverted {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-below-board-inverted {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+            position: absolute;
+            right: 0;
+            top: 0;
+            margin: 0;
+        }
+
+        .pips-below-board {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
         .move-info {
             font-size: 18px;
             font-weight: bold;
@@ -201,17 +280,18 @@
 
 <body>
     <div class="container">
-
-        <div id="top-row">
-            <select id="gameSelect">
-                <option value="0">Game 1</option>
-            </select>
+        <div class="header">
+            <div id="match-info"></div>
+            <div id="players-info"></div>
+            <div id="top-bar"></div>
+        </div>
+        <canvas id="boardCanvas" width="800" height="800"></canvas>
+        <div class="board-footer">
+            <div id="move-info" class="move-info"></div>
+            <div id="red-pips" class="pips-below-board">0</div>
         </div>
 
-        <canvas id="boardCanvas" width="800" height="800"></canvas>
-
-        <div class="board-footer">
-            <div class="move-info" id="moveInfo">Initial Position</div>
+        <div id="top-row">
             <div id="controls">
                 <button id="prevBtn" title="Previous Move">
                     <img src="/static/left.png" alt="Previous" style="width: 100%; height: 100%;">
@@ -238,6 +318,17 @@
         let inverted = false;
         let invertColors = false;
         let dataLoaded = false;
+        let redPlayer = 'Unknown';
+        let blackPlayer = 'Unknown';
+        let matchLength = 0;
+        let gameRedScore = 0;
+        let gameBlackScore = 0;
+        let enable_crawford_game_number = null;
+        const infoDiv = document.getElementById('move-info');
+        const matchInfoDiv = document.getElementById('match-info');
+        const playersInfoDiv = document.getElementById('players-info');
+        const topBar = document.getElementById('top-bar');
+        infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -305,49 +396,168 @@
         }
 
         // Load data
-        fetch(`/api/games/${game_id}`)
-            .then(response => response.json())
-            .then(jsonData => {
-                let gamesArray;
-                if (Array.isArray(jsonData)) {
-                    gamesArray = jsonData;
-                } else if (jsonData.games && Array.isArray(jsonData.games)) {
-                    gamesArray = jsonData.games;
-                } else if (jsonData.detail) {
-                    alert('Error: ' + jsonData.detail);
-                    return;
-                } else {
-                    console.error('Unexpected data format:', jsonData);
-                    return;
+        fetch(`/api/analysis/${game_id}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                data = gamesArray[0].turns; // Default to first game
-                availableGames = gamesArray.map((game, index) => ({
-                    game_number: index + 1,
-                    turns: game.turns,
-                    first_player: game.first.name,
-                    second_player: game.second.name,
-                    first_score: game.first.score,
-                    second_score: game.second.score
-                }));
-                dataLoaded = true;
-                updateGameSelect();
-                updateButtons();
-                drawBoard();
-                updateInfo();
+                return response.json();
+            })
+            .then(json => {
+                const gameInfo = json.game_info;
+                availableGames = json.games || [];
+                redPlayer = gameInfo.red_player || 'Unknown';
+                blackPlayer = gameInfo.black_player || 'Unknown';
+                invertColors = gameInfo.invert_colors || false;
+                matchLength = gameInfo.match_length || 0;
+                enable_crawford_game_number = parseInt(gameInfo.enable_crawford_game) || null;
+                const scores = gameInfo.scores || {};
+                const redScore = scores.Red || 0;
+                const blackScore = scores.Black || 0;
+
+                // Создаем выпадающий список для выбора игры только если это матч
+                if (availableGames.length > 0 && matchLength > 0) {
+                    let selectHtml = '<select id="gameSelect" onchange="loadGame(this.value)">';
+                    selectHtml += '<option value="">Выберите игру</option>';
+                    availableGames.forEach(game => {
+                        selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
+                    });
+                    selectHtml += '</select>';
+                    currentGameNum = parseInt(availableGames[0].game_number);
+                    gameRedScore = scores.Red || 0;
+                    gameBlackScore = scores.Black || 0;
+                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                    let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div></div>';
+
+                    const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                    if (hideInfoCheckbox) {
+                        const savedState = localStorage.getItem('hideInfoCheckbox');
+                        if (savedState === 'true') {
+                            hideInfoCheckbox.checked = true;
+                        }
+                        hideInfoCheckbox.addEventListener('change', () => {
+                            localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                        });
+                    }
+
+                    // Автоматически загружаем первую игру
+                    if (availableGames.length > 0) {
+                        loadGame(availableGames[0].game_number);
+                    }
+                } else if (availableGames.length > 0) {
+                    matchInfoDiv.innerHTML = "Манигейм";
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+
+                    const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                    if (hideInfoCheckbox) {
+                        const savedState = localStorage.getItem('hideInfoCheckbox');
+                        if (savedState === 'true') {
+                            hideInfoCheckbox.checked = true;
+                        }
+                        hideInfoCheckbox.addEventListener('change', () => {
+                            localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                        });
+                    }
+
+                    // Автоматически загружаем единственную игру
+                    loadGame(availableGames[0].game_number);
+                } else {
+                    matchInfoDiv.innerHTML = "";
+                    playersInfoDiv.innerHTML = "";
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+
+                    const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                    if (hideInfoCheckbox) {
+                        const savedState = localStorage.getItem('hideInfoCheckbox');
+                        if (savedState === 'true') {
+                            hideInfoCheckbox.checked = true;
+                        }
+                        hideInfoCheckbox.addEventListener('change', () => {
+                            localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                        });
+                    }
+
+                    infoDiv.innerHTML = '<div class="error">No games found in this analysis.</div>';
+                }
             })
             .catch(error => {
-                console.error('Error loading games data:', error);
-                alert('Error loading games data: ' + error.message);
+                console.error('Error loading games list:', error);
+                infoDiv.innerHTML = '<div class="error">Error loading game data. Please check the game ID and try again.</div>';
             });
 
-        function updateGameSelect() {
-            const gameSelect = document.getElementById('gameSelect');
-            gameSelect.innerHTML = '';
-            availableGames.forEach(game => {
-                const option = document.createElement('option');
-                option.value = game.game_number - 1;
-                option.textContent = `Game ${game.game_number}`;
-                gameSelect.appendChild(option);
+        function loadGame(gameNum) {
+            return new Promise((resolve, reject) => {
+                if (!gameNum) {
+                    data = [];
+                    dataLoaded = false;
+                    infoDiv.innerHTML = '<div class="loading">Select a game to view</div>';
+                    resolve();
+                    return;
+                }
+
+                currentGameNum = parseInt(gameNum);
+                // Update the select dropdown
+                const gameSelect = document.getElementById('gameSelect');
+                if (gameSelect) {
+                    gameSelect.value = gameNum;
+                }
+                infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
+
+                fetch(`/api/analysis/${game_id}?game_num=${gameNum}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(json => {
+                        const gameInfo = json.game_info;
+
+                        data = json.moves.filter(item => item.turn !== undefined || item.action === 'win');
+                        data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
+
+                        const gameScores = gameInfo.scores || {};
+                        gameRedScore = gameScores.Red || 0;
+                        gameBlackScore = gameScores.Black || 0;
+                        if (matchLength === 0) {
+                            playersInfoDiv.innerHTML = "Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
+                        } else {
+                            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                            playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                        }
+                        let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
+                        topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div class="right-group">' + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div></div>';
+
+                        const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                        if (hideInfoCheckbox) {
+                            const savedState = localStorage.getItem('hideInfoCheckbox');
+                            if (savedState === 'true') {
+                                hideInfoCheckbox.checked = true;
+                            }
+                            hideInfoCheckbox.addEventListener('change', () => {
+                                localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                            });
+                        }
+
+                        if (data.length > 0) {
+                            dataLoaded = true;
+                            current = 0;
+                            drawBoard();
+                            updateButtons();
+                            infoDiv.innerHTML = '';
+                        } else {
+                            infoDiv.innerHTML = '<div class="error">No game data found for this game.</div>';
+                        }
+                        resolve();
+                    })
+                    .catch(error => {
+                        console.error('Error loading game:', error);
+                        infoDiv.innerHTML = '<div class="error">Error loading game data. Please try again.</div>';
+                        reject(error);
+                    });
             });
         }
 
@@ -383,6 +593,43 @@
             const currentPlayerName = currentPlayerType ? (currentPlayerType === 'first' ? game.first_player : game.second_player) : null;
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
+
+            const redPips = calculatePips(positions.first, 'first', invertColors);
+            const blackPips = calculatePips(positions.second, 'second', invertColors);
+
+            if (invertColors) {
+                document.getElementById('black-pips').innerText = `${redPips}`;
+                document.getElementById('red-pips').innerText = `${blackPips}`;
+                document.getElementById('black-pips').className = 'pips-above-board-inverted';
+                document.getElementById('red-pips').className = 'pips-below-board-inverted';
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(650, 800, 150, 50);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${redPips}`, 725, -20);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(650, -50, 150, 50);
+                ctx.fillStyle = '#000000';
+                ctx.fillText(`${blackPips}`, 725, 830);
+            } else {
+                document.getElementById('black-pips').innerText = `${blackPips}`;
+                document.getElementById('red-pips').innerText = `${redPips}`;
+                document.getElementById('black-pips').className = 'pips-above-board';
+                document.getElementById('red-pips').className = 'pips-below-board';
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(650, -50, 150, 50);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${blackPips}`, 725, -20);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(650, 800, 150, 50);
+                ctx.fillStyle = '#000000';
+                ctx.fillText(`${redPips}`, 725, 830);
+            }
 
             const item = data[current];
             if (item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
@@ -520,6 +767,35 @@
 
         function getDy(point) {
             return (point > 12) ? 55 : -55;
+        }
+
+        function calculatePips(positions, player, invertColors = false) {
+            let totalPips = 0;
+            for (let pointStr in positions) {
+                if (pointStr === 'bar') {
+                    totalPips += Math.abs(positions[pointStr]) * 25;
+                } else if (pointStr === 'off') {
+                } else {
+                    const point = parseInt(pointStr);
+                    const count = positions[pointStr];
+                    let effectivePoint = point;
+                    if (invertColors) {
+                        if (player === 'first') {
+                            effectivePoint = 25 - point;
+                        } else if (player === 'second') {
+                            effectivePoint = point;
+                        }
+                    } else {
+                        if (player === 'second') {
+                            effectivePoint = 25 - point;
+                        } else if (player === 'first') {
+                            effectivePoint = point;
+                        }
+                    }
+                    totalPips += count * effectivePoint;
+                }
+            }
+            return totalPips;
         }
 
         function updateButtons() {
