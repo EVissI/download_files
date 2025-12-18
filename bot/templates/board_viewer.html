@@ -436,15 +436,15 @@
                     let displayPoint = point;
                     if (invertColors) {
                         if (player === 'first') {
-                            displayPoint = 25 - point;
-                        } else if (player === 'second') {
                             displayPoint = point;
+                        } else if (player === 'second') {
+                            displayPoint = 25 - point;
                         }
                     } else {
                         if (player === 'second') {
-                            displayPoint = 25 - point;
-                        } else if (player === 'first') {
                             displayPoint = point;
+                        } else if (player === 'first') {
+                            displayPoint = 25 - point;
                         }
                     }
                     let numberY;
@@ -504,17 +504,23 @@
             }
         }
 
-        function getX(point) {
-            if (point >= 13 && point <= 18) {
-                const baseX = 50 + (point - 13) * 60;
-                return baseX - (point === 13 ? 8 : 0);
-            } else if (point >= 19 && point <= 24) {
-                return 450 + (point - 19) * 60;
-            } else if (point >= 7 && point <= 12) {
-                const baseX = 50 + (12 - point) * 60;
-                return baseX - (point === 12 ? 4 : 0);
-            } else if (point >= 1 && point <= 6) {
-                return 450 + (6 - point) * 60;
+        function getX(point, playerType = null) {
+            // Для анимации второго игрока в инвертированном состоянии нужна дополнительная инвертация
+            let actualPoint = point;
+            if (inverted && playerType === 'second') {
+                actualPoint = invertPoint(point);
+            }
+
+            if (actualPoint >= 13 && actualPoint <= 18) {
+                const baseX = 50 + (actualPoint - 13) * 60;
+                return baseX - (actualPoint === 13 ? 8 : 0);
+            } else if (actualPoint >= 19 && actualPoint <= 24) {
+                return 450 + (actualPoint - 19) * 60;
+            } else if (actualPoint >= 7 && actualPoint <= 12) {
+                const baseX = 50 + (12 - actualPoint) * 60;
+                return baseX - (actualPoint === 12 ? 4 : 0);
+            } else if (actualPoint >= 1 && actualPoint <= 6) {
+                return 450 + (6 - actualPoint) * 60;
             }
             return 0;
         }
@@ -552,7 +558,7 @@
                 fromY = barY + (barCount - 1) * barDy;
             } else {
                 const fromPoint = parseInt(fromStr);
-                fromX = getX(fromPoint);
+                fromX = getX(fromPoint, playerType);
                 const fromBaseY = getBaseY(fromPoint);
                 const fromDy = getDy(fromPoint);
                 const fromCount = player_pos[fromStr] || 0;
@@ -577,7 +583,7 @@
                 // No stacking for off, fixed position
             } else {
                 const toPoint = parseInt(toStr);
-                toX = getX(toPoint);
+                toX = getX(toPoint, playerType);
                 const toBaseY = getBaseY(toPoint);
                 const toDy = getDy(toPoint);
                 let toCount = player_pos[toStr] || 0;
@@ -630,7 +636,7 @@
             if (opp_pos[toStr] === 0) delete opp_pos[toStr];
 
             const hitPoint = parseInt(toStr);
-            const fromX = getX(hitPoint);
+            const fromX = getX(hitPoint, hitPlayerType);
             const fromBaseY = getBaseY(hitPoint);
             const fromDy = getDy(hitPoint);
             const hitCount = opp_pos[toStr] || 0; // Now 0
@@ -719,7 +725,8 @@
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
             let moves = nextTurn.moves || [];
-            if (inverted) {
+            // Применять инвертацию только для первого игрока
+            if (inverted && playerType === 'first') {
                 moves = moves.map(m => ({
                     ...m,
                     from: invertPoint(m.from),
