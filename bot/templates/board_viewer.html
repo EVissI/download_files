@@ -693,11 +693,26 @@
 
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
-            if (nextTurn.moves && nextTurn.moves.length > 0) {
+            let moves = nextTurn.moves || [];
+            if (inverted) {
+                moves = moves.map(move => ({
+                    from: move.from === 'bar' ? 'bar' : move.from === 'off' ? 'off' : (25 - parseInt(move.from)).toString(),
+                    to: move.to === 'bar' ? 'bar' : move.to === 'off' ? 'off' : (25 - parseInt(move.to)).toString(),
+                    hit: move.hit
+                }));
+            }
+
+            // Timeout to reset animating in case of error
+            const timeoutId = setTimeout(() => {
+                animating = false;
+                updateButtons();
+            }, 15000);
+
+            if (moves.length > 0) {
                 let moveIndex = 0;
                 const animateMoves = () => {
-                    if (moveIndex < nextTurn.moves.length) {
-                        const move = nextTurn.moves[moveIndex];
+                    if (moveIndex < moves.length) {
+                        const move = moves[moveIndex];
                         animateSingleMove(move, playerType, temp_positions, (hasHit, move, playerType, temp_positions) => {
                             if (hasHit) {
                                 animateHit(move, playerType, temp_positions, () => {
@@ -712,6 +727,7 @@
                             }
                         });
                     } else {
+                        clearTimeout(timeoutId);
                         current++;
                         drawBoard();
                         updateButtons();
@@ -721,6 +737,7 @@
                 };
                 animateMoves();
             } else {
+                clearTimeout(timeoutId);
                 current++;
                 drawBoard();
                 updateButtons();
