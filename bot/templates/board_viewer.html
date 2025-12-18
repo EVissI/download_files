@@ -505,14 +505,7 @@
         }
 
         function getX(point, playerType = null) {
-            // Дополнительная инвертация для второго игрока в зависимости от состояния доски
             let actualPoint = point;
-            if (playerType === 'second') {
-                // Если состояние доски не соответствует типу игрока, нужна дополнительная инвертация
-                if (!(inverted === (playerType === 'second'))) {
-                    actualPoint = invertPoint(point);
-                }
-            }
 
             if (actualPoint >= 13 && actualPoint <= 18) {
                 const baseX = 50 + (actualPoint - 13) * 60;
@@ -728,8 +721,8 @@
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
             let moves = nextTurn.moves || [];
-            // Применять инвертацию только для первого игрока
-            if (inverted && playerType === 'first') {
+            // Применять инвертацию для обоих игроков при инвертированном виде
+            if (inverted) {
                 moves = moves.map(m => ({
                     ...m,
                     from: invertPoint(m.from),
