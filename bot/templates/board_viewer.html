@@ -448,14 +448,15 @@
                     second_player: game.second.name,
                     first_score: game.first.score,
                     second_score: game.second.score,
+                    point_match: game.point_match,
                     is_long_game: game.is_long_game
                 }));
-                const gameInfo = jsonData.game_info || {};
+                const gameInfo = gamesArray[0]
                 redPlayer = gameInfo.first ? gameInfo.first.name : 'Unknown';
                 blackPlayer = gameInfo.second ? gameInfo.second.name : 'Unknown';
                 gameRedScore = gameInfo.first ? gameInfo.first.score : 0;
                 gameBlackScore = gameInfo.second ? gameInfo.second.score : 0;
-                matchPoint = gameInfo.match_length ? gameInfo.match_length : 0
+                matchPoint = gameInfo.point_match ? gameInfo.point_match : 0
                 dataLoaded = true;
                 const matchInfoDiv = document.getElementById('match-info');
                 const matchText = matchPoint === 0 ? 'Манигейм' : `Матч до ${matchPoint}`;
