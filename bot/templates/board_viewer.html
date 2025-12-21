@@ -1273,8 +1273,12 @@
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = 'none';
                 }
-                if (matchInfoDiv && matchLength > 0) {
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                if (matchInfoDiv) {
+                    if (matchLength > 0) {
+                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                    } else {
+                        matchInfoDiv.innerHTML = 'Манигейм';
+                    }
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
             }
@@ -1378,8 +1382,12 @@
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = 'none';
                 }
-                if (matchInfoDiv && matchLength > 0) {
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                if (matchInfoDiv) {
+                    if (matchLength > 0) {
+                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                    } else {
+                        matchInfoDiv.innerHTML = 'Манигейм';
+                    }
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
             }
