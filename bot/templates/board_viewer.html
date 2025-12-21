@@ -237,150 +237,180 @@
         }
 
 
-    @media (max-width: 480px) {
-        h1 {
-            font-size: 1.5rem;
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            canvas {
+                width: 100%;
+                height: 100%;
+            }
+
+            button {
+                width: 60px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+
+            table {
+                font-size: 16px;
+            }
+
+            th,
+            td {
+                padding: 6px 8px;
+                word-spacing: 4px;
+            }
+
+            #prevBtn,
+            #nextBtn,
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn {
+                width: 35px;
+                height: 35px;
+            }
         }
 
-        canvas {
-            width: 100%;
-            height: 100%;
+        @media (min-width: 1200px) {
+
+            #prevBtn,
+            #nextBtn,
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn {
+                width: 100px;
+                height: 100px;
+            }
         }
 
-        button {
-            width: 60px;
-            padding: 8px 16px;
-            font-size: 14px;
+        .loading {
+            color: #007bff;
+            font-style: italic;
         }
 
-        table {
-            font-size: 16px;
+        .error {
+            color: #dc3545;
+            background-color: #2d1b1b;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
         }
 
-        th,
-        td {
-            padding: 6px 8px;
-            word-spacing: 4px;
+        .header {
+            display: flex;
+            flex-direction: column;
         }
 
-        #prevBtn,
-        #nextBtn,
-        #invertBtn,
-        #screenshotBtn,
-        #screenSaveBtn,
-        #screenUploadBtn {
-            width: 35px;
-            height: 35px;
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-    }
-    @media (min-width: 1200px) {
 
-        #prevBtn,
-        #nextBtn,
-        #invertBtn,
-        #screenshotBtn,
-        #screenSaveBtn,
-        #screenUploadBtn {
-            width: 100px;
-            height: 100px;
+        #hideInfoCheckbox {
+            margin-right: 10px;
         }
-    }
 
-    .loading {
-        color: #007bff;
-        font-style: italic;
-    }
-
-    .error {
-        color: #dc3545;
-        background-color: #2d1b1b;
-        border: 1px solid #dc3545;
-        border-radius: 4px;
-        padding: 10px;
-        margin: 10px 0;
-    }
-
-    .header {
-        display: flex;
-        flex-direction: column;
-    }
-
-    #top-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    #hideInfoCheckbox {
-        margin-right: 10px;
-    }
-
-    .right-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
+        .right-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
 
-    #players-info {
-        max-width: 800px;
-        margin: 0 auto;
-    }
+        #players-info {
+            max-width: 800px;
+            margin: 0 auto;
+        }
 
-    .pips-above-board {
-        background-color: #000000;
-        color: #ffffff;
-        padding: 3px 6px;
-        border-radius: 4px;
-        font-size: 18px;
-        font-weight: bold;
-        text-align: right;
-        display: block;
-        width: fit-content;
-    }
+        .pips-above-board {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
 
-    .pips-above-board-inverted {
-        background-color: #ffffff;
-        color: #000000;
-        padding: 3px 6px;
-        border-radius: 4px;
-        font-size: 18px;
-        font-weight: bold;
-        text-align: right;
-        display: block;
-        width: fit-content;
-    }
+        .pips-above-board-inverted {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
 
-    .pips-below-board-inverted {
-        background-color: #000000;
-        color: #ffffff;
-        padding: 3px 6px;
-        border-radius: 4px;
-        font-size: 18px;
-        font-weight: bold;
-        text-align: right;
-        display: block;
-        width: fit-content;
-        position: absolute;
-        right: 0;
-        top: 0;
-        margin: 0;
-    }
+        .pips-below-board-inverted {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+            position: absolute;
+            right: 0;
+            top: 0;
+            margin: 0;
+        }
 
-    .pips-below-board {
-        background-color: #ffffff;
-        color: #000000;
-        padding: 3px 6px;
-        border-radius: 4px;
-        font-size: 18px;
-        font-weight: bold;
-        text-align: right;
-        display: block;
-        width: fit-content;
-    }
+        .pips-below-board {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
     </style>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        // Add cache-busting to CSS background images
+        document.addEventListener('DOMContentLoaded', function () {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const invertBtn = document.getElementById('invertBtn');
+            const screenshotBtn = document.getElementById('screenshotBtn');
+            const screenSaveBtn = document.getElementById('screenSaveBtn');
+            const screenUploadBtn = document.getElementById('screenUploadBtn');
+            if (prevBtn) {
+                prevBtn.style.backgroundImage = "url('/static/left.png?t=" + Date.now() + "')";
+            }
+            if (nextBtn) {
+                nextBtn.style.backgroundImage = "url('/static/right.png?t=" + Date.now() + "')";
+            }
+            if (invertBtn) {
+                invertBtn.style.backgroundImage = "url('/static/change_color.png?t=" + Date.now() + "')";
+            }
+            if (screenshotBtn) {
+                screenshotBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
+            }
+            if (screenSaveBtn) {
+                screenSaveBtn.style.backgroundImage = "url('/static/ScreenSave.png?t=" + Date.now() + "')";
+            }
+            if (screenUploadBtn) {
+                screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.png?t=" + Date.now() + "')";
+            }
+        });
+    </script>
 </head>
 
 <body>
@@ -405,27 +435,15 @@
             <div class="move-info" id="moveInfo">Initial Position</div>
             <div id="red-pips" class="pips-below-board">0</div>
             <div id="controls">
-                <button id="screenSaveBtn" title="Save Screenshot">
-                    <img src="/static/ScreenSave.png" alt="Save Screenshot" style="width: 100%; height: 100%;">
-                </button>
-                <button id="screenUploadBtn" title="Upload Screenshots">
-                    <img src="/static/ScreenUpload.png" alt="Upload Screenshots" style="width: 100%; height: 100%;">
-                </button>
-                <button id="screenshotBtn" title="Take Screenshot">
-                    <img src="/static/Screen.png" alt="Take Screenshot" style="width: 100%; height: 100%;">
-                </button>
-                <button id="invertBtn" title="Invert Board">
-                    <img src="/static/change_color.png" alt="Invert" style="width: 100%; height: 100%;">
-                </button>
-                <button id="prevBtn" title="Previous Move">
-                    <img src="/static/left.png" alt="Previous" style="width: 100%; height: 100%;">
-                </button>
+                <button onclick="saveScreenshot()" id="screenSaveBtn" title="Save Screenshot"></button>
+                <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Upload Screenshots"></button>
+                <button onclick="takeScreenshot()" id="screenshotBtn" title="Take Screenshot"></button>
+                <button onclick="toggleInvert()" id="invertBtn" title="Invert Board"></button>
+                <button onclick="prevTurn()" id="prevBtn" title="Previous Move"></button>
                 <div class="turn-display">
                     <span id="turnLabel">1</span>
                 </div>
-                <button id="nextBtn" title="Next Move">
-                    <img src="/static/right.png" alt="Next" style="width: 100%; height: 100%;">
-                </button>
+                <button onclick="nextTurn()" id="nextBtn" title="Next Move"></button>
             </div>
         </div>
     </div>
@@ -1028,7 +1046,7 @@
             }
         }
 
-        function animateToNext() {
+        function nextTurn() {
             if (skipAnimationEnabled) {
                 if (current >= data.length - 1) return;
                 current++;
@@ -1051,8 +1069,8 @@
             updateButtons();
             updateInfo(); // Обновляем инфо сразу
 
-            const nextTurn = data[current];
-            const playerType = nextTurn.turn === 'first' ? 'first' : 'second';
+            const nextTurnData = data[current];
+            const playerType = nextTurnData.turn === 'first' ? 'first' : 'second';
 
             let prev_positions;
             if (current === 0) {
@@ -1064,7 +1082,7 @@
 
             const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
-            let moves = nextTurn.moves || [];
+            let moves = nextTurnData.moves || [];
             const toScreenPoint = (p) => {
                 if (p === 'bar' || p === 'off') return p;
                 const n = Number(p);
@@ -1139,7 +1157,7 @@
             }
         }
 
-        function animateToPrev() {
+        function prevTurn() {
             if (animating) {
                 skipAnimation = true;
                 setTimeout(() => {
@@ -1159,6 +1177,11 @@
             drawBoard();
             updateButtons();
             updateInfo();
+        }
+
+        function toggleInvert() {
+            inverted = !inverted;
+            drawBoard();
         }
 
         function updateButtons() {
@@ -1185,7 +1208,7 @@
             const game = availableGames.find(g => g.game_number === currentGameNum);
             if (turn && turn.moves && turn.moves.length > 0) {
                 const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
-                moveInfo.textContent =  movesStr;
+                moveInfo.textContent = movesStr;
             } else if (turn && turn.action) {
                 moveInfo.textContent = turn.action;
             } else {
@@ -1354,19 +1377,6 @@
         }
 
         // Event listeners
-        document.getElementById('prevBtn').addEventListener('click', () => {
-            animateToPrev();
-        });
-
-        document.getElementById('nextBtn').addEventListener('click', () => {
-            animateToNext();
-        });
-
-        document.getElementById('invertBtn').addEventListener('click', () => {
-            inverted = !inverted;
-            drawBoard();
-        });
-
         document.getElementById('gameSelect').addEventListener('change', (e) => {
             const gameIndex = parseInt(e.target.value);
             currentGameNum = gameIndex + 1;
@@ -1382,10 +1392,6 @@
             updateButtons();
             updateInfo();
         });
-
-        document.getElementById('screenSaveBtn').addEventListener('click', saveScreenshot);
-        document.getElementById('screenUploadBtn').addEventListener('click', uploadScreenshots);
-        document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
 
         document.getElementById('skipAnimationCheckbox').addEventListener('change', (e) => {
             skipAnimationEnabled = e.target.checked;
