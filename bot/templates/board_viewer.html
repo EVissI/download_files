@@ -467,7 +467,7 @@
             availableGames.forEach(game => {
                 const option = document.createElement('option');
                 option.value = game.game_number - 1;
-                option.textContent = `Game ${game.game_number} of ${availableGames.length}`;
+                option.textContent = `Game ${game.game_number}`;
                 gameSelect.appendChild(option);
             });
         }
