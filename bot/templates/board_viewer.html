@@ -977,7 +977,7 @@
                 canvas.toBlob(blob => {
                     const formData = new FormData();
                     formData.append('photo', blob);
-                    fetch(`/api/save_screenshot?chat_id=${chatId}`, {
+                    fetch(`/api/save_screenshot?chat_id=${chat_id}`, {
                         method: 'POST',
                         body: formData
                     }).then(response => {
@@ -1004,7 +1004,7 @@
         }
 
         function uploadScreenshots() {
-            fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(response => {
+            fetch(`/api/upload_screenshots?chat_id=${chat_id}`, { method: 'POST' }).then(response => {
                 if (response.ok) {
                     showFadingMessage('Скриншоты отправлены');
                 } else {
@@ -1055,7 +1055,7 @@
                     const file = new File([blob], 'screenshot.png', { type: 'image/png' });
                     const formData = new FormData();
                     formData.append('photo', file);
-                    fetch(`/api/send_screenshot?chat_id=${chatId}`, {
+                    fetch(`/api/send_screenshot?chat_id=${chat_id}`, {
                         method: 'POST',
                         body: formData
                     }).then(response => {
