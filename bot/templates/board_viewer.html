@@ -344,6 +344,9 @@
         let availableGames = [];
         let current = 0;
         let currentGameNum = 1;
+        let matchLength = 0;
+        let gameRedScore = 0;
+        let gameBlackScore = 0;
         let inverted = false;
         let invertColors = false;
         let dataLoaded = false;
@@ -444,13 +447,13 @@
                     second_score: game.second.score,
                     is_long_game: game.is_long_game
                 }));
+                const scores = jsonData.scores || {};
+                gameRedScore = scores.Red || 0;
+                gameBlackScore = scores.Black || 0;
                 dataLoaded = true;
                 const matchInfoDiv = document.getElementById('match-info');
-                if (availableGames.length === 1) {
-                    matchInfoDiv.innerHTML = "Манигейм";
-                } else {
-                    matchInfoDiv.innerHTML = `Матч до ${availableGames.length}`;
-                }
+                const matchText = availableGames.length === 1 ? 'Манигейм' : `Матч до ${availableGames.length}`;
+                matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                 updateGameSelect();
                 updateButtons();
                 drawBoard();
