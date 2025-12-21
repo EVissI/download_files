@@ -343,8 +343,6 @@
                     console.error('Unexpected data format:', jsonData);
                     return;
                 }
-                // Assume chatId might be in jsonData if API supports it
-                chatId = jsonData.chat_id || null;  // Set chatId if available
                 data = gamesArray[0].turns; // Default to first game
                 availableGames = gamesArray.map((game, index) => ({
                     game_number: index + 1,
