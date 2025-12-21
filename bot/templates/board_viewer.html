@@ -1287,7 +1287,7 @@
             current = 0;
             inverted = false;
             const matchInfoDiv = document.getElementById('match-info');
-            const matchText = availableGames.point_match === 0 ? 'Манигейм' : `Матч до ${availableGames.point_match}`;
+            const matchText = availableGames[gameIndex].point_match === 0 ? 'Манигейм' : `Матч до ${availableGames[gameIndex].point_match}`;
             matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
             drawBoard();
             updateButtons();
