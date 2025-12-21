@@ -91,6 +91,12 @@
             padding: 5px;
         }
 
+        .right-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         #skipAnimationCheckbox {
             margin-left: 5px;
         }
@@ -280,8 +286,10 @@
             <select id="gameSelect">
                 <option value="0">Game 1</option>
             </select>
-            <input type="checkbox" id="skipAnimationCheckbox">
-            <div id="black-pips" class="pips-above-board">0</div>
+            <div class="right-group">
+                <input type="checkbox" id="skipAnimationCheckbox">
+                <div id="black-pips" class="pips-above-board">0</div>
+            </div>
         </div>
 
         <canvas id="boardCanvas" width="800" height="800"></canvas>
