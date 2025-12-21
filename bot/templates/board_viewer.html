@@ -542,6 +542,35 @@
             return (point > 12) ? 55 : -55;
         }
 
+        function calculatePips(positions, player, invertColors = false) {
+            let totalPips = 0;
+            for (let pointStr in positions) {
+                if (pointStr === 'bar') {
+                    totalPips += Math.abs(positions[pointStr]) * 25;
+                } else if (pointStr === 'off') {
+                } else {
+                    const point = parseInt(pointStr);
+                    const count = positions[pointStr];
+                    let effectivePoint = point;
+                    if (invertColors) {
+                        if (player === 'red') {
+                            effectivePoint = 25 - point;
+                        } else if (player === 'black') {
+                            effectivePoint = point;
+                        }
+                    } else {
+                        if (player === 'black') {
+                            effectivePoint = 25 - point;
+                        } else if (player === 'red') {
+                            effectivePoint = point;
+                        }
+                    }
+                    totalPips += count * effectivePoint;
+                }
+            }
+            return totalPips;
+        }
+
         function getInitialPositions(inverted, is_long_game) {
             if (is_long_game) {
                 if (inverted) {
