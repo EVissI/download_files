@@ -377,6 +377,112 @@
                 gameSelect.appendChild(option);
             });
         }
+        
+        function drawCheckers(player, img, positions, currentPlayer) {
+            ctx.font = 'bold 30px Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (player === currentPlayer) {
+                for (let point = 1; point <= 24; point++) {
+                    const x = getX(point);
+                    let y = getBaseY(point);
+                    const dy = getDy(point);
+
+                    let displayPoint = point;
+                    if (invertColors) {
+                        if (player === 'second') {
+                            displayPoint = point;
+                        } else if (player === 'first') {
+                            displayPoint = 25 - point;
+                        }
+                    } else {
+                        if (player === 'first') {
+                            displayPoint = point;
+                        } else if (player === 'second') {
+                            displayPoint = 25 - point;
+                        }
+                    }
+                    let numberY;
+                    if (point > 12) {
+                        numberY = y - 50;
+                    } else {
+                        numberY = y + 60;
+                    }
+                    ctx.fillText(displayPoint, x, numberY);
+                }
+            }
+
+            for (let pointStr in positions) {
+                if (pointStr === 'bar' || pointStr === 'off') continue;
+                const point = parseInt(pointStr);
+                let count = positions[pointStr];
+                const x = getX(point);
+                let y = getBaseY(point);
+                const dy = getDy(point);
+
+                for (let i = 0; i < Math.min(count, 6); i++) {
+                    ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
+                }
+
+                if (count > 6) {
+                    const lastCheckerY = y + (5 * dy);
+                    ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
+                }
+            }
+
+            const barX = 400;
+            const barY = (player === 'second') ? 220 : 520;
+            const barDy = (player === 'second') ? 55 : -55;
+            if (positions.bar && positions.bar !== 0) {
+                let y = barY;
+                for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
+                    ctx.drawImage(img, barX - 31.25, y + (i * barDy) - 31.25, 62.5, 62.5);
+                }
+                if (Math.abs(positions.bar) > 6) {
+                    const lastCheckerY = y + (5 * barDy);
+                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
+                }
+            }
+
+            let offX = 783;
+            let offY = (player === 'second')
+                ? (invertColors ? 440 : 340)
+                : (invertColors ? 340 : 440);
+            if (positions.off && positions.off !== 0) {
+                const originalFont = ctx.font;
+                ctx.font = 'bold 32px Arial';
+                ctx.fillText(`${positions.off}`, offX, offY);
+                ctx.font = originalFont;
+            }
+        }
+
+        function getX(point, playerType = null) {
+
+            let actualPoint = point;
+
+            if (actualPoint >= 13 && actualPoint <= 18) {
+                const baseX = 50 + (actualPoint - 13) * 60;
+                return baseX - (actualPoint === 13 ? 8 : 0);
+            } else if (actualPoint >= 19 && actualPoint <= 24) {
+                return 450 + (actualPoint - 19) * 60;
+            } else if (actualPoint >= 7 && actualPoint <= 12) {
+                const baseX = 50 + (12 - actualPoint) * 60;
+                return baseX - (actualPoint === 12 ? 4 : 0);
+            } else if (actualPoint >= 1 && actualPoint <= 6) {
+                return 450 + (6 - actualPoint) * 60;
+            }
+            return 0;
+        }
+
+        function getBaseY(point) {
+            return (point > 12) ? 70 : 690;
+        }
+
+        function getDy(point) {
+            return (point > 12) ? 55 : -55;
+        }
 
         function getInitialPositions(inverted, is_long_game) {
             if (is_long_game) {
