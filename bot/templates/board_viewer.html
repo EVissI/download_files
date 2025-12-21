@@ -91,6 +91,11 @@
             padding: 5px;
         }
 
+        #skipAnimationCheckbox {
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+
         #prevBtn,
         #nextBtn,
         #invertBtn,
@@ -276,6 +281,7 @@
             <select id="gameSelect">
                 <option value="0">Game 1</option>
             </select>
+            <input type="checkbox" id="skipAnimationCheckbox"> Skip Animation
             <div id="black-pips" class="pips-above-board">0</div>
         </div>
 
@@ -321,6 +327,7 @@
         let animating = false;
         let skipAnimation = false;
         let animationSpeed = 0.5;
+        let skipAnimationEnabled = false;
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -891,6 +898,15 @@
         }
 
         function animateToNext() {
+            if (skipAnimationEnabled) {
+                if (current >= data.length - 1) return;
+                current++;
+                drawBoard();
+                updateButtons();
+                updateInfo();
+                return;
+            }
+
             // Если уже идет анимация - устанавливаем флаг пропуска
             if (animating) {
                 skipAnimation = true;
@@ -1236,6 +1252,10 @@
         document.getElementById('screenSaveBtn').addEventListener('click', saveScreenshot);
         document.getElementById('screenUploadBtn').addEventListener('click', uploadScreenshots);
         document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
+
+        document.getElementById('skipAnimationCheckbox').addEventListener('change', (e) => {
+            skipAnimationEnabled = e.target.checked;
+        });
 
         // Draw board when images are loaded
         let imagesLoaded = 0;
