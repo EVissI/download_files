@@ -455,7 +455,7 @@
                 blackPlayer = gameInfo.second ? gameInfo.second.name : 'Unknown';
                 gameRedScore = gameInfo.first ? gameInfo.first.score : 0;
                 gameBlackScore = gameInfo.second ? gameInfo.second.score : 0;
-                matchPoint = gameInfo.point_match ? gameInfo.point_match : 0
+                matchPoint = gameInfo.match_length ? gameInfo.match_length : 0
                 dataLoaded = true;
                 const matchInfoDiv = document.getElementById('match-info');
                 const matchText = matchPoint === 0 ? 'Манигейм' : `Матч до ${matchPoint}`;
