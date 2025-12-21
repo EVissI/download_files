@@ -1276,6 +1276,9 @@
             data = availableGames[gameIndex].turns;
             current = 0;
             inverted = false;
+            const matchInfoDiv = document.getElementById('match-info');
+            const matchText = availableGames.length === 1 ? 'Манигейм' : `Матч до ${availableGames.length}`;
+            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
             drawBoard();
             updateButtons();
             updateInfo();
