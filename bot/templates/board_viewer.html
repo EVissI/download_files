@@ -231,6 +231,11 @@
             width: fit-content;
         }
 
+        .header {
+            display: flex;
+            flex-direction: column;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -290,14 +295,16 @@
 
 <body>
     <div class="container">
-
-        <div id="top-row">
-            <select id="gameSelect">
-                <option value="0">Game 1</option>
-            </select>
-            <div class="right-group">
-                <input type="checkbox" id="skipAnimationCheckbox">
-                <div id="black-pips" class="pips-above-board">0</div>
+        <div class="header">
+            <div id="match-info"></div>
+            <div id="top-row">
+                <select id="gameSelect">
+                    <option value="0">Game 1</option>
+                </select>
+                <div class="right-group">
+                    <input type="checkbox" id="skipAnimationCheckbox">
+                    <div id="black-pips" class="pips-above-board">0</div>
+                </div>
             </div>
         </div>
 
@@ -438,6 +445,12 @@
                     is_long_game: game.is_long_game
                 }));
                 dataLoaded = true;
+                const matchInfoDiv = document.getElementById('match-info');
+                if (availableGames.length === 1) {
+                    matchInfoDiv.innerHTML = "Манигейм";
+                } else {
+                    matchInfoDiv.innerHTML = `Матч до ${availableGames.length}`;
+                }
                 updateGameSelect();
                 updateButtons();
                 drawBoard();
@@ -454,7 +467,7 @@
             availableGames.forEach(game => {
                 const option = document.createElement('option');
                 option.value = game.game_number - 1;
-                option.textContent = `Game ${game.game_number}`;
+                option.textContent = `Game ${game.game_number} of ${availableGames.length}`;
                 gameSelect.appendChild(option);
             });
         }
