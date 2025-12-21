@@ -93,7 +93,10 @@
 
         #prevBtn,
         #nextBtn,
-        #invertBtn {
+        #invertBtn,
+        #screenshotBtn,
+        #screenSaveBtn,
+        #screenUploadBtn {
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
@@ -107,13 +110,19 @@
 
         #prevBtn:hover,
         #nextBtn:hover,
-        #invertBtn:hover {
+        #invertBtn:hover,
+        #screenshotBtn:hover,
+        #screenSaveBtn:hover,
+        #screenUploadBtn:hover {
             background-color: transparent;
         }
 
         #prevBtn:disabled,
         #nextBtn:disabled,
-        #invertBtn:disabled {
+        #invertBtn:disabled,
+        #screenshotBtn:disabled,
+        #screenSaveBtn:disabled,
+        #screenUploadBtn:disabled {
             opacity: 0.5;
             background-color: transparent;
         }
@@ -192,11 +201,67 @@
                 padding: 10px 20px;
             }
 
+            #prevBtn,
+            #nextBtn,
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn {
+                width: 60px;
+                height: 60px;
+            }
+
             .container {
                 padding: 0 10px;
             }
         }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            canvas {
+                width: 100%;
+                height: 100%;
+            }
+
+            button {
+                width: 60px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+
+            .container {
+                padding: 0 10px;
+            }
+
+            #prevBtn,
+            #nextBtn,
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn {
+                width: 35px;
+                height: 35px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+
+            #prevBtn,
+            #nextBtn,
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn {
+                width: 100px;
+                height: 100px;
+            }
+        }
     </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </head>
 
 <body>
@@ -222,6 +287,15 @@
                 <button id="nextBtn" title="Next Move">
                     <img src="/static/right.png" alt="Next" style="width: 100%; height: 100%;">
                 </button>
+                <button onclick="saveScreenshot()" id="screenSaveBtn" title="Save Screenshot">
+                    <img src="/static/ScreenSave.png" alt="Save" style="width: 100%; height: 100%;">
+                </button>
+                <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Upload Screenshots">
+                    <img src="/static/ScreenUpload.png" alt="Upload" style="width: 100%; height: 100%;">
+                </button>
+                <button onclick="takeScreenshot()" id="screenshotBtn" title="Take Screenshot">
+                    <img src="/static/Screen.png" alt="Screenshot" style="width: 100%; height: 100%;">
+                </button>
                 <button id="invertBtn" title="Invert Board">
                     <img src="/static/change_color.png" alt="Invert" style="width: 100%; height: 100%;">
                 </button>
@@ -230,6 +304,12 @@
     </div>
 
     <script>
+        if (window.Telegram) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+        }
+
+        let chatId = 'default';
 
         let data = [];
         let availableGames = [];
@@ -333,6 +413,7 @@
                     second_score: game.second.score,
                     is_long_game: game.is_long_game
                 }));
+                chatId = jsonData.chat_id || chatId;
                 dataLoaded = true;
                 updateGameSelect();
                 updateButtons();
@@ -952,6 +1033,125 @@
         Dice4b.onload = imageLoaded;
         Dice5b.onload = imageLoaded;
         Dice6b.onload = imageLoaded;
+
+        function showFadingMessage(message) {
+            const msgDiv = document.createElement('div');
+            msgDiv.style.position = 'fixed';
+            msgDiv.style.top = '50%';
+            msgDiv.style.left = '50%';
+            msgDiv.style.transform = 'translate(-50%, -50%)';
+            msgDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            msgDiv.style.color = 'white';
+            msgDiv.style.padding = '10px 20px';
+            msgDiv.style.borderRadius = '5px';
+            msgDiv.style.fontSize = '16px';
+            msgDiv.style.zIndex = '10000';
+            msgDiv.innerHTML = message;
+            document.body.appendChild(msgDiv);
+            setTimeout(() => {
+                msgDiv.style.transition = 'opacity 1s';
+                msgDiv.style.opacity = '0';
+                setTimeout(() => msgDiv.remove(), 1000);
+            }, 1000);
+        }
+
+        function saveScreenshot() {
+            const controls = document.getElementById('controls');
+            const originalControlsDisplay = controls.style.display;
+            controls.style.display = 'none';
+
+            html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
+                controls.style.display = originalControlsDisplay;
+
+                canvas.toBlob(blob => {
+                    const formData = new FormData();
+                    formData.append('photo', blob);
+                    fetch(`/api/save_screenshot?chat_id=${chatId}`, {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => {
+                        if (response.ok) {
+                            showFadingMessage('Screenshot saved to buffer');
+                        } else {
+                            showFadingMessage('Error saving screenshot');
+                        }
+                    }).catch(error => {
+                        console.error('Error saving screenshot:', error);
+                        showFadingMessage('Error saving screenshot');
+                    });
+                });
+            }).catch(error => {
+                console.error('Error creating screenshot:', error);
+                controls.style.display = originalControlsDisplay;
+                showFadingMessage('Error creating screenshot');
+            });
+        }
+
+        function uploadScreenshots() {
+            fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(response => {
+                if (response.ok) {
+                    showFadingMessage('Screenshots uploaded');
+                } else {
+                    showFadingMessage('Error uploading screenshots');
+                }
+            }).catch(error => {
+                console.error('Error uploading screenshots:', error);
+                showFadingMessage('Error uploading screenshots');
+            });
+        }
+
+        function takeScreenshot() {
+            const controls = document.getElementById('controls');
+            const originalControlsDisplay = controls.style.display;
+            controls.style.display = 'none';
+
+            html2canvas(document.body, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#1a1a1a'
+            }).then(canvas => {
+                controls.style.display = originalControlsDisplay;
+
+                canvas.toBlob(blob => {
+                    const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        const formData = new FormData();
+                        formData.append('photo', file);
+
+                        fetch(`/api/send_screenshot?chat_id=${chatId}`, {
+                            method: 'POST',
+                            body: formData
+                        }).then(response => {
+                            if (response.ok) {
+                            } else {
+                                response.text().then(text => {
+                                    console.error('Server response:', text);
+                                    try {
+                                        const errorData = JSON.parse(text);
+                                        alert('Error sending screenshot: ' + (errorData.detail || text));
+                                    } catch (e) {
+                                        alert('Error sending screenshot: ' + text);
+                                    }
+                                });
+                            }
+                        }).catch(error => {
+                            console.error('Error sending screenshot:', error);
+                            alert('Error sending screenshot: ' + error);
+                        });
+                    } else {
+                        const link = document.createElement('a');
+                        link.download = 'screenshot.png';
+                        link.href = canvas.toDataURL();
+                        link.click();
+                    }
+                });
+            }).catch(error => {
+                console.error('Error creating screenshot:', error);
+                controls.style.display = originalControlsDisplay;
+                alert('Error creating screenshot: ' + error.message);
+            });
+        }
 
     </script>
 </body>

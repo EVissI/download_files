@@ -1613,6 +1613,22 @@
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
+                controls.style.display = originalControlsDisplay;
+                invertBtn.style.display = originalInvertDisplay;
+                screenshotBtn.style.display = originalScreenshotDisplay;
+                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
+                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
+                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (playersInfo) {
+                    playersInfo.style.display = originalPlayersInfoDisplay;
+                    playersInfo.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfo) {
+                    matchInfo.innerHTML = originalMatchInfoHTML;
+                }
+                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
                 showFadingMessage('Ошибка при создании скриншота');
             });
         }
@@ -1768,6 +1784,22 @@
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
+                controls.style.display = originalControlsDisplay;
+                invertBtn.style.display = originalInvertDisplay;
+                screenshotBtn.style.display = originalScreenshotDisplay;
+                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
+                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
+                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (playersInfo) {
+                    playersInfo.style.display = originalPlayersInfoDisplay;
+                    playersInfo.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfo) {
+                    matchInfo.innerHTML = originalMatchInfoHTML;
+                }
+                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
                 alert('Ошибка при создании скриншота: ' + error.message);
             });
         }
