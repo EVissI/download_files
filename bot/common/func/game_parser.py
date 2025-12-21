@@ -157,6 +157,7 @@ def extract_names_and_scores(lines: List[str]) -> Dict[str, Union[str, int]]:
     }
 
 
+
 def extract_point_match(text: str) -> Optional[int]:
     pattern = r"(\d+)\s+point match"
     match = re.search(pattern, text, re.IGNORECASE)

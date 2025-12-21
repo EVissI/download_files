@@ -297,6 +297,7 @@
     <div class="container">
         <div class="header">
             <div id="match-info"></div>
+            <div id="players-info"></div>
             <div id="top-row">
                 <select id="gameSelect">
                     <option value="0">Game 1</option>
@@ -347,6 +348,8 @@
         let matchLength = 0;
         let gameRedScore = 0;
         let gameBlackScore = 0;
+        let redPlayer = 'Unknown';
+        let blackPlayer = 'Unknown';
         let inverted = false;
         let invertColors = false;
         let dataLoaded = false;
@@ -448,12 +451,17 @@
                     is_long_game: game.is_long_game
                 }));
                 const gameInfo = jsonData.game_info || {};
+                redPlayer = gameInfo.first ? gameInfo.first.name : 'Unknown';
+                blackPlayer = gameInfo.second ? gameInfo.second.name : 'Unknown';
                 gameRedScore = gameInfo.first ? gameInfo.first.score : 0;
                 gameBlackScore = gameInfo.second ? gameInfo.second.score : 0;
+                matchPoint = gameInfo.point_match ? gameInfo.point_match : 0
                 dataLoaded = true;
                 const matchInfoDiv = document.getElementById('match-info');
-                const matchText = availableGames.length === 1 ? 'Манигейм' : `Матч до ${availableGames.length}`;
+                const matchText = matchPoint === 0 ? 'Манигейм' : `Матч до ${matchPoint}`;
                 matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                const playersInfoDiv = document.getElementById('players-info');
+                playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                 updateGameSelect();
                 updateButtons();
                 drawBoard();
@@ -1279,7 +1287,6 @@
             current = 0;
             inverted = false;
             const matchInfoDiv = document.getElementById('match-info');
-            const matchText = availableGames.length === 1 ? 'Манигейм' : `Матч до ${availableGames.length}`;
             matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
             drawBoard();
             updateButtons();
