@@ -250,7 +250,6 @@
     </div>
 
     <script>
-
         let data = [];
         let availableGames = [];
         let current = 0;
@@ -261,7 +260,6 @@
         let animating = false;
         let skipAnimation = false;
         let animationSpeed = 0.5;
-        let chatId = null;  // Will be fetched from API if available
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -322,6 +320,7 @@
         // Get game_id from URL
         const urlParams = new URLSearchParams(window.location.search);
         const game_id = urlParams.get('game_id');
+        const chat_id = urlParams.get('chat_id')
 
         if (!game_id) {
             console.error('No game_id provided in URL');
@@ -377,7 +376,7 @@
                 gameSelect.appendChild(option);
             });
         }
-        
+
         function drawCheckers(player, img, positions, currentPlayer) {
             ctx.font = 'bold 30px Arial';
             ctx.fillStyle = '#ffffff';
