@@ -1249,12 +1249,16 @@
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const screenshotBtn = document.getElementById('screenshotBtn');
             const invertBtn = document.getElementById('invertBtn');
+            const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
             const originalScreenshotDisplay = screenshotBtn ? screenshotBtn.style.display : 'none';
             const originalInvertDisplay = invertBtn ? invertBtn.style.display : 'none';
+            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
+            const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : 'none';
+            const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
 
             controls.style.display = 'none';
             if (gameSelect) gameSelect.style.display = 'none';
@@ -1262,6 +1266,17 @@
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
             if (screenshotBtn) screenshotBtn.style.display = 'none';
             if (invertBtn) invertBtn.style.display = 'none';
+            if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
+            // Keep crawfordLabel visible for screenshots
+            if (hideInfoCheckbox && hideInfoCheckbox.checked) {
+                if (playersInfoDiv) {
+                    playersInfoDiv.style.display = 'none';
+                }
+                if (matchInfoDiv && matchLength > 0) {
+                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                }
+                if (gameSelect) gameSelect.style.display = 'none';
+            }
 
             html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
                 // Restore after screenshot
@@ -1271,6 +1286,14 @@
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (playersInfoDiv) {
+                    playersInfoDiv.style.display = originalPlayersInfoDisplay;
+                    playersInfoDiv.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfoDiv) {
+                    matchInfoDiv.innerHTML = originalMatchInfoHTML;
+                }
 
                 canvas.toBlob(blob => {
                     const formData = new FormData();
@@ -1297,6 +1320,14 @@
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (playersInfoDiv) {
+                    playersInfoDiv.style.display = originalPlayersInfoDisplay;
+                    playersInfoDiv.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfoDiv) {
+                    matchInfoDiv.innerHTML = originalMatchInfoHTML;
+                }
                 showFadingMessage('Ошибка при создании скриншота');
             });
         }
@@ -1322,12 +1353,16 @@
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const screenshotBtn = document.getElementById('screenshotBtn');
             const invertBtn = document.getElementById('invertBtn');
+            const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
             const originalScreenshotDisplay = screenshotBtn ? screenshotBtn.style.display : 'none';
             const originalInvertDisplay = invertBtn ? invertBtn.style.display : 'none';
+            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
+            const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : 'none';
+            const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
 
             controls.style.display = 'none';
             if (gameSelect) gameSelect.style.display = 'none';
@@ -1335,6 +1370,17 @@
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
             if (screenshotBtn) screenshotBtn.style.display = 'none';
             if (invertBtn) invertBtn.style.display = 'none';
+            if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
+            // Keep crawfordLabel visible for screenshots
+            if (hideInfoCheckbox && hideInfoCheckbox.checked) {
+                if (playersInfoDiv) {
+                    playersInfoDiv.style.display = 'none';
+                }
+                if (matchInfoDiv && matchLength > 0) {
+                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                }
+                if (gameSelect) gameSelect.style.display = 'none';
+            }
 
             html2canvas(document.body, {
                 useCORS: true,
@@ -1348,6 +1394,14 @@
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (playersInfoDiv) {
+                    playersInfoDiv.style.display = originalPlayersInfoDisplay;
+                    playersInfoDiv.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfoDiv) {
+                    matchInfoDiv.innerHTML = originalMatchInfoHTML;
+                }
 
                 canvas.toBlob(blob => {
                     const file = new File([blob], 'screenshot.png', { type: 'image/png' });
@@ -1375,6 +1429,14 @@
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (playersInfoDiv) {
+                    playersInfoDiv.style.display = originalPlayersInfoDisplay;
+                    playersInfoDiv.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfoDiv) {
+                    matchInfoDiv.innerHTML = originalMatchInfoHTML;
+                }
                 showFadingMessage('Ошибка при создании скриншота');
             });
         }
