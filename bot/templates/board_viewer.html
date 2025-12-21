@@ -1183,13 +1183,11 @@
             const moveInfo = document.getElementById('moveInfo');
             const turn = data[current];
             const game = availableGames.find(g => g.game_number === currentGameNum);
-            const playerName = turn && turn.turn ? (turn.turn === 'first' ? game.first_player : game.second_player) : '';
-            const prefix = playerName ? `${playerName}: ` : '';
             if (turn && turn.moves && turn.moves.length > 0) {
                 const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
-                moveInfo.textContent = prefix + movesStr;
+                moveInfo.textContent =  movesStr;
             } else if (turn && turn.action) {
-                moveInfo.textContent = prefix + turn.action;
+                moveInfo.textContent = turn.action;
             } else {
                 moveInfo.textContent = 'Initial Position';
             }
