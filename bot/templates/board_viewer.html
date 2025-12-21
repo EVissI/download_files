@@ -110,6 +110,10 @@
             margin-left: 5px;
         }
 
+        #hideInfoCheckbox {
+            margin-right: 10px;
+        }
+
         #prevBtn,
         #nextBtn,
         #invertBtn,
@@ -423,6 +427,7 @@
                     <option value="0">Game 1</option>
                 </select>
                 <div class="right-group">
+                    <input type="checkbox" id="hideInfoCheckbox">
                     <input type="checkbox" id="skipAnimationCheckbox">
                     <div id="black-pips" class="pips-above-board">0</div>
                 </div>
@@ -1388,6 +1393,17 @@
             updateButtons();
             updateInfo();
         });
+
+        const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+        if (hideInfoCheckbox) {
+            const savedState = localStorage.getItem('hideInfoCheckbox');
+            if (savedState === 'true') {
+                hideInfoCheckbox.checked = true;
+            }
+            hideInfoCheckbox.addEventListener('change', () => {
+                localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+            });
+        }
 
         document.getElementById('skipAnimationCheckbox').addEventListener('change', (e) => {
             skipAnimationEnabled = e.target.checked;
