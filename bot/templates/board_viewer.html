@@ -447,9 +447,9 @@
                     second_score: game.second.score,
                     is_long_game: game.is_long_game
                 }));
-                const scores = jsonData.scores || {};
-                gameRedScore = scores.Red || 0;
-                gameBlackScore = scores.Black || 0;
+                const gameInfo = jsonData.game_info || {};
+                gameRedScore = gameInfo.first ? gameInfo.first.score : 0;
+                gameBlackScore = gameInfo.second ? gameInfo.second.score : 0;
                 dataLoaded = true;
                 const matchInfoDiv = document.getElementById('match-info');
                 const matchText = availableGames.length === 1 ? 'Манигейм' : `Матч до ${availableGames.length}`;
