@@ -860,7 +860,7 @@
             const item = data[current + 1];
 
 
-            const turnData = data[current + 1];
+            const turnData = data[current];
             if (turnData && turnData.dice && turnData.dice.length === 2 &&
                 !['double', 'take', 'win'].includes(turnData.action)) {
 
@@ -869,7 +869,6 @@
                 let diceX1, diceX2;
                 let diceSet;
 
-                // Логика позиций кубиков (та же, что в drawBoard)
                 if (invertColors) {
                     if (currentPlayerType === 'first') {
                         diceX1 = 130; diceX2 = 220; diceSet = diceImages.white;
@@ -893,7 +892,6 @@
             const player_pos = temp_positions[playerType];
             const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
 
-            // Handle from
             let fromX, fromY;
             const fromStr = move.from.toString();
             if (fromStr === 'bar') {
@@ -911,7 +909,6 @@
                 fromY = fromBaseY + (fromCount - 1) * fromDy;
             }
 
-            // Temporarily remove checker from from position
             if (fromStr === 'bar') {
                 player_pos['bar'] = (player_pos['bar'] || 1) - 1;
                 if (player_pos['bar'] === 0) delete player_pos['bar'];
@@ -920,7 +917,6 @@
                 if (player_pos[fromStr] === 0) delete player_pos[fromStr];
             }
 
-            // Handle to
             let toX, toY;
             const toStr = move.to.toString();
             if (toStr === 'off') {
