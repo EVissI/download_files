@@ -40,10 +40,20 @@
         #top-row {
             margin: 0px 0;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             margin-top: 10px;
             align-items: center;
             width: 100%;
+            position: relative;
+        }
+
+        #gameSelect {
+            margin: 0 auto;
+        }
+
+        .right-group {
+            position: absolute;
+            right: 0;
         }
 
         #controls {
@@ -89,12 +99,6 @@
             border: 1px solid #444;
             border-radius: 6px;
             padding: 5px;
-        }
-
-        .right-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
 
         #skipAnimationCheckbox {
