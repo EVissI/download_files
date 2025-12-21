@@ -316,8 +316,19 @@
             align-items: center;
         }
 
-        #hideInfoCheckbox {
-            margin-right: 10px;
+        #checkboxes {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        #checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
         }
 
         .right-group {
@@ -427,8 +438,6 @@
                     <option value="0">Game 1</option>
                 </select>
                 <div class="right-group">
-                    <input type="checkbox" id="hideInfoCheckbox">
-                    <input type="checkbox" id="skipAnimationCheckbox">
                     <div id="black-pips" class="pips-above-board">0</div>
                 </div>
             </div>
@@ -449,6 +458,10 @@
                     <span id="turnLabel">1</span>
                 </div>
                 <button onclick="nextTurn()" id="nextBtn" title="Next Move"></button>
+            </div>
+            <div id="checkboxes">
+                <label><input type="checkbox" id="hideInfoCheckbox"> Убрать данные матча на скриншоте</label>
+                <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию шашек</label>
             </div>
         </div>
     </div>
@@ -1249,16 +1262,14 @@
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const screenshotBtn = document.getElementById('screenshotBtn');
             const invertBtn = document.getElementById('invertBtn');
-            const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
-            const skipAnimationCheckbox = document.getElementById('skipAnimationCheckbox');
+            const checkboxes = document.getElementById('checkboxes');
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
             const originalScreenshotDisplay = screenshotBtn ? screenshotBtn.style.display : 'none';
             const originalInvertDisplay = invertBtn ? invertBtn.style.display : 'none';
-            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
-            const originalSkipAnimationCheckboxDisplay = skipAnimationCheckbox ? skipAnimationCheckbox.style.display : 'none';
+            const originalCheckboxesDisplay = checkboxes ? checkboxes.style.display : 'none';
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : 'none';
             const originalPlayersInfoHTML = playersInfoDiv ? playersInfoDiv.innerHTML : '';
             const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
@@ -1269,8 +1280,7 @@
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
             if (screenshotBtn) screenshotBtn.style.display = 'none';
             if (invertBtn) invertBtn.style.display = 'none';
-            if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
-            if (skipAnimationCheckbox) skipAnimationCheckbox.style.display = 'none';
+            if (checkboxes) checkboxes.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfoDiv) {
@@ -1294,8 +1304,7 @@
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (skipAnimationCheckbox) skipAnimationCheckbox.style.display = originalSkipAnimationCheckboxDisplay;
+                if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
@@ -1329,8 +1338,7 @@
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (skipAnimationCheckbox) skipAnimationCheckbox.style.display = originalSkipAnimationCheckboxDisplay;
+                if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
@@ -1338,7 +1346,7 @@
                 if (matchInfoDiv) {
                     matchInfoDiv.innerHTML = originalMatchInfoHTML;
                 }
-                showFadingMessage('Ошибка при создании скриншота');
+                showFadingMessage('Ошибка при создания скриншота');
             });
         }
 
@@ -1363,16 +1371,14 @@
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const screenshotBtn = document.getElementById('screenshotBtn');
             const invertBtn = document.getElementById('invertBtn');
-            const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
-            const skipAnimationCheckbox = document.getElementById('skipAnimationCheckbox');
+            const checkboxes = document.getElementById('checkboxes');
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
             const originalScreenshotDisplay = screenshotBtn ? screenshotBtn.style.display : 'none';
             const originalInvertDisplay = invertBtn ? invertBtn.style.display : 'none';
-            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
-            const originalSkipAnimationCheckboxDisplay = skipAnimationCheckbox ? skipAnimationCheckbox.style.display : 'none';
+            const originalCheckboxesDisplay = checkboxes ? checkboxes.style.display : 'none';
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : 'none';
             const originalPlayersInfoHTML = playersInfoDiv ? playersInfoDiv.innerHTML : '';
             const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
@@ -1383,8 +1389,7 @@
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
             if (screenshotBtn) screenshotBtn.style.display = 'none';
             if (invertBtn) invertBtn.style.display = 'none';
-            if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
-            if (skipAnimationCheckbox) skipAnimationCheckbox.style.display = 'none';
+            if (checkboxes) checkboxes.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfoDiv) {
@@ -1412,8 +1417,7 @@
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (skipAnimationCheckbox) skipAnimationCheckbox.style.display = originalSkipAnimationCheckboxDisplay;
+                if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
@@ -1448,8 +1452,7 @@
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (skipAnimationCheckbox) skipAnimationCheckbox.style.display = originalSkipAnimationCheckboxDisplay;
+                if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
