@@ -1274,6 +1274,8 @@
             const gameIndex = parseInt(e.target.value);
             currentGameNum = gameIndex + 1;
             data = availableGames[gameIndex].turns;
+            gameRedScore = availableGames[gameIndex].first_score;
+            gameBlackScore = availableGames[gameIndex].second_score;
             current = 0;
             inverted = false;
             const matchInfoDiv = document.getElementById('match-info');
