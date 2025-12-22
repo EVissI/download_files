@@ -144,7 +144,11 @@
             margin-top: 10px;
             align-items: center;
             width: 100%;
-            position: relative;
+        }
+
+        .pips-container {
+            text-align: right;
+            margin-bottom: 10px;
         }
 
         #controls {
@@ -433,13 +437,6 @@
             margin-right: 10px;
         }
 
-        .right-group {
-            position: absolute;
-            right: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
 
 
         #players-info {
@@ -540,10 +537,11 @@
                 <select id="gameSelect">
                     <option value="0">Game 1</option>
                 </select>
-                <div class="right-group">
-                    <div id="black-pips" class="pips-above-board">0</div>
-                </div>
             </div>
+        </div>
+
+        <div class="pips-container">
+            <div id="black-pips" class="pips-above-board">0</div>
         </div>
 
         <canvas id="boardCanvas" width="800" height="800"></canvas>
