@@ -1185,7 +1185,7 @@
 
             if (isBarFrom) {
                 player_pos['bar'] = (player_pos['bar'] || 1) - 1;
-                if (player_pos['bar'] === 0) delete player_pos['bar'];
+                if (player_pos['bar'] <= 0) delete player_pos['bar'];
             } else {
                 player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
                 if (player_pos[fromStr] === 0) delete player_pos[fromStr];
@@ -1235,10 +1235,11 @@
 
             let moves = nextTurnData.moves || [];
             const toScreenPoint = (p) => {
-                if (p === 'bar' || p === 'off') return p;
+                if (p === 'off' || p === 0) return 'off';
+                if (p === 'bar' || p === 25) return 'bar';
                 const n = Number(p);
-                if (!Number.isFinite(n)) return p;
-                const boardP = (playerType === 'second') ? (25 - n) : n;
+                if (!Number.isFinite(n) || n < 1 || n > 24) return p;
+                let boardP = (playerType === 'second') ? (25 - n) : n;
                 return inverted ? (25 - boardP) : boardP;
             };
 
