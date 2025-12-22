@@ -736,6 +736,8 @@
                 updateButtons();
                 drawBoard();
                 updateInfo();
+                // Force draw board after a short delay to ensure initialization
+                setTimeout(() => drawBoard(), 100);
             })
             .catch(error => {
                 console.error('Error loading games data:', error);
