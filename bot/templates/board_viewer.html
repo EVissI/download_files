@@ -152,10 +152,18 @@
         #top-row {
             margin: 0px 0;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             margin-top: 10px;
             align-items: center;
             width: 100%;
+            position: relative;
+        }
+
+        #gameSelect {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
         }
 
         #controls {
@@ -539,7 +547,6 @@
             <div id="match-info"></div>
             <div id="players-info"></div>
             <div id="top-row">
-                <div style="flex: 1;"></div>
                 <select id="gameSelect">
                     <option value="0">Game 1</option>
                 </select>
