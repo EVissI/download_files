@@ -1042,10 +1042,10 @@
             const player_pos = temp_positions[playerType];
             const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
             const fromStr = move.from.toString();
+            const toStr = move.to.toString()
             let fromX, fromY;
             const rawFrom = move.from;
             const fromIsBar = (rawFrom === 'bar' || rawFrom === 25 || rawFrom === '25');
-
             const rawTo = move.to;
             const isOff = (rawTo === 'off' || rawTo === 0 || rawTo === '0');
             const isBar = (rawTo === 'bar' || rawTo === 25 || rawTo === '25');
