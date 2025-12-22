@@ -601,6 +601,7 @@
         let skipAnimation = false;
         let animationSpeed = 0.5;
         let skipAnimationEnabled = false;
+        let pendingPrevGame = false;
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -1381,6 +1382,25 @@
                             updateInfo();
                             animating = false;
                             skipAnimation = false;
+                            if (pendingPrevGame) {
+                                pendingPrevGame = false;
+                                if (currentGameNum > 1) {
+                                    currentGameNum--;
+                                    data = availableGames[currentGameNum - 1].turns;
+                                    current = data.length - 1;
+                                    updateGameSelect();
+                                    drawBoard();
+                                    updateButtons();
+                                    updateInfo();
+                                    const game = availableGames[currentGameNum - 1];
+                                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`}</span><span>Игра ${currentGameNum}</span><span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                                    redPlayer = game.first_player;
+                                    blackPlayer = game.second_player;
+                                    gameRedScore = game.first_score;
+                                    gameBlackScore = game.second_score;
+                                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                                }
+                            }
                             return;
                         }
 
@@ -1421,27 +1441,16 @@
         function prevTurn() {
             if (animating) {
                 skipAnimation = true;
+                pendingPrevGame = true;
                 setTimeout(() => {
-                    if (current > 0) {
-                        current--;
-                        drawBoard();
-                        updateButtons();
-                        updateInfo();
-                    } else if (currentGameNum > 1) {
-                        currentGameNum--;
-                        data = availableGames[currentGameNum - 1].turns;
-                        current = data.length - 1;
-                        updateGameSelect();
-                        drawBoard();
-                        updateButtons();
-                        updateInfo();
-                        const game = availableGames[currentGameNum - 1];
-                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`}</span><span>Игра ${currentGameNum}</span><span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
-                        redPlayer = game.first_player;
-                        blackPlayer = game.second_player;
-                        gameRedScore = game.first_score;
-                        gameBlackScore = game.second_score;
-                        playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                    if (pendingPrevGame) {
+                        pendingPrevGame = false;
+                        if (current > 0) {
+                            current--;
+                            drawBoard();
+                            updateButtons();
+                            updateInfo();
+                        }
                     }
                 }, 50);
                 return;
