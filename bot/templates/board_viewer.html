@@ -569,9 +569,6 @@
             <div class="move-info" id="moveInfo">Initial Position</div>
             <div id="red-pips" class="pips-below-board">0</div>
             <div id="controls">
-                <button onclick="saveScreenshot()" id="screenSaveBtn" title="Save Screenshot"></button>
-                <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Upload Screenshots"></button>
-                <button onclick="takeScreenshot()" id="screenshotBtn" title="Take Screenshot"></button>
                 <button onclick="toggleInvert()" id="invertBtn" title="Invert Board"></button>
                 <button onclick="prevTurn()" id="prevBtn" title="Previous Move"></button>
                 <div class="turn-display">
@@ -582,6 +579,18 @@
             <div id="checkboxes">
                 <label><input type="checkbox" id="hideInfoCheckbox"> Убрать данные матча на скриншоте</label>
                 <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию шашек</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button onclick="takeScreenshot()" id="screenshotBtn" title="Take Screenshot"></button>
+                    <span>Выслать скриншот экрана</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button onclick="saveScreenshot()" id="screenSaveBtn" title="Save Screenshot"></button>
+                    <span>Добавить скриншот в буфер обмена</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Upload Screenshots"></button>
+                    <span>Выслать архив со скриншотами</span>
+                </div>
             </div>
         </div>
     </div>
