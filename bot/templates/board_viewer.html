@@ -519,7 +519,6 @@
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-        // Add cache-busting to CSS background images
         document.addEventListener('DOMContentLoaded', function () {
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
@@ -527,24 +526,13 @@
             const screenshotBtn = document.getElementById('screenshotBtn');
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
-            if (prevBtn) {
-                prevBtn.style.backgroundImage = "url('/static/left.png?t=" + Date.now() + "')";
-            }
-            if (nextBtn) {
-                nextBtn.style.backgroundImage = "url('/static/right.png?t=" + Date.now() + "')";
-            }
-            if (invertBtn) {
-                invertBtn.style.backgroundImage = "url('/static/change_color.png?t=" + Date.now() + "')";
-            }
-            if (screenshotBtn) {
-                screenshotBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
-            }
-            if (screenSaveBtn) {
-                screenSaveBtn.style.backgroundImage = "url('/static/ScreenSave.png?t=" + Date.now() + "')";
-            }
-            if (screenUploadBtn) {
-                screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.png?t=" + Date.now() + "')";
-            }
+
+            prevBtn.style.backgroundImage = `url('prev.png?v=${new Date().getTime()}')`;
+            nextBtn.style.backgroundImage = `url('next.png?v=${new Date().getTime()}')`;
+            invertBtn.style.backgroundImage = `url('invert.png?v=${new Date().getTime()}')`;
+            screenshotBtn.style.backgroundImage = `url('screenshot.png?v=${new Date().getTime()}')`;
+            screenSaveBtn.style.backgroundImage = `url('screensave.png?v=${new Date().getTime()}')`;
+            screenUploadBtn.style.backgroundImage = `url('screenupload.png?v=${new Date().getTime()}')`;
         });
     </script>
 </head>
@@ -670,6 +658,28 @@
                 5: Dice5b,
                 6: Dice6b
             }
+        };
+
+        const Double2 = new Image();
+        Double2.src = '/static/Double2.png?t=' + Date.now();
+        const Double4 = new Image();
+        Double4.src = '/static/Double4.png?t=' + Date.now();
+        const Double8 = new Image();
+        Double8.src = '/static/Double8.png?t=' + Date.now();
+        const Double16 = new Image();
+        Double16.src = '/static/Double16.png?t=' + Date.now();
+        const Double32 = new Image();
+        Double32.src = '/static/Double32.png?t=' + Date.now();
+        const Double64 = new Image();
+        Double64.src = '/static/Double64.png?t=' + Date.now();
+
+        const cubeImages = {
+            2: Double2,
+            4: Double4,
+            8: Double8,
+            16: Double16,
+            32: Double32,
+            64: Double64
         };
 
         // Get game_id from URL
@@ -996,6 +1006,35 @@
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
+
+            // Draw cube
+            if (item && item.cube_owner === null) {
+                // Default position: cube 64 in center
+                ctx.drawImage(cubeImages[64], 400 - 25, 400 - 25, 50, 50);
+            } else if (item && item.cube_value && item.cube_value > 1) {
+                const cubeImg = cubeImages[item.cube_value];
+                if (cubeImg) {
+                    let cubeX, cubeY;
+                    if (item.cube_location === 'center') {
+                        if (item.cube_owner === 'first') {
+                            cubeX = 100 - 25;
+                            cubeY = 400 - 25;
+                        } else {
+                            cubeX = 700 - 25;
+                            cubeY = 400 - 25;
+                        }
+                    } else {
+                        if (item.cube_owner === 'first') {
+                            cubeX = 400 - 25;
+                            cubeY = 50 - 25;
+                        } else {
+                            cubeX = 400 - 25;
+                            cubeY = 750 - 25;
+                        }
+                    }
+                    ctx.drawImage(cubeImg, cubeX, cubeY, 50, 50);
+                }
+            }
         }
 
         function drawBoardForAnimation(positions, currentPlayerType) {
@@ -1005,6 +1044,36 @@
             invertColors = inverted;
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
+
+            // Draw cube
+            const turnItem = data[current];
+            if (turnItem && turnItem.cube_owner === null) {
+                // Default position: cube 64 in center
+                ctx.drawImage(cubeImages[64], 400 - 25, 400 - 25, 50, 50);
+            } else if (turnItem && turnItem.cube_value && turnItem.cube_value > 1) {
+                const cubeImg = cubeImages[turnItem.cube_value];
+                if (cubeImg) {
+                    let cubeX, cubeY;
+                    if (turnItem.cube_location === 'center') {
+                        if (turnItem.cube_owner === 'first') {
+                            cubeX = 100 - 25;
+                            cubeY = 400 - 25;
+                        } else {
+                            cubeX = 700 - 25;
+                            cubeY = 400 - 25;
+                        }
+                    } else {
+                        if (turnItem.cube_owner === 'first') {
+                            cubeX = 400 - 25;
+                            cubeY = 50 - 25;
+                        } else {
+                            cubeX = 400 - 25;
+                            cubeY = 750 - 25;
+                        }
+                    }
+                    ctx.drawImage(cubeImg, cubeX, cubeY, 50, 50);
+                }
+            }
 
 
             const item = data[current + 1];
@@ -1634,7 +1703,7 @@
 
         // Draw board when images are loaded
         let imagesLoaded = 0;
-        const totalImages = 15;
+        const totalImages = 21;
 
         function imageLoaded() {
             imagesLoaded++;
@@ -1658,6 +1727,12 @@
         Dice4b.onload = imageLoaded;
         Dice5b.onload = imageLoaded;
         Dice6b.onload = imageLoaded;
+        Double2.onload = imageLoaded;
+        Double4.onload = imageLoaded;
+        Double8.onload = imageLoaded;
+        Double16.onload = imageLoaded;
+        Double32.onload = imageLoaded;
+        Double64.onload = imageLoaded;
 
     </script>
 </body>
