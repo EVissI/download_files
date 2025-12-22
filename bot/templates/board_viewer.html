@@ -578,8 +578,6 @@
                 <button onclick="nextTurn()" id="nextBtn" title="Next Move"></button>
             </div>
             <div id="checkboxes">
-                <label><input type="checkbox" id="hideInfoCheckbox"> Убрать данные матча на скриншоте</label>
-                <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию шашек</label>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <button onclick="takeScreenshot()" id="screenshotBtn" title="Take Screenshot"></button>
                     <span>Выслать скриншот экрана</span>
@@ -592,6 +590,8 @@
                     <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Upload Screenshots"></button>
                     <span>Выслать архив со скриншотами</span>
                 </div>
+                <label><input type="checkbox" id="hideInfoCheckbox"> Убрать данные матча на скриншоте</label>
+                <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию шашек</label>
             </div>
         </div>
     </div>
