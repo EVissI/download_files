@@ -1293,6 +1293,8 @@
             if (current >= data.length - 1) {
                 if (currentGameNum < availableGames.length) {
                     currentGameNum++;
+                    let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
+                    document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
                     data = availableGames[currentGameNum - 1].turns;
                     current = 0;
                     updateGameSelect();
@@ -1448,6 +1450,8 @@
             if (current === 0) {
                 if (currentGameNum > 1) {
                     currentGameNum--;
+                    let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
+                    document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
                     data = availableGames[currentGameNum - 1].turns;
                     current = data.length - 1;
                     updateGameSelect();
