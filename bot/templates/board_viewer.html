@@ -1041,9 +1041,8 @@
             const img = playerType === 'first' ? whiteChecker : blackChecker;
             const player_pos = temp_positions[playerType];
             const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
-
-            let fromX, fromY;
             const fromStr = move.from.toString();
+            let fromX, fromY;
             const rawFrom = move.from;
             const fromIsBar = (rawFrom === 'bar' || rawFrom === 25 || rawFrom === '25');
 
