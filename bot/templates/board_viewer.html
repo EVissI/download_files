@@ -1025,7 +1025,7 @@
                             cubeY = 400 - 25;
                         }
                     } else {
-                        if (item.cube_owner === 'first') {
+                        if (item && item.cube_owner === 'first') {
                             cubeX = 400 - 25;
                             cubeY = 625 - 25;
                         } else {
@@ -1077,7 +1077,7 @@
             }
 
 
-            const item = data[current + 1];
+            const item = (current + 1 < data.length) ? data[current + 1] : null;
 
 
             const turnData = data[current];
