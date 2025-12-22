@@ -1283,11 +1283,31 @@
 
         function nextTurn() {
             if (skipAnimationEnabled) {
-                if (current >= data.length - 1) return;
-                current++;
-                drawBoard();
-                updateButtons();
-                updateInfo();
+                if (current >= data.length - 1) {
+                    if (currentGameNum < availableGames.length) {
+                        currentGameNum++;
+                        data = availableGames[currentGameNum - 1].turns;
+                        current = 0;
+                        updateGameSelect();
+                        updateButtons();
+                        drawBoard();
+                        updateInfo();
+                        const game = availableGames[currentGameNum - 1];
+                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`}</span><span>Игра ${currentGameNum}</span><span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                        redPlayer = game.first_player;
+                        blackPlayer = game.second_player;
+                        gameRedScore = game.first_score;
+                        gameBlackScore = game.second_score;
+                        playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                    } else {
+                        return;
+                    }
+                } else {
+                    current++;
+                    drawBoard();
+                    updateButtons();
+                    updateInfo();
+                }
                 return;
             }
 
@@ -1297,99 +1317,119 @@
                 return;
             }
 
-            if (current >= data.length - 1) return;
-
-            animating = true;
-            skipAnimation = false; // Сбрасываем флаг
-            updateButtons();
-            updateInfo(); // Обновляем инфо сразу
-
-            const nextTurnData = data[current];
-            const playerType = nextTurnData.turn === 'first' ? 'first' : 'second';
-
-            let prev_positions;
-            if (current === 0) {
-                const game = availableGames.find(g => g.game_number === currentGameNum);
-                prev_positions = getInitialPositions(inverted, game.is_long_game);
+            if (current >= data.length - 1) {
+                if (currentGameNum < availableGames.length) {
+                    currentGameNum++;
+                    data = availableGames[currentGameNum - 1].turns;
+                    current = 0;
+                    updateGameSelect();
+                    updateButtons();
+                    drawBoard();
+                    updateInfo();
+                    const game = availableGames[currentGameNum - 1];
+                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`}</span><span>Игра ${currentGameNum}</span><span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                    redPlayer = game.first_player;
+                    blackPlayer = game.second_player;
+                    gameRedScore = game.first_score;
+                    gameBlackScore = game.second_score;
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                } else {
+                    return;
+                }
             } else {
-                prev_positions = inverted ? data[current - 1].inverted_positions : data[current - 1].positions;
-            }
 
-            const temp_positions = JSON.parse(JSON.stringify(prev_positions));
-
-            let moves = nextTurnData.moves || [];
-            const toScreenPoint = (p) => {
-                if (p === 'off' || p === 0) return 'off';
-                if (p === 'bar' || p === 25) return 'bar';
-                const n = Number(p);
-                if (!Number.isFinite(n) || n < 1 || n > 24) return p;
-                let boardP = (playerType === 'second') ? (25 - n) : n;
-                return inverted ? (25 - boardP) : boardP;
-            };
-
-            moves = moves.map(m => ({
-                ...m,
-                from: toScreenPoint(m.from),
-                to: toScreenPoint(m.to),
-            }));
-
-            const timeoutId = setTimeout(() => {
-                animating = false;
+                animating = true;
+                skipAnimation = false; // Сбрасываем флаг
                 updateButtons();
-            }, 5000);
+                updateInfo(); // Обновляем инфо сразу
 
-            if (moves.length > 0) {
-                let moveIndex = 0;
-                const animateMoves = () => {
-                    // Проверяем флаг пропуска
-                    if (skipAnimation) {
-                        // Применяем все оставшиеся ходы мгновенно
-                        while (moveIndex < moves.length) {
-                            const move = moves[moveIndex];
-                            updateTempPositionsAfterMove(move, playerType, temp_positions);
-                            moveIndex++;
+                const nextTurnData = data[current];
+                const playerType = nextTurnData.turn === 'first' ? 'first' : 'second';
+
+                let prev_positions;
+                if (current === 0) {
+                    const game = availableGames.find(g => g.game_number === currentGameNum);
+                    prev_positions = getInitialPositions(inverted, game.is_long_game);
+                } else {
+                    prev_positions = inverted ? data[current - 1].inverted_positions : data[current - 1].positions;
+                }
+
+                const temp_positions = JSON.parse(JSON.stringify(prev_positions));
+
+                let moves = nextTurnData.moves || [];
+                const toScreenPoint = (p) => {
+                    if (p === 'off' || p === 0) return 'off';
+                    if (p === 'bar' || p === 25) return 'bar';
+                    const n = Number(p);
+                    if (!Number.isFinite(n) || n < 1 || n > 24) return p;
+                    let boardP = (playerType === 'second') ? (25 - n) : n;
+                    return inverted ? (25 - boardP) : boardP;
+                };
+
+                moves = moves.map(m => ({
+                    ...m,
+                    from: toScreenPoint(m.from),
+                    to: toScreenPoint(m.to),
+                }));
+
+                const timeoutId = setTimeout(() => {
+                    animating = false;
+                    updateButtons();
+                }, 5000);
+
+                if (moves.length > 0) {
+                    let moveIndex = 0;
+                    const animateMoves = () => {
+                        // Проверяем флаг пропуска
+                        if (skipAnimation) {
+                            // Применяем все оставшиеся ходы мгновенно
+                            while (moveIndex < moves.length) {
+                                const move = moves[moveIndex];
+                                updateTempPositionsAfterMove(move, playerType, temp_positions);
+                                moveIndex++;
+                            }
+                            // Завершаем анимацию
+                            clearTimeout(timeoutId);
+                            current++;
+                            drawBoard();
+                            updateButtons();
+                            updateInfo();
+                            animating = false;
+                            skipAnimation = false;
+                            return;
                         }
-                        // Завершаем анимацию
-                        clearTimeout(timeoutId);
-                        current++;
-                        drawBoard();
-                        updateButtons();
-                        updateInfo();
-                        animating = false;
-                        skipAnimation = false;
-                        return;
-                    }
 
-                    if (moveIndex < moves.length) {
-                        const move = moves[moveIndex];
-                        animateSingleMove(move, playerType, temp_positions, (hasHit, move, playerType, temp_positions) => {
-                            if (hasHit) {
-                                animateHit(move, playerType, temp_positions, () => {
+                        if (moveIndex < moves.length) {
+                            const move = moves[moveIndex];
+                            animateSingleMove(move, playerType, temp_positions, (hasHit, move, playerType, temp_positions) => {
+                                if (hasHit) {
+                                    animateHit(move, playerType, temp_positions, () => {
+                                        moveIndex++;
+                                        setTimeout(animateMoves, 100 / animationSpeed);
+                                    });
+                                } else {
                                     moveIndex++;
                                     setTimeout(animateMoves, 100 / animationSpeed);
-                                });
-                            } else {
-                                moveIndex++;
-                                setTimeout(animateMoves, 100 / animationSpeed);
-                            }
-                        });
-                    } else {
-                        clearTimeout(timeoutId);
-                        current++;
-                        drawBoard();
-                        updateButtons();
-                        updateInfo();
-                        animating = false;
-                    }
-                };
-                animateMoves();
-            } else {
-                clearTimeout(timeoutId);
-                current++;
-                drawBoard();
-                updateButtons();
-                updateInfo();
-                animating = false;
+                                }
+                            });
+                        } else {
+                            clearTimeout(timeoutId);
+                            current++;
+                            drawBoard();
+                            updateButtons();
+                            updateInfo();
+                            animating = false;
+                        }
+                    };
+                    animateMoves();
+                } else {
+                    clearTimeout(timeoutId);
+                    current++;
+                    drawBoard();
+                    updateButtons();
+                    updateInfo();
+                    animating = false;
+                }
             }
         }
 
