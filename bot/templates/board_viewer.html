@@ -1048,6 +1048,7 @@
 
             // Draw cube
             const turnItem = data[current];
+            const item = (current + 1 < data.length) ? data[current + 1] : null;
             if (turnItem && turnItem.cube_owner === null) {
                 // Default position: cube 64 in center
                 ctx.drawImage(cubeImages[64], 400 - 25, 400 - 25, 50, 50);
@@ -1075,9 +1076,6 @@
                     ctx.drawImage(cubeImg, cubeX, cubeY, 50, 50);
                 }
             }
-
-
-            const item = (current + 1 < data.length) ? data[current + 1] : null;
 
 
             const turnData = data[current];
