@@ -526,13 +526,24 @@
             const screenshotBtn = document.getElementById('screenshotBtn');
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
-
-            prevBtn.style.backgroundImage = `url('prev.png?v=${new Date().getTime()}')`;
-            nextBtn.style.backgroundImage = `url('next.png?v=${new Date().getTime()}')`;
-            invertBtn.style.backgroundImage = `url('invert.png?v=${new Date().getTime()}')`;
-            screenshotBtn.style.backgroundImage = `url('screenshot.png?v=${new Date().getTime()}')`;
-            screenSaveBtn.style.backgroundImage = `url('screensave.png?v=${new Date().getTime()}')`;
-            screenUploadBtn.style.backgroundImage = `url('screenupload.png?v=${new Date().getTime()}')`;
+            if (prevBtn) {
+                prevBtn.style.backgroundImage = "url('/static/left.png?t=" + Date.now() + "')";
+            }
+            if (nextBtn) {
+                nextBtn.style.backgroundImage = "url('/static/right.png?t=" + Date.now() + "')";
+            }
+            if (invertBtn) {
+                invertBtn.style.backgroundImage = "url('/static/change_color.png?t=" + Date.now() + "')";
+            }
+            if (screenshotBtn) {
+                screenshotBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
+            }
+            if (screenSaveBtn) {
+                screenSaveBtn.style.backgroundImage = "url('/static/ScreenSave.png?t=" + Date.now() + "')";
+            }
+            if (screenUploadBtn) {
+                screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.png?t=" + Date.now() + "')";
+            }
         });
     </script>
 </head>
