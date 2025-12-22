@@ -1019,19 +1019,19 @@
                 if (cubeImg) {
                     let cubeX, cubeY;
                     if (item.cube_location === 'center' && item.action != 'drop') {
-                        if (item.cube_owner === 'first') {
+                        if (item && item.cube_owner === 'first') {
                             cubeX = 200 - 25;
-                            cubeY = 400 - 25;
+                            cubeY = 380 - 25;
                         } else {
                             cubeX = 600 - 25;
-                            cubeY = 400 - 25;
+                            cubeY = 380 - 25;
                         }
                     } else {
                         if (item && item.cube_owner === 'first') {
-                            cubeX = 350 - 25;
+                            cubeX = 400 - 25;
                             cubeY = 625 - 25;
                         } else {
-                            cubeX = 350 - 25;
+                            cubeX = 400 - 25;
                             cubeY = 150 - 25;
                         }
                     }
@@ -1047,37 +1047,6 @@
             invertColors = inverted;
             drawCheckers('first', whiteChecker, positions.first, currentPlayerType);
             drawCheckers('second', blackChecker, positions.second, currentPlayerType);
-
-            // Draw cube
-            const turnItem = data[current];
-            const item = (current + 1 < data.length) ? data[current + 1] : null;
-            if (turnItem && turnItem.cube_owner === null) {
-                // Default position: cube 64 in center
-                ctx.drawImage(cubeImages[64], 400 - 25, 400 - 25, 50, 50);
-            } else if (turnItem && turnItem.cube_value && turnItem.cube_value > 1) {
-                const cubeImg = cubeImages[turnItem.cube_value];
-                if (cubeImg) {
-                    let cubeX, cubeY;
-                    if (turnItem.cube_location === 'center') {
-                        if (turnItem.cube_owner === 'first') {
-                            cubeX = 100 - 25;
-                            cubeY = 400 - 25;
-                        } else {
-                            cubeX = 700 - 25;
-                            cubeY = 400 - 25;
-                        }
-                    } else {
-                        if (item && item.cube_owner === 'first') {
-                            cubeX = 350 - 25;
-                            cubeY = 625 - 25;
-                        } else {
-                            cubeX = 350 - 25;
-                            cubeY = 150 - 25;
-                        }
-                    }
-                    ctx.drawImage(cubeImg, cubeX, cubeY, 50, 50);
-                }
-            }
 
 
             const turnData = data[current];
