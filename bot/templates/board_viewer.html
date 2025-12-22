@@ -539,16 +539,19 @@
             <div id="match-info"></div>
             <div id="players-info"></div>
             <div id="top-row">
-                <select id="gameSelect">
-                    <option value="0">Game 1</option>
-                </select>
                 <div class="right-group">
                     <div id="black-pips" class="pips-above-board">0</div>
                 </div>
             </div>
         </div>
 
-        <canvas id="boardCanvas" width="800" height="800"></canvas>
+        <div class="board-wrapper" style="position: relative; margin: 0 auto 20px;">
+            <canvas id="boardCanvas" width="800" height="800"></canvas>
+            <select id="gameSelect"
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
+                <option value="0">Game 1</option>
+            </select>
+        </div>
 
         <div class="board-footer">
             <div class="move-info" id="moveInfo">Initial Position</div>
