@@ -653,6 +653,19 @@
         const Dice6b = new Image();
         Dice6b.src = '/static/6b.png?t=' + Date.now();
 
+        const Double2 = new Image();
+        Double2.src = '/static/Double2.png?t=' + Date.now();
+        const Double4 = new Image();
+        Double4.src = '/static/Double4.png?t=' + Date.now();
+        const Double8 = new Image();
+        Double8.src = '/static/Double8.png?t=' + Date.now();
+        const Double16 = new Image();
+        Double16.src = '/static/Double16.png?t=' + Date.now();
+        const Double32 = new Image();
+        Double32.src = '/static/Double32.png?t=' + Date.now();
+        const Double64 = new Image();
+        Double64.src = '/static/Double64.png?t=' + Date.now();
+
         const diceImages = {
             white: {
                 1: Dice1w,
@@ -699,6 +712,38 @@
                     return;
                 }
                 data = gamesArray[0].turns; // Default to first game
+                let doubleTurns = data.map((item, index) => item.action === 'double' ? index : -1).filter(idx => idx !== -1);
+                let firstDoubleIndex = doubleTurns.length > 0 ? doubleTurns[0] : -1;
+                let currentCube = null;
+                let currentCubePlayer = null;
+
+                function updateCurrentCube(turn) {
+                    let lastDoubleIndex = -1;
+                    for (let i = 0; i < doubleTurns.length; i++) {
+                        if (doubleTurns[i] <= turn) {
+                            lastDoubleIndex = doubleTurns[i];
+                        } else {
+                            break;
+                        }
+                    }
+                    if (lastDoubleIndex !== -1) {
+                        const cubeValue = data[lastDoubleIndex].cube;
+                        const doubleImages = {
+                            2: Double2,
+                            4: Double4,
+                            8: Double8,
+                            16: Double16,
+                            32: Double32,
+                            64: Double64
+                        };
+                        currentCube = doubleImages[cubeValue];
+                        currentCubePlayer = data[lastDoubleIndex].player;
+                    } else {
+                        currentCube = null;
+                        currentCubePlayer = null;
+                    }
+                }
+
                 availableGames = gamesArray.map((game, index) => ({
                     game_number: index + 1,
                     turns: game.turns,
@@ -967,6 +1012,7 @@
             }
 
             const item = data[current];
+            updateCurrentCube(current);
             if (item && item.dice && item.dice.length >= 2 && !['double', 'take', 'win'].includes(item.action)) {
                 const [d1, d2] = item.dice;
                 const diceY = 350;
@@ -995,6 +1041,66 @@
                 }
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+            }
+
+            if (current < firstDoubleIndex) {
+                ctx.drawImage(Double64, 375, 350, 50, 50);
+            }
+
+            for (let i = 0; i < doubleTurns.length; i++) {
+                const doubleIndex = doubleTurns[i];
+                if (current === doubleIndex) {
+                    const cubeValue = data[doubleIndex].cube;
+                    const doubleImages = {
+                        2: Double2,
+                        4: Double4,
+                        8: Double8,
+                        16: Double16,
+                        32: Double32,
+                        64: Double64
+                    };
+                    const img = doubleImages[cubeValue];
+                    if (img) {
+                        let cubeX;
+                        if (invertColors) {
+                            if (data[doubleIndex].player === 'first') {
+                                cubeX = 175; // куб справа для красных при инверсии
+                            } else {
+                                cubeX = 575; // куб слева для черных при инверсии
+                            }
+                        } else {
+                            if (data[doubleIndex].player === 'first') {
+                                cubeX = 575; // куб слева для красных
+                            } else {
+                                cubeX = 175; // куб справа для черных
+                            }
+                        }
+                        ctx.drawImage(img, cubeX, 350, 50, 50);
+                    }
+                    break;
+                }
+            }
+
+            if (currentCube && current > firstDoubleIndex && !doubleTurns.includes(current) && item.action !== 'win') {
+                let cubeY = 350;
+                if (invertColors) {
+                    if (currentCubePlayer === 'first') {
+                        cubeY = 600;
+                    } else if (currentCubePlayer === 'second') {
+                        cubeY = 100;
+                    }
+                } else {
+                    if (currentCubePlayer === 'second') {
+                        cubeY = 600;
+                    } else if (currentCubePlayer === 'first') {
+                        cubeY = 100;
+                    }
+                }
+                ctx.drawImage(currentCube, 375, cubeY, 50, 50);
+            }
+
+            if (item.action === 'win') {
+                ctx.drawImage(Double64, 375, 350, 50, 50);
             }
         }
 
@@ -1634,7 +1740,7 @@
 
         // Draw board when images are loaded
         let imagesLoaded = 0;
-        const totalImages = 15;
+        const totalImages = 21;
 
         function imageLoaded() {
             imagesLoaded++;
@@ -1658,6 +1764,12 @@
         Dice4b.onload = imageLoaded;
         Dice5b.onload = imageLoaded;
         Dice6b.onload = imageLoaded;
+        Double2.onload = imageLoaded;
+        Double4.onload = imageLoaded;
+        Double8.onload = imageLoaded;
+        Double16.onload = imageLoaded;
+        Double32.onload = imageLoaded;
+        Double64.onload = imageLoaded;
 
     </script>
 </body>
