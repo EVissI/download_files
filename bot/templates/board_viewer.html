@@ -530,6 +530,7 @@
             <div id="match-info"></div>
             <div id="players-info"></div>
             <div id="top-row">
+                <span id="crawfordLabel" style="visibility: hidden;">Кроуфорд</span>
                 <select id="gameSelect">
                     <option value="0">Game 1</option>
                 </select>
@@ -602,6 +603,7 @@
         let animationSpeed = 0.5;
         let skipAnimationEnabled = false;
         let pendingPrevGame = false;
+        let enable_crawford_game_number = null;
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
@@ -718,7 +720,8 @@
                     first_score: game.first.score,
                     second_score: game.second.score,
                     point_match: game.point_match,
-                    is_long_game: game.is_long_game
+                    is_long_game: game.is_long_game,
+                    is_crawford: game.is_crawford
                 }));
                 const gameInfo = gamesArray[0]
                 redPlayer = gameInfo.first ? gameInfo.first.name : 'Unknown';
@@ -726,6 +729,7 @@
                 gameRedScore = gameInfo.first ? gameInfo.first.score : 0;
                 gameBlackScore = gameInfo.second ? gameInfo.second.score : 0;
                 matchPoint = gameInfo.point_match ? gameInfo.point_match : 0
+                enable_crawford_game_number = gamesArray.findIndex(game => game.is_crawford) + 1 || null;
                 dataLoaded = true;
                 const matchInfoDiv = document.getElementById('match-info');
                 const matchText = matchPoint === 0 ? 'Манигейм' : `Матч до ${matchPoint}`;
@@ -736,6 +740,9 @@
                 updateButtons();
                 drawBoard();
                 updateInfo();
+                // Update crawford visibility
+                let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
+                document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
                 // Force draw board after a short delay to ensure initialization
                 setTimeout(() => drawBoard(), 100);
             })
@@ -1738,6 +1745,8 @@
             const matchInfoDiv = document.getElementById('match-info');
             const matchText = availableGames[gameIndex].point_match === 0 ? 'Манигейм' : `Матч до ${availableGames[gameIndex].point_match}`;
             matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+            let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
+            document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
             drawBoard();
             updateButtons();
             updateInfo();
