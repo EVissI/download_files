@@ -1070,7 +1070,7 @@
             let toX, toY;
             const toStr = move.to.toString();
             if (toStr === 'off') {
-                toX = invertColors ? 20 : 820;
+                toX = 820;
                 toY = playerType === 'second'
                     ? (invertColors ? 440 : 340)
                     : (invertColors ? 340 : 440);
@@ -1137,6 +1137,7 @@
             const barY = (hitPlayerType === 'second') ? 220 : 520;
             const barDy = (hitPlayerType === 'second') ? 55 : -55;
             const barCount = opp_pos['bar'] || 0;
+            const toX = 820; // Fly to the right
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
 
             let progress = 0;
