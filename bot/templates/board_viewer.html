@@ -158,11 +158,16 @@
 
         #controls {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            gap: 5px;
             width: 100%;
             flex-wrap: wrap;
+        }
+
+        .center-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .turn-display {
@@ -305,7 +310,7 @@
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
-                justify-content: center;
+                justify-content: space-between;
                 width: 100%;
             }
 
@@ -553,11 +558,13 @@
             <div id="red-pips" class="pips-below-board">0</div>
             <div id="controls">
                 <button onclick="toggleInvert()" id="invertBtn" title="Invert Board"></button>
-                <button onclick="prevTurn()" id="prevBtn" title="Previous Move"></button>
-                <div class="turn-display">
-                    <span id="turnLabel">1</span>
+                <div class="center-controls">
+                    <button onclick="prevTurn()" id="prevBtn" title="Previous Move"></button>
+                    <div class="turn-display">
+                        <span id="turnLabel">1</span>
+                    </div>
+                    <button onclick="nextTurn()" id="nextBtn" title="Next Move"></button>
                 </div>
-                <button onclick="nextTurn()" id="nextBtn" title="Next Move"></button>
             </div>
             <div id="checkboxes">
                 <table style="border: none; border-collapse: collapse; width: 100%;">
