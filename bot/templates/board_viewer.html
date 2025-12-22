@@ -1028,19 +1028,19 @@
                     let cubeX, cubeY;
                     if (item.cube_location === 'center') {
                         if (item.cube_owner === 'first') {
-                            cubeX = 100 - 25;
+                            cubeX = 200 - 25;
                             cubeY = 400 - 25;
                         } else {
-                            cubeX = 700 - 25;
+                            cubeX = 600 - 25;
                             cubeY = 400 - 25;
                         }
                     } else {
                         if (item.cube_owner === 'first') {
                             cubeX = 400 - 25;
-                            cubeY = 50 - 25;
+                            cubeY = 150 - 25;
                         } else {
                             cubeX = 400 - 25;
-                            cubeY = 750 - 25;
+                            cubeY = 650 - 25;
                         }
                     }
                     ctx.drawImage(cubeImg, cubeX, cubeY, 50, 50);
