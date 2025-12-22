@@ -1466,7 +1466,7 @@
 
             if (dataLoaded) {
                 prevBtn.disabled = current === 0;
-                nextBtn.disabled = current === data.length - 1;
+                nextBtn.disabled = current === data.length - 1 && currentGameNum >= availableGames.length;
             } else {
                 prevBtn.disabled = true;
                 nextBtn.disabled = true;
