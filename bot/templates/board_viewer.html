@@ -144,7 +144,14 @@
             margin-top: 10px;
             align-items: center;
             width: 100%;
-            justify-content: flex-start;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .center-select {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
         }
 
         .pips-container {
@@ -531,9 +538,11 @@
             <div id="players-info"></div>
             <div id="top-row">
                 <span id="crawfordLabel" style="visibility: hidden;">Кроуфорд</span>
-                <select id="gameSelect">
-                    <option value="0">Game 1</option>
-                </select>
+                <div class="center-select">
+                    <select id="gameSelect">
+                        <option value="0">Game 1</option>
+                    </select>
+                </div>
                 <div class="pips-container">
                     <div id="black-pips" class="pips-above-board">0</div>
                 </div>
