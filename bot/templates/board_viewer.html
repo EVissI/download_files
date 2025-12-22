@@ -1043,8 +1043,14 @@
             const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
 
             let fromX, fromY;
-            const fromStr = move.from.toString();
-            if (fromStr === 'bar') {
+
+            const rawFrom = move.from;
+            const fromIsBar = (rawFrom === 'bar' || rawFrom === 25 || rawFrom === '25');
+
+            const rawTo = move.to;
+            const isOff = (rawTo === 'off' || rawTo === 0 || rawTo === '0');
+            const isBar = (rawTo === 'bar' || rawTo === 25 || rawTo === '25');
+            if (fromIsBar) {
                 fromX = 400;
                 const barY = (playerType === 'second') ? 220 : 520;
                 const barDy = (playerType === 'second') ? 55 : -55;
@@ -1059,7 +1065,7 @@
                 fromY = fromBaseY + (fromCount - 1) * fromDy;
             }
 
-            if (fromStr === 'bar') {
+            if (fromIsBar) {
                 player_pos['bar'] = (player_pos['bar'] || 1) - 1;
                 if (player_pos['bar'] === 0) delete player_pos['bar'];
             } else {
@@ -1068,8 +1074,7 @@
             }
 
             let toX, toY;
-            const toStr = move.to.toString();
-            if (toStr === 'off') {
+            if (isOff) {
                 toX = 820;
                 toY = playerType === 'second'
                     ? (invertColors ? 440 : 340)
@@ -1171,22 +1176,22 @@
             const opp_pos = temp_positions[playerType === 'first' ? 'second' : 'first'];
             const fromStr = move.from.toString();
             const toStr = move.to.toString();
-
+            const isOffMove = (move.to === 0 || move.to === '0' || move.to === 'off');
+            const isBarFrom = (move.from === 25 || move.from === '25' || move.from === 'bar');
             if (move.hit) {
                 opp_pos[toStr] = (opp_pos[toStr] || 1) - 1;
                 if (opp_pos[toStr] === 0) delete opp_pos[toStr];
                 opp_pos['bar'] = (opp_pos['bar'] || 0) + 1;
             }
 
-            if (fromStr === 'bar') {
+            if (isBarFrom) {
                 player_pos['bar'] = (player_pos['bar'] || 1) - 1;
                 if (player_pos['bar'] === 0) delete player_pos['bar'];
             } else {
                 player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
                 if (player_pos[fromStr] === 0) delete player_pos[fromStr];
             }
-
-            if (toStr === 'off') {
+            if (isOffMove) {
                 player_pos['off'] = (player_pos['off'] || 0) + 1;
             } else {
                 player_pos[toStr] = (player_pos[toStr] || 0) + 1;
