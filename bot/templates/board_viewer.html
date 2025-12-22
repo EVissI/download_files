@@ -1552,7 +1552,17 @@
                 if (gameSelect) gameSelect.style.display = 'none';
             }
 
-            html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
+            html2canvas(document.body, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#1a1a1a',
+                clip: {
+                    x: 0,
+                    y: 0,
+                    width: document.body.scrollWidth,
+                    height: 800  // Ограничение высоты скриншота до 800 пикселей
+                }
+            }).then(canvas => {
                 // Restore after screenshot
                 controls.style.display = originalControlsDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
@@ -1664,7 +1674,13 @@
             html2canvas(document.body, {
                 useCORS: true,
                 allowTaint: true,
-                backgroundColor: '#1a1a1a'
+                backgroundColor: '#1a1a1a',
+                clip: {
+                    x: 0,
+                    y: 0,
+                    width: document.body.scrollWidth,
+                    height: 800  // Ограничение высоты скриншота до 800 пикселей
+                }
             }).then(canvas => {
                 // Restore after screenshot
                 controls.style.display = originalControlsDisplay;
