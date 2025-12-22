@@ -204,6 +204,7 @@ def parse_game(
         },
         "point_match": points_match,
         "is_long_game": is_long_game,
+        "is_crawford": False,
         "turns": [],
     }
 
