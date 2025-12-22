@@ -1560,7 +1560,7 @@
                 }
                 if (matchInfoDiv) {
                     if (matchPoint > 0) {
-                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchPoint}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; position: relative;"><span>Матч до ${matchPoint}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                     } else {
                         matchInfoDiv.innerHTML = 'Манигейм';
                     }
@@ -1674,7 +1674,7 @@
                 }
                 if (matchInfoDiv) {
                     if (matchPoint > 0) {
-                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchPoint}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; position: relative;"><span>Матч до ${matchPoint}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                     } else {
                         matchInfoDiv.innerHTML = 'Манигейм';
                     }
