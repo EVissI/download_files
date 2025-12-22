@@ -1021,7 +1021,7 @@
                 const cubeImg = cubeImages[item.cube_value];
                 if (cubeImg) {
                     let cubeX, cubeY;
-                    if (item.cube_location === 'center') {
+                    if (item.cube_location === 'center' && item.action != 'drop') {
                         if (item.cube_owner === 'first') {
                             cubeX = 200 - 25;
                             cubeY = 400 - 25;
