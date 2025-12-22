@@ -18,7 +18,7 @@ class BackgammonPositionTracker:
         if self.is_long_game:
             self.start_positions = {
                 "first": {"bar": 0, "off": 0, 6: 5, 8: 3, 13: 5, 23: 2, 24: 1},
-                "second": {"bar": 0, "off": 0, 1: 1, 2:2, 12: 5, 17: 3, 19: 5},
+                "second": {"bar": 0, "off": 0, 1: 1, 2: 2, 12: 5, 17: 3, 19: 5},
             }
         else:
             self.start_positions = {
@@ -155,7 +155,6 @@ def extract_names_and_scores(lines: List[str]) -> Dict[str, Union[str, int]]:
         "second_name": "Player 2",
         "second_score": 0,
     }
-
 
 
 def extract_point_match(text: str) -> Optional[int]:
@@ -336,6 +335,26 @@ async def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
     game_type = extract_game_type(split_file[0])
     games_raw = split_file[1:]
 
+    # Сначала парсим все игры в список
+    games = []
+    for raw_game in games_raw:
+        game = parse_game(raw_game, points_match, game_type, is_inverse)
+        games.append(game)
+
+    # Определяем индекс игры Crawford
+    crawford_index = None
+    if points_match is not None:
+        for i, game in enumerate(games):
+            first_score = game["first"]["score"]
+            second_score = game["second"]["score"]
+            if max(first_score, second_score) == points_match - 1:
+                crawford_index = i
+                break
+
+    # Добавляем флаг is_crawford, если найдена
+    if crawford_index is not None:
+        games[crawford_index]["is_crawford"] = True
+
     dir_path = Path("./files") / dir_name
     dir_path.mkdir(parents=True, exist_ok=True)
     file_path = dir_path / "games.json"
@@ -347,8 +366,7 @@ async def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
         first = True
         count = 0
 
-        for raw_game in games_raw:
-            game = parse_game(raw_game, points_match, game_type, is_inverse)
+        for game in games:
             json_data = json.dumps(game, indent=2)
 
             if not first:
