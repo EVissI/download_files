@@ -577,20 +577,31 @@
                 <button onclick="nextTurn()" id="nextBtn" title="Next Move"></button>
             </div>
             <div id="checkboxes">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <button onclick="takeScreenshot()" id="screenshotBtn" title="Take Screenshot"></button>
-                    <span>Выслать скриншот экрана</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <button onclick="saveScreenshot()" id="screenSaveBtn" title="Save Screenshot"></button>
-                    <span>Добавить скриншот в буфер обмена</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Upload Screenshots"></button>
-                    <span>Выслать архив со скриншотами</span>
-                </div>
-                <label><input type="checkbox" id="hideInfoCheckbox"> Убрать данные матча на скриншоте</label>
-                <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию шашек</label>
+                <table style="border: none; width: 100%;">
+                    <tr>
+                        <td style="text-align: left;">Выслать скриншот экрана</td>
+                        <td style="text-align: right;"><button onclick="takeScreenshot()" id="screenshotBtn"
+                                title="Take Screenshot"></button></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">Добавить скриншот в буфер обмена</td>
+                        <td style="text-align: right;"><button onclick="saveScreenshot()" id="screenSaveBtn"
+                                title="Save Screenshot"></button></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">Выслать архив со скриншотами</td>
+                        <td style="text-align: right;"><button onclick="uploadScreenshots()" id="screenUploadBtn"
+                                title="Upload Screenshots"></button></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">Убрать данные матча на скриншоте</td>
+                        <td style="text-align: right;"><input type="checkbox" id="hideInfoCheckbox"></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">Убрать анимацию шашек</td>
+                        <td style="text-align: right;"><input type="checkbox" id="skipAnimationCheckbox"></td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
