@@ -746,6 +746,7 @@
                 const playersInfoDiv = document.getElementById('players-info');
                 playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                 updateGameSelect();
+                document.getElementById('gameSelect').value = currentGameNum - 1;
                 updateButtons();
                 drawBoard();
                 updateInfo();
