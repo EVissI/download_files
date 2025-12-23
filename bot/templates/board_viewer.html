@@ -1291,8 +1291,8 @@
                         document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
                         data = availableGames[currentGameNum - 1].turns;
                         current = 0;
-                        document.getElementById('gameSelect').value = currentGameNum - 1;
                         updateGameSelect();
+                        document.getElementById('gameSelect').value = currentGameNum - 1;
                         updateButtons();
                         drawBoard();
                         updateInfo();
@@ -1329,6 +1329,7 @@
                     data = availableGames[currentGameNum - 1].turns;
                     current = 0;
                     updateGameSelect();
+                    document.getElementById('gameSelect').value = currentGameNum - 1;
                     updateButtons();
                     drawBoard();
                     updateInfo();
@@ -1411,6 +1412,7 @@
                                     data = availableGames[currentGameNum - 1].turns;
                                     current = data.length - 1;
                                     updateGameSelect();
+                                    document.getElementById('gameSelect').value = currentGameNum - 1;
                                     drawBoard();
                                     updateButtons();
                                     updateInfo();
@@ -1485,8 +1487,8 @@
                     document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
                     data = availableGames[currentGameNum - 1].turns;
                     current = data.length - 1;
-                    document.getElementById('gameSelect').value = currentGameNum - 1;
                     updateGameSelect();
+                    document.getElementById('gameSelect').value = currentGameNum - 1;
                     drawBoard();
                     updateButtons();
                     updateInfo();
