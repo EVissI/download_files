@@ -1290,6 +1290,7 @@
                         document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
                         data = availableGames[currentGameNum - 1].turns;
                         current = 0;
+                        document.getElementById('gameSelect').value = currentGameNum - 1;
                         updateGameSelect();
                         updateButtons();
                         drawBoard();
@@ -1483,6 +1484,7 @@
                     document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
                     data = availableGames[currentGameNum - 1].turns;
                     current = data.length - 1;
+                    document.getElementById('gameSelect').value = currentGameNum - 1;
                     updateGameSelect();
                     drawBoard();
                     updateButtons();
