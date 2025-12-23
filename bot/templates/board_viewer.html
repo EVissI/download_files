@@ -1091,6 +1091,35 @@
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
+
+            // Draw cube during animation
+            if (turnData && turnData.cube_owner === null) {
+                // Default position: cube 64 in center
+                ctx.drawImage(cubeImages[64], 400 - 25, 400 - 25, 50, 50);
+            } else if (turnData && turnData.cube_value && turnData.cube_value > 1) {
+                const cubeImg = cubeImages[turnData.cube_value];
+                if (cubeImg) {
+                    let cubeX, cubeY;
+                    if (turnData.cube_location === 'center' && turnData.action != 'drop') {
+                        if (turnData && turnData.cube_owner === 'first') {
+                            cubeX = 200 - 25;
+                            cubeY = 380 - 25;
+                        } else {
+                            cubeX = 600 - 25;
+                            cubeY = 380 - 25;
+                        }
+                    } else {
+                        if (turnData && turnData.cube_owner === 'first') {
+                            cubeX = 400 - 25;
+                            cubeY = 625 - 25;
+                        } else {
+                            cubeX = 400 - 25;
+                            cubeY = 150 - 25;
+                        }
+                    }
+                    ctx.drawImage(cubeImg, cubeX, cubeY, 50, 50);
+                }
+            }
         }
         function animateSingleMove(move, playerType, temp_positions, callback) {
             const img = playerType === 'first' ? whiteChecker : blackChecker;
