@@ -65,7 +65,7 @@ class SyncthingSync:
                                    f"globalFiles={global_files}")
                         
                         # Проверяем: папка не в процессе синхронизации
-                        if state == "idle" and need_items == 0 and need_deletes == 0:
+                        if state == "idle" and status.get("needBytes", 0) == 0:
                             logger.info(f"✅ Синхронизация завершена ({global_files} файлов)")
                             return True
                     
