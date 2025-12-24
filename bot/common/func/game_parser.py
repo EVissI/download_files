@@ -319,6 +319,25 @@ def parse_game(
             turn["positions"] = copy.deepcopy(tracker.positions)
             turn["inverted_positions"] = tracker._invert_positions(tracker.positions)
 
+    # Найти информацию о победителе
+    for line in reversed(lines):
+        if "Wins" in line:
+            wins_line = line
+            break
+    else:
+        wins_line = None
+
+    if wins_line:
+        wins_match = re.search(r"Wins (\d+) points", wins_line)
+        if wins_match:
+            points = int(wins_match[1])
+            leading_spaces = len(wins_line) - len(wins_line.lstrip())
+            if leading_spaces <= 2:
+                winner = first
+            else:
+                winner = second
+            game_data["winner"] = {"player": winner, "points": points}
+
     return game_data
 
 
