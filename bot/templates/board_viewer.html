@@ -1535,6 +1535,16 @@
             const turn = data[current];
             const game = availableGames.find(g => g.game_number === currentGameNum);
 
+            let moveText = '';
+            if (turn && turn.moves && turn.moves.length > 0) {
+                const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
+                moveText = movesStr;
+            } else if (turn && turn.action) {
+                moveText = turn.action;
+            } else {
+                moveText = 'Пропуск хода';
+            }
+
             // Check if last turn and winner
             if (current === data.length - 1 && game.winner) {
                 const winner = game.winner;
@@ -1548,16 +1558,9 @@
                 }
                 const winner_score = winner.player === 'first' ? first_score : second_score;
                 const loser_score = winner.player === 'first' ? second_score : first_score;
-                moveInfo.innerHTML = `${nickname} победил. Счет <span style="font-size: 1.5em; font-weight: bold;">${winner_score}</span>:<span style="font-size: 1.5em; font-weight: bold;">${loser_score}</span>`;
+                moveInfo.innerHTML = `${moveText} ${nickname} победил. Счет ${winner_score}:${loser_score}`;
             } else {
-                if (turn && turn.moves && turn.moves.length > 0) {
-                    const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
-                    moveInfo.textContent = movesStr;
-                } else if (turn && turn.action) {
-                    moveInfo.textContent = turn.action;
-                } else {
-                    moveInfo.textContent = 'Пропуск хода';
-                }
+                moveInfo.textContent = moveText;
             }
         }
 
