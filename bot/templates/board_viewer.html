@@ -1558,7 +1558,7 @@
                 }
                 const winner_score = winner.player === 'first' ? first_score : second_score;
                 const loser_score = winner.player === 'first' ? second_score : first_score;
-                moveInfo.innerHTML = `${moveText} &nbsp; ${nickname} победил. Счет ${winner_score}:${loser_score}`;
+                moveInfo.innerHTML = `${moveText}<br>${nickname} победил. Счет ${winner_score}:${loser_score}`;
             } else {
                 moveInfo.textContent = moveText;
             }
