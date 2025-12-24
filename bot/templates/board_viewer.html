@@ -730,7 +730,8 @@
                     second_score: game.second.score,
                     point_match: game.point_match,
                     is_long_game: game.is_long_game,
-                    is_crawford: game.is_crawford
+                    is_crawford: game.is_crawford,
+                    winner: game.winner
                 }));
                 const gameInfo = gamesArray[0]
                 redPlayer = gameInfo.first ? gameInfo.first.name : 'Unknown';
@@ -1027,6 +1028,27 @@
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
 
+            // Draw winner message if last turn
+            if (current === data.length - 1) {
+                const game = availableGames.find(g => g.game_number === currentGameNum);
+                if (game.winner) {
+                    const winner = game.winner;
+                    const nickname = winner.player === 'first' ? game.first_player : game.second_player;
+                    let first_score = game.first_score;
+                    let second_score = game.second_score;
+                    if (winner.player === 'first') {
+                        first_score += winner.points;
+                    } else {
+                        second_score += winner.points;
+                    }
+                    const text = `${nickname} победил. Счет ${first_score}:${second_score}`;
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+                }
+            }
+
             // Draw cube
             if (item && item.cube_owner === null) {
                 // Default position: cube 64 in center
@@ -1091,6 +1113,27 @@
 
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+            }
+
+            // Draw winner message if last turn during animation
+            if (current === data.length - 1) {
+                const game = availableGames.find(g => g.game_number === currentGameNum);
+                if (game.winner) {
+                    const winner = game.winner;
+                    const nickname = winner.player === 'first' ? game.first_player : game.second_player;
+                    let first_score = game.first_score;
+                    let second_score = game.second_score;
+                    if (winner.player === 'first') {
+                        first_score += winner.points;
+                    } else {
+                        second_score += winner.points;
+                    }
+                    const text = `${nickname} победил. Счет ${first_score}:${second_score}`;
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+                }
             }
 
             // Draw cube during animation
