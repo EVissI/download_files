@@ -1023,35 +1023,6 @@
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
 
-            // Draw winner message if last turn
-            if (current === data.length - 1) {
-                const game = availableGames.find(g => g.game_number === currentGameNum);
-                if (game.winner) {
-                    const winner = game.winner;
-                    const nickname = winner.player === 'first' ? game.first_player : game.second_player;
-                    let first_score = game.first_score;
-                    let second_score = game.second_score;
-                    if (winner.player === 'first') {
-                        first_score += winner.points;
-                    } else {
-                        second_score += winner.points;
-                    }
-                    const text = `${nickname} победил. Счет ${first_score}:${second_score}`;
-                    ctx.font = 'bold 36px Arial';
-                    const textWidth = ctx.measureText(text).width;
-                    const textHeight = 36; // approximate
-                    const padding = 10;
-                    const rectX = canvas.width / 2 - textWidth / 2 - padding;
-                    const rectY = canvas.height / 2 - textHeight / 2 - padding;
-                    const rectWidth = textWidth + 2 * padding;
-                    const rectHeight = textHeight + 2 * padding;
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                    ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
-                    ctx.fillStyle = 'white';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + textHeight / 4);
-                }
-            }
 
             // Draw cube
             if (item && item.cube_owner === null) {
@@ -1119,35 +1090,6 @@
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
 
-            // Draw winner message if last turn during animation
-            if (current === data.length - 1) {
-                const game = availableGames.find(g => g.game_number === currentGameNum);
-                if (game.winner) {
-                    const winner = game.winner;
-                    const nickname = winner.player === 'first' ? game.first_player : game.second_player;
-                    let first_score = game.first_score;
-                    let second_score = game.second_score;
-                    if (winner.player === 'first') {
-                        first_score += winner.points;
-                    } else {
-                        second_score += winner.points;
-                    }
-                    const text = `${nickname} победил. Счет ${first_score}:${second_score}`;
-                    ctx.font = 'bold 36px Arial';
-                    const textWidth = ctx.measureText(text).width;
-                    const textHeight = 36; // approximate
-                    const padding = 10;
-                    const rectX = canvas.width / 2 - textWidth / 2 - padding;
-                    const rectY = canvas.height / 2 - textHeight / 2 - padding;
-                    const rectWidth = textWidth + 2 * padding;
-                    const rectHeight = textHeight + 2 * padding;
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                    ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
-                    ctx.fillStyle = 'white';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + textHeight / 4);
-                }
-            }
 
             // Draw cube during animation
             if (turnData && turnData.cube_owner === null) {
@@ -1592,13 +1534,30 @@
             const moveInfo = document.getElementById('moveInfo');
             const turn = data[current];
             const game = availableGames.find(g => g.game_number === currentGameNum);
-            if (turn && turn.moves && turn.moves.length > 0) {
-                const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
-                moveInfo.textContent = movesStr;
-            } else if (turn && turn.action) {
-                moveInfo.textContent = turn.action;
+
+            // Check if last turn and winner
+            if (current === data.length - 1 && game.winner) {
+                const winner = game.winner;
+                const nickname = winner.player === 'first' ? game.first_player : game.second_player;
+                let first_score = game.first_score;
+                let second_score = game.second_score;
+                if (winner.player === 'first') {
+                    first_score += winner.points;
+                } else {
+                    second_score += winner.points;
+                }
+                const winner_score = winner.player === 'first' ? first_score : second_score;
+                const loser_score = winner.player === 'first' ? second_score : first_score;
+                moveInfo.innerHTML = `${nickname} победил. Счет <span style="font-size: 1.5em; font-weight: bold;">${winner_score}</span>:<span style="font-size: 1.5em; font-weight: bold;">${loser_score}</span>`;
             } else {
-                moveInfo.textContent = 'Пропуск хода';
+                if (turn && turn.moves && turn.moves.length > 0) {
+                    const movesStr = turn.moves.map(m => `${m.from}/${m.to}${m.hit ? '*' : ''}`).join(' ');
+                    moveInfo.textContent = movesStr;
+                } else if (turn && turn.action) {
+                    moveInfo.textContent = turn.action;
+                } else {
+                    moveInfo.textContent = 'Пропуск хода';
+                }
             }
         }
 
