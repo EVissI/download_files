@@ -804,9 +804,8 @@ async def process_batch_hint_files(
             return
 
         total_files = len(file_paths)
-        await message.answer(f"📋 Отправляю пакет из {total_files} файлов на анализ...")
+        await message.answer(f"📋 Отправляю пакет на анализ. Файлов: {total_files} ")
 
-        # Синхронизируем все файлы перед отправкой
         for mat_path in file_paths:
             if not await syncthing_sync.sync_and_wait(max_wait=30):
                 logger.warning("Ошибка синхронизации Syncthing")
@@ -816,7 +815,6 @@ async def process_batch_hint_files(
                 )
                 return
 
-        # === Отправляем одну задачу для всего батча ===
         job = batch_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_batch_job",
             file_paths,
