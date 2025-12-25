@@ -772,6 +772,12 @@
                                 (error === '3' && ((item.player_name === blackPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win'));
                         });
 
+                        // Проверить, есть ли видимые ходы помимо win
+                        const hasNonWinVisible = data.some(item => item.is_visible && item.action !== 'win');
+                        if (!hasNonWinVisible && error !== '0') {
+                            alert('Ошибки в игре не найдены');
+                        }
+
 
                         const gameScores = gameInfo.scores || {};
                         gameRedScore = gameScores.Red || 0;
