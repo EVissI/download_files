@@ -3,10 +3,12 @@ from aiogram.types import Message
 from bot.db.dao import UserDAO
 from bot.db.models import User
 from loguru import logger
+from bot.db.redis import sync_redis_client
 
 from bot.db.schemas import SUser
 
 commands_router = Router()
+
 
 @commands_router.message(F.text.startswith("/makeadmin"))
 async def make_admin(message: Message, session_without_commit):
@@ -31,6 +33,7 @@ async def make_admin(message: Message, session_without_commit):
         logger.error(f"Ошибка при выполнении команды /makeadmin: {e}")
         await message.answer("Произошла ошибка при выполнении команды.")
 
+
 @commands_router.message(F.text.startswith("/delete_user"))
 async def make_admin(message: Message, session_without_commit):
     try:
@@ -54,19 +57,48 @@ async def make_admin(message: Message, session_without_commit):
         logger.error(f"Ошибка при выполнении команды /delete_user: {e}")
         await message.answer("Произошла ошибка при выполнении команды.")
 
+
 @commands_router.message(F.text.startswith("/listusers"))
 async def list_users(message: Message, session_without_commit):
     try:
         user_dao = UserDAO(session_without_commit)
-        users:list[User] = await user_dao.find_all()
+        users: list[User] = await user_dao.find_all()
 
         if not users:
             return await message.answer("Нет зарегистрированных пользователей.")
 
         user_list = "\n".join(
-            [f"ID: <code>{user.id}</code>, Username: <code>{user.username or 'нет'}</code>, Role: {user.role}" for user in users]
+            [
+                f"ID: <code>{user.id}</code>, Username: <code>{user.username or 'нет'}</code>, Role: {user.role}"
+                for user in users
+            ]
         )
         await message.answer(f"Список пользователей:\n{user_list}")
     except Exception as e:
         logger.error(f"Ошибка при выполнении команды /listusers: {e}")
+        await message.answer("Произошла ошибка при выполнении команды.")
+
+
+@commands_router.message(F.text.startswith("/clear_active_jobs"))
+async def clear_active_jobs(message: Message):
+    try:
+        parts = message.text.split()
+        if len(parts) != 2 or not parts[1].isdigit():
+            return await message.answer("Использование: /clear_active_jobs <user_id>")
+
+        user_id = int(parts[1])
+
+        # Удаляем все активные задачи для пользователя
+        key = f"user_active_jobs:{user_id}"
+        active_jobs = sync_redis_client.smembers(key)
+        if active_jobs:
+            sync_redis_client.delete(key)
+            await message.answer(
+                f"Удалено активных задач для пользователя {user_id}: {len(active_jobs)}"
+            )
+            logger.info(f"Cleared active jobs for user {user_id}: {active_jobs}")
+        else:
+            await message.answer(f"У пользователя {user_id} нет активных задач.")
+    except Exception as e:
+        logger.error(f"Ошибка при выполнении команды /clear_active_jobs: {e}")
         await message.answer("Произошла ошибка при выполнении команды.")
