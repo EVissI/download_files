@@ -2387,6 +2387,8 @@
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
+            const animationControls = document.querySelector('.animation-controls');
+            const originalAnimationControlsDisplay = animationControls ? animationControls.style.display : 'none';
 
             function restoreControls() {
                 controls.style.display = originalControlsDisplay;
@@ -2405,6 +2407,8 @@
                     matchInfo.innerHTML = originalMatchInfoHTML;
                 }
                 if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
+                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
+                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
             }
 
             controls.style.display = 'none';
@@ -2424,6 +2428,9 @@
                     matchInfo.innerHTML = `<div style="position: relative;"><span style="position: absolute; left: 0;">Матч до ${matchLength}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
+                if (animationControls) {
+                    animationControls.style.display = 'none';
+                }
             }
 
             html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
@@ -2554,6 +2561,9 @@
                     matchInfo.innerHTML = `<div style="position: relative;"><span style="position: absolute; left: 0;">Матч до ${matchLength}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
+                if (animationControls) {
+                    animationControls.style.display = 'none';
+                }
             }
 
             // Create a canvas to capture the entire page
