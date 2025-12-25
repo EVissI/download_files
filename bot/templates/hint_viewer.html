@@ -1149,8 +1149,12 @@
             const isBar = (rawTo === 'bar' || rawTo === 25 || rawTo === '25');
             if (fromIsBar) {
                 fromX = 400;
-                const barY = (playerType === 'black') ? 220 : 520;
-                const barDy = (playerType === 'black') ? 55 : -55;
+                let barY = (playerType === 'black') ? 220 : 520;
+                let barDy = (playerType === 'black') ? 55 : -55;
+                if (invertColors) {
+                    barY = (playerType === 'black') ? 520 : 220;
+                    barDy = (playerType === 'black') ? -55 : 55;
+                }
                 const barCount = player_pos['bar'] || 0;
                 fromY = barY + (barCount - 1) * barDy;
             } else {
@@ -1236,8 +1240,12 @@
             let fromY = fromBaseY + (hitCount - 1) * fromDy;
 
             const barX = 400;
-            const barY = (hitPlayerType === 'black') ? 220 : 520;
-            const barDy = (hitPlayerType === 'black') ? 55 : -55;
+            let barY = (hitPlayerType === 'black') ? 220 : 520;
+            let barDy = (hitPlayerType === 'black') ? 55 : -55;
+            if (invertColors) {
+                barY = (hitPlayerType === 'black') ? 520 : 220;
+                barDy = (hitPlayerType === 'black') ? -55 : 55;
+            }
             const barCount = opp_pos['bar'] || 0;
             const toX = 820; // Fly to the right
             const toY = barY + barCount * barDy; // Position for the hit checker on bar
@@ -1350,7 +1358,10 @@
             }
 
             const barX = 400;
-            const barY = (player === 'black') ? 220 : 520;
+            let barY = (player === 'black') ? 220 : 520;
+            if (invertColors) {
+                barY = (player === 'black') ? 520 : 220;
+            }
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
                 const dy = (player === 'black') ? 55 : -55;
@@ -2050,6 +2061,20 @@
                     const temp_positions = JSON.parse(JSON.stringify(prev_positions));
 
                     let moves = nextTurnData.moves || [];
+                    const toScreenPoint = (p) => {
+                        if (p === 'off' || p === 0) return 'off';
+                        if (p === 'bar' || p === 25) return 'bar';
+                        const n = Number(p);
+                        if (!Number.isFinite(n) || n < 1 || n > 24) return p;
+                        let boardP = (playerType === 'black') ? (25 - n) : n;
+                        return inverted ? (25 - boardP) : boardP;
+                    };
+
+                    moves = moves.map(m => ({
+                        ...m,
+                        from: toScreenPoint(m.from),
+                        to: toScreenPoint(m.to),
+                    }));
 
                     const timeoutId = setTimeout(() => {
                         animating = false;
