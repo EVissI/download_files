@@ -2067,7 +2067,7 @@
                         const n = Number(p);
                         if (!Number.isFinite(n) || n < 1 || n > 24) return p;
                         let boardP = (playerType === 'black') ? (25 - n) : n;
-                        return inverted ? (25 - boardP) : boardP;
+                        return invertColors ? (25 - boardP) : boardP;
                     };
 
                     moves = moves.map(m => ({
