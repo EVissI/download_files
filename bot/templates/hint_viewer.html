@@ -2373,6 +2373,7 @@
             const playersInfo = document.getElementById('players-info');
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
+            const animationControls = document.querySelector('.animation-controls');
             const originalControlsDisplay = controls.style.display;
             const originalInvertDisplay = invertBtn.style.display;
             const originalScreenshotDisplay = screenshotBtn.style.display;
@@ -2382,13 +2383,12 @@
             const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
+            const originalAnimationControlsDisplay = animationControls ? animationControls.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
-            const animationControls = document.querySelector('.animation-controls');
-            const originalAnimationControlsDisplay = animationControls ? animationControls.style.display : 'none';
 
             function restoreControls() {
                 controls.style.display = originalControlsDisplay;
@@ -2399,6 +2399,7 @@
                 if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
                 if (playersInfo) {
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
@@ -2407,8 +2408,6 @@
                     matchInfo.innerHTML = originalMatchInfoHTML;
                 }
                 if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
-                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
-                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
             }
 
             controls.style.display = 'none';
@@ -2419,6 +2418,8 @@
             if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
             if (screenSaveBtn) screenSaveBtn.style.display = 'none';
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
+            if (animationControls) animationControls.style.display = 'none';
+            if (animationControls) animationControls.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
@@ -2428,9 +2429,6 @@
                     matchInfo.innerHTML = `<div style="position: relative;"><span style="position: absolute; left: 0;">Матч до ${matchLength}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
-                if (animationControls) {
-                    animationControls.style.display = 'none';
-                }
             }
 
             html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
@@ -2510,6 +2508,7 @@
             const playersInfo = document.getElementById('players-info');
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
+            const animationControls = document.querySelector('.animation-controls');
             const originalControlsDisplay = controls.style.display;
             const originalInvertDisplay = invertBtn.style.display;
             const originalScreenshotDisplay = screenshotBtn.style.display;
@@ -2519,6 +2518,7 @@
             const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
+            const originalAnimationControlsDisplay = animationControls ? animationControls.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
@@ -2534,6 +2534,7 @@
                 if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
                 if (playersInfo) {
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
@@ -2561,9 +2562,6 @@
                     matchInfo.innerHTML = `<div style="position: relative;"><span style="position: absolute; left: 0;">Матч до ${matchLength}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
-                if (animationControls) {
-                    animationControls.style.display = 'none';
-                }
             }
 
             // Create a canvas to capture the entire page
