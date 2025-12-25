@@ -2374,6 +2374,11 @@
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const animationControls = document.querySelector('.animation-controls');
+            let animationControlsParent = null;
+            if (animationControls) {
+                animationControlsParent = animationControls.parentNode;
+                animationControlsParent.removeChild(animationControls);
+            }
             const originalControlsDisplay = controls.style.display;
             const originalInvertDisplay = invertBtn.style.display;
             const originalScreenshotDisplay = screenshotBtn.style.display;
@@ -2383,7 +2388,6 @@
             const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
-            const originalAnimationControlsDisplay = animationControls ? animationControls.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
@@ -2399,7 +2403,9 @@
                 if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
-                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
+                if (animationControls && animationControlsParent) {
+                    animationControlsParent.appendChild(animationControls);
+                }
                 if (playersInfo) {
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
@@ -2418,8 +2424,6 @@
             if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
             if (screenSaveBtn) screenSaveBtn.style.display = 'none';
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
-            if (animationControls) animationControls.style.display = 'none';
-            if (animationControls) animationControls.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
@@ -2509,6 +2513,11 @@
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const animationControls = document.querySelector('.animation-controls');
+            let animationControlsParent = null;
+            if (animationControls) {
+                animationControlsParent = animationControls.parentNode;
+                animationControlsParent.removeChild(animationControls);
+            }
             const originalControlsDisplay = controls.style.display;
             const originalInvertDisplay = invertBtn.style.display;
             const originalScreenshotDisplay = screenshotBtn.style.display;
@@ -2518,7 +2527,6 @@
             const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
-            const originalAnimationControlsDisplay = animationControls ? animationControls.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
@@ -2534,7 +2542,9 @@
                 if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
-                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
+                if (animationControls && animationControlsParent) {
+                    animationControlsParent.appendChild(animationControls);
+                }
                 if (playersInfo) {
                     playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
