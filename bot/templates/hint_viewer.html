@@ -2364,6 +2364,26 @@
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
+
+            function restoreControls() {
+                controls.style.display = originalControlsDisplay;
+                invertBtn.style.display = originalInvertDisplay;
+                screenshotBtn.style.display = originalScreenshotDisplay;
+                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
+                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
+                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (playersInfo) {
+                    playersInfo.style.display = originalPlayersInfoDisplay;
+                    playersInfo.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfo) {
+                    matchInfo.innerHTML = originalMatchInfoHTML;
+                }
+                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
+            }
+
             controls.style.display = 'none';
             invertBtn.style.display = 'none';
             screenshotBtn.style.display = 'none';
@@ -2384,24 +2404,6 @@
             }
 
             html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
-                // Restore controls and game selector after taking screenshot
-                controls.style.display = originalControlsDisplay;
-                invertBtn.style.display = originalInvertDisplay;
-                screenshotBtn.style.display = originalScreenshotDisplay;
-                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
-                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
-                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
-                if (playersInfo) {
-                    playersInfo.style.display = originalPlayersInfoDisplay;
-                    playersInfo.innerHTML = originalPlayersInfoHTML;
-                }
-                if (matchInfo) {
-                    matchInfo.innerHTML = originalMatchInfoHTML;
-                }
-                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
-
                 canvas.toBlob(blob => {
                     const formData = new FormData();
                     formData.append('photo', blob);
@@ -2414,30 +2416,17 @@
                         } else {
                             showFadingMessage('Ошибка при сохранении скриншота');
                         }
+                        restoreControls();
                     }).catch(error => {
                         console.error('Error saving screenshot:', error);
                         showFadingMessage('Ошибка при сохранении скриншота');
+                        restoreControls();
                     });
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
-                controls.style.display = originalControlsDisplay;
-                invertBtn.style.display = originalInvertDisplay;
-                screenshotBtn.style.display = originalScreenshotDisplay;
-                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
-                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
-                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
-                if (playersInfo) {
-                    playersInfo.style.display = originalPlayersInfoDisplay;
-                    playersInfo.innerHTML = originalPlayersInfoHTML;
-                }
-                if (matchInfo) {
-                    matchInfo.innerHTML = originalMatchInfoHTML;
-                }
-                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
                 showFadingMessage('Ошибка при создании скриншота');
+                restoreControls();
             });
         }
 
@@ -2505,6 +2494,26 @@
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
+
+            function restoreControls() {
+                controls.style.display = originalControlsDisplay;
+                invertBtn.style.display = originalInvertDisplay;
+                screenshotBtn.style.display = originalScreenshotDisplay;
+                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
+                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
+                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
+                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (playersInfo) {
+                    playersInfo.style.display = originalPlayersInfoDisplay;
+                    playersInfo.innerHTML = originalPlayersInfoHTML;
+                }
+                if (matchInfo) {
+                    matchInfo.innerHTML = originalMatchInfoHTML;
+                }
+                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
+            }
+
             controls.style.display = 'none';
             invertBtn.style.display = 'none';
             screenshotBtn.style.display = 'none';
@@ -2530,23 +2539,6 @@
                 allowTaint: true,
                 backgroundColor: '#1a1a1a'
             }).then(canvas => {
-                // Restore controls and game selector after taking screenshot
-                controls.style.display = originalControlsDisplay;
-                invertBtn.style.display = originalInvertDisplay;
-                screenshotBtn.style.display = originalScreenshotDisplay;
-                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
-                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
-                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
-                if (playersInfo) {
-                    playersInfo.style.display = originalPlayersInfoDisplay;
-                    playersInfo.innerHTML = originalPlayersInfoHTML;
-                }
-                if (matchInfo) {
-                    matchInfo.innerHTML = originalMatchInfoHTML;
-                }
-                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
                     // Create a file from the blob
@@ -2567,7 +2559,7 @@
                             body: formData
                         }).then(response => {
                             if (response.ok) {
-
+                                restoreControls();
                             } else {
                                 response.text().then(text => {
                                     console.error('Server response:', text);
@@ -2578,37 +2570,25 @@
                                         alert('Ошибка при отправке скриншота: ' + text);
                                     }
                                 });
+                                restoreControls();
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
                             alert('Ошибка при отправке скриншота: ' + error);
+                            restoreControls();
                         });
                     } else {
                         const link = document.createElement('a');
                         link.download = 'screenshot.png';
                         link.href = canvas.toDataURL();
                         link.click();
+                        restoreControls();
                     }
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
-                controls.style.display = originalControlsDisplay;
-                invertBtn.style.display = originalInvertDisplay;
-                screenshotBtn.style.display = originalScreenshotDisplay;
-                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
-                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
-                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
-                if (playersInfo) {
-                    playersInfo.style.display = originalPlayersInfoDisplay;
-                    playersInfo.innerHTML = originalPlayersInfoHTML;
-                }
-                if (matchInfo) {
-                    matchInfo.innerHTML = originalMatchInfoHTML;
-                }
-                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
                 alert('Ошибка при создании скриншота: ' + error.message);
+                restoreControls();
             });
         }
     </script>
