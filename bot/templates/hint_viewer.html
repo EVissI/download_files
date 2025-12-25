@@ -1139,31 +1139,65 @@
             }
 
             // Draw cube during animation
-            if (turnData && turnData.cube_owner === null) {
+            const item = turnData;
+            if (current < firstDoubleIndex) {
                 ctx.drawImage(Double64, 375, 350, 50, 50);
-            } else if (turnData && turnData.cube_value && turnData.cube_value > 1) {
-                const cubeImg = cubeImages[turnData.cube_value];
-                if (cubeImg) {
-                    let cubeX, cubeY;
-                    if (turnData.cube_location === 'center' && turnData.action != 'drop') {
-                        if (turnData && turnData.cube_owner === 'Red') {
-                            cubeX = 200 - 25;
-                            cubeY = 380 - 25;
+            }
+
+            for (let i = 0; i < doubleTurns.length; i++) {
+                const doubleIndex = doubleTurns[i];
+                if (current === doubleIndex) {
+                    const cubeValue = data[doubleIndex].cube;
+                    const doubleImages = {
+                        2: Double2,
+                        4: Double4,
+                        8: Double8,
+                        16: Double16,
+                        32: Double32,
+                        64: Double64
+                    };
+                    const img = doubleImages[cubeValue];
+                    if (img) {
+                        let cubeX;
+                        if (invertColors) {
+                            if (data[doubleIndex].player === 'Red') {
+                                cubeX = 175; // куб справа для красных при инверсии
+                            } else {
+                                cubeX = 575; // куб слева для черных при инверсии
+                            }
                         } else {
-                            cubeX = 600 - 25;
-                            cubeY = 380 - 25;
+                            if (data[doubleIndex].player === 'Red') {
+                                cubeX = 575; // куб слева для красных
+                            } else {
+                                cubeX = 175; // куб справа для черных
+                            }
                         }
-                    } else {
-                        if (turnData && turnData.cube_owner === 'Red') {
-                            cubeX = 400 - 25;
-                            cubeY = 625 - 25;
-                        } else {
-                            cubeX = 400 - 25;
-                            cubeY = 150 - 25;
-                        }
+                        ctx.drawImage(img, cubeX, 350, 50, 50);
                     }
-                    ctx.drawImage(cubeImg, cubeX, cubeY, 50, 50);
+                    break;
                 }
+            }
+
+            if (currentCube && current > firstDoubleIndex && !doubleTurns.includes(current) && item.action !== 'win') {
+                let cubeY = 350;
+                if (invertColors) {
+                    if (currentCubePlayer === 'Red') {
+                        cubeY = 600;
+                    } else if (currentCubePlayer === 'Black') {
+                        cubeY = 100;
+                    }
+                } else {
+                    if (currentCubePlayer === 'Black') {
+                        cubeY = 600;
+                    } else if (currentCubePlayer === 'Red') {
+                        cubeY = 100;
+                    }
+                }
+                ctx.drawImage(currentCube, 375, cubeY, 50, 50);
+            }
+
+            if (item.action === 'win') {
+                ctx.drawImage(Double64, 375, 350, 50, 50);
             }
         }
 
