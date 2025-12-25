@@ -768,8 +768,8 @@
                         data.forEach(item => {
                             item.is_visible = (error === '0') ||
                                 (error === '1' && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) ||
-                                (error === '2' && item.player_name === redPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) ||
-                                (error === '3' && item.player_name === blackPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take'));
+                                (error === '2' && ((item.player_name === redPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win')) ||
+                                (error === '3' && ((item.player_name === blackPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win'));
                         });
 
 
