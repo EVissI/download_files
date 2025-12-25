@@ -527,6 +527,14 @@
         const gameId = urlParams.get('game_id') || 'default';
         const error = urlParams.get('error') || '0';
 
+        // Disable animation if error != '0'
+        if (error !== '0') {
+            const animationControls = document.querySelector('.animation-controls');
+            if (animationControls) {
+                animationControls.style.display = 'none';
+            }
+        }
+
         // Add cache-busting to CSS background images
         document.addEventListener('DOMContentLoaded', function () {
             const prevBtn = document.getElementById('prevBtn');
@@ -794,6 +802,11 @@
                             skipAnimationCheckbox.addEventListener('change', (e) => {
                                 skipAnimationEnabled = e.target.checked;
                             });
+                        }
+
+                        // Force skip animation if error != '0'
+                        if (error !== '0') {
+                            skipAnimationEnabled = true;
                         }
 
                         const animationSpeedSlider = document.getElementById('animationSpeedSlider');
