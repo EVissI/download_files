@@ -1068,7 +1068,7 @@
             return totalPips;
         }
 
-        function drawBoardForAnimation(positions, currentPlayerType) {
+        function currentPlayerType(positions, currentPlayerType) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
 
@@ -1200,7 +1200,7 @@
                 const currentX = fromX + (toX - fromX) * easedProgress;
                 const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation(temp_positions, playerType);
+                drawBoardForAnimation(temp_positions);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
@@ -1254,7 +1254,7 @@
                 const currentX = fromX + (barX - fromX) * easedProgress;
                 const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation(temp_positions, playerType);
+                drawBoardForAnimation(temp_positions);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
@@ -1600,7 +1600,7 @@
                 const smaller = Math.min(finalRedScore, finalBlackScore);
                 info = `${item.player_name} победил. Счёт ${larger} - ${smaller}`;
             } else if (item.moves && item.moves.length > 0) {
-                info = prefix + `${item.gnu_move.trim()}`;
+                info = prefix + `${item.gnu_move ? item.gnu_move.trim() : ''}`;
             } else if (item.moves && item.moves.length === 0) {
                 info = prefix + `Пропуск`;
             } else {
@@ -1631,7 +1631,7 @@
                         displayAction += `, ${hint.action_2}`;
                     }
                     let rowClass = '';
-                    if (item.gnu_move.trim() === 'Double' && hint.action_1 === 'Double' && hint.action_2 === nextGnuMove) {
+                    if (item.gnu_move && item.gnu_move.trim() === 'Double' && hint.action_1 === 'Double' && hint.action_2 === nextGnuMove) {
                         if (noDoubleEq !== null && hint.eq !== undefined) {
                             if (hint.eq > noDoubleEq) {
                                 rowClass = 'hint-best';
@@ -1639,7 +1639,7 @@
                                 rowClass = 'hint-good';
                             }
                         }
-                    } else if (item.gnu_move.trim() === 'take' && hint.action_2 === 'take') {
+                    } else if (item.gnu_move && item.gnu_move.trim() === 'take' && hint.action_2 === 'take') {
                         if (PassHintEq !== null && hint.eq !== undefined) {
                             if (hint.eq > PassHintEq) {
                                 rowClass = 'hint-best';
@@ -1647,7 +1647,7 @@
                                 rowClass = 'hint-good';
                             }
                         }
-                    } else if (item.gnu_move.trim() !== 'take' && item.gnu_move.trim() !== 'Double' && hint.action_1 === 'No double') {
+                    } else if (item.gnu_move && item.gnu_move.trim() !== 'take' && item.gnu_move.trim() !== 'Double' && hint.action_1 === 'No double') {
                         if (index === 0) {
                             rowClass = 'hint-best';
                         } else if (index === 1) {
@@ -1747,12 +1747,13 @@
             }
         }
 
-        function drawBoardForAnimation(positions, currentPlayerType) {
+        function drawBoardForAnimation(positions) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
 
-            drawCheckers('red', whiteImg, positions.red, currentPlayerType);
-            drawCheckers('black', blackImg, positions.black, currentPlayerType);
+            const currentPlayer = data[current].player.toLowerCase();
+            drawCheckers('red', whiteImg, positions.red, currentPlayer);
+            drawCheckers('black', blackImg, positions.black, currentPlayer);
 
             const turnData = data[current];
             if (turnData && turnData.dice && turnData.dice.length >= 2 && !['double', 'take', 'win'].includes(turnData.action)) {
@@ -1879,7 +1880,7 @@
                 const currentX = fromX + (toX - fromX) * easedProgress;
                 const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation(temp_positions, playerType);
+                drawBoardForAnimation(temp_positions);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
@@ -1933,7 +1934,7 @@
                 const currentX = fromX + (barX - fromX) * easedProgress;
                 const currentY = fromY + (toY - fromY) * easedProgress;
 
-                drawBoardForAnimation(temp_positions, playerType);
+                drawBoardForAnimation(temp_positions);
                 ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
 
                 if (progress < 1) {
@@ -2177,7 +2178,7 @@
                 const smaller = Math.min(finalRedScore, finalBlackScore);
                 info = `${item.player_name} победил. Счёт ${larger} - ${smaller}`;
             } else if (item.moves && item.moves.length > 0) {
-                info = prefix + `${item.gnu_move.trim()}`;
+                info = prefix + `${item.gnu_move ? item.gnu_move.trim() : ''}`;
             } else if (item.moves && item.moves.length === 0) {
                 info = prefix + `Пропуск`;
             } else {
