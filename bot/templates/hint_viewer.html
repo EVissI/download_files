@@ -2117,6 +2117,80 @@
             render(current, invertColors);
         }
 
+        function updateInfo() {
+            if (!dataLoaded) return;
+
+            const turnLabel = document.getElementById('turnLabel');
+            turnLabel.textContent = current + 1;
+
+            const moveInfo = document.getElementById('move-info');
+            const item = data[current];
+            let info = '';
+            let prefix = (current > 0 && data[current - 1].action === 'double') ? '<strong>Take</strong>  <br>' : '';
+            if (item.action === 'double') {
+                info = `Double (${item.cube})`;
+            } else if (item.action === 'take') {
+                info = `Take`;
+            } else if (item.action === 'win') {
+                // Найти следующую игру для счета
+                const nextGame = availableGames.find(g => g.game_number > currentGameNum);
+                let finalRedScore, finalBlackScore;
+                if (nextGame) {
+                    // Загрузить scores из файла следующей игры
+                    fetch(`/api/analysis/${gameId}?game_num=${nextGame.game_number}`)
+                        .then(response => response.json())
+                        .then(json => {
+                            const nextScores = json.game_info.scores || {};
+                            finalRedScore = nextScores.Red || 0;
+                            finalBlackScore = nextScores.Black || 0;
+                            const larger = Math.max(finalRedScore, finalBlackScore);
+                            const smaller = Math.min(finalRedScore, finalBlackScore);
+                            const winInfo = `${item.player_name} победил. Счёт ${larger} - ${smaller}`;
+                            document.getElementById('move-info').innerHTML = winInfo;
+                        })
+                        .catch(error => {
+                            console.error('Error loading next game scores:', error);
+                            // Fallback to current logic
+                            finalRedScore = gameRedScore;
+                            finalBlackScore = gameBlackScore;
+                            if (item.player_name === redPlayer) {
+                                finalRedScore += item.points;
+                            } else if (item.player_name === blackPlayer) {
+                                finalBlackScore += item.points;
+                            }
+                            const larger = Math.max(finalRedScore, finalBlackScore);
+                            const smaller = Math.min(finalRedScore, finalBlackScore);
+                            info = `${item.player_name} победил. Счёт ${larger} - ${smaller}`;
+                        });
+                    return; // Exit early, info will be set asynchronously
+                } else {
+                    // Если следующей игры нет, используем текущую логику
+                    finalRedScore = gameRedScore;
+                    finalBlackScore = gameBlackScore;
+                    if (item.player_name === redPlayer) {
+                        finalRedScore += item.points;
+                    } else if (item.player_name === blackPlayer) {
+                        finalBlackScore += item.points;
+                    }
+                }
+                const larger = Math.max(finalRedScore, finalBlackScore);
+                const smaller = Math.min(finalRedScore, finalBlackScore);
+                info = `${item.player_name} победил. Счёт ${larger} - ${smaller}`;
+            } else if (item.moves && item.moves.length > 0) {
+                info = prefix + `${item.gnu_move.trim()}`;
+            } else if (item.moves && item.moves.length === 0) {
+                info = prefix + `Пропуск`;
+            } else {
+                info = prefix + '<div class="info-text">No moves available for this turn.</div>';
+                console.warn('No moves for turn:', current, item);
+            }
+            setTimeout(() => {
+                document.getElementById('move-info').innerHTML = info;
+                console.log('Info set to:', info);
+                console.log('Actual move-info div content:', document.getElementById('move-info').innerHTML);
+            }, 0);
+        }
+
         function showFadingMessage(message) {
             const msgDiv = document.createElement('div');
             msgDiv.style.position = 'fixed';
