@@ -432,7 +432,8 @@
             align-items: center;
         }
 
-        #hideInfoCheckbox {
+        #hideInfoCheckbox,
+        #skipAnimationCheckbox {
             margin-right: 10px;
         }
 
@@ -590,6 +591,11 @@
         let gameRedScore = 0;
         let gameBlackScore = 0;
         let enable_crawford_game_number = null;
+        let animating = false;
+        let skipAnimation = false;
+        let animationSpeed = 0.5;
+        let skipAnimationEnabled = false;
+        let pendingPrevGame = false;
         const infoDiv = document.getElementById('move-info');
         const matchInfoDiv = document.getElementById('match-info');
         const playersInfoDiv = document.getElementById('players-info');
@@ -633,7 +639,7 @@
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                     let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                     console.log('currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div></div>';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox"><input type="checkbox" id="skipAnimationCheckbox"><div id="black-pips" class="pips-above-board">0</div></div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -653,7 +659,7 @@
                 } else if (availableGames.length > 0) {
                     matchInfoDiv.innerHTML = "Манигейм";
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox"><input type="checkbox" id="skipAnimationCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -671,7 +677,7 @@
                 } else {
                     matchInfoDiv.innerHTML = "";
                     playersInfoDiv.innerHTML = "";
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox"><input type="checkbox" id="skipAnimationCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -745,7 +751,7 @@
                         }
                         let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                         console.log('loadGame currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
-                        topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div class="right-group">' + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div></div>';
+                        topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div class="right-group">' + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + (document.getElementById('skipAnimationCheckbox') ? document.getElementById('skipAnimationCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div></div>';
 
                         const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                         if (hideInfoCheckbox) {
@@ -755,6 +761,13 @@
                             }
                             hideInfoCheckbox.addEventListener('change', () => {
                                 localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                            });
+                        }
+
+                        const skipAnimationCheckbox = document.getElementById('skipAnimationCheckbox');
+                        if (skipAnimationCheckbox) {
+                            skipAnimationCheckbox.addEventListener('change', (e) => {
+                                skipAnimationEnabled = e.target.checked;
                             });
                         }
 
@@ -994,6 +1007,15 @@
             }
         };
 
+        const cubeImages = {
+            2: Double2,
+            4: Double4,
+            8: Double8,
+            16: Double16,
+            32: Double32,
+            64: Double64
+        };
+
         function getX(point) {
             if (point >= 13 && point <= 18) {
                 const baseX = 50 + (point - 13) * 60;
@@ -1044,6 +1066,233 @@
                 }
             }
             return totalPips;
+        }
+
+        function drawBoardForAnimation(positions, currentPlayerType) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+
+            drawCheckers('red', whiteImg, positions.red, currentPlayerType);
+            drawCheckers('black', blackImg, positions.black, currentPlayerType);
+
+            const turnData = data[current];
+            if (turnData && turnData.dice && turnData.dice.length >= 2 && !['double', 'take', 'win'].includes(turnData.action)) {
+                const [d1, d2] = turnData.dice;
+                const diceY = 350;
+                let diceX1, diceX2;
+                let diceSet;
+                if (invertColors) {
+                    if (currentPlayerType === 'red') {
+                        diceX1 = 130;
+                        diceX2 = 220;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 530;
+                        diceX2 = 620;
+                        diceSet = diceImages.black;
+                    }
+                } else {
+                    if (currentPlayerType === 'red') {
+                        diceX1 = 530;
+                        diceX2 = 620;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 130;
+                        diceX2 = 220;
+                        diceSet = diceImages.black;
+                    }
+                }
+                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+            }
+
+            // Draw cube during animation
+            if (turnData && turnData.cube_owner === null) {
+                ctx.drawImage(Double64, 375, 350, 50, 50);
+            } else if (turnData && turnData.cube_value && turnData.cube_value > 1) {
+                const cubeImg = cubeImages[turnData.cube_value];
+                if (cubeImg) {
+                    let cubeX, cubeY;
+                    if (turnData.cube_location === 'center' && turnData.action != 'drop') {
+                        if (turnData && turnData.cube_owner === 'Red') {
+                            cubeX = 200 - 25;
+                            cubeY = 380 - 25;
+                        } else {
+                            cubeX = 600 - 25;
+                            cubeY = 380 - 25;
+                        }
+                    } else {
+                        if (turnData && turnData.cube_owner === 'Red') {
+                            cubeX = 400 - 25;
+                            cubeY = 625 - 25;
+                        } else {
+                            cubeX = 400 - 25;
+                            cubeY = 150 - 25;
+                        }
+                    }
+                    ctx.drawImage(cubeImg, cubeX, cubeY, 50, 50);
+                }
+            }
+        }
+
+        function animateSingleMove(move, playerType, temp_positions, callback) {
+            const img = playerType === 'red' ? whiteImg : blackImg;
+            const player_pos = temp_positions[playerType];
+            const opp_pos = temp_positions[playerType === 'red' ? 'black' : 'red'];
+            const fromStr = move.from.toString();
+            const toStr = move.to.toString()
+            let fromX, fromY;
+            const rawFrom = move.from;
+            const fromIsBar = (rawFrom === 'bar' || rawFrom === 25 || rawFrom === '25');
+            const rawTo = move.to;
+            const isOff = (rawTo === 'off' || rawTo === 0 || rawTo === '0');
+            const isBar = (rawTo === 'bar' || rawTo === 25 || rawTo === '25');
+            if (fromIsBar) {
+                fromX = 400;
+                const barY = (playerType === 'black') ? 220 : 520;
+                const barDy = (playerType === 'black') ? 55 : -55;
+                const barCount = player_pos['bar'] || 0;
+                fromY = barY + (barCount - 1) * barDy;
+            } else {
+                const fromPoint = parseInt(fromStr);
+                fromX = getX(fromPoint);
+                const fromBaseY = getBaseY(fromPoint);
+                const fromDy = getDy(fromPoint);
+                const fromCount = player_pos[fromStr] || 0;
+                fromY = fromBaseY + (fromCount - 1) * fromDy;
+            }
+
+            if (fromIsBar) {
+                player_pos['bar'] = (player_pos['bar'] || 1) - 1;
+                if (player_pos['bar'] === 0) delete player_pos['bar'];
+            } else {
+                player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
+                if (player_pos[fromStr] === 0) delete player_pos[fromStr];
+            }
+
+            let toX, toY;
+            if (isOff) {
+                toX = 820;
+                toY = playerType === 'black'
+                    ? (invertColors ? 440 : 340)
+                    : (invertColors ? 340 : 440);
+            } else {
+                const toPoint = parseInt(toStr);
+                toX = getX(toPoint);
+                const toBaseY = getBaseY(toPoint);
+                const toDy = getDy(toPoint);
+                let toCount = player_pos[toStr] || 0;
+                if (move.hit) {
+                    toCount = 0; // After hit, place on empty point
+                }
+                toY = toBaseY + toCount * toDy;
+            }
+
+            let progress = 0;
+            const duration = 200 / animationSpeed; // Duration for smooth animation
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                progress = Math.min(elapsed / duration, 1);
+                // Ease-in-out for smoother movement
+                const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const currentX = fromX + (toX - fromX) * easedProgress;
+                const currentY = fromY + (toY - fromY) * easedProgress;
+
+                drawBoardForAnimation(temp_positions, playerType);
+                ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Add checker to to position
+                    if (toStr === 'off') {
+                        player_pos['off'] = (player_pos['off'] || 0) + 1;
+                    } else {
+                        player_pos[toStr] = (player_pos[toStr] || 0) + 1;
+                    }
+                    callback(move.hit, move, playerType, temp_positions);
+                }
+            };
+            animate();
+        }
+
+        function animateHit(move, playerType, temp_positions, finalCallback) {
+            const hitPlayerType = playerType === 'red' ? 'black' : 'red';
+            const img = hitPlayerType === 'red' ? whiteImg : blackImg;
+            const opp_pos = temp_positions[hitPlayerType];
+
+            const toStr = move.to.toString();
+            // Temporarily remove hit checker from to position
+            opp_pos[toStr] = (opp_pos[toStr] || 1) - 1;
+            if (opp_pos[toStr] === 0) delete opp_pos[toStr];
+
+            const hitPoint = parseInt(toStr);
+            const fromX = getX(hitPoint);
+            const fromBaseY = getBaseY(hitPoint);
+            const fromDy = getDy(hitPoint);
+            const hitCount = opp_pos[toStr] || 0; // Now 0
+            let fromY = fromBaseY + (hitCount - 1) * fromDy;
+
+            const barX = 400;
+            const barY = (hitPlayerType === 'black') ? 220 : 520;
+            const barDy = (hitPlayerType === 'black') ? 55 : -55;
+            const barCount = opp_pos['bar'] || 0;
+            const toX = 820; // Fly to the right
+            const toY = barY + barCount * barDy; // Position for the hit checker on bar
+
+            let progress = 0;
+            const duration = 200 / animationSpeed;
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                progress = Math.min(elapsed / duration, 1);
+                // Ease-in-out for smoother movement
+                const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const currentX = fromX + (barX - fromX) * easedProgress;
+                const currentY = fromY + (toY - fromY) * easedProgress;
+
+                drawBoardForAnimation(temp_positions, playerType);
+                ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Add hit checker to bar
+                    opp_pos['bar'] = (opp_pos['bar'] || 0) + 1;
+                    finalCallback();
+                }
+            };
+            animate();
+        }
+
+        function updateTempPositionsAfterMove(move, playerType, temp_positions) {
+            const player_pos = temp_positions[playerType];
+            const opp_pos = temp_positions[playerType === 'red' ? 'black' : 'red'];
+            const fromStr = move.from.toString();
+            const toStr = move.to.toString();
+            const isOffMove = (move.to === 0 || move.to === '0' || move.to === 'off');
+            const isBarFrom = (move.from === 25 || move.from === '25' || move.from === 'bar');
+            if (move.hit) {
+                opp_pos[toStr] = (opp_pos[toStr] || 1) - 1;
+                if (opp_pos[toStr] === 0) delete opp_pos[toStr];
+                opp_pos['bar'] = (opp_pos['bar'] || 0) + 1;
+            }
+
+            if (isBarFrom) {
+                player_pos['bar'] = (player_pos['bar'] || 1) - 1;
+                if (player_pos['bar'] <= 0) delete player_pos['bar'];
+            } else {
+                player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
+                if (player_pos[fromStr] === 0) delete player_pos[fromStr];
+            }
+            if (isOffMove) {
+                player_pos['off'] = (player_pos['off'] || 0) + 1;
+            } else {
+                player_pos[toStr] = (player_pos[toStr] || 0) + 1;
+            }
         }
 
         function drawCheckers(player, img, positions, currentPlayer) {
@@ -1450,6 +1699,23 @@
         }
 
         async function prevTurn() {
+            if (animating) {
+                skipAnimation = true;
+                pendingPrevGame = true;
+                setTimeout(() => {
+                    if (pendingPrevGame) {
+                        pendingPrevGame = false;
+                        if (current > 0) {
+                            current--;
+                            render(current, invertColors);
+                            updateButtons();
+                            updateInfo();
+                        }
+                    }
+                }, 50);
+                return;
+            }
+
             if (dataLoaded) {
                 if (current > 0) {
                     let newCurrent = current - 1;
@@ -1481,25 +1747,366 @@
             }
         }
 
-        function nextTurn() {
-            if (dataLoaded) {
-                if (current < data.length - 1) {
-                    let newCurrent = current + 1;
-                    while (newCurrent < data.length && !data[newCurrent].is_visible) {
-                        newCurrent++;
+        function drawBoardForAnimation(positions, currentPlayerType) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+
+            drawCheckers('red', whiteImg, positions.red, currentPlayerType);
+            drawCheckers('black', blackImg, positions.black, currentPlayerType);
+
+            const turnData = data[current];
+            if (turnData && turnData.dice && turnData.dice.length >= 2 && !['double', 'take', 'win'].includes(turnData.action)) {
+                const [d1, d2] = turnData.dice;
+                const diceY = 350;
+                let diceX1, diceX2;
+                let diceSet;
+                if (invertColors) {
+                    if (currentPlayerType === 'red') {
+                        diceX1 = 130;
+                        diceX2 = 220;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 530;
+                        diceX2 = 620;
+                        diceSet = diceImages.black;
                     }
-                    if (newCurrent < data.length) {
-                        render(newCurrent, invertColors);
-                        updateButtons();
-                        return;
+                } else {
+                    if (currentPlayerType === 'red') {
+                        diceX1 = 530;
+                        diceX2 = 620;
+                        diceSet = diceImages.white;
+                    } else {
+                        diceX1 = 130;
+                        diceX2 = 220;
+                        diceSet = diceImages.black;
                     }
                 }
-                // If no next visible in current game, try next game
-                if (availableGames.length > 1) {
-                    const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
-                    if (currentIndex !== -1 && currentIndex < availableGames.length - 1) {
-                        const nextGameNum = availableGames[currentIndex + 1].game_number;
-                        loadGame(nextGameNum);
+                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+            }
+
+            // Draw cube during animation
+            if (turnData && turnData.cube_owner === null) {
+                ctx.drawImage(Double64, 375, 350, 50, 50);
+            } else if (turnData && turnData.cube_value && turnData.cube_value > 1) {
+                const cubeImg = cubeImages[turnData.cube_value];
+                if (cubeImg) {
+                    let cubeX, cubeY;
+                    if (turnData.cube_location === 'center' && turnData.action != 'drop') {
+                        if (turnData && turnData.cube_owner === 'Red') {
+                            cubeX = 200 - 25;
+                            cubeY = 380 - 25;
+                        } else {
+                            cubeX = 600 - 25;
+                            cubeY = 380 - 25;
+                        }
+                    } else {
+                        if (turnData && turnData.cube_owner === 'Red') {
+                            cubeX = 400 - 25;
+                            cubeY = 625 - 25;
+                        } else {
+                            cubeX = 400 - 25;
+                            cubeY = 150 - 25;
+                        }
+                    }
+                    ctx.drawImage(cubeImg, cubeX, cubeY, 50, 50);
+                }
+            }
+        }
+
+        function animateSingleMove(move, playerType, temp_positions, callback) {
+            const img = playerType === 'red' ? whiteImg : blackImg;
+            const player_pos = temp_positions[playerType];
+            const opp_pos = temp_positions[playerType === 'red' ? 'black' : 'red'];
+            const fromStr = move.from.toString();
+            const toStr = move.to.toString()
+            let fromX, fromY;
+            const rawFrom = move.from;
+            const fromIsBar = (rawFrom === 'bar' || rawFrom === 25 || rawFrom === '25');
+            const rawTo = move.to;
+            const isOff = (rawTo === 'off' || rawTo === 0 || rawTo === '0');
+            const isBar = (rawTo === 'bar' || rawTo === 25 || rawTo === '25');
+            if (fromIsBar) {
+                fromX = 400;
+                const barY = (playerType === 'black') ? 220 : 520;
+                const barDy = (playerType === 'black') ? 55 : -55;
+                const barCount = player_pos['bar'] || 0;
+                fromY = barY + (barCount - 1) * barDy;
+            } else {
+                const fromPoint = parseInt(fromStr);
+                fromX = getX(fromPoint);
+                const fromBaseY = getBaseY(fromPoint);
+                const fromDy = getDy(fromPoint);
+                const fromCount = player_pos[fromStr] || 0;
+                fromY = fromBaseY + (fromCount - 1) * fromDy;
+            }
+
+            if (fromIsBar) {
+                player_pos['bar'] = (player_pos['bar'] || 1) - 1;
+                if (player_pos['bar'] === 0) delete player_pos['bar'];
+            } else {
+                player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
+                if (player_pos[fromStr] === 0) delete player_pos[fromStr];
+            }
+
+            let toX, toY;
+            if (isOff) {
+                toX = 820;
+                toY = playerType === 'black'
+                    ? (invertColors ? 440 : 340)
+                    : (invertColors ? 340 : 440);
+            } else {
+                const toPoint = parseInt(toStr);
+                toX = getX(toPoint);
+                const toBaseY = getBaseY(toPoint);
+                const toDy = getDy(toPoint);
+                let toCount = player_pos[toStr] || 0;
+                if (move.hit) {
+                    toCount = 0; // After hit, place on empty point
+                }
+                toY = toBaseY + toCount * toDy;
+            }
+
+            let progress = 0;
+            const duration = 200 / animationSpeed; // Duration for smooth animation
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                progress = Math.min(elapsed / duration, 1);
+                // Ease-in-out for smoother movement
+                const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const currentX = fromX + (toX - fromX) * easedProgress;
+                const currentY = fromY + (toY - fromY) * easedProgress;
+
+                drawBoardForAnimation(temp_positions, playerType);
+                ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Add checker to to position
+                    if (toStr === 'off') {
+                        player_pos['off'] = (player_pos['off'] || 0) + 1;
+                    } else {
+                        player_pos[toStr] = (player_pos[toStr] || 0) + 1;
+                    }
+                    callback(move.hit, move, playerType, temp_positions);
+                }
+            };
+            animate();
+        }
+
+        function animateHit(move, playerType, temp_positions, finalCallback) {
+            const hitPlayerType = playerType === 'red' ? 'black' : 'red';
+            const img = hitPlayerType === 'red' ? whiteImg : blackImg;
+            const opp_pos = temp_positions[hitPlayerType];
+
+            const toStr = move.to.toString();
+            // Temporarily remove hit checker from to position
+            opp_pos[toStr] = (opp_pos[toStr] || 1) - 1;
+            if (opp_pos[toStr] === 0) delete opp_pos[toStr];
+
+            const hitPoint = parseInt(toStr);
+            const fromX = getX(hitPoint);
+            const fromBaseY = getBaseY(hitPoint);
+            const fromDy = getDy(hitPoint);
+            const hitCount = opp_pos[toStr] || 0; // Now 0
+            let fromY = fromBaseY + (hitCount - 1) * fromDy;
+
+            const barX = 400;
+            const barY = (hitPlayerType === 'black') ? 220 : 520;
+            const barDy = (hitPlayerType === 'black') ? 55 : -55;
+            const barCount = opp_pos['bar'] || 0;
+            const toX = 820; // Fly to the right
+            const toY = barY + barCount * barDy; // Position for the hit checker on bar
+
+            let progress = 0;
+            const duration = 200 / animationSpeed;
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                progress = Math.min(elapsed / duration, 1);
+                // Ease-in-out for smoother movement
+                const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const currentX = fromX + (barX - fromX) * easedProgress;
+                const currentY = fromY + (toY - fromY) * easedProgress;
+
+                drawBoardForAnimation(temp_positions, playerType);
+                ctx.drawImage(img, currentX - 31.25, currentY - 31.25, 62.5, 62.5);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Add hit checker to bar
+                    opp_pos['bar'] = (opp_pos['bar'] || 0) + 1;
+                    finalCallback();
+                }
+            };
+            animate();
+        }
+
+        function updateTempPositionsAfterMove(move, playerType, temp_positions) {
+            const player_pos = temp_positions[playerType];
+            const opp_pos = temp_positions[playerType === 'red' ? 'black' : 'red'];
+            const fromStr = move.from.toString();
+            const toStr = move.to.toString();
+            const isOffMove = (move.to === 0 || move.to === '0' || move.to === 'off');
+            const isBarFrom = (move.from === 25 || move.from === '25' || move.from === 'bar');
+            if (move.hit) {
+                opp_pos[toStr] = (opp_pos[toStr] || 1) - 1;
+                if (opp_pos[toStr] === 0) delete opp_pos[toStr];
+                opp_pos['bar'] = (opp_pos['bar'] || 0) + 1;
+            }
+
+            if (isBarFrom) {
+                player_pos['bar'] = (player_pos['bar'] || 1) - 1;
+                if (player_pos['bar'] <= 0) delete player_pos['bar'];
+            } else {
+                player_pos[fromStr] = (player_pos[fromStr] || 1) - 1;
+                if (player_pos[fromStr] === 0) delete player_pos[fromStr];
+            }
+            if (isOffMove) {
+                player_pos['off'] = (player_pos['off'] || 0) + 1;
+            } else {
+                player_pos[toStr] = (player_pos[toStr] || 0) + 1;
+            }
+        }
+
+        function nextTurn() {
+            if (skipAnimationEnabled) {
+                if (dataLoaded) {
+                    if (current < data.length - 1) {
+                        let newCurrent = current + 1;
+                        while (newCurrent < data.length && !data[newCurrent].is_visible) {
+                            newCurrent++;
+                        }
+                        if (newCurrent < data.length) {
+                            render(newCurrent, invertColors);
+                            updateButtons();
+                            return;
+                        }
+                    }
+                    // If no next visible in current game, try next game
+                    if (availableGames.length > 1) {
+                        const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
+                        if (currentIndex !== -1 && currentIndex < availableGames.length - 1) {
+                            const nextGameNum = availableGames[currentIndex + 1].game_number;
+                            loadGame(nextGameNum);
+                        }
+                    }
+                }
+                return;
+            }
+
+            // Если уже идет анимация - устанавливаем флаг пропуска
+            if (animating) {
+                skipAnimation = true;
+                return;
+            }
+
+            if (dataLoaded) {
+                if (current >= data.length - 1) {
+                    // If no next visible in current game, try next game
+                    if (availableGames.length > 1) {
+                        const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
+                        if (currentIndex !== -1 && currentIndex < availableGames.length - 1) {
+                            const nextGameNum = availableGames[currentIndex + 1].game_number;
+                            loadGame(nextGameNum);
+                        }
+                    } else {
+                        return;
+                    }
+                } else {
+
+                    animating = true;
+                    skipAnimation = false; // Сбрасываем флаг
+                    updateButtons();
+                    updateInfo(); // Обновляем инфо сразу
+
+                    const nextTurnData = data[current];
+                    const playerType = nextTurnData.player.toLowerCase();
+
+                    let prev_positions;
+                    if (current === 0) {
+                        // Initial positions
+                        if (invertColors) {
+                            prev_positions = {
+                                red: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                                black: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
+                            };
+                        } else {
+                            prev_positions = {
+                                red: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
+                                black: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
+                            };
+                        }
+                    } else {
+                        prev_positions = invertColors ? data[current - 1].inverted_positions : data[current - 1].positions;
+                    }
+
+                    const temp_positions = JSON.parse(JSON.stringify(prev_positions));
+
+                    let moves = nextTurnData.moves || [];
+
+                    const timeoutId = setTimeout(() => {
+                        animating = false;
+                        updateButtons();
+                    }, 5000);
+
+                    if (moves.length > 0) {
+                        let moveIndex = 0;
+                        const animateMoves = () => {
+                            // Проверяем флаг пропуска
+                            if (skipAnimation) {
+                                // Применяем все оставшиеся ходы мгновенно
+                                while (moveIndex < moves.length) {
+                                    const move = moves[moveIndex];
+                                    updateTempPositionsAfterMove(move, playerType, temp_positions);
+                                    moveIndex++;
+                                }
+                                // Завершаем анимацию
+                                clearTimeout(timeoutId);
+                                current++;
+                                render(current, invertColors);
+                                updateButtons();
+                                updateInfo();
+                                animating = false;
+                                skipAnimation = false;
+                                return;
+                            }
+
+                            if (moveIndex < moves.length) {
+                                const move = moves[moveIndex];
+                                animateSingleMove(move, playerType, temp_positions, (hasHit, move, playerType, temp_positions) => {
+                                    if (hasHit) {
+                                        animateHit(move, playerType, temp_positions, () => {
+                                            moveIndex++;
+                                            setTimeout(animateMoves, 100 / animationSpeed);
+                                        });
+                                    } else {
+                                        moveIndex++;
+                                        setTimeout(animateMoves, 100 / animationSpeed);
+                                    }
+                                });
+                            } else {
+                                clearTimeout(timeoutId);
+                                current++;
+                                render(current, invertColors);
+                                updateButtons();
+                                updateInfo();
+                                animating = false;
+                            }
+                        };
+                        animateMoves();
+                    } else {
+                        clearTimeout(timeoutId);
+                        current++;
+                        render(current, invertColors);
+                        updateButtons();
+                        updateInfo();
+                        animating = false;
                     }
                 }
             }
