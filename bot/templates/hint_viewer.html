@@ -1114,7 +1114,7 @@
                 let diceX1, diceX2;
                 let diceSet;
                 if (invertColors) {
-                    if (currentPlayerType === 'red') {
+                    if (currentPlayer === 'red') {
                         diceX1 = 130;
                         diceX2 = 220;
                         diceSet = diceImages.white;
@@ -1124,7 +1124,7 @@
                         diceSet = diceImages.black;
                     }
                 } else {
-                    if (currentPlayerType === 'red') {
+                    if (currentPlayer === 'red') {
                         diceX1 = 530;
                         diceX2 = 620;
                         diceSet = diceImages.white;
