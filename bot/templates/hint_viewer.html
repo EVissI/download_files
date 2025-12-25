@@ -432,9 +432,28 @@
             align-items: center;
         }
 
-        #hideInfoCheckbox,
-        #skipAnimationCheckbox {
+        #hideInfoCheckbox {
             margin-right: 10px;
+        }
+
+        .animation-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .animation-controls label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+
+        #animationSpeedSlider {
+            width: 100px;
         }
 
         .right-group {
@@ -572,6 +591,12 @@
             <div id="moveHintsTable" class="hints-content"></div>
             <div id="cubeHintsTable" class="hints-content"></div>
         </div>
+
+        <div class="animation-controls">
+            <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию шашек</label>
+            <label>Скорость анимации: <input type="range" id="animationSpeedSlider" min="0.1" max="2" step="0.1"
+                    value="0.5"></label>
+        </div>
     </div>
 
     <script>
@@ -639,7 +664,7 @@
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                     let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                     console.log('currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox"><input type="checkbox" id="skipAnimationCheckbox"><div id="black-pips" class="pips-above-board">0</div></div>';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox"><div id="black-pips" class="pips-above-board">0</div></div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -659,7 +684,7 @@
                 } else if (availableGames.length > 0) {
                     matchInfoDiv.innerHTML = "Манигейм";
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox"><input type="checkbox" id="skipAnimationCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -677,7 +702,7 @@
                 } else {
                     matchInfoDiv.innerHTML = "";
                     playersInfoDiv.innerHTML = "";
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox"><input type="checkbox" id="skipAnimationCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -751,7 +776,7 @@
                         }
                         let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                         console.log('loadGame currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
-                        topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div class="right-group">' + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + (document.getElementById('skipAnimationCheckbox') ? document.getElementById('skipAnimationCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div></div>';
+                        topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div class="right-group">' + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div></div>';
 
                         const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                         if (hideInfoCheckbox) {
@@ -768,6 +793,13 @@
                         if (skipAnimationCheckbox) {
                             skipAnimationCheckbox.addEventListener('change', (e) => {
                                 skipAnimationEnabled = e.target.checked;
+                            });
+                        }
+
+                        const animationSpeedSlider = document.getElementById('animationSpeedSlider');
+                        if (animationSpeedSlider) {
+                            animationSpeedSlider.addEventListener('input', (e) => {
+                                animationSpeed = parseFloat(e.target.value);
                             });
                         }
 
