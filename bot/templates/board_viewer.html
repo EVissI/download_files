@@ -738,11 +738,15 @@
                 dataLoaded = true;
                 const matchInfoDiv = document.getElementById('match-info');
                 const matchText = matchPoint === 0 ? 'Манигейм' : `Матч до ${matchPoint}`;
-                matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                const gameSpan = matchPoint === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
+                matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                 const playersInfoDiv = document.getElementById('players-info');
                 playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                 updateGameSelect();
                 document.getElementById('gameSelect').value = currentGameNum - 1;
+                if (matchPoint === 0) {
+                    document.querySelector('.center-select').style.display = 'none';
+                }
                 updateButtons();
                 drawBoard();
                 updateInfo();
@@ -1295,7 +1299,10 @@
                         drawBoard();
                         updateInfo();
                         const game = availableGames[currentGameNum - 1];
-                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`}</span><span>Игра ${currentGameNum}</span><span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                        const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
+                        const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
+                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                        document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
                         redPlayer = game.first_player;
                         blackPlayer = game.second_player;
                         gameRedScore = game.first_score;
@@ -1332,7 +1339,10 @@
                     drawBoard();
                     updateInfo();
                     const game = availableGames[currentGameNum - 1];
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`}</span><span>Игра ${currentGameNum}</span><span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                    const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
+                    const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
+                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                    document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
                     redPlayer = game.first_player;
                     blackPlayer = game.second_player;
                     gameRedScore = game.first_score;
@@ -1415,7 +1425,10 @@
                                     updateButtons();
                                     updateInfo();
                                     const game = availableGames[currentGameNum - 1];
-                                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`}</span><span>Игра ${currentGameNum}</span><span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                                    const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
+                                    const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
+                                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                                    document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
                                     redPlayer = game.first_player;
                                     blackPlayer = game.second_player;
                                     gameRedScore = game.first_score;
@@ -1491,7 +1504,10 @@
                     updateButtons();
                     updateInfo();
                     const game = availableGames[currentGameNum - 1];
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`}</span><span>Игра ${currentGameNum}</span><span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                    const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
+                    const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
+                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
+                    document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
                     redPlayer = game.first_player;
                     blackPlayer = game.second_player;
                     gameRedScore = game.first_score;
@@ -1834,10 +1850,13 @@
             current = 0;
             inverted = false;
             const matchInfoDiv = document.getElementById('match-info');
-            const matchText = availableGames[gameIndex].point_match === 0 ? 'Манигейм' : `Матч до ${availableGames[gameIndex].point_match}`;
-            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+            const game = availableGames[gameIndex];
+            const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
+            const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
+            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
             let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
             document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
+            document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
             drawBoard();
             updateButtons();
             updateInfo();
