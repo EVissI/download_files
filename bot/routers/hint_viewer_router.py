@@ -822,6 +822,7 @@ async def process_batch_hint_files(
             file_paths,
             str(message.from_user.id),
             batch_id,
+            job_id,
             job_id=job_id,
         )
 
