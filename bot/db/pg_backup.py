@@ -14,7 +14,9 @@ def new_client():
     return yadisk.AsyncClient(token=settings.YA_API_TOKEN)
 
 
-async def upload_to_yandex_disk(file_path: str, file_name: str, max_retries: int = 3, retry_delay: int = 2):
+async def upload_to_yandex_disk(
+    file_path: str, file_name: str, max_retries: int = 3, retry_delay: int = 2
+):
     client = new_client()
     remote_path = f"/PG_backups/{file_name}"
 
@@ -52,11 +54,16 @@ async def backup_postgres_to_yandex_disk():
     try:
         logger.info(f"Создаю SQL-дамп: {backup_name}")
         cmd = [
+            "docker",
+            "exec",
+            "db",
             "pg_dump",
-            "-h", "db",
-            "-U", settings.POSTGRES_USER,
-            "-d", settings.POSTGRES_DB,
-            "-f", temp_file_path
+            "-h",
+            "db",
+            "-U",
+            settings.POSTGRES_USER,
+            "-d",
+            settings.POSTGRES_DB,
         ]
         env = os.environ.copy()
         env["PGPASSWORD"] = settings.POSTGRES_PASSWORD
@@ -67,6 +74,9 @@ async def backup_postgres_to_yandex_disk():
             logger.error(f"Ошибка pg_dump: {process.stderr}")
             raise Exception("Не удалось создать дамп")
 
+        with open(temp_file_path, "w") as f:
+            f.write(process.stdout)
+
         await upload_to_yandex_disk(temp_file_path, backup_name)
 
     finally:
@@ -76,14 +86,16 @@ async def backup_postgres_to_yandex_disk():
 
 async def main():
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(backup_postgres_to_yandex_disk, CronTrigger(hour=0, minute=0))  
+    scheduler.add_job(backup_postgres_to_yandex_disk, CronTrigger(hour=0, minute=0))
     scheduler.start()
 
-    logger.info("Планировщик запущен. Резервное копирование будет выполняться каждый день в 00:00.")
-    
+    logger.info(
+        "Планировщик запущен. Резервное копирование будет выполняться каждый день в 00:00."
+    )
+
     try:
         while True:
-            await asyncio.sleep(3600) 
+            await asyncio.sleep(3600)
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown()
 

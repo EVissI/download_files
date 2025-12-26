@@ -202,8 +202,8 @@ def analyze_backgammon_batch_job(
                 if not asyncio.run(syncthing_sync.sync_and_wait(max_wait=30)):
                     logger.warning("Ошибка синхронизации Syncthing")
                 send_telegram_message(
-                    f"✅ **{fname}** обработан!\n{red_player} vs {black_player}",
-                    parse_mode="Markdown",
+                    f"✅ <b>{fname}</b> обработан!\n{red_player} vs {black_player}",
+                    parse_mode="HTML",
                 )
                 # Отправляем клавиатуру отдельно (упрощенная версия)
                 try:
@@ -220,8 +220,8 @@ def analyze_backgammon_batch_job(
                     logger.warning(f"Error sending keyboard: {e}")
             else:
                 send_telegram_message(
-                    f"✅ **{fname}** обработан, но игр не найдено.",
-                    parse_mode="Markdown",
+                    f"✅ <b>{fname}</b> обработан, но игр не найдено.",
+                    parse_mode="HTML",
                 )
 
             results.append(
@@ -238,7 +238,7 @@ def analyze_backgammon_batch_job(
         except Exception as e:
             logger.exception(f"[Batch File Failed] {fname}")
             send_telegram_message(
-                f"❌ **{fname}**: {str(e)[:100]}", parse_mode="Markdown"
+                f"❌ <b>{fname}</b>: {str(e)[:100]}", parse_mode="HTML"
             )
             results.append(
                 {

@@ -393,10 +393,7 @@ async def hint_viewer_menu(
                     )
             await message.answer(queue_warning)
         # === Отправляем пользователю уведомление ===
-        status_text = (
-            f"✅ Файл принят!\n"
-            f"Примерное время: ~{estimated_time} сек\n"
-        )
+        status_text = f"✅ Файл принят!\n" f"Примерное время: ~{estimated_time} сек\n"
 
         await message.answer(status_text, parse_mode="Markdown")
 
@@ -861,11 +858,11 @@ async def process_batch_hint_files(
         )
 
         # === Отправляем сводку ===
-        summary = f"📤 Пакет отправлен на анализ: **{total_files}** файлов\n\n"
+        summary = f"📤 Пакет отправлен на анализ: <b>{total_files}</b> файлов\n\n"
         summary += "⏳ Мониторю прогресс...\n"
         summary += "💡 Результаты будут отправлены по мере завершения"
 
-        await message.answer(summary, parse_mode="Markdown")
+        await message.answer(summary, parse_mode="HTML")
 
         await state.clear()
 
