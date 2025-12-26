@@ -48,8 +48,6 @@
     restart: unless-stopped
     tty: true
     stdin_open: true
-    sysctls:
-      - vm.overcommit_memory=1
 
 
 
