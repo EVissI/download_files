@@ -864,7 +864,7 @@ async def process_batch_hint_files(
         )
 
         # === Отправляем сводку ===
-        summary = f"📤 Пакет отправлен на анализ: <b>{total_files}</b> файлов\n\n"
+        summary = f"📤 Пакет отправлен на анализ\n\n"
         summary += "⏳ Мониторю прогресс...\n"
         summary += "💡 Результаты будут отправлены по мере завершения"
 
@@ -915,7 +915,7 @@ async def check_job_status(
                         # Сохраняем mat_path для статистики
                         game_id = job_info["game_id"]
                         await redis_client.set(
-                            f"mat_path:{game_id}", result["mat_path"], expire=3600
+                            f"mat_path:{game_id}", result["mat_path"], expire=7200
                         )
 
                         # Создаём ZIP архив если есть игры
