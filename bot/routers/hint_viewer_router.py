@@ -174,6 +174,7 @@ def add_active_job(user_id: int, job_id: str):
     """
     sync_redis_client.sadd(f"user_active_jobs:{user_id}", job_id)
     sync_redis_client.expire(f"user_active_jobs:{user_id}", 3600)
+    logger.info(f"Added active job: user_id={user_id}, job_id={job_id}")
 
 
 def remove_active_job(user_id: int, job_id: str):
@@ -181,6 +182,7 @@ def remove_active_job(user_id: int, job_id: str):
     Удаляет job_id из активных задач пользователя.
     """
     sync_redis_client.srem(f"user_active_jobs:{user_id}", job_id)
+    logger.info(f"Removed active job: user_id={user_id}, job_id={job_id}")
 
 
 @hint_viewer_router.message(
@@ -359,6 +361,9 @@ async def hint_viewer_menu(
         )
 
         add_active_job(message.from_user.id, job_id)
+        logger.info(
+            f"Added active job: user_id={message.from_user.id}, job_id={job_id}"
+        )
 
         # === Сохраняем информацию о задаче в Redis ===
         await redis_client.set(
