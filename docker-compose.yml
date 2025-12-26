@@ -63,26 +63,26 @@
     volumes:
       - pgdata:/var/lib/postgresql
 
-  admin-panel:
-    build: .
-    command: python -m bot.flask_admin.appbuilder_main
-    container_name: admin_panel
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./bot:/app/bot
-      - ./log:/app/log
-      - ./temp:/app/temp
-    env_file:
-      - .env
-    environment:
-      - FLASK_ENV=development
-      - FLASK_APP=bot.flask_admin.appbuilder_main
-    depends_on:
-      - db
-      - redis
-      - backgammon-bot
-    restart: unless-stopped
+  # admin-panel:
+  #   build: .
+  #   command: python -m bot.flask_admin.appbuilder_main
+  #   container_name: admin_panel
+  #   ports:
+  #     - "5000:5000"
+  #   volumes:
+  #     - ./bot:/app/bot
+  #     - ./log:/app/log
+  #     - ./temp:/app/temp
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - FLASK_ENV=development
+  #     - FLASK_APP=bot.flask_admin.appbuilder_main
+  #   depends_on:
+  #     - db
+  #     - redis
+  #     - backgammon-bot
+  #   restart: unless-stopped
 
 
 volumes:
