@@ -12,6 +12,8 @@ from bot.config import settings
 from bot.common.func.hint_viewer import extract_player_names
 from bot.routers.hint_viewer_router import remove_active_job
 
+from bot.db.redis import sync_redis_client
+
 # Логирование
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -234,6 +236,7 @@ def analyze_backgammon_batch_job(
                     "status": "success",
                 }
             )
+            sync_redis_client.set(f"mat_path:{game_id}", mat_path, ex=7200)
 
         except Exception as e:
             logger.exception(f"[Batch File Failed] {fname}")
