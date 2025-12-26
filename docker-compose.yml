@@ -1,5 +1,4 @@
-﻿services:
-  # === Основной бот (без изменений) ===
+﻿services: 
   backgammon-bot:
     build: .
     command: /bin/sh -c "alembic upgrade head && python -m bot.init"
@@ -56,6 +55,27 @@
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql
+
+  # === Flask-Admin панель ===
+  admin-panel:
+    build: .
+    command: python -m bot.flask_admin.appbuilder_main
+    container_name: admin_panel
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./bot:/app/bot
+      - ./log:/app/log
+      - ./temp:/app/temp
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=bot.flask_admin.appbuilder_main
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
 
 
 volumes:
