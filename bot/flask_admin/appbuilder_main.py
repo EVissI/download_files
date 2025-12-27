@@ -3,6 +3,9 @@ from flask_appbuilder import AppBuilder, IndexView, ModelView
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
+import logging
+
+logger = logging.getLogger(__name__)
 
 from bot.config import settings
 from bot.db.models import (
@@ -38,7 +41,10 @@ def create_app():
     # === КОНФИГУРАЦИЯ ===
     app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace(
         "+asyncpg", ""
-    )  # Убираем async для sync
+    )  
+    app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace(
+        "db", "localhost"
+    )  
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = settings.SECRET_KEY
     app.config["WTF_CSRF_ENABLED"] = True
@@ -55,11 +61,14 @@ def create_app():
     db.init_app(app)
 
     with app.app_context():
-        appbuilder = AppBuilder(app, db.session, indexview=CustomIndexView)
-
-        db.create_all()
-
-        register_models(appbuilder, db)
+        try:
+            appbuilder = AppBuilder(app, db.session, indexview=CustomIndexView)
+            db.create_all()
+            register_models(appbuilder, db)
+            logger.info("Flask admin initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing Flask admin: {e}", exc_info=True)
+            raise
 
     return app, appbuilder
 
