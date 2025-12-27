@@ -24,9 +24,8 @@ def create_app():
 
     app = Flask(__name__)
 
-    # === КОНФИГУРАЦИЯ ===
-    app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace("+asyncpg", "")
-    app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace("db", "localhost")
+    sync_db_uri = settings.DB_URL.replace("+asyncpg", "").replace("db", "localhost")
+    app.config["SQLALCHEMY_DATABASE_URI"] = sync_db_uri
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = settings.SECRET_KEY
     app.config["WTF_CSRF_ENABLED"] = True
