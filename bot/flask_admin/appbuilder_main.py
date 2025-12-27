@@ -8,20 +8,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 from bot.config import settings
-from bot.db.models import (
-    User,
-    UserGroup,
-    UserInGroup,
-    Promocode,
-    PromocodeServiceQuantity,
-    UserPromocode,
-    UserPromocodeService,
-    MessageForNew,
-    AnalizePayment,
-    AnalizePaymentServiceQuantity,
-    UserAnalizePayment,
-    UserAnalizePaymentService,
-)
 
 # === СИНХРОННАЯ БД ДЛЯ FLASK-APPBUILDER ===
 db = SQLAlchemy()
@@ -39,12 +25,8 @@ def create_app():
     app = Flask(__name__)
 
     # === КОНФИГУРАЦИЯ ===
-    app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace(
-        "+asyncpg", ""
-    )  
-    app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace(
-        "db", "localhost"
-    )  
+    app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace("+asyncpg", "")
+    app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace("db", "localhost")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = settings.SECRET_KEY
     app.config["WTF_CSRF_ENABLED"] = True
@@ -62,9 +44,14 @@ def create_app():
 
     with app.app_context():
         try:
+            # Register sync models dynamically from existing DB tables
+            from bot.flask_admin.models_sync import register_sync_models
+
+            models = register_sync_models(db)
+
             appbuilder = AppBuilder(app, db.session, indexview=CustomIndexView)
             db.create_all()
-            register_models(appbuilder, db)
+            register_models(appbuilder, db, models)
             logger.info("Flask admin initialized successfully")
         except Exception as e:
             logger.error(f"Error initializing Flask admin: {e}", exc_info=True)
@@ -73,13 +60,13 @@ def create_app():
     return app, appbuilder
 
 
-def register_models(appbuilder, db):
+def register_models(appbuilder, db, models: dict):
     """Регистрация моделей в админ-панели"""
 
     # === ПОЛЬЗОВАТЕЛИ И ГРУППЫ ===
 
     class UserAdmin(ModelView):
-        datamodel = SQLAInterface(User)
+        datamodel = SQLAInterface(models.get("User"))
         list_columns = [
             "id",
             "username",
@@ -118,20 +105,20 @@ def register_models(appbuilder, db):
         ]
 
     class UserGroupAdmin(ModelView):
-        datamodel = SQLAInterface(UserGroup)
+        datamodel = SQLAInterface(models.get("UserGroup"))
         list_columns = ["id", "name"]
         search_columns = ["name"]
         page_size = 20
 
     class UserInGroupAdmin(ModelView):
-        datamodel = SQLAInterface(UserInGroup)
+        datamodel = SQLAInterface(models.get("UserInGroup"))
         list_columns = ["id", "user_id", "group_id"]
         page_size = 20
 
     # === ПРОМОКОДЫ ===
 
     class PromocodeAdmin(ModelView):
-        datamodel = SQLAInterface(Promocode)
+        datamodel = SQLAInterface(models.get("Promocode"))
         list_columns = [
             "id",
             "code",
@@ -145,24 +132,24 @@ def register_models(appbuilder, db):
         show_columns = list_columns
 
     class PromocodeServiceQuantityAdmin(ModelView):
-        datamodel = SQLAInterface(PromocodeServiceQuantity)
+        datamodel = SQLAInterface(models.get("PromocodeServiceQuantity"))
         list_columns = ["id", "promocode_id", "service_type", "quantity"]
         page_size = 20
 
     class UserPromocodeAdmin(ModelView):
-        datamodel = SQLAInterface(UserPromocode)
+        datamodel = SQLAInterface(models.get("UserPromocode"))
         list_columns = ["id", "user_id", "promocode_id", "is_active"]
         page_size = 20
 
     class UserPromocodeServiceAdmin(ModelView):
-        datamodel = SQLAInterface(UserPromocodeService)
+        datamodel = SQLAInterface(models.get("UserPromocodeService"))
         list_columns = ["id", "user_promocode_id", "service_type", "remaining_quantity"]
         page_size = 20
 
     # === СООБЩЕНИЯ ДЛЯ НОВЫХ ===
 
     class MessageForNewAdmin(ModelView):
-        datamodel = SQLAInterface(MessageForNew)
+        datamodel = SQLAInterface(models.get("MessageForNew"))
         list_columns = ["id", "text", "lang_code", "dispatch_day", "dispatch_time"]
         search_columns = ["text"]
         page_size = 20
@@ -170,18 +157,18 @@ def register_models(appbuilder, db):
     # === ПЛАТЕЖИ АНАЛИЗОВ ===
 
     class AnalizePaymentAdmin(ModelView):
-        datamodel = SQLAInterface(AnalizePayment)
+        datamodel = SQLAInterface(models.get("AnalizePayment"))
         list_columns = ["id", "name", "price", "duration_days", "is_active"]
         search_columns = ["name"]
         page_size = 20
 
     class AnalizePaymentServiceQuantityAdmin(ModelView):
-        datamodel = SQLAInterface(AnalizePaymentServiceQuantity)
+        datamodel = SQLAInterface(models.get("AnalizePaymentServiceQuantity"))
         list_columns = ["id", "analize_payment_id", "service_type", "quantity"]
         page_size = 20
 
     class UserAnalizePaymentAdmin(ModelView):
-        datamodel = SQLAInterface(UserAnalizePayment)
+        datamodel = SQLAInterface(models.get("UserAnalizePayment"))
         list_columns = [
             "id",
             "user_id",
@@ -193,7 +180,7 @@ def register_models(appbuilder, db):
         page_size = 20
 
     class UserAnalizePaymentServiceAdmin(ModelView):
-        datamodel = SQLAInterface(UserAnalizePaymentService)
+        datamodel = SQLAInterface(models.get("UserAnalizePaymentService"))
         list_columns = [
             "id",
             "user_analize_payment_id",
