@@ -57,7 +57,7 @@ async def backup_postgres_to_yandex_disk():
             "docker",
             "exec",
             "db",
-            "pg_dump",
+            "/usr/lib/postgresql/18/bin/pg_dump",
             "-h",
             "db",
             "-U",
