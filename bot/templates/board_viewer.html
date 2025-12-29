@@ -1973,9 +1973,9 @@
                 snowflake.classList.add('snowflake');
                 snowflake.textContent = snowflakes[Math.floor(Math.random() * snowflakes.length)];
 
-                const randomX = Math.random() * 100; // От 0 до 100% ширины экрана
-                const randomDuration = 8 + Math.random() * 8; // От 8 до 16 секунд
-                const randomDelay = Math.random() * 5; // Задержка от 0 до 5 секунд
+                const randomX = Math.random() * 100; 
+                const randomDuration = 8 + Math.random() * 8; 
+                const randomDelay = Math.random() * 5; 
                 const animationDirection = Math.random() > 0.5 ? 'snowfall' : 'snowfall-left';
 
                 snowflake.style.left = randomX + '%';
