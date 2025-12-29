@@ -498,7 +498,7 @@
         .snowflake {
             position: fixed;
             top: -10px;
-            z-index: 1;
+            z-index: -1;
             user-select: none;
             pointer-events: none;
             font-size: 1.5em;
@@ -1958,7 +1958,7 @@
         // Функция для создания снежинок
         function createSnowflakes() {
             const snowflakesCount = 50;
-            const snowflakes = ['❄', '✨', '☃', '❅', '❆'];
+            const snowflakes = ['❄', '☃', '❅', '❆'];
 
             for (let i = 0; i < snowflakesCount; i++) {
                 const snowflake = document.createElement('div');
