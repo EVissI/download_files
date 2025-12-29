@@ -54,10 +54,7 @@ async def backup_postgres_to_yandex_disk():
     try:
         logger.info(f"Создаю SQL-дамп: {backup_name}")
         cmd = [
-            "docker",
-            "exec",
-            "db",
-            "/usr/lib/postgresql/18/bin/pg_dump",
+            "pg_dump",
             "-h",
             "db",
             "-U",
