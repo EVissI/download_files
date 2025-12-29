@@ -493,6 +493,51 @@
             display: block;
             width: fit-content;
         }
+
+        /* Снежинки */
+        .snowflake {
+            position: fixed;
+            top: -10px;
+            z-index: 1;
+            user-select: none;
+            pointer-events: none;
+            font-size: 1.5em;
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+            opacity: 0.8;
+        }
+
+        @keyframes snowfall {
+            0% {
+                transform: translateY(0) translateX(0) rotate(0deg);
+                opacity: 0.8;
+            }
+
+            50% {
+                opacity: 0.9;
+            }
+
+            100% {
+                transform: translateY(100vh) translateX(100px) rotate(360deg);
+                opacity: 0.3;
+            }
+        }
+
+        @keyframes snowfall-left {
+            0% {
+                transform: translateY(0) translateX(0) rotate(0deg);
+                opacity: 0.8;
+            }
+
+            50% {
+                opacity: 0.9;
+            }
+
+            100% {
+                transform: translateY(100vh) translateX(-100px) rotate(360deg);
+                opacity: 0.3;
+            }
+        }
     </style>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -1909,6 +1954,36 @@
         Double16.onload = imageLoaded;
         Double32.onload = imageLoaded;
         Double64.onload = imageLoaded;
+
+        // Функция для создания снежинок
+        function createSnowflakes() {
+            const snowflakesCount = 50;
+            const snowflakes = ['❄', '✨', '☃', '❅', '❆'];
+
+            for (let i = 0; i < snowflakesCount; i++) {
+                const snowflake = document.createElement('div');
+                snowflake.classList.add('snowflake');
+                snowflake.textContent = snowflakes[Math.floor(Math.random() * snowflakes.length)];
+
+                const randomX = Math.random() * window.innerWidth;
+                const randomDuration = 8 + Math.random() * 8; // От 8 до 16 секунд
+                const randomDelay = Math.random() * 5; // Задержка от 0 до 5 секунд
+                const animationDirection = Math.random() > 0.5 ? 'snowfall' : 'snowfall-left';
+
+                snowflake.style.left = randomX + 'px';
+                snowflake.style.animation = `${animationDirection} ${randomDuration}s linear ${randomDelay}s infinite`;
+                snowflake.style.fontSize = (0.8 + Math.random() * 0.8) + 'em';
+
+                document.body.appendChild(snowflake);
+            }
+        }
+
+        // Запускаем снежинки при загрузке страницы
+        window.addEventListener('load', createSnowflakes);
+        // Если документ уже загружен
+        if (document.readyState === 'complete') {
+            createSnowflakes();
+        }
 
     </script>
 </body>
