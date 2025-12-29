@@ -1656,6 +1656,8 @@
             const screenshotBtn = document.getElementById('screenshotBtn');
             const invertBtn = document.getElementById('invertBtn');
             const checkboxes = document.getElementById('checkboxes');
+            const snowflakes = document.querySelectorAll('.snowflake');
+            const originalSnowflakeDisplay = Array.from(snowflakes).map(s => s.style.display);
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
@@ -1674,6 +1676,7 @@
             if (screenshotBtn) screenshotBtn.style.display = 'none';
             if (invertBtn) invertBtn.style.display = 'none';
             if (checkboxes) checkboxes.style.display = 'none';
+            snowflakes.forEach(flake => flake.style.display = 'none');
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfoDiv) {
@@ -1703,8 +1706,7 @@
                 height: 460
             }).then(canvas => {
                 // Restore after screenshot
-                controls.style.display = originalControlsDisplay;
-                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
+                snowflakes.forEach((flake, index) => flake.style.display = originalSnowflakeDisplay[index]);
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
@@ -1751,6 +1753,7 @@
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
+                snowflakes.forEach((flake, index) => flake.style.display = originalSnowflakeDisplay[index]);
                 controls.style.display = originalControlsDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
@@ -1791,6 +1794,8 @@
             const screenshotBtn = document.getElementById('screenshotBtn');
             const invertBtn = document.getElementById('invertBtn');
             const checkboxes = document.getElementById('checkboxes');
+            const snowflakes = document.querySelectorAll('.snowflake');
+            const originalSnowflakeDisplay = Array.from(snowflakes).map(s => s.style.display);
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
@@ -1809,6 +1814,7 @@
             if (screenshotBtn) screenshotBtn.style.display = 'none';
             if (invertBtn) invertBtn.style.display = 'none';
             if (checkboxes) checkboxes.style.display = 'none';
+            snowflakes.forEach(flake => flake.style.display = 'none');
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfoDiv) {
@@ -1832,6 +1838,7 @@
                 height: 460
             }).then(canvas => {
                 // Restore after screenshot
+                snowflakes.forEach((flake, index) => flake.style.display = originalSnowflakeDisplay[index]);
                 controls.style.display = originalControlsDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
@@ -1867,6 +1874,7 @@
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
+                snowflakes.forEach((flake, index) => flake.style.display = originalSnowflakeDisplay[index]);
                 controls.style.display = originalControlsDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
