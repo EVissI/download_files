@@ -17,7 +17,7 @@ RUN apt update && apt install -y --no-install-recommends \
     && \
     echo "deb http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
-    apt update && apt install -y --no-install-recommends postgresql-client-17 && \
+    apt update && apt install -y --no-install-recommends postgresql-client-18 && \
     rm -rf /var/lib/apt/lists/*
 
 # Подавляем ALSA ошибки, задав null-устройство для звука
