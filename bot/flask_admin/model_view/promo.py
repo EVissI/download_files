@@ -17,26 +17,10 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     can_show = False
     can_list = True
 
-    # Колонки для отображения и формы
     list_columns = ["service_type", "quantity"]
     form_columns = ["service_type", "quantity"]
 
-    column_labels = {
-        "service_type": _("Тип услуги"),
-        "quantity": _("Количество (пусто = ∞)"),
-    }
 
-    column_descriptions = {
-        "quantity": _("Оставьте пустым для неограниченного количества"),
-    }
-
-    # Красивое отображение ∞
-    column_formatters = {
-        "quantity": lambda v, c, m, p: (
-            "∞" if m.quantity is None or m.quantity <= 0 else str(m.quantity)
-        ),
-        
-    }
     add_exclude_columns = ["created_at", "updated_at"]
     edit_exclude_columns = ["created_at", "updated_at"]
     page_size = 50
@@ -54,7 +38,13 @@ class PromocodeModelView(ModelView):
         "duration_days_display",
         "services_summary",
     ]
-
+    
+    label_columns = {'code':'Название',
+                     'is_active':'Активен?',
+                     'max_usage_display':'Кол-во использований',
+                     'duration_days_display':'Длительность',
+                     'services_summary':'Услуги',}
+    
     add_columns = edit_columns = [
         "code",
         "is_active",
@@ -73,39 +63,15 @@ class PromocodeModelView(ModelView):
 
     search_columns = ["code"]
 
-    column_labels = {
-        "code": _("Код промокода"),
-        "is_active": _("Активен"),
-        "max_usage_display": _("Макс. использований"),
-        "activate_count_display": _("Использовано раз"),
-        "duration_days_display": _("Длительность (дней)"),
-        "services_summary": _("Услуги"),
-    }
-
-    column_descriptions = {
-        "max_usage": _("Пусто = неограничено"),
-        "duration_days": _("Пусто = бессрочно"),
-        "services_summary": _("Список услуг, на которые распространяется промокод"),
-    }
 
     related_views = [PromocodeServiceQuantityInline]
 
-    # Обязательно подгружаем services, чтобы property работал быстро и без N+1 запросов
     def get_query(self):
         return super().get_query().options(joinedload(Promocode.services))
 
     def get_count_query(self):
         return super().get_count_query().options(joinedload(Promocode.services))
 
-    column_filters = ["is_active"]
-    column_searchable_list = ["code"]
-    column_filterable_list = ["is_active"]
-    
-    column_default_sort = ("id", True)
-
-    list_title = _("Промокоды")
-    add_title = edit_title = _("Редактировать промокод")
-    show_title = _("Просмотр промокода")
 
     def pre_add(self, item):
         item.activate_count = 0
