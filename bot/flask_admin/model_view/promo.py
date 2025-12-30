@@ -49,24 +49,26 @@ class PromocodeModelView(ModelView):
     list_columns = [
         "code",
         "is_active",
-        "max_usage_formatted",       
-        "activate_count_formatted",  
-        "duration_days_formatted",   
+        "max_usage_display",
+        "activate_count_display",
+        "duration_days_display",
         "services_summary",
     ]
 
     add_columns = edit_columns = [
         "code",
         "is_active",
-        "max_usage",
-        "duration_days",
+        "max_usage",           
+        "duration_days",       
     ]
+
     show_columns = [
         "code",
         "is_active",
-        "max_usage_formatted",
-        "activate_count_formatted",
-        "duration_days_formatted",
+        "max_usage_display",
+        "activate_count_display",
+        "duration_days_display",
+        "services_summary",
     ]
 
     search_columns = ["code"]
@@ -74,15 +76,16 @@ class PromocodeModelView(ModelView):
     column_labels = {
         "code": _("Код промокода"),
         "is_active": _("Активен"),
-        "max_usage": _("Макс. использований"),
-        "activate_count": _("Использовано раз"),
-        "duration_days": _("Длительность (дней)"),
+        "max_usage_display": _("Макс. использований"),
+        "activate_count_display": _("Использовано раз"),
+        "duration_days_display": _("Длительность (дней)"),
         "services_summary": _("Услуги"),
     }
 
     column_descriptions = {
         "max_usage": _("Пусто = неограничено"),
         "duration_days": _("Пусто = бессрочно"),
+        "services_summary": _("Список услуг, на которые распространяется промокод"),
     }
 
     related_views = [PromocodeServiceQuantityInline]
@@ -95,6 +98,9 @@ class PromocodeModelView(ModelView):
         return super().get_count_query().options(joinedload(Promocode.services))
 
     column_filters = ["is_active"]
+    column_searchable_list = ["code"]
+    column_filterable_list = ["is_active"]
+    
     column_default_sort = ("id", True)
 
     list_title = _("Промокоды")
