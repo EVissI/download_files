@@ -68,9 +68,7 @@ def register_models(appbuilder, db):
     appbuilder.add_view(
         PromocodeModelView,
         "Промокоды",
-        icon="fa-cube",
-        category="Управление",
-        category_icon="fa-cube"
+        icon="fa-gift",
     )
 
 def create_app_for_flask_cli():
