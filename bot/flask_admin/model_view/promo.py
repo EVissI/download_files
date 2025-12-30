@@ -11,16 +11,12 @@ class PromocodeServiceForm(DynamicForm):
     service_type = SelectField(
         "Тип услуги",
         choices=[(st.value, st.value) for st in ServiceType],
-        validators=[DataRequired()],
-        description="Выберите тип услуги, которую предоставляет промокод"
+        validators=[DataRequired()]
     )
     quantity = IntegerField(
         "Количество",
         default=0,
-        validators=[
-            NumberRange(min=0, message="Количество должно быть неотрицательным")
-        ],
-        description="Укажите количество (0 = неограниченно)"
+        validators=[NumberRange(min=0)]
     )
 
 
@@ -47,16 +43,16 @@ class PromocodeAdmin(ModelView):
         "max_usage",
         "activate_count",
         "duration_days",
-        "services",  # inline
+        "services",
     ]
 
-    # Главное: используем inline_models как список словарей или кортежей
+    # Ключевой фикс: inline_models как кортеж с { "create": True }
     inline_models = [
         (PromocodeServiceQuantity, {
+            "create": True,  # Разрешаем создание новых записей
+            "edit": True,    # Разрешаем редактирование
             "form": PromocodeServiceForm,
-            "form_label": "Услуги промокода",
             "form_columns": ["service_type", "quantity"],
-            "form_extra_fields": {},  # не обязательно
         })
     ]
 
@@ -71,22 +67,16 @@ class PromocodeAdmin(ModelView):
     }
 
     description_columns = {
-        "max_usage": "Оставьте пустым для неограниченного количества использований",
-        "activate_count": "Автоматически увеличивается при активации",
-        "duration_days": "Оставьте пустым, если промокод бессрочный",
-        "services": "Укажите, какие услуги и в каком количестве даёт промокод",
+        "services": "Добавьте услуги: выберите тип и укажите количество (0 = неограниченно)",
     }
 
-    # Сводка услуг в списке
     def services_summary(self, item):
         if not item.services:
             return "Нет услуг"
-
         services_list = []
         for service in item.services:
-            qty = service.quantity if service.quantity is not None and service.quantity > 0 else "∞"
+            qty = service.quantity if service.quantity > 0 else "∞"
             services_list.append(f"{service.service_type.value}: {qty}")
-
         return ", ".join(services_list)
 
     services_summary.label = "Услуги"
