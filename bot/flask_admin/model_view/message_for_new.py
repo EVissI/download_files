@@ -17,14 +17,7 @@ from bot.common.tasks.gift import check_and_notify_gift
 
 class MessageForNewModelView(ModelView):
     datamodel = SQLAInterface(MessageForNew)
-
-    can_create = False
-    can_delete = False
-    can_edit = True
-    can_show = True
-    can_list = True
-    show_delete = False
-    show_delete_link = False
+    base_permissions = ['can_list', 'can_show', 'can_edit']
     page_size = 50
 
     list_title = _("Сообщения для новых пользователей")
