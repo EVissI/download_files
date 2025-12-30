@@ -8,6 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from pytz import timezone
 
 
@@ -61,7 +62,15 @@ bot = Bot(
     token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 admins = settings.ROOT_ADMIN_IDS
-scheduler = AsyncIOScheduler(timezone=timezone("Europe/Moscow"))
+
+jobstores = {
+    'default': SQLAlchemyJobStore(url=settings.DB_URL)
+}
+
+scheduler = AsyncIOScheduler(
+    jobstores=jobstores,
+    timezone=timezone("Europe/Moscow")
+)
 
 
 def setup_logger(app_name: str):

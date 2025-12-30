@@ -32,15 +32,31 @@ async def set_commands():
 
 
 def setup_expire_scheduler():
-    scheduler.add_job(expire_analiz_balances, "interval", hours=1)
-    scheduler.add_job(backup_postgres_to_yandex_disk, CronTrigger(hour=0, minute=0))
-    scheduler.add_job(cleanup_screenshots, "interval", minutes=30)
+    scheduler.add_job(
+        expire_analiz_balances,
+        "interval",
+        hours=1,
+        id="expire_analiz_balances",
+        replace_existing=True
+    )
+    scheduler.add_job(
+        backup_postgres_to_yandex_disk,
+        CronTrigger(hour=0, minute=0),
+        id="daily_backup",
+        replace_existing=True
+    )
+    scheduler.add_job(
+        cleanup_screenshots,
+        "interval",
+        minutes=30,
+        id="cleanup_screenshots",
+        replace_existing=True
+    )
 
 
 async def start_bot():
     await set_commands()
     setup_expire_scheduler()
-    await resume_scheduled_broadcasts()
     await schedule_gift_job_from_db()
     scheduler.start()
     for admin_id in admins:

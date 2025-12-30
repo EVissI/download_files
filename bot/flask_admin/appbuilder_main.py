@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
 import logging
 
+from bot.flask_admin.model_view.message_for_new import MessageForNewModelView
 from bot.flask_admin.model_view.payment import AnalizePaymentModelView, AnalizePaymentServiceQuantityInline
 from bot.flask_admin.model_view.promo import PromocodeModelView, PromocodeServiceQuantityInline
 
@@ -73,6 +74,7 @@ def register_models(appbuilder, db):
     )
     appbuilder.add_view_no_menu(AnalizePaymentServiceQuantityInline)
     appbuilder.add_view(AnalizePaymentModelView, "Пакеты", icon='fa-credit-card')
+    appbuilder.add_view_no_menu(MessageForNewModelView, "Сообщения для новеньких")
 
 def create_app_for_flask_cli():
     """Helper factory for Flask CLI: returns only the Flask app object."""

@@ -1,5 +1,6 @@
 ﻿from flask_appbuilder import ModelView, CompactCRUDMixin
 from flask_appbuilder.models.sqla.interface import SQLAInterface
+from wtforms import BooleanField
 from flask_babel import lazy_gettext as _
 from bot.db.models import Promocode, PromocodeServiceQuantity
 from flask import redirect, url_for
@@ -67,7 +68,15 @@ class PromocodeModelView(ModelView):
 
     search_columns = ["code"]
 
-
+    
+    edit_form_extra_fields = {
+        'is_active': BooleanField(
+            label='Активен?',
+            default=True,          
+            render_kw={'required': False}  
+        )
+    }
+    add_form_extra_fields = edit_form_extra_fields
     related_views = [PromocodeServiceQuantityInline]
 
     def get_query(self):
