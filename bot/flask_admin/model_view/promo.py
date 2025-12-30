@@ -33,8 +33,8 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     column_formatters = {
         "quantity": lambda v, c, m, p: "∞" if m.quantity is None or m.quantity <= 0 else str(m.quantity),
     }
-
-    # Важно: компактный вид без лишних элементов
+    add_exclude_columns = ["created_at", "updated_at"]
+    edit_exclude_columns = ["created_at", "updated_at"]
     page_size = 50
     show_columns = []  # не показываем отдельную страницу show
 
