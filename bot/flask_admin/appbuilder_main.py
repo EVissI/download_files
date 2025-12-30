@@ -74,7 +74,7 @@ def register_models(appbuilder, db):
     )
     appbuilder.add_view_no_menu(AnalizePaymentServiceQuantityInline)
     appbuilder.add_view(AnalizePaymentModelView, "Пакеты", icon='fa-credit-card')
-    appbuilder.add_view(MessageForNewModelView, "Сообщения для новеньких")
+    appbuilder.add_view(MessageForNewModelView, "Сообщения для новеньких", icon='fa-calendar-o')
 
 def create_app_for_flask_cli():
     """Helper factory for Flask CLI: returns only the Flask app object."""
