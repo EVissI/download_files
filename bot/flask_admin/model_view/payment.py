@@ -1,6 +1,7 @@
 ﻿from flask_appbuilder import ModelView, CompactCRUDMixin
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
+from wtforms import BooleanField
 from bot.db.models import AnalizePayment, AnalizePaymentServiceQuantity
 from flask import redirect, url_for
 from sqlalchemy.orm import joinedload
@@ -72,6 +73,14 @@ class AnalizePaymentModelView(ModelView):
 
     search_columns = ["name"]
 
+    edit_form_extra_fields = {
+        'is_active': BooleanField(
+            label='Активен?',
+            default=True,          
+            render_kw={'required': False}  
+        )
+    }
+    add_form_extra_fields = edit_form_extra_fields
     related_views = [AnalizePaymentServiceQuantityInline]
 
     # Предзагружаем связанные услуги для корректного отображения services_summary
