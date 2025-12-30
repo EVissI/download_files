@@ -49,17 +49,24 @@ class PromocodeModelView(ModelView):
     list_columns = [
         "code",
         "is_active",
-        "max_usage",
-        "activate_count",
-        "duration_days",
+        "max_usage_formatted",       
+        "activate_count_formatted",  
+        "duration_days_formatted",   
         "services_summary",
     ]
 
-    add_columns = edit_columns = show_columns = [
+    add_columns = edit_columns = [
         "code",
         "is_active",
         "max_usage",
         "duration_days",
+    ]
+    show_columns = [
+        "code",
+        "is_active",
+        "max_usage_formatted",
+        "activate_count_formatted",
+        "duration_days_formatted",
     ]
 
     search_columns = ["code"]
@@ -80,18 +87,19 @@ class PromocodeModelView(ModelView):
 
     related_views = [PromocodeServiceQuantityInline]
 
-    # Подгружаем связанные услуги, чтобы property работал без лишних запросов
+    # Обязательно подгружаем services, чтобы property работал быстро и без N+1 запросов
     def get_query(self):
         return super().get_query().options(joinedload(Promocode.services))
 
     def get_count_query(self):
         return super().get_count_query().options(joinedload(Promocode.services))
 
-    # Форматтеры только для реальных полей — лямбды с одним аргументом v
+    # Правильные форматтеры — лямбда с ОДНИМ аргументом v
     column_formatters = {
         "max_usage": lambda v: "∞" if v is None else str(v),
         "duration_days": lambda v: "∞" if v is None else str(v),
         "activate_count": lambda v: str(v or 0),
+        # services_summary берётся из property модели — форматтер не нужен
     }
 
     column_filters = ["is_active"]
@@ -114,3 +122,5 @@ class PromocodeModelView(ModelView):
         if hasattr(self, "_last_added_id"):
             url = url_for(f"{self.endpoint}.edit", pk=self._last_added_id)
             delattr(self, "_last_added_id")
+            return redirect(url)
+        return super().post_add_redirect()

@@ -142,6 +142,27 @@ class Promocode(Base):
     users: Mapped[list["UserPromocode"]] = relationship(
         "UserPromocode", back_populates="promocode"
     )
+    @property
+    @renders('services_summary')  
+    def services_summary(self):
+        if not self.services:
+            return "—"
+        return ", ".join(str(s) for s in self.services)
+
+    @property
+    @renders('max_usage_formatted')  
+    def max_usage_formatted(self):
+        return "∞" if self.max_usage is None else str(self.max_usage)
+
+    @property
+    @renders('duration_days_formatted')
+    def duration_days_formatted(self):
+        return "∞" if self.duration_days is None else str(self.duration_days)
+
+    @property
+    @renders('activate_count_formatted')
+    def activate_count_formatted(self):
+        return str(self.activate_count or 0)
 
 
 class ServiceType(str, enum.Enum):
@@ -175,12 +196,7 @@ class PromocodeServiceQuantity(Base):
         else:
             return f"{self.service_type.value}: ∞"
         
-    @property
-    @renders('services_summary')  
-    def services_summary(self):
-        if not self.services:
-            return "—"
-        return ", ".join(str(s) for s in self.services)
+
 
 
 class UserPromocode(Base):
