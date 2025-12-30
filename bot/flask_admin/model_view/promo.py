@@ -49,6 +49,8 @@ class PromocodeAdmin(ModelView):
         "duration_days",
     ]
 
+    exclude_columns = ["services"]  # Исключаем поле services из форм
+
     # Используем related_views для управления услугами в отдельных вкладках
     related_views = [PromocodeServiceQuantityAdmin]
 
