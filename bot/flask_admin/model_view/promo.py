@@ -47,7 +47,6 @@ class PromocodeAdmin(ModelView):
         "max_usage",
         "activate_count",
         "duration_days",
-        "services",
     ]
 
     # Используем related_views для управления услугами в отдельных вкладках
