@@ -5,6 +5,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
 import logging
 
+from bot.flask_admin.model_view.promo import PromocodeAdmin
+
 logger = logging.getLogger(__name__)
 
 from bot.config import settings
@@ -74,21 +76,6 @@ def create_app():
 
 def register_models(appbuilder, db):
     """Регистрация моделей в админ-панели"""
-
-    class PromocodeAdmin(ModelView):
-        datamodel = SQLAInterface(Promocode)
-        list_columns = [
-            "id",
-            "code",
-            "is_active",
-            "max_usage",
-            "activate_count",
-            "duration_days",
-        ]
-        search_columns = ["code"]
-        page_size = 20
-        show_columns = list_columns
-
 
     appbuilder.add_view(
         PromocodeAdmin, "Промокоды", icon="fa-ticket", category="Промокоды"
