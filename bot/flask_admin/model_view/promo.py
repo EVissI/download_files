@@ -76,6 +76,11 @@ class PromocodeModelView(ModelView):
         "duration_days": _("Пусто = бессрочно"),
     }
 
+    # Устанавливаем значение по умолчанию для activate_count при создании
+    form_defaults = {
+        "activate_count": 0,
+    }
+
     # Вот ключевой момент: related_views вместо inline_models
     related_views = [PromocodeServiceQuantityInline]
 
