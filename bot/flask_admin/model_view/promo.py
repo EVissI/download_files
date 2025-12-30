@@ -99,5 +99,13 @@ class PromocodeModelView(ModelView):
     show_title = _("Просмотр промокода")
 
     def post_add(self, item):
-        """После создания промокода перенаправляем на его редактирование"""
-        return redirect(url_for("PromocodeModelView.edit", pk=item.id))
+        """После создания промокода сохраняем ID для перенаправления"""
+        self._last_added_id = item.id
+
+    def post_add_redirect(self):
+        """Перенаправляем на редактирование созданного промокода"""
+        if hasattr(self, "_last_added_id"):
+            url = url_for(f"{self.endpoint}.edit", pk=self._last_added_id)
+            delattr(self, "_last_added_id")
+            return url
+        return super().post_add_redirect()
