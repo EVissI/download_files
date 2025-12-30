@@ -293,6 +293,19 @@ class AnalizePayment(Base):
         "UserAnalizePayment", back_populates="analize_payment"
     )
 
+    @property
+    @renders('duration_days_display')
+    def duration_days_display(self) -> str:
+        """Отображает длительность как '∞' если None, иначе число дней"""
+        return "∞" if self.duration_days is None else str(self.duration_days)
+
+    @property
+    @renders('services_summary')
+    def services_summary(self) -> str:
+        """Красивое сводное отображение услуг в списке и деталях"""
+        if not self.services:
+            return "—"
+        return ", ".join(str(service) for service in self.services)
 
 class UserAnalizePayment(Base):
     __tablename__ = "user_analize_payments"
