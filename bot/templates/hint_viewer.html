@@ -674,6 +674,7 @@
         let animationSpeed = 0.5;
         let skipAnimationEnabled = false;
         let pendingPrevGame = false;
+        let hidePipsCheckbox = null;
         const infoDiv = document.getElementById('move-info');
         const matchInfoDiv = document.getElementById('match-info');
         const playersInfoDiv = document.getElementById('players-info');
@@ -848,7 +849,7 @@
                             });
                         }
 
-                        const hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
+                        hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
                         if (hidePipsCheckbox) {
                             const savedState = localStorage.getItem('hidePipsCheckbox');
                             if (savedState === 'true') {
