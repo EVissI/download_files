@@ -2,7 +2,7 @@
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
 from bot.db.models import Promocode, PromocodeServiceQuantity
-
+from flask import redirect, url_for
 
 class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     """Инлайн-вьюха для услуг — именно с CompactCRUDMixin для компактного CRUD на одной странице"""
@@ -98,4 +98,10 @@ class PromocodeModelView(ModelView):
     show_title = _("Просмотр промокода")
 
     def post_add_redirect(self):
-        return self.url_for("show", pk=self.datamodel.obj.id)
+        """
+        Переопределяем редирект после создания промокода —
+        сразу открываем страницу просмотра нового объекта
+        """
+        # self._item — это только что созданный объект (доступен внутри post_add_redirect)
+        pk = self.datamodel.get_pk_value(self._item)
+        return redirect(url_for(f"{self.__class__.__name__}.show", pk=pk))
