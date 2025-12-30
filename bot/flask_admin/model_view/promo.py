@@ -94,14 +94,6 @@ class PromocodeModelView(ModelView):
     def get_count_query(self):
         return super().get_count_query().options(joinedload(Promocode.services))
 
-    # Правильные форматтеры — лямбда с ОДНИМ аргументом v
-    column_formatters = {
-        "max_usage": lambda v: "∞" if v is None else str(v),
-        "duration_days": lambda v: "∞" if v is None else str(v),
-        "activate_count": lambda v: str(v or 0),
-        # services_summary берётся из property модели — форматтер не нужен
-    }
-
     column_filters = ["is_active"]
     column_default_sort = ("id", True)
 
