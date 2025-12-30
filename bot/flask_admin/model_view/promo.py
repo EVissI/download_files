@@ -3,7 +3,7 @@ from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
 from bot.db.models import Promocode, PromocodeServiceQuantity
 from flask import redirect, url_for
-
+from sqlalchemy.orm import joinedload
 
 class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     """Инлайн-вьюха для услуг — именно с CompactCRUDMixin для компактного CRUD на одной странице"""
@@ -54,7 +54,6 @@ class PromocodeModelView(ModelView):
         "services_summary",
     ]
 
-    # Убираем activate_count из форм добавления и редактирования
     add_columns = edit_columns = show_columns = [
         "code",
         "is_active",
@@ -70,6 +69,7 @@ class PromocodeModelView(ModelView):
         "max_usage": _("Макс. использований"),
         "activate_count": _("Использовано раз"),
         "duration_days": _("Длительность (дней)"),
+        "services_summary": _("Услуги"),  # Добавил метку для ясности
     }
 
     column_descriptions = {
@@ -77,19 +77,18 @@ class PromocodeModelView(ModelView):
         "duration_days": _("Пусто = бессрочно"),
     }
 
-    # Удаляем form_defaults — он больше не нужен
-
     related_views = [PromocodeServiceQuantityInline]
+
+    # Ключевой фикс: явно загружаем связанные услуги при отображении списка
+    def _get_list_query(self):
+        return super()._get_list_query().options(joinedload(Promocode.services))
 
     column_formatters = {
         "services_summary": lambda v, c, m, n: (
-            ", ".join(str(s) for s in m.services) if m.services else "-"
+            ", ".join(str(s) for s in m.services) if m.services else "—"
         ),
-        "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else m.max_usage,
-        "duration_days": lambda v, c, m, n: (
-            "∞" if m.duration_days is None else m.duration_days
-        ),
-        # Можно также отформатировать activate_count, если хочешь
+        "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else str(m.max_usage),
+        "duration_days": lambda v, c, m, n: "∞" if m.duration_days is None else str(m.duration_days),
         "activate_count": lambda v, c, m, n: str(m.activate_count or 0),
     }
 
@@ -100,12 +99,9 @@ class PromocodeModelView(ModelView):
     add_title = edit_title = _("Редактировать промокод")
     show_title = _("Просмотр промокода")
 
-    # Автоматически устанавливаем activate_count = 0 при создании
     def pre_add(self, item):
         item.activate_count = 0
-        return super().pre_add(item)
 
-    # На всякий случай — если вдруг кто-то обошёл pre_add
     def post_add(self, item):
         if item.activate_count is None:
             item.activate_count = 0
