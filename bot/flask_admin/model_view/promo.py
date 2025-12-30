@@ -87,19 +87,13 @@ class PromocodeModelView(ModelView):
     def get_count_query(self):
         return super().get_count_query().options(joinedload(Promocode.services))
 
-    # КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: правильное имя метода
-    def _list_label_services_summary(self, model):
-        """Виртуальная колонка для списка — сводка услуг"""
-        if not model.services:
-            return "—"
-        return ", ".join(str(s) for s in model.services)
-
-    # Регистрируем как label-колонку
-    label_columns = {
-        "services_summary": "services_summary",  # можно просто строку — ссылка на имя метода без префикса
-    }
+    def _list_services_summary(self, model):
+            if not model.services:
+                return "—"
+            return ", ".join(str(s) for s in model.services)
 
     column_formatters = {
+        "services_summary": "_list_services_summary",  # просто имя метода как строка
         "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else str(m.max_usage),
         "duration_days": lambda v, c, m, n: "∞" if m.duration_days is None else str(m.duration_days),
         "activate_count": lambda v, c, m, n: str(m.activate_count or 0),
