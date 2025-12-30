@@ -42,7 +42,8 @@ class MessageForNewModelView(ModelView):
         "dispatch_time",
         "text",
     ]
-
+    
+    edit_exclude_columns = ["created_at", "updated_at"]
     # Форма редактирования с валидацией
     form_columns = ["lang_code", "text", "dispatch_day", "dispatch_time"]
 
