@@ -38,12 +38,15 @@ class PromocodeModelView(ModelView):
         "duration_days_display",
         "services_summary",
     ]
-
+    title = "Промокод"
     label_columns = {'code':'Название',
                      'is_active':'Активен?',
                      'max_usage_display':'Макс использований',
                      'activate_count_display':'Кол-во использований',
                      'duration_days_display':'Длительность',
+                     'max_usage':'Макс использований',
+                     'activate_count':'Кол-во использований',
+                     'duration_days':'Длительность',
                      'services_summary':'Услуги',}
     
     add_columns = edit_columns = [
