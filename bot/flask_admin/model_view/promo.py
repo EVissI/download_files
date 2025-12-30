@@ -88,17 +88,26 @@ class PromocodeModelView(ModelView):
         return super().get_count_query().options(joinedload(Promocode.services))
 
     def _list_services_summary(self, model):
-            if not model.services:
+            """Надёжная сводка услуг через прямой запрос"""
+            services = (
+                self.datamodel.session.query(PromocodeServiceQuantity)
+                .filter_by(promocode_id=model.id)
+                .order_by(PromocodeServiceQuantity.id)  # для стабильного порядка
+                .all()
+            )
+            
+            if not services:
                 return "—"
-            return ", ".join(str(s) for s in model.services)
+            
+            return ", ".join(str(s) for s in services)
 
     column_formatters = {
-        "services_summary": "_list_services_summary",  # просто имя метода как строка
+        "services_summary": "_list_services_summary",
         "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else str(m.max_usage),
         "duration_days": lambda v, c, m, n: "∞" if m.duration_days is None else str(m.duration_days),
         "activate_count": lambda v, c, m, n: str(m.activate_count or 0),
     }
-
+    
     column_filters = ["is_active"]
     column_default_sort = ("id", True)
 
