@@ -58,7 +58,6 @@ class PromocodeModelView(ModelView):
         "code",
         "is_active",
         "max_usage",
-        "activate_count",
         "duration_days",
     ]
 
