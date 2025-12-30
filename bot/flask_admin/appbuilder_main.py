@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
 import logging
 
-from bot.flask_admin.model_view.payment import AnalizePaymentModelView
+from bot.flask_admin.model_view.payment import AnalizePaymentModelView, AnalizePaymentServiceQuantityInline
 from bot.flask_admin.model_view.promo import PromocodeModelView, PromocodeServiceQuantityInline
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,7 @@ def register_models(appbuilder, db):
         "Промокоды",
         icon="fa-gift",
     )
+    appbuilder.add_view_no_menu(AnalizePaymentServiceQuantityInline)
     appbuilder.add_view(AnalizePaymentModelView, "Пакеты", icon='fa-credit-card')
 
 def create_app_for_flask_cli():
