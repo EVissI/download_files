@@ -16,6 +16,14 @@ class PromocodeServiceForm(DynamicForm):
     quantity = IntegerField("Количество", default=0, validators=[NumberRange(min=0)])
 
 
+class PromocodeServiceQuantityAdmin(ModelView):
+    datamodel = SQLAInterface(PromocodeServiceQuantity)
+    form = PromocodeServiceForm
+    form_columns = ["service_type", "quantity"]
+    list_columns = ["service_type", "quantity"]
+    add_columns = edit_columns = ["service_type", "quantity"]
+
+
 class PromocodeAdmin(ModelView):
     datamodel = SQLAInterface(Promocode)
 
@@ -39,19 +47,11 @@ class PromocodeAdmin(ModelView):
         "max_usage",
         "activate_count",
         "duration_days",
+        "services",
     ]
 
-    # Ключевой фикс: inline_models как dict с inline_type tabular для создания новых записей
-    inline_models = [
-        {
-            "model": PromocodeServiceQuantity,
-            "inline_type": "tabular",
-            "create": True,  # Разрешаем создание новых записей
-            "edit": True,  # Разрешаем редактирование
-            "form": PromocodeServiceForm,
-            "form_columns": ["service_type", "quantity"],
-        }
-    ]
+    # Используем related_views для управления услугами в отдельных вкладках
+    related_views = [PromocodeServiceQuantityAdmin]
 
     label_columns = {
         "code": "Код промокода",
