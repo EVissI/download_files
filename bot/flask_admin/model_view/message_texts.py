@@ -28,8 +28,8 @@ class MessagesTextsModelView(ModelView):
     # Колонки в списке
     list_columns = [
         "code",
-        "text_ru_preview",
-        "text_en_preview",
+        "text_ru",
+        "text_en",
     ]
 
     # Поля в форме добавления/редактирования
@@ -54,8 +54,6 @@ class MessagesTextsModelView(ModelView):
         "code": _("Код"),
         "text_ru": _("Текст (RU)"),
         "text_en": _("Текст (EN)"),
-        "text_ru_preview": _("Текст (RU)"),
-        "text_en_preview": _("Текст (EN)"),
     }
 
     # Подсказки в форме
@@ -67,19 +65,3 @@ class MessagesTextsModelView(ModelView):
 
     # Сортировка по умолчанию
     order_columns = ["code"]
-
-    # Красивые текстовые поля и валидация
-    form_extra_fields = {
-        "text_ru": TextAreaField(
-            _("Текст (RU)"),
-            widget=BS3TextAreaFieldWidget(),
-            validators=[Length(max=1000)],
-            description=_("До 1000 символов, поддерживается HTML")
-        ),
-        "text_en": TextAreaField(
-            _("Текст (EN)"),
-            widget=BS3TextAreaFieldWidget(),
-            validators=[Length(max=1000)],
-            description=_("До 1000 символов, поддерживается HTML")
-        ),
-    }

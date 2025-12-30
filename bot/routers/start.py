@@ -44,7 +44,7 @@ async def start_command(
             user_info.lang_code if user_info.lang_code else "en"
         )
         await message.answer(
-            message_dao.get_text(
+            await message_dao.get_text(
                 "start", user_info.lang_code if user_info.lang_code else "en"
             ),
             reply_markup=MainKeyboard.build(user_info.role, i18n),
@@ -71,7 +71,7 @@ async def start_command(
             user_info.lang_code
         )
         await message.answer(
-            message_dao.get_text(
+            await message_dao.get_text(
                 "start", user_info.lang_code if user_info.lang_code else "en"
             ),
             reply_markup=MainKeyboard.build(user_info.role, i18n),
@@ -87,7 +87,7 @@ async def start_command(
         user_info.lang_code if user_info.lang_code else "en"
     )
     await message.answer(
-        message_dao.get_text(
+        await message_dao.get_text(
             "start", user_info.lang_code if user_info.lang_code else "en"
         ),
         reply_markup=MainKeyboard.build(user_info.role, i18n),
