@@ -20,7 +20,6 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     list_columns = ["service_type", "quantity"]
     form_columns = ["service_type", "quantity"]
 
-    form_title  = 'Услуги'
     add_exclude_columns = ["created_at", "updated_at"]
     edit_exclude_columns = ["created_at", "updated_at"]
     page_size = 50
