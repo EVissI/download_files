@@ -98,9 +98,5 @@ class PromocodeModelView(ModelView):
     show_title = _("Просмотр промокода")
 
     def post_add(self, item):
-            """
-            Переопределяем post_add, чтобы после создания
-            редиректить сразу на просмотр нового промокода
-            """
-            pk = self.datamodel.get_pk_value(item)
-            return redirect(url_for(f"{self.endpoint}.show", pk=pk))
+        pk = self.datamodel.get_pk_value(item)
+        return redirect(url_for(f"{self.endpoint}.edit", pk=pk))
