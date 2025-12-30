@@ -105,8 +105,7 @@ class PromocodeModelView(ModelView):
     def post_add_redirect(self):
         """Перенаправляем на редактирование созданного промокода"""
         if hasattr(self, "_last_added_id"):
-            item = self.datamodel.get(self._last_added_id)
-            url = self.get_url_for_edit(item)
+            url = self.url_for("edit", pk=self._last_added_id)
             delattr(self, "_last_added_id")
             return url
         return super().post_add_redirect()
