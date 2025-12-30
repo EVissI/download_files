@@ -97,11 +97,6 @@ class PromocodeModelView(ModelView):
     add_title = edit_title = _("Редактировать промокод")
     show_title = _("Просмотр промокода")
 
-    def post_add_redirect(self):
-        """
-        Переопределяем редирект после создания промокода —
-        сразу открываем страницу просмотра нового объекта
-        """
-        # self._item — это только что созданный объект (доступен внутри post_add_redirect)
-        pk = self.datamodel.get_pk_value(self._item)
-        return redirect(url_for(f"{self.__class__.__name__}.show", pk=pk))
+    def post_add(self, item):
+        """После создания промокода сразу открываем его просмотр"""
+        return redirect(self.get_url_for_show(item))
