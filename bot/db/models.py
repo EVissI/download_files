@@ -252,6 +252,11 @@ class AnalizePaymentServiceQuantity(Base):
     analize_payment: Mapped["AnalizePayment"] = relationship(
         "AnalizePayment", back_populates="services"
     )
+    def __str__(self):
+        if self.quantity is not None and self.quantity > 0:
+            return f"{self.service_type.value}: {self.quantity}"
+        else:
+            return f"{self.service_type.value}: ∞"
 
 
 class UserAnalizePaymentService(Base):
