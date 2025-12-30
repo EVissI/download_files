@@ -63,16 +63,16 @@ def create_app():
 
 def register_models(appbuilder, db):
     """Регистрация моделей в админ-панели"""
-
+    
+    appbuilder.add_view_no_menu(PromocodeServiceQuantityInline)
     appbuilder.add_view(
         PromocodeModelView,
         "Промокоды",
         icon="fa-tag",
         category="Управление",
+        category_icon="fa-cogs"
     )
 
-    appbuilder.add_view_no_menu(PromocodeServiceQuantityInline)
-    
 def create_app_for_flask_cli():
     """Helper factory for Flask CLI: returns only the Flask app object."""
     app, _ = create_app()
