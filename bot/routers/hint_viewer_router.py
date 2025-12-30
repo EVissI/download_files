@@ -502,12 +502,11 @@ async def handle_show_stats(
             )
             if os.path.exists(new_file_path):
                 os.remove(new_file_path)
-            await redis_client.delete(f"mat_path:{game_id}")
-        await waiting_manager.stop()
-
     except Exception as e:
         logger.error(f"Ошибка при показе статистики: {e}")
         await callback.answer("Ошибка при обработке статистики.")
+    finally:
+        await waiting_manager.stop()
 
 
 @hint_viewer_router.callback_query(F.data.startswith("hint_player:"), UserInfo())
