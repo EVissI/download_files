@@ -397,8 +397,8 @@ async def hint_viewer_menu(
                         f"Не удалось отправить уведомление админу {admin.id}: {e}"
                     )
             await message.answer(queue_warning)
-        # === Отправляем пользователю уведомление ===
-        status_text = f"✅ Файл принят!\n" f"Примерное время: ~{estimated_time} сек\n"
+
+        status_text = f"✅ Файл принят!\n" f"Примерное время: {estimated_time} сек\n"
 
         await message.answer(status_text, parse_mode="Markdown")
 
@@ -500,8 +500,6 @@ async def handle_show_stats(
                 parse_mode="HTML",
                 reply_markup=MainKeyboard.build(user_info.role, i18n),
             )
-            if os.path.exists(new_file_path):
-                os.remove(new_file_path)
     except Exception as e:
         logger.error(f"Ошибка при показе статистики: {e}")
         await callback.answer("Ошибка при обработке статистики.")
