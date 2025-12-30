@@ -98,4 +98,4 @@ class PromocodeModelView(ModelView):
     show_title = _("Просмотр промокода")
 
     def post_add_redirect(self):
-        return self.get_url_for_show(self.datamodel.obj.id)
+        return self.url_for("show", pk=self.datamodel.obj.id)
