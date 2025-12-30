@@ -51,7 +51,7 @@ class PromocodeModelView(ModelView):
         "max_usage",
         "activate_count",
         "duration_days",
-        "services_summary",
+        "services_summary",  # оставляем имя колонки
     ]
 
     add_columns = edit_columns = show_columns = [
@@ -69,7 +69,7 @@ class PromocodeModelView(ModelView):
         "max_usage": _("Макс. использований"),
         "activate_count": _("Использовано раз"),
         "duration_days": _("Длительность (дней)"),
-        "services_summary": _("Услуги"),  # Добавил метку для ясности
+        "services_summary": _("Услуги"),  # обязательно указать метку
     }
 
     column_descriptions = {
@@ -79,14 +79,21 @@ class PromocodeModelView(ModelView):
 
     related_views = [PromocodeServiceQuantityInline]
 
-    # Ключевой фикс: явно загружаем связанные услуги при отображении списка
-    def _get_list_query(self):
-        return super()._get_list_query().options(joinedload(Promocode.services))
+    # Самый надёжный способ — переопределить get_list_query с joinedload
+    def get_query(self):
+        return super().get_query().options(joinedload(Promocode.services))
+
+    def get_count_query(self):
+        return super().get_count_query().options(joinedload(Promocode.services))
+
+    # Альтернатива: кастомный метод для колонки
+    def _services_summary_formatter(self, context, model, name):
+        if not model.services:
+            return "—"
+        return ", ".join(str(service) for service in model.services)
 
     column_formatters = {
-        "services_summary": lambda v, c, m, n: (
-            ", ".join(str(s) for s in m.services) if m.services else "—"
-        ),
+        "services_summary": _services_summary_formatter,
         "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else str(m.max_usage),
         "duration_days": lambda v, c, m, n: "∞" if m.duration_days is None else str(m.duration_days),
         "activate_count": lambda v, c, m, n: str(m.activate_count or 0),
