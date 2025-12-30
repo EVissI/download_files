@@ -4,6 +4,7 @@ from flask_babel import lazy_gettext as _
 from bot.db.models import Promocode, PromocodeServiceQuantity
 from flask import redirect, url_for
 
+
 class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     """Инлайн-вьюха для услуг — именно с CompactCRUDMixin для компактного CRUD на одной странице"""
 
@@ -98,5 +99,5 @@ class PromocodeModelView(ModelView):
     show_title = _("Просмотр промокода")
 
     def post_add(self, item):
-        pk = self.datamodel.get_pk_value(item)
-        return redirect(url_for(f"{self.endpoint}.edit", pk=pk))
+        """После создания промокода перенаправляем на его редактирование"""
+        return redirect(url_for("PromocodeModelView.edit", pk=item.id))
