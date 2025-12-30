@@ -1680,6 +1680,7 @@
             const screenshotBtn = document.getElementById('screenshotBtn');
             const invertBtn = document.getElementById('invertBtn');
             const checkboxes = document.getElementById('checkboxes');
+            const animationControls = document.querySelector('.animation-controls');
             const snowflakes = document.querySelectorAll('.snowflake');
             const originalSnowflakeDisplay = Array.from(snowflakes).map(s => s.style.display);
             const originalControlsDisplay = controls.style.display;
@@ -1689,6 +1690,7 @@
             const originalScreenshotDisplay = screenshotBtn ? screenshotBtn.style.display : 'none';
             const originalInvertDisplay = invertBtn ? invertBtn.style.display : 'none';
             const originalCheckboxesDisplay = checkboxes ? checkboxes.style.display : 'none';
+            const originalAnimationControlsDisplay = animationControls ? animationControls.style.display : 'none';
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : 'none';
             const originalPlayersInfoHTML = playersInfoDiv ? playersInfoDiv.innerHTML : '';
             const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
@@ -1700,6 +1702,7 @@
             if (screenshotBtn) screenshotBtn.style.display = 'none';
             if (invertBtn) invertBtn.style.display = 'none';
             if (checkboxes) checkboxes.style.display = 'none';
+            if (animationControls) animationControls.style.display = 'none';
             snowflakes.forEach(flake => flake.style.display = 'none');
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
@@ -1737,6 +1740,7 @@
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
                 if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
+                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
@@ -1786,6 +1790,7 @@
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
                 if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
+                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
@@ -1819,6 +1824,7 @@
             const screenshotBtn = document.getElementById('screenshotBtn');
             const invertBtn = document.getElementById('invertBtn');
             const checkboxes = document.getElementById('checkboxes');
+            const animationControls = document.querySelector('.animation-controls');
             const snowflakes = document.querySelectorAll('.snowflake');
             const originalSnowflakeDisplay = Array.from(snowflakes).map(s => s.style.display);
             const originalControlsDisplay = controls.style.display;
@@ -1828,6 +1834,7 @@
             const originalScreenshotDisplay = screenshotBtn ? screenshotBtn.style.display : 'none';
             const originalInvertDisplay = invertBtn ? invertBtn.style.display : 'none';
             const originalCheckboxesDisplay = checkboxes ? checkboxes.style.display : 'none';
+            const originalAnimationControlsDisplay = animationControls ? animationControls.style.display : 'none';
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : 'none';
             const originalPlayersInfoHTML = playersInfoDiv ? playersInfoDiv.innerHTML : '';
             const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
@@ -1839,6 +1846,7 @@
             if (screenshotBtn) screenshotBtn.style.display = 'none';
             if (invertBtn) invertBtn.style.display = 'none';
             if (checkboxes) checkboxes.style.display = 'none';
+            if (animationControls) animationControls.style.display = 'none';
             snowflakes.forEach(flake => flake.style.display = 'none');
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
@@ -1872,6 +1880,7 @@
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
                 if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
+                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
@@ -1908,6 +1917,7 @@
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
                 if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
+                if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
