@@ -23,7 +23,8 @@ class MessageForNewModelView(ModelView):
     can_edit = True
     can_show = True
     can_list = True
-
+    show_delete = False
+    show_delete_link = False
     page_size = 50
 
     list_title = _("Сообщения для новых пользователей")
@@ -42,7 +43,7 @@ class MessageForNewModelView(ModelView):
         "dispatch_time",
         "text",
     ]
-    
+
     edit_exclude_columns = ["created_at", "updated_at"]
     # Форма редактирования с валидацией
     form_columns = ["lang_code", "text", "dispatch_day", "dispatch_time"]
