@@ -13,7 +13,7 @@ from sqlalchemy import (
     Text,
 )
 from bot.db.database import Base
-
+from flask_appbuilder.models.decorators import renders
 
 class User(Base):
     __tablename__ = "users"
@@ -174,6 +174,13 @@ class PromocodeServiceQuantity(Base):
             return f"{self.service_type.value}: {self.quantity}"
         else:
             return f"{self.service_type.value}: ∞"
+        
+    @property
+    @renders('services_summary')  
+    def services_summary(self):
+        if not self.services:
+            return "—"
+        return ", ".join(str(s) for s in self.services)
 
 
 class UserPromocode(Base):

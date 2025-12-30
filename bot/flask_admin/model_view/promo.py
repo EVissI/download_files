@@ -80,34 +80,20 @@ class PromocodeModelView(ModelView):
 
     related_views = [PromocodeServiceQuantityInline]
 
-    # Подгружаем связанные услуги
+    # Подгружаем связанные услуги, чтобы property работал без лишних запросов
     def get_query(self):
         return super().get_query().options(joinedload(Promocode.services))
 
     def get_count_query(self):
         return super().get_count_query().options(joinedload(Promocode.services))
 
-    def _list_services_summary(self, model):
-            """Надёжная сводка услуг через прямой запрос"""
-            services = (
-                self.datamodel.session.query(PromocodeServiceQuantity)
-                .filter_by(promocode_id=model.id)
-                .order_by(PromocodeServiceQuantity.id)  # для стабильного порядка
-                .all()
-            )
-            
-            if not services:
-                return "—"
-            
-            return ", ".join(str(s) for s in services)
-
+    # Форматтеры только для реальных полей — лямбды с одним аргументом v
     column_formatters = {
-        "services_summary": "_list_services_summary",
-        "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else str(m.max_usage),
-        "duration_days": lambda v, c, m, n: "∞" if m.duration_days is None else str(m.duration_days),
-        "activate_count": lambda v, c, m, n: str(m.activate_count or 0),
+        "max_usage": lambda v: "∞" if v is None else str(v),
+        "duration_days": lambda v: "∞" if v is None else str(v),
+        "activate_count": lambda v: str(v or 0),
     }
-    
+
     column_filters = ["is_active"]
     column_default_sort = ("id", True)
 
@@ -128,5 +114,3 @@ class PromocodeModelView(ModelView):
         if hasattr(self, "_last_added_id"):
             url = url_for(f"{self.endpoint}.edit", pk=self._last_added_id)
             delattr(self, "_last_added_id")
-            return redirect(url)
-        return super().post_add_redirect()
