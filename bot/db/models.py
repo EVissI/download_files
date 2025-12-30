@@ -142,20 +142,20 @@ class Promocode(Base):
     users: Mapped[list["UserPromocode"]] = relationship(
         "UserPromocode", back_populates="promocode"
     )
-
+    
     @property
-    @renders('max_usage')  
-    def max_usage(self):
+    @renders('max_usage_display')  
+    def max_usage_display(self):
         return "∞" if self.max_usage is None else str(self.max_usage)
 
     @property
-    @renders('duration_days')
-    def duration_days(self):
+    @renders('duration_days_display')
+    def duration_days_display(self):
         return "∞" if self.duration_days is None else str(self.duration_days)
 
     @property
-    @renders('activate_count')
-    def activate_count(self):
+    @renders('activate_count_display')
+    def activate_count_display(self):
         return str(self.activate_count or 0)
 
     @property

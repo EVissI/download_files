@@ -32,17 +32,17 @@ class PromocodeModelView(ModelView):
     list_columns = [
         "code",
         "is_active",
-        "max_usage",
-        "activate_count",
-        "duration_days",
+        "max_usage_display",
+        "activate_count_display",
+        "duration_days_display",
         "services_summary",
     ]
 
     label_columns = {'code':'Название',
                      'is_active':'Активен?',
-                     'max_usage':'Макс использований',
-                     'activate_count':'Кол-во использований',
-                     'duration_days':'Длительность',
+                     'max_usage_display':'Макс использований',
+                     'activate_count_display':'Кол-во использований',
+                     'duration_days_display':'Длительность',
                      'services_summary':'Услуги',}
     
     add_columns = edit_columns = [
@@ -55,9 +55,9 @@ class PromocodeModelView(ModelView):
     show_columns = [
         "code",
         "is_active",
-        "max_usage",
-        "activate_count",
-        "duration_days",
+        "max_usage_display",
+        "activate_count_display",
+        "duration_days_display",
         "services_summary",
     ]
 
