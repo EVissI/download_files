@@ -80,27 +80,25 @@ class PromocodeModelView(ModelView):
 
     related_views = [PromocodeServiceQuantityInline]
 
-    # Обязательно подгружаем услуги
+    # Подгружаем связанные услуги
     def get_query(self):
         return super().get_query().options(joinedload(Promocode.services))
 
     def get_count_query(self):
         return super().get_count_query().options(joinedload(Promocode.services))
 
-    # УБИРАЕМ column_formatters для services_summary
-    # Вместо этого используем label_columns + метод с префиксом _label_
-
-    def _label_services_summary(self, model):
-        """Метод, автоматически вызываемый FAB для виртуальной колонки"""
+    # КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: правильное имя метода
+    def _list_label_services_summary(self, model):
+        """Виртуальная колонка для списка — сводка услуг"""
         if not model.services:
             return "—"
         return ", ".join(str(s) for s in model.services)
 
+    # Регистрируем как label-колонку
     label_columns = {
-        "services_summary": _label_services_summary,
+        "services_summary": "services_summary",  # можно просто строку — ссылка на имя метода без префикса
     }
 
-    # Оставляем только остальные форматтеры
     column_formatters = {
         "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else str(m.max_usage),
         "duration_days": lambda v, c, m, n: "∞" if m.duration_days is None else str(m.duration_days),
