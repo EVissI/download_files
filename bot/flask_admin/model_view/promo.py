@@ -1,12 +1,13 @@
-﻿
-from flask_appbuilder.models.sqla.interface import SQLAInterface
-from flask_appbuilder import  ModelView
+﻿from flask_appbuilder.models.sqla.interface import SQLAInterface
+from flask_appbuilder import ModelView
+from wtforms import SelectField
 
-from bot.db.models import Promocode, PromocodeServiceQuantity
+from bot.db.models import Promocode, PromocodeServiceQuantity, ServiceType
 
 
 class PromocodeServiceQuantityInline(ModelView):
     """Инлайн-модель для количества услуг в промокоде"""
+
     datamodel = SQLAInterface(PromocodeServiceQuantity)
 
     list_columns = ["service_type", "quantity"]
@@ -15,6 +16,11 @@ class PromocodeServiceQuantityInline(ModelView):
         "service_type": "Тип услуги",
         "quantity": "Количество",
     }
+
+    form_overrides = {"service_type": SelectField}
+
+    form_args = {"service_type": {"choices": [(e.value, e.value) for e in ServiceType]}}
+
 
 class PromocodeAdmin(ModelView):
     datamodel = SQLAInterface(Promocode)
@@ -54,6 +60,8 @@ class PromocodeAdmin(ModelView):
         "duration_days": "Оставьте пустым, если промокод бессрочный",
     }
 
-    inline_models = [(PromocodeServiceQuantityInline, {"form_columns": ["service_type", "quantity"]})]
+    inline_models = [
+        (PromocodeServiceQuantityInline, {"form_columns": ["service_type", "quantity"]})
+    ]
 
     page_size = 20
