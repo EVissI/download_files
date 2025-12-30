@@ -5,6 +5,7 @@ from bot.db.models import (
     Broadcast,
     BroadcastStatus,
     BroadcastUser,
+    MessagesTexts,
     ServiceType,
     User,
     Analysis,
@@ -19,7 +20,7 @@ from bot.db.models import (
     UserPromocodeService,
     AnalizePaymentServiceQuantity,
     PromocodeServiceQuantity,
-    MessageForNew
+    MessageForNew,
 )
 from sqlalchemy import delete, func, insert, literal, not_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -138,8 +139,10 @@ class UserDAO(BaseDAO[User]):
                 f"Ошибка при получении общего баланса для пользователя {user_id}: {e}"
             )
             raise
-    
-    async def update_admin_insert_name(self, user_id: int, admin_insert_name: str) -> Optional[User]:
+
+    async def update_admin_insert_name(
+        self, user_id: int, admin_insert_name: str
+    ) -> Optional[User]:
         """
         Обновляет поле admin_insert_name для пользователя с заданным user_id.
         Возвращает обновлённый объект User или None, если пользователь не найден или при ошибке.
@@ -147,20 +150,24 @@ class UserDAO(BaseDAO[User]):
         try:
             user = await self._session.get(self.model, user_id)
             if not user:
-                logger.warning(f"User with id {user_id} not found for admin_insert_name update")
+                logger.warning(
+                    f"User with id {user_id} not found for admin_insert_name update"
+                )
                 return None
 
             user.admin_insert_name = admin_insert_name
             await self._session.commit()
             # Обновляем объект из сессии, чтобы вернуть актуальные данные
             await self._session.refresh(user)
-            logger.info(f"Updated admin_insert_name for user {user_id} -> {admin_insert_name}")
+            logger.info(
+                f"Updated admin_insert_name for user {user_id} -> {admin_insert_name}"
+            )
             return user
         except SQLAlchemyError as e:
             logger.error(f"Error updating admin_insert_name for user {user_id}: {e}")
             await self._session.rollback()
             return None
-        
+
     async def get_total_analiz_balance(
         self, user_id: int, service_type: ServiceType
     ) -> Optional[int]:
@@ -286,7 +293,8 @@ class UserDAO(BaseDAO[User]):
                     UserPromocode.user_id == user_id,
                     UserPromocode.is_active == True,
                     UserPromocodeService.service_type == service_type,
-                    (UserPromocodeService.remaining_quantity > 0) | (UserPromocodeService.remaining_quantity.is_(None)),
+                    (UserPromocodeService.remaining_quantity > 0)
+                    | (UserPromocodeService.remaining_quantity.is_(None)),
                 )
                 .order_by(UserPromocode.created_at.asc())
                 .limit(1)
@@ -314,13 +322,15 @@ class UserDAO(BaseDAO[User]):
                 select(UserAnalizePaymentService)
                 .join(
                     UserAnalizePayment,
-                    UserAnalizePayment.id == UserAnalizePaymentService.user_analize_payment_id,
+                    UserAnalizePayment.id
+                    == UserAnalizePaymentService.user_analize_payment_id,
                 )
                 .where(
                     UserAnalizePayment.user_id == user_id,
                     UserAnalizePayment.is_active == True,
                     UserAnalizePaymentService.service_type == service_type,
-                    (UserAnalizePaymentService.remaining_quantity > 0) | (UserAnalizePaymentService.remaining_quantity.is_(None)),
+                    (UserAnalizePaymentService.remaining_quantity > 0)
+                    | (UserAnalizePaymentService.remaining_quantity.is_(None)),
                 )
                 .order_by(UserAnalizePayment.created_at.asc())
                 .limit(1)
@@ -344,13 +354,15 @@ class UserDAO(BaseDAO[User]):
                 return True
 
             # No active records with balance > 0 or NULL
-            logger.info(f"No active records with balance > 0 or NULL for user {user_id}")
+            logger.info(
+                f"No active records with balance > 0 or NULL for user {user_id}"
+            )
             return False
         except SQLAlchemyError as e:
             logger.error(f"Error decreasing analiz_balance for user {user_id}: {e}")
             await self._session.rollback()
             return False
-    
+
     async def check_expired_records(self, user_id: int) -> list[dict]:
         """
         Checks if any UserPromocode or UserAnalizePayment records for the user have expired based on duration_days.
@@ -380,11 +392,13 @@ class UserDAO(BaseDAO[User]):
                     expiration_date = expiration_date.replace(tzinfo=timezone.utc)
                 if current_time > expiration_date:
                     user_promo.is_active = False
-                    expired_records.append({
-                        "type": "UserPromocode",
-                        "id": user_promo.id,
-                        "expiration_date": expiration_date.isoformat(),
-                    })
+                    expired_records.append(
+                        {
+                            "type": "UserPromocode",
+                            "id": user_promo.id,
+                            "expiration_date": expiration_date.isoformat(),
+                        }
+                    )
                     logger.info(
                         f"Deactivated expired UserPromocode ID {user_promo.id} for user {user_id}"
                     )
@@ -406,23 +420,29 @@ class UserDAO(BaseDAO[User]):
             payment_records = payment_result.all()
 
             for user_payment, duration_days in payment_records:
-                expiration_date = user_payment.created_at + timedelta(days=duration_days)
+                expiration_date = user_payment.created_at + timedelta(
+                    days=duration_days
+                )
                 if expiration_date.tzinfo is None:
                     expiration_date = expiration_date.replace(tzinfo=timezone.utc)
                 if current_time > expiration_date:
                     user_payment.is_active = False
-                    expired_records.append({
-                        "type": "UserAnalizePayment",
-                        "id": user_payment.id,
-                        "expiration_date": expiration_date.isoformat(),
-                    })
+                    expired_records.append(
+                        {
+                            "type": "UserAnalizePayment",
+                            "id": user_payment.id,
+                            "expiration_date": expiration_date.isoformat(),
+                        }
+                    )
                     logger.info(
                         f"Deactivated expired UserAnalizePayment ID {user_payment.id} for user {user_id}"
                     )
 
             if expired_records:
                 await self._session.commit()
-                logger.info(f"Expired records updated for user {user_id}: {len(expired_records)} records")
+                logger.info(
+                    f"Expired records updated for user {user_id}: {len(expired_records)} records"
+                )
             else:
                 logger.info(f"No expired records found for user {user_id}")
 
@@ -475,7 +495,6 @@ class AnalisisDAO(BaseDAO[Analysis]):
 class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
     model = DetailedAnalysis
 
-    
     async def get_detailed_analyzes_by_user_id(
         self,
         user_id: int,
@@ -506,6 +525,7 @@ class DetailedAnalysisDAO(BaseDAO[DetailedAnalysis]):
                 f"Ошибка при загрузке записей детального анализа для user_id {user_id}: {e}"
             )
             raise
+
     async def get_average_analysis_by_user(self, user_id: int) -> dict:
         try:
             logger.info(
@@ -968,8 +988,10 @@ class UserAnalizePaymentDAO(BaseDAO[UserAnalizePayment]):
             )
             raise
 
+
 class BroadcastDAO(BaseDAO[Broadcast]):
     model = Broadcast
+
     async def get_unique_content_broadcasts(self) -> List[Broadcast]:
         """
         Получает все рассылки со статусом SENT, выбирая только одну рассылку с уникальным текстом (с наименьшим id).
@@ -988,13 +1010,15 @@ class BroadcastDAO(BaseDAO[Broadcast]):
                 select(self.model)
                 .where(
                     self.model.status == BroadcastStatus.SENT,
-                    self.model.id.in_(select(subquery.c.min_id))
+                    self.model.id.in_(select(subquery.c.min_id)),
                 )
                 .order_by(self.model.id)
             )
             result = await self._session.execute(query)
             broadcasts = result.scalars().all()
-            logger.info(f"Загружено {len(broadcasts)} уникальных рассылок со статусом SENT")
+            logger.info(
+                f"Загружено {len(broadcasts)} уникальных рассылок со статусом SENT"
+            )
             return broadcasts
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке уникальных рассылок: {e}")
@@ -1015,7 +1039,7 @@ class BroadcastDAO(BaseDAO[Broadcast]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при загрузке запланированных рассылок: {e}")
             raise
-        
+
     async def update_status(self, broadcast_id: int, status: BroadcastStatus) -> bool:
         """
         Обновляет статус рассылки по id.
@@ -1024,7 +1048,9 @@ class BroadcastDAO(BaseDAO[Broadcast]):
         try:
             broadcast = await self._session.get(self.model, broadcast_id)
             if not broadcast:
-                logger.warning(f"Broadcast with id {broadcast_id} not found for status update")
+                logger.warning(
+                    f"Broadcast with id {broadcast_id} not found for status update"
+                )
                 return False
 
             broadcast.status = status
@@ -1036,7 +1062,9 @@ class BroadcastDAO(BaseDAO[Broadcast]):
             await self._session.rollback()
             return False
 
-    async def add_recipients_to_broadcast(self, broadcast_id: int, user_ids: List[int]) -> bool:
+    async def add_recipients_to_broadcast(
+        self, broadcast_id: int, user_ids: List[int]
+    ) -> bool:
         """
         Добавляет записи в таблицу BroadcastUser, связывая broadcast_id с указанными user_ids.
         Возвращает True при успешном добавлении, False при ошибке или если broadcast_id не существует.
@@ -1055,17 +1083,14 @@ class BroadcastDAO(BaseDAO[Broadcast]):
             ]
 
             # Выполняем массовую вставку в таблицу BroadcastUser
-            await self._session.execute(
-                insert(BroadcastUser),
-                broadcast_user_entries
-            )
+            await self._session.execute(insert(BroadcastUser), broadcast_user_entries)
             logger.info(f"Added {len(user_ids)} recipients to broadcast {broadcast_id}")
             return True
         except SQLAlchemyError as e:
             logger.error(f"Error adding recipients to broadcast {broadcast_id}: {e}")
             await self._session.rollback()
             return False
-        
+
     async def get_recipients_for_broadcast(self, broadcast_id: int) -> List[int]:
         """
         Получает список user_id, прикрепленных к указанной рассылке через таблицу BroadcastUser.
@@ -1079,13 +1104,19 @@ class BroadcastDAO(BaseDAO[Broadcast]):
                 return []
 
             # Запрашиваем user_id из таблицы BroadcastUser
-            query = select(BroadcastUser.user_id).where(BroadcastUser.broadcast_id == broadcast_id)
+            query = select(BroadcastUser.user_id).where(
+                BroadcastUser.broadcast_id == broadcast_id
+            )
             result = await self._session.execute(query)
             user_ids = [row.user_id for row in result.fetchall()]
-            logger.info(f"Retrieved {len(user_ids)} recipients for broadcast {broadcast_id}")
+            logger.info(
+                f"Retrieved {len(user_ids)} recipients for broadcast {broadcast_id}"
+            )
             return user_ids
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving recipients for broadcast {broadcast_id}: {e}")
+            logger.error(
+                f"Error retrieving recipients for broadcast {broadcast_id}: {e}"
+            )
             return []
 
 
@@ -1127,10 +1158,12 @@ class MessageForNewDAO(BaseDAO[MessageForNew]):
             logger.info(f"MessageForNew {action}: day={dispatch_day}, lang={lang_code}")
             return record
         except SQLAlchemyError as e:
-            logger.error(f"Error upserting MessageForNew (day={dispatch_day}, lang={lang_code}): {e}")
+            logger.error(
+                f"Error upserting MessageForNew (day={dispatch_day}, lang={lang_code}): {e}"
+            )
             await self._session.rollback()
             return None
-        
+
     async def get_by_lang_code(self, lang_code: str) -> Optional[MessageForNew]:
         """
         Возвращает запись MessageForNew по lang_code или None, если не найдена.
@@ -1145,14 +1178,15 @@ class MessageForNewDAO(BaseDAO[MessageForNew]):
             result = await self._session.execute(query)
             record = result.scalar_one_or_none()
             if record:
-                logger.info(f"Loaded MessageForNew for lang={lang}, day={record.dispatch_day}")
+                logger.info(
+                    f"Loaded MessageForNew for lang={lang}, day={record.dispatch_day}"
+                )
             else:
                 logger.info(f"No MessageForNew found for lang={lang}")
             return record
         except SQLAlchemyError as e:
             logger.error(f"Error loading MessageForNew for lang={lang_code}: {e}")
             raise
-
 
 
 class UserGroupDAO(BaseDAO[UserGroup]):
@@ -1174,6 +1208,7 @@ class UserGroupDAO(BaseDAO[UserGroup]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при получении пользователей группы {group_id}: {e}")
             raise
+
     async def add_users_to_group(self, group_id: int, user_ids: list[int]) -> UserGroup:
         """
         Добавить пользователей в группу по списку user_ids.
@@ -1213,8 +1248,10 @@ class UserGroupDAO(BaseDAO[UserGroup]):
             await self._session.rollback()
             logger.error(f"Ошибка при добавлении пользователей в группу: {e}")
             raise
-    
-    async def remove_users_from_group(self, group_id: int, user_ids: list[int]) -> UserGroup:
+
+    async def remove_users_from_group(
+        self, group_id: int, user_ids: list[int]
+    ) -> UserGroup:
         """
         Удалить пользователей из группы по списку user_ids.
         """
@@ -1268,4 +1305,43 @@ class UserGroupDAO(BaseDAO[UserGroup]):
         except SQLAlchemyError as e:
             await self._session.rollback()
             logger.error(f"Ошибка при удалении группы: {e}")
+            raise
+
+
+class MessagesTextsDAO(BaseDAO[MessagesTexts]):
+
+    model = MessagesTexts
+
+    async def get_by_code(self, code: str) -> Optional[MessagesTexts]:
+        """
+        Получает запись MessagesTexts по коду.
+        """
+        try:
+            query = select(self.model).where(self.model.code == code)
+            result = await self._session.execute(query)
+            message_text = result.scalar_one_or_none()
+            return message_text
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при получении записи MessagesTexts по коду '{code}': {e}"
+            )
+            raise
+        
+    async def get_text(self, code: str, lang_code: str) -> Optional[str]:
+        """
+        Получает запись MessagesTexts по коду.
+        """
+        try:
+            query = select(self.model).where(self.model.code == code)
+            result = await self._session.execute(query)
+            message_text = result.scalar_one_or_none()
+            if message_text:
+                if lang_code == 'ru':
+                    return message_text.text_ru
+                else:
+                    return message_text.text_en
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при получении записи MessagesTexts по коду '{code}': {e}"
+            )
             raise

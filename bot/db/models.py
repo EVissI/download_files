@@ -443,3 +443,11 @@ class UserInGroup(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="groups")
     group: Mapped["UserGroup"] = relationship("UserGroup", back_populates="users")
+
+class MessagesTexts(Base):
+    __tablename__ = 'messages_texts'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(30), nullable=False)
+    text_ru: Mapped[str] = mapped_column(String(1000))
+    text_en: Mapped[str] = mapped_column(String(1000))

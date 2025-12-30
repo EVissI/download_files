@@ -18,6 +18,7 @@ from bot.db.models import (
     UserPromocodeService,
     UserPromocode,
     Promocode,
+    MessagesTexts,
 )
 
 config = context.config
@@ -33,8 +34,9 @@ def include_object(object, name, type_, reflected, compare_to):
     """
     Функция для исключения таблиц Flask-AppBuilder из миграций Alembic.
     Исключаем таблицы, начинающиеся с 'ab_', которые создаются автоматически.
+    Также исключаем apscheduler_jobs.
     """
-    if type_ == "table" and name.startswith("ab_"):
+    if type_ == "table" and (name.startswith("ab_") or name == "apscheduler_jobs"):
         return False
     return True
 
@@ -65,7 +67,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
