@@ -390,7 +390,32 @@ class MessageForNew(Base):
     dispatch_time: Mapped[str] = mapped_column(
         String(5), nullable=False
     )  # Время рассылки в формате "HH:MM"
+    @property
+    @renders('dispatch_day_display')
+    def dispatch_day_display(self) -> str:
+        """Человекочитаемые дни недели"""
+        if not self.dispatch_day:
+            return "—"
+        days_map = {
+            'mon': 'Понедельник',
+            'tue': 'Вторник',
+            'wed': 'Среда',
+            'thu': 'Четверг',
+            'fri': 'Пятница',
+            'sat': 'Суббота',
+            'sun': 'Воскресенье',
+        }
+        days = [d.strip().lower() for d in self.dispatch_day.split(',')]
+        return ", ".join(days_map.get(d, d.capitalize()) for d in days)
 
+    @property
+    @renders('text_preview')
+    def text_preview(self) -> str:
+        """Короткий предпросмотр текста в списке"""
+        if not self.text:
+            return "—"
+        preview = self.text.strip().replace("\n", " ")
+        return (preview[:120] + "…") if len(preview) > 120 else preview
 
 class UserGroup(Base):
     __tablename__ = "user_groups"
