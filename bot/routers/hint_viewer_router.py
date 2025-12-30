@@ -566,7 +566,8 @@ async def handle_hint_player_selection(
         )
         await session_without_commit.commit()
 
-        await redis_client.delete(f"mat_path:{game_id}")
+        # Keep mat_path in Redis for future stats requests
+        # await redis_client.delete(f"mat_path:{game_id}")
         await state.clear()
 
     except Exception as e:
