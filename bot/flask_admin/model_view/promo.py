@@ -11,13 +11,9 @@ class PromocodeServiceForm(DynamicForm):
     service_type = SelectField(
         "Тип услуги",
         choices=[(st.value, st.value) for st in ServiceType],
-        validators=[DataRequired()]
+        validators=[DataRequired()],
     )
-    quantity = IntegerField(
-        "Количество",
-        default=0,
-        validators=[NumberRange(min=0)]
-    )
+    quantity = IntegerField("Количество", default=0, validators=[NumberRange(min=0)])
 
 
 class PromocodeAdmin(ModelView):
@@ -46,14 +42,16 @@ class PromocodeAdmin(ModelView):
         "services",
     ]
 
-    # Ключевой фикс: inline_models как кортеж с { "create": True }
+    # Ключевой фикс: inline_models как dict с inline_type tabular для создания новых записей
     inline_models = [
-        (PromocodeServiceQuantity, {
+        {
+            "model": PromocodeServiceQuantity,
+            "inline_type": "tabular",
             "create": True,  # Разрешаем создание новых записей
-            "edit": True,    # Разрешаем редактирование
+            "edit": True,  # Разрешаем редактирование
             "form": PromocodeServiceForm,
             "form_columns": ["service_type", "quantity"],
-        })
+        }
     ]
 
     label_columns = {
