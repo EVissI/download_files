@@ -6,7 +6,7 @@ from bot.db.models import Promocode, PromocodeServiceQuantity
 
 class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     """Инлайн-вьюха для услуг — именно с CompactCRUDMixin для компактного CRUD на одной странице"""
-    
+
     datamodel = SQLAInterface(PromocodeServiceQuantity)
 
     # Разрешаем все операции
@@ -31,12 +31,14 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
 
     # Красивое отображение ∞
     column_formatters = {
-        "quantity": lambda v, c, m, p: "∞" if m.quantity is None or m.quantity <= 0 else str(m.quantity),
+        "quantity": lambda v, c, m, p: (
+            "∞" if m.quantity is None or m.quantity <= 0 else str(m.quantity)
+        ),
     }
     add_exclude_columns = ["created_at", "updated_at"]
     edit_exclude_columns = ["created_at", "updated_at"]
     page_size = 50
-    show_columns = []  # не показываем отдельную страницу show
+    show_columns = []
 
 
 class PromocodeModelView(ModelView):
@@ -79,9 +81,13 @@ class PromocodeModelView(ModelView):
 
     # Сводка услуг в списке
     column_formatters = {
-        "services_summary": lambda v, c, m, n: ", ".join(str(s) for s in m.services) if m.services else "-",
+        "services_summary": lambda v, c, m, n: (
+            ", ".join(str(s) for s in m.services) if m.services else "-"
+        ),
         "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else m.max_usage,
-        "duration_days": lambda v, c, m, n: "∞" if m.duration_days is None else m.duration_days,
+        "duration_days": lambda v, c, m, n: (
+            "∞" if m.duration_days is None else m.duration_days
+        ),
     }
 
     column_filters = ["is_active"]
@@ -90,3 +96,6 @@ class PromocodeModelView(ModelView):
     list_title = _("Промокоды")
     add_title = edit_title = _("Редактировать промокод")
     show_title = _("Просмотр промокода")
+
+    def post_add_redirect(self):
+        return self.get_url_for_show(self.datamodel.obj.id)
