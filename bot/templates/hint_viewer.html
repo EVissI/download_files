@@ -1794,8 +1794,10 @@
                 const PassHint = (item.cube_hints[0].cubeful_equities || []).find(h => h.action_1 === 'Double' && h.action_2 === 'pass');
                 const noDoubleEq = noDoubleHint && noDoubleHint.eq ? noDoubleHint.eq : null;
                 const PassHintEq = PassHint && PassHint.eq ? PassHint.eq : null;
+                const firstCubeEq = item.cube_hints[0].cubeful_equities && item.cube_hints[0].cubeful_equities.length > 0 ? item.cube_hints[0].cubeful_equities[0].eq : null;
                 (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                    const displayEq = (firstCubeEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstCubeEq).toFixed(3) : eq;
                     let displayAction = hint.action_1;
                     if (hint.action_2) {
                         displayAction += `, ${hint.action_2}`;
@@ -1826,7 +1828,7 @@
                             rowClass = 'hint-poor';
                         }
                     }
-                    cubeTableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${eq}</td></tr>`;
+                    cubeTableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${displayEq}</td></tr>`;
                 });
             }
             cubeTableHtml += '</table>';
@@ -1839,11 +1841,13 @@
             if (item.action === 'win') {
                 moveTableHtml += `<tr class="hint-best"><td>Победа ${item.player_name} (${item.points} очков)</td><td>-</td><td>-</td><td>-</td></tr>`;
             } else {
+                const firstEq = item.hints && item.hints.length > 0 ? item.hints[0].eq : null;
                 (item.hints || []).forEach((hint, index) => {
                     if (hint.probs && hint.probs.length >= 2) {
                         const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
                         const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
                         const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                        const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
                         let move = hint.move || '-';
                         let rowClass = '';
                         if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.trim().replace(/\*/g, '')) {
@@ -1855,7 +1859,7 @@
                                 rowClass = 'hint-poor';
                             }
                         }
-                        moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td></tr>`;
+                        moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
                     }
                 });
             }

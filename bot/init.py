@@ -56,8 +56,8 @@ def setup_expire_scheduler():
 
 async def start_bot():
     await set_commands()
-    setup_expire_scheduler()
-    await schedule_gift_job_from_db()
+    # setup_expire_scheduler()
+    # await schedule_gift_job_from_db()
     scheduler.start()
     for admin_id in admins:
         try:
