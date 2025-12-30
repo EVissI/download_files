@@ -1,35 +1,37 @@
-﻿from flask_appbuilder import ModelView
+﻿from flask_appbuilder import ModelView, CompactCRUDMixin
 from flask_appbuilder.models.sqla.interface import SQLAInterface
+from flask_appbuilder.views import CompactCRUDMixin as CompactMixin  # На всякий случай
 from flask_babel import lazy_gettext as _
 
-from bot.db.models import Promocode, PromocodeServiceQuantity, ServiceType
+from bot.db.models import Promocode, PromocodeServiceQuantity
 
 
-class PromocodeServiceQuantityView(ModelView):
-    """Модель-вью для инлайн-редактирования услуг в промокоде"""
+class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
+    """Инлайн-вью для услуг промокода — позволяет создавать новые записи, а не привязывать существующие"""
     
     datamodel = SQLAInterface(PromocodeServiceQuantity)
 
     can_create = True
     can_edit = True
     can_delete = True
+    can_view_details = False
+    can_show = False
 
     list_columns = ["service_type", "quantity"]
-    edit_columns = ["service_type", "quantity"]
-    add_columns = ["service_type", "quantity"]
+    form_columns = ["service_type", "quantity"]  # Только эти поля в форме добавления/редактирования
 
     column_labels = {
         "service_type": _("Тип услуги"),
-        "quantity": _("Количество (None = ∞)"),
+        "quantity": _("Количество (пусто или 0 = ∞)"),
     }
 
     column_descriptions = {
-        "quantity": _("Укажите количество использований. Оставьте пустым или None для неограниченного."),
+        "quantity": _("Оставьте пустым для неограниченного количества"),
     }
 
-    # Кастомное отображение количества (с ∞)
+    # Отображение ∞ вместо None или 0
     column_formatters = {
-        "quantity": lambda view, context, model, name: "∞" if model.quantity is None else model.quantity,
+        "quantity": lambda v, c, m, p: "∞" if m.quantity is None or m.quantity <= 0 else str(m.quantity),
     }
 
 
@@ -56,7 +58,7 @@ class PromocodeModelView(ModelView):
         "users",
     ]
 
-    edit_columns = add_columns = [
+    add_columns = edit_columns = [
         "code",
         "is_active",
         "max_usage",
@@ -78,31 +80,25 @@ class PromocodeModelView(ModelView):
     }
 
     column_descriptions = {
-        "max_usage": _("Максимальное количество активаций. None = неограничено"),
+        "max_usage": _("Максимальное количество активаций. Пусто = неограничено"),
         "activate_count": _("Сколько раз уже активирован"),
-        "duration_days": _("На сколько дней даётся доступ после активации. None = бессрочно"),
+        "duration_days": _("На сколько дней даётся доступ. Пусто = бессрочно"),
     }
 
-    # Инлайн-редактирование услуг
-    inline_models = (PromocodeServiceQuantityView,)
+    # Ключевой момент: используем список с классом инлайн-вьюхи и CompactCRUDMixin
+    inline_models = [PromocodeServiceQuantityInline]
 
-    # Красивое отображение списка услуг в списке промокодов
+    # Сводка услуг в списке промокодов
     column_formatters = {
-        "services_summary": lambda view, context, model, name: ", ".join(str(s) for s in model.services) if model.services else "-",
-        "max_usage": lambda view, context, model, name: "∞" if model.max_usage is None else model.max_usage,
-        "duration_days": lambda view, context, model, name: "∞" if model.duration_days is None else model.duration_days,
+        "services_summary": lambda v, c, m, n: ", ".join(str(s) for s in m.services) if m.services else "-",
+        "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else m.max_usage,
+        "duration_days": lambda v, c, m, n: "∞" if m.duration_days is None else m.duration_days,
     }
 
     column_default_sort = ("id", True)
 
-    # Фильтры
-    column_filters = [
-        "is_active",
-        "max_usage",
-        "duration_days",
-    ]
+    column_filters = ["is_active", "max_usage", "duration_days"]
 
-    # Кастомный заголовок списка
     list_title = _("Промокоды")
     add_title = edit_title = _("Редактировать промокод")
     show_title = _("Просмотр промокода")

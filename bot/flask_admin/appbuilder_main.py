@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
 import logging
 
-from bot.flask_admin.model_view.promo import PromocodeModelView
+from bot.flask_admin.model_view.promo import PromocodeModelView, PromocodeServiceQuantityInline
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +69,10 @@ def register_models(appbuilder, db):
         "Промокоды",
         icon="fa-tag",
         category="Управление",
-        category_icon="fa-cogs",
     )
 
+    appbuilder.add_view_no_menu(PromocodeServiceQuantityInline)
+    
 def create_app_for_flask_cli():
     """Helper factory for Flask CLI: returns only the Flask app object."""
     app, _ = create_app()
