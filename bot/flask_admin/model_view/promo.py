@@ -51,7 +51,7 @@ class PromocodeModelView(ModelView):
         "max_usage",           
         "duration_days",       
     ]
-
+    base_filters = ['code', 'is_active']
     show_columns = [
         "code",
         "is_active",
