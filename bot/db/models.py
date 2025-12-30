@@ -2,7 +2,16 @@
 import enum
 from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Enum, String, Text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Enum,
+    String,
+    Text,
+)
 from bot.db.database import Base
 
 
@@ -48,10 +57,9 @@ class User(Base):
         cascade="all, delete-orphan",
     )
     broadcast_recipients: Mapped[list["Broadcast"]] = relationship(
-        "Broadcast",
-        secondary="broadcast_users",
-        back_populates="recipients"
+        "Broadcast", secondary="broadcast_users", back_populates="recipients"
     )
+
 
 class Analysis(Base):
     __tablename__ = "analyzes"
@@ -135,13 +143,16 @@ class Promocode(Base):
         "UserPromocode", back_populates="promocode"
     )
 
+
 class ServiceType(str, enum.Enum):
-        MATCH = "Матч"
-        MONEYGAME = "Moneygame"
-        SHORT_BOARD = "Плеер"
-        HINTS = "Ошибки"
+    MATCH = "Матч"
+    MONEYGAME = "Moneygame"
+    SHORT_BOARD = "Плеер"
+    HINTS = "Ошибки"
+
 
 service_type_enum = Enum(ServiceType, name="servicetype", metadata=Base.metadata)
+
 
 class PromocodeServiceQuantity(Base):
     __tablename__ = "promocode_service_quantities"
@@ -156,6 +167,13 @@ class PromocodeServiceQuantity(Base):
     promocode: Mapped["Promocode"] = relationship(
         "Promocode", back_populates="services"
     )
+
+    def __str__(self):
+        """Отображение услуги в админке"""
+        if self.quantity is not None and self.quantity > 0:
+            return f"{self.service_type.value}: {self.quantity}"
+        else:
+            return f"{self.service_type.value}: ∞"
 
 
 class UserPromocode(Base):
@@ -183,10 +201,8 @@ class UserPromocodeService(Base):
     user_promocode_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("user_promocode.id")
     )
-    service_type: Mapped[ServiceType] = mapped_column(
-        Enum(ServiceType), nullable=False
-    )
-    remaining_quantity: Mapped[int|None] = mapped_column(Integer, nullable=True)
+    service_type: Mapped[ServiceType] = mapped_column(Enum(ServiceType), nullable=False)
+    remaining_quantity: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     user_promocode: Mapped["UserPromocode"] = relationship(
         "UserPromocode", back_populates="remaining_services"
@@ -199,8 +215,6 @@ class AnalizePaymentServiceQuantity(Base):
     """
 
     __tablename__ = "analize_payment_service_quantities"
-
-
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     analize_payment_id: Mapped[int] = mapped_column(
@@ -286,6 +300,7 @@ class BroadcastStatus(enum.Enum):
     SENT = "SENT"
     CANCELLED = "CANCELLED"
 
+
 class Broadcast(Base):
     __tablename__ = "broadcasts"
 
@@ -294,22 +309,18 @@ class Broadcast(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     media_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     media_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    group_id:Mapped[int | None] = mapped_column(Integer, nullable=True)
+    group_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     group: Mapped[str] = mapped_column(String(30), nullable=False)
     run_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped["BroadcastStatus"] = mapped_column(
-        Enum(BroadcastStatus),
-        default=BroadcastStatus.SCHEDULED.value,
-        nullable=False
+        Enum(BroadcastStatus), default=BroadcastStatus.SCHEDULED.value, nullable=False
     )
     created_by: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id"), nullable=False
     )
     user: Mapped["User"] = relationship("User", back_populates="broadcasts")
     recipients: Mapped[list["User"]] = relationship(
-        "User",
-        secondary="broadcast_users",
-        back_populates="broadcast_recipients"
+        "User", secondary="broadcast_users", back_populates="broadcast_recipients"
     )
 
 
@@ -317,8 +328,12 @@ class BroadcastUser(Base):
     __tablename__ = "broadcast_users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    broadcast_id: Mapped[int] = mapped_column(Integer, ForeignKey("broadcasts.id"), nullable=False)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    broadcast_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("broadcasts.id"), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=False
+    )
 
 
 class MessageForNew(Base):
@@ -327,8 +342,13 @@ class MessageForNew(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     lang_code: Mapped[str] = mapped_column(String(3), nullable=False, default="en")
-    dispatch_day: Mapped[str] = mapped_column(String, nullable=False)  # День рассылки, например, "Monday"
-    dispatch_time: Mapped[str] = mapped_column(String(5), nullable=False)  # Время рассылки в формате "HH:MM"
+    dispatch_day: Mapped[str] = mapped_column(
+        String, nullable=False
+    )  # День рассылки, например, "Monday"
+    dispatch_time: Mapped[str] = mapped_column(
+        String(5), nullable=False
+    )  # Время рассылки в формате "HH:MM"
+
 
 class UserGroup(Base):
     __tablename__ = "user_groups"
@@ -342,12 +362,17 @@ class UserGroup(Base):
         cascade="all, delete-orphan",
     )
 
+
 class UserInGroup(Base):
     __tablename__ = "user_in_groups"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
-    group_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_groups.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=False
+    )
+    group_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("user_groups.id"), nullable=False
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="groups")
     group: Mapped["UserGroup"] = relationship("UserGroup", back_populates="users")

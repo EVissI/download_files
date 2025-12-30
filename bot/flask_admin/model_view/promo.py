@@ -1,25 +1,24 @@
 ﻿from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_appbuilder import ModelView
-from wtforms import SelectField
+from flask_appbuilder.forms import DynamicForm
+from wtforms import SelectField, IntegerField
+from wtforms.validators import DataRequired, NumberRange
 
 from bot.db.models import Promocode, PromocodeServiceQuantity, ServiceType
 
 
-class PromocodeServiceQuantityInline(ModelView):
-    """Инлайн-модель для количества услуг в промокоде"""
-
-    datamodel = SQLAInterface(PromocodeServiceQuantity)
-
-    list_columns = ["service_type", "quantity"]
-    form_columns = ["service_type", "quantity"]
-    label_columns = {
-        "service_type": "Тип услуги",
-        "quantity": "Количество",
-    }
-
-    form_overrides = {"service_type": SelectField}
-
-    form_args = {"service_type": {"choices": [(e.value, e.value) for e in ServiceType]}}
+class PromocodeServiceForm(DynamicForm):
+    service_type = SelectField(
+        "Тип услуги",
+        choices=[(st.value, st.value) for st in ServiceType],
+        validators=[DataRequired()],
+    )
+    quantity = IntegerField(
+        "Количество",
+        validators=[
+            NumberRange(min=0, message="Количество должно быть неотрицательным")
+        ],
+    )
 
 
 class PromocodeAdmin(ModelView):
@@ -32,6 +31,7 @@ class PromocodeAdmin(ModelView):
         "max_usage",
         "activate_count",
         "duration_days",
+        "services_summary",
     ]
     show_columns = list_columns + ["services"]
     search_columns = ["code"]
@@ -45,6 +45,28 @@ class PromocodeAdmin(ModelView):
         "services",  # инлайн-таблица
     ]
 
+    # Настройка inline-формы для услуг
+    inline_models = [
+        {
+            "model": PromocodeServiceQuantity,
+            "form": PromocodeServiceForm,
+            "form_label": "Услуги промокода",
+            "form_columns": ["service_type", "quantity"],
+            "form_label_columns": {
+                "service_type": "Тип услуги",
+                "quantity": "Количество",
+            },
+            "form_widget_args": {
+                "service_type": {
+                    "description": "Выберите тип услуги, которую предоставляет промокод"
+                },
+                "quantity": {
+                    "description": "Укажите количество услуг (оставьте 0 для неограниченного количества)"
+                },
+            },
+        }
+    ]
+
     label_columns = {
         "code": "Код промокода",
         "is_active": "Активен",
@@ -52,16 +74,46 @@ class PromocodeAdmin(ModelView):
         "activate_count": "Уже активировано",
         "duration_days": "Срок действия (дней)",
         "services": "Услуги",
+        "services_summary": "Услуги",
     }
+
+    # Метод для отображения сводки по услугам в списке
+    def services_summary(self, item):
+        if not item.services:
+            return "Нет услуг"
+
+        services_list = []
+        for service in item.services:
+            if service.quantity is not None and service.quantity > 0:
+                services_list.append(
+                    f"{service.service_type.value}: {service.quantity}"
+                )
+            else:
+                services_list.append(f"{service.service_type.value}: ∞")
+
+        return ", ".join(services_list)
+
+    services_summary.label = "Услуги"
 
     description_columns = {
         "max_usage": "Оставьте пустым для неограниченного количества использований",
         "activate_count": "Автоматически увеличивается при активации (можно задать вручную)",
         "duration_days": "Оставьте пустым, если промокод бессрочный",
+        "services": "Услуги, предоставляемые по промокоду",
     }
 
-    inline_models = [
-        (PromocodeServiceQuantityInline, {"form_columns": ["service_type", "quantity"]})
+    # Настройка отображения inline-формы в режиме просмотра
+    show_inline_models = [
+        {
+            "model": PromocodeServiceQuantity,
+            "form": PromocodeServiceForm,
+            "form_label": "Услуги промокода",
+            "form_columns": ["service_type", "quantity"],
+            "form_label_columns": {
+                "service_type": "Тип услуги",
+                "quantity": "Количество",
+            },
+        }
     ]
 
     page_size = 20
