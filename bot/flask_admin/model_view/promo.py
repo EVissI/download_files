@@ -1,34 +1,42 @@
-﻿from flask_appbuilder.models.sqla.interface import SQLAInterface
-from flask_appbuilder import ModelView
-from flask_appbuilder.forms import DynamicForm
-from wtforms import SelectField, IntegerField
-from wtforms.validators import DataRequired, NumberRange
+﻿from flask_appbuilder import ModelView
+from flask_appbuilder.models.sqla.interface import SQLAInterface
+from flask_babel import lazy_gettext as _
 
 from bot.db.models import Promocode, PromocodeServiceQuantity, ServiceType
 
 
-class PromocodeServiceForm(DynamicForm):
-    service_type = SelectField(
-        "Тип услуги",
-        choices=[(st.value, st.value) for st in ServiceType],
-        validators=[DataRequired()],
-    )
-    quantity = IntegerField("Количество", default=0, validators=[NumberRange(min=0)])
-
-
-class PromocodeServiceQuantityAdmin(ModelView):
+class PromocodeServiceQuantityView(ModelView):
+    """Модель-вью для инлайн-редактирования услуг в промокоде"""
+    
     datamodel = SQLAInterface(PromocodeServiceQuantity)
-    form = PromocodeServiceForm
-    form_columns = ["service_type", "quantity"]
+
+    can_create = True
+    can_edit = True
+    can_delete = True
+
     list_columns = ["service_type", "quantity"]
-    add_columns = edit_columns = ["service_type", "quantity"]
+    edit_columns = ["service_type", "quantity"]
+    add_columns = ["service_type", "quantity"]
+
+    column_labels = {
+        "service_type": _("Тип услуги"),
+        "quantity": _("Количество (None = ∞)"),
+    }
+
+    column_descriptions = {
+        "quantity": _("Укажите количество использований. Оставьте пустым или None для неограниченного."),
+    }
+
+    # Кастомное отображение количества (с ∞)
+    column_formatters = {
+        "quantity": lambda view, context, model, name: "∞" if model.quantity is None else model.quantity,
+    }
 
 
-class PromocodeAdmin(ModelView):
+class PromocodeModelView(ModelView):
     datamodel = SQLAInterface(Promocode)
 
     list_columns = [
-        "id",
         "code",
         "is_active",
         "max_usage",
@@ -37,46 +45,64 @@ class PromocodeAdmin(ModelView):
         "services_summary",
     ]
 
-    show_columns = list_columns + ["services"]
-
-    search_columns = ["code"]
-
-    add_columns = edit_columns = [
+    show_columns = [
+        "id",
         "code",
         "is_active",
         "max_usage",
         "activate_count",
         "duration_days",
+        "services",
+        "users",
     ]
 
-    exclude_columns = ["services"]  # Исключаем поле services из форм
+    edit_columns = add_columns = [
+        "code",
+        "is_active",
+        "max_usage",
+        "activate_count",
+        "duration_days",
+        "services",
+    ]
 
-    # Используем related_views для управления услугами в отдельных вкладках
-    related_views = [PromocodeServiceQuantityAdmin]
+    search_columns = ["code"]
 
-    label_columns = {
-        "code": "Код промокода",
-        "is_active": "Активен",
-        "max_usage": "Макс. использований",
-        "activate_count": "Уже активировано",
-        "duration_days": "Срок действия (дней)",
-        "services": "Услуги",
-        "services_summary": "Услуги",
+    column_labels = {
+        "code": _("Код промокода"),
+        "is_active": _("Активен"),
+        "max_usage": _("Макс. использований"),
+        "activate_count": _("Использовано раз"),
+        "duration_days": _("Длительность (дней)"),
+        "services": _("Услуги"),
+        "users": _("Пользователи"),
     }
 
-    description_columns = {
-        "services": "Добавьте услуги: выберите тип и укажите количество (0 = неограниченно)",
+    column_descriptions = {
+        "max_usage": _("Максимальное количество активаций. None = неограничено"),
+        "activate_count": _("Сколько раз уже активирован"),
+        "duration_days": _("На сколько дней даётся доступ после активации. None = бессрочно"),
     }
 
-    def services_summary(self, item):
-        if not item.services:
-            return "Нет услуг"
-        services_list = []
-        for service in item.services:
-            qty = service.quantity if service.quantity > 0 else "∞"
-            services_list.append(f"{service.service_type.value}: {qty}")
-        return ", ".join(services_list)
+    # Инлайн-редактирование услуг
+    inline_models = (PromocodeServiceQuantityView,)
 
-    services_summary.label = "Услуги"
+    # Красивое отображение списка услуг в списке промокодов
+    column_formatters = {
+        "services_summary": lambda view, context, model, name: ", ".join(str(s) for s in model.services) if model.services else "-",
+        "max_usage": lambda view, context, model, name: "∞" if model.max_usage is None else model.max_usage,
+        "duration_days": lambda view, context, model, name: "∞" if model.duration_days is None else model.duration_days,
+    }
 
-    page_size = 20
+    column_default_sort = ("id", True)
+
+    # Фильтры
+    column_filters = [
+        "is_active",
+        "max_usage",
+        "duration_days",
+    ]
+
+    # Кастомный заголовок списка
+    list_title = _("Промокоды")
+    add_title = edit_title = _("Редактировать промокод")
+    show_title = _("Просмотр промокода")

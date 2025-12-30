@@ -5,25 +5,12 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
 import logging
 
-from bot.flask_admin.model_view.promo import PromocodeAdmin
+from bot.flask_admin.model_view.promo import PromocodeModelView
 
 logger = logging.getLogger(__name__)
 
 from bot.config import settings
-from bot.db.models import (
-    User,
-    UserGroup,
-    UserInGroup,
-    Promocode,
-    PromocodeServiceQuantity,
-    UserPromocode,
-    UserPromocodeService,
-    MessageForNew,
-    AnalizePayment,
-    AnalizePaymentServiceQuantity,
-    UserAnalizePayment,
-    UserAnalizePaymentService,
-)
+
 
 # === СИНХРОННАЯ БД ДЛЯ FLASK-APPBUILDER ===
 db = SQLAlchemy()
@@ -78,9 +65,12 @@ def register_models(appbuilder, db):
     """Регистрация моделей в админ-панели"""
 
     appbuilder.add_view(
-        PromocodeAdmin, "Промокоды", icon="fa-ticket", category="Промокоды"
+        PromocodeModelView,
+        "Промокоды",
+        icon="fa-tag",
+        category="Управление",
+        category_icon="fa-cogs",
     )
-
 
 def create_app_for_flask_cli():
     """Helper factory for Flask CLI: returns only the Flask app object."""
