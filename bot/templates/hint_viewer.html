@@ -717,7 +717,7 @@
                     playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                     let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                     console.log('currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox"><div id="black-pips" class="pips-above-board">0</div></div>';
+                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox"><input type="checkbox" id="hidePipsCheckbox"><div id="black-pips" class="pips-above-board">0</div></div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
                     if (hideInfoCheckbox) {
@@ -845,6 +845,18 @@
                             }
                             hideInfoCheckbox.addEventListener('change', () => {
                                 localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                            });
+                        }
+
+                        const hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
+                        if (hidePipsCheckbox) {
+                            const savedState = localStorage.getItem('hidePipsCheckbox');
+                            if (savedState === 'true') {
+                                hidePipsCheckbox.checked = true;
+                            }
+                            hidePipsCheckbox.addEventListener('change', () => {
+                                localStorage.setItem('hidePipsCheckbox', hidePipsCheckbox.checked);
+                                render(current, invertColors);
                             });
                         }
 
@@ -1531,6 +1543,8 @@
                 return;
             }
 
+            const hidePips = hidePipsCheckbox && hidePipsCheckbox.checked;
+
             current = turn;
             updateCurrentCube(turn);
             document.getElementById('turnLabel').innerText = `${data[turn].turn || 'End'}`;
@@ -1565,38 +1579,47 @@
             const redPips = calculatePips(redPositions, 'red', invertColors);
             const blackPips = calculatePips(blackPositions, 'black', invertColors);
 
-            if (invertColors) {
-                document.getElementById('black-pips').innerText = `${redPips}`;
-                document.getElementById('red-pips').innerText = `${blackPips}`;
-                document.getElementById('black-pips').className = 'pips-above-board-inverted';
-                document.getElementById('red-pips').className = 'pips-below-board-inverted';
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(650, 800, 150, 50);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${redPips}`, 725, -20);
+            if (!hidePips) {
+                if (invertColors) {
+                    document.getElementById('black-pips').innerText = `${redPips}`;
+                    document.getElementById('red-pips').innerText = `${blackPips}`;
+                    document.getElementById('black-pips').className = 'pips-above-board-inverted';
+                    document.getElementById('red-pips').className = 'pips-below-board-inverted';
+                    document.getElementById('black-pips').style.display = 'block';
+                    document.getElementById('red-pips').style.display = 'block';
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(650, 800, 150, 50);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${redPips}`, 725, -20);
 
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(650, -50, 150, 50);
-                ctx.fillStyle = '#000000';
-                ctx.fillText(`${blackPips}`, 725, 830);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(650, -50, 150, 50);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillText(`${blackPips}`, 725, 830);
+                } else {
+                    document.getElementById('black-pips').innerText = `${blackPips}`;
+                    document.getElementById('red-pips').innerText = `${redPips}`;
+                    document.getElementById('black-pips').className = 'pips-above-board';
+                    document.getElementById('red-pips').className = 'pips-below-board';
+                    document.getElementById('black-pips').style.display = 'block';
+                    document.getElementById('red-pips').style.display = 'block';
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(650, -50, 150, 50);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${blackPips}`, 725, -20);
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(650, 800, 150, 50);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillText(`${redPips}`, 725, 830);
+                }
             } else {
-                document.getElementById('black-pips').innerText = `${blackPips}`;
-                document.getElementById('red-pips').innerText = `${redPips}`;
-                document.getElementById('black-pips').className = 'pips-above-board';
-                document.getElementById('red-pips').className = 'pips-below-board';
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(650, -50, 150, 50);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${blackPips}`, 725, -20);
-
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(650, 800, 150, 50);
-                ctx.fillStyle = '#000000';
-                ctx.fillText(`${redPips}`, 725, 830);
+                document.getElementById('black-pips').style.display = 'none';
+                document.getElementById('red-pips').style.display = 'none';
             }
 
 
@@ -2438,6 +2461,10 @@
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
+            const blackPips = document.getElementById('black-pips');
+            const redPips = document.getElementById('red-pips');
+            const originalBlackPipsDisplay = blackPips ? blackPips.style.display : 'none';
+            const originalRedPipsDisplay = redPips ? redPips.style.display : 'none';
 
             function restoreControls() {
                 controls.style.display = originalControlsDisplay;
@@ -2459,6 +2486,10 @@
                     matchInfo.innerHTML = originalMatchInfoHTML;
                 }
                 if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
+                if (blackPips) blackPips.style.display = originalBlackPipsDisplay;
+                if (redPips) redPips.style.display = originalRedPipsDisplay;
+                if (blackPips) blackPips.style.display = originalBlackPipsDisplay;
+                if (redPips) redPips.style.display = originalRedPipsDisplay;
             }
 
             controls.style.display = 'none';
@@ -2478,6 +2509,16 @@
                     matchInfo.innerHTML = `<div style="position: relative;"><span style="position: absolute; left: 0;">Матч до ${matchLength}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
                 }
                 if (gameSelect) gameSelect.style.display = 'none';
+            }
+
+            if (hidePipsCheckbox && hidePipsCheckbox.checked) {
+                if (blackPips) blackPips.style.display = 'none';
+                if (redPips) redPips.style.display = 'none';
+            }
+
+            if (hidePipsCheckbox && hidePipsCheckbox.checked) {
+                if (blackPips) blackPips.style.display = 'none';
+                if (redPips) redPips.style.display = 'none';
             }
 
             html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
