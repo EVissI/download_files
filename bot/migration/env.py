@@ -6,8 +6,19 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from bot.config import settings
 from bot.db.database import Base
-from bot.db.models import User, Analysis,AnalizePayment,AnalizePaymentServiceQuantity,DetailedAnalysis,\
-PromocodeServiceQuantity,UserAnalizePayment,UserAnalizePaymentService,UserPromocodeService,UserPromocode,Promocode
+from bot.db.models import (
+    User,
+    Analysis,
+    AnalizePayment,
+    AnalizePaymentServiceQuantity,
+    DetailedAnalysis,
+    PromocodeServiceQuantity,
+    UserAnalizePayment,
+    UserAnalizePaymentService,
+    UserPromocodeService,
+    UserPromocode,
+    Promocode,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DB_URL)
@@ -16,6 +27,17 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    """
+    Функция для исключения таблиц Flask-AppBuilder из миграций Alembic.
+    Исключаем таблицы, начинающиеся с 'ab_', которые создаются автоматически.
+    """
+    if type_ == "table" and name.startswith("ab_"):
+        return False
+    return True
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -35,6 +57,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():

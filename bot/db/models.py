@@ -130,7 +130,7 @@ class Promocode(Base):
     code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     max_usage: Mapped[Optional[int]] = mapped_column(Integer, default=None)
-    activate_count: Mapped[Optional[int]] = mapped_column(Integer, default=None)
+    activate_count: Mapped[Optional[int]] = mapped_column(Integer, default=0, server_default='0')
     duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
 
     services: Mapped[list["PromocodeServiceQuantity"]] = relationship(

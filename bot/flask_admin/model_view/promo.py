@@ -76,7 +76,7 @@ class PromocodeModelView(ModelView):
         "duration_days": _("Пусто = бессрочно"),
     }
 
-    # Устанавливаем значение по умолчанию для activate_count при создании
+
     form_defaults = {
         "activate_count": 0,
     }
