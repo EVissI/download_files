@@ -20,7 +20,7 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     list_columns = ["service_type", "quantity"]
     form_columns = ["service_type", "quantity"]
 
-
+    form_title  = 'Услуги'
     add_exclude_columns = ["created_at", "updated_at"]
     edit_exclude_columns = ["created_at", "updated_at"]
     page_size = 50
@@ -38,10 +38,11 @@ class PromocodeModelView(ModelView):
         "duration_days_display",
         "services_summary",
     ]
-    
+
     label_columns = {'code':'Название',
                      'is_active':'Активен?',
-                     'max_usage_display':'Кол-во использований',
+                     'max_usage_display':'Макс использований',
+                     'activate_count_display':'Кол-во использований',
                      'duration_days_display':'Длительность',
                      'services_summary':'Услуги',}
     
