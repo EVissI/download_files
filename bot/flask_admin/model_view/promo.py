@@ -39,7 +39,6 @@ class PromocodeAdmin(ModelView):
         "max_usage",
         "activate_count",
         "duration_days",
-        "services",
     ]
 
     # Ключевой фикс: inline_models как dict с inline_type tabular для создания новых записей
