@@ -485,6 +485,9 @@ async def handle_show_stats(
                 game_id=game_id,
             )
 
+            # Update mat_path in Redis with the new file path
+            await redis_client.set(f"mat_path:{game_id}", new_file_path, expire=7200)
+
             keyboard = InlineKeyboardBuilder()
             for player in player_names:
                 keyboard.button(text=player, callback_data=f"hint_player:{player}")
@@ -495,6 +498,8 @@ async def handle_show_stats(
             )
         else:
             formatted_analysis, new_file_path = result
+            # Update mat_path in Redis with the new file path
+            await redis_client.set(f"mat_path:{game_id}", new_file_path, expire=7200)
             await callback.message.answer(
                 f"{formatted_analysis}\n\n",
                 parse_mode="HTML",
