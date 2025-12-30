@@ -9,8 +9,7 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     """Инлайн-вьюха для услуг — именно с CompactCRUDMixin для компактного CRUD на одной странице"""
 
     datamodel = SQLAInterface(PromocodeServiceQuantity)
-
-    # Разрешаем все операции
+    list_title = "Услуги"
     can_create = True
     can_edit = True
     can_delete = True
@@ -20,6 +19,8 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     list_columns = ["service_type", "quantity"]
     form_columns = ["service_type", "quantity"]
 
+    label_columns = {'service_type':'Сервис',
+                     'quantity':'Кол-во',}
     add_exclude_columns = ["created_at", "updated_at"]
     edit_exclude_columns = ["created_at", "updated_at"]
     page_size = 50
