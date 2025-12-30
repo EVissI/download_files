@@ -64,7 +64,7 @@ def create_app():
 def register_models(appbuilder, db):
     """Регистрация моделей в админ-панели"""
     
-    appbuilder.add_view_no_menu(PromocodeServiceQuantityInline)
+    appbuilder.add_view_no_menu(PromocodeServiceQuantityInline, 'Услуги')
     appbuilder.add_view(
         PromocodeModelView,
         "Промокоды",
