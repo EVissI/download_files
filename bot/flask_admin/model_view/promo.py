@@ -54,6 +54,7 @@ class PromocodeModelView(ModelView):
         "services_summary",
     ]
 
+    # Убираем activate_count из форм добавления и редактирования
     add_columns = edit_columns = show_columns = [
         "code",
         "is_active",
@@ -76,15 +77,10 @@ class PromocodeModelView(ModelView):
         "duration_days": _("Пусто = бессрочно"),
     }
 
+    # Удаляем form_defaults — он больше не нужен
 
-    form_defaults = {
-        "activate_count": 0,
-    }
-
-    # Вот ключевой момент: related_views вместо inline_models
     related_views = [PromocodeServiceQuantityInline]
 
-    # Сводка услуг в списке
     column_formatters = {
         "services_summary": lambda v, c, m, n: (
             ", ".join(str(s) for s in m.services) if m.services else "-"
@@ -93,6 +89,8 @@ class PromocodeModelView(ModelView):
         "duration_days": lambda v, c, m, n: (
             "∞" if m.duration_days is None else m.duration_days
         ),
+        # Можно также отформатировать activate_count, если хочешь
+        "activate_count": lambda v, c, m, n: str(m.activate_count or 0),
     }
 
     column_filters = ["is_active"]
@@ -102,12 +100,19 @@ class PromocodeModelView(ModelView):
     add_title = edit_title = _("Редактировать промокод")
     show_title = _("Просмотр промокода")
 
+    # Автоматически устанавливаем activate_count = 0 при создании
+    def pre_add(self, item):
+        item.activate_count = 0
+        return super().pre_add(item)
+
+    # На всякий случай — если вдруг кто-то обошёл pre_add
     def post_add(self, item):
-        """После создания промокода сохраняем ID для перенаправления"""
+        if item.activate_count is None:
+            item.activate_count = 0
+            self.datamodel.session.commit()
         self._last_added_id = item.id
 
     def post_add_redirect(self):
-        """Перенаправляем на редактирование созданного промокода"""
         if hasattr(self, "_last_added_id"):
             url = url_for(f"{self.endpoint}.edit", pk=self._last_added_id)
             delattr(self, "_last_added_id")
