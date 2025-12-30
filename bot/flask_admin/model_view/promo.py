@@ -35,6 +35,7 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
         "quantity": lambda v, c, m, p: (
             "∞" if m.quantity is None or m.quantity <= 0 else str(m.quantity)
         ),
+        
     }
     add_exclude_columns = ["created_at", "updated_at"]
     edit_exclude_columns = ["created_at", "updated_at"]
@@ -51,7 +52,7 @@ class PromocodeModelView(ModelView):
         "max_usage",
         "activate_count",
         "duration_days",
-        "services_summary",  # оставляем имя колонки
+        "services_summary",
     ]
 
     add_columns = edit_columns = show_columns = [
@@ -69,7 +70,7 @@ class PromocodeModelView(ModelView):
         "max_usage": _("Макс. использований"),
         "activate_count": _("Использовано раз"),
         "duration_days": _("Длительность (дней)"),
-        "services_summary": _("Услуги"),  # обязательно указать метку
+        "services_summary": _("Услуги"),
     }
 
     column_descriptions = {
@@ -79,21 +80,28 @@ class PromocodeModelView(ModelView):
 
     related_views = [PromocodeServiceQuantityInline]
 
-    # Самый надёжный способ — переопределить get_list_query с joinedload
+    # Обязательно подгружаем услуги
     def get_query(self):
         return super().get_query().options(joinedload(Promocode.services))
 
     def get_count_query(self):
         return super().get_count_query().options(joinedload(Promocode.services))
 
-    # Альтернатива: кастомный метод для колонки
-    def _services_summary_formatter(self, context, model, name):
+    # УБИРАЕМ column_formatters для services_summary
+    # Вместо этого используем label_columns + метод с префиксом _label_
+
+    def _label_services_summary(self, model):
+        """Метод, автоматически вызываемый FAB для виртуальной колонки"""
         if not model.services:
             return "—"
-        return ", ".join(str(service) for service in model.services)
+        return ", ".join(str(s) for s in model.services)
 
+    label_columns = {
+        "services_summary": _label_services_summary,
+    }
+
+    # Оставляем только остальные форматтеры
     column_formatters = {
-        "services_summary": _services_summary_formatter,
         "max_usage": lambda v, c, m, n: "∞" if m.max_usage is None else str(m.max_usage),
         "duration_days": lambda v, c, m, n: "∞" if m.duration_days is None else str(m.duration_days),
         "activate_count": lambda v, c, m, n: str(m.activate_count or 0),
