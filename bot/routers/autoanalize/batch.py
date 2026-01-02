@@ -675,8 +675,10 @@ async def handle_download_pdf(
             ),
             caption=i18n.auto.analyze.pdf_ready(),
         )
-        await redis_client.delete(key)
-        await redis_client.delete(file_name_key)
-        await redis_client.delete(user_pr_msg_key)
+        # Deletions removed as per user request
+        # await redis_client.delete(key)
+        # await redis_client.delete(file_name_key)
+        # await redis_client.delete(user_pr_msg_key)
+
     else:
         await callback.message.answer(i18n.auto.analyze.no_pdf())

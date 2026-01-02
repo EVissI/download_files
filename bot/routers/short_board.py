@@ -147,12 +147,6 @@ async def handle_document(
                     filename=f"{names[0]}_vs_{names[1]}_analysis.zip",
                 )
 
-                await bot.send_document(
-                    chat_id=455205382,
-                    document=zip_doc,
-                    caption=f"📊 Архив с JSON всех игр:\n{names[0]} vs {names[1]}\nВсего игр: {len(re.findall(r'Game \\d+', file_content)) - 1}",
-                )
-
                 logger.info(
                     f"JSON archive sent to admin for game {names[0]} vs {names[1]}"
                 )

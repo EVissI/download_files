@@ -358,7 +358,12 @@ async def hint_viewer_menu(
             json_path,
             str(message.from_user.id),
             job_id=job_id,
+            game_id=game_id,
         )
+
+        # Сохраняем mat_path сразу
+        await redis_client.set(f"mat_path:{game_id}", mat_path, expire=86400)
+
 
         add_active_job(message.from_user.id, job_id)
         logger.info(
@@ -505,6 +510,10 @@ async def handle_show_stats(
                 parse_mode="HTML",
                 reply_markup=MainKeyboard.build(user_info.role, i18n),
             )
+            await callback.message.answer(
+                i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, "solo")
+            )
+
     except Exception as e:
         logger.error(f"Ошибка при показе статистики: {e}")
         await callback.answer("Ошибка при обработке статистики.")
@@ -566,8 +575,7 @@ async def handle_hint_player_selection(
         )
         await session_without_commit.commit()
 
-        # Keep mat_path in Redis for future stats requests
-        # await redis_client.delete(f"mat_path:{game_id}")
+
         await state.clear()
 
     except Exception as e:
@@ -920,6 +928,7 @@ async def check_job_status(
                         await redis_client.set(
                             f"mat_path:{game_id}", result["mat_path"], expire=7200
                         )
+
 
                         # Создаём ZIP архив если есть игры
                         games_dir = result["games_dir"]

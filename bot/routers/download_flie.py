@@ -212,7 +212,9 @@ async def handle_player_selection(
         await dao.add(SAnalysis(**db_analysis_data))
 
         # Очищаем Redis после успешной записи
-        await redis_client.delete(redis_key)
+        # Deletion removed as per user request
+        # await redis_client.delete(redis_key)
+
         logger.info(f"Анализ {analysis_id} успешно сохранен для пользователя {user_id}")
 
         await callback.message.answer(

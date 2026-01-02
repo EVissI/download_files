@@ -49,7 +49,8 @@ logger.info(f"Redis URL: redis://<user>:<pass>@{REDIS_HOST}:{REDIS_PORT}/{REDIS_
 redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 
-def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
+def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str, game_id: str = None):
+
     """
     Анализирует один .mat файл (запускается в worker-е).
 
@@ -65,6 +66,11 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str):
         logger.info(f"[Job Start] mat_path={mat_path}, user_id={user_id}")
 
         process_mat_file(mat_path, json_path, user_id)
+
+        if game_id:
+            from bot.db.redis import sync_redis_client
+            sync_redis_client.set(f"mat_path:{game_id}", mat_path, ex=86400)
+
 
         # Проверяем что результат создан
         games_dir = json_path.rsplit(".", 1)[0] + "_games"
