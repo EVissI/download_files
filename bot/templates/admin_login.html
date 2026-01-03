@@ -26,13 +26,39 @@
         }
     </style>
     <script>
-        window.onload = function () {
-            Telegram.WebApp.ready();
-            const initData = Telegram.WebApp.initData;
-            if (!initData) {
-                document.getElementById('status').innerText = 'Ошибка: открыто не из Telegram.';
-                return;
+        function initializeApp() {
+            try {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
+
+                const initData = Telegram.WebApp.initData;
+                const statusElement = document.getElementById('status');
+
+                if (!initData) {
+                    // Try to wait a bit, sometimes it's not ready immediately
+                    statusElement.innerText = 'Ожидание данных от Telegram...';
+                    setTimeout(() => {
+                        const retryData = Telegram.WebApp.initData;
+                        if (!retryData) {
+                            statusElement.innerText = 'Ошибка: данные Telegram не найдены. Убедитесь, что вы открыли приложение через кнопку в боте.';
+                            console.error('Telegram WebApp initData is empty');
+                        } else {
+                            verifyData(retryData);
+                        }
+                    }, 500);
+                    return;
+                }
+
+                verifyData(initData);
+            } catch (e) {
+                document.getElementById('status').innerText = 'Ошибка инициализации: ' + e.message;
             }
+        }
+
+        function verifyData(initData) {
+            const statusElement = document.getElementById('status');
+            statusElement.innerText = 'Проверка доступа...';
+
             fetch('/admin/verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -40,14 +66,23 @@
             }).then(async response => {
                 const data = await response.json();
                 if (response.ok) {
+                    statusElement.innerText = 'Успешно! Перенаправление...';
                     window.location.href = '/admin/';
                 } else {
-                    document.getElementById('status').innerText = 'Ошибка: ' + (data.detail || 'Доступ запрещен');
+                    statusElement.innerText = 'Доступ запрещен: ' + (data.detail || 'Неизвестная ошибка');
                 }
             }).catch(err => {
-                document.getElementById('status').innerText = 'Ошибка сети';
+                statusElement.innerText = 'Ошибка сети при проверке';
+                console.error('Verify error:', err);
             });
-        };
+        }
+
+        // Вызываем сразу, скрипт загружен синхронно
+        if (window.Telegram && window.Telegram.WebApp) {
+            initializeApp();
+        } else {
+            window.onload = initializeApp;
+        }
     </script>
 </head>
 
