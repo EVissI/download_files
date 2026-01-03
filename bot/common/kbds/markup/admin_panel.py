@@ -26,11 +26,7 @@ class AdminKeyboard:
             if key == 'back':
                 continue
             kb.add(KeyboardButton(text=text))
-        
-        # Keep web_app button in reply KB as well
-        admin_url = f"{settings.MINI_APP_URL}/admin/login"
-        kb.add(KeyboardButton(text="🖥 Админ-панель (Web)", web_app=WebAppInfo(url=admin_url)))
-        
+    
         kb.add(KeyboardButton(text=AdminKeyboard.admin_text_kb['back']))
         
         kb.adjust(2, 2, 2, 1, 1, 1)
