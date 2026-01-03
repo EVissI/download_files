@@ -44,7 +44,11 @@ async def handle_admin_panel(message: Message, state: FSMContext):
     Handles the admin panel command from the main keyboard.
     """
     await message.answer(
-        message.text,
+        "Выберите раздел или используйте кнопку ниже для входа в веб-админку:",
+        reply_markup=AdminKeyboard.get_inline_admin_web()
+    )
+    await message.answer(
+        "Разделы управления:",
         reply_markup=AdminKeyboard.build()
     )
     await state.set_state(GeneralStates.admin_panel)

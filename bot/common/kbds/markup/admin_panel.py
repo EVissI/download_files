@@ -1,5 +1,5 @@
-﻿from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
+﻿from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from bot.config import settings
 
 
@@ -27,7 +27,7 @@ class AdminKeyboard:
                 continue
             kb.add(KeyboardButton(text=text))
         
-        # Add WebApp button for Admin Panel
+        # Keep web_app button in reply KB as well
         admin_url = f"{settings.MINI_APP_URL}/admin/login"
         kb.add(KeyboardButton(text="🖥 Админ-панель (Web)", web_app=WebAppInfo(url=admin_url)))
         
@@ -35,3 +35,10 @@ class AdminKeyboard:
         
         kb.adjust(2, 2, 2, 1, 1, 1)
         return kb.as_markup(resize_keyboard=True)
+
+    @staticmethod
+    def get_inline_admin_web() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        admin_url = f"{settings.MINI_APP_URL}/admin/login"
+        kb.button(text="🚀 Войти в Админ-панель", web_app=WebAppInfo(url=admin_url))
+        return kb.as_markup()
