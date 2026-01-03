@@ -37,19 +37,19 @@ class User(Base):
         String(5), default=Role.USER.value, nullable=False
     )
     user_game_analisis: Mapped[list["Analysis"]] = relationship(
-        "Analysis", back_populates="user"
+        "Analysis", back_populates="user", cascade="all, delete-orphan"
     )
     detailed_analyzes: Mapped[list["DetailedAnalysis"]] = relationship(
-        "DetailedAnalysis", back_populates="user"
+        "DetailedAnalysis", back_populates="user", cascade="all, delete-orphan"
     )
     used_promocodes: Mapped[list["UserPromocode"]] = relationship(
-        "UserPromocode", back_populates="user"
+        "UserPromocode", back_populates="user", cascade="all, delete-orphan"
     )
     analize_payments_assoc: Mapped[list["UserAnalizePayment"]] = relationship(
-        "UserAnalizePayment", back_populates="user"
+        "UserAnalizePayment", back_populates="user", cascade="all, delete-orphan"
     )
     broadcasts: Mapped[list["Broadcast"]] = relationship(
-        "Broadcast", back_populates="user"
+        "Broadcast", back_populates="user", cascade="all, delete-orphan"
     )
     groups: Mapped[list["UserInGroup"]] = relationship(
         "UserInGroup",
@@ -140,7 +140,7 @@ class Promocode(Base):
     )
 
     users: Mapped[list["UserPromocode"]] = relationship(
-        "UserPromocode", back_populates="promocode"
+        "UserPromocode", back_populates="promocode", cascade="all, delete-orphan"
     )
     
     @property
@@ -295,7 +295,7 @@ class AnalizePayment(Base):
         cascade="all, delete-orphan",
     )
     users_assoc: Mapped[list["UserAnalizePayment"]] = relationship(
-        "UserAnalizePayment", back_populates="analize_payment"
+        "UserAnalizePayment", back_populates="analize_payment", cascade="all, delete-orphan"
     )
 
     @property
