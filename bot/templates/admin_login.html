@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: #f0f2f5;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+    </style>
+    <script>
+        window.onload = function () {
+            Telegram.WebApp.ready();
+            const initData = Telegram.WebApp.initData;
+            if (!initData) {
+                document.getElementById('status').innerText = 'Ошибка: открыто не из Telegram.';
+                return;
+            }
+            fetch('/admin/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData: initData })
+            }).then(async response => {
+                const data = await response.json();
+                if (response.ok) {
+                    window.location.href = '/admin/';
+                } else {
+                    document.getElementById('status').innerText = 'Ошибка: ' + (data.detail || 'Доступ запрещен');
+                }
+            }).catch(err => {
+                document.getElementById('status').innerText = 'Ошибка сети';
+            });
+        };
+    </script>
+</head>
+
+<body>
+    <div class="card">
+        <h2 id="status">Авторизация...</h2>
+    </div>
+</body>
+
+</html>

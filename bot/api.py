@@ -1,12 +1,17 @@
-﻿from fastapi import FastAPI
+﻿from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.wsgi import WSGIMiddleware
+import secrets
 
 from bot.routers.hint_viewer_router import hint_viewer_api_router
 from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
+from bot.common.utils.tg_auth import verify_telegram_webapp_data
+from bot.config import settings
+from bot.db.redis import redis_client
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -30,12 +35,67 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def admin_security_middleware(request: Request, call_next):
+    if request.url.path.startswith("/admin"):
+        # Allow login and verify bypass
+        if request.url.path in ["/admin/login", "/admin/verify"]:
+            return await call_next(request)
+        
+        session_token = request.cookies.get("admin_session")
+        if not session_token:
+            return Response("Unauthorized", status_code=401)
+        
+        admin_id = await redis_client.get(f"admin_session:{session_token}")
+        if not admin_id:
+            return Response("Unauthorized", status_code=401)
+            
+    return await call_next(request)
+
+
 app.mount("/static", NoCacheStaticFiles(directory="bot/static"), name="static")
 templates = Jinja2Templates(directory="bot/templates")
 
 # Include routers
 app.include_router(hint_viewer_api_router, prefix="")
 app.include_router(short_board_api_router, prefix="")
+
+
+@app.get("/admin/login", response_class=HTMLResponse)
+async def admin_login(request: Request):
+    return templates.TemplateResponse("admin_login.html", {"request": request})
+
+
+@app.post("/admin/verify")
+async def admin_verify(request: Request, response: Response):
+    data = await request.json()
+    init_data = data.get("initData")
+    if not init_data:
+        raise HTTPException(status_code=400, detail="Missing initData")
+    
+    user_data = verify_telegram_webapp_data(init_data)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Invalid Telegram data")
+    
+    user_id = user_data.get("user", {}).get("id")
+    if user_id not in settings.ROOT_ADMIN_IDS:
+        raise HTTPException(status_code=403, detail="Not an admin")
+    
+    # Create session
+    session_token = secrets.token_urlsafe(32)
+    # Store session in redis
+    await redis_client.set(f"admin_session:{session_token}", str(user_id), expire=86400) # 24h
+    
+    response.set_cookie(
+        key="admin_session",
+        value=session_token,
+        httponly=True,
+        samesite="lax",
+        max_age=86400
+    )
+    return {"status": "ok"}
+
 
 flask_app, _ = create_app()
 app.mount("/admin", WSGIMiddleware(flask_app))

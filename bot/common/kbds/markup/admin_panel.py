@@ -1,5 +1,6 @@
-﻿from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+﻿from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from bot.config import settings
 
 
 class AdminKeyboard:
@@ -21,9 +22,16 @@ class AdminKeyboard:
     @staticmethod
     def build() -> ReplyKeyboardMarkup:
         kb = ReplyKeyboardBuilder()
-        for text in AdminKeyboard.get_kb_text().values():
-            kb.add(
-                KeyboardButton(text=text)
-            )
-        kb.adjust(2,2,2,1,1,1)
+        for key, text in AdminKeyboard.admin_text_kb.items():
+            if key == 'back':
+                continue
+            kb.add(KeyboardButton(text=text))
+        
+        # Add WebApp button for Admin Panel
+        admin_url = f"{settings.MINI_APP_URL}/admin/login"
+        kb.add(KeyboardButton(text="🖥 Админ-панель (Web)", web_app=WebAppInfo(url=admin_url)))
+        
+        kb.add(KeyboardButton(text=AdminKeyboard.admin_text_kb['back']))
+        
+        kb.adjust(2, 2, 2, 1, 1, 1)
         return kb.as_markup(resize_keyboard=True)
