@@ -23,72 +23,102 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             text-align: center;
+            max-width: 90%;
+        }
+
+        #status {
+            word-break: break-all;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .debug-info {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 1rem;
+            text-align: left;
+            background: #eee;
+            padding: 0.5rem;
+            border-radius: 4px;
+            display: none;
         }
     </style>
     <script>
         function initializeApp() {
             try {
+                const statusElement = document.getElementById('status');
+                statusElement.innerText = 'Запуск Telegram WebApp...';
+
                 Telegram.WebApp.ready();
                 Telegram.WebApp.expand();
 
                 const initData = Telegram.WebApp.initData;
-                const statusElement = document.getElementById('status');
 
                 if (!initData) {
-                    // Try to wait a bit, sometimes it's not ready immediately
-                    statusElement.innerText = 'Ожидание данных от Telegram...';
+                    statusElement.innerText = 'Ожидание initData...';
                     setTimeout(() => {
                         const retryData = Telegram.WebApp.initData;
                         if (!retryData) {
-                            statusElement.innerText = 'Ошибка: данные Telegram не найдены. Убедитесь, что вы открыли приложение через кнопку в боте.';
-                            console.error('Telegram WebApp initData is empty');
+                            statusElement.innerText = 'Ошибка: данные Telegram не найдены. Убедитесь, что кнопка в боте настроена правильно.';
                         } else {
                             verifyData(retryData);
                         }
-                    }, 500);
+                    }, 1000);
                     return;
                 }
 
                 verifyData(initData);
             } catch (e) {
-                document.getElementById('status').innerText = 'Ошибка инициализации: ' + e.message;
+                document.getElementById('status').innerText = 'Ошибка: ' + e.message;
             }
         }
 
         function verifyData(initData) {
             const statusElement = document.getElementById('status');
-            statusElement.innerText = 'Проверка доступа...';
+            const debugElement = document.getElementById('debug');
+            statusElement.innerText = 'Проверка доступа (запрос к серверу)...';
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             fetch('/admin/verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: initData })
+                body: JSON.stringify({ initData: initData }),
+                signal: controller.signal
             }).then(async response => {
-                const data = await response.json();
+                clearTimeout(timeoutId);
+                const data = await response.json().catch(() => ({ detail: 'Ошибка парсинга ответа' }));
+
                 if (response.ok) {
-                    statusElement.innerText = 'Успешно! Перенаправление...';
+                    statusElement.innerText = 'Успешно! Входим...';
                     window.location.href = '/admin/';
                 } else {
-                    statusElement.innerText = 'Доступ запрещен: ' + (data.detail || 'Неизвестная ошибка');
+                    statusElement.innerText = 'Доступ запрещен (' + response.status + '): ' + (data.detail || 'Неизвестная ошибка');
+                    debugElement.style.display = 'block';
+                    debugElement.innerText = JSON.stringify(data);
                 }
             }).catch(err => {
-                statusElement.innerText = 'Ошибка сети при проверке';
-                console.error('Verify error:', err);
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') {
+                    statusElement.innerText = 'Таймаут запроса. Сервер не отвечает за 15 секунд.';
+                } else {
+                    statusElement.innerText = 'Ошибка подключения к серверу.';
+                }
+                console.error('Fetch error:', err);
+                debugElement.style.display = 'block';
+                debugElement.innerText = err.toString();
             });
         }
 
-        // Вызываем сразу, скрипт загружен синхронно
-        if (window.Telegram && window.Telegram.WebApp) {
-            initializeApp();
-        } else {
-            window.onload = initializeApp;
-        }
+        window.onload = initializeApp;
     </script>
 </head>
 
 <body>
     <div class="card">
-        <h2 id="status">Авторизация...</h2>
+        <h2 id="status">Подготовка...</h2>
+        <div id="debug" class="debug-info"></div>
     </div>
 </body>
 
