@@ -76,6 +76,14 @@ class RedisClient:
         result = await self.redis.delete(key)
         return bool(result)
 
+    async def incr(self, key: str, amount: int = 1):
+        await self.ensure_connection()
+        return await self.redis.incr(key, amount)
+
+    async def ttl(self, key: str):
+        await self.ensure_connection()
+        return await self.redis.ttl(key)
+
     def ping(self):
         """Sync метод для проверки соединения"""
         return self.redis.ping() if self.redis else False
