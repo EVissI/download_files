@@ -16,16 +16,6 @@ from loguru import logger
 import traceback
 import json
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Global exception caught: {exc}")
-    logger.error(traceback.format_exc())
-    return Response(
-        content=json.dumps({"detail": str(exc), "traceback": traceback.format_exc()}),
-        status_code=500,
-        media_type="application/json"
-    )
-
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -40,6 +30,15 @@ class NoCacheStaticFiles(StaticFiles):
 
 app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global exception caught: {exc}")
+    logger.error(traceback.format_exc())
+    return Response(
+        content=json.dumps({"detail": str(exc), "traceback": traceback.format_exc()}),
+        status_code=500,
+        media_type="application/json"
+    )
 # CORS middleware for web app integration
 app.add_middleware(
     CORSMiddleware,
