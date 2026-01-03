@@ -21,8 +21,8 @@ db = SQLAlchemy()
 
 class CustomIndexView(IndexView):
     """Кастомная главная страница"""
-
     title = "Dashboard"
+    template = "admin_index.html"
 
 
 def create_app():
