@@ -564,6 +564,86 @@
                 opacity: 0.3;
             }
         }
+
+        /* Support Button and Modal */
+        #supportBtn {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 60px;
+            height: 60px;
+            padding: 0;
+            color: transparent;
+            background-color: transparent;
+            border: none;
+            margin: 20px auto;
+            display: block;
+            cursor: pointer;
+        }
+
+        #supportBtn:hover {
+            opacity: 0.8;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 20000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            background-color: #2d2d2d;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            color: white;
+            text-align: left;
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: #007bff;
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            height: 100px;
+            background-color: #1a1a1a;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-footer button {
+            padding: 8px 16px;
+        }
+
+        .cancel-btn {
+            background-color: #6c757d;
+        }
+
+        .cancel-btn:hover {
+            background-color: #5a6268;
+        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -605,6 +685,10 @@
             }
             if (screenUploadBtn) {
                 screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.png?t=" + Date.now() + "')";
+            }
+            const supportBtn = document.getElementById('supportBtn');
+            if (supportBtn) {
+                supportBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
             }
         });
     </script>
@@ -650,6 +734,20 @@
             <label><input type="checkbox" id="hidePipsCheckbox"> Убрать отображение пипсов</label>
             <label>Скорость анимации: <input type="range" id="animationSpeedSlider" min="0.1" max="2" step="0.1"
                     value="0.5"></label>
+        </div>
+
+        <button id="supportBtn" onclick="openSupportModal()" title="Техподержка"></button>
+
+        <div id="supportModal" class="modal">
+            <div class="modal-content">
+                <h2>Техническая поддержка</h2>
+                <p>Опишите проблему, с которой вы столкнулись:</p>
+                <textarea id="supportText" placeholder="Введите текст сообщения..."></textarea>
+                <div class="modal-footer">
+                    <button class="cancel-btn" onclick="closeSupportModal()">Отмена</button>
+                    <button id="sendSupportBtn" onclick="sendToSupport()">Отправить</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2753,6 +2851,70 @@
         // Если документ уже загружен
         if (document.readyState === 'complete') {
             createSnowflakes();
+        }
+
+        function openSupportModal() {
+            document.getElementById('supportModal').style.display = 'block';
+            document.getElementById('supportText').value = '';
+        }
+
+        function closeSupportModal() {
+            document.getElementById('supportModal').style.display = 'none';
+        }
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('supportModal');
+            if (event.target == modal) {
+                closeSupportModal();
+            }
+        }
+
+        function sendToSupport() {
+            const text = document.getElementById('supportText').value;
+            if (!text.trim()) {
+                alert('Пожалуйста, введите описание проблемы');
+                return;
+            }
+
+            const sendBtn = document.getElementById('sendSupportBtn');
+            const originalBtnText = sendBtn.innerText;
+            sendBtn.disabled = true;
+            sendBtn.innerText = 'Отправка...';
+
+            html2canvas(document.body, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#1a1a1a'
+            }).then(canvas => {
+                canvas.toBlob(blob => {
+                    const formData = new FormData();
+                    formData.append('photo', blob);
+                    formData.append('text', text);
+
+                    fetch('/api/send_to_support', {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => {
+                        if (response.ok) {
+                            showFadingMessage('Сообщение отправлено в техподдержку');
+                            closeSupportModal();
+                        } else {
+                            alert('Ошибка при отправке сообщения');
+                        }
+                    }).catch(error => {
+                        console.error('Error sending to support:', error);
+                        alert('Ошибка при отправке сообщения');
+                    }).finally(() => {
+                        sendBtn.disabled = false;
+                        sendBtn.innerText = originalBtnText;
+                    });
+                });
+            }).catch(error => {
+                console.error('Error creating screenshot:', error);
+                alert('Ошибка при создании скриншота');
+                sendBtn.disabled = false;
+                sendBtn.innerText = originalBtnText;
+            });
         }
     </script>
 </body>

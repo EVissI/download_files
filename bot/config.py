@@ -65,6 +65,7 @@ bot = Bot(
     token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 admins = settings.ROOT_ADMIN_IDS
+SUPPORT_TG_ID = 455205382
 
 jobstores = {
     'default': SQLAlchemyJobStore(url=settings.DB_URL_SYNC)

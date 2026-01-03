@@ -694,6 +694,43 @@ async def send_screenshot(request: Request):
         raise HTTPException(status_code=500, detail="Error sending screenshot")
 
 
+@hint_viewer_api_router.post("/api/send_to_support")
+async def send_to_support(request: Request):
+    """
+    Принимает скриншот и описание проблемы, отправляет в техподдержку.
+    """
+    try:
+        form_data = await request.form()
+        photo = form_data.get("photo")
+        text = form_data.get("text", "Без описания")
+
+        if not photo:
+            logger.warning("Support request received without photo")
+            raise HTTPException(status_code=400, detail="No photo provided")
+
+        # Читаем файл
+        photo_bytes = await photo.read()
+        
+        from aiogram.types import BufferedInputFile
+        from bot.config import bot, SUPPORT_TG_ID
+
+        photo_file = BufferedInputFile(photo_bytes, filename="support_screenshot.png")
+
+        # Отправляе в техподдержку
+        await bot.send_photo(
+            chat_id=SUPPORT_TG_ID,
+            photo=photo_file,
+            caption=f"🆘 Сообщение в техподдержку\n\n{text}"
+        )
+
+        logger.info(f"Support request sent to {SUPPORT_TG_ID}")
+        return {"status": "success"}
+
+    except Exception as e:
+        logger.error(f"Error sending support request: {e}")
+        raise HTTPException(status_code=500, detail="Error sending support request")
+
+
 @hint_viewer_api_router.post("/api/save_screenshot")
 async def save_screenshot(request: Request):
     """
