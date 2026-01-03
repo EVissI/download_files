@@ -324,7 +324,8 @@
             }
 
             button {
-                width: 60px;
+                width: auto;
+                min-width: 60px;
                 padding: 10px 20px;
             }
 
@@ -351,7 +352,8 @@
             #invertBtn,
             #screenshotBtn,
             #screenSaveBtn,
-            #screenUploadBtn {
+            #screenUploadBtn,
+            #supportBtn {
                 width: 60px;
                 height: 60px;
             }
@@ -368,7 +370,8 @@
             }
 
             button {
-                width: 60px;
+                width: auto;
+                min-width: 60px;
                 padding: 8px 16px;
                 font-size: 14px;
             }
@@ -388,7 +391,8 @@
             #invertBtn,
             #screenshotBtn,
             #screenSaveBtn,
-            #screenUploadBtn {
+            #screenUploadBtn,
+            #supportBtn {
                 width: 35px;
                 height: 35px;
             }
@@ -401,7 +405,8 @@
             #invertBtn,
             #screenshotBtn,
             #screenSaveBtn,
-            #screenUploadBtn {
+            #screenUploadBtn,
+            #supportBtn {
                 width: 100px;
                 height: 100px;
             }
@@ -566,19 +571,28 @@
         }
 
         /* Support Button and Modal */
+        .support-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            margin: 20px 0;
+            color: #ccc;
+            font-size: 16px;
+        }
+
         #supportBtn {
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            width: 60px;
-            height: 60px;
+            width: 40px;
+            height: 40px;
             padding: 0;
             color: transparent;
             background-color: transparent;
             border: none;
-            margin: 20px auto;
-            display: block;
             cursor: pointer;
+            flex-shrink: 0;
         }
 
         #supportBtn:hover {
@@ -736,7 +750,10 @@
                     value="0.5"></label>
         </div>
 
-        <button id="supportBtn" onclick="openSupportModal()" title="Техподержка"></button>
+        <div class="support-container">
+            <button id="supportBtn" onclick="openSupportModal()" title="Техподержка"></button>
+            <span>Отправить скрин в тех поддержку</span>
+        </div>
 
         <div id="supportModal" class="modal">
             <div class="modal-content">
@@ -2881,6 +2898,16 @@
             sendBtn.disabled = true;
             sendBtn.innerText = 'Отправка...';
 
+            // Hide screenshot-related UI elements for capture
+            const supportContainer = document.querySelector('.support-container');
+            const originalSupportDisplay = supportContainer.style.display;
+            supportContainer.style.display = 'none';
+
+            // Still hide modal as requested previously
+            const modal = document.getElementById('supportModal');
+            const originalModalDisplay = modal.style.display;
+            modal.style.display = 'none';
+
             html2canvas(document.body, {
                 useCORS: true,
                 allowTaint: true,
@@ -2897,23 +2924,27 @@
                     }).then(response => {
                         if (response.ok) {
                             showFadingMessage('Сообщение отправлено в техподдержку');
-                            closeSupportModal();
                         } else {
                             alert('Ошибка при отправке сообщения');
+                            modal.style.display = originalModalDisplay;
                         }
                     }).catch(error => {
                         console.error('Error sending to support:', error);
                         alert('Ошибка при отправке сообщения');
+                        modal.style.display = originalModalDisplay;
                     }).finally(() => {
                         sendBtn.disabled = false;
                         sendBtn.innerText = originalBtnText;
+                        supportContainer.style.display = originalSupportDisplay;
                     });
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
                 alert('Ошибка при создании скриншота');
+                modal.style.display = originalModalDisplay;
                 sendBtn.disabled = false;
                 sendBtn.innerText = originalBtnText;
+                supportContainer.style.display = originalSupportDisplay;
             });
         }
     </script>
