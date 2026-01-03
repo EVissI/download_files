@@ -60,6 +60,19 @@
         }
     </style>
     <script>
+        function updateDebug() {
+            const debug = document.getElementById('debug');
+            const info = {
+                platform: window.Telegram?.WebApp?.platform || 'unknown',
+                version: window.Telegram?.WebApp?.version || 'unknown',
+                initDataSet: !!window.Telegram?.WebApp?.initData,
+                initDataLength: window.Telegram?.WebApp?.initData?.length || 0,
+                href: window.location.href,
+                userAgent: navigator.userAgent
+            };
+            return info;
+        }
+
         function initializeApp() {
             const statusElement = document.getElementById('status');
             statusElement.innerText = 'Запуск...';
@@ -67,11 +80,15 @@
             try {
                 if (!window.Telegram || !window.Telegram.WebApp) {
                     statusElement.innerText = 'Ошибка: Telegram SDK не загружен.';
+                    updateDebug();
                     return;
                 }
 
                 Telegram.WebApp.ready();
                 Telegram.WebApp.expand();
+
+                const info = updateDebug();
+
                 if (!info.initDataSet) {
                     statusElement.innerText = 'Ошибка: initData пустой.\nУбедитесь, что открыли через кнопку WebApp.';
                 } else {
@@ -79,6 +96,7 @@
                 }
             } catch (e) {
                 statusElement.innerText = 'Критическая ошибка: ' + e.message;
+                updateDebug();
             }
         }
 
