@@ -2917,13 +2917,19 @@
                     const formData = new FormData();
                     formData.append('photo', blob);
                     formData.append('text', text);
+                    formData.append('chat_id', chatId);
 
                     fetch('/api/send_to_support', {
                         method: 'POST',
                         body: formData
-                    }).then(response => {
+                    }).then(async response => {
                         if (response.ok) {
                             showFadingMessage('Сообщение отправлено в техподдержку');
+                        } else if (response.status === 429) {
+                            const data = await response.json();
+                            const waitText = (data.detail && data.detail.wait_text) ? data.detail.wait_text : 'некоторое время';
+                            alert(`Слишком много запросов. Пожалуйста, подождите ${waitText} перед следующей отправкой.`);
+                            modal.style.display = originalModalDisplay;
                         } else {
                             alert('Ошибка при отправке сообщения');
                             modal.style.display = originalModalDisplay;

@@ -697,16 +697,38 @@ async def send_screenshot(request: Request):
 @hint_viewer_api_router.post("/api/send_to_support")
 async def send_to_support(request: Request):
     """
-    Принимает скриншот и описание проблемы, отправляет в техподдержку.
+    Принимает скриншот и описание проблемы, отправляет в техподдержку с рейлимитом.
     """
     try:
         form_data = await request.form()
         photo = form_data.get("photo")
         text = form_data.get("text", "Без описания")
+        chat_id = request.query_params.get("chat_id") or form_data.get("chat_id")
+
+        if not chat_id:
+            logger.warning("Support request received without chat_id")
+            raise HTTPException(status_code=400, detail="No chat_id provided")
 
         if not photo:
             logger.warning("Support request received without photo")
             raise HTTPException(status_code=400, detail="No photo provided")
+
+        # Рейлимит: 5 запросов за 10 минут (600 секунд)
+        rate_limit_key = f"rate_limit:support:{chat_id}"
+        current_requests = await redis_client.get(rate_limit_key)
+        
+        if current_requests and int(current_requests) >= 5:
+            ttl = await redis_client.ttl(rate_limit_key)
+            minutes = ttl // 60
+            seconds = ttl % 60
+            raise HTTPException(
+                status_code=429, 
+                detail={
+                    "message": "Слишком много запросов",
+                    "retry_after": ttl,
+                    "wait_text": f"{minutes} мин {seconds} сек" if minutes > 0 else f"{seconds} сек"
+                }
+            )
 
         # Читаем файл
         photo_bytes = await photo.read()
@@ -716,16 +738,24 @@ async def send_to_support(request: Request):
 
         photo_file = BufferedInputFile(photo_bytes, filename="support_screenshot.png")
 
-        # Отправляе в техподдержку
+        # Отправляем в техподдержку
         await bot.send_photo(
             chat_id=SUPPORT_TG_ID,
             photo=photo_file,
-            caption=f"🆘 Сообщение в техподдержку\n\n{text}"
+            caption=f"🆘 Сообщение в техподдержку\nUser ID: {chat_id}\n\n{text}"
         )
 
-        logger.info(f"Support request sent to {SUPPORT_TG_ID}")
+        # Обновляем счетчик в Redis
+        if not current_requests:
+            await redis_client.set(rate_limit_key, 1, expire=600)
+        else:
+            await redis_client.incr(rate_limit_key)
+
+        logger.info(f"Support request sent to {SUPPORT_TG_ID} from {chat_id}")
         return {"status": "success"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error sending support request: {e}")
         raise HTTPException(status_code=500, detail="Error sending support request")
