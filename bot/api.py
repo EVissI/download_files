@@ -12,6 +12,20 @@ from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.config import settings
 from bot.db.redis import redis_client
+from loguru import logger
+import traceback
+import json
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global exception caught: {exc}")
+    logger.error(traceback.format_exc())
+    return Response(
+        content=json.dumps({"detail": str(exc), "traceback": traceback.format_exc()}),
+        status_code=500,
+        media_type="application/json"
+    )
+
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -69,24 +83,31 @@ async def admin_login(request: Request):
 
 @app.post("/admin/verify")
 async def admin_verify(request: Request, response: Response):
+    logger.info("Admin verify request received")
     data = await request.json()
     init_data = data.get("initData")
     if not init_data:
+        logger.warning("Missing initData in request")
         raise HTTPException(status_code=400, detail="Missing initData")
     
     user_data = verify_telegram_webapp_data(init_data)
     if not user_data:
+        logger.warning("Failed to verify telegram webapp data")
         raise HTTPException(status_code=401, detail="Invalid Telegram data")
     
     user_id = user_data.get("user", {}).get("id")
+    logger.info(f"Verified user_id: {user_id}")
     if user_id not in settings.ROOT_ADMIN_IDS:
+        logger.warning(f"User {user_id} not in ROOT_ADMIN_IDS: {settings.ROOT_ADMIN_IDS}")
         raise HTTPException(status_code=403, detail="Not an admin")
     
     # Create session
     session_token = secrets.token_urlsafe(32)
     # Store session in redis
+    logger.info(f"Creating session for user {user_id}")
     await redis_client.set(f"admin_session:{session_token}", str(user_id), expire=86400) # 24h
     
+    logger.info(f"Setting session cookie for user {user_id}")
     response.set_cookie(
         key="admin_session",
         value=session_token,
