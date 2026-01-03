@@ -3,6 +3,9 @@
     build: .
     command: /bin/sh -c "alembic upgrade head && python -m bot.init"
     container_name: backgammon_bot
+    environment:
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=db
     volumes:
       - ./bot:/app/bot
       - ./log:/app/log
