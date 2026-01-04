@@ -29,10 +29,10 @@ async def autoanalyze_command(
 ):  
     keyboard = InlineKeyboardBuilder()
     keyboard.button(
-        text=i18n.auto.analyze.batch_type(), callback_data="autoanalyze_batch"
+        text=i18n.auto.analyze.single_match(), callback_data="autoanalyze_single"
     )
     keyboard.button(
-        text=i18n.auto.analyze.single_match(), callback_data="autoanalyze_single"
+        text=i18n.auto.analyze.batch_type(), callback_data="autoanalyze_batch"
     )
     keyboard.adjust(1)
     await message.answer(i18n.user.static.select_autoanalyze_type(), reply_markup=keyboard.as_markup())
