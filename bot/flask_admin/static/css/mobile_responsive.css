@@ -1,6 +1,6 @@
 /* МОБИЛЬНАЯ ОПТИМИЗАЦИЯ FLASK-APPBUILDER - УСИЛЕННАЯ ВЕРСИЯ */
 
-/* БАЗОВЫЕ ПРАВИЛА ДЛЯ ВСЕХ ЭЛЕМЕНТОВ */
+/* БАЗОВЫЕ ПРАВИЛА */
 * {
     box-sizing: border-box !important;
 }
@@ -27,7 +27,7 @@ body,
     overflow-x: hidden !important;
 }
 
-/* ФОРМЫ - ГЛАВНАЯ ПРОБЛЕМА ДЛЯ EDIT ENDPOINT */
+/* ФОРМЫ */
 form,
 .form-horizontal,
 .form-edit,
@@ -54,7 +54,7 @@ form,
     padding-left: 0 !important;
 }
 
-/* INPUT ПОЛЯ И SELECT - КРИТИЧНО ДЛЯ МОБИЛЬНЫХ */
+/* INPUT ПОЛЯ И SELECT */
 .form-control,
 input[type="text"],
 input[type="number"],
@@ -80,7 +80,7 @@ label {
     margin-bottom: 0.5rem !important;
 }
 
-/* КОЛОНКИ BOOTSTRAP - ПЕРЕОПРЕДЕЛЯЕМ ВСЕ */
+/* КОЛОНКИ BOOTSTRAP */
 .col-xs-1,
 .col-sm-1,
 .col-md-1,
@@ -176,10 +176,62 @@ table {
     width: 100% !important;
 }
 
-/* УБИРАЕМ ВСЕ ВОЗМОЖНЫЕ ОТСТУПЫ */
-body>*,
-form>* {
+/* СПЕЦИФИЧНЫЕ ПРАВИЛА ДЛЯ BS3TextAreaFieldWidget */
+.form-group .form-control,
+.form-group textarea,
+.form-group input {
     max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* Контейнеры с классами, которые могут быть добавлены виджетами */
+.controls,
+.form-inline,
+.form-horizontal .controls {
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+/* Убираем inline стили, которые могут быть добавлены JS */
+[style*="width"] {
+    max-width: 100% !important;
+}
+
+/* Для элементов с фиксированной шириной */
+div[style*="width: "],
+span[style*="width: "] {
+    max-width: 100% !important;
+    width: auto !important;
+}
+
+/* TextArea виджеты */
+textarea.form-control {
+    max-width: 100% !important;
+    width: 100% !important;
+    min-height: 150px !important;
+}
+
+/* Для всех input элементов в форме */
+form input[type="text"],
+form input[type="email"],
+form input[type="password"],
+form input[type="number"],
+form input[type="date"],
+form input[type="time"],
+form select,
+form textarea {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Убираем горизонтальный скролл у родительских контейнеров */
+.form-group>div,
+.form-group>label,
+.form-group>span {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
 }
 
 /* МОБИЛЬНЫЕ МЕДИА-ЗАПРОСЫ */
