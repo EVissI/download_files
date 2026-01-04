@@ -46,16 +46,16 @@ class MessageForNewModelView(ModelView):
     label_columns = {
         "lang_code": _("Язык"),
         "text": _("Текст сообщения"),
-        "dispatch_day": _("Дни недели (mon,tue,wed...)"),
-        "dispatch_time": _("Время отправки (ЧЧ:ММ)"),
+        "dispatch_day": _("Дни недели"),
+        "dispatch_time": _("Время отправки"),
         "dispatch_day_display": _("Дни недели"),
         "text_preview": _("Предпросмотр текста"),
     }
 
     description_columns = {
-        "text": _("Поддерживается HTML-разметка. Максимум 1000 символов."),
-        "dispatch_day": _("Через запятую на английском: mon,tue,wed,thu,fri,sat,sun. Изменяйте в одной записи — будет скопировано в другую."),
-        "dispatch_time": _("Формат: 14:30. Изменяйте в одной записи — будет скопировано в другую."),
+        "text": _("Максимум 1000 символов."),
+        "dispatch_day": _("mon,tue,wed,thu,fri,sat,sun"),
+        "dispatch_time": _("Формат: 14:30"),
     }
 
     order_columns = ["lang_code"]
