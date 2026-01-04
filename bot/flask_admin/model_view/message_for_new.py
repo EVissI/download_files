@@ -1,7 +1,6 @@
 ﻿# admin/views/message_for_new.py
 from flask_appbuilder import ModelView, has_access
 from flask_appbuilder.models.sqla.interface import SQLAInterface
-from flask_appbuilder.fieldwidgets import BS3TextAreaFieldWidget
 from flask_appbuilder.forms import DynamicForm
 from flask import flash
 from wtforms import StringField, TextAreaField
@@ -64,7 +63,6 @@ class MessageForNewModelView(ModelView):
     form_extra_fields = {
         "text": TextAreaField(
             _("Текст сообщения"),
-            widget=BS3TextAreaFieldWidget(),
             validators=[DataRequired(), Length(max=1000)],
             description=_("Поддерживается HTML. Максимум 1000 символов.")
         ),
