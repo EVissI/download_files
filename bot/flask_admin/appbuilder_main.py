@@ -46,8 +46,8 @@ def create_app():
         "UPLOAD_FOLDER": "temp/admin_uploads",
         "BABEL_DEFAULT_LOCALE": "ru",
         "BABEL_DEFAULT_TIMEZONE": "Europe/Moscow",
+        "CUSTOM_CSS": "/static/admin_custom.css",
     }
-    app.config["FAB_BASE_TEMPLATE"] = "my_base.html"
     db.init_app(app)
 
     with app.app_context():
