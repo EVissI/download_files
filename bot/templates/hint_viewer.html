@@ -2470,7 +2470,7 @@
             if (!dataLoaded) return;
 
             const turnLabel = document.getElementById('turnLabel');
-            turnLabel.textContent = current + 1;
+            turnLabel.textContent = data[current].turn || 'End';
 
             const moveInfo = document.getElementById('move-info');
             const item = data[current];
