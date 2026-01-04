@@ -7,8 +7,14 @@ import logging
 
 from bot.flask_admin.model_view.message_for_new import MessageForNewModelView
 from bot.flask_admin.model_view.message_texts import MessagesTextsModelView
-from bot.flask_admin.model_view.payment import AnalizePaymentModelView, AnalizePaymentServiceQuantityInline
-from bot.flask_admin.model_view.promo import PromocodeModelView, PromocodeServiceQuantityInline
+from bot.flask_admin.model_view.payment import (
+    AnalizePaymentModelView,
+    AnalizePaymentServiceQuantityInline,
+)
+from bot.flask_admin.model_view.promo import (
+    PromocodeModelView,
+    PromocodeServiceQuantityInline,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +27,7 @@ db = SQLAlchemy()
 
 class CustomIndexView(IndexView):
     """Кастомная главная страница"""
+
     title = "Dashboard"
 
 
@@ -32,21 +39,18 @@ def create_app():
     # === КОНФИГУРАЦИЯ ===
     app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace(
         "+asyncpg", ""
-    ).replace(
-        "db", "localhost"
-    )  
+    ).replace("db", "localhost")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = settings.SECRET_KEY
     app.config["WTF_CSRF_ENABLED"] = True
 
     # === FLASK-APPBUILDER КОНФИГ ===
     app.config["FLASK_APP_BUILDER"] = {
-        "THEME": "bootstrap4.html",
+        "THEME": "mybase.html",
         "ROWS_PER_PAGE": 20,
         "UPLOAD_FOLDER": "temp/admin_uploads",
         "BABEL_DEFAULT_LOCALE": "ru",
         "BABEL_DEFAULT_TIMEZONE": "Europe/Moscow",
-        "CUSTOM_CSS": "/static/admin_custom.css",
     }
     db.init_app(app)
 
@@ -65,7 +69,7 @@ def create_app():
 
 def register_models(appbuilder, db):
     """Регистрация моделей в админ-панели"""
-    
+
     appbuilder.add_view_no_menu(PromocodeServiceQuantityInline)
     appbuilder.add_view(
         PromocodeModelView,
@@ -73,9 +77,12 @@ def register_models(appbuilder, db):
         icon="fa-gift",
     )
     appbuilder.add_view_no_menu(AnalizePaymentServiceQuantityInline)
-    appbuilder.add_view(AnalizePaymentModelView, "Пакеты", icon='fa-credit-card')
-    appbuilder.add_view(MessageForNewModelView, "Сообщения для новеньких", icon='fa-calendar-o')
-    appbuilder.add_view(MessagesTextsModelView, "Текстовки", icon='fa-comment')
+    appbuilder.add_view(AnalizePaymentModelView, "Пакеты", icon="fa-credit-card")
+    appbuilder.add_view(
+        MessageForNewModelView, "Сообщения для новеньких", icon="fa-calendar-o"
+    )
+    appbuilder.add_view(MessagesTextsModelView, "Текстовки", icon="fa-comment")
+
 
 def create_app_for_flask_cli():
     """Helper factory for Flask CLI: returns only the Flask app object."""
