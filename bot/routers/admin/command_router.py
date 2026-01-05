@@ -1,5 +1,14 @@
 ﻿from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import (
+    Message,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.filters import StateFilter
 from bot.db.dao import UserDAO
 from bot.db.models import User
 from loguru import logger
@@ -10,9 +19,15 @@ import asyncio
 from redis import Redis
 from rq import Queue, Worker
 from rq.registry import StartedJobRegistry
-from bot.config import settings, admins
+from bot.config import settings, admins, scheduler
+from bot.common.tasks.monitor_notification import check_for_user
+import uuid
 
 commands_router = Router()
+
+
+class MonitorStates(StatesGroup):
+    waiting_threshold = State()
 
 
 @commands_router.message(F.text.startswith("/makeadmin"))
@@ -110,7 +125,7 @@ async def clear_active_jobs(message: Message):
 
 
 @commands_router.message(F.text.startswith("/monitor"))
-async def monitor(message: Message):
+async def monitor(message: Message, state: FSMContext):
     """Показывает текущую загрузку RQ очередей и количество воркеров. Только для админов."""
     try:
         if message.from_user is None or message.from_user.id not in admins:
@@ -131,17 +146,83 @@ async def monitor(message: Message):
             registry = StartedJobRegistry(queue=q)
             active = len(registry)
             total_active += active
-            lines.append(f"{names.get(qname, qname)}:active={active}")
+            lines.append(f"{names.get(qname, qname)}: Активно={active}")
 
         worker_count = await asyncio.to_thread(
             lambda: len(Worker.all(connection=redis_conn))
         )
 
-        msg = "Мониторинг очередей:\n" + "\n".join(lines)
+        msg = "Мониторинг очередей: \n" + "\n".join(lines)
         total_waiting = worker_count - total_active
         msg += f"\n\nВсего воркеров: {worker_count}\nВсего в ожидании: {total_waiting}, активно: {total_active}"
 
-        await message.answer(msg)
+        # Создаем кнопку для установки уведомления
+        keyboard = InlineKeyboardBuilder()
+        keyboard.button(
+            text="🔔 Установить уведомление", callback_data="monitor:set_notification"
+        )
+        keyboard.adjust(1)
+
+        await message.answer(msg, reply_markup=keyboard.as_markup())
+        await state.clear()
     except Exception as e:
         logger.exception(f"Ошибка в /monitor: {e}")
         await message.answer("Ошибка при получении статуса очередей.")
+
+
+@commands_router.callback_query(F.data == "monitor:set_notification")
+async def set_notification_callback(callback: CallbackQuery, state: FSMContext):
+    """Обработка нажатия на кнопку установки уведомления."""
+    try:
+        if callback.from_user is None or callback.from_user.id not in admins:
+            return await callback.answer("Доступ запрещен.", show_alert=True)
+
+        await state.set_state(MonitorStates.waiting_threshold)
+        await callback.message.answer(
+            "Введите значение total_active, при котором нужно отправить уведомление.\n"
+            "Пример: 10"
+        )
+        await callback.answer()
+    except Exception as e:
+        logger.exception(f"Ошибка в set_notification_callback: {e}")
+        await callback.answer("Ошибка при установке уведомления.", show_alert=True)
+
+
+@commands_router.message(StateFilter(MonitorStates.waiting_threshold))
+async def process_threshold(message: Message, state: FSMContext):
+    """Обработка ввода значения порога."""
+    try:
+        if not message.text.isdigit():
+            await message.answer("Пожалуйста, введите число.")
+            return
+
+        threshold = int(message.text)
+        user_id = message.from_user.id
+
+        # Регистрируем задачу в локальном scheduler (в том же процессе), job_id позволяет обновлять задачу
+        job_id = f"monitor_notification:{user_id}"
+        scheduler.add_job(
+            check_for_user,
+            "interval",
+            seconds=30,
+            args=[user_id, threshold],
+            id=job_id,
+            replace_existing=True,
+            coalesce=True,
+        )
+
+        notification_key = f"monitor:notification:{user_id}"
+        sync_redis_client.set(notification_key, threshold)
+
+        await message.answer(
+            f"✅ Уведомление установлено!\n"
+            f"Вы получите сообщение когда total_active станет равно {threshold}."
+        )
+        logger.info(
+            f"Monitor notification set for user {user_id}: threshold={threshold}"
+        )
+        await state.clear()
+    except Exception as e:
+        logger.exception(f"Ошибка в process_threshold: {e}")
+        await message.answer("Ошибка при сохранении уведомления.")
+        await state.clear()
