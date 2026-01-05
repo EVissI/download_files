@@ -30,8 +30,8 @@ admin_setup_router.message.filter(RoleFilter(
 admin_setup_router.include_routers(
     commands_router,
     excel_setup_router,
-    promo_setup_router,
-    payment_setup_router,
+    # promo_setup_router,
+    # payment_setup_router,
     broadcast_router,
     user_setting_router,
     message_for_new_router,
