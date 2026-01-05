@@ -179,7 +179,7 @@ async def set_notification_callback(callback: CallbackQuery, state: FSMContext):
 
         await state.set_state(MonitorStates.waiting_threshold)
         await callback.message.answer(
-            "Введите значение total_active, при котором нужно отправить уведомление.\n"
+            "Введите значение кол-ва активных воркеров, при котором нужно отправить уведомление.\n"
             "Пример: 10"
         )
         await callback.answer()
@@ -216,7 +216,7 @@ async def process_threshold(message: Message, state: FSMContext):
 
         await message.answer(
             f"✅ Уведомление установлено!\n"
-            f"Вы получите сообщение когда total_active станет равно {threshold}."
+            f"Вы получите сообщение когда кол-во активных воркеров станет равно {threshold}."
         )
         logger.info(
             f"Monitor notification set for user {user_id}: threshold={threshold}"

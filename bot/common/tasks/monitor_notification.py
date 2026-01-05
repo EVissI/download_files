@@ -39,7 +39,7 @@ async def check_for_user(admin_id: int, threshold: int):
             try:
                 await bot.send_message(
                     chat_id=admin_id,
-                    text=f"🔔 Мониторинг: total_active достигло {threshold}!",
+                    text=f"🔔 Мониторинг: кол-во активных воркеров достигло {threshold}!",
                 )
                 logger.info(
                     f"Monitor notification sent to {admin_id}: total_active={total_active}"
