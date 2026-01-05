@@ -132,7 +132,9 @@ async def monitor(message: Message):
             total_active += active
             lines.append(f"{qname}: waiting={waiting}, active={active}")
 
-        worker_count = await asyncio.to_thread(lambda: len(Worker.all()))
+        worker_count = await asyncio.to_thread(
+            lambda: len(Worker.all(connection=redis_conn))
+        )
 
         msg = "Мониторинг очередей:\n" + "\n".join(lines)
         msg += f"\n\nВсего воркеров: {worker_count}\nВсего в ожидании: {total_waiting}, активно: {total_active}"
