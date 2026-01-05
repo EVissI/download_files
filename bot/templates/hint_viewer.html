@@ -2573,6 +2573,7 @@
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const animationControls = document.querySelector('.animation-controls');
+            const supportContainer = document.querySelector('.support-container');
             let animationControlsParent = null;
             if (animationControls) {
                 animationControlsParent = animationControls.parentNode;
@@ -2587,6 +2588,7 @@
             const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
+            const originalSupportDisplay = supportContainer ? supportContainer.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
@@ -2606,6 +2608,7 @@
                 if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (supportContainer) supportContainer.style.display = originalSupportDisplay;
                 if (animationControls && animationControlsParent) {
                     animationControlsParent.appendChild(animationControls);
                 }
@@ -2631,6 +2634,7 @@
             if (hideInfoCheckbox) hideInfoCheckbox.style.display = 'none';
             if (screenSaveBtn) screenSaveBtn.style.display = 'none';
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
+            if (supportContainer) supportContainer.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
@@ -2730,6 +2734,7 @@
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const animationControls = document.querySelector('.animation-controls');
+            const supportContainer = document.querySelector('.support-container');
             let animationControlsParent = null;
             if (animationControls) {
                 animationControlsParent = animationControls.parentNode;
@@ -2744,6 +2749,7 @@
             const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
+            const originalSupportDisplay = supportContainer ? supportContainer.style.display : 'none';
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
