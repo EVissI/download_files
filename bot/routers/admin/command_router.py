@@ -122,21 +122,23 @@ async def monitor(message: Message):
         total_waiting = 0
         total_active = 0
         lines: list[str] = []
-
+        names = {
+            "backgammon_analysis": "Одиночные игры",
+            "backgammon_batch_analysis": "Пакеты игр",
+        }
         for qname in queue_names:
             q = Queue(qname, connection=redis_conn)
             registry = StartedJobRegistry(queue=q)
-            waiting = q.count
             active = len(registry)
-            total_waiting += waiting
             total_active += active
-            lines.append(f"{qname}: waiting={waiting}, active={active}")
+            lines.append(f"{qname}:active={active}")
 
         worker_count = await asyncio.to_thread(
             lambda: len(Worker.all(connection=redis_conn))
         )
 
         msg = "Мониторинг очередей:\n" + "\n".join(lines)
+        total_waiting = worker_count - total_active
         msg += f"\n\nВсего воркеров: {worker_count}\nВсего в ожидании: {total_waiting}, активно: {total_active}"
 
         await message.answer(msg)
