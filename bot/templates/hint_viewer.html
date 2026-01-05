@@ -2834,8 +2834,8 @@
                                     } catch (e) {
                                         alert('Ошибка при отправке скриншота: ' + text);
                                     }
+                                    restoreControls();
                                 });
-                                restoreControls();
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
