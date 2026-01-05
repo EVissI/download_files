@@ -6,6 +6,11 @@ from loguru import logger
 from bot.db.redis import sync_redis_client
 
 from bot.db.schemas import SUser
+import asyncio
+from redis import Redis
+from rq import Queue, Worker
+from rq.registry import StartedJobRegistry
+from bot.config import settings, admins
 
 commands_router = Router()
 
@@ -102,3 +107,37 @@ async def clear_active_jobs(message: Message):
     except Exception as e:
         logger.error(f"Ошибка при выполнении команды /clear_active_jobs: {e}")
         await message.answer("Произошла ошибка при выполнении команды.")
+
+
+@commands_router.message(F.text.startswith("/monitor"))
+async def monitor(message: Message):
+    """Показывает текущую загрузку RQ очередей и количество воркеров. Только для админов."""
+    try:
+        if message.from_user is None or message.from_user.id not in admins:
+            return await message.reply("Доступ запрещен.")
+
+        redis_conn = Redis.from_url(settings.REDIS_URL, decode_responses=False)
+        queue_names = ["backgammon_analysis", "backgammon_batch_analysis"]
+
+        total_waiting = 0
+        total_active = 0
+        lines: list[str] = []
+
+        for qname in queue_names:
+            q = Queue(qname, connection=redis_conn)
+            registry = StartedJobRegistry(queue=q)
+            waiting = q.count
+            active = len(registry)
+            total_waiting += waiting
+            total_active += active
+            lines.append(f"{qname}: waiting={waiting}, active={active}")
+
+        worker_count = await asyncio.to_thread(lambda: len(Worker.all()))
+
+        msg = "Мониторинг очередей:\n" + "\n".join(lines)
+        msg += f"\n\nВсего воркеров: {worker_count}\nВсего в ожидании: {total_waiting}, активно: {total_active}"
+
+        await message.answer(msg)
+    except Exception as e:
+        logger.exception(f"Ошибка в /monitor: {e}")
+        await message.answer("Ошибка при получении статуса очередей.")
