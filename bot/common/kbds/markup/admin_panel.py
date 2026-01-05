@@ -6,9 +6,10 @@ from bot.config import settings
 class AdminKeyboard:
     admin_text_kb = {
         'excel':'Excel выгрузки',
-        'promo':'Промокоды',
-        'payment':'Пакеты',
+        # 'promo':'Промокоды',
+        # 'payment':'Пакеты',
         'notify':'Рассылка',
+        'monitor':'Мониторинг воркеров',
         'users_setting':'Пользователи',
         'users_group': 'Группы пользователей',
         'message_for_new': 'Сообщение для новых пользователей',

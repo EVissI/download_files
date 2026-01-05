@@ -9,6 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import StateFilter
+from bot.common.kbds.markup.admin_panel import AdminKeyboard
 from bot.db.dao import UserDAO
 from bot.db.models import User
 from loguru import logger
@@ -186,6 +187,51 @@ async def set_notification_callback(callback: CallbackQuery, state: FSMContext):
     except Exception as e:
         logger.exception(f"Ошибка в set_notification_callback: {e}")
         await callback.answer("Ошибка при установке уведомления.", show_alert=True)
+
+@commands_router.message(F.text == AdminKeyboard.admin_text_kb['monitor'])
+async def monitor(message: Message, state: FSMContext):
+    """Показывает текущую загрузку RQ очередей и количество воркеров. Только для админов."""
+    try:
+        if message.from_user is None or message.from_user.id not in admins:
+            return await message.reply("Доступ запрещен.")
+
+        redis_conn = Redis.from_url(settings.REDIS_URL, decode_responses=False)
+        queue_names = ["backgammon_analysis", "backgammon_batch_analysis"]
+
+        total_waiting = 0
+        total_active = 0
+        lines: list[str] = []
+        names = {
+            "backgammon_analysis": "Одиночные игры",
+            "backgammon_batch_analysis": "Пакеты игр",
+        }
+        for qname in queue_names:
+            q = Queue(qname, connection=redis_conn)
+            registry = StartedJobRegistry(queue=q)
+            active = len(registry)
+            total_active += active
+            lines.append(f"{names.get(qname, qname)}: Активно={active}")
+
+        worker_count = await asyncio.to_thread(
+            lambda: len(Worker.all(connection=redis_conn))
+        )
+
+        msg = "Мониторинг очередей: \n" + "\n".join(lines)
+        total_waiting = worker_count - total_active
+        msg += f"\n\nВсего воркеров: {worker_count}\nВсего в ожидании: {total_waiting}, активно: {total_active}"
+
+        # Создаем кнопку для установки уведомления
+        keyboard = InlineKeyboardBuilder()
+        keyboard.button(
+            text="🔔 Установить уведомление", callback_data="monitor:set_notification"
+        )
+        keyboard.adjust(1)
+
+        await message.answer(msg, reply_markup=keyboard.as_markup())
+        await state.clear()
+    except Exception as e:
+        logger.exception(f"Ошибка в /monitor: {e}")
+        await message.answer("Ошибка при получении статуса очередей.")
 
 
 @commands_router.message(StateFilter(MonitorStates.waiting_threshold))
