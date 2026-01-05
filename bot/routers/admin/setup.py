@@ -10,8 +10,8 @@ from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.models import User
 from bot.routers.admin.command_router import commands_router
 from bot.routers.admin.excel_view.setup import excel_setup_router
-from bot.routers.admin.promocode.setup import promo_setup_router
-from bot.routers.admin.payment.setup import payment_setup_router
+# from bot.routers.admin.promocode.setup import promo_setup_router
+# from bot.routers.admin.payment.setup import payment_setup_router
 from bot.routers.admin.notify import broadcast_router
 from bot.routers.admin.users_setting.setup import user_setting_router
 from bot.routers.admin.update_message_for_new import message_for_new_router
