@@ -2579,16 +2579,16 @@
                 animationControlsParent = animationControls.parentNode;
                 animationControlsParent.removeChild(animationControls);
             }
-            const originalControlsDisplay = controls.style.display;
-            const originalInvertDisplay = invertBtn.style.display;
-            const originalScreenshotDisplay = screenshotBtn.style.display;
-            const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
-            const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : 'none';
-            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
-            const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
-            const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
-            const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
-            const originalSupportDisplay = supportContainer ? supportContainer.style.display : 'none';
+            const originalControlsDisplay = controls ? controls.style.display : null;
+            const originalInvertDisplay = invertBtn ? invertBtn.style.display : null;
+            const originalScreenshotDisplay = screenshotBtn ? screenshotBtn.style.display : null;
+            const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : null;
+            const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : null;
+            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : null;
+            const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : null;
+            const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : null;
+            const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : null;
+            const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
@@ -2600,30 +2600,28 @@
             const originalRedPipsDisplay = redPips ? redPips.style.display : 'none';
 
             function restoreControls() {
-                controls.style.display = originalControlsDisplay;
-                invertBtn.style.display = originalInvertDisplay;
-                screenshotBtn.style.display = originalScreenshotDisplay;
-                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
-                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
-                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
-                if (supportContainer) supportContainer.style.display = originalSupportDisplay;
+                if (controls && originalControlsDisplay !== null) controls.style.display = originalControlsDisplay;
+                if (invertBtn && originalInvertDisplay !== null) invertBtn.style.display = originalInvertDisplay;
+                if (screenshotBtn && originalScreenshotDisplay !== null) screenshotBtn.style.display = originalScreenshotDisplay;
+                if (gameSelect && originalGameSelectDisplay !== null) gameSelect.style.display = originalGameSelectDisplay;
+                if (hintsButtons && originalHintsButtonsDisplay !== null) hintsButtons.style.display = originalHintsButtonsDisplay;
+                if (hideInfoCheckbox && originalHideInfoCheckboxDisplay !== null) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (screenSaveBtn && originalScreenSaveBtnDisplay !== null) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
+                if (screenUploadBtn && originalScreenUploadBtnDisplay !== null) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (supportContainer && originalSupportDisplay !== null) supportContainer.style.display = originalSupportDisplay;
                 if (animationControls && animationControlsParent) {
                     animationControlsParent.appendChild(animationControls);
                 }
                 if (playersInfo) {
-                    playersInfo.style.display = originalPlayersInfoDisplay;
+                    if (originalPlayersInfoDisplay !== null) playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
                 }
-                if (matchInfo) {
+                if (matchInfo && originalMatchInfoHTML !== null) {
                     matchInfo.innerHTML = originalMatchInfoHTML;
                 }
-                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
-                if (blackPips) blackPips.style.display = originalBlackPipsDisplay;
-                if (redPips) redPips.style.display = originalRedPipsDisplay;
-                if (blackPips) blackPips.style.display = originalBlackPipsDisplay;
-                if (redPips) redPips.style.display = originalRedPipsDisplay;
+                if (crawfordLabel && originalCrawfordDisplay !== null) crawfordLabel.style.display = originalCrawfordDisplay;
+                if (blackPips && originalBlackPipsDisplay !== null) blackPips.style.display = originalBlackPipsDisplay;
+                if (redPips && originalRedPipsDisplay !== null) redPips.style.display = originalRedPipsDisplay;
             }
 
             controls.style.display = 'none';
@@ -2740,42 +2738,43 @@
                 animationControlsParent = animationControls.parentNode;
                 animationControlsParent.removeChild(animationControls);
             }
-            const originalControlsDisplay = controls.style.display;
-            const originalInvertDisplay = invertBtn.style.display;
-            const originalScreenshotDisplay = screenshotBtn.style.display;
-            const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
-            const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : 'none';
-            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : 'none';
-            const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : 'none';
-            const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
-            const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : 'none';
-            const originalSupportDisplay = supportContainer ? supportContainer.style.display : 'none';
+            const originalControlsDisplay = controls ? controls.style.display : null;
+            const originalInvertDisplay = invertBtn ? invertBtn.style.display : null;
+            const originalScreenshotDisplay = screenshotBtn ? screenshotBtn.style.display : null;
+            const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : null;
+            const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : null;
+            const originalHideInfoCheckboxDisplay = hideInfoCheckbox ? hideInfoCheckbox.style.display : null;
+            const originalPlayersInfoDisplay = playersInfo ? playersInfo.style.display : null;
+            const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : null;
+            const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : null;
+            const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
-            const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
+            const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : null;
             const crawfordLabel = document.getElementById('crawfordLabel');
-            const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
+            const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : null;
 
             function restoreControls() {
-                controls.style.display = originalControlsDisplay;
-                invertBtn.style.display = originalInvertDisplay;
-                screenshotBtn.style.display = originalScreenshotDisplay;
-                if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
-                if (hintsButtons) hintsButtons.style.display = originalHintsButtonsDisplay;
-                if (hideInfoCheckbox) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
-                if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
-                if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (controls && originalControlsDisplay !== null) controls.style.display = originalControlsDisplay;
+                if (invertBtn && originalInvertDisplay !== null) invertBtn.style.display = originalInvertDisplay;
+                if (screenshotBtn && originalScreenshotDisplay !== null) screenshotBtn.style.display = originalScreenshotDisplay;
+                if (gameSelect && originalGameSelectDisplay !== null) gameSelect.style.display = originalGameSelectDisplay;
+                if (hintsButtons && originalHintsButtonsDisplay !== null) hintsButtons.style.display = originalHintsButtonsDisplay;
+                if (hideInfoCheckbox && originalHideInfoCheckboxDisplay !== null) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+                if (screenSaveBtn && originalScreenSaveBtnDisplay !== null) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
+                if (screenUploadBtn && originalScreenUploadBtnDisplay !== null) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
+                if (supportContainer && originalSupportDisplay !== null) supportContainer.style.display = originalSupportDisplay;
                 if (animationControls && animationControlsParent) {
                     animationControlsParent.appendChild(animationControls);
                 }
                 if (playersInfo) {
-                    playersInfo.style.display = originalPlayersInfoDisplay;
+                    if (originalPlayersInfoDisplay !== null) playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
                 }
-                if (matchInfo) {
+                if (matchInfo && originalMatchInfoHTML !== null) {
                     matchInfo.innerHTML = originalMatchInfoHTML;
                 }
-                if (crawfordLabel) crawfordLabel.style.display = originalCrawfordDisplay;
+                if (crawfordLabel && originalCrawfordDisplay !== null) crawfordLabel.style.display = originalCrawfordDisplay;
             }
 
             controls.style.display = 'none';
