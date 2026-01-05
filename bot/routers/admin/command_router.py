@@ -131,7 +131,7 @@ async def monitor(message: Message):
             registry = StartedJobRegistry(queue=q)
             active = len(registry)
             total_active += active
-            lines.append(f"{qname}:active={active}")
+            lines.append(f"{names.get(qname, qname)}:active={active}")
 
         worker_count = await asyncio.to_thread(
             lambda: len(Worker.all(connection=redis_conn))
