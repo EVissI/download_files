@@ -2575,8 +2575,10 @@
             const animationControls = document.querySelector('.animation-controls');
             const supportContainer = document.querySelector('.support-container');
             let animationControlsParent = null;
+            let animationControlsNextSibling = null;
             if (animationControls) {
                 animationControlsParent = animationControls.parentNode;
+                animationControlsNextSibling = animationControls.nextSibling;
                 animationControlsParent.removeChild(animationControls);
             }
             const originalControlsDisplay = controls ? controls.style.display : null;
@@ -2610,7 +2612,11 @@
                 if (screenUploadBtn && originalScreenUploadBtnDisplay !== null) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (supportContainer && originalSupportDisplay !== null) supportContainer.style.display = originalSupportDisplay;
                 if (animationControls && animationControlsParent) {
-                    animationControlsParent.appendChild(animationControls);
+                    if (animationControlsNextSibling) {
+                        animationControlsParent.insertBefore(animationControls, animationControlsNextSibling);
+                    } else {
+                        animationControlsParent.appendChild(animationControls);
+                    }
                 }
                 if (playersInfo) {
                     if (originalPlayersInfoDisplay !== null) playersInfo.style.display = originalPlayersInfoDisplay;
@@ -2734,8 +2740,10 @@
             const animationControls = document.querySelector('.animation-controls');
             const supportContainer = document.querySelector('.support-container');
             let animationControlsParent = null;
+            let animationControlsNextSibling = null;
             if (animationControls) {
                 animationControlsParent = animationControls.parentNode;
+                animationControlsNextSibling = animationControls.nextSibling;
                 animationControlsParent.removeChild(animationControls);
             }
             const originalControlsDisplay = controls ? controls.style.display : null;
@@ -2765,7 +2773,11 @@
                 if (screenUploadBtn && originalScreenUploadBtnDisplay !== null) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (supportContainer && originalSupportDisplay !== null) supportContainer.style.display = originalSupportDisplay;
                 if (animationControls && animationControlsParent) {
-                    animationControlsParent.appendChild(animationControls);
+                    if (animationControlsNextSibling) {
+                        animationControlsParent.insertBefore(animationControls, animationControlsNextSibling);
+                    } else {
+                        animationControlsParent.appendChild(animationControls);
+                    }
                 }
                 if (playersInfo) {
                     if (originalPlayersInfoDisplay !== null) playersInfo.style.display = originalPlayersInfoDisplay;
