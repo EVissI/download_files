@@ -1084,39 +1084,37 @@ async def check_job_status(
                             )
 
                     else:
-                        # === ОШИБКА ===
                         error_msg = result.get("error", "Неизвестная ошибка")
                         await message.answer(f"❌ Ошибка при анализе: {error_msg}")
 
-                    remove_active_job(message.from_user.id, job_id)
                     break
 
                 elif job.is_failed:
-                    # === ЗАДАЧА ПРОВАЛИЛАСЬ ===
-                    remove_active_job(message.from_user.id, job_id)
                     await message.answer("❌ Анализ завершился с критической ошибкой")
                     break
 
                 elif job.is_queued:
-                    # === ЗАДАЧА В ОЧЕРЕДИ ===
                     position = job.get_position()
                     await asyncio.sleep(3)
                     continue
 
                 elif job.is_started:
-                    # === ЗАДАЧА ВЫПОЛНЯЕТСЯ ===
-                    await asyncio.sleep(5)  # Проверяем чаще когда выполняется
+                    await asyncio.sleep(5)  
                     continue
 
                 else:
                     await asyncio.sleep(3)
                     continue
-                
+
             except Exception as e:
                 logger.warning(f"Error checking job status: {e}")
+                remove_active_job(message.from_user.id, job_id)
                 await asyncio.sleep(5)
                 continue
-
+        
     except Exception as e:
         logger.exception(f"Error in check_job_status for {job_id}")
+        remove_active_job(message.from_user.id, job_id)
         await message.answer("❌ Ошибка при проверке статуса задачи")
+    finally:
+        remove_active_job(message.from_user.id, job_id)

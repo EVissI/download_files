@@ -182,7 +182,6 @@ async def monitor(message: Message, state: FSMContext):
         keyboard.adjust(1)
 
         await message.answer(msg, reply_markup=keyboard.as_markup())
-        await state.clear()
     except Exception as e:
         logger.exception(f"Ошибка в /monitor: {e}")
         await message.answer("Ошибка при получении статуса очередей.")
