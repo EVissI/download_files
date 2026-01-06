@@ -1089,13 +1089,12 @@ async def check_job_status(
                         await message.answer(f"❌ Ошибка при анализе: {error_msg}")
 
                     remove_active_job(message.from_user.id, job_id)
-                    await state.clear()
                     break
 
                 elif job.is_failed:
                     # === ЗАДАЧА ПРОВАЛИЛАСЬ ===
+                    remove_active_job(message.from_user.id, job_id)
                     await message.answer("❌ Анализ завершился с критической ошибкой")
-                    await state.clear()
                     break
 
                 elif job.is_queued:
@@ -1112,7 +1111,7 @@ async def check_job_status(
                 else:
                     await asyncio.sleep(3)
                     continue
-
+                
             except Exception as e:
                 logger.warning(f"Error checking job status: {e}")
                 await asyncio.sleep(5)
