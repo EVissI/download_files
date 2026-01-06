@@ -35,7 +35,7 @@ async def check_for_user(admin_id: int, threshold: int):
             logger.debug(f"Monitor notification for {admin_id} is on cooldown")
             return
 
-        if total_active == threshold:
+        if total_active >= threshold:
             try:
                 await bot.send_message(
                     chat_id=admin_id,
