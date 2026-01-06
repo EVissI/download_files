@@ -26,13 +26,8 @@ async def check_for_user(admin_id: int, threshold: int):
             registry = StartedJobRegistry(queue=q)
             total_active += len(registry)
 
-        logger.debug(
-            f"Monitor check for {admin_id}: total_active = {total_active}, threshold = {threshold}"
-        )
-
         cooldown_key = f"monitor:notification:cooldown:{admin_id}"
         if sync_redis_client.exists(cooldown_key):
-            logger.debug(f"Monitor notification for {admin_id} is on cooldown")
             return
 
         if total_active >= threshold:
