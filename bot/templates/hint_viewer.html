@@ -2947,10 +2947,16 @@
                     formData.append('text', text);
                     formData.append('chat_id', chatId);
 
+                    // Create AbortController for timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
                     fetch('/api/send_to_support', {
                         method: 'POST',
-                        body: formData
+                        body: formData,
+                        signal: controller.signal
                     }).then(async response => {
+                        clearTimeout(timeoutId);
                         if (response.ok) {
                             showFadingMessage('Сообщение отправлено в техподдержку');
                         } else if (response.status === 429) {
@@ -2963,8 +2969,13 @@
                             modal.style.display = originalModalDisplay;
                         }
                     }).catch(error => {
+                        clearTimeout(timeoutId);
                         console.error('Error sending to support:', error);
-                        alert('Ошибка при отправке сообщения');
+                        if (error.name === 'AbortError') {
+                            alert('Плохое соединение. Таймаут 10 секунд. Попробуйте позже.');
+                        } else {
+                            alert('Ошибка при отправке сообщения');
+                        }
                         modal.style.display = originalModalDisplay;
                     }).finally(() => {
                         sendBtn.disabled = false;
