@@ -104,6 +104,9 @@ async def handle_payment_select(
         return
 
     # # Подготовка данных для чека
+    price_per_service = (
+        payment.price / len(payment.services) if payment.services else payment.price
+    )
     receipt = {
         "customer": {
             "phone": user.phone_number,
@@ -114,7 +117,7 @@ async def handle_payment_select(
                 "description": f"{service.service_type.value} ({service.quantity if service.quantity is not None else '∞'})",
                 "quantity": 1.0,
                 "amount": {
-                    "value": str(payment.price),
+                    "value": str(price_per_service),
                     "currency": "RUB",
                 },  # Убедитесь, что сумма совпадает с prices
                 "vat_code": "1",
