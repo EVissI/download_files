@@ -96,6 +96,10 @@ class HintViewerStates(StatesGroup):
     stats_player_selection = State()
 
 
+class SupportStates(StatesGroup):
+    waiting_reply = State()
+
+
 syncthing_sync = SyncthingSync()
 
 
@@ -364,7 +368,6 @@ async def hint_viewer_menu(
         # Сохраняем mat_path сразу
         await redis_client.set(f"mat_path:{game_id}", mat_path, expire=86400)
 
-
         add_active_job(message.from_user.id, job_id)
         logger.info(
             f"Added active job: user_id={message.from_user.id}, job_id={job_id}"
@@ -511,7 +514,8 @@ async def handle_show_stats(
                 reply_markup=MainKeyboard.build(user_info.role, i18n),
             )
             await callback.message.answer(
-                i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, "solo")
+                i18n.auto.analyze.ask_pdf(),
+                reply_markup=get_download_pdf_kb(i18n, "solo"),
             )
 
     except Exception as e:
@@ -574,7 +578,6 @@ async def handle_hint_player_selection(
             i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, "solo")
         )
         await session_without_commit.commit()
-
 
         await state.clear()
 
@@ -716,33 +719,48 @@ async def send_to_support(request: Request):
         # Рейлимит: 5 запросов за 10 минут (600 секунд)
         rate_limit_key = f"rate_limit:support:{chat_id}"
         current_requests = await redis_client.get(rate_limit_key)
-        
+
         if current_requests and int(current_requests) >= 5:
             ttl = await redis_client.ttl(rate_limit_key)
             minutes = ttl // 60
             seconds = ttl % 60
             raise HTTPException(
-                status_code=429, 
+                status_code=429,
                 detail={
                     "message": "Слишком много запросов",
                     "retry_after": ttl,
-                    "wait_text": f"{minutes} мин {seconds} сек" if minutes > 0 else f"{seconds} сек"
-                }
+                    "wait_text": (
+                        f"{minutes} мин {seconds} сек"
+                        if minutes > 0
+                        else f"{seconds} сек"
+                    ),
+                },
             )
 
         # Читаем файл
         photo_bytes = await photo.read()
-        
+
         from aiogram.types import BufferedInputFile
         from bot.config import bot, SUPPORT_TG_ID
 
         photo_file = BufferedInputFile(photo_bytes, filename="support_screenshot.png")
 
-        # Отправляем в техподдержку
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Ответить",
+                        callback_data=f"support_reply:{chat_id}",
+                    )
+                ]
+            ]
+        )
+
         await bot.send_photo(
             chat_id=SUPPORT_TG_ID,
             photo=photo_file,
-            caption=f"🆘 Сообщение в техподдержку\nUser ID: {chat_id}\n\n{text}"
+            caption=f"🆘 Сообщение в техподдержку\nUser ID: {chat_id}\n\n{text}",
+            reply_markup=keyboard,
         )
 
         # Обновляем счетчик в Redis
@@ -759,6 +777,47 @@ async def send_to_support(request: Request):
     except Exception as e:
         logger.error(f"Error sending support request: {e}")
         raise HTTPException(status_code=500, detail="Error sending support request")
+
+
+@hint_viewer_router.callback_query(F.data.startswith("support_reply:"))
+async def support_reply_start(callback: CallbackQuery, state: FSMContext):
+    """
+    Хендлер для кнопки 'Ответить' в сообщении техподдержки.
+    Переводит оператора в состояние ожидания текста ответа и сохраняет user_id.
+    """
+    await callback.answer()
+    user_id = int(callback.data.split(":", 1)[1])
+
+    await state.set_state(SupportStates.waiting_reply)
+    await state.update_data(reply_user_id=user_id)
+
+    await callback.message.answer(
+        f"Напишите ответ пользователю {user_id}. Сообщение будет отправлено от бота."
+    )
+
+
+@hint_viewer_router.message(StateFilter(SupportStates.waiting_reply))
+async def support_reply_send(message: Message, state: FSMContext):
+    """
+    Получает текст ответа от оператора и отправляет его пользователю из состояния FSM.
+    """
+    from bot.config import bot
+
+    data = await state.get_data()
+    reply_user_id = data.get("reply_user_id")
+
+    if not reply_user_id:
+        await message.answer("Не удалось определить пользователя для ответа.")
+        await state.clear()
+        return
+
+    await bot.send_message(
+        chat_id=int(reply_user_id),
+        text=f"✉️ Ответ от техподдержки:\n\n{message.text}",
+    )
+
+    await message.answer("Ответ отправлен пользователю.")
+    await state.clear()
 
 
 @hint_viewer_api_router.post("/api/save_screenshot")
@@ -996,7 +1055,6 @@ async def check_job_status(
                             f"mat_path:{game_id}", result["mat_path"], expire=7200
                         )
 
-
                         # Создаём ZIP архив если есть игры
                         games_dir = result["games_dir"]
                         if os.path.exists(games_dir) and result["has_games"]:
@@ -1099,7 +1157,7 @@ async def check_job_status(
                     continue
 
                 elif job.is_started:
-                    await asyncio.sleep(5)  
+                    await asyncio.sleep(5)
                     continue
 
                 else:
@@ -1111,7 +1169,7 @@ async def check_job_status(
                 remove_active_job(message.from_user.id, job_id)
                 await asyncio.sleep(5)
                 continue
-        
+
     except Exception as e:
         logger.exception(f"Error in check_job_status for {job_id}")
         remove_active_job(message.from_user.id, job_id)

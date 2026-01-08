@@ -220,7 +220,7 @@ async def analyze_file_by_path(
                     logger.error("Ошибка при генерации PDF.")
                     await message_or_callback.bot.send_message(
                         settings.CHAT_GROUP_ID,
-                        f"<b>Автоматический анализ игры от {current_date_str}</b>\n\n {players_str}) Матч до {duration}\n\n",
+                        f"<b>Автоматический анализ игры от {current_date_str}</b>\n\n{players_str} Матч до {duration}\n\n",
                         parse_mode="HTML",
                     )
                     return
@@ -229,7 +229,7 @@ async def analyze_file_by_path(
                 await message_or_callback.bot.send_document(
                     chat_id=settings.CHAT_GROUP_ID,
                     document=BufferedInputFile(pdf_bytes, filename=file_name_to_pdf),
-                    caption=f"<b>Автоматический анализ игры от {current_date_str}</b>\n\n {players_str}) Матч до {duration}\n\n",
+                    caption=f"<b>Автоматический анализ игры от {current_date_str}</b>\n\n{players_str} Матч до {duration}\n\n",
                     parse_mode="HTML",
                 )
             except Exception as e:
