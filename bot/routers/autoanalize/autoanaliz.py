@@ -237,7 +237,7 @@ async def analyze_file_by_path(
         return formatted_analysis, new_file_path
 
     else:
-        return analysis_data, new_file_path, player_names
+        return analysis_data, new_file_path, player_names, duration
 
 
 mat_file_lock = asyncio.Lock()
@@ -299,14 +299,15 @@ async def handle_mat_file(
                         reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
                     )
 
-                if isinstance(result, tuple) and len(result) == 3:
+                if isinstance(result, tuple) and len(result) == 4:
                     # Multiple players
-                    analysis_data, new_file_path, player_names = result
+                    analysis_data, new_file_path, player_names, duration = result
                     await state.update_data(
                         analysis_data=analysis_data,
                         file_name=os.path.basename(new_file_path),
                         file_path=new_file_path,
                         player_names=player_names,
+                        duration=duration,
                     )
 
                     keyboard = InlineKeyboardBuilder()

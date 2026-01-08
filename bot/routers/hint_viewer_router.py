@@ -198,7 +198,7 @@ def remove_active_job(user_id: int, job_id: str):
 async def hint_viewer_start(message: Message, state: FSMContext):
     await state.set_state(HintViewerStates.choose_type)
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text="Один файл", callback_data="hint_type:single")
+    keyboard.button(text="Одна игра", callback_data="hint_type:single")
     keyboard.button(text="Пакетный анализ", callback_data="hint_type:batch")
     keyboard.adjust(1)
     await message.answer("Выберите тип анализа:", reply_markup=keyboard.as_markup())
@@ -482,14 +482,15 @@ async def handle_show_stats(
             forward_message=False,
         )
 
-        if isinstance(result, tuple) and len(result) == 3:
+        if isinstance(result, tuple) and len(result) == 4:
             # Multiple players
-            analysis_data, new_file_path, player_names = result
+            analysis_data, new_file_path, player_names,duration = result
             await state.update_data(
                 analysis_data=analysis_data,
                 file_name=os.path.basename(new_file_path),
                 file_path=new_file_path,
                 player_names=player_names,
+                duration=duration,
                 game_id=game_id,
             )
 
