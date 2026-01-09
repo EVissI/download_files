@@ -27,7 +27,6 @@ start_router = Router()
 async def start_command(
     message: Message, state: FSMContext, session_with_commit: AsyncSession
 ):
-    test = 'asd'
     user_data = message.from_user
     user_id = user_data.id
     message_dao = MessagesTextsDAO(session_with_commit)
@@ -46,7 +45,7 @@ async def start_command(
         )
         await message.answer(
             await message_dao.get_text(
-                "start", user_info.lang_code if user_info.lang_code else "en", test=test
+                "start", user_info.lang_code if user_info.lang_code else "en"
             ),
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
@@ -73,7 +72,7 @@ async def start_command(
         )
         await message.answer(
             await message_dao.get_text(
-                "start", user_info.lang_code if user_info.lang_code else "en", test=test
+                "start", user_info.lang_code if user_info.lang_code else "en"
             ),
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
@@ -89,7 +88,7 @@ async def start_command(
     )
     await message.answer(
         await message_dao.get_text(
-            "start", user_info.lang_code if user_info.lang_code else "en", test=test
+            "start", user_info.lang_code if user_info.lang_code else "en"
         ),
         reply_markup=MainKeyboard.build(user_info.role, i18n),
     )
