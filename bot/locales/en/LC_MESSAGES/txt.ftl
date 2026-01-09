@@ -170,7 +170,7 @@ auto-batch-wrong_file = Skipped: Not a match file.
 auto-batch-no_data_pdf = No batch analysis data available for PDF generation.
 auto-analyze-error-balance = Not enough balance for full analysis. Please activate promo code or buy balance in profile.
 auto-analyze-batch_type = Batch Analyze
-auto-analyze-single_match = Single Match Analysis
+auto-analyze-single_match = One game
 user-static-select_autoanalyze_type = Please select the type of auto analysis:
 auto-batch-summary_pr_header = Games: { $count }
     Date: { $date }
