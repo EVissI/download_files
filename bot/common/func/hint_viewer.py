@@ -857,6 +857,9 @@ def parse_gnu_move(move_str: str):
             continue
 
         fr_str = segments[0]
+        hit_fr = fr_str.endswith("*")
+        if hit_fr:
+            fr_str = fr_str[:-1]
         fr = (
             25
             if fr_str == "bar"
@@ -868,6 +871,9 @@ def parse_gnu_move(move_str: str):
         for _ in range(count):
             prev = fr
             for seg in segments[1:]:
+                hit_seg = seg.endswith("*")
+                if hit_seg:
+                    seg = seg[:-1]
                 to = (
                     25
                     if seg == "bar"
@@ -875,8 +881,11 @@ def parse_gnu_move(move_str: str):
                 )
                 if to is None:
                     break
-                moves.append({"from": prev, "to": to, "hit": False})
+                moves.append({"from": prev, "to": to, "hit": hit_seg})
                 prev = to
+
+        if hit_fr and moves:
+            moves[0]["hit"] = True
 
         if hit:
             if moves:
