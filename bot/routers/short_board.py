@@ -28,7 +28,7 @@ from bot.config import translator_hub
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 from bot.config import settings
-from bot.db.dao import UserDAO
+from bot.db.dao import UserDAO, MessagesTextsDAO
 from bot.db.models import User
 from bot.config import bot
 from bot.common.func.game_parser import parse_file, get_names
@@ -60,8 +60,13 @@ templates = Jinja2Templates(directory="bot/templates")
 async def short_board_command(
     message: Message,
     state: FSMContext,
+    user_info: User,
+    session_without_commit: AsyncSession,
 ):
-    await message.answer("Отправьте файл с игрой для обработки.")
+    messages_dao = MessagesTextsDAO(session_without_commit)
+    await message.answer(messages_dao.get_text(
+        "short_board_input", user_info.lang_code
+    ))
     await state.set_state(ShortBoardDialog.file)
 
 
@@ -73,6 +78,7 @@ async def handle_document(
     session_without_commit
 ):
     try:
+        messages_dao = MessagesTextsDAO(session_without_commit)
         file = message.document
         chat_id = message.chat.id
 
@@ -92,7 +98,9 @@ async def handle_document(
             await bot.send_message(chat_id, f"Ошибка при чтении файла: {e}")
             return
 
-        await bot.send_message(chat_id, "Файл получен. Начинаю обработку...")
+        await bot.send_message(chat_id, messages_dao.get_text(
+            "short_board_processing", user_info.lang_code
+        ))
 
         names = get_names(file_content)
 
@@ -107,9 +115,6 @@ async def handle_document(
             shutil.copy(file_path, new_file_path)
         except Exception as e:
             logger.error(f"Failed to copy file {file_path} to {new_file_path}: {e}")
-            await bot.send_message(
-                chat_id, "Ошибка при копировании файла. Попробуйте снова."
-            )
             return
 
         # сохранение файла на яндекс диск
@@ -163,7 +168,9 @@ async def handle_document(
 
         # Создаем кнопку с веб-приложением
         button = InlineKeyboardButton(
-            text="Открыть игру 📲",
+            text=await messages_dao.get_text(
+                "short_board_open_game", user_info.lang_code
+            ),
             web_app=WebAppInfo(
                 url=f"{settings.MINI_APP_URL}/board-viewer?game_id={dir_name}&chat_id={chat_id}"
             ),
@@ -172,7 +179,8 @@ async def handle_document(
 
         await bot.send_message(
             chat_id,
-            "Готово! Нажми кнопку ниже, чтобы открыть игру и просмотреть ходы.",
+            await messages_dao.get_text(
+                "short_board_ready", user_info.lang_code),
             reply_markup=keyboard,
         )
 
