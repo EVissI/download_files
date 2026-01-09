@@ -969,6 +969,7 @@ async def process_batch_hint_files(
             batch_id,
             job_id,
             job_id=job_id,
+            lang_code=user_info.lang_code,
         )
 
         add_active_job(message.from_user.id, job_id)

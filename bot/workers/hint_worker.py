@@ -34,8 +34,32 @@ REDIS_USER_PASSWORD = os.getenv("REDIS_USER_PASSWORD")
 
 # 2. Если используешь default пароль
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-
-# Выбираем какой использовать
+text ={
+    "hint_viewer_finished": {
+        "en": "✅ Analysis completed!\n{red_player} vs {black_player}\n",
+        "ru": "✅ Анализ завершен!\n{red_player} vs {black_player}\n"
+    },
+    "hint_viewer_butn_1":{
+        "en": "View all moves",
+        "ru": "Просмотр всех ходов"
+    },
+    "hint_viewer_butn_2":{
+        "en": "Only mistakes (both players)",
+        "ru": "Только ошибки (оба игрока)"
+    },
+    "hint_viewer_butn_3":{
+        "en": "Only mistakes ({red_player})",
+        "ru": "Только ошибки ({red_player})"
+    },
+    "hint_viewer_butn_4":{
+        "en": "Only mistakes ({black_player})",
+        "ru": "Только ошибки ({black_player})"
+    },
+    "hint_viewer_butn_5":{
+        "en": "Show game statistics",
+        "ru": "Показать статистику игры"
+    },
+}
 if REDIS_USER and REDIS_USER_PASSWORD:
     # С ACL-пользователем
     redis_url = f"redis://{REDIS_USER}:{REDIS_USER_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
@@ -99,7 +123,7 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str, game_id:
 
 
 def analyze_backgammon_batch_job(
-    file_paths: list, user_id: str, batch_id: str, job_id: str = None
+    file_paths: list, user_id: str, batch_id: str, job_id: str = None, lang_code: str = "en"
 ):
     """
     Анализирует пакет .mat файлов последовательно (запускается в worker-е).
@@ -121,7 +145,6 @@ def analyze_backgammon_batch_job(
     logger.info(
         f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
     )
-
     def send_telegram_message(text, parse_mode="Markdown"):
         """Отправляет сообщение в Telegram через API"""
         try:
@@ -171,7 +194,7 @@ def analyze_backgammon_batch_job(
                     "inline_keyboard": [
                         [
                             {
-                                "text": "Просмотр всех ходов",
+                                "text": text["hint_viewer_butn_1"][lang_code],
                                 "web_app": {
                                     "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
                                 },
@@ -179,7 +202,7 @@ def analyze_backgammon_batch_job(
                         ],
                         [
                             {
-                                "text": "Только ошибки (оба игрока)",
+                                "text": text["hint_viewer_butn_2"][lang_code],
                                 "web_app": {
                                     "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
                                 },
@@ -187,7 +210,7 @@ def analyze_backgammon_batch_job(
                         ],
                         [
                             {
-                                "text": f"Только ошибки ({red_player})",
+                                "text": text["hint_viewer_butn_3"][lang_code].format(red_player=red_player),
                                 "web_app": {
                                     "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
                                 },
@@ -195,7 +218,7 @@ def analyze_backgammon_batch_job(
                         ],
                         [
                             {
-                                "text": f"Только ошибки ({black_player})",
+                                "text": text["hint_viewer_butn_4"][lang_code].format(black_player=black_player),
                                 "web_app": {
                                     "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
                                 },
@@ -203,7 +226,7 @@ def analyze_backgammon_batch_job(
                         ],
                         [
                             {
-                                "text": "Показать статистику игры",
+                                "text": text["hint_viewer_butn_5"][lang_code],
                                 "callback_data": f"show_stats:{game_id}",
                             }
                         ],
@@ -223,7 +246,8 @@ def analyze_backgammon_batch_job(
                     )
                     data = {
                         "chat_id": int(user_id),
-                        "text": "Выберите вариант просмотра ошибок:",
+                        "text": text["hint_viewer_finished"][lang_code].format(
+                            red_player=red_player, black_player=black_player),
                         "reply_markup": json.dumps(keyboard),
                     }
                     requests.post(url, data=data, timeout=10)
@@ -268,10 +292,6 @@ def analyze_backgammon_batch_job(
     # Отправляем итоговое сообщение
     successful = sum(1 for r in results if r["status"] == "success")
     failed = len(results) - successful
-    send_telegram_message(
-        f"🎉 **Пакетная обработка завершена!**\n\n✅ Успешно: {successful}\n❌ Ошибок: {failed}\n📊 Всего: {total_files}",
-        parse_mode="Markdown",
-    )
     logger.info(f"Removing active job: user_id={user_id}, job_id={job_id or batch_id}")
     remove_active_job(user_id, job_id or batch_id)
     return {
