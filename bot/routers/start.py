@@ -27,7 +27,7 @@ start_router = Router()
 async def start_command(
     message: Message, state: FSMContext, session_with_commit: AsyncSession
 ):
-    test = 'test'
+    test = 'asd'
     user_data = message.from_user
     user_id = user_data.id
     message_dao = MessagesTextsDAO(session_with_commit)
