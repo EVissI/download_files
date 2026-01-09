@@ -128,7 +128,7 @@ async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
 
 
 async def get_queue_position_message(
-    redis_conn: Redis, queue_names: list[str]
+    redis_conn: Redis, queue_names: list[str], session, user_info: User
 ) -> str | None:
     """
     Проверяет нагрузку и возвращает сообщение о позиции в очереди.
@@ -137,7 +137,7 @@ async def get_queue_position_message(
     try:
         total_waiting = 0
         total_active = 0
-
+        message_dao = MessagesTextsDAO(session)
         for q_name in queue_names:
             q = Queue(q_name, connection=redis_conn)
             registry = StartedJobRegistry(queue=q)
@@ -150,12 +150,16 @@ async def get_queue_position_message(
             f"Queue status - Waiting: {total_waiting}, Active: {total_active}, Workers: {worker_count}"
         )
         if worker_count == 0:
-            return "⚠️ Сервера временно недоступны. Ваша задача будет обработана с задержкой."
+            return await message_dao.get_text(
+                "hint_viewer_queue_servers_down", user_info.lang_code
+            )
         total_q = total_waiting + total_active
         if total_q >= worker_count:
 
             position = total_waiting + 1
-            msg = f"⚠️Высокая нагрузка на сервера\n" f"Вы {position}-й в очереди."
+            msg = await message_dao.get_text(
+                "hint_viewer_queue_position", user_info.lang_code, position=position
+            )
             return msg
         return None
 

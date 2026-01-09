@@ -1252,6 +1252,7 @@ def process_single_game(game_data, output_dir, game_number):
     for entry in aug:
         if "moves" in entry:
             entry["gnu_move"] = convert_moves_to_gnu(entry["moves"])
+            entry["gnu_move"] = normalize_move(entry["gnu_move"]) or entry["gnu_move"]
 
     # Генерируем токены команд для gnubg
     gnubg_tokens = json_to_gnubg_commands(
