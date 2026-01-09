@@ -64,7 +64,7 @@ async def short_board_command(
     session_without_commit: AsyncSession,
 ):
     messages_dao = MessagesTextsDAO(session_without_commit)
-    await message.answer(messages_dao.get_text(
+    await message.answer(await messages_dao.get_text(
         "short_board_input", user_info.lang_code
     ))
     await state.set_state(ShortBoardDialog.file)
@@ -98,7 +98,7 @@ async def handle_document(
             await bot.send_message(chat_id, f"Ошибка при чтении файла: {e}")
             return
 
-        await bot.send_message(chat_id, messages_dao.get_text(
+        await bot.send_message(chat_id, await messages_dao.get_text(
             "short_board_processing", user_info.lang_code
         ))
 
