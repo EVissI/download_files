@@ -802,6 +802,7 @@
         let skipAnimationEnabled = false;
         let pendingPrevGame = false;
         let hidePipsCheckbox = null;
+        let hasErrorsInMatch = false;
         const infoDiv = document.getElementById('move-info');
         const matchInfoDiv = document.getElementById('match-info');
         const playersInfoDiv = document.getElementById('players-info');
@@ -829,6 +830,7 @@
                 const redScore = scores.Red || 0;
                 const blackScore = scores.Black || 0;
                 chatId = gameInfo.chat_id || chatId;
+                hasErrorsInMatch = false;
 
                 // Создаем выпадающий список для выбора игры только если это матч
                 if (availableGames.length > 0 && matchLength > 0) {
@@ -947,8 +949,19 @@
 
                         // Проверить, есть ли видимые ходы помимо win
                         const hasNonWinVisible = data.some(item => item.is_visible && item.action !== 'win');
-                        if (!hasNonWinVisible && error !== '0') {
-                            alert('Ошибки в игре не найдены');
+                        if (hasNonWinVisible) {
+                            hasErrorsInMatch = true;
+                        } else if (error !== '0') {
+                            // Автоматически перейти к следующей игре
+                            const nextGame = availableGames.find(g => g.game_number > currentGameNum);
+                            if (nextGame) {
+                                loadGame(nextGame.game_number);
+                            } else {
+                                // Конец матча, проверить, были ли ошибки в матче
+                                if (!hasErrorsInMatch) {
+                                    alert('В матче нет ошибок');
+                                }
+                            }
                         }
 
 
