@@ -9,7 +9,7 @@ class AdminKeyboard:
         # 'promo':'Промокоды',
         # 'payment':'Пакеты',
         'notify':'Рассылка',
-        'monitor':'Мониторинг воркеров',
+        'monitor':'Мониторинг обработчиков',
         'users_setting':'Пользователи',
         'users_group': 'Группы пользователей',
         'message_for_new': 'Сообщение для новых пользователей',
