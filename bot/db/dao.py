@@ -1330,7 +1330,7 @@ class MessagesTextsDAO(BaseDAO[MessagesTexts]):
 
     async def get_text(self, code: str, lang_code: str, **kwargs) -> Optional[str]:
         """
-        Получает запись MessagesTexts по коду, обрабатывает escape-последовательности и форматирует текст с использованием kwargs.
+        Получает запись MessagesTexts по коду, обрабатывает escape-последовательности (включая \\n) и форматирует текст с использованием kwargs.
         """
         try:
             query = select(self.model).where(self.model.code == code)
@@ -1338,9 +1338,19 @@ class MessagesTextsDAO(BaseDAO[MessagesTexts]):
             message_text = result.scalar_one_or_none()
             if message_text:
                 if lang_code == "ru":
-                    text = codecs.decode(message_text.text_ru, "unicode_escape")
+                    text = (
+                        message_text.text_ru.replace("\\n", "\n")
+                        .replace("\\t", "\t")
+                        .replace('\\"', '"')
+                        .replace("\\'", "'")
+                    )
                 else:
-                    text = codecs.decode(message_text.text_en, "unicode_escape")
+                    text = (
+                        message_text.text_en.replace("\\n", "\n")
+                        .replace("\\t", "\t")
+                        .replace('\\"', '"')
+                        .replace("\\'", "'")
+                    )
                 if kwargs:
                     return text.format(**kwargs)
                 else:
