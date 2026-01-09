@@ -463,10 +463,6 @@
             font-size: 14px;
         }
 
-        #animationSpeedSlider {
-            width: 100px;
-        }
-
         .right-group {
             display: flex;
             align-items: center;
@@ -756,8 +752,13 @@
         <div class="animation-controls">
             <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию шашек</label>
             <label><input type="checkbox" id="hidePipsCheckbox"> Убрать отображение пипсов</label>
-            <label>Скорость анимации: <input type="range" id="animationSpeedSlider" min="0.1" max="2" step="0.1"
-                    value="0.5"></label>
+            <label>Скорость анимации: <select id="animationSpeedSlider">
+                    <option value="0.4">0.4</option>
+                    <option value="0.7">0.7</option>
+                    <option value="1.0" selected>1.0</option>
+                    <option value="1.3">1.3</option>
+                    <option value="1.6">1.6</option>
+                </select></label>
         </div>
 
         <div class="support-container">
@@ -797,7 +798,7 @@
         let enable_crawford_game_number = null;
         let animating = false;
         let skipAnimation = false;
-        let animationSpeed = 0.5;
+        let animationSpeed = 1.0;
         let skipAnimationEnabled = false;
         let pendingPrevGame = false;
         let hidePipsCheckbox = null;
@@ -1005,7 +1006,7 @@
 
                         const animationSpeedSlider = document.getElementById('animationSpeedSlider');
                         if (animationSpeedSlider) {
-                            animationSpeedSlider.addEventListener('input', (e) => {
+                            animationSpeedSlider.addEventListener('change', (e) => {
                                 animationSpeed = parseFloat(e.target.value);
                             });
                         }
