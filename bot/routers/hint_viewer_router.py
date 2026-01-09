@@ -396,7 +396,7 @@ async def hint_viewer_menu(
             expire=3600,
         )
         queue_warning = await get_queue_position_message(
-            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
+            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"], session_without_commit, user_info
         )
         if queue_warning:
             user_dao = UserDAO(session_without_commit)
@@ -988,7 +988,7 @@ async def process_batch_hint_files(
             expire=3600,  # 1 час
         )
         queue_warning = await get_queue_position_message(
-            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"]
+            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"], session_without_commit, user_info
         )
         if queue_warning:
             user_dao = UserDAO(session_without_commit)
