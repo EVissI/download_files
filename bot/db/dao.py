@@ -1326,20 +1326,24 @@ class MessagesTextsDAO(BaseDAO[MessagesTexts]):
                 f"Ошибка при получении записи MessagesTexts по коду '{code}': {e}"
             )
             raise
-        
-    async def get_text(self, code: str, lang_code: str) -> Optional[str]:
+
+    async def get_text(self, code: str, lang_code: str, **kwargs) -> Optional[str]:
         """
-        Получает запись MessagesTexts по коду.
+        Получает запись MessagesTexts по коду и форматирует текст с использованием kwargs.
         """
         try:
             query = select(self.model).where(self.model.code == code)
             result = await self._session.execute(query)
             message_text = result.scalar_one_or_none()
             if message_text:
-                if lang_code == 'ru':
-                    return message_text.text_ru
+                if lang_code == "ru":
+                    text = message_text.text_ru
                 else:
-                    return message_text.text_en
+                    text = message_text.text_en
+                if kwargs:
+                    return text.format(**kwargs)
+                else:
+                    return text
         except SQLAlchemyError as e:
             logger.error(
                 f"Ошибка при получении записи MessagesTexts по коду '{code}': {e}"
