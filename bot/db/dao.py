@@ -1,5 +1,6 @@
 ﻿from loguru import logger
 import pytz
+import codecs
 from bot.db.base import BaseDAO
 from bot.db.models import (
     Broadcast,
@@ -1329,7 +1330,7 @@ class MessagesTextsDAO(BaseDAO[MessagesTexts]):
 
     async def get_text(self, code: str, lang_code: str, **kwargs) -> Optional[str]:
         """
-        Получает запись MessagesTexts по коду и форматирует текст с использованием kwargs.
+        Получает запись MessagesTexts по коду, обрабатывает escape-последовательности и форматирует текст с использованием kwargs.
         """
         try:
             query = select(self.model).where(self.model.code == code)
@@ -1337,9 +1338,9 @@ class MessagesTextsDAO(BaseDAO[MessagesTexts]):
             message_text = result.scalar_one_or_none()
             if message_text:
                 if lang_code == "ru":
-                    text = message_text.text_ru
+                    text = codecs.decode(message_text.text_ru, "unicode_escape")
                 else:
-                    text = message_text.text_en
+                    text = codecs.decode(message_text.text_en, "unicode_escape")
                 if kwargs:
                     return text.format(**kwargs)
                 else:
