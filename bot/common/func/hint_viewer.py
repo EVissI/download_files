@@ -800,15 +800,28 @@ def normalize_move(move_str: str) -> str:
     # Sort by from desc, to desc, hit True first
     move_tuples.sort(key=lambda x: (-x[0], -x[1], -int(x[2])))
 
+    # Merge chains skipping intermediate points without hits
+    merged_tuples = []
+    i = 0
+    while i < len(move_tuples):
+        fr, to, hit = move_tuples[i]
+        j = i + 1
+        while j < len(move_tuples) and move_tuples[j][0] == to and not hit:
+            to = move_tuples[j][1]
+            hit = move_tuples[j][2]
+            j += 1
+        merged_tuples.append((fr, to, hit))
+        i = j
+
     # Canonicalize hits: collect per to
     hit_to = defaultdict(bool)
-    for fr, to, hit in move_tuples:
+    for fr, to, hit in merged_tuples:
         hit_to[to] |= hit
 
     # Assign hit to first move per to
     need_hit = set(to for to in hit_to if hit_to[to])
     new_tuples = []
-    for fr, to, _ in move_tuples:
+    for fr, to, _ in merged_tuples:
         hit = False
         if to in need_hit:
             hit = True
