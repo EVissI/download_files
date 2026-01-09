@@ -1739,7 +1739,7 @@
             if (!dataLoaded) return;
 
             const turnLabel = document.getElementById('turnLabel');
-            turnLabel.textContent = current + 1;
+            turnLabel.textContent = data[current].turn;
 
             const moveInfo = document.getElementById('moveInfo');
             const turn = data[current];

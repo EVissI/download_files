@@ -285,7 +285,7 @@ async def handle_mat_file(
                     return
 
                 data = await state.get_data()
-                analysis_type = data.get("analysis_type")
+                analysis_type = data.get("analysis_type")   
 
                 try:
                     result = await analyze_file_by_path(

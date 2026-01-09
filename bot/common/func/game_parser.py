@@ -253,7 +253,8 @@ def parse_game(
                 cube_location = "center"
                 game_data["turns"].append(
                     {
-                        "turn": player,
+                        "turn": move["move"],
+                        "player": player,
                         "dice": [0, 0],
                         "cube_owner": cube_owner,
                         "cube_value": cube_value,
@@ -273,7 +274,8 @@ def parse_game(
                 cube_location = player
                 game_data["turns"].append(
                     {
-                        "turn": player,
+                        "turn": move["move"],
+                        "player": player,
                         "dice": [0, 0],
                         "cube_owner": cube_owner,
                         "cube_value": cube_value,
@@ -284,9 +286,7 @@ def parse_game(
                 )
                 turn = game_data["turns"][-1]
                 if turn["action"] in ("take", "drop"):
-                    tracker.current_player = (
-                        "second" if tracker.current_player == "first" else "first"
-                    )
+                    tracker.current_player = toggle_player(tracker.current_player)
                 turn["positions"] = copy.deepcopy(tracker.positions)
                 turn["inverted_positions"] = tracker._invert_positions(
                     tracker.positions
@@ -297,7 +297,8 @@ def parse_game(
                 cube_location = None
                 game_data["turns"].append(
                     {
-                        "turn": player,
+                        "turn": move["move"],
+                        "player": player,
                         "dice": [0, 0],
                         "cube_owner": cube_owner,
                         "cube_value": cube_value,
@@ -322,7 +323,8 @@ def parse_game(
 
             game_data["turns"].append(
                 {
-                    "turn": player,
+                    "turn": move["move"],
+                    "player": player,
                     "dice": dice,
                     "cube_owner": cube_owner,
                     "cube_value": cube_value,
@@ -333,10 +335,8 @@ def parse_game(
             turn = game_data["turns"][-1]
             if "moves" in turn and turn["moves"]:
                 for m in turn["moves"]:
-                    tracker.apply_move(turn["turn"], m)
-                tracker.current_player = (
-                    "second" if turn["turn"] == "first" else "first"
-                )
+                    tracker.apply_move(turn["player"], m)
+                tracker.current_player = toggle_player(turn["player"])
             turn["positions"] = copy.deepcopy(tracker.positions)
             turn["inverted_positions"] = tracker._invert_positions(tracker.positions)
 
