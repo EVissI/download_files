@@ -30,7 +30,7 @@ from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
-from bot.db.dao import DetailedAnalysisDAO, UserDAO
+from bot.db.dao import DetailedAnalysisDAO, UserDAO, MessagesTextsDAO
 from bot.db.models import ServiceType, User
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.db.schemas import SDetailedAnalysis
@@ -61,35 +61,37 @@ class BatchAnalyzeDialog(StatesGroup):
 async def start_batch_auto_analyze(
     callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner, user_info: User, session_without_commit: AsyncSession
 ):
+    message_dao = MessagesTextsDAO(session_without_commit)
     await callback.message.delete()
     await state.set_state(BatchAnalyzeDialog.choose_type)
     dao = UserDAO(session_without_commit)
     balance_match = await dao.get_total_analiz_balance(user_info.id, service_type=ServiceType.MATCH)
     balance_money = await dao.get_total_analiz_balance(user_info.id, service_type=ServiceType.MONEYGAME)
     if balance_match == 0 and balance_money == 0:
-        await callback.message.answer(i18n.user.static.has_no_sub(), reply_markup=get_activate_promo_keyboard(i18n))
+        await callback.message.answer(await message_dao.get_text('analyze_not_enought_balance', user_info.lang_code), reply_markup=get_activate_promo_keyboard(i18n))
         return
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text=i18n.auto.batch.sequential(), callback_data="batch_type:sequential")
-    keyboard.button(text=i18n.auto.batch.zip(), callback_data="batch_type:zip")
+    keyboard.button(text=await message_dao.get_text('analyze_batch_sequential', user_info.lang_code), callback_data="batch_type:sequential")
+    keyboard.button(text=await message_dao.get_text('analyze_batch_zip', user_info.lang_code), callback_data="batch_type:zip")
     keyboard.adjust(1)
-    await callback.message.answer(i18n.auto.batch.choose_type(), reply_markup=keyboard.as_markup())
+    await callback.message.answer(await message_dao.get_text('analyze_batch_choose_type', user_info.lang_code), reply_markup=keyboard.as_markup())
 
 
-@batch_auto_analyze_router.callback_query(F.data.startswith("batch_type:"), StateFilter(BatchAnalyzeDialog.choose_type))
+@batch_auto_analyze_router.callback_query(F.data.startswith("batch_type:"), StateFilter(BatchAnalyzeDialog.choose_type), UserInfo())
 async def handle_batch_type_selection(
-    callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner
+    callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner, user_info: User, session_without_commit: AsyncSession
 ):
+    message_dao = MessagesTextsDAO(session_without_commit)
     batch_type = callback.data.split(":")[1]
     if batch_type == "sequential":
         await state.set_state(BatchAnalyzeDialog.uploading_sequential)
         await state.update_data(file_paths=[])
         keyboard = ReplyKeyboardBuilder()
         keyboard.button(text=i18n.auto.batch.stop())
-        await callback.message.answer(i18n.auto.batch.submit_sequential(), reply_markup=keyboard.as_markup(resize_keyboard=True))
+        await callback.message.answer(await message_dao.get_text('analyze_batch_submit_sequent', user_info.lang_code), reply_markup=keyboard.as_markup(resize_keyboard=True))
     else:  # zip
         await state.set_state(BatchAnalyzeDialog.uploading_zip)
-        await callback.message.answer(i18n.auto.batch.submit_zip(), reply_markup=get_cancel_kb(i18n))
+        await callback.message.answer(await message_dao.get_text('analyze_batch_submit_zip', user_info.lang_code), reply_markup=get_cancel_kb(i18n))
     await callback.answer()
     await callback.message.delete()
 
@@ -417,6 +419,7 @@ async def handle_batch_player_selection(
     session_without_commit: AsyncSession
 ):
     try:
+        message_dao = MessagesTextsDAO(session_without_commit)
         data = await state.get_data()
         selected_player = callback.data.split(":")[1]
         analysis_data = data["analysis_data"]
@@ -524,7 +527,7 @@ async def handle_batch_player_selection(
 
                     keyboard.adjust(1)
                     await callback.message.answer(
-                        i18n.auto.analyze.complete(),
+                        await message_dao.get_text('analyze_complete_ch_player', user_info.lang_code),
                         reply_markup=keyboard.as_markup(),
                     )
                     await state.set_state(BatchAnalyzeDialog.select_player)
@@ -553,6 +556,7 @@ async def finalize_batch(
     successful_count: int,
     session_without_commit: AsyncSession
 ):
+    message_dao = MessagesTextsDAO(session_without_commit)
     if successful_count > 0: 
         #сохраняем дату в редис для пдф
         await redis_client.set(f"batch_analysis_data:{user_info.id}", json.dumps(all_analysis_datas), expire=3600)
@@ -622,7 +626,7 @@ async def finalize_batch(
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
         await message.answer(
-            i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'batch')
+            await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), reply_markup=get_download_pdf_kb(i18n, 'batch')
         )
     else:
         await message.answer(i18n.auto.batch.no_matches(), reply_markup=MainKeyboard.build(user_info.role, i18n))
@@ -639,10 +643,12 @@ def calculate_average_analysis(pr_values: list) -> float:
 async def handle_download_pdf(
     callback: CallbackQuery,
     callback_data: DownloadPDFCallback,
+    session_without_commit: AsyncSession,
     user_info: User,
     state: FSMContext,
     i18n: TranslatorRunner,
 ):
+    message_dao = MessagesTextsDAO(session_without_commit)
     await callback.message.delete()
     if callback_data.action == "yes":
         key = f"batch_analysis_data:{user_info.id}"
@@ -673,12 +679,5 @@ async def handle_download_pdf(
                 pdf_bytes,
                 filename=file_name
             ),
-            caption=i18n.auto.analyze.pdf_ready(),
+            caption=await message_dao.get_text('analyze_pdf_ready', user_info.lang_code),
         )
-        # Deletions removed as per user request
-        # await redis_client.delete(key)
-        # await redis_client.delete(file_name_key)
-        # await redis_client.delete(user_pr_msg_key)
-
-    else:
-        await callback.message.answer(i18n.auto.analyze.no_pdf())

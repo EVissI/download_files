@@ -24,11 +24,12 @@ from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
-from bot.db.dao import DetailedAnalysisDAO, UserDAO
+from bot.db.dao import DetailedAnalysisDAO, UserDAO, MessagesTextsDAO
 from bot.db.models import PromocodeServiceQuantity, ServiceType, User
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.db.schemas import SDetailedAnalysis, SUser
 from bot.db.redis import redis_client
+
 
 from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import translator_hub
@@ -50,19 +51,20 @@ class AutoAnalyzeDialog(StatesGroup):
     F.data == "autoanalyze_single", UserInfo()
 )
 async def start_auto_analyze(
-    callback: CallbackQuery, state: FSMContext, i18n: TranslatorRunner
+    callback: CallbackQuery, state: FSMContext, user_info:User, i18n: TranslatorRunner, session_without_commit:AsyncSession
 ):
+    message_dao = MessagesTextsDAO(session_without_commit)
     await callback.message.delete()
     keyboard = InlineKeyboardBuilder()
     keyboard.button(
-        text=i18n.auto.analyze.moneygame(), callback_data="auto_type:moneygame"
+        text=await message_dao.get_text('analyze_moneygame', user_info.lang_code), callback_data="auto_type:moneygame"
     )
     keyboard.button(
-        text=i18n.auto.analyze.games_match(), callback_data="auto_type:match"
+        text=await message_dao.get_text('analyze_match', user_info.lang_code), callback_data="auto_type:match"
     )
     keyboard.adjust(1)
     await callback.message.answer(
-        i18n.auto.analyze.choose_type(), reply_markup=keyboard.as_markup()
+        await message_dao.get_text('analyze_choose_game_type', user_info.lang_code), reply_markup=keyboard.as_markup()
     )
 
 
@@ -74,6 +76,7 @@ async def handle_type_selection(
     user_info: User,
     session_without_commit: AsyncSession,
 ):
+    message_dao = MessagesTextsDAO(session_without_commit)
     await callback.message.delete()
     analysis_type = callback.data.split(":")[1]
     await state.set_state(AutoAnalyzeDialog.file)
@@ -83,18 +86,18 @@ async def handle_type_selection(
         balance = await dao.get_total_analiz_balance(
             user_info.id, service_type=ServiceType.MONEYGAME
         )
-        text = i18n.auto.analyze.submit_moneygame()
+        text = await message_dao.get_text('analyze_submit_moneygame', user_info.lang_code)
     if analysis_type == "match":
         balance = await dao.get_total_analiz_balance(
             user_info.id, service_type=ServiceType.MATCH
         )
-        text = i18n.auto.analyze.submit_match()
+        text = await message_dao.get_text('analyze_submit_match', user_info.lang_code)
     if balance is None or balance > 0:
         await callback.message.answer(text, reply_markup=get_cancel_kb(i18n))
         await callback.answer()
     if balance == 0:
         await callback.message.answer(
-            i18n.auto.analyze.not_ebought_balance(),
+            await message_dao.get_text('analyze_not_enought_balance', user_info.lang_code),
             reply_markup=get_activate_promo_keyboard(i18n),
         )
         await state.clear()
@@ -106,7 +109,7 @@ async def handle_type_selection(
     UserInfo(),
 )
 async def cancel_auto_analyze(
-    message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User
+    message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User, session_without_commit
 ):
     await state.clear()
     await message.answer(
@@ -258,13 +261,14 @@ async def handle_mat_file(
     # Try to acquire the lock non-blocking
     if not mat_file_lock.locked():
         async with mat_file_lock:
+            message_dao = MessagesTextsDAO(session_without_commit)
             try:
                 waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
                 file = message.document
                 if not file.file_name.endswith(
                     (".mat", ".txt", ".sgf", ".sgg", ".bkg", ".gam", ".pos", ".fibs", ".tmg")
                 ):
-                    return await message.answer(i18n.auto.analyze.invalid())
+                    return await message.answer(await message_dao.get_text('analyze_type_invalid', user_info.lang_code))
 
                 # Create the 'files' directory if it doesn't exist
                 files_dir = os.path.join(os.getcwd(), "files")
@@ -316,7 +320,7 @@ async def handle_mat_file(
                     keyboard.adjust(1)
                     await waiting_manager.stop()
                     await message.answer(
-                        i18n.auto.analyze.complete(),
+                        await message_dao.get_text('analyze_complete_ch_player', user_info.lang_code),
                         reply_markup=keyboard.as_markup(),
                     )
                 else:
@@ -329,7 +333,8 @@ async def handle_mat_file(
                         reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
                     )
                     await message.answer(
-                        i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'solo')
+                        await message_dao.get_text('analyze_ask_pdf', user_info.lang_code),
+                        reply_markup=get_download_pdf_kb(i18n, 'solo')
                     )
                     await session_without_commit.commit()
 
@@ -352,6 +357,7 @@ async def handle_player_selection(
     i18n: TranslatorRunner,
 ):
     try:
+        message_dao = MessagesTextsDAO(session_without_commit)
         data = await state.get_data()
         try:
             duration = int(data.get("duration"))
@@ -444,7 +450,7 @@ async def handle_player_selection(
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
         )
         await callback.message.answer(
-            i18n.auto.analyze.ask_pdf(), reply_markup=get_download_pdf_kb(i18n, 'solo')
+            await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), reply_markup=get_download_pdf_kb(i18n, 'solo')
         )
         await session_without_commit.commit()
 
@@ -461,7 +467,9 @@ async def handle_download_pdf(
     user_info: User,
     state: FSMContext,
     i18n: TranslatorRunner,
+    session_without_commit: AsyncSession,
 ):
+    message_dao = MessagesTextsDAO(session_without_commit)
     await callback.message.delete()
     if callback_data.action == "yes":
         key = f"analysis_data:{user_info.id}"
@@ -481,10 +489,6 @@ async def handle_download_pdf(
             return
         await callback.message.answer_document(
             document=BufferedInputFile(pdf_bytes, filename=file_name),
-            caption=i18n.auto.analyze.pdf_ready(),
+            
+            caption=await message_dao.get_text('analyze_pdf_ready', user_info.lang_code),
         )
-        # Deletion removed as per user request
-        # await redis_client.delete(key)
-
-    else:
-        await callback.message.answer(i18n.auto.analyze.no_pdf())
