@@ -703,6 +703,36 @@
         .cancel-btn:hover {
             background-color: #5a6268;
         }
+
+        /* Tabs */
+        .tabs-header {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #2d2d2d;
+            color: white;
+            border: 1px solid #444;
+            border-bottom: none;
+        }
+
+        .tab-btn.active {
+            background-color: #007bff;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #444;
+            background-color: #2d2d2d;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -3187,6 +3217,7 @@
         }
 
         function switchTab(tabName) {
+            event.preventDefault();
             // Hide all tab contents
             const tabContents = document.querySelectorAll('.tab-content');
             tabContents.forEach(tab => {
