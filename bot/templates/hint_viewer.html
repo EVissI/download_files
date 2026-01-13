@@ -698,7 +698,7 @@
 
         #eq-threshold-tab select,
         #eq-threshold-tab input[type="number"] {
-            width: 50%;
+            width: 40%;
             padding: 8px;
             border: 1px solid #444;
             border-radius: 6px;
@@ -900,22 +900,22 @@
                             </div>
                         </div>
                     </div>
+                    <div>
+                        <label>Порог:
+                            <select id="eqThresholdSelect">
+                                <option value="0.030">Сомнительный ход (0.030)</option>
+                                <option value="0.060" selected>Плохой ход (0.060)</option>
+                                <option value="0.120">Очень плохой ход (0.120)</option>
+                            </select>
+                        </label>
+                        <br>
+                        <label>Значение:
+                            <input type="number" id="eqThreshold" step="0.001" min="0" value="0.060">
+                        </label>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="cancel-btn" onclick="closeSettingsModal()">Закрыть</button>
-                </div>
-            </div>
-            <!-- Вкладка Порог EQ -->
-            <div id="eq-threshold-tab" class="tab-content">
-                <div>
-                    <label>Порог:
-                        <select id="eqThresholdSelect">
-                            <option value="0.030">Сомнительный ход (0.030)</option>
-                            <option value="0.060" selected>Плохой ход (0.060)</option>
-                            <option value="0.120">Очень плохой ход (0.120)</option>
-                        </select>
-                        <input type="number" id="eqThreshold" step="0.001" min="0" value="0.060">
-                    </label>
                 </div>
             </div>
         </div>
