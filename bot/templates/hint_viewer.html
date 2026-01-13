@@ -696,6 +696,7 @@
             padding: 8px 16px;
         }
 
+        #eq-threshold-tab select,
         #eq-threshold-tab input[type="number"] {
             width: 50%;
             padding: 8px;
@@ -707,6 +708,7 @@
             font-family: Arial, sans-serif;
         }
 
+        #eq-threshold-tab select:focus,
         #eq-threshold-tab input[type="number"]:focus {
             outline: none;
             border-color: #007bff;
@@ -896,18 +898,6 @@
                                     </label>
                                 </div>
                             </div>
-                            <!-- Вкладка Порог EQ -->
-                            <div id="eq-threshold-tab" class="tab-content">
-                                <div>
-                                    <label>Сомнительный:
-                                        <input type="number" id="doubtfulThreshold" step="0.001" min="0" value="0.030">
-                                    </label>
-                                    <br>
-                                    <label>Плохой:
-                                        <input type="number" id="badThreshold" step="0.001" min="0" value="0.060">
-                                    </label>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -918,12 +908,13 @@
             <!-- Вкладка Порог EQ -->
             <div id="eq-threshold-tab" class="tab-content">
                 <div>
-                    <label>Сомнительный:
-                        <input type="number" id="doubtfulThreshold" step="0.001" min="0" value="0.030">
-                    </label>
-                    <br>
-                    <label>Плохой:
-                        <input type="number" id="badThreshold" step="0.001" min="0" value="0.060">
+                    <label>Порог:
+                        <select id="eqThresholdSelect">
+                            <option value="0.030">Сомнительный ход (0.030)</option>
+                            <option value="0.060" selected>Плохой ход (0.060)</option>
+                            <option value="0.120">Очень плохой ход (0.120)</option>
+                        </select>
+                        <input type="number" id="eqThreshold" step="0.001" min="0" value="0.060">
                     </label>
                 </div>
             </div>
@@ -954,8 +945,7 @@
         let pendingPrevGame = false;
         let hidePipsCheckbox = null;
         let hasErrorsInMatch = false;
-        let doubtfulThreshold = 0.030;
-        let badThreshold = 0.060;
+        let eqThreshold = 0.060;
         const infoDiv = document.getElementById('move-info');
         const matchInfoDiv = document.getElementById('match-info');
         const playersInfoDiv = document.getElementById('players-info');
@@ -1173,22 +1163,18 @@
                                 animSpeedSlider.value = animSpeedState;
                             }
 
-                            const doubtfulState = localStorage.getItem('doubtfulThreshold');
-                            const doubtfulInput = document.getElementById('doubtfulThreshold');
-                            if (doubtfulInput && doubtfulState) {
-                                doubtfulInput.value = doubtfulState;
-                                doubtfulThreshold = parseFloat(doubtfulState);
-                            } else if (doubtfulInput) {
-                                doubtfulInput.value = doubtfulThreshold;
+                            const eqState = localStorage.getItem('eqThreshold');
+                            const eqInput = document.getElementById('eqThreshold');
+                            if (eqInput && eqState) {
+                                eqInput.value = eqState;
+                                eqThreshold = parseFloat(eqState);
+                            } else if (eqInput) {
+                                eqInput.value = eqThreshold;
                             }
 
-                            const badState = localStorage.getItem('badThreshold');
-                            const badInput = document.getElementById('badThreshold');
-                            if (badInput && badState) {
-                                badInput.value = badState;
-                                badThreshold = parseFloat(badState);
-                            } else if (badInput) {
-                                badInput.value = badThreshold;
+                            const eqSelect = document.getElementById('eqThresholdSelect');
+                            if (eqSelect) {
+                                eqSelect.value = eqThreshold.toString();
                             }
                         };
 
@@ -1196,19 +1182,28 @@
                         initSettingsFromLocalStorage();
 
                         // Обработчики изменения для порогов EQ
-                        const doubtfulInput = document.getElementById('doubtfulThreshold');
-                        if (doubtfulInput) {
-                            doubtfulInput.addEventListener('input', (e) => {
-                                doubtfulThreshold = parseFloat(e.target.value) || 0.030;
-                                localStorage.setItem('doubtfulThreshold', doubtfulThreshold);
+                        const eqInput = document.getElementById('eqThreshold');
+                        if (eqInput) {
+                            eqInput.addEventListener('input', (e) => {
+                                eqThreshold = parseFloat(e.target.value) || 0.060;
+                                localStorage.setItem('eqThreshold', eqThreshold);
+                                const eqSelect = document.getElementById('eqThresholdSelect');
+                                if (eqSelect) {
+                                    eqSelect.value = eqThreshold.toString();
+                                }
                             });
                         }
 
-                        const badInput = document.getElementById('badThreshold');
-                        if (badInput) {
-                            badInput.addEventListener('input', (e) => {
-                                badThreshold = parseFloat(e.target.value) || 0.060;
-                                localStorage.setItem('badThreshold', badThreshold);
+                        const eqSelect = document.getElementById('eqThresholdSelect');
+                        if (eqSelect) {
+                            eqSelect.addEventListener('change', (e) => {
+                                const value = parseFloat(e.target.value);
+                                eqThreshold = value;
+                                localStorage.setItem('eqThreshold', eqThreshold);
+                                const eqInput = document.getElementById('eqThreshold');
+                                if (eqInput) {
+                                    eqInput.value = value;
+                                }
                             });
                         }
 
@@ -2204,12 +2199,12 @@
                         let rowClass = '';
                         if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.trim().replace(/\*/g, '')) {
                             const diff = firstEq - hint.eq; // положительная разница, насколько хуже
-                            if (diff > badThreshold) {
-                                rowClass = 'hint-poor';
-                            } else if (diff > doubtfulThreshold) {
+                            if (diff < eqThreshold) {
+                                rowClass = 'hint-best';
+                            } else if (index >= 1 && index <= 4) {
                                 rowClass = 'hint-good';
                             } else {
-                                rowClass = 'hint-best';
+                                rowClass = 'hint-poor';
                             }
                         }
                         moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
