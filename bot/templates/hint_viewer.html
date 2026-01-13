@@ -2144,13 +2144,13 @@
                         let move = hint.move || '-';
                         let rowClass = '';
                         if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.trim().replace(/\*/g, '')) {
-                            rowClass = 'hint-best';
-                        } else if (firstEq !== null && hint.eq !== undefined && index > 0) {
                             const diff = firstEq - hint.eq; // положительная разница, насколько хуже
                             if (diff > badThreshold) {
                                 rowClass = 'hint-poor';
                             } else if (diff > doubtfulThreshold) {
                                 rowClass = 'hint-good';
+                            } else {
+                                rowClass = 'hint-best';
                             }
                         }
                         moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
