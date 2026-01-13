@@ -2710,6 +2710,7 @@
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : null;
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : null;
             const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
+            const originalSettingsDisplay = settingsContainer ? settingsContainer.style.display : null;
             const settingsBtn = document.getElementById('settingsBtn');
             const settingsSpan = settingsContainer ? settingsContainer.querySelector('span') : null;
             const originalSettingsBtnDisplay = settingsBtn ? settingsBtn.style.display : null;
@@ -2766,9 +2767,9 @@
             if (screenSaveBtn) screenSaveBtn.style.display = 'none';
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
             if (supportContainer) supportContainer.style.display = 'none';
+            if (settingsContainer) settingsContainer.style.display = 'none';
             if (settingsBtn) settingsBtn.style.display = 'none';
             if (settingsSpan) settingsSpan.style.display = 'none';
-            if (settingsContainer) settingsContainer.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
@@ -2930,6 +2931,7 @@
             if (screenSaveBtn) screenSaveBtn.style.display = 'none';
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
             if (supportContainer) supportContainer.style.display = 'none';
+            if (settingsContainer) settingsContainer.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
