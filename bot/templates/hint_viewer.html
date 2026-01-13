@@ -749,21 +749,12 @@
             <div id="cubeHintsTable" class="hints-content"></div>
         </div>
 
-        <div class="animation-controls">
-            <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию шашек</label>
-            <label><input type="checkbox" id="hidePipsCheckbox"> Убрать отображение пипсов</label>
-            <label>Скорость анимации: <select id="animationSpeedSlider">
-                    <option value="0.4">0.4</option>
-                    <option value="0.7">0.7</option>
-                    <option value="1.0" selected>1.0</option>
-                    <option value="1.3">1.3</option>
-                    <option value="1.6">1.6</option>
-                </select></label>
-        </div>
+        <!-- animation-controls перенесены в модальное окно настроек -->
 
         <div class="support-container">
             <button id="supportBtn" onclick="openSupportModal()" title="Техподержка"></button>
             <span>Отправить скрин в тех поддержку</span>
+            <button id="settingsBtn" onclick="openSettingsModal()" title="Настройки">⚙️</button>
         </div>
 
         <div id="supportModal" class="modal">
@@ -774,6 +765,53 @@
                 <div class="modal-footer">
                     <button class="cancel-btn" onclick="closeSupportModal()">Отмена</button>
                     <button id="sendSupportBtn" onclick="sendToSupport()">Отправить</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно настроек -->
+        <div id="settingsModal" class="modal settings-modal">
+            <div class="modal-content settings-modal-content">
+                <div class="modal-header">
+                    <h2>Настройки</h2>
+                    <span class="modal-close" onclick="closeSettingsModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="tabs-container">
+                        <div class="tabs-header">
+                            <button class="tab-btn active"
+                                onclick="switchTab('animation-controls-tab')">Анимация</button>
+                            <button class="tab-btn" onclick="switchTab('general-tab')">Общие</button>
+                        </div>
+                        <div class="tabs-content">
+                            <!-- Вкладка Animation Controls -->
+                            <div id="animation-controls-tab" class="tab-content active">
+                                <div class="animation-controls">
+                                    <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию
+                                        шашек</label>
+                                    <label><input type="checkbox" id="hidePipsCheckbox"> Убрать отображение
+                                        пипсов</label>
+                                    <label>Скорость анимации:
+                                        <select id="animationSpeedSlider">
+                                            <option value="0.4">0.4</option>
+                                            <option value="0.7">0.7</option>
+                                            <option value="1.0" selected>1.0</option>
+                                            <option value="1.3">1.3</option>
+                                            <option value="1.6">1.6</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </div>
+                            <!-- Вкладка General (пустая для будущих настроек) -->
+                            <div id="general-tab" class="tab-content">
+                                <p>Общие настройки (в разработке)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-btn" onclick="closeSettingsModal()">Закрыть</button>
+                    <button onclick="saveSettings()">Сохранить</button>
                 </div>
             </div>
         </div>
@@ -1001,10 +1039,34 @@
                             });
                         }
 
+                        // Инициализация настроек из localStorage для модального окна
+                        const initSettingsFromLocalStorage = () => {
+                            const skipAnimState = localStorage.getItem('skipAnimationCheckbox');
+                            const skipAnimCheckbox = document.getElementById('skipAnimationCheckbox');
+                            if (skipAnimCheckbox && skipAnimState === 'true') {
+                                skipAnimCheckbox.checked = true;
+                            }
+
+                            const hidePipsState = localStorage.getItem('hidePipsCheckbox');
+                            if (hidePipsCheckbox && hidePipsState === 'true') {
+                                hidePipsCheckbox.checked = true;
+                            }
+
+                            const animSpeedState = localStorage.getItem('animationSpeedSlider');
+                            const animSpeedSlider = document.getElementById('animationSpeedSlider');
+                            if (animSpeedSlider && animSpeedState) {
+                                animSpeedSlider.value = animSpeedState;
+                            }
+                        };
+
+                        // Инициализируем настройки при загрузке игры
+                        initSettingsFromLocalStorage();
+
                         const skipAnimationCheckbox = document.getElementById('skipAnimationCheckbox');
                         if (skipAnimationCheckbox) {
                             skipAnimationCheckbox.addEventListener('change', (e) => {
                                 skipAnimationEnabled = e.target.checked;
+                                localStorage.setItem('skipAnimationCheckbox', e.target.checked);
                             });
                         }
 
@@ -1021,6 +1083,7 @@
                         if (animationSpeedSlider) {
                             animationSpeedSlider.addEventListener('change', (e) => {
                                 animationSpeed = parseFloat(e.target.value);
+                                localStorage.setItem('animationSpeedSlider', e.target.value);
                             });
                         }
 
@@ -3006,6 +3069,72 @@
                 supportContainer.style.display = originalSupportDisplay;
             });
         }
+
+        // Settings Modal Functions
+        function openSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'block';
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all tab buttons
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show the selected tab content
+            const selectedTab = document.getElementById(tabName);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+
+            // Add active class to the clicked button
+            event.target.classList.add('active');
+        }
+
+        function saveSettings() {
+            // Save settings to localStorage if needed
+            showFadingMessage('Настройки сохранены');
+            closeSettingsModal();
+        }
+
+        // Close settings modal when clicking outside of it
+        window.addEventListener('click', function (event) {
+            const settingsModal = document.getElementById('settingsModal');
+            const supportModal = document.getElementById('supportModal');
+
+            if (event.target === settingsModal) {
+                closeSettingsModal();
+            }
+            if (event.target === supportModal) {
+                closeSupportModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                const settingsModal = document.getElementById('settingsModal');
+                const supportModal = document.getElementById('supportModal');
+
+                if (settingsModal.style.display === 'block') {
+                    closeSettingsModal();
+                }
+                if (supportModal.style.display === 'block') {
+                    closeSupportModal();
+                }
+            }
+        });
     </script>
 </body>
 
