@@ -163,14 +163,23 @@
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            flex-wrap: wrap;
+            gap: 20px;
         }
 
-        .screenshot-controls,
+        .screenshot-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            justify-content: center;
+        }
+
         .navigation-controls {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 15px;
+            height: 64px;
+            /* Высота двух рядов кнопок (32px * 2) */
+            justify-content: center;
         }
 
         .turn-display {
@@ -727,10 +736,14 @@
         <div id="top-row">
             <div id="controls">
                 <div class="screenshot-controls">
-                    <button onclick="saveScreenshot()" id="screenSaveBtn"></button>
-                    <button onclick="uploadScreenshots()" id="screenUploadBtn"></button>
-                    <button onclick="takeScreenshot()" id="screenshotBtn"></button>
-                    <button onclick="toggleInvert()" id="invertBtn"></button>
+                    <div>
+                        <button onclick="saveScreenshot()" id="screenSaveBtn"></button>
+                        <button onclick="uploadScreenshots()" id="screenUploadBtn"></button>
+                    </div>
+                    <div>
+                        <button onclick="takeScreenshot()" id="screenshotBtn"></button>
+                        <button onclick="toggleInvert()" id="invertBtn"></button>
+                    </div>
                 </div>
                 <div class="navigation-controls">
                     <button onclick="prevTurn()" id="prevBtn"></button>
