@@ -582,12 +582,22 @@
         }
 
         /* Support Button and Modal */
+        .settings-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            margin: 20px 0 10px 0;
+            color: #ccc;
+            font-size: 16px;
+        }
+
         .support-container {
             display: flex;
             align-items: center;
             justify-content: flex-start;
             gap: 10px;
-            margin: 20px 0;
+            margin: 0 0 20px 0;
             color: #ccc;
             font-size: 16px;
         }
@@ -764,10 +774,13 @@
 
         <!-- animation-controls перенесены в модальное окно настроек -->
 
+        <div class="settings-container">
+            <button id="settingsBtn" onclick="openSettingsModal()" title="Настройки">⚙️</button>
+            <span>Настройки</span>
+        </div>
         <div class="support-container">
             <button id="supportBtn" onclick="openSupportModal()" title="Техподержка"></button>
             <span>Отправить скрин в тех поддержку</span>
-            <button id="settingsBtn" onclick="openSettingsModal()" title="Настройки">⚙️</button>
         </div>
 
         <div id="supportModal" class="modal">
