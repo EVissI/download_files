@@ -772,16 +772,12 @@
         <!-- Модальное окно настроек -->
         <div id="settingsModal" class="modal settings-modal">
             <div class="modal-content settings-modal-content">
-                <div class="modal-header">
-                    <h2>Настройки</h2>
-                    <span class="modal-close" onclick="closeSettingsModal()">&times;</span>
-                </div>
+                <h2>Настройки</h2>
                 <div class="modal-body">
                     <div class="tabs-container">
                         <div class="tabs-header">
                             <button class="tab-btn active"
                                 onclick="switchTab('animation-controls-tab')">Анимация</button>
-                            <button class="tab-btn" onclick="switchTab('general-tab')">Общие</button>
                         </div>
                         <div class="tabs-content">
                             <!-- Вкладка Animation Controls -->
@@ -802,16 +798,11 @@
                                     </label>
                                 </div>
                             </div>
-                            <!-- Вкладка General (пустая для будущих настроек) -->
-                            <div id="general-tab" class="tab-content">
-                                <p>Общие настройки (в разработке)</p>
-                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="cancel-btn" onclick="closeSettingsModal()">Закрыть</button>
-                    <button onclick="saveSettings()">Сохранить</button>
                 </div>
             </div>
         </div>
