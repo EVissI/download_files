@@ -696,8 +696,8 @@
             padding: 8px 16px;
         }
 
-        #eq-threshold-tab select,
-        #eq-threshold-tab input[type="number"] {
+        .modal-body>div select,
+        .modal-body>div input[type="number"] {
             width: 40%;
             padding: 8px;
             border: 1px solid #444;
@@ -708,8 +708,8 @@
             font-family: Arial, sans-serif;
         }
 
-        #eq-threshold-tab select:focus,
-        #eq-threshold-tab input[type="number"]:focus {
+        .modal-body>div select:focus,
+        .modal-body>div input[type="number"]:focus {
             outline: none;
             border-color: #007bff;
             box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
@@ -903,14 +903,14 @@
                     <div>
                         <label>Порог:
                             <select id="eqThresholdSelect">
-                                <option value="0.030">Сомнительный ход (0.030)</option>
-                                <option value="0.060" selected>Плохой ход (0.060)</option>
+                                <option value="0.030" selected>Сомнительный ход (0.030)</option>
+                                <option value="0.060">Плохой ход (0.060)</option>
                                 <option value="0.120">Очень плохой ход (0.120)</option>
                             </select>
                         </label>
                         <br>
                         <label>Значение:
-                            <input type="number" id="eqThreshold" step="0.001" min="0" value="0.060">
+                            <input type="number" id="eqThreshold" step="0.001" min="0" value="0.030">
                         </label>
                     </div>
                 </div>
@@ -945,7 +945,7 @@
         let pendingPrevGame = false;
         let hidePipsCheckbox = null;
         let hasErrorsInMatch = false;
-        let eqThreshold = 0.060;
+        let eqThreshold = 0.030;
         const infoDiv = document.getElementById('move-info');
         const matchInfoDiv = document.getElementById('match-info');
         const playersInfoDiv = document.getElementById('players-info');
