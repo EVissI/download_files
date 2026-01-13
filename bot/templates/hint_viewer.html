@@ -2692,6 +2692,7 @@
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const animationControls = document.querySelector('.animation-controls');
             const supportContainer = document.querySelector('.support-container');
+            const settingsContainer = document.querySelector('.settings-container');
             let animationControlsParent = null;
             let animationControlsNextSibling = null;
             if (animationControls) {
@@ -2709,6 +2710,7 @@
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : null;
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : null;
             const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
+            const originalSettingsDisplay = settingsContainer ? settingsContainer.style.display : null;
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
@@ -2729,6 +2731,8 @@
                 if (screenSaveBtn && originalScreenSaveBtnDisplay !== null) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn && originalScreenUploadBtnDisplay !== null) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (supportContainer && originalSupportDisplay !== null) supportContainer.style.display = originalSupportDisplay;
+                if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
+                if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
                 if (animationControls && animationControlsParent) {
                     if (animationControlsNextSibling) {
                         animationControlsParent.insertBefore(animationControls, animationControlsNextSibling);
@@ -2757,6 +2761,8 @@
             if (screenSaveBtn) screenSaveBtn.style.display = 'none';
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
             if (supportContainer) supportContainer.style.display = 'none';
+            if (settingsContainer) settingsContainer.style.display = 'none';
+            if (settingsContainer) settingsContainer.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
@@ -2857,6 +2863,7 @@
             const screenUploadBtn = document.getElementById('screenUploadBtn');
             const animationControls = document.querySelector('.animation-controls');
             const supportContainer = document.querySelector('.support-container');
+            const settingsContainer = document.querySelector('.settings-container');
             let animationControlsParent = null;
             let animationControlsNextSibling = null;
             if (animationControls) {
@@ -2874,6 +2881,7 @@
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : null;
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : null;
             const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
+            const originalSettingsDisplay = settingsContainer ? settingsContainer.style.display : null;
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : null;
