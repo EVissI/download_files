@@ -15,6 +15,7 @@ from sqlalchemy import (
 from bot.db.database import Base
 from flask_appbuilder.models.decorators import renders
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -59,6 +60,34 @@ class User(Base):
     broadcast_recipients: Mapped[list["Broadcast"]] = relationship(
         "Broadcast", secondary="broadcast_users", back_populates="recipients"
     )
+
+    @property
+    @renders("active_promocodes")
+    def active_promocodes(self):
+        """Количество активных промокодов пользователя"""
+        active_count = len([p for p in self.used_promocodes if p.is_active])
+        return str(active_count) if active_count > 0 else "—"
+
+    @property
+    @renders("active_payments")
+    def active_payments(self):
+        """Количество активных покупок пользователя"""
+        active_count = len([p for p in self.analize_payments_assoc if p.is_active])
+        return str(active_count) if active_count > 0 else "—"
+
+    @property
+    @renders("total_balance")
+    def total_balance(self):
+        """Общий баланс услуг по всем активным промокодам и платежам"""
+        total = 0
+        # Суммируем remaining_quantity по всем активным записям
+        for promocode in [p for p in self.used_promocodes if p.is_active]:
+            for service in promocode.remaining_services:
+                total += service.remaining_quantity or 0
+        for payment in [p for p in self.analize_payments_assoc if p.is_active]:
+            for service in payment.remaining_services:
+                total += service.remaining_quantity
+        return str(total) if total > 0 else "0"
 
 
 class Analysis(Base):
@@ -130,7 +159,9 @@ class Promocode(Base):
     code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     max_usage: Mapped[Optional[int]] = mapped_column(Integer, default=None)
-    activate_count: Mapped[Optional[int]] = mapped_column(Integer, default=0, server_default='0')
+    activate_count: Mapped[Optional[int]] = mapped_column(
+        Integer, default=0, server_default="0"
+    )
     duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
 
     services: Mapped[list["PromocodeServiceQuantity"]] = relationship(
@@ -142,24 +173,24 @@ class Promocode(Base):
     users: Mapped[list["UserPromocode"]] = relationship(
         "UserPromocode", back_populates="promocode", cascade="all, delete-orphan"
     )
-    
+
     @property
-    @renders('max_usage_display')  
+    @renders("max_usage_display")
     def max_usage_display(self):
         return "∞" if self.max_usage is None else str(self.max_usage)
 
     @property
-    @renders('duration_days_display')
+    @renders("duration_days_display")
     def duration_days_display(self):
         return "∞" if self.duration_days is None else str(self.duration_days)
 
     @property
-    @renders('activate_count_display')
+    @renders("activate_count_display")
     def activate_count_display(self):
         return str(self.activate_count or 0)
 
     @property
-    @renders('services_summary')  
+    @renders("services_summary")
     def services_summary(self):
         if not self.services:
             return "—"
@@ -196,8 +227,6 @@ class PromocodeServiceQuantity(Base):
             return f"{self.service_type.value}: {self.quantity}"
         else:
             return f"{self.service_type.value}: ∞"
-        
-
 
 
 class UserPromocode(Base):
@@ -252,6 +281,7 @@ class AnalizePaymentServiceQuantity(Base):
     analize_payment: Mapped["AnalizePayment"] = relationship(
         "AnalizePayment", back_populates="services"
     )
+
     def __str__(self):
         if self.quantity is not None and self.quantity > 0:
             return f"{self.service_type.value}: {self.quantity}"
@@ -295,22 +325,25 @@ class AnalizePayment(Base):
         cascade="all, delete-orphan",
     )
     users_assoc: Mapped[list["UserAnalizePayment"]] = relationship(
-        "UserAnalizePayment", back_populates="analize_payment", cascade="all, delete-orphan"
+        "UserAnalizePayment",
+        back_populates="analize_payment",
+        cascade="all, delete-orphan",
     )
 
     @property
-    @renders('duration_days_display')
+    @renders("duration_days_display")
     def duration_days_display(self) -> str:
         """Отображает длительность как '∞' если None, иначе число дней"""
         return "∞" if self.duration_days is None else str(self.duration_days)
 
     @property
-    @renders('services_summary')
+    @renders("services_summary")
     def services_summary(self) -> str:
         """Красивое сводное отображение услуг в списке и деталях"""
         if not self.services:
             return "—"
         return ", ".join(str(service) for service in self.services)
+
 
 class UserAnalizePayment(Base):
     __tablename__ = "user_analize_payments"
@@ -390,32 +423,34 @@ class MessageForNew(Base):
     dispatch_time: Mapped[str] = mapped_column(
         String(5), nullable=False
     )  # Время рассылки в формате "HH:MM"
+
     @property
-    @renders('dispatch_day_display')
+    @renders("dispatch_day_display")
     def dispatch_day_display(self) -> str:
         """Человекочитаемые дни недели"""
         if not self.dispatch_day:
             return "—"
         days_map = {
-            'mon': 'Понедельник',
-            'tue': 'Вторник',
-            'wed': 'Среда',
-            'thu': 'Четверг',
-            'fri': 'Пятница',
-            'sat': 'Суббота',
-            'sun': 'Воскресенье',
+            "mon": "Понедельник",
+            "tue": "Вторник",
+            "wed": "Среда",
+            "thu": "Четверг",
+            "fri": "Пятница",
+            "sat": "Суббота",
+            "sun": "Воскресенье",
         }
-        days = [d.strip().lower() for d in self.dispatch_day.split(',')]
+        days = [d.strip().lower() for d in self.dispatch_day.split(",")]
         return ", ".join(days_map.get(d, d.capitalize()) for d in days)
 
     @property
-    @renders('text_preview')
+    @renders("text_preview")
     def text_preview(self) -> str:
         """Короткий предпросмотр текста в списке"""
         if not self.text:
             return "—"
         preview = self.text.strip().replace("\n", " ")
         return (preview[:120] + "…") if len(preview) > 120 else preview
+
 
 class UserGroup(Base):
     __tablename__ = "user_groups"
@@ -444,8 +479,9 @@ class UserInGroup(Base):
     user: Mapped["User"] = relationship("User", back_populates="groups")
     group: Mapped["UserGroup"] = relationship("UserGroup", back_populates="users")
 
+
 class MessagesTexts(Base):
-    __tablename__ = 'messages_texts'
+    __tablename__ = "messages_texts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(30), nullable=False)
