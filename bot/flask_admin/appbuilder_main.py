@@ -15,6 +15,11 @@ from bot.flask_admin.model_view.promo import (
     PromocodeModelView,
     PromocodeServiceQuantityInline,
 )
+from bot.flask_admin.model_view.user import (
+    UserModelView,
+    UserPromocodeInline,
+    UserAnalizePaymentInline,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +83,9 @@ def register_models(appbuilder, db):
     )
     appbuilder.add_view_no_menu(AnalizePaymentServiceQuantityInline)
     appbuilder.add_view(AnalizePaymentModelView, "Пакеты", icon="fa-credit-card")
+    appbuilder.add_view_no_menu(UserPromocodeInline)
+    appbuilder.add_view_no_menu(UserAnalizePaymentInline)
+    appbuilder.add_view(UserModelView, "Пользователи", icon="fa-users")
     appbuilder.add_view(
         MessageForNewModelView, "Сообщения для новеньких", icon="fa-calendar-o"
     )
