@@ -696,8 +696,8 @@
             padding: 8px 16px;
         }
 
-        .modal-body>div select,
-        .modal-body>div input[type="number"] {
+        .modal-footer>div select,
+        .modal-footer>div input[type="number"] {
             width: 40%;
             padding: 8px;
             border: 1px solid #444;
@@ -708,8 +708,8 @@
             font-family: Arial, sans-serif;
         }
 
-        .modal-body>div select:focus,
-        .modal-body>div input[type="number"]:focus {
+        .modal-footer>div select:focus,
+        .modal-footer>div input[type="number"]:focus {
             outline: none;
             border-color: #007bff;
             box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
@@ -900,6 +900,8 @@
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="modal-footer">
                     <div>
                         <label>Порог:
                             <select id="eqThresholdSelect">
@@ -913,8 +915,6 @@
                             <input type="number" id="eqThreshold" step="0.001" min="0" value="0.030">
                         </label>
                     </div>
-                </div>
-                <div class="modal-footer">
                     <button class="cancel-btn" onclick="closeSettingsModal()">Закрыть</button>
                 </div>
             </div>
