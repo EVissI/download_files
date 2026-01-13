@@ -64,30 +64,35 @@ class User(Base):
     @property
     @renders("active_promocodes")
     def active_promocodes(self):
-        """Количество активных промокодов пользователя"""
-        active_count = len([p for p in self.used_promocodes if p.is_active])
-        return str(active_count) if active_count > 0 else "—"
+        """Список активных промокодов пользователя"""
+        active_promocodes = [
+            p.promocode.code for p in self.used_promocodes if p.is_active
+        ]
+        return ", ".join(active_promocodes) if active_promocodes else "—"
 
     @property
     @renders("active_payments")
     def active_payments(self):
-        """Количество активных покупок пользователя"""
-        active_count = len([p for p in self.analize_payments_assoc if p.is_active])
-        return str(active_count) if active_count > 0 else "—"
+        """Список активных покупок пользователя"""
+        active_payments = [
+            p.analize_payment.name for p in self.analize_payments_assoc if p.is_active
+        ]
+        return ", ".join(active_payments) if active_payments else "—"
 
     @property
     @renders("total_balance")
     def total_balance(self):
         """Общий баланс услуг по всем активным промокодам и платежам"""
         total = 0
-        # Суммируем remaining_quantity по всем активным записям
+        # Промокоды
         for promocode in [p for p in self.used_promocodes if p.is_active]:
             for service in promocode.remaining_services:
                 total += service.remaining_quantity or 0
+        # Платежи
         for payment in [p for p in self.analize_payments_assoc if p.is_active]:
             for service in payment.remaining_services:
                 total += service.remaining_quantity
-        return str(total) if total > 0 else "0"
+        return str(total)
 
 
 class Analysis(Base):
