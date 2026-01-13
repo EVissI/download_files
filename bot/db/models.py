@@ -1,4 +1,5 @@
 ﻿from datetime import datetime
+from collections import defaultdict
 import enum
 from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -82,17 +83,29 @@ class User(Base):
     @property
     @renders("total_balance")
     def total_balance(self):
-        """Общий баланс услуг по всем активным промокодам и платежам"""
-        total = 0
+        """Детальный баланс услуг по сервисам"""
+        from collections import defaultdict
+
+        service_totals = defaultdict(int)
+
         # Промокоды
         for promocode in [p for p in self.used_promocodes if p.is_active]:
             for service in promocode.remaining_services:
-                total += service.remaining_quantity or 0
+                service_totals[service.service_type.value] += (
+                    service.remaining_quantity or 0
+                )
+
         # Платежи
         for payment in [p for p in self.analize_payments_assoc if p.is_active]:
             for service in payment.remaining_services:
-                total += service.remaining_quantity
-        return str(total)
+                service_totals[service.service_type.value] += service.remaining_quantity
+
+        if not service_totals:
+            return "—"
+
+        return ", ".join(
+            f"{service}: {count}" for service, count in service_totals.items()
+        )
 
 
 class Analysis(Base):
