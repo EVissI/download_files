@@ -35,6 +35,7 @@ class UserAnalizePaymentInline(ModelView):
 class UserModelView(ModelView):
     datamodel = SQLAInterface(User)
     base_permissions = ['can_list', 'can_show']
+    
     list_columns = [
         "id",
         "username",
@@ -46,7 +47,7 @@ class UserModelView(ModelView):
         "active_payments",
         "total_balance",
     ]
-
+    order_columns = ['id', 'username', 'role']
     show_columns = list_columns
 
     label_columns = {
