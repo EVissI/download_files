@@ -1082,7 +1082,13 @@
                         data.forEach(item => {
                             if (item.hints && item.hints.length > 0) {
                                 const firstEq = item.hints[0].eq;
-                                item.is_error = item.hints.some(hint => firstEq - hint.eq >= eqThreshold);
+                                const madeHint = item.hints.find(h => h.move && h.move.replace(/\*/g, '') === item.gnu_move.trim().replace(/\*/g, ''));
+                                if (madeHint) {
+                                    const diff = firstEq - madeHint.eq;
+                                    item.is_error = diff >= eqThreshold;
+                                } else {
+                                    item.is_error = false;
+                                }
                             } else {
                                 item.is_error = false;
                             }
@@ -1292,7 +1298,13 @@
             data.forEach(item => {
                 if (item.hints && item.hints.length > 0) {
                     const firstEq = item.hints[0].eq;
-                    item.is_error = item.hints.some(hint => firstEq - hint.eq >= eqThreshold);
+                    const madeHint = item.hints.find(h => h.move && h.move.replace(/\*/g, '') === item.gnu_move.trim().replace(/\*/g, ''));
+                    if (madeHint) {
+                        const diff = firstEq - madeHint.eq;
+                        item.is_error = diff >= eqThreshold;
+                    } else {
+                        item.is_error = false;
+                    }
                 } else {
                     item.is_error = false;
                 }
