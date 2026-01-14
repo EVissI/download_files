@@ -217,7 +217,17 @@
             cursor: not-allowed;
         }
 
-        select {
+        .game-select {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 5px;
+        }
+
+        .settings-modal select {
             font-family: Arial, sans-serif;
             font-size: 16px;
             color: white;
@@ -1034,7 +1044,7 @@
 
                 // Создаем выпадающий список для выбора игры только если это матч
                 if (availableGames.length > 0 && matchLength > 0) {
-                    let selectHtml = '<select id="gameSelect" onchange="loadGame(this.value)">';
+                    let selectHtml = '<select id="gameSelect" class="game-select" onchange="loadGame(this.value)">';
                     selectHtml += '<option value="">Выберите игру</option>';
                     availableGames.forEach(game => {
                         selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
