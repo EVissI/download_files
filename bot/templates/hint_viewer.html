@@ -225,6 +225,7 @@
             border: 1px solid #444;
             border-radius: 6px;
             padding: 5px;
+            box-sizing: border-box;
         }
 
         #prevBtn,
@@ -658,11 +659,7 @@
 
         .modal-content {
             background-color: #2d2d2d;
-            position: absolute;
-            top: 10%;
-            bottom: 10%;
-            left: 50%;
-            transform: translateX(-50%);
+            margin: 15% auto;
             padding: 20px;
             border: 1px solid #444;
             border-radius: 8px;
@@ -672,6 +669,7 @@
             text-align: left;
             display: flex;
             flex-direction: column;
+            min-height: 300px;
         }
 
         .modal-content h2 {
@@ -728,7 +726,7 @@
         }
 
         .select-wrapper {
-            width: 360px;
+            width: 100%;
         }
 
         .select-wrapper select {
@@ -754,7 +752,7 @@
         }
 
         .select-wrapper {
-            width: 360px;
+            width: 100%;
         }
 
         .select-wrapper select {
