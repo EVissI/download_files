@@ -716,6 +716,7 @@
         }
 
         .cancel-btn {
+            padding-top: 10px;
             background-color: #6c757d;
         }
 
@@ -895,16 +896,18 @@
                             <div id="eq-threshold-tab" class="tab-content">
                                 <div>
                                     <label
-                                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">Порог:
-                                        <select id="eqThresholdSelect">
+                                        style="display: flex; align-items: center; margin-bottom: 10px; margin-right: 20px;">
+                                        <span style="flex: 1;">Порог:</span>
+                                        <select id="eqThresholdSelect" style="width: 200px;">
                                             <option value="0.030" selected>Сомнительный ход (0.030)</option>
                                             <option value="0.060">Плохой ход (0.060)</option>
                                             <option value="0.120">Очень плохой ход (0.120)</option>
                                         </select>
                                     </label>
-                                    <label
-                                        style="display: flex; justify-content: space-between; align-items: center;">Значение:
-                                        <input type="number" id="eqThreshold" step="0.001" min="0" value="0.030">
+                                    <label style="display: flex; align-items: center; margin-right: 20px;">
+                                        <span style="flex: 1;">Значение:</span>
+                                        <input type="number" id="eqThreshold" step="0.001" min="0" value="0.030"
+                                            style="width: 200px;">
                                     </label>
                                 </div>
                             </div>
