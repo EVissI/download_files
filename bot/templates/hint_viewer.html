@@ -761,13 +761,6 @@
         const gameId = urlParams.get('game_id') || 'default';
         const error = urlParams.get('error') || '0';
 
-        // Disable animation if error != '0'
-        if (error !== '0') {
-            const animationControls = document.querySelector('.animation-controls');
-            if (animationControls) {
-                animationControls.style.display = 'none';
-            }
-        }
 
         // Add cache-busting to CSS background images
         document.addEventListener('DOMContentLoaded', function () {
@@ -1227,13 +1220,9 @@
                             });
                         }
 
-                        // Force skip animation and hide controls if error != '0'
+                        // Force skip animation if error != '0'
                         if (error !== '0') {
                             skipAnimationEnabled = true;
-                            const animationControls = document.querySelector('.animation-controls');
-                            if (animationControls) {
-                                animationControls.style.display = 'none';
-                            }
                         }
 
                         const animationSpeedSlider = document.getElementById('animationSpeedSlider');
