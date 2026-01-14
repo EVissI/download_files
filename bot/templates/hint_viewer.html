@@ -1088,7 +1088,7 @@
                         // Добавьте поле is_visible
                         data.forEach(item => {
                             const isErrorMode = error !== '0';
-                            const isMoveWithError = item.hints && item.hints.length > 0 && Math.abs(item.hints[0].eq - item.eq) <= eqThreshold;
+                            const isMoveWithError = item.hints && item.hints.length > 0 && (item.hints[0].eq - item.eq) >= eqThreshold;
                             item.is_visible = (error === '0') ||
                                 (error === '1' && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take') && isMoveWithError) ||
                                 (error === '2' && ((item.player_name === redPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take') && isMoveWithError) || item.action === 'win')) ||
