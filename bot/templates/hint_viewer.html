@@ -942,6 +942,11 @@
         let hidePipsCheckbox = null;
         let hasErrorsInMatch = false;
         let eqThreshold = 0.030;
+        // Load eqThreshold from localStorage if available
+        const savedEqThreshold = localStorage.getItem('eqThreshold');
+        if (savedEqThreshold !== null) {
+            eqThreshold = parseFloat(savedEqThreshold);
+        }
         const infoDiv = document.getElementById('move-info');
         const matchInfoDiv = document.getElementById('match-info');
         const playersInfoDiv = document.getElementById('players-info');
