@@ -1194,7 +1194,6 @@
                                 if (eqSelect) {
                                     eqSelect.value = eqThreshold.toString();
                                 }
-                                updateVisibility();
                             });
                         }
 
@@ -1208,7 +1207,6 @@
                                 if (eqInput) {
                                     eqInput.value = value;
                                 }
-                                updateVisibility();
                             });
                         }
 
@@ -3268,6 +3266,7 @@
 
         function closeSettingsModal() {
             document.getElementById('settingsModal').style.display = 'none';
+            updateVisibility();
         }
 
         function switchTab(tabName) {
