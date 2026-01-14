@@ -1087,12 +1087,16 @@
 
                         // Добавьте поле is_visible
                         data.forEach(item => {
-                            const isErrorMode = error !== '0';
-                            const isMoveWithError = item.hints && item.hints.length > 0 && (item.hints[0].eq - item.eq) <= eqThreshold;
+                            if (item.hints && item.hints.length > 0) {
+                                const firstEq = item.hints[0].eq;
+                                item.is_error = item.hints.some(hint => firstEq - hint.eq >= eqThreshold);
+                            } else {
+                                item.is_error = false;
+                            }
                             item.is_visible = (error === '0') ||
-                                (error === '1' && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take') && isMoveWithError) ||
-                                (error === '2' && ((item.player_name === redPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take') && isMoveWithError) || item.action === 'win')) ||
-                                (error === '3' && ((item.player_name === blackPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take') && isMoveWithError) || item.action === 'win'));
+                                (error === '1' && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take') && item.is_error) ||
+                                (error === '2' && ((item.player_name === redPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error) ||
+                                (error === '3' && ((item.player_name === blackPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error);
                         });
 
                         // Проверить, есть ли видимые ходы помимо win
@@ -1185,6 +1189,7 @@
 
                         // Инициализируем настройки при загрузке игры
                         initSettingsFromLocalStorage();
+                        updateVisibility();
 
                         // Обработчики изменения для порогов EQ
                         const eqInput = document.getElementById('eqThreshold');
@@ -1196,6 +1201,7 @@
                                 if (eqSelect) {
                                     eqSelect.value = eqThreshold.toString();
                                 }
+                                updateVisibility();
                             });
                         }
 
@@ -1209,6 +1215,7 @@
                                 if (eqInput) {
                                     eqInput.value = value;
                                 }
+                                updateVisibility();
                             });
                         }
 
@@ -1290,6 +1297,35 @@
         let firstDoubleIndex = -1;
         let currentCube = null;
         let currentCubePlayer = null;
+
+        function updateVisibility() {
+            if (!dataLoaded) return;
+            data.forEach(item => {
+                if (item.hints && item.hints.length > 0) {
+                    const firstEq = item.hints[0].eq;
+                    item.is_error = item.hints.some(hint => firstEq - hint.eq >= eqThreshold);
+                } else {
+                    item.is_error = false;
+                }
+                item.is_visible = (error === '0') ||
+                    (error === '1' && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take') && item.is_error) ||
+                    (error === '2' && ((item.player_name === redPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error) ||
+                    (error === '3' && ((item.player_name === blackPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error);
+            });
+            // Найти новый current, если текущий не видим
+            if (!data[current].is_visible) {
+                let newCurrent = current;
+                while (newCurrent >= 0 && !data[newCurrent].is_visible) newCurrent--;
+                if (newCurrent < 0) {
+                    newCurrent = current;
+                    while (newCurrent < data.length && !data[newCurrent].is_visible) newCurrent++;
+                }
+                if (newCurrent >= data.length) newCurrent = data.length - 1;
+                current = newCurrent;
+            }
+            render(current, invertColors);
+            updateButtons();
+        }
 
         function updateCurrentCube(turn) {
             let lastDoubleIndex = -1;
