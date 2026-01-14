@@ -961,11 +961,12 @@
                             <!-- Вкладка Animation Controls -->
                             <div id="animation-controls-tab" class="tab-content active">
                                 <div class="animation-controls">
-                                    <label><input type="checkbox" id="skipAnimationCheckbox"> Убрать анимацию
+                                    <label id="skipAnimationLabel"><input type="checkbox" id="skipAnimationCheckbox">
+                                        Убрать анимацию
                                         шашек</label>
                                     <label><input type="checkbox" id="hidePipsCheckbox"> Убрать отображение
                                         пипсов</label>
-                                    <label>Скорость анимации:
+                                    <label id="animationSpeedLabel">Скорость анимации:
                                         <select id="animationSpeedSlider">
                                             <option value="0.4">0.4</option>
                                             <option value="0.7">0.7</option>
@@ -1278,6 +1279,14 @@
                             const eqSelect = document.getElementById('eqThresholdSelect');
                             if (eqSelect) {
                                 eqSelect.value = eqThreshold.toString();
+                            }
+
+                            // Hide animation controls in error mode
+                            if (error !== '0') {
+                                const skipLabel = document.getElementById('skipAnimationLabel');
+                                if (skipLabel) skipLabel.style.display = 'none';
+                                const speedLabel = document.getElementById('animationSpeedLabel');
+                                if (speedLabel) speedLabel.style.display = 'none';
                             }
                         };
 
