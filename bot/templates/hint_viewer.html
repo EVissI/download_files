@@ -893,7 +893,7 @@
                             </div>
                             <!-- Вкладка EQ Threshold -->
                             <div id="eq-threshold-tab" class="tab-content">
-                                <div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
                                     <label>Порог:
                                         <select id="eqThresholdSelect">
                                             <option value="0.030" selected>Сомнительный ход (0.030)</option>
@@ -901,7 +901,6 @@
                                             <option value="0.120">Очень плохой ход (0.120)</option>
                                         </select>
                                     </label>
-                                    <br>
                                     <label>Значение:
                                         <input type="number" id="eqThreshold" step="0.001" min="0" value="0.030">
                                     </label>
@@ -911,7 +910,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="cancel-btn" onclick="closeSettingsModal()">Закрыть</button>
+                    <button class="cancel-btn" onclick="closeSettingsModal()">Подтвердить</button>
                 </div>
             </div>
         </div>
