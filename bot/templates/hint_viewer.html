@@ -1173,10 +1173,12 @@
 
                             const eqState = localStorage.getItem('eqThreshold');
                             const eqInput = document.getElementById('eqThreshold');
-                            if (eqInput && eqState) {
-                                eqInput.value = eqState;
+                            if (eqState) {
                                 eqThreshold = parseFloat(eqState);
-                            } else if (eqInput) {
+                            } else {
+                                localStorage.setItem('eqThreshold', eqThreshold);
+                            }
+                            if (eqInput) {
                                 eqInput.value = eqThreshold;
                             }
 
