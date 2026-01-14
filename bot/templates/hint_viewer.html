@@ -724,6 +724,14 @@
             font-size: 14px;
         }
 
+        .select-wrapper {
+            width: 60%;
+        }
+
+        .select-wrapper select {
+            width: 100%;
+        }
+
         .eq-threshold-controls {
             display: flex;
             flex-direction: column;
@@ -740,6 +748,14 @@
             min-width: 80px;
             color: #ccc;
             font-size: 16px;
+        }
+
+        .select-wrapper {
+            width: 60%;
+        }
+
+        .select-wrapper select {
+            width: 100%;
         }
 
         .modal-body>div select:focus,
@@ -931,11 +947,13 @@
                                 <div class="eq-threshold-controls">
                                     <label class="eq-label">
                                         <span class="label-text">Порог:</span>
-                                        <select id="eqThresholdSelect">
-                                            <option value="0.030" selected>Сомнительный ход (0.030)</option>
-                                            <option value="0.060">Плохой ход (0.060)</option>
-                                            <option value="0.120">Очень плохой ход (0.120)</option>
-                                        </select>
+                                        <div class="select-wrapper">
+                                            <select id="eqThresholdSelect">
+                                                <option value="0.030" selected>Сомнительный ход (0.030)</option>
+                                                <option value="0.060">Плохой ход (0.060)</option>
+                                                <option value="0.120">Очень плохой ход (0.120)</option>
+                                            </select>
+                                        </div>
                                     </label>
                                     <label class="eq-label">
                                         <span class="label-text">Значение:</span>
