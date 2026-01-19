@@ -152,7 +152,7 @@
         }
 
         function updateDropdownPosition(select, point, scale) {
-            const x = (getX(point) - 10) * scale; // Slightly more to the left
+            const x = (getX(point) - 15) * scale; // More to the left
             // Position dropdown strictly above/below the point number
             let y_text;
             if (point > 12) {
@@ -160,7 +160,7 @@
             } else {
                 y_text = 750; // Position of number for lower half
             }
-            const offset = point > 12 ? -25 : 20; // Higher for upper row, below for lower
+            const offset = point > 12 ? -30 : 20; // Even higher for upper row
             const y = (y_text + offset) * scale;
             select.style.left = x + 'px';
             select.style.top = y + 'px';
