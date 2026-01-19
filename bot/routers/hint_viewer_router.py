@@ -265,7 +265,7 @@ async def handle_batch_stop(
 
 
 @hint_viewer_router.message(
-    F.document, StateFilter(HintViewerStates.uploading_sequential)
+    F.document, StateFilter(HintViewerStates.uploading_sequential), UserInfo()
 )
 async def handle_sequential_hint_file(message: Message, state: FSMContext, user_info: User, session_without_commit: AsyncSession):
     message_dao = MessagesTextsDAO(session_without_commit)
