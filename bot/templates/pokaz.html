@@ -226,7 +226,7 @@
 
         .checker-selector label {
             color: white;
-            font-size: 0.8rem;
+            font-size: 0.96rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -234,13 +234,13 @@
 
         @media (min-width: 768px) {
             .checker-selector label {
-                font-size: 1.2rem;
+                font-size: 1.44rem;
             }
         }
 
         @media (min-width: 1200px) {
             .checker-selector label {
-                font-size: 1.5rem;
+                font-size: 1.8rem;
             }
         }
 
@@ -307,6 +307,12 @@
             }
         }
 
+        .bar-label {
+            color: white;
+            font-size: 0.96rem;
+            text-align: center;
+        }
+
         @media (min-width: 768px) {}
 
         @media (min-width: 1200px) {}
@@ -335,7 +341,7 @@
                 <label><input type="radio" name="checkerColor" value="black"> Черные</label>
             </div>
             <div class="bar-selector">
-                <div style="color: white; font-size: 0.8rem; text-align: center;">на баре:</div>
+                <div class="bar-label">на баре:</div>
                 <div class="selectors">
                     <div>
                         <label for="white-bar-select">Белый:</label>
