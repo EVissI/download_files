@@ -127,6 +127,24 @@
             .nickname_inputs {
                 margin-bottom: 0.6rem;
             }
+
+            .score-inputs label {
+                font-size: 1.2rem;
+                width: 10rem;
+            }
+
+            .score-inputs input {
+                font-size: 1.2rem;
+                padding: 0.4rem;
+            }
+
+            .crawford-options label {
+                font-size: 1.2rem;
+            }
+
+            .crawford-options div label {
+                font-size: 1.2rem;
+            }
         }
 
         @media (min-width: 1200px) {
@@ -147,6 +165,24 @@
 
             .nickname_inputs {
                 margin-bottom: 0.8rem;
+            }
+
+            .score-inputs label {
+                font-size: 1.5rem;
+                width: 12rem;
+            }
+
+            .score-inputs input {
+                font-size: 1.5rem;
+                padding: 0.5rem;
+            }
+
+            .crawford-options label {
+                font-size: 1.5rem;
+            }
+
+            .crawford-options div label {
+                font-size: 1.5rem;
             }
         }
 
@@ -178,7 +214,7 @@
 
         .game-type label {
             color: white;
-            font-size: 0.96vw;
+            font-size: 0.96rem;
             width: 100%;
             text-align: center;
         }
@@ -318,6 +354,66 @@
             align-self: center;
         }
 
+        .match-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .score-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .score-inputs div {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .score-inputs label {
+            color: white;
+            font-size: 0.8rem;
+            width: 8rem;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        .score-inputs input {
+            flex: 1;
+            padding: 0.3125rem;
+            font-size: 0.8rem;
+            text-align: center;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            background-color: #2d2d2d;
+            color: white;
+        }
+
+        .crawford-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .crawford-options label {
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .crawford-options div {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .crawford-options div label {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.8rem;
+        }
+
         @media (min-width: 768px) {}
 
         @media (min-width: 1200px) {}
@@ -371,6 +467,25 @@
                     <option value="манигейм">манигейм</option>
                     <option value="матч">матч</option>
                 </select>
+                <div class="match-panel" style="display: none;">
+                    <div class="score-inputs">
+                        <div>
+                            <label for="lower-score">Очки нижнего игрока:</label>
+                            <input type="number" id="lower-score" min="0">
+                        </div>
+                        <div>
+                            <label for="upper-score">Очки верхнего игрока:</label>
+                            <input type="number" id="upper-score" min="0">
+                        </div>
+                    </div>
+                    <div class="crawford-options">
+                        <label>Crawford rule:</label>
+                        <div>
+                            <label><input type="checkbox" name="crawford" value="0"> 0</label>
+                            <label><input type="checkbox" name="crawford" value="1"> 1</label>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -717,6 +832,15 @@
     boardImg.onload = imageLoaded;
     whiteChecker.onload = imageLoaded;
     blackChecker.onload = imageLoaded;
+
+    document.getElementById('game-type-select').addEventListener('change', (e) => {
+        const matchPanel = document.querySelector('.match-panel');
+        if (e.target.value === 'матч') {
+            matchPanel.style.display = 'flex';
+        } else {
+            matchPanel.style.display = 'none';
+        }
+    });
 
     window.addEventListener('resize', updateAllDropdownPositions);
 </script>
