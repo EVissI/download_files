@@ -151,18 +151,25 @@
         }
 
         .selectors-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            position: relative;
             margin: 1rem 0;
+            min-height: 4rem;
+            /* Ensure space for absolute positioned elements */
         }
 
         .checker-selector {
+            position: absolute;
+            left: 0;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             gap: 0.5rem;
-            padding-left: 10%;
+        }
+
+        .bar-selector {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
         }
 
         .checker-selector label {
@@ -186,15 +193,23 @@
         }
 
         .bar-selector {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             flex-direction: row;
             align-items: center;
-            justify-content: space-between;
+            gap: 1rem;
             color: white;
         }
 
-        .bar-selector>div:first-child,
-        .bar-selector>div:last-child {
+        .bar-selector .selectors {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .bar-selector .selectors div {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
@@ -265,18 +280,20 @@
                 <label><input type="radio" name="checkerColor" value="black"> Черные</label>
             </div>
             <div class="bar-selector">
-                <div>
-                    <label for="white-bar-select">Белый:</label>
-                    <select id="white-bar-select">
-                        <option value="0">0</option>
-                    </select>
-                </div>
                 <div style="color: white; font-size: 1rem;">на баре:</div>
-                <div>
-                    <label for="black-bar-select">Черный:</label>
-                    <select id="black-bar-select">
-                        <option value="0">0</option>
-                    </select>
+                <div class="selectors">
+                    <div>
+                        <label for="white-bar-select">Белый:</label>
+                        <select id="white-bar-select">
+                            <option value="0">0</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="black-bar-select">Черный:</label>
+                        <select id="black-bar-select">
+                            <option value="0">0</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
