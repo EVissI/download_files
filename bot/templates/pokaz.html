@@ -159,7 +159,9 @@
             const y = (y_text + offset) * scale;
             select.style.left = x + 'px';
             select.style.top = y + 'px';
-            select.style.fontSize = (12 * scale) + 'px';
+            select.style.width = (50 * scale) + 'px'; // Decrease horizontal size by 2 times
+            select.style.height = (40 * scale) + 'px'; // Increase vertical size by 2 times
+            select.style.fontSize = (18 * scale) + 'px'; // Increase font size
         }
 
         function updateAllDropdownPositions() {
