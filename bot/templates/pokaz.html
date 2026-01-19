@@ -150,7 +150,7 @@
         }
 
         function updateDropdownPosition(select, point, scale) {
-            const x = (getX(point) - (point > 12 ? 15 : 13)) * scale; // More to the left for upper, less for lower
+            const x = (getX(point) - (point > 12 ? 15 : 17)) * scale; // More to the left for lower
             // Position dropdown strictly above/below the point number
             let y_text;
             if (point > 12) {
