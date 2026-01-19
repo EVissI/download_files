@@ -150,7 +150,7 @@
         }
 
         function updateDropdownPosition(select, point, scale) {
-            const x = (getX(point) - (point > 12 ? 15 : 15)) * scale; 
+            const x = (getX(point) - (point > 12 ? 0 : 0)) * scale; 
             let y_text;
             if (point > 12) {
                 y_text = 20; 
