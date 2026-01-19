@@ -1,0 +1,244 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backgammon Board Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            color: white;
+            background-color: #1a1a1a;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            display: none;
+        }
+
+        .board-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        canvas {
+            border: 2px solid #333;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+            max-width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .dropdown {
+            position: absolute;
+            font-size: 12px;
+        }
+
+        select {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 2px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin: 20px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            canvas {
+                width: 100%;
+                height: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Backgammon Board Editor</h1>
+        <div class="board-wrapper">
+            <canvas id="boardCanvas" width="800" height="800"></canvas>
+        </div>
+        <button onclick="updateBoard()">Обновить доску</button>
+    </div>
+
+    <script>
+        let positions = {
+            first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+            second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
+        };
+
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
+        const boardWrapper = document.querySelector('.board-wrapper');
+
+        // Load images
+        const boardImg = new Image();
+        boardImg.src = '/static/board.png';
+        const whiteChecker = new Image();
+        whiteChecker.src = '/static/white_checker.png';
+        const blackChecker = new Image();
+        blackChecker.src = '/static/black_checker.png';
+
+        function getX(point) {
+            if (point >= 13 && point <= 18) {
+                const baseX = 50 + (point - 13) * 60;
+                return baseX - (point === 13 ? 8 : 0);
+            } else if (point >= 19 && point <= 24) {
+                return 450 + (point - 19) * 60;
+            } else if (point >= 7 && point <= 12) {
+                const baseX = 50 + (12 - point) * 60;
+                return baseX - (point === 12 ? 4 : 0);
+            } else if (point >= 1 && point <= 6) {
+                return 450 + (6 - point) * 60;
+            }
+            return 0;
+        }
+
+        function getBaseY(point) {
+            return (point > 12) ? 70 : 690;
+        }
+
+        function createDropdowns() {
+            for (let point = 1; point <= 24; point++) {
+                const select = document.createElement('select');
+                select.id = `point-${point}`;
+                select.className = 'dropdown';
+                for (let i = 0; i <= 15; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    select.appendChild(option);
+                }
+                // Set initial value based on positions
+                let count = 0;
+                if (positions.first[point.toString()]) count = positions.first[point.toString()];
+                else if (positions.second[point.toString()]) count = positions.second[point.toString()];
+                select.value = count;
+
+                const x = getX(point) - 10;
+                const y = getBaseY(point) - (point > 12 ? 80 : 40); // Above for upper, below for lower
+                select.style.left = x + 'px';
+                select.style.top = y + 'px';
+
+                boardWrapper.appendChild(select);
+            }
+        }
+
+        function drawCheckers(player, img, positions, currentPlayer) {
+            ctx.font = 'bold 30px Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (player === currentPlayer) {
+                for (let point = 1; point <= 24; point++) {
+                    const x = getX(point);
+                    let y = getBaseY(point);
+                    const dy = getDy(point);
+
+                    let displayPoint = point;
+                    ctx.fillText(displayPoint, x, point > 12 ? y - 50 : y + 60);
+                }
+            }
+
+            for (let pointStr in positions) {
+                if (pointStr === 'bar' || pointStr === 'off') continue;
+                const point = parseInt(pointStr);
+                let count = positions[pointStr];
+                const x = getX(point);
+                let y = getBaseY(point);
+                const dy = getDy(point);
+
+                for (let i = 0; i < Math.min(count, 6); i++) {
+                    ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
+                }
+
+                if (count > 6) {
+                    const lastCheckerY = y + (5 * dy);
+                    ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
+                }
+            }
+
+            // Bar and off can be added if needed
+        }
+
+        function getDy(point) {
+            return (point > 12) ? 55 : -55;
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+
+            drawCheckers('first', whiteChecker, positions.first, 'first');
+            drawCheckers('second', blackChecker, positions.second, 'second');
+        }
+
+        function updateBoard() {
+            // Update positions from dropdowns
+            // For simplicity, assign to first player, clear second
+            for (let point = 1; point <= 24; point++) {
+                const select = document.getElementById(`point-${point}`);
+                const count = parseInt(select.value);
+                if (count > 0) {
+                    positions.first[point.toString()] = count;
+                    delete positions.second[point.toString()];
+                } else {
+                    delete positions.first[point.toString()];
+                    delete positions.second[point.toString()];
+                }
+            }
+            drawBoard();
+        }
+
+        // Load images and draw
+        let imagesLoaded = 0;
+        const totalImages = 3;
+
+        function imageLoaded() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) {
+                createDropdowns();
+                drawBoard();
+            }
+        }
+
+        boardImg.onload = imageLoaded;
+        whiteChecker.onload = imageLoaded;
+        blackChecker.onload = imageLoaded;
+    </script>
+</body>
+
+</html>

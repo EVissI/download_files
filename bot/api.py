@@ -17,7 +17,6 @@ import traceback
 import json
 
 
-
 class NoCacheStaticFiles(StaticFiles):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,6 +29,7 @@ class NoCacheStaticFiles(StaticFiles):
 
 app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global exception caught: {exc}")
@@ -37,8 +37,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     return Response(
         content=json.dumps({"detail": str(exc), "traceback": traceback.format_exc()}),
         status_code=500,
-        media_type="application/json"
+        media_type="application/json",
     )
+
+
 # CORS middleware for web app integration
 app.add_middleware(
     CORSMiddleware,
@@ -55,15 +57,15 @@ async def admin_security_middleware(request: Request, call_next):
         # Allow login and verify bypass
         if request.url.path in ["/admin/login", "/admin/verify"]:
             return await call_next(request)
-        
+
         session_token = request.cookies.get("admin_session")
         if not session_token:
             return Response("Unauthorized", status_code=401)
-        
+
         admin_id = await redis_client.get(f"admin_session:{session_token}")
         if not admin_id:
             return Response("Unauthorized", status_code=401)
-            
+
     return await call_next(request)
 
 
@@ -73,6 +75,16 @@ templates = Jinja2Templates(directory="bot/templates")
 # Include routers
 app.include_router(hint_viewer_api_router, prefix="")
 app.include_router(short_board_api_router, prefix="")
+
+
+@app.get("/pokaz")
+async def get_pokaz(request: Request, chat_id: str = None):
+    """
+    Возвращает HTML-страницу редактора доски нардов.
+    """
+    return templates.TemplateResponse(
+        "pokaz.html", {"request": request, "chat_id": chat_id}
+    )
 
 
 @app.get("/admin/login", response_class=HTMLResponse)
@@ -88,31 +100,35 @@ async def admin_verify(request: Request, response: Response):
     if not init_data:
         logger.warning("Missing initData in request")
         raise HTTPException(status_code=400, detail="Missing initData")
-    
+
     user_data = verify_telegram_webapp_data(init_data)
     if not user_data:
         logger.warning("Failed to verify telegram webapp data")
         raise HTTPException(status_code=401, detail="Invalid Telegram data")
-    
+
     user_id = user_data.get("user", {}).get("id")
     logger.info(f"Verified user_id: {user_id}")
     if user_id not in settings.ROOT_ADMIN_IDS:
-        logger.warning(f"User {user_id} not in ROOT_ADMIN_IDS: {settings.ROOT_ADMIN_IDS}")
+        logger.warning(
+            f"User {user_id} not in ROOT_ADMIN_IDS: {settings.ROOT_ADMIN_IDS}"
+        )
         raise HTTPException(status_code=403, detail="Not an admin")
-    
+
     # Create session
     session_token = secrets.token_urlsafe(32)
     # Store session in redis
     logger.info(f"Creating session for user {user_id}")
-    await redis_client.set(f"admin_session:{session_token}", str(user_id), expire=86400) # 24h
-    
+    await redis_client.set(
+        f"admin_session:{session_token}", str(user_id), expire=86400
+    )  # 24h
+
     logger.info(f"Setting session cookie for user {user_id}")
     response.set_cookie(
         key="admin_session",
         value=session_token,
         httponly=True,
         samesite="lax",
-        max_age=86400
+        max_age=86400,
     )
     return {"status": "ok"}
 

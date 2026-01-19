@@ -1,29 +1,24 @@
 ﻿import asyncio
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram import Bot, Dispatcher
 from apscheduler.triggers.cron import CronTrigger
 
-from bot.common.func.aps_sheldure import schedule_gift_job_from_db
 from bot.common.middlewares.database_middleware import (
     DatabaseMiddlewareWithCommit,
     DatabaseMiddlewareWithoutCommit,
 )
 from bot.common.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.common.tasks.deactivate import expire_analiz_balances
-from bot.common.tasks.gift import check_and_notify_gift
 from bot.common.tasks.cleanup_screenshots import cleanup_screenshots
 from bot.db.pg_backup import backup_postgres_to_yandex_disk
-from bot.routers.admin.notify import resume_scheduled_broadcasts
 from bot.routers.setup import setup_router
-from bot.config import settings, setup_logger
+from bot.config import setup_logger, bot, admins, scheduler
 from bot.db.redis import redis_client
 
 setup_logger("bot")
 from aiogram.types import BotCommand, BotCommandScopeDefault
 from bot.config import translator_hub
 from loguru import logger
-from bot.config import bot, admins, scheduler
 
 
 async def set_commands():

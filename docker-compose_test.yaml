@@ -1,0 +1,19 @@
+﻿services: 
+  backgammon-bot:
+    build: .
+    command: /bin/sh -c "python -m bot.test_bot_init"
+    container_name: pokaz_bot
+    volumes:
+      - ./bot:/app/bot
+      - ./log:/app/log
+      - ./files:/app/files
+    env_file:
+      - .env
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+

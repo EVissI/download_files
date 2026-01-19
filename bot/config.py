@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     LOG_ROTATION: str = "10 MB"
 
     BOT_TOKEN: str
+    TEST_BOT_TOKEN: str
     CHAT_GROUP_ID: int
     ROOT_ADMIN_IDS: List[int]
     YA_API_TOKEN: str
@@ -64,6 +65,9 @@ translator_hub: TranslatorHub = create_translator_hub()
 
 bot = Bot(
     token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
+test_bot = Bot(
+    token=settings.TEST_BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 admins = settings.ROOT_ADMIN_IDS
 SUPPORT_TG_ID = 826161194
