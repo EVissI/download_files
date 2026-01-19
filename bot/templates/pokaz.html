@@ -18,7 +18,6 @@
 
         .container {
             width: 100%;
-            margin: 0 auto;
         }
 
         h1 {
@@ -149,7 +148,7 @@
         }
 
         function updateDropdownPosition(select, point, scale) {
-            const x = (getX(point) - (point > 12 ? 20 : 20)) * scale; 
+            const x = (getX(point) - (point > 12 ? 25 : 25)) * scale; 
             let y_text;
             if (point > 12) {
                 y_text = 20; 
