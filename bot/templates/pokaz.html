@@ -52,6 +52,7 @@
             background-color: #2d2d2d;
             border: 1px solid #444;
             border-radius: 4px;
+            padding: 2px;
         }
 
         button {
@@ -71,6 +72,10 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
             canvas {
                 width: 100%;
                 height: 100%;
@@ -136,14 +141,11 @@
                     option.textContent = i;
                     select.appendChild(option);
                 }
-                // Set initial value based on positions
-                let count = 0;
-                if (positions.first[point.toString()]) count = positions.first[point.toString()];
-                else if (positions.second[point.toString()]) count = positions.second[point.toString()];
-                select.value = count;
+                // Set initial value to 0 (empty)
+                select.value = 0;
 
-                const x = getX(point) - 10;
-                const y = getBaseY(point) - (point > 12 ? 80 : 40); // Above for upper, below for lower
+                const x = getX(point) - 5;
+                const y = getBaseY(point) - (point > 12 ? 60 : 30); // Closer to board
                 select.style.left = x + 'px';
                 select.style.top = y + 'px';
 
