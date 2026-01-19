@@ -236,62 +236,11 @@
             }
         }
 
-        .off-selector {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 1rem;
-            margin: 1rem 0;
-            color: white;
-        }
-
-        .off-selector .selectors {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .off-selector .selectors div {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.25rem;
-        }
-
-        .off-selector label {
-            font-size: 0.8rem;
-        }
-
-        .off-selector select {
-            font-size: 0.8rem;
-            width: 50px;
-            background-color: #2d2d2d;
-            color: white;
-            border: 1px solid #444;
-            border-radius: 0.25rem;
-            text-align: center;
-        }
-
         @media (min-width: 768px) {
-            .off-selector label {
-                font-size: 1rem;
-            }
 
-            .off-selector select {
-                font-size: 1rem;
-                width: 60px;
-            }
         }
 
         @media (min-width: 1200px) {
-            .off-selector label {
-                font-size: 1.2rem;
-            }
-
-            .off-selector select {
-                font-size: 1.2rem;
-                width: 70px;
-            }
         }
     </style>
 </head>
@@ -329,23 +278,6 @@
             <div>
                 <label for="black-bar-select">Черный:</label>
                 <select id="black-bar-select">
-                    <option value="0">0</option>
-                </select>
-            </div>
-        </div>
-    </div>
-    <div class="off-selector">
-        <div style="color: white; font-size: 1rem;">снятые у:</div>
-        <div class="selectors">
-            <div>
-                <label for="white-off-select">Белый:</label>
-                <select id="white-off-select">
-                    <option value="0">0</option>
-                </select>
-            </div>
-            <div>
-                <label for="black-off-select">Черный:</label>
-                <select id="black-off-select">
                     <option value="0">0</option>
                 </select>
             </div>
