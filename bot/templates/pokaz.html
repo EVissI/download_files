@@ -74,9 +74,13 @@
 
         .inputs {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             margin-bottom: 20px;
+        }
+
+        .inputs div {
+            margin-bottom: 10px;
         }
 
         .inputs label {
@@ -86,7 +90,7 @@
         }
 
         .inputs input {
-            width: 60px;
+            width: 100px;
             padding: 5px;
             font-size: 16px;
             text-align: center;
@@ -108,10 +112,14 @@
     <div class="container">
         <h1>Backgammon Board Editor</h1>
         <div class="inputs">
-            <label for="white-input">белые:</label>
-            <input type="number" id="white-input" min="0" max="15" value="0">
-            <label for="black-input">черные:</label>
-            <input type="number" id="black-input" min="0" max="15" value="0">
+            <div>
+                <label for="white-input">белые:</label>
+                <input type="text" id="white-input">
+            </div>
+            <div>
+                <label for="black-input">черные:</label>
+                <input type="text" id="black-input">
+            </div>
         </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
