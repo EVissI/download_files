@@ -238,19 +238,32 @@
             return (point > 12) ? 70 : 690;
         }
 
+        function updateSelectOptions(color) {
+            const targetPositions = color === 'white' ? positions.first : positions.second;
+            for (let point = 1; point <= 24; point++) {
+                const select = document.getElementById(`point-${point}`);
+                if (!select) continue;
+                const currentOnPoint = parseInt(select.value) || 0;
+                const totalWithoutThis = getTotalCheckers(targetPositions) - currentOnPoint;
+                const maxForThis = Math.max(0, 15 - totalWithoutThis);
+                select.innerHTML = '';
+                for (let i = 0; i <= maxForThis; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    select.appendChild(option);
+                }
+                select.value = currentOnPoint;
+            }
+        }
+
         function createDropdowns() {
             const scale = canvas.offsetWidth / 800;
             for (let point = 1; point <= 24; point++) {
                 const select = document.createElement('select');
                 select.id = `point-${point}`;
                 select.className = 'dropdown';
-                for (let i = 0; i <= 15; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = i;
-                    select.appendChild(option);
-                }
-                // Set initial value to 0 (empty)
+                // Options will be set by updateSelectOptions
                 select.value = 0;
 
                 updateDropdownPosition(select, point, scale);
@@ -260,6 +273,7 @@
 
                 boardWrapper.appendChild(select);
             }
+            updateSelectOptions('white'); // Default
         }
 
         function updateDropdownPosition(select, point, scale) {
@@ -375,6 +389,7 @@
                 }
             }
             drawBoard();
+            updateSelectOptions(color);
         }
 
         // Load images and draw
@@ -386,6 +401,11 @@
             if (imagesLoaded === totalImages) {
                 createDropdowns();
                 drawBoard();
+                document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        updateSelectOptions(radio.value);
+                    });
+                });
             }
         }
 
