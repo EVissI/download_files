@@ -1,5 +1,5 @@
 ﻿services: 
-  backgammon-bot:
+  pokaz_bot:
     build: .
     command: /bin/sh -c "python -m bot.test_bot_init"
     container_name: pokaz_bot
