@@ -214,7 +214,7 @@
             transform: translateY(-50%);
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
             gap: 0.5rem;
         }
 
@@ -317,6 +317,8 @@
             color: white;
             font-size: 0.96rem;
             text-align: center;
+            width: fit-content;
+            margin: 0 auto;
         }
 
         @media (min-width: 768px) {}
@@ -342,8 +344,8 @@
             <canvas id="boardCanvas" width="800" height="800"></canvas>
         </div>
         <div class="selectors-container">
+            <div class="checker-label">Шашки:</div>
             <div class="checker-selector">
-                <div class="checker-label">Шашки:</div>
                 <label><input type="radio" name="checkerColor" value="white" checked> Белые</label>
                 <label><input type="radio" name="checkerColor" value="black"> Черные</label>
             </div>
