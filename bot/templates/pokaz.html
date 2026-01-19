@@ -309,16 +309,12 @@
     function updateSelectOptions(color) {
         const targetPositions = color === 'white' ? positions.first : positions.second;
         const otherPositions = color === 'white' ? positions.second : positions.first;
-        const barCount = targetPositions.bar || 0;
-        const totalOnBoard = getTotalCheckers(targetPositions) - barCount;
         for (let point = 1; point <= 24; point++) {
             const select = document.getElementById(`point-${point}`);
             if (!select) continue;
             const currentOnPoint = parseInt(select.value) || 0;
-            const totalWithoutThis = totalOnBoard - currentOnPoint;
-            const maxForThis = Math.max(0, 15 - totalWithoutThis);
             const occupiedByOther = otherPositions[point.toString()] > 0;
-            const actualMax = occupiedByOther ? 0 : maxForThis;
+            const actualMax = occupiedByOther ? 0 : 15;
             select.innerHTML = '';
             for (let i = 0; i <= actualMax; i++) {
                 const option = document.createElement('option');
@@ -335,12 +331,8 @@
         const blackBarSelect = document.getElementById('black-bar-select');
         if (whiteBarSelect) {
             const currentBar = parseInt(whiteBarSelect.value) || 0;
-            const barCount = positions.first.bar || 0;
-            const totalOnBoard = getTotalCheckers(positions.first) - barCount;
-            const totalWithoutBar = totalOnBoard - currentBar;
-            const maxBar = Math.max(0, 15 - totalWithoutBar);
             whiteBarSelect.innerHTML = '';
-            for (let i = 0; i <= maxBar; i++) {
+            for (let i = 0; i <= 15; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
@@ -350,12 +342,8 @@
         }
         if (blackBarSelect) {
             const currentBar = parseInt(blackBarSelect.value) || 0;
-            const barCount = positions.second.bar || 0;
-            const totalOnBoard = getTotalCheckers(positions.second) - barCount;
-            const totalWithoutBar = totalOnBoard - currentBar;
-            const maxBar = Math.max(0, 15 - totalWithoutBar);
             blackBarSelect.innerHTML = '';
-            for (let i = 0; i <= maxBar; i++) {
+            for (let i = 0; i <= 15; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
