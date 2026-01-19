@@ -150,21 +150,20 @@
         }
 
         function updateDropdownPosition(select, point, scale) {
-            const x = (getX(point) - (point > 12 ? 15 : 17)) * scale; // More to the left for lower
-            // Position dropdown strictly above/below the point number
+            const x = (getX(point) - (point > 12 ? 15 : 15)) * scale; 
             let y_text;
             if (point > 12) {
-                y_text = 20; // Position of number for upper half
+                y_text = 20; 
             } else {
-                y_text = 750; // Position of number for lower half
+                y_text = 750; 
             }
-            const offset = point > 12 ? -82 : 20; // A bit lower for upper row
+            const offset = point > 12 ? -70 : 20; 
             const y = (y_text + offset) * scale;
             select.style.left = x + 'px';
             select.style.top = y + 'px';
-            select.style.width = (55 * scale) + 'px'; // Slightly wider
-            select.style.height = (55 * scale) + 'px'; // Slightly less in height
-            select.style.fontSize = (26 * scale) + 'px'; // Bigger font size by 2
+            select.style.width = (55 * scale) + 'px'; 
+            select.style.height = (55 * scale) + 'px'; 
+            select.style.fontSize = (26 * scale) + 'px'; 
         }
 
         function updateAllDropdownPositions() {
