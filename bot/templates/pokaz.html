@@ -149,6 +149,33 @@
                 margin-bottom: 0.8rem;
             }
         }
+
+        .checker-selector {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .checker-selector label {
+            color: white;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .checker-selector label {
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .checker-selector label {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
 
@@ -167,6 +194,10 @@
         </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
+        </div>
+        <div class="checker-selector">
+            <label><input type="radio" name="checkerColor" value="white" checked> Белые</label>
+            <label><input type="radio" name="checkerColor" value="black"> Черные</label>
         </div>
     </div>
 
@@ -310,13 +341,18 @@
 
         function updateBoard() {
             // Update positions from dropdowns
-            // For simplicity, assign to first player, clear second
+            const color = document.querySelector('input[name="checkerColor"]:checked').value;
             for (let point = 1; point <= 24; point++) {
                 const select = document.getElementById(`point-${point}`);
                 const count = parseInt(select.value);
                 if (count > 0) {
-                    positions.first[point.toString()] = count;
-                    delete positions.second[point.toString()];
+                    if (color === 'white') {
+                        positions.first[point.toString()] = count;
+                        delete positions.second[point.toString()];
+                    } else {
+                        positions.second[point.toString()] = count;
+                        delete positions.first[point.toString()];
+                    }
                 } else {
                     delete positions.first[point.toString()];
                     delete positions.second[point.toString()];
