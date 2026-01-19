@@ -240,14 +240,17 @@
 
         function updateSelectOptions(color) {
             const targetPositions = color === 'white' ? positions.first : positions.second;
+            const otherPositions = color === 'white' ? positions.second : positions.first;
             for (let point = 1; point <= 24; point++) {
                 const select = document.getElementById(`point-${point}`);
                 if (!select) continue;
                 const currentOnPoint = parseInt(select.value) || 0;
                 const totalWithoutThis = getTotalCheckers(targetPositions) - currentOnPoint;
                 const maxForThis = Math.max(0, 15 - totalWithoutThis);
+                const occupiedByOther = otherPositions[point.toString()] > 0;
+                const actualMax = occupiedByOther ? 0 : maxForThis;
                 select.innerHTML = '';
-                for (let i = 0; i <= maxForThis; i++) {
+                for (let i = 0; i <= actualMax; i++) {
                     const option = document.createElement('option');
                     option.value = i;
                     option.textContent = i;
@@ -382,10 +385,8 @@
                         continue;
                     }
                     targetPositions[point.toString()] = count;
-                    delete otherPositions[point.toString()];
                 } else {
                     delete targetPositions[point.toString()];
-                    delete otherPositions[point.toString()];
                 }
             }
             drawBoard();
