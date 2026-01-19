@@ -178,13 +178,11 @@
         }
 
         .bar-selector {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
             display: flex;
             flex-direction: column;
+            align-items: center;
             gap: 0.5rem;
+            margin: 1rem 0;
             color: white;
         }
 
@@ -253,302 +251,315 @@
             <label><input type="radio" name="checkerColor" value="white" checked> Белые</label>
             <label><input type="radio" name="checkerColor" value="black"> Черные</label>
         </div>
-        <div class="bar-selector">
-            <div style="text-align: center; color: white; font-size: 1rem;">на баре:</div>
-            <div>
-                <label for="white-bar-select">Белый:</label>
-                <select id="white-bar-select">
-                    <option value="0">0</option>
-                </select>
-            </div>
-            <div>
-                <label for="black-bar-select">Черный:</label>
-                <select id="black-bar-select">
-                    <option value="0">0</option>
-                </select>
-            </div>
+    </div>
+    <div class="bar-selector">
+        <div style="text-align: center; color: white; font-size: 1rem;">на баре:</div>
+        <div>
+            <label for="white-bar-select">Белый:</label>
+            <select id="white-bar-select">
+                <option value="0">0</option>
+            </select>
+        </div>
+        <div>
+            <label for="black-bar-select">Черный:</label>
+            <select id="black-bar-select">
+                <option value="0">0</option>
+            </select>
         </div>
     </div>
+</body>
 
-    <script>
-        let positions = {
-            first: { '1': 0, '12': 0, '17': 0, '19': 0, 'bar': 0, 'off': 0 },
-            second: { '6': 0, '8': 0, '13': 0, '24': 0, 'bar': 0, 'off': 0 }
-        };
+<script>
+    let positions = {
+        first: { '1': 0, '12': 0, '17': 0, '19': 0, 'bar': 0, 'off': 0 },
+        second: { '6': 0, '8': 0, '13': 0, '24': 0, 'bar': 0, 'off': 0 }
+    };
 
-        const canvas = document.getElementById('boardCanvas');
-        const ctx = canvas.getContext('2d');
-        const boardWrapper = document.querySelector('.board-wrapper');
+    const canvas = document.getElementById('boardCanvas');
+    const ctx = canvas.getContext('2d');
+    const boardWrapper = document.querySelector('.board-wrapper');
 
-        // Load images
-        const boardImg = new Image();
-        boardImg.src = '/static/board.png';
-        const whiteChecker = new Image();
-        whiteChecker.src = '/static/white_checker.png';
-        const blackChecker = new Image();
-        blackChecker.src = '/static/black_checker.png';
+    // Load images
+    const boardImg = new Image();
+    boardImg.src = '/static/board.png';
+    const whiteChecker = new Image();
+    whiteChecker.src = '/static/white_checker.png';
+    const blackChecker = new Image();
+    blackChecker.src = '/static/black_checker.png';
 
-        function getX(point) {
-            if (point >= 13 && point <= 18) {
-                const baseX = 50 + (point - 13) * 60;
-                return baseX - (point === 13 ? 8 : 0);
-            } else if (point >= 19 && point <= 24) {
-                return 450 + (point - 19) * 60;
-            } else if (point >= 7 && point <= 12) {
-                const baseX = 50 + (12 - point) * 60;
-                return baseX - (point === 12 ? 4 : 0);
-            } else if (point >= 1 && point <= 6) {
-                return 450 + (6 - point) * 60;
-            }
-            return 0;
+    function getX(point) {
+        if (point >= 13 && point <= 18) {
+            const baseX = 50 + (point - 13) * 60;
+            return baseX - (point === 13 ? 8 : 0);
+        } else if (point >= 19 && point <= 24) {
+            return 450 + (point - 19) * 60;
+        } else if (point >= 7 && point <= 12) {
+            const baseX = 50 + (12 - point) * 60;
+            return baseX - (point === 12 ? 4 : 0);
+        } else if (point >= 1 && point <= 6) {
+            return 450 + (6 - point) * 60;
         }
+        return 0;
+    }
 
-        function getBaseY(point) {
-            return (point > 12) ? 70 : 690;
-        }
+    function getBaseY(point) {
+        return (point > 12) ? 70 : 690;
+    }
 
-        function updateSelectOptions(color) {
-            const targetPositions = color === 'white' ? positions.first : positions.second;
-            const otherPositions = color === 'white' ? positions.second : positions.first;
-            for (let point = 1; point <= 24; point++) {
-                const select = document.getElementById(`point-${point}`);
-                if (!select) continue;
-                const currentOnPoint = parseInt(select.value) || 0;
-                const totalWithoutThis = getTotalCheckers(targetPositions) - currentOnPoint;
-                const maxForThis = Math.max(0, 15 - totalWithoutThis);
-                const occupiedByOther = otherPositions[point.toString()] > 0;
-                const actualMax = occupiedByOther ? 0 : maxForThis;
-                select.innerHTML = '';
-                for (let i = 0; i <= actualMax; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = i;
-                    select.appendChild(option);
-                }
-                select.value = currentOnPoint;
+    function updateSelectOptions(color) {
+        const targetPositions = color === 'white' ? positions.first : positions.second;
+        const otherPositions = color === 'white' ? positions.second : positions.first;
+        for (let point = 1; point <= 24; point++) {
+            const select = document.getElementById(`point-${point}`);
+            if (!select) continue;
+            const currentOnPoint = parseInt(select.value) || 0;
+            const totalWithoutThis = getTotalCheckers(targetPositions) - currentOnPoint;
+            const maxForThis = Math.max(0, 15 - totalWithoutThis);
+            const occupiedByOther = otherPositions[point.toString()] > 0;
+            const actualMax = occupiedByOther ? 0 : maxForThis;
+            select.innerHTML = '';
+            for (let i = 0; i <= actualMax; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                select.appendChild(option);
             }
+            select.value = currentOnPoint;
         }
+    }
 
-        function updateBarSelects() {
-            const whiteBarSelect = document.getElementById('white-bar-select');
-            const blackBarSelect = document.getElementById('black-bar-select');
-            if (whiteBarSelect) {
-                const currentBar = parseInt(whiteBarSelect.value) || 0;
-                const totalWithoutBar = getTotalCheckers(positions.first) - currentBar;
-                const maxBar = Math.max(0, 15 - totalWithoutBar);
-                whiteBarSelect.innerHTML = '';
-                for (let i = 0; i <= maxBar; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = i;
-                    whiteBarSelect.appendChild(option);
-                }
-                whiteBarSelect.value = currentBar;
+    function updateBarSelects() {
+        const whiteBarSelect = document.getElementById('white-bar-select');
+        const blackBarSelect = document.getElementById('black-bar-select');
+        if (whiteBarSelect) {
+            const currentBar = parseInt(whiteBarSelect.value) || 0;
+            const totalWithoutBar = getTotalCheckers(positions.first) - currentBar;
+            const maxBar = Math.max(0, 15 - totalWithoutBar);
+            whiteBarSelect.innerHTML = '';
+            for (let i = 0; i <= maxBar; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                whiteBarSelect.appendChild(option);
             }
-            if (blackBarSelect) {
-                const currentBar = parseInt(blackBarSelect.value) || 0;
-                const totalWithoutBar = getTotalCheckers(positions.second) - currentBar;
-                const maxBar = Math.max(0, 15 - totalWithoutBar);
-                blackBarSelect.innerHTML = '';
-                for (let i = 0; i <= maxBar; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = i;
-                    blackBarSelect.appendChild(option);
-                }
-                blackBarSelect.value = currentBar;
-            }
+            whiteBarSelect.value = currentBar;
         }
+        if (blackBarSelect) {
+            const currentBar = parseInt(blackBarSelect.value) || 0;
+            const totalWithoutBar = getTotalCheckers(positions.second) - currentBar;
+            const maxBar = Math.max(0, 15 - totalWithoutBar);
+            blackBarSelect.innerHTML = '';
+            for (let i = 0; i <= maxBar; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                blackBarSelect.appendChild(option);
+            }
+            blackBarSelect.value = currentBar;
+        }
+    }
 
-        function createDropdowns() {
-            const scale = canvas.offsetWidth / 800;
-            for (let point = 1; point <= 24; point++) {
-                const select = document.createElement('select');
-                select.id = `point-${point}`;
-                select.className = 'dropdown';
-                // Options will be set by updateSelectOptions
-                select.value = 0;
+    function createDropdowns() {
+        const scale = canvas.offsetWidth / 800;
+        for (let point = 1; point <= 24; point++) {
+            const select = document.createElement('select');
+            select.id = `point-${point}`;
+            select.className = 'dropdown';
+            // Options will be set by updateSelectOptions
+            select.value = 0;
 
+            updateDropdownPosition(select, point, scale);
+
+            // Add event listener to update board on change
+            select.addEventListener('change', updateBoard);
+
+            boardWrapper.appendChild(select);
+        }
+        updateSelectOptions('white'); // Default
+        updateBarSelects();
+    }
+
+    function updateDropdownPosition(select, point, scale) {
+        const x = (getX(point) - (point > 12 ? 25 : 25)) * scale;
+        let y_text;
+        if (point > 12) {
+            y_text = 20;
+        } else {
+            y_text = 750;
+        }
+        const offset = point > 12 ? -70 : 20;
+        const y = (y_text + offset) * scale;
+        select.style.left = x + 'px';
+        select.style.top = y + 'px';
+        select.style.width = (55 * scale) + 'px';
+        select.style.height = (55 * scale) + 'px';
+        select.style.fontSize = (26 * scale) + 'px';
+    }
+
+    function updateAllDropdownPositions() {
+        const scale = canvas.offsetWidth / 800;
+        for (let point = 1; point <= 24; point++) {
+            const select = document.getElementById(`point-${point}`);
+            if (select) {
                 updateDropdownPosition(select, point, scale);
-
-                // Add event listener to update board on change
-                select.addEventListener('change', updateBoard);
-
-                boardWrapper.appendChild(select);
             }
-            updateSelectOptions('white'); // Default
-            updateBarSelects();
         }
+    }
 
-        function updateDropdownPosition(select, point, scale) {
-            const x = (getX(point) - (point > 12 ? 25 : 25)) * scale;
-            let y_text;
-            if (point > 12) {
-                y_text = 20;
-            } else {
-                y_text = 750;
-            }
-            const offset = point > 12 ? -70 : 20;
-            const y = (y_text + offset) * scale;
-            select.style.left = x + 'px';
-            select.style.top = y + 'px';
-            select.style.width = (55 * scale) + 'px';
-            select.style.height = (55 * scale) + 'px';
-            select.style.fontSize = (26 * scale) + 'px';
-        }
+    function drawCheckers(player, img, positions, currentPlayer) {
+        ctx.font = 'bold 1.875rem Arial';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
-        function updateAllDropdownPositions() {
-            const scale = canvas.offsetWidth / 800;
+        if (player === currentPlayer) {
             for (let point = 1; point <= 24; point++) {
-                const select = document.getElementById(`point-${point}`);
-                if (select) {
-                    updateDropdownPosition(select, point, scale);
-                }
-            }
-        }
-
-        function drawCheckers(player, img, positions, currentPlayer) {
-            ctx.font = 'bold 1.875rem Arial';
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            if (player === currentPlayer) {
-                for (let point = 1; point <= 24; point++) {
-                    const x = getX(point);
-                    let y = getBaseY(point);
-                    const dy = getDy(point);
-
-                    let displayPoint = point;
-                    ctx.fillText(displayPoint, x, point > 12 ? y - 50 : y + 60);
-                }
-            }
-
-            for (let pointStr in positions) {
-                if (pointStr === 'bar' || pointStr === 'off') continue;
-                const point = parseInt(pointStr);
-                let count = positions[pointStr];
                 const x = getX(point);
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
-                for (let i = 0; i < Math.min(count, 6); i++) {
-                    ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
-                }
+                let displayPoint = point;
+                ctx.fillText(displayPoint, x, point > 12 ? y - 50 : y + 60);
+            }
+        }
 
-                if (count > 6) {
-                    const lastCheckerY = y + (5 * dy);
-                    ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
-                }
+        for (let pointStr in positions) {
+            if (pointStr === 'bar' || pointStr === 'off') continue;
+            const point = parseInt(pointStr);
+            let count = positions[pointStr];
+            const x = getX(point);
+            let y = getBaseY(point);
+            const dy = getDy(point);
+
+            for (let i = 0; i < Math.min(count, 6); i++) {
+                ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
             }
 
-            // Bar and off can be added if needed
-        }
-
-        function getDy(point) {
-            return (point > 12) ? 55 : -55;
-        }
-
-        function drawBoard() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
-
-            drawCheckers('first', whiteChecker, positions.first, 'first');
-            drawCheckers('second', blackChecker, positions.second, 'second');
-        }
-
-        function getTotalCheckers(pos) {
-            let total = 0;
-            for (let key in pos) {
-                if (key !== 'bar' && key !== 'off') {
-                    total += pos[key];
-                }
+            if (count > 6) {
+                const lastCheckerY = y + (5 * dy);
+                ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
             }
-            return total;
         }
 
-        function updateBoard() {
-            // Update positions from dropdowns
-            const color = document.querySelector('input[name="checkerColor"]:checked').value;
-            const targetPositions = color === 'white' ? positions.first : positions.second;
-            const otherPositions = color === 'white' ? positions.second : positions.first;
-
-            for (let point = 1; point <= 24; point++) {
-                const select = document.getElementById(`point-${point}`);
-                const count = parseInt(select.value);
-                const oldCount = targetPositions[point.toString()] || 0;
-
-                if (count > 0) {
-                    const newTotal = getTotalCheckers(targetPositions) - oldCount + count;
-                    if (newTotal > 15) {
-                        alert('Максимум 15 шашек на цвет!');
-                        select.value = oldCount;
-                        continue;
-                    }
-                    targetPositions[point.toString()] = count;
-                } else {
-                    delete targetPositions[point.toString()];
-                }
+        const barX = 400;
+        const barY = (player === 'second') ? 220 : 520;
+        const barDy = (player === 'second') ? 55 : -55;
+        if (positions.bar && positions.bar !== 0) {
+            let y = barY;
+            for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
+                ctx.drawImage(img, barX - 31.25, y + (i * barDy) - 31.25, 62.5, 62.5);
             }
+            if (Math.abs(positions.bar) > 6) {
+                const lastCheckerY = y + (5 * barDy);
+                ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
+            }
+        }
+    }
+
+    function getDy(point) {
+        return (point > 12) ? 55 : -55;
+    }
+
+    function drawBoard() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+
+        drawCheckers('first', whiteChecker, positions.first, 'first');
+        drawCheckers('second', blackChecker, positions.second, 'second');
+    }
+
+    function getTotalCheckers(pos) {
+        let total = 0;
+        for (let key in pos) {
+            if (key !== 'bar' && key !== 'off') {
+                total += pos[key];
+            }
+        }
+        return total;
+    }
+
+    function updateBoard() {
+        // Update positions from dropdowns
+        const color = document.querySelector('input[name="checkerColor"]:checked').value;
+        const targetPositions = color === 'white' ? positions.first : positions.second;
+        const otherPositions = color === 'white' ? positions.second : positions.first;
+
+        for (let point = 1; point <= 24; point++) {
+            const select = document.getElementById(`point-${point}`);
+            const count = parseInt(select.value);
+            const oldCount = targetPositions[point.toString()] || 0;
+
+            if (count > 0) {
+                const newTotal = getTotalCheckers(targetPositions) - oldCount + count;
+                if (newTotal > 15) {
+                    alert('Максимум 15 шашек на цвет!');
+                    select.value = oldCount;
+                    continue;
+                }
+                targetPositions[point.toString()] = count;
+            } else {
+                delete targetPositions[point.toString()];
+            }
+        }
+        drawBoard();
+        updateSelectOptions(color);
+        updateBarSelects();
+    }
+
+    // Load images and draw
+    let imagesLoaded = 0;
+    const totalImages = 3;
+
+    function imageLoaded() {
+        imagesLoaded++;
+        if (imagesLoaded === totalImages) {
+            createDropdowns();
             drawBoard();
-            updateSelectOptions(color);
-            updateBarSelects();
-        }
-
-        // Load images and draw
-        let imagesLoaded = 0;
-        const totalImages = 3;
-
-        function imageLoaded() {
-            imagesLoaded++;
-            if (imagesLoaded === totalImages) {
-                createDropdowns();
+            document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const newColor = radio.value;
+                    updateSelectOptions(newColor);
+                    // Update select values to match positions for new color
+                    for (let point = 1; point <= 24; point++) {
+                        const select = document.getElementById(`point-${point}`);
+                        const targetPositions = newColor === 'white' ? positions.first : positions.second;
+                        select.value = targetPositions[point.toString()] || 0;
+                    }
+                    updateBarSelects();
+                });
+            });
+            document.getElementById('white-bar-select').addEventListener('change', (e) => {
+                const count = parseInt(e.target.value);
+                if (count > 0) {
+                    positions.first.bar = count;
+                } else {
+                    delete positions.first.bar;
+                }
                 drawBoard();
-                document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
-                    radio.addEventListener('change', () => {
-                        const newColor = radio.value;
-                        updateSelectOptions(newColor);
-                        // Update select values to match positions for new color
-                        for (let point = 1; point <= 24; point++) {
-                            const select = document.getElementById(`point-${point}`);
-                            const targetPositions = newColor === 'white' ? positions.first : positions.second;
-                            select.value = targetPositions[point.toString()] || 0;
-                        }
-                        updateBarSelects();
-                    });
-                });
-                document.getElementById('white-bar-select').addEventListener('change', (e) => {
-                    const count = parseInt(e.target.value);
-                    if (count > 0) {
-                        positions.first.bar = count;
-                    } else {
-                        delete positions.first.bar;
-                    }
-                    drawBoard();
-                    updateSelectOptions('white');
-                    updateBarSelects();
-                });
-                document.getElementById('black-bar-select').addEventListener('change', (e) => {
-                    const count = parseInt(e.target.value);
-                    if (count > 0) {
-                        positions.second.bar = count;
-                    } else {
-                        delete positions.second.bar;
-                    }
-                    drawBoard();
-                    updateSelectOptions('black');
-                    updateBarSelects();
-                });
-            }
+                updateSelectOptions('white');
+                updateBarSelects();
+            });
+            document.getElementById('black-bar-select').addEventListener('change', (e) => {
+                const count = parseInt(e.target.value);
+                if (count > 0) {
+                    positions.second.bar = count;
+                } else {
+                    delete positions.second.bar;
+                }
+                drawBoard();
+                updateSelectOptions('black');
+                updateBarSelects();
+            });
         }
+    }
 
-        boardImg.onload = imageLoaded;
-        whiteChecker.onload = imageLoaded;
-        blackChecker.onload = imageLoaded;
+    boardImg.onload = imageLoaded;
+    whiteChecker.onload = imageLoaded;
+    blackChecker.onload = imageLoaded;
 
-        // Update dropdown positions on window resize
-        window.addEventListener('resize', updateAllDropdownPositions);
-    </script>
+    // Update dropdown positions on window resize
+    window.addEventListener('resize', updateAllDropdownPositions);
+</script>
 </body>
 
 </html>
