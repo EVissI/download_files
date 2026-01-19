@@ -339,23 +339,39 @@
             drawCheckers('second', blackChecker, positions.second, 'second');
         }
 
+        function getTotalCheckers(pos) {
+            let total = 0;
+            for (let key in pos) {
+                if (key !== 'bar' && key !== 'off') {
+                    total += pos[key];
+                }
+            }
+            return total;
+        }
+
         function updateBoard() {
             // Update positions from dropdowns
             const color = document.querySelector('input[name="checkerColor"]:checked').value;
+            const targetPositions = color === 'white' ? positions.first : positions.second;
+            const otherPositions = color === 'white' ? positions.second : positions.first;
+
             for (let point = 1; point <= 24; point++) {
                 const select = document.getElementById(`point-${point}`);
                 const count = parseInt(select.value);
+                const oldCount = targetPositions[point.toString()] || 0;
+
                 if (count > 0) {
-                    if (color === 'white') {
-                        positions.first[point.toString()] = count;
-                        delete positions.second[point.toString()];
-                    } else {
-                        positions.second[point.toString()] = count;
-                        delete positions.first[point.toString()];
+                    const newTotal = getTotalCheckers(targetPositions) - oldCount + count;
+                    if (newTotal > 15) {
+                        alert('Максимум 15 шашек на цвет!');
+                        select.value = oldCount;
+                        continue;
                     }
+                    targetPositions[point.toString()] = count;
+                    delete otherPositions[point.toString()];
                 } else {
-                    delete positions.first[point.toString()];
-                    delete positions.second[point.toString()];
+                    delete targetPositions[point.toString()];
+                    delete otherPositions[point.toString()];
                 }
             }
             drawBoard();
