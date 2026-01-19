@@ -28,7 +28,7 @@ async def cmd_start(message: Message):
     button = InlineKeyboardButton(
         text="тест",
         web_app=WebAppInfo(
-            url=f"{settings.MINI_APP_URL}/pokaz&?chat_id={message.from_user.id}"
+            url=f"{settings.MINI_APP_URL}/pokaz?chat_id={message.from_user.id}"
         ),
     )
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
