@@ -79,28 +79,28 @@
             flex-direction: column;
             align-items: stretch;
             width: 70%;
-            margin-bottom: clamp(0.5rem, 1vh, 1rem);
+            margin-bottom: 0.5rem;
         }
 
         .nickname_inputs div {
             display: flex;
             align-items: center;
-            margin-bottom: clamp(0.625rem, 1vh, 1rem);
+            margin-bottom: 0.625rem;
         }
 
         .nickname_inputs label {
             color: white;
-            margin-right: clamp(0.625rem, 1vw, 1rem);
-            font-size: clamp(1rem, 1.5vw, 1.5rem);
-            width: clamp(5rem, 6vw, 8rem);
+            margin-right: 0.625rem;
+            font-size: 1rem;
+            width: 5rem;
             text-align: left;
             flex-shrink: 0;
         }
 
         .nickname_inputs input {
             flex: 1;
-            padding: clamp(0.3125rem, 0.5vw, 0.5rem);
-            font-size: clamp(1rem, 1.5vw, 1.5rem);
+            padding: 0.3125rem;
+            font-size: 1rem;
             text-align: center;
             border: 1px solid #444;
             border-radius: 0.25rem;
@@ -108,7 +108,47 @@
             color: white;
         }
 
-        @media (max-width: 768px) {}
+        @media (min-width: 768px) {
+            .nickname_inputs label {
+                font-size: 1.2rem;
+                width: 6rem;
+                margin-right: 0.75rem;
+            }
+
+            .nickname_inputs input {
+                font-size: 1.2rem;
+                padding: 0.4rem;
+            }
+
+            .nickname_inputs div {
+                margin-bottom: 0.75rem;
+            }
+
+            .nickname_inputs {
+                margin-bottom: 0.6rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .nickname_inputs label {
+                font-size: 1.5rem;
+                width: 7rem;
+                margin-right: 1rem;
+            }
+
+            .nickname_inputs input {
+                font-size: 1.5rem;
+                padding: 0.5rem;
+            }
+
+            .nickname_inputs div {
+                margin-bottom: 1rem;
+            }
+
+            .nickname_inputs {
+                margin-bottom: 0.8rem;
+            }
+        }
     </style>
 </head>
 
