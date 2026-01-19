@@ -1742,27 +1742,6 @@
             }
         }
 
-        function updateBoard(gameIndex) {
-            const index = parseInt(gameIndex);
-            currentGameNum = index + 1;
-            data = availableGames[index].turns;
-            gameRedScore = availableGames[index].first_score;
-            gameBlackScore = availableGames[index].second_score;
-            current = 0;
-            inverted = false;
-            const matchInfoDiv = document.getElementById('match-info');
-            const game = availableGames[index];
-            const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
-            const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-            let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
-            document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
-            document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
-            drawBoard();
-            updateButtons();
-            updateInfo();
-        }
-
         function updateInfo() {
             if (!dataLoaded) return;
 
