@@ -131,6 +131,7 @@
         }
 
         function createDropdowns() {
+            const scale = canvas.offsetWidth / 800;
             for (let point = 1; point <= 24; point++) {
                 const select = document.createElement('select');
                 select.id = `point-${point}`;
@@ -144,10 +145,11 @@
                 // Set initial value to 0 (empty)
                 select.value = 0;
 
-                const x = getX(point) - 5;
-                const y = getBaseY(point) - (point > 12 ? 60 : 30); // Closer to board
+                const x = (getX(point) - 5) * scale;
+                const y = (getBaseY(point) - (point > 12 ? 60 : 30)) * scale; // Closer to board
                 select.style.left = x + 'px';
                 select.style.top = y + 'px';
+                select.style.fontSize = (12 * scale) + 'px';
 
                 boardWrapper.appendChild(select);
             }
