@@ -180,13 +180,19 @@
         .bar-selector {
             display: flex;
             flex-direction: row;
-            align-items: center;
+            align-items: flex-start;
             gap: 1rem;
             margin: 1rem 0;
             color: white;
         }
 
-        .bar-selector div {
+        .bar-selector .selectors {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .bar-selector .selectors div {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
@@ -232,13 +238,19 @@
         .off-selector {
             display: flex;
             flex-direction: row;
-            align-items: center;
+            align-items: flex-start;
             gap: 1rem;
             margin: 1rem 0;
             color: white;
         }
 
-        .off-selector div {
+        .off-selector .selectors {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .off-selector .selectors div {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
@@ -305,33 +317,37 @@
         </div>
     </div>
     <div class="bar-selector">
-        <div style="text-align: center; color: white; font-size: 1rem;">на баре:</div>
-        <div>
-            <label for="white-bar-select">Белый:</label>
-            <select id="white-bar-select">
-                <option value="0">0</option>
-            </select>
-        </div>
-        <div>
-            <label for="black-bar-select">Черный:</label>
-            <select id="black-bar-select">
-                <option value="0">0</option>
-            </select>
+        <div style="color: white; font-size: 1rem;">на баре:</div>
+        <div class="selectors">
+            <div>
+                <label for="white-bar-select">Белый:</label>
+                <select id="white-bar-select">
+                    <option value="0">0</option>
+                </select>
+            </div>
+            <div>
+                <label for="black-bar-select">Черный:</label>
+                <select id="black-bar-select">
+                    <option value="0">0</option>
+                </select>
+            </div>
         </div>
     </div>
     <div class="off-selector">
-        <div style="text-align: center; color: white; font-size: 1rem;">снятые у:</div>
-        <div>
-            <label for="white-off-select">Белый:</label>
-            <select id="white-off-select">
-                <option value="0">0</option>
-            </select>
-        </div>
-        <div>
-            <label for="black-off-select">Черный:</label>
-            <select id="black-off-select">
-                <option value="0">0</option>
-            </select>
+        <div style="color: white; font-size: 1rem;">снятые у:</div>
+        <div class="selectors">
+            <div>
+                <label for="white-off-select">Белый:</label>
+                <select id="white-off-select">
+                    <option value="0">0</option>
+                </select>
+            </div>
+            <div>
+                <label for="black-off-select">Черный:</label>
+                <select id="black-off-select">
+                    <option value="0">0</option>
+                </select>
+            </div>
         </div>
     </div>
 </body>
