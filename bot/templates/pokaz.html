@@ -205,7 +205,7 @@
 
         .bar-selector .selectors {
             display: flex;
-            flex-direction: row;
+            flex-direction: column;
             gap: 0.5rem;
         }
 
@@ -218,6 +218,7 @@
 
         .bar-selector label {
             font-size: 0.8rem;
+            width: 50px;
         }
 
         .bar-selector select {
@@ -233,6 +234,7 @@
         @media (min-width: 768px) {
             .bar-selector label {
                 font-size: 1rem;
+                width: 60px;
             }
 
             .bar-selector select {
@@ -244,6 +246,7 @@
         @media (min-width: 1200px) {
             .bar-selector label {
                 font-size: 1.2rem;
+                width: 70px;
             }
 
             .bar-selector select {
@@ -632,7 +635,6 @@
     whiteChecker.onload = imageLoaded;
     blackChecker.onload = imageLoaded;
 
-    // Update dropdown positions on window resize
     window.addEventListener('resize', updateAllDropdownPositions);
 </script>
 </body>
