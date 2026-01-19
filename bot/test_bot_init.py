@@ -32,7 +32,7 @@ async def cmd_start(message: Message):
         ),
     )
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
-    await message.answer()
+    await message.answer('тест', reply_markup=keyboard)
 
 
 async def start_bot():
