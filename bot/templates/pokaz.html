@@ -145,21 +145,35 @@
                 // Set initial value to 0 (empty)
                 select.value = 0;
 
-                const x = (getX(point) - 5) * scale;
-                // Position dropdown strictly above/below the point number
-                let y_text;
-                if (point > 12) {
-                    y_text = 20; // Position of number for upper half
-                } else {
-                    y_text = 750; // Position of number for lower half
-                }
-                const offset = point > 12 ? -20 : 20; // Slightly above for upper, below for lower
-                const y = (y_text + offset) * scale;
-                select.style.left = x + 'px';
-                select.style.top = y + 'px';
-                select.style.fontSize = (12 * scale) + 'px';
+                updateDropdownPosition(select, point, scale);
 
                 boardWrapper.appendChild(select);
+            }
+        }
+
+        function updateDropdownPosition(select, point, scale) {
+            const x = (getX(point) - 5) * scale;
+            // Position dropdown strictly above/below the point number
+            let y_text;
+            if (point > 12) {
+                y_text = 20; // Position of number for upper half
+            } else {
+                y_text = 750; // Position of number for lower half
+            }
+            const offset = point > 12 ? -20 : 20; // Slightly above for upper, below for lower
+            const y = (y_text + offset) * scale;
+            select.style.left = x + 'px';
+            select.style.top = y + 'px';
+            select.style.fontSize = (12 * scale) + 'px';
+        }
+
+        function updateAllDropdownPositions() {
+            const scale = canvas.offsetWidth / 800;
+            for (let point = 1; point <= 24; point++) {
+                const select = document.getElementById(`point-${point}`);
+                if (select) {
+                    updateDropdownPosition(select, point, scale);
+                }
             }
         }
 
@@ -245,6 +259,9 @@
         boardImg.onload = imageLoaded;
         whiteChecker.onload = imageLoaded;
         blackChecker.onload = imageLoaded;
+
+        // Update dropdown positions on window resize
+        window.addEventListener('resize', updateAllDropdownPositions);
     </script>
 </body>
 
