@@ -215,6 +215,7 @@
         }
 
 
+
         .checker-selector label {
             color: white;
             font-size: 0.96rem;
@@ -236,9 +237,6 @@
         }
 
         .bar-selector {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -333,36 +331,38 @@
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
         </div>
-        <div class="selectors-container">
-            <div class="checker-selector">
-                <div class="checker-label">Шашки:</div>
-                <label><input type="radio" name="checkerColor" value="white" checked> Белые</label>
-                <label><input type="radio" name="checkerColor" value="black"> Черные</label>
-            </div>
-            <div class="bar-selector">
-                <div class="bar-label">на баре:</div>
-                <div class="selectors">
-                    <div>
-                        <label for="white-bar-select">Белый:</label>
-                        <select id="white-bar-select">
-                            <option value="0">0</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="black-bar-select">Черный:</label>
-                        <select id="black-bar-select">
-                            <option value="0">0</option>
-                        </select>
+        <div>
+            <div class="selectors-container">
+                <div class="checker-selector">
+                    <div class="checker-label">Шашки:</div>
+                    <label><input type="radio" name="checkerColor" value="white" checked> Белые</label>
+                    <label><input type="radio" name="checkerColor" value="black"> Черные</label>
+                </div>
+                <div class="bar-selector">
+                    <div class="bar-label">на баре:</div>
+                    <div class="selectors">
+                        <div>
+                            <label for="white-bar-select">Белый:</label>
+                            <select id="white-bar-select">
+                                <option value="0">0</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="black-bar-select">Черный:</label>
+                            <select id="black-bar-select">
+                                <option value="0">0</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="game-type">
-            <label for="game-type-select">Тип игры</label>
-            <select id="game-type-select">
-                <option value="манигейм">манигейм</option>
-                <option value="матч">матч</option>
-            </select>
+            <div class="game-type">
+                <label for="game-type-select">Тип игры</label>
+                <select id="game-type-select">
+                    <option value="манигейм">манигейм</option>
+                    <option value="матч">матч</option>
+                </select>
+            </div>
         </div>
     </div>
 </body>
