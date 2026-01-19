@@ -346,14 +346,16 @@
     function updateSelectOptions(color) {
         const targetPositions = color === 'white' ? positions.first : positions.second;
         const otherPositions = color === 'white' ? positions.second : positions.first;
+        const totalCheckers = getTotalCheckers(targetPositions);
         for (let point = 1; point <= 24; point++) {
             const select = document.getElementById(`point-${point}`);
             if (!select) continue;
             const currentOnPoint = parseInt(select.value) || 0;
             const occupiedByOther = otherPositions[point.toString()] > 0;
-            const actualMax = occupiedByOther ? 0 : 15;
+            const baseMax = occupiedByOther ? 0 : 15;
+            const maxForThis = Math.min(baseMax, 15 - (totalCheckers - currentOnPoint));
             select.innerHTML = '';
-            for (let i = 0; i <= actualMax; i++) {
+            for (let i = 0; i <= maxForThis; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
@@ -368,8 +370,10 @@
         const blackBarSelect = document.getElementById('black-bar-select');
         if (whiteBarSelect) {
             const currentBar = parseInt(whiteBarSelect.value) || 0;
+            const totalCheckers = getTotalCheckers(positions.first);
+            const maxForThis = 15 - (totalCheckers - currentBar);
             whiteBarSelect.innerHTML = '';
-            for (let i = 0; i <= 15; i++) {
+            for (let i = 0; i <= maxForThis; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
@@ -379,8 +383,10 @@
         }
         if (blackBarSelect) {
             const currentBar = parseInt(blackBarSelect.value) || 0;
+            const totalCheckers = getTotalCheckers(positions.second);
+            const maxForThis = 15 - (totalCheckers - currentBar);
             blackBarSelect.innerHTML = '';
-            for (let i = 0; i <= 15; i++) {
+            for (let i = 0; i <= maxForThis; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
@@ -395,8 +401,10 @@
         const blackOffSelect = document.getElementById('black-off-select');
         if (whiteOffSelect) {
             const currentOff = parseInt(whiteOffSelect.value) || 0;
+            const totalCheckers = getTotalCheckers(positions.first);
+            const maxForThis = 15 - (totalCheckers - currentOff);
             whiteOffSelect.innerHTML = '';
-            for (let i = 0; i <= 15; i++) {
+            for (let i = 0; i <= maxForThis; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
@@ -406,8 +414,10 @@
         }
         if (blackOffSelect) {
             const currentOff = parseInt(blackOffSelect.value) || 0;
+            const totalCheckers = getTotalCheckers(positions.second);
+            const maxForThis = 15 - (totalCheckers - currentOff);
             blackOffSelect.innerHTML = '';
-            for (let i = 0; i <= 15; i++) {
+            for (let i = 0; i <= maxForThis; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
