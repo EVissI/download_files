@@ -86,13 +86,12 @@
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
         </div>
-        <button onclick="updateBoard()">Обновить доску</button>
     </div>
 
     <script>
         let positions = {
-            first: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
-            second: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
+            first: { '1': 0, '12': 0, '17': 0, '19': 0, 'bar': 0, 'off': 0 },
+            second: { '6': 0, '8': 0, '13': 0, '24': 0, 'bar': 0, 'off': 0 }
         };
 
         const canvas = document.getElementById('boardCanvas');
@@ -143,25 +142,28 @@
 
                 updateDropdownPosition(select, point, scale);
 
+                // Add event listener to update board on change
+                select.addEventListener('change', updateBoard);
+
                 boardWrapper.appendChild(select);
             }
         }
 
         function updateDropdownPosition(select, point, scale) {
-            const x = (getX(point) - (point > 12 ? 25 : 25)) * scale; 
+            const x = (getX(point) - (point > 12 ? 25 : 25)) * scale;
             let y_text;
             if (point > 12) {
-                y_text = 20; 
+                y_text = 20;
             } else {
-                y_text = 750; 
+                y_text = 750;
             }
-            const offset = point > 12 ? -70 : 20; 
+            const offset = point > 12 ? -70 : 20;
             const y = (y_text + offset) * scale;
             select.style.left = x + 'px';
             select.style.top = y + 'px';
-            select.style.width = (55 * scale) + 'px'; 
-            select.style.height = (55 * scale) + 'px'; 
-            select.style.fontSize = (26 * scale) + 'px'; 
+            select.style.width = (55 * scale) + 'px';
+            select.style.height = (55 * scale) + 'px';
+            select.style.fontSize = (26 * scale) + 'px';
         }
 
         function updateAllDropdownPositions() {
