@@ -951,7 +951,7 @@ async def process_batch_hint_files(
             return
 
         total_files = len(file_paths)
-        await message.answer(await message_dao.get_text("hint_viewer_files_accepted", user_info.lang_code, file_count=total_files))
+        await message.answer(await message_dao.get_text("hint_viewer_files_accepted", user_info.lang_code, total_files=total_files))
 
         for mat_path in file_paths:
             if not await syncthing_sync.sync_and_wait(max_wait=30):
