@@ -72,27 +72,25 @@
             background-color: #0056b3;
         }
 
-        .inputs {
+        .nickname_inputs {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             margin-bottom: 20px;
         }
 
-        .inputs div {
-            display: flex;
-            align-items: center;
-            margin-right: 20px;
+        .nickname_inputs div {
+            margin-bottom: 10px;
         }
 
-        .inputs label {
+        .nickname_inputs label {
             color: white;
             margin-right: 10px;
             font-size: 16px;
         }
 
-        .inputs input {
-            flex: 1;
+        .nickname_inputs input {
+            width: 100px;
             padding: 5px;
             font-size: 16px;
             text-align: center;
@@ -113,13 +111,13 @@
 <body>
     <div class="container">
         <h1>Backgammon Board Editor</h1>
-        <div class="inputs">
+        <div class="nickname_inputs">
             <div>
-                <label for="white-input">Белые:</label>
+                <label for="white-input">белые:</label>
                 <input type="text" id="white-input">
             </div>
             <div>
-                <label for="black-input">Черные:</label>
+                <label for="black-input">черные:</label>
                 <input type="text" id="black-input">
             </div>
         </div>
