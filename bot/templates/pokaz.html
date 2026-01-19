@@ -176,6 +176,60 @@
                 font-size: 1.5rem;
             }
         }
+
+        .bar-selector {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            color: white;
+        }
+
+        .bar-selector div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .bar-selector label {
+            font-size: 0.8rem;
+        }
+
+        .bar-selector select {
+            font-size: 0.8rem;
+            width: 50px;
+            background-color: #2d2d2d;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            text-align: center;
+        }
+
+        @media (min-width: 768px) {
+            .bar-selector label {
+                font-size: 1rem;
+            }
+
+            .bar-selector select {
+                font-size: 1rem;
+                width: 60px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .bar-selector label {
+                font-size: 1.2rem;
+            }
+
+            .bar-selector select {
+                font-size: 1.2rem;
+                width: 70px;
+            }
+        }
     </style>
 </head>
 
@@ -198,6 +252,21 @@
         <div class="checker-selector">
             <label><input type="radio" name="checkerColor" value="white" checked> Белые</label>
             <label><input type="radio" name="checkerColor" value="black"> Черные</label>
+        </div>
+        <div class="bar-selector">
+            <div style="text-align: center; color: white; font-size: 1rem;">на баре:</div>
+            <div>
+                <label for="white-bar-select">Белый:</label>
+                <select id="white-bar-select">
+                    <option value="0">0</option>
+                </select>
+            </div>
+            <div>
+                <label for="black-bar-select">Черный:</label>
+                <select id="black-bar-select">
+                    <option value="0">0</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -260,6 +329,37 @@
             }
         }
 
+        function updateBarSelects() {
+            const whiteBarSelect = document.getElementById('white-bar-select');
+            const blackBarSelect = document.getElementById('black-bar-select');
+            if (whiteBarSelect) {
+                const currentBar = parseInt(whiteBarSelect.value) || 0;
+                const totalWithoutBar = getTotalCheckers(positions.first) - currentBar;
+                const maxBar = Math.max(0, 15 - totalWithoutBar);
+                whiteBarSelect.innerHTML = '';
+                for (let i = 0; i <= maxBar; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    whiteBarSelect.appendChild(option);
+                }
+                whiteBarSelect.value = currentBar;
+            }
+            if (blackBarSelect) {
+                const currentBar = parseInt(blackBarSelect.value) || 0;
+                const totalWithoutBar = getTotalCheckers(positions.second) - currentBar;
+                const maxBar = Math.max(0, 15 - totalWithoutBar);
+                blackBarSelect.innerHTML = '';
+                for (let i = 0; i <= maxBar; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    blackBarSelect.appendChild(option);
+                }
+                blackBarSelect.value = currentBar;
+            }
+        }
+
         function createDropdowns() {
             const scale = canvas.offsetWidth / 800;
             for (let point = 1; point <= 24; point++) {
@@ -277,6 +377,7 @@
                 boardWrapper.appendChild(select);
             }
             updateSelectOptions('white'); // Default
+            updateBarSelects();
         }
 
         function updateDropdownPosition(select, point, scale) {
@@ -391,6 +492,7 @@
             }
             drawBoard();
             updateSelectOptions(color);
+            updateBarSelects();
         }
 
         // Load images and draw
@@ -412,7 +514,30 @@
                             const targetPositions = newColor === 'white' ? positions.first : positions.second;
                             select.value = targetPositions[point.toString()] || 0;
                         }
+                        updateBarSelects();
                     });
+                });
+                document.getElementById('white-bar-select').addEventListener('change', (e) => {
+                    const count = parseInt(e.target.value);
+                    if (count > 0) {
+                        positions.first.bar = count;
+                    } else {
+                        delete positions.first.bar;
+                    }
+                    drawBoard();
+                    updateSelectOptions('white');
+                    updateBarSelects();
+                });
+                document.getElementById('black-bar-select').addEventListener('change', (e) => {
+                    const count = parseInt(e.target.value);
+                    if (count > 0) {
+                        positions.second.bar = count;
+                    } else {
+                        delete positions.second.bar;
+                    }
+                    drawBoard();
+                    updateSelectOptions('black');
+                    updateBarSelects();
                 });
             }
         }
