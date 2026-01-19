@@ -158,13 +158,13 @@
             } else {
                 y_text = 750; // Position of number for lower half
             }
-            const offset = point > 12 ? -30 : 20; // Even higher for upper row
+            const offset = point > 12 ? -32 : 20; // Higher by 2 for upper row
             const y = (y_text + offset) * scale;
             select.style.left = x + 'px';
             select.style.top = y + 'px';
             select.style.width = (50 * scale) + 'px'; // Decrease horizontal size by 2 times
             select.style.height = (60 * scale) + 'px'; // Increase vertical size more
-            select.style.fontSize = (24 * scale) + 'px'; // Bigger font size
+            select.style.fontSize = (26 * scale) + 'px'; // Bigger font size by 2
         }
 
         function updateAllDropdownPositions() {
