@@ -26,7 +26,7 @@ dp = Dispatcher()
 @dp.message(F.text == "/start")
 async def cmd_start(message: Message):
     button = InlineKeyboardButton(
-        text="",
+        text="тест",
         web_app=WebAppInfo(
             url=f"{settings.MINI_APP_URL}/pokaz&?chat_id={message.from_user.id}"
         ),
