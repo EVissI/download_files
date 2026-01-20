@@ -500,9 +500,13 @@
             appearance: textfield;
         }
 
-        .left_panel {
-            width: 60%;
+        .left-panel2 {
+            width: 50%;
             padding-left: 1rem;
+        }
+
+        .right-panel2 {
+            width: 50%;
         }
 
         .turn-selector {
@@ -678,6 +682,36 @@
             text-align: center;
         }
 
+        .cube-value-options {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cube-value-options div {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .cube-value-options label {
+            color: white;
+            font-size: 0.8rem;
+            text-align: left;
+            flex-shrink: 0;
+            width: 5rem;
+        }
+
+        .cube-value-options select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
+        }
+
         .action-buttons {
             display: flex;
             justify-content: left;
@@ -817,7 +851,7 @@
                 </div>
             </div>
         </div>
-        <div class="left_panel">
+        <div class="left-panel2">
             <div class="turn-selector">
                 <label for="turn-select">Чей ход?</label>
                 <select id="turn-select" class="selector-size"></select>
@@ -825,6 +859,22 @@
             <div class="action-buttons">
                 <button id="clear-button">Очистить</button>
                 <button id="show-button">Показать</button>
+            </div>
+        </div>
+        <div class="right-panel2">
+            <div class="cube-value-options">
+                <div>
+                    <label for="cube-value-select">Значение на кубе</label>
+                    <select id="cube-value-select" class="selector-size">
+                        <option value="0">0</option>
+                        <option value="2">2</option>
+                        <option value="4">4</option>
+                        <option value="8">8</option>
+                        <option value="16">16</option>
+                        <option value="32">32</option>
+                        <option value="64">64</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
