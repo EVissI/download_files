@@ -501,7 +501,10 @@
             -moz-appearance: textfield;
             appearance: textfield;
         }
-
+        .left_panel{
+            width: 50%;
+            padding-left: 1rem;
+        }
         .turn-selector {
             display: flex;
             align-items: center;
@@ -801,13 +804,15 @@
                 </div>
             </div>
         </div>
-        <div class="turn-selector">
-            <label for="turn-select">Чей ход?</label>
-            <select id="turn-select" class="selector-size"></select>
-        </div>
-        <div class="action-buttons">
-            <button id="clear-button">Очистить</button>
-            <button id="show-button">Показать</button>
+        <div class="left_panel">
+            <div class="turn-selector">
+                <label for="turn-select">Чей ход?</label>
+                <select id="turn-select" class="selector-size"></select>
+            </div>
+            <div class="action-buttons">
+                <button id="clear-button">Очистить</button>
+                <button id="show-button">Показать</button>
+            </div>
         </div>
     </div>
 </body>
