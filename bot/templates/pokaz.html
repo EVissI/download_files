@@ -1,14 +1,10 @@
-﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Backgammon Board Editor</title>
-    
-    <!-- Choices.js CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
-    
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -60,82 +56,22 @@
             display: block;
         }
 
-        /* Стили для Choices.js dropdowns */
-        .choices {
+        .dropdown {
             position: absolute;
-            margin-bottom: 0;
             font-size: 0.8rem;
-            z-index: 100;
         }
 
-        .choices__inner {
-            min-height: 55px !important;
-            min-width: 55px !important;
-            background-color: #2d2d2d !important;
-            border: 1px solid #444 !important;
-            border-radius: 0.25rem !important;
-            font-size: 26px !important;
-            color: white !important;
-            text-align: center !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding: 0 !important;
-        }
-
-        .choices__list--single {
-            padding: 0 !important;
-        }
-
-        .choices__list--dropdown {
-            background-color: #2d2d2d !important;
-            border: 1px solid #444 !important;
-            border-radius: 0.25rem !important;
-            color: white !important;
-            font-size: 20px !important;
-            text-align: center !important;
-            max-height: 300px !important;
-            overflow-y: auto !important;
-        }
-
-        .choices__list--dropdown .choices__item {
-            color: white !important;
-            padding: 10px 5px !important;
-            border-bottom: 1px solid #444 !important;
-        }
-
-        .choices__list--dropdown .choices__item--selectable.is-highlighted {
-            background-color: #007bff !important;
-        }
-
-        .choices[data-type*=select-one] .choices__inner {
-            padding-right: 0 !important;
-        }
-
-        .choices[data-type*=select-one]:after {
-            border-color: white transparent transparent transparent !important;
-            right: 10px !important;
-        }
-
-        .choices[data-type*=select-one].is-open:after {
-            border-color: transparent transparent white transparent !important;
-        }
-
-        .choices__list--dropdown .choices__item--selectable {
-            padding-right: 0 !important;
-        }
-
-        /* Адаптация для мобильных */
-        @media (max-width: 768px) {
-            .choices__inner {
-                min-height: 44px !important;
-                min-width: 44px !important;
-                font-size: 20px !important;
-            }
-            
-            .choices__list--dropdown {
-                font-size: 16px !important;
-            }
+        select {
+            font-family: Arial, sans-serif;
+            font-size: 0.8rem;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            padding: 0.125rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
         }
 
         button {
@@ -235,15 +171,19 @@
             text-align: center;
         }
 
-        .game-type .choices {
-            position: relative !important;
-            width: 6rem !important;
-        }
-
-        .game-type .choices__inner {
-            width: 6rem !important;
-            height: 3rem !important;
-            font-size: 0.96rem !important;
+        .game-type select {
+            font-family: Arial, sans-serif;
+            font-size: 0.96rem;
+            color: white;
+            width: 6rem;
+            height: 3rem;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            padding: 0.125rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
         }
 
         .checker-selector {
@@ -252,6 +192,8 @@
             align-items: flex-start;
             gap: 0.5rem;
         }
+
+
 
         .checker-selector label {
             color: white;
@@ -287,9 +229,14 @@
             width: 60px;
         }
 
-        .bar-selector .choices {
-            position: relative !important;
+        .bar-selector select {
+            background-color: #2d2d2d;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            text-align: center;
         }
+
 
         .bar-label {
             color: white;
@@ -385,9 +332,8 @@
             font-size: 0.8rem;
         }
 
-        .turn-selector .choices {
-            position: relative !important;
-            width: 135px !important;
+        .turn-selector select {
+            width: 135px;
         }
 
         .score-inputs input::-webkit-outer-spin-button,
@@ -415,8 +361,15 @@
             width: 4rem;
         }
 
-        .max-cube-options .choices {
-            position: relative !important;
+        .max-cube-options select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
         }
 
         .crawford-options {
@@ -438,8 +391,15 @@
             width: 4rem;
         }
 
-        .crawford-options .choices {
-            position: relative !important;
+        .crawford-options select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
         }
 
         .jacobi-options {
@@ -460,8 +420,15 @@
             flex-shrink: 0;
         }
 
-        .jacobi-options .choices {
-            position: relative !important;
+        .jacobi-options select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
         }
 
         .beaver-options {
@@ -482,15 +449,24 @@
             flex-shrink: 0;
         }
 
-        .beaver-options .choices {
-            position: relative !important;
+        .beaver-options select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
         }
 
-        .selector-size .choices__inner {
-            width: 60px !important;
-            height: 30px !important;
-            font-size: 0.8rem !important;
+        .selector-size {
+            width: 60px;
+            height: 30px;
+            font-size: 0.8rem;
+            padding: 0.3125rem;
         }
+
 
         .max-cube-options_money {
             display: flex;
@@ -510,8 +486,15 @@
             flex-shrink: 0;
         }
 
-        .max-cube-options_money .choices {
-            position: relative !important;
+        .max-cube-options_money select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
         }
 
         .cube-value-options {
@@ -535,8 +518,15 @@
             width: 5.5rem;
         }
 
-        .cube-value-options .choices {
-            position: relative !important;
+        .cube-value-options select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
         }
 
         .cube-owner-selector {
@@ -552,9 +542,8 @@
             font-size: 0.8rem;
         }
 
-        .cube-owner-selector .choices {
-            position: relative !important;
-            width: 120px !important;
+        .cube-owner-selector select {
+            width: 120px;
         }
 
         .dice-selector {
@@ -569,9 +558,8 @@
             font-size: 0.8rem;
         }
 
-        .dice-selector .choices {
-            position: relative !important;
-            width: 48px !important;
+        .dice-selector select {
+            width: 48px;
         }
 
         .action-buttons {
@@ -772,9 +760,6 @@
     </div>
 </body>
 
-<!-- Choices.js JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-
 <script>
     let positions = {
         first: { '1': 0, '12': 0, '17': 0, '19': 0, 'bar': 0, 'off': 0 },
@@ -784,24 +769,6 @@
     const canvas = document.getElementById('boardCanvas');
     const ctx = canvas.getContext('2d');
     const boardWrapper = document.querySelector('.board-wrapper');
-
-    // Хранилище для Choices.js инстансов
-    let choicesInstances = {
-        points: {},
-        whiteBar: null,
-        blackBar: null,
-        gameType: null,
-        turn: null,
-        cubeValue: null,
-        cubeOwner: null,
-        dice1: null,
-        dice2: null,
-        crawford: null,
-        maxCube: null,
-        jacobi: null,
-        beaver: null,
-        maxCubeMoney: null
-    };
 
     // Load images
     const boardImg = new Image();
@@ -903,7 +870,6 @@
         const targetPositions = color === 'white' ? positions.first : positions.second;
         const otherPositions = color === 'white' ? positions.second : positions.first;
         const totalCheckers = getTotalCheckers(targetPositions);
-        
         for (let point = 1; point <= 24; point++) {
             const select = document.getElementById(`point-${point}`);
             if (!select) continue;
@@ -911,48 +877,76 @@
             const occupiedByOther = otherPositions[point.toString()] > 0;
             const baseMax = occupiedByOther ? 0 : 15;
             const maxForThis = Math.min(baseMax, 15 - (totalCheckers - currentOnPoint));
-            
-            // Обновляем опции в Choices
-            if (choicesInstances.points[point]) {
-                const newOptions = [];
-                for (let i = 0; i <= maxForThis; i++) {
-                    newOptions.push({value: i.toString(), label: i.toString(), selected: i === currentOnPoint});
-                }
-                choicesInstances.points[point].setChoices(newOptions, 'value', 'label', true);
+            select.innerHTML = '';
+            for (let i = 0; i <= maxForThis; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                select.appendChild(option);
             }
+            select.value = currentOnPoint;
         }
     }
 
     function updateBarSelects() {
         const whiteBarSelect = document.getElementById('white-bar-select');
         const blackBarSelect = document.getElementById('black-bar-select');
-        
         if (whiteBarSelect) {
             const currentBar = parseInt(whiteBarSelect.value) || 0;
             const totalCheckers = getTotalCheckers(positions.first);
             const maxForThis = 15 - (totalCheckers - currentBar);
-            
-            if (choicesInstances.whiteBar) {
-                const newOptions = [{value: '0', label: '0', selected: currentBar === 0}];
-                for (let i = 1; i <= maxForThis; i++) {
-                    newOptions.push({value: i.toString(), label: i.toString(), selected: i === currentBar});
-                }
-                choicesInstances.whiteBar.setChoices(newOptions, 'value', 'label', true);
+            whiteBarSelect.innerHTML = '';
+            for (let i = 0; i <= maxForThis; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                whiteBarSelect.appendChild(option);
             }
+            whiteBarSelect.value = currentBar;
         }
-        
         if (blackBarSelect) {
             const currentBar = parseInt(blackBarSelect.value) || 0;
             const totalCheckers = getTotalCheckers(positions.second);
             const maxForThis = 15 - (totalCheckers - currentBar);
-            
-            if (choicesInstances.blackBar) {
-                const newOptions = [{value: '0', label: '0', selected: currentBar === 0}];
-                for (let i = 1; i <= maxForThis; i++) {
-                    newOptions.push({value: i.toString(), label: i.toString(), selected: i === currentBar});
-                }
-                choicesInstances.blackBar.setChoices(newOptions, 'value', 'label', true);
+            blackBarSelect.innerHTML = '';
+            for (let i = 0; i <= maxForThis; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                blackBarSelect.appendChild(option);
             }
+            blackBarSelect.value = currentBar;
+        }
+    }
+
+    function updateOffSelects() {
+        const whiteOffSelect = document.getElementById('white-off-select');
+        const blackOffSelect = document.getElementById('black-off-select');
+        if (whiteOffSelect) {
+            const currentOff = parseInt(whiteOffSelect.value) || 0;
+            const totalCheckers = getTotalCheckers(positions.first);
+            const maxForThis = 15 - (totalCheckers - currentOff);
+            whiteOffSelect.innerHTML = '';
+            for (let i = 0; i <= maxForThis; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                whiteOffSelect.appendChild(option);
+            }
+            whiteOffSelect.value = currentOff;
+        }
+        if (blackOffSelect) {
+            const currentOff = parseInt(blackOffSelect.value) || 0;
+            const totalCheckers = getTotalCheckers(positions.second);
+            const maxForThis = 15 - (totalCheckers - currentOff);
+            blackOffSelect.innerHTML = '';
+            for (let i = 0; i <= maxForThis; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                blackOffSelect.appendChild(option);
+            }
+            blackOffSelect.value = currentOff;
         }
     }
 
@@ -962,77 +956,18 @@
             const select = document.createElement('select');
             select.id = `point-${point}`;
             select.className = 'dropdown';
-            
-            // Добавляем опции
-            for (let i = 0; i <= 15; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                select.appendChild(option);
-            }
-            
-            // Инициализируем Choices.js
-            const choices = new Choices(select, {
-                searchEnabled: false,
-                itemSelectText: '',
-                shouldSort: false,
-                position: 'auto',
-                renderSelectedChoices: 'always',
-                allowHTML: false,
-                silent: false
-            });
-            
-            choicesInstances.points[point] = choices;
-            
+            select.value = 0;
+
             updateDropdownPosition(select, point, scale);
-            
-            // Добавляем обработчик изменения
+
             select.addEventListener('change', updateBoard);
-            
+
             boardWrapper.appendChild(select);
         }
         updateSelectOptions('white');
         updateBarSelects();
-    }
-
-    function initAllChoices() {
-        // Инициализация всех селектов через Choices.js
-        const selectors = [
-            { id: 'white-bar-select', key: 'whiteBar' },
-            { id: 'black-bar-select', key: 'blackBar' },
-            { id: 'game-type-select', key: 'gameType' },
-            { id: 'turn-select', key: 'turn' },
-            { id: 'cube-value-select', key: 'cubeValue' },
-            { id: 'cube-owner-select', key: 'cubeOwner' },
-            { id: 'dice1-select', key: 'dice1' },
-            { id: 'dice2-select', key: 'dice2' },
-            { id: 'crawford-select', key: 'crawford' },
-            { id: 'max-cube-select', key: 'maxCube' },
-            { id: 'jacobi-select', key: 'jacobi' },
-            { id: 'beaver-select', key: 'beaver' },
-            { id: 'max-cube-select-m', key: 'maxCubeMoney' }
-        ];
-        
-        selectors.forEach(selector => {
-            const element = document.getElementById(selector.id);
-            if (element) {
-                choicesInstances[selector.key] = new Choices(element, {
-                    searchEnabled: false,
-                    itemSelectText: '',
-                    shouldSort: false,
-                    position: 'auto',
-                    renderSelectedChoices: 'always',
-                    allowHTML: false,
-                    silent: false
-                });
-                
-                // Добавляем обработчики событий
-                if (selector.id.includes('dice') || selector.id === 'turn-select' || 
-                    selector.id === 'cube-value-select' || selector.id === 'cube-owner-select') {
-                    element.addEventListener('change', drawBoard);
-                }
-            }
-        });
+        updateOffSelects();
+        updateOffSelects();
     }
 
     function updateDropdownPosition(select, point, scale) {
@@ -1045,13 +980,11 @@
         }
         const offset = point > 12 ? -70 : 43;
         const y = (y_text + offset) * scale;
-        
-        const container = select.parentElement;
-        if (container && container.classList.contains('choices')) {
-            container.style.left = x + 'px';
-            container.style.top = y + 'px';
-            container.style.width = (55 * scale) + 'px';
-        }
+        select.style.left = x + 'px';
+        select.style.top = y + 'px';
+        select.style.width = (55 * scale) + 'px';
+        select.style.height = (55 * scale) + 'px';
+        select.style.fontSize = (26 * scale) + 'px';
     }
 
     function updateAllDropdownPositions() {
@@ -1188,9 +1121,7 @@
                 const newTotal = getTotalCheckers(targetPositions) - oldCount + count;
                 if (newTotal > 15) {
                     alert('Максимум 15 шашек на цвет!');
-                    if (choicesInstances.points[point]) {
-                        choicesInstances.points[point].setChoiceByValue(oldCount.toString());
-                    }
+                    select.value = oldCount;
                     continue;
                 }
                 targetPositions[point.toString()] = count;
@@ -1201,36 +1132,37 @@
         drawBoard();
         updateSelectOptions(color);
         updateBarSelects();
+        updateOffSelects();
     }
 
     function updateTurnSelect() {
         const whiteNick = document.getElementById('white-input').value || 'Белые';
         const blackNick = document.getElementById('black-input').value || 'Черные';
         const turnSelect = document.getElementById('turn-select');
-        
-        // Обновляем опции в Choices
-        if (choicesInstances.turn) {
-            const options = [
-                {value: 'white', label: whiteNick},
-                {value: 'black', label: blackNick}
-            ];
-            choicesInstances.turn.setChoices(options, 'value', 'label', true);
-        }
+        turnSelect.innerHTML = '';
+        const optionWhite = document.createElement('option');
+        optionWhite.value = 'white';
+        optionWhite.textContent = whiteNick;
+        turnSelect.appendChild(optionWhite);
+        const optionBlack = document.createElement('option');
+        optionBlack.value = 'black';
+        optionBlack.textContent = blackNick;
+        turnSelect.appendChild(optionBlack);
     }
 
     function updateCubeOwnerSelect() {
         const whiteNick = document.getElementById('white-input').value || 'Белые';
         const blackNick = document.getElementById('black-input').value || 'Черные';
         const cubeOwnerSelect = document.getElementById('cube-owner-select');
-        
-        // Обновляем опции в Choices
-        if (choicesInstances.cubeOwner) {
-            const options = [
-                {value: 'white', label: whiteNick},
-                {value: 'black', label: blackNick}
-            ];
-            choicesInstances.cubeOwner.setChoices(options, 'value', 'label', true);
-        }
+        cubeOwnerSelect.innerHTML = '';
+        const optionWhite = document.createElement('option');
+        optionWhite.value = 'white';
+        optionWhite.textContent = whiteNick;
+        cubeOwnerSelect.appendChild(optionWhite);
+        const optionBlack = document.createElement('option');
+        optionBlack.value = 'black';
+        optionBlack.textContent = blackNick;
+        cubeOwnerSelect.appendChild(optionBlack);
     }
 
     // Load images and draw
@@ -1241,12 +1173,9 @@
         imagesLoaded++;
         if (imagesLoaded === totalImages) {
             createDropdowns();
-            initAllChoices();
             drawBoard();
             updateTurnSelect();
             updateCubeOwnerSelect();
-            
-            // Event listeners
             document.getElementById('white-input').addEventListener('input', updateTurnSelect);
             document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
             document.getElementById('white-input').addEventListener('input', drawBoard);
@@ -1256,7 +1185,6 @@
             document.getElementById('lower-score').addEventListener('input', drawBoard);
             document.getElementById('upper-score').addEventListener('input', drawBoard);
             document.getElementById('match_lenght').addEventListener('input', drawBoard);
-            
             document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
                 radio.addEventListener('change', () => {
                     const newColor = radio.value;
@@ -1264,15 +1192,12 @@
                     for (let point = 1; point <= 24; point++) {
                         const select = document.getElementById(`point-${point}`);
                         const targetPositions = newColor === 'white' ? positions.first : positions.second;
-                        if (choicesInstances.points[point]) {
-                            choicesInstances.points[point].setChoiceByValue((targetPositions[point.toString()] || 0).toString());
-                        }
+                        select.value = targetPositions[point.toString()] || 0;
                     }
                     updateBarSelects();
                     drawBoard();
                 });
             });
-            
             document.getElementById('white-bar-select').addEventListener('change', (e) => {
                 const count = parseInt(e.target.value);
                 if (count > 0) {
@@ -1284,7 +1209,6 @@
                 updateSelectOptions('white');
                 updateBarSelects();
             });
-            
             document.getElementById('black-bar-select').addEventListener('change', (e) => {
                 const count = parseInt(e.target.value);
                 if (count > 0) {
@@ -1295,6 +1219,28 @@
                 drawBoard();
                 updateSelectOptions('black');
                 updateBarSelects();
+            });
+            document.getElementById('white-off-select').addEventListener('change', (e) => {
+                const count = parseInt(e.target.value);
+                if (count > 0) {
+                    positions.first.off = count;
+                } else {
+                    delete positions.first.off;
+                }
+                drawBoard();
+                updateSelectOptions('white');
+                updateOffSelects();
+            });
+            document.getElementById('black-off-select').addEventListener('change', (e) => {
+                const count = parseInt(e.target.value);
+                if (count > 0) {
+                    positions.second.off = count;
+                } else {
+                    delete positions.second.off;
+                }
+                drawBoard();
+                updateSelectOptions('black');
+                updateOffSelects();
             });
         }
     }
@@ -1336,6 +1282,13 @@
         }
     });
 
+    // Add event listeners for elements that affect board drawing
+    document.getElementById('turn-select').addEventListener('change', drawBoard);
+    document.getElementById('cube-value-select').addEventListener('change', drawBoard);
+    document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
+    document.getElementById('dice1-select').addEventListener('change', drawBoard);
+    document.getElementById('dice2-select').addEventListener('change', drawBoard);
+
     // Clear button logic
     document.getElementById('clear-button').addEventListener('click', () => {
         // Reset positions
@@ -1348,33 +1301,32 @@
         document.getElementById('white-input').value = 'nick_1';
         document.getElementById('black-input').value = 'nick_2';
         document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
-        
-        // Сбрасываем все Choices.js селекты
-        Object.values(choicesInstances.points).forEach(choices => {
-            choices.setChoiceByValue('0');
-        });
-        
-        if (choicesInstances.whiteBar) choicesInstances.whiteBar.setChoiceByValue('0');
-        if (choicesInstances.blackBar) choicesInstances.blackBar.setChoiceByValue('0');
-        if (choicesInstances.gameType) choicesInstances.gameType.setChoiceByValue('манигейм');
-        if (choicesInstances.crawford) choicesInstances.crawford.setChoiceByValue('0');
-        if (choicesInstances.maxCube) choicesInstances.maxCube.setChoiceByValue('8');
-        if (choicesInstances.jacobi) choicesInstances.jacobi.setChoiceByValue('0');
-        if (choicesInstances.beaver) choicesInstances.beaver.setChoiceByValue('0');
-        if (choicesInstances.maxCubeMoney) choicesInstances.maxCubeMoney.setChoiceByValue('8');
-        if (choicesInstances.cubeValue) choicesInstances.cubeValue.setChoiceByValue('0');
-        if (choicesInstances.dice1) choicesInstances.dice1.setChoiceByValue('0');
-        if (choicesInstances.dice2) choicesInstances.dice2.setChoiceByValue('0');
-        
+        document.getElementById('white-bar-select').value = '0';
+        document.getElementById('black-bar-select').value = '0';
+        document.getElementById('game-type-select').value = 'манигейм';
         document.getElementById('lower-score').value = '0';
         document.getElementById('upper-score').value = '0';
         document.getElementById('match_lenght').value = '0';
+        document.getElementById('crawford-select').value = '0';
+        document.getElementById('max-cube-select').value = '8';
+        document.getElementById('jacobi-select').value = '0';
+        document.getElementById('beaver-select').value = '0';
+        document.getElementById('max-cube-select-m').value = '8';
+        document.getElementById('cube-value-select').value = '0';
+        document.getElementById('dice1-select').value = '0';
+        document.getElementById('dice2-select').value = '0';
 
         // Update dependent selects
         updateTurnSelect();
         updateCubeOwnerSelect();
         updateSelectOptions('white');
         updateBarSelects();
+        updateOffSelects();
+
+        // Reset point selects
+        for (let point = 1; point <= 24; point++) {
+            document.getElementById(`point-${point}`).value = '0';
+        }
 
         // Show/hide panels based on game type
         const matchPanel = document.querySelector('.match-panel');
@@ -1387,13 +1339,7 @@
     });
 
     window.addEventListener('resize', updateAllDropdownPositions);
-    
-    // Инициализация при загрузке
-    window.addEventListener('DOMContentLoaded', function() {
-        initAllChoices();
-        updateTurnSelect();
-        updateCubeOwnerSelect();
-    });
 </script>
 </body>
+
 </html>
