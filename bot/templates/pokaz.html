@@ -196,7 +196,7 @@
         .right-panel {
             display: flex;
             flex-direction: column;
-            max-width: 50%;
+            max-width: 40%;
             gap: 0.5rem;
         }
 
@@ -365,9 +365,6 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            padding: 0.5rem;
-            background-color: #2a2a2a;
-            border-radius: 0.5rem;
         }
 
         .score-inputs {
@@ -385,7 +382,7 @@
         .score-inputs label {
             color: white;
             font-size: 0.8rem;
-            width: 10rem;
+            width: 8rem;
             text-align: left;
             flex-shrink: 0;
         }
@@ -403,16 +400,16 @@
 
         .crawford-options {
             display: flex;
-            flex-direction: row;
-            align-items: center;
+            flex-direction: column;
+            align-items: flex-start;
             gap: 0.5rem;
         }
 
         .crawford-options label {
             color: white;
             font-size: 0.8rem;
-            width: auto;
-            text-align: left;
+            width: 100%;
+            text-align: center;
         }
 
         .crawford-options select {
@@ -475,14 +472,14 @@
                     </div>
                 </div>
             </div>
+            <div class="game-type">
+                <label for="game-type-select">Тип игры</label>
+                <select id="game-type-select">
+                    <option value="манигейм">манигейм</option>
+                    <option value="матч">матч</option>
+                </select>
+            </div>
             <div class="right-panel">
-                <div class="game-type">
-                    <label for="game-type-select">Тип игры</label>
-                    <select id="game-type-select">
-                        <option value="манигейм">манигейм</option>
-                        <option value="матч">матч</option>
-                    </select>
-                </div>
                 <div class="match-panel" style="display: none;">
                     <div class="score-inputs">
                         <div>
