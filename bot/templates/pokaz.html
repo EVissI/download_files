@@ -1288,6 +1288,55 @@
     document.getElementById('dice1-select').addEventListener('change', drawBoard);
     document.getElementById('dice2-select').addEventListener('change', drawBoard);
 
+    // Clear button logic
+    document.getElementById('clear-button').addEventListener('click', () => {
+        // Reset positions
+        positions = {
+            first: {},
+            second: {}
+        };
+
+        // Reset inputs and selects to default values
+        document.getElementById('white-input').value = 'nick_1';
+        document.getElementById('black-input').value = 'nick_2';
+        document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
+        document.getElementById('white-bar-select').value = '0';
+        document.getElementById('black-bar-select').value = '0';
+        document.getElementById('game-type-select').value = 'манигейм';
+        document.getElementById('lower-score').value = '0';
+        document.getElementById('upper-score').value = '0';
+        document.getElementById('match_lenght').value = '0';
+        document.getElementById('crawford-select').value = '0';
+        document.getElementById('max-cube-select').value = '8';
+        document.getElementById('jacobi-select').value = '0';
+        document.getElementById('beaver-select').value = '0';
+        document.getElementById('max-cube-select-m').value = '8';
+        document.getElementById('cube-value-select').value = '0';
+        document.getElementById('dice1-select').value = '0';
+        document.getElementById('dice2-select').value = '0';
+
+        // Update dependent selects
+        updateTurnSelect();
+        updateCubeOwnerSelect();
+        updateSelectOptions('white');
+        updateBarSelects();
+        updateOffSelects();
+
+        // Reset point selects
+        for (let point = 1; point <= 24; point++) {
+            document.getElementById(`point-${point}`).value = '0';
+        }
+
+        // Show/hide panels based on game type
+        const matchPanel = document.querySelector('.match-panel');
+        const manigeymPanel = document.querySelector('.manigeym-panel');
+        matchPanel.style.display = 'none';
+        manigeymPanel.style.display = 'flex';
+
+        // Redraw board
+        drawBoard();
+    });
+
     window.addEventListener('resize', updateAllDropdownPositions);
 </script>
 </body>
