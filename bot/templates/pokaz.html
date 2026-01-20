@@ -172,6 +172,24 @@
                 font-size: 1.2rem;
                 padding: 0.4rem;
             }
+
+            .jacobi-options label {
+                font-size: 1.2rem;
+            }
+
+            .jacobi-options select {
+                font-size: 1.2rem;
+                padding: 0.4rem;
+            }
+
+            .beaver-options label {
+                font-size: 1.2rem;
+            }
+
+            .beaver-options select {
+                font-size: 1.2rem;
+                padding: 0.4rem;
+            }
         }
 
         @media (min-width: 1200px) {
@@ -210,6 +228,24 @@
             }
 
             .crawford-options select {
+                font-size: 1.5rem;
+                padding: 0.5rem;
+            }
+
+            .jacobi-options label {
+                font-size: 1.5rem;
+            }
+
+            .jacobi-options select {
+                font-size: 1.5rem;
+                padding: 0.5rem;
+            }
+
+            .beaver-options label {
+                font-size: 1.5rem;
+            }
+
+            .beaver-options select {
                 font-size: 1.5rem;
                 padding: 0.5rem;
             }
@@ -504,6 +540,70 @@
             text-align: center;
         }
 
+        .jacobi-options {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .jacobi-options div {
+            display: flex;
+            align-items: center;
+        }
+
+        .jacobi-options label {
+            color: white;
+            font-size: 0.8rem;
+            width: 8rem;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        .jacobi-options select {
+            font-family: Arial, sans-serif;
+            font-size: 0.8rem;
+            width: 60px;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            padding: 0.3125rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
+        }
+
+        .beaver-options {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .beaver-options div {
+            display: flex;
+            align-items: center;
+        }
+
+        .beaver-options label {
+            color: white;
+            font-size: 0.8rem;
+            width: 8rem;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        .beaver-options select {
+            font-family: Arial, sans-serif;
+            font-size: 0.8rem;
+            width: 60px;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            padding: 0.3125rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
+        }
+
         @media (min-width: 768px) {}
 
         @media (min-width: 1200px) {}
@@ -597,6 +697,51 @@
                                 <option value="16">16</option>
                             </select>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="manigeym-panel" style="display: none;">
+            <div class='left-panel'>
+                <div class="score-inputs">
+                    <div>
+                        <label for="lower-score-m">Очки нижнего игрока:</label>
+                        <input type="number" id="lower-score-m" min="0" , value="0">
+                    </div>
+                    <div>
+                        <label for="upper-score-m">Очки верхнего игрока:</label>
+                        <input type="number" id="upper-score-m" min="0" , value="0">
+                    </div>
+                </div>
+            </div>
+            <div class='right-panel'>
+                <div class="jacobi-options">
+                    <div>
+                        <label for="jacobi-select">Яйкоби</label>
+                        <select id="jacobi-select">
+                            <option value="0" selected>0</option>
+                            <option value="1">1</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="beaver-options">
+                    <div>
+                        <label for="beaver-select">Бивер</label>
+                        <select id="beaver-select">
+                            <option value="0" selected>0</option>
+                            <option value="1">1</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="max-cube-options">
+                    <div>
+                        <label for="max-cube-select-m">Макс куб</label>
+                        <select id="max-cube-select-m">
+                            <option value="2">2</option>
+                            <option value="4">4</option>
+                            <option value="8" selected>8</option>
+                            <option value="16">16</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -945,10 +1090,16 @@
 
     document.getElementById('game-type-select').addEventListener('change', (e) => {
         const matchPanel = document.querySelector('.match-panel');
+        const manigeymPanel = document.querySelector('.manigeym-panel');
         if (e.target.value === 'матч') {
             matchPanel.style.display = 'flex';
+            manigeymPanel.style.display = 'none';
+        } else if (e.target.value === 'манигейм') {
+            matchPanel.style.display = 'none';
+            manigeymPanel.style.display = 'flex';
         } else {
             matchPanel.style.display = 'none';
+            manigeymPanel.style.display = 'none';
         }
     });
 
