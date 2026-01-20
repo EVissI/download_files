@@ -577,6 +577,45 @@
             flex-shrink: 0;
             width: 100%;
         }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .selectors-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .selectors-container {
+                max-width: 100%;
+            }
+
+            .game-panel,
+            .manigeym-panel {
+                flex-direction: column;
+            }
+
+            .cube_panel {
+                flex-direction: column;
+            }
+
+            .left-panel2,
+            .right-panel2 {
+                width: 100%;
+            }
+
+            select,
+            input {
+                font-size: 0.9rem;
+            }
+
+            .action-buttons button {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -1058,10 +1097,9 @@
         drawCheckers('first', whiteChecker, positions.first, 'first');
         drawCheckers('second', blackChecker, positions.second, 'second');
 
-        // Draw dice
         const d1 = parseInt(document.getElementById('dice1-select').value);
         const d2 = parseInt(document.getElementById('dice2-select').value);
-        const turn = document.getElementById('turn-select').value; // 'white' or 'black'
+        const turn = document.getElementById('turn-select').value;
 
         if (d1 > 0 || d2 > 0) {
             const diceY = 350;
@@ -1080,7 +1118,6 @@
             if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
         }
 
-        // Draw cube
         const cubeValue = parseInt(document.getElementById('cube-value-select').value);
         const cubeOwner = document.getElementById('cube-owner-select').value;
 
@@ -1107,7 +1144,6 @@
     }
 
     function updateBoard() {
-        // Update positions from dropdowns
         const color = document.querySelector('input[name="checkerColor"]:checked').value;
         const targetPositions = color === 'white' ? positions.first : positions.second;
         const otherPositions = color === 'white' ? positions.second : positions.first;
@@ -1165,9 +1201,8 @@
         cubeOwnerSelect.appendChild(optionBlack);
     }
 
-    // Load images and draw
     let imagesLoaded = 0;
-    const totalImages = 21; // 3 checkers + 12 dice + 6 cubes
+    const totalImages = 21;
 
     function imageLoaded() {
         imagesLoaded++;
