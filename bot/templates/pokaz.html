@@ -196,9 +196,8 @@
         .game-panel {
             display: flex;
             flex-direction: column;
-            max-width: 40%;
+            width: 50%;
             gap: 0.5rem;
-            margin: 0 auto;
         }
 
         .selectors-container {
@@ -401,16 +400,17 @@
 
         .crawford-options {
             display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
             gap: 0.5rem;
         }
 
         .crawford-options label {
             color: white;
             font-size: 0.8rem;
-            width: 100%;
-            text-align: center;
+            width: auto;
+            text-align: left;
         }
 
         .crawford-options select {
