@@ -774,6 +774,34 @@
             font-size: 0.8rem;
             border-radius: 0.3rem;
             margin: 0;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 767px) {
+            .action-buttons {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+            }
+
+            .action-buttons button {
+                padding: 0.5rem 1rem;
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .action-buttons button {
+                padding: 0.8rem 1.5rem;
+                font-size: 1rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .action-buttons button {
+                padding: 1rem 2rem;
+                font-size: 1.2rem;
+            }
         }
     </style>
 </head>
