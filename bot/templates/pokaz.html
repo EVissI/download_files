@@ -442,6 +442,36 @@
             -webkit-appearance: none;
             margin: 0;
         }
+        .max-cube-options{
+            display: flex;
+            flex-direction: column;
+        }
+        .max-cube-options div {
+            display: flex;
+            align-items: center;
+        }
+
+        .max-cube-options label {
+            color: white;
+            font-size: 0.8rem;
+            width: 8rem;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        .max-cube-options select {
+            flex: 1;
+            font-family: Arial, sans-serif;
+            font-size: 0.8rem;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            padding: 0.3125rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
+        }
 
         .crawford-options {
             display: flex;
@@ -560,7 +590,7 @@
                     </div>
                     <div class="max-cube-options">
                         <div>
-                            <label for="max-cube-select">Кроуфорд</label>
+                            <label for="max-cube-select">Макс куб</label>
                             <select id="max-cube-select">
                                 <option value="2" >2</option>
                                 <option value="4">4</option>
