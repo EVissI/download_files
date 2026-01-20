@@ -28,7 +28,7 @@
             box-sizing: border-box;
         }
 
-        .right-panel{
+        .right-panel {
             display: flex;
             flex-direction: column;
             width: 50%;
@@ -418,7 +418,6 @@
         }
 
         .score-inputs input {
-            flex: 1;
             padding: 0.3125rem;
             font-size: 0.8rem;
             text-align: center;
@@ -437,10 +436,12 @@
             -webkit-appearance: none;
             margin: 0;
         }
-        .max-cube-options{
+
+        .max-cube-options {
             display: flex;
             flex-direction: column;
         }
+
         .max-cube-options div {
             display: flex;
             align-items: center;
@@ -455,7 +456,6 @@
         }
 
         .max-cube-options select {
-            flex: 1;
             width: 60px;
             font-family: Arial, sans-serif;
             font-size: 0.8rem;
@@ -488,7 +488,6 @@
         }
 
         .crawford-options select {
-            flex: 1;
             font-family: Arial, sans-serif;
             font-size: 0.8rem;
             width: 60px;
@@ -563,15 +562,15 @@
                     <div class="score-inputs">
                         <div>
                             <label for="lower-score">Очки нижнего игрока:</label>
-                            <input type="number" id="lower-score" min="0", value="0">
+                            <input type="number" id="lower-score" min="0" , value="0">
                         </div>
                         <div>
                             <label for="upper-score">Очки верхнего игрока:</label>
-                            <input type="number" id="upper-score" min="0", value="0">
+                            <input type="number" id="upper-score" min="0" , value="0">
                         </div>
                         <div>
                             <label for="upper-score">Длина матча:</label>
-                            <input type="number" id="match_lenght" min="0", value="0">
+                            <input type="number" id="match_lenght" min="0" , value="0">
                         </div>
                     </div>
                 </div>
@@ -589,7 +588,7 @@
                         <div>
                             <label for="max-cube-select">Макс куб</label>
                             <select id="max-cube-select">
-                                <option value="2" >2</option>
+                                <option value="2">2</option>
                                 <option value="4">4</option>
                                 <option value="8" selected>8</option>
                                 <option value="16">16</option>
