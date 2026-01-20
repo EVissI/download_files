@@ -29,7 +29,7 @@
             background-color: #2a2a2a;
             border-radius: 0.5rem;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            width: 60%;
+            width: 55%;
             box-sizing: border-box;
         }
 
@@ -390,6 +390,7 @@
             box-sizing: border-box;
             flex-direction: row;
         }
+
         .score-inputs {
             display: flex;
             flex-direction: column;
@@ -417,6 +418,15 @@
             border-radius: 0.25rem;
             background-color: #2d2d2d;
             color: white;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .score-inputs input::-webkit-outer-spin-button,
+        .score-inputs input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
 
         .crawford-options {
