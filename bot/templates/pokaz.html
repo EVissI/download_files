@@ -130,7 +130,6 @@
 
             .score-inputs label {
                 font-size: 1.2rem;
-                width: 10rem;
             }
 
             .score-inputs input {
@@ -169,7 +168,6 @@
 
             .score-inputs label {
                 font-size: 1.5rem;
-                width: 12rem;
             }
 
             .score-inputs input {
@@ -367,6 +365,9 @@
             gap: 0.5rem;
         }
 
+        .left-panel {
+            gap: 0.5rem;
+        }
 
         .score-inputs {
             display: flex;
@@ -383,7 +384,6 @@
         .score-inputs label {
             color: white;
             font-size: 0.8rem;
-            width: 8rem;
             text-align: left;
             flex-shrink: 0;
         }
@@ -488,11 +488,11 @@
                     <div class="score-inputs">
                         <div>
                             <label for="lower-score">Очки нижнего игрока:</label>
-                            <input type="number" id="lower-score" min="0">
+                            <input type="number" id="lower-score" min="0" , value="0">
                         </div>
                         <div>
                             <label for="upper-score">Очки верхнего игрока:</label>
-                            <input type="number" id="upper-score" min="0">
+                            <input type="number" id="upper-score" min="0" , value="0">
                         </div>
                     </div>
                     <div class="crawford-options">
