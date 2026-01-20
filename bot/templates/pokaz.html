@@ -130,6 +130,7 @@
 
             .score-inputs label {
                 font-size: 1.2rem;
+                width: 10rem;
             }
 
             .score-inputs input {
@@ -168,6 +169,7 @@
 
             .score-inputs label {
                 font-size: 1.5rem;
+                width: 12rem;
             }
 
             .score-inputs input {
@@ -361,14 +363,11 @@
         .match-panel {
             display: flex;
             flex-direction: row;
-            max-width: 50%;
             gap: 0.5rem;
         }
 
         .left-panel {
             width: 50%;
-            overflow: hidden;
-            gap: 0.5rem;
         }
 
         .score-inputs {
@@ -386,6 +385,7 @@
         .score-inputs label {
             color: white;
             font-size: 0.8rem;
+            width: 8rem;
             text-align: left;
             flex-shrink: 0;
         }
@@ -403,8 +403,12 @@
 
         .crawford-options {
             display: flex;
-            flex-direction: row;
-            justify-content: space-between;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .crawford-options div {
+            display: flex;
             align-items: center;
             gap: 0.5rem;
         }
@@ -412,18 +416,20 @@
         .crawford-options label {
             color: white;
             font-size: 0.8rem;
-            width: auto;
+            width: 8rem;
             text-align: left;
+            flex-shrink: 0;
         }
 
         .crawford-options select {
+            flex: 1;
             font-family: Arial, sans-serif;
             font-size: 0.8rem;
             color: white;
             background-color: #2d2d2d;
             border: 1px solid #444;
             border-radius: 0.25rem;
-            padding: 0.125rem;
+            padding: 0.3125rem;
             -webkit-appearance: none;
             appearance: none;
             text-align: center;
@@ -490,19 +496,21 @@
                     <div class="score-inputs">
                         <div>
                             <label for="lower-score">Очки нижнего игрока:</label>
-                            <input type="number" id="lower-score" min="0" , value="0">
+                            <input type="number" id="lower-score" min="0">
                         </div>
                         <div>
                             <label for="upper-score">Очки верхнего игрока:</label>
-                            <input type="number" id="upper-score" min="0" , value="0">
+                            <input type="number" id="upper-score" min="0">
                         </div>
                     </div>
                     <div class="crawford-options">
-                        <label for="crawford-select">Кроуфорд</label>
-                        <select id="crawford-select">
-                            <option value="0" selected>0</option>
-                            <option value="1">1</option>
-                        </select>
+                        <div>
+                            <label for="crawford-select">Кроуфорд</label>
+                            <select id="crawford-select">
+                                <option value="0" selected>0</option>
+                                <option value="1">1</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
