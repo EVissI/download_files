@@ -529,7 +529,7 @@
         }
 
         .turn-selector select {
-            width: 130px;
+            width: 135px;
         }
 
         .score-inputs input::-webkit-outer-spin-button,
@@ -725,6 +725,22 @@
             text-align: center;
         }
 
+        .cube-owner-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .cube-owner-selector label {
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .cube-owner-selector select {
+            width: 120px;
+        }
+
         .action-buttons {
             display: flex;
             justify-content: left;
@@ -890,6 +906,10 @@
                         <option value="64">64</option>
                     </select>
                 </div>
+            </div>
+            <div class="cube-owner-selector">
+                <label for="cube-owner-select">Чей куб?</label>
+                <select id="cube-owner-select" class="selector-size"></select>
             </div>
         </div>
     </div>
@@ -1177,6 +1197,21 @@
         turnSelect.appendChild(optionBlack);
     }
 
+    function updateCubeOwnerSelect() {
+        const whiteNick = document.getElementById('white-input').value || 'Белые';
+        const blackNick = document.getElementById('black-input').value || 'Черные';
+        const cubeOwnerSelect = document.getElementById('cube-owner-select');
+        cubeOwnerSelect.innerHTML = '';
+        const optionWhite = document.createElement('option');
+        optionWhite.value = 'white';
+        optionWhite.textContent = whiteNick;
+        cubeOwnerSelect.appendChild(optionWhite);
+        const optionBlack = document.createElement('option');
+        optionBlack.value = 'black';
+        optionBlack.textContent = blackNick;
+        cubeOwnerSelect.appendChild(optionBlack);
+    }
+
     // Load images and draw
     let imagesLoaded = 0;
     const totalImages = 3;
@@ -1187,8 +1222,11 @@
             createDropdowns();
             drawBoard();
             updateTurnSelect();
+            updateCubeOwnerSelect();
             document.getElementById('white-input').addEventListener('input', updateTurnSelect);
+            document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
             document.getElementById('black-input').addEventListener('input', updateTurnSelect);
+            document.getElementById('black-input').addEventListener('input', updateCubeOwnerSelect);
             document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
                 radio.addEventListener('change', () => {
                     const newColor = radio.value;
