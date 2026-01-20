@@ -1081,18 +1081,11 @@
 
         // Draw cube
         const cubeValue = parseInt(document.getElementById('cube-value-select').value);
-        const cubeOwner = document.getElementById('cube-owner-select').value;
 
         if (cubeValue > 0) {
             const img = cubeImages[cubeValue];
             if (img) {
-                let cubeX;
-                if (cubeOwner === 'white') {
-                    cubeX = 575;
-                } else {
-                    cubeX = 175;
-                }
-                ctx.drawImage(img, cubeX, 350, 50, 50);
+                ctx.drawImage(img, 375, 350, 50, 50);
             }
         }
     }
