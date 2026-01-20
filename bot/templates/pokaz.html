@@ -741,6 +741,22 @@
             width: 120px;
         }
 
+        .dice-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .dice-selector label {
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .dice-selector select {
+            width: 60px;
+        }
+
         .action-buttons {
             display: flex;
             justify-content: left;
@@ -910,6 +926,25 @@
             <div class="cube-owner-selector">
                 <label for="cube-owner-select">Чей куб?</label>
                 <select id="cube-owner-select" class="selector-size"></select>
+            </div>
+            <div class="dice-selector">
+                <label>На кубиках:</label>
+                <select id="dice1-select" class="selector-size">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                </select>
+                <select id="dice2-select" class="selector-size">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                </select>
             </div>
         </div>
     </div>
