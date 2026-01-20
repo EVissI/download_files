@@ -960,6 +960,7 @@
             updateDropdownPosition(select, point, scale);
 
             select.addEventListener('change', updateBoard);
+            select.addEventListener('click', drawBoard);
 
             boardWrapper.appendChild(select);
         }
@@ -1208,6 +1209,7 @@
                 updateSelectOptions('white');
                 updateBarSelects();
             });
+            document.getElementById('white-bar-select').addEventListener('click', drawBoard);
             document.getElementById('black-bar-select').addEventListener('change', (e) => {
                 const count = parseInt(e.target.value);
                 if (count > 0) {
@@ -1219,6 +1221,7 @@
                 updateSelectOptions('black');
                 updateBarSelects();
             });
+            document.getElementById('black-bar-select').addEventListener('click', drawBoard);
             document.getElementById('white-off-select').addEventListener('change', (e) => {
                 const count = parseInt(e.target.value);
                 if (count > 0) {
@@ -1243,17 +1246,28 @@
             });
             // Add listeners for dice and cube selectors
             document.getElementById('dice1-select').addEventListener('change', drawBoard);
+            document.getElementById('dice1-select').addEventListener('click', drawBoard);
             document.getElementById('dice2-select').addEventListener('change', drawBoard);
+            document.getElementById('dice2-select').addEventListener('click', drawBoard);
             document.getElementById('cube-value-select').addEventListener('change', drawBoard);
+            document.getElementById('cube-value-select').addEventListener('click', drawBoard);
             document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
+            document.getElementById('cube-owner-select').addEventListener('click', drawBoard);
             document.getElementById('turn-select').addEventListener('change', drawBoard);
+            document.getElementById('turn-select').addEventListener('click', drawBoard);
             // Add listeners for other selectors to update board
             document.getElementById('game-type-select').addEventListener('change', drawBoard);
+            document.getElementById('game-type-select').addEventListener('click', drawBoard);
             document.getElementById('crawford-select').addEventListener('change', drawBoard);
+            document.getElementById('crawford-select').addEventListener('click', drawBoard);
             document.getElementById('max-cube-select').addEventListener('change', drawBoard);
+            document.getElementById('max-cube-select').addEventListener('click', drawBoard);
             document.getElementById('jacobi-select').addEventListener('change', drawBoard);
+            document.getElementById('jacobi-select').addEventListener('click', drawBoard);
             document.getElementById('beaver-select').addEventListener('change', drawBoard);
+            document.getElementById('beaver-select').addEventListener('click', drawBoard);
             document.getElementById('max-cube-select-m').addEventListener('change', drawBoard);
+            document.getElementById('max-cube-select-m').addEventListener('click', drawBoard);
             // Add listeners for buttons
             document.getElementById('clear-button').addEventListener('click', drawBoard);
             document.getElementById('show-button').addEventListener('click', drawBoard);
