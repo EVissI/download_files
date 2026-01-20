@@ -32,6 +32,16 @@
             width: 55%;
             box-sizing: border-box;
         }
+        .right-panel{
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            background-color: #2a2a2a;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            width: 55%;
+            box-sizing: border-box;
+        }
 
         .left-panel input[type="number"],
         .left-panel select {
@@ -528,7 +538,13 @@
                             <label for="upper-score">Очки верхнего игрока:</label>
                             <input type="number" id="upper-score" min="0">
                         </div>
+                        <div>
+                            <label for="upper-score">Длина матча:</label>
+                            <input type="number" id="match_lenght" min="0">
+                        </div>
                     </div>
+                </div>
+                <div class='right-panel'>
                     <div class="crawford-options">
                         <div>
                             <label for="crawford-select">Кроуфорд</label>
