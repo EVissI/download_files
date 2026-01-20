@@ -436,6 +436,19 @@
             gap: 0.3rem;
         }
 
+        .manigeym-panel {
+            display: flex;
+            width: 100%;
+            box-sizing: border-box;
+            justify-content: center;
+            gap: 0.3rem;
+        }
+
+        .centered-options {
+            display: flex;
+            gap: 0.3rem;
+        }
+
         .score-inputs {
             display: flex;
             gap: 0.3rem;
@@ -702,19 +715,7 @@
             </div>
         </div>
         <div class="manigeym-panel" style="display: none;">
-            <div class='left-panel'>
-                <div class="score-inputs">
-                    <div>
-                        <label for="lower-score-m">Очки нижнего игрока:</label>
-                        <input type="number" id="lower-score-m" min="0" , value="0">
-                    </div>
-                    <div>
-                        <label for="upper-score-m">Очки верхнего игрока:</label>
-                        <input type="number" id="upper-score-m" min="0" , value="0">
-                    </div>
-                </div>
-            </div>
-            <div class='right-panel'>
+            <div class="centered-options">
                 <div class="jacobi-options">
                     <div>
                         <label for="jacobi-select">Яйкоби</label>
