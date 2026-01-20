@@ -536,15 +536,15 @@
                     <div class="score-inputs">
                         <div>
                             <label for="lower-score">Очки нижнего игрока:</label>
-                            <input type="number" id="lower-score" min="0">
+                            <input type="number" id="lower-score" min="0", value="0">
                         </div>
                         <div>
                             <label for="upper-score">Очки верхнего игрока:</label>
-                            <input type="number" id="upper-score" min="0">
+                            <input type="number" id="upper-score" min="0", value="0">
                         </div>
                         <div>
                             <label for="upper-score">Длина матча:</label>
-                            <input type="number" id="match_lenght" min="0">
+                            <input type="number" id="match_lenght" min="0", value="0">
                         </div>
                     </div>
                 </div>
@@ -555,6 +555,17 @@
                             <select id="crawford-select">
                                 <option value="0" selected>0</option>
                                 <option value="1">1</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="max-cube-options">
+                        <div>
+                            <label for="max-cube-select">Кроуфорд</label>
+                            <select id="max-cube-select">
+                                <option value="2" >2</option>
+                                <option value="4">4</option>
+                                <option value="8" selected>8</option>
+                                <option value="16">16</option>
                             </select>
                         </div>
                     </div>
@@ -844,7 +855,6 @@
                 radio.addEventListener('change', () => {
                     const newColor = radio.value;
                     updateSelectOptions(newColor);
-                    // Update select values to match positions for new color
                     for (let point = 1; point <= 24; point++) {
                         const select = document.getElementById(`point-${point}`);
                         const targetPositions = newColor === 'white' ? positions.first : positions.second;
