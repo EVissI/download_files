@@ -193,7 +193,7 @@
             margin: 1rem 0;
         }
 
-        .right-panel {
+        .game-panel {
             display: flex;
             flex-direction: column;
             max-width: 40%;
@@ -479,25 +479,25 @@
                     <option value="матч">матч</option>
                 </select>
             </div>
-            <div class="right-panel">
-                <div class="match-panel" style="display: none;">
-                    <div class="score-inputs">
-                        <div>
-                            <label for="lower-score">Очки нижнего игрока:</label>
-                            <input type="number" id="lower-score" min="0">
-                        </div>
-                        <div>
-                            <label for="upper-score">Очки верхнего игрока:</label>
-                            <input type="number" id="upper-score" min="0">
-                        </div>
+        </div>
+        <div class="game-panel">
+            <div class="match-panel" style="display: none;">
+                <div class="score-inputs">
+                    <div>
+                        <label for="lower-score">Очки нижнего игрока:</label>
+                        <input type="number" id="lower-score" min="0">
                     </div>
-                    <div class="crawford-options">
-                        <label for="crawford-select">Crawford rule:</label>
-                        <select id="crawford-select">
-                            <option value="0" selected>0</option>
-                            <option value="1">1</option>
-                        </select>
+                    <div>
+                        <label for="upper-score">Очки верхнего игрока:</label>
+                        <input type="number" id="upper-score" min="0">
                     </div>
+                </div>
+                <div class="crawford-options">
+                    <label for="crawford-select">Crawford rule:</label>
+                    <select id="crawford-select">
+                        <option value="0" selected>0</option>
+                        <option value="1">1</option>
+                    </select>
                 </div>
             </div>
         </div>
