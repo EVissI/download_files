@@ -1189,6 +1189,7 @@
                         select.value = targetPositions[point.toString()] || 0;
                     }
                     updateBarSelects();
+                    drawBoard();
                 });
             });
             document.getElementById('white-bar-select').addEventListener('change', (e) => {
@@ -1241,6 +1242,13 @@
             document.getElementById('cube-value-select').addEventListener('change', drawBoard);
             document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
             document.getElementById('turn-select').addEventListener('change', drawBoard);
+            // Add listeners for other selectors to update board
+            document.getElementById('game-type-select').addEventListener('change', drawBoard);
+            document.getElementById('crawford-select').addEventListener('change', drawBoard);
+            document.getElementById('max-cube-select').addEventListener('change', drawBoard);
+            document.getElementById('jacobi-select').addEventListener('change', drawBoard);
+            document.getElementById('beaver-select').addEventListener('change', drawBoard);
+            document.getElementById('max-cube-select-m').addEventListener('change', drawBoard);
         }
     }
 
