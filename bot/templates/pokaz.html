@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -20,6 +20,29 @@
             display: flex;
             flex-direction: column;
             gap: 5vh;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+            background-color: #2a2a2a;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .left-panel input[type="number"],
+        .left-panel select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #3a3a3a;
+            color: white;
+            box-sizing: border-box;
         }
 
         h1 {
@@ -647,17 +670,15 @@
             const select = document.createElement('select');
             select.id = `point-${point}`;
             select.className = 'dropdown';
-            // Options will be set by updateSelectOptions
             select.value = 0;
 
             updateDropdownPosition(select, point, scale);
 
-            // Add event listener to update board on change
             select.addEventListener('change', updateBoard);
 
             boardWrapper.appendChild(select);
         }
-        updateSelectOptions('white'); // Default
+        updateSelectOptions('white');
         updateBarSelects();
         updateOffSelects();
         updateOffSelects();
