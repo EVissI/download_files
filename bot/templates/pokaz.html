@@ -1281,13 +1281,58 @@
             manigeymPanel.style.display = 'none';
         }
     });
-
+    function generateXGID() {
+        let xgid = "";
+        
+        const blackBar = positions.second.bar || 0;
+        if (blackBar === 0) {
+            xgid += "-";
+        } else if (blackBar <= 15) {
+            xgid += String.fromCharCode(96 + blackBar); // 'a' to 'p' (97-112)
+        }
+        
+        for (let point = 24; point >= 1; point--) {
+            const whiteCount = positions.first[point] || 0;
+            const blackCount = positions.second[point] || 0;
+            
+            if (whiteCount > 0) {
+                if (whiteCount <= 15) {
+                    xgid += String.fromCharCode(64 + whiteCount); // 'A' to 'P' (65-80)
+                }
+            } else if (blackCount > 0) {
+                if (blackCount <= 15) {
+                    xgid += String.fromCharCode(96 + blackCount); // 'a' to 'p' (97-112)
+                }
+            } else {
+                xgid += "-";
+            }
+        }
+        
+        const whiteBar = positions.first.bar || 0;
+        if (whiteBar === 0) {
+            xgid += "-";
+        } else if (whiteBar <= 15) {
+            xgid += String.fromCharCode(64 + whiteBar); // 'A' to 'P' (65-80)
+        }
+        
+        return xgid;
+    }
     // Add event listeners for elements that affect board drawing
     document.getElementById('turn-select').addEventListener('change', drawBoard);
     document.getElementById('cube-value-select').addEventListener('change', drawBoard);
     document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
     document.getElementById('dice1-select').addEventListener('change', drawBoard);
     document.getElementById('dice2-select').addEventListener('change', drawBoard);
+    document.getElementById('show-button').addEventListener('click', () => {
+        const xgid = generateXGID();
+        
+            
+        if (xgid.length !== 26) {
+                alert(`Ошибка: XGID строка должна содержать 26 символов, а содержит ${xgid.length}\nXGID: ${xgid}`);
+            } else {
+                alert(`XGID: ${xgid}\n\nДлина строки: ${xgid.length} символов (корректно)`);
+            }
+    });
 
     // Clear button logic
     document.getElementById('clear-button').addEventListener('click', () => {
