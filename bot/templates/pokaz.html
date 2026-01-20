@@ -195,8 +195,8 @@
 
         .game-panel {
             display: flex;
-            flex-direction: column;
-            width: 50%;
+            flex-direction: row;
+            width: 100%;
             gap: 0.5rem;
         }
 
@@ -215,7 +215,6 @@
             flex-direction: column;
             align-items: flex-start;
             gap: 0.5rem;
-            max-width: 40%;
             margin: 0 auto;
         }
 
@@ -363,7 +362,7 @@
 
         .match-panel {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             gap: 0.5rem;
         }
 
@@ -483,22 +482,24 @@
         </div>
         <div class="game-panel">
             <div class="match-panel" style="display: none;">
-                <div class="score-inputs">
-                    <div>
-                        <label for="lower-score">Очки нижнего игрока:</label>
-                        <input type="number" id="lower-score" min="0">
+                <div class='left-panel'>
+                    <div class="score-inputs">
+                        <div>
+                            <label for="lower-score">Очки нижнего игрока:</label>
+                            <input type="number" id="lower-score" min="0">
+                        </div>
+                        <div>
+                            <label for="upper-score">Очки верхнего игрока:</label>
+                            <input type="number" id="upper-score" min="0">
+                        </div>
                     </div>
-                    <div>
-                        <label for="upper-score">Очки верхнего игрока:</label>
-                        <input type="number" id="upper-score" min="0">
+                    <div class="crawford-options">
+                        <label for="crawford-select">Crawford rule:</label>
+                        <select id="crawford-select">
+                            <option value="0" selected>0</option>
+                            <option value="1">1</option>
+                        </select>
                     </div>
-                </div>
-                <div class="crawford-options">
-                    <label for="crawford-select">Crawford rule:</label>
-                    <select id="crawford-select">
-                        <option value="0" selected>0</option>
-                        <option value="1">1</option>
-                    </select>
                 </div>
             </div>
         </div>
