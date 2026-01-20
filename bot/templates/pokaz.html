@@ -1177,8 +1177,13 @@
             updateCubeOwnerSelect();
             document.getElementById('white-input').addEventListener('input', updateTurnSelect);
             document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
+            document.getElementById('white-input').addEventListener('input', drawBoard);
             document.getElementById('black-input').addEventListener('input', updateTurnSelect);
             document.getElementById('black-input').addEventListener('input', updateCubeOwnerSelect);
+            document.getElementById('black-input').addEventListener('input', drawBoard);
+            document.getElementById('lower-score').addEventListener('input', drawBoard);
+            document.getElementById('upper-score').addEventListener('input', drawBoard);
+            document.getElementById('match_lenght').addEventListener('input', drawBoard);
             document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
                 radio.addEventListener('change', () => {
                     const newColor = radio.value;
@@ -1249,6 +1254,9 @@
             document.getElementById('jacobi-select').addEventListener('change', drawBoard);
             document.getElementById('beaver-select').addEventListener('change', drawBoard);
             document.getElementById('max-cube-select-m').addEventListener('change', drawBoard);
+            // Add listeners for buttons
+            document.getElementById('clear-button').addEventListener('click', drawBoard);
+            document.getElementById('show-button').addEventListener('click', drawBoard);
         }
     }
 
