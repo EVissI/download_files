@@ -577,56 +577,6 @@
             flex-shrink: 0;
             width: 100%;
         }
-
-        /* Custom select styles */
-        .custom-select {
-            position: relative;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .custom-select-selected {
-            background-color: #2d2d2d;
-            color: white;
-            border: 1px solid #444;
-            border-radius: 0.25rem;
-            padding: 0.3125rem;
-            cursor: pointer;
-            text-align: center;
-            font-size: 0.8rem;
-            font-family: Arial, sans-serif;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .custom-select-options {
-            display: none;
-            position: absolute;
-            background-color: #2d2d2d;
-            border: 1px solid #444;
-            border-radius: 0.25rem;
-            z-index: 1000;
-            max-height: 200px;
-            overflow-y: auto;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .custom-select.show .custom-select-options {
-            display: block;
-        }
-
-        .custom-select-option {
-            padding: 0.5rem;
-            cursor: pointer;
-            color: white;
-            text-align: center;
-        }
-
-        .custom-select-option:hover {
-            background-color: #444;
-        }
-
     </style>
 </head>
 
@@ -812,8 +762,8 @@
 
 <script>
     let positions = {
-        first: { '1': 0, '12': 0, '17': 0, '19': 0, 'bar': 0, 'off': 0 },
-        second: { '6': 0, '8': 0, '13': 0, '24': 0, 'bar': 0, 'off': 0 }
+        first: {},
+        second: {}
     };
 
     const canvas = document.getElementById('boardCanvas');
@@ -1188,99 +1138,31 @@
     function updateTurnSelect() {
         const whiteNick = document.getElementById('white-input').value || 'Белые';
         const blackNick = document.getElementById('black-input').value || 'Черные';
-        updateCustomSelect('turn-select', [
-            { value: 'white', text: whiteNick },
-            { value: 'black', text: blackNick }
-        ]);
+        const turnSelect = document.getElementById('turn-select');
+        turnSelect.innerHTML = '';
+        const optionWhite = document.createElement('option');
+        optionWhite.value = 'white';
+        optionWhite.textContent = whiteNick;
+        turnSelect.appendChild(optionWhite);
+        const optionBlack = document.createElement('option');
+        optionBlack.value = 'black';
+        optionBlack.textContent = blackNick;
+        turnSelect.appendChild(optionBlack);
     }
 
     function updateCubeOwnerSelect() {
         const whiteNick = document.getElementById('white-input').value || 'Белые';
         const blackNick = document.getElementById('black-input').value || 'Черные';
-        updateCustomSelect('cube-owner-select', [
-            { value: 'white', text: whiteNick },
-            { value: 'black', text: blackNick }
-        ]);
-    }
-
-    // Custom select functions
-    function createCustomSelect(selectId) {
-        const select = document.getElementById(selectId);
-        if (!select) return;
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'custom-select';
-        wrapper.id = `custom-${selectId}`;
-
-        const selected = document.createElement('div');
-        selected.className = 'custom-select-selected';
-        selected.textContent = select.options[select.selectedIndex].textContent;
-
-        const options = document.createElement('ul');
-        options.className = 'custom-select-options';
-
-        for (let option of select.options) {
-            const li = document.createElement('li');
-            li.className = 'custom-select-option';
-            li.textContent = option.textContent;
-            li.dataset.value = option.value;
-            options.appendChild(li);
-        }
-
-        wrapper.appendChild(selected);
-        wrapper.appendChild(options);
-
-        select.parentNode.replaceChild(wrapper, select);
-        select.style.display = 'none';
-        wrapper.appendChild(select); // Keep hidden select for form submission if needed
-
-        // Events
-        selected.addEventListener('click', () => {
-            wrapper.classList.toggle('show');
-        });
-
-        options.addEventListener('click', (e) => {
-            if (e.target.classList.contains('custom-select-option')) {
-                selected.textContent = e.target.textContent;
-                select.value = e.target.dataset.value;
-                select.dispatchEvent(new Event('change'));
-                wrapper.classList.remove('show');
-            }
-        });
-
-        // Close on outside click
-        document.addEventListener('click', (e) => {
-            if (!wrapper.contains(e.target)) {
-                wrapper.classList.remove('show');
-            }
-        });
-    }
-
-    function updateCustomSelect(selectId, optionsArray) {
-        const wrapper = document.getElementById(`custom-${selectId}`);
-        if (!wrapper) return;
-
-        const select = document.getElementById(selectId);
-        const selected = wrapper.querySelector('.custom-select-selected');
-        const optionsUl = wrapper.querySelector('.custom-select-options');
-
-        select.innerHTML = '';
-        optionsUl.innerHTML = '';
-
-        for (let opt of optionsArray) {
-            const option = document.createElement('option');
-            option.value = opt.value;
-            option.textContent = opt.text;
-            select.appendChild(option);
-
-            const li = document.createElement('li');
-            li.className = 'custom-select-option';
-            li.textContent = opt.text;
-            li.dataset.value = opt.value;
-            optionsUl.appendChild(li);
-        }
-
-        selected.textContent = select.options[select.selectedIndex].textContent;
+        const cubeOwnerSelect = document.getElementById('cube-owner-select');
+        cubeOwnerSelect.innerHTML = '';
+        const optionWhite = document.createElement('option');
+        optionWhite.value = 'white';
+        optionWhite.textContent = whiteNick;
+        cubeOwnerSelect.appendChild(optionWhite);
+        const optionBlack = document.createElement('option');
+        optionBlack.value = 'black';
+        optionBlack.textContent = blackNick;
+        cubeOwnerSelect.appendChild(optionBlack);
     }
 
     // Load images and draw
@@ -1294,14 +1176,6 @@
             drawBoard();
             updateTurnSelect();
             updateCubeOwnerSelect();
-
-            // Create custom selects
-            createCustomSelect('game-type-select');
-            createCustomSelect('turn-select');
-            createCustomSelect('cube-value-select');
-            createCustomSelect('cube-owner-select');
-            createCustomSelect('dice1-select');
-            createCustomSelect('dice2-select');
             document.getElementById('white-input').addEventListener('input', updateTurnSelect);
             document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
             document.getElementById('white-input').addEventListener('input', drawBoard);
@@ -1417,13 +1291,11 @@
 
     // Clear button logic
     document.getElementById('clear-button').addEventListener('click', () => {
-        // Reset positions
         positions = {
             first: {},
             second: {}
         };
 
-        // Reset inputs and selects to default values
         document.getElementById('white-input').value = 'nick_1';
         document.getElementById('black-input').value = 'nick_2';
         document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
@@ -1438,31 +1310,25 @@
         document.getElementById('jacobi-select').value = '0';
         document.getElementById('beaver-select').value = '0';
         document.getElementById('max-cube-select-m').value = '8';
-        document.getElementById('turn-select').value = 'white';
         document.getElementById('cube-value-select').value = '0';
-        document.getElementById('cube-owner-select').value = 'white';
         document.getElementById('dice1-select').value = '0';
         document.getElementById('dice2-select').value = '0';
 
-        // Update dependent selects
         updateTurnSelect();
         updateCubeOwnerSelect();
         updateSelectOptions('white');
         updateBarSelects();
         updateOffSelects();
 
-        // Reset point selects
         for (let point = 1; point <= 24; point++) {
             document.getElementById(`point-${point}`).value = '0';
         }
 
-        // Show/hide panels based on game type
         const matchPanel = document.querySelector('.match-panel');
         const manigeymPanel = document.querySelector('.manigeym-panel');
         matchPanel.style.display = 'none';
         manigeymPanel.style.display = 'flex';
 
-        // Redraw board
         drawBoard();
     });
 
