@@ -1541,6 +1541,16 @@
             turnValue = -1;
         }
         xgid += turnValue.toString();
+        xgid += ':'
+        let cubePart = '';
+        if (cubeShown !== 0) {
+            cubePart = 'D';
+        } else if (cubeValue !== 0) {
+            cubePart = cubeValue.toString() + cubeShown.toString();
+        } else {
+            cubePart = '00';
+        }
+        xgid += cubePart;
         return xgid;
     }
     document.getElementById('turn-select').addEventListener('change', drawBoard);
@@ -1552,9 +1562,7 @@
     document.getElementById('show-button').addEventListener('click', () => {
         const xgid = generateXGID();
 
-
-
-    alert(`XGID: ${xgid}`);
+        alert(`XGID: ${xgid}`);
     });
 
     // Clear button logic
