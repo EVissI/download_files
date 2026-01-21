@@ -1486,9 +1486,8 @@
         xgid += exponent.toString();
         xgid += ':'
         const cubeOwner = document.getElementById('cube-owner-select').value;
-        const cubeShown = parseInt(document.getElementById('cube-shown-select').value);
         let cubePosition = 0;
-        if (cubeValue !== 0 && cubeShown !== 0) {
+        if (cubeValue !== 0) {
             if (cubeOwner === 'white') {
                 cubePosition = 1;
             } else if (cubeOwner === 'black') {
