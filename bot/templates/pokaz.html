@@ -1556,7 +1556,33 @@
     document.getElementById('show-button').addEventListener('click', () => {
         const xgid = generateXGID();
 
-        alert(`XGID: ${xgid}`);
+        fetch('/pokaz/hints?xgid=' + xgid)
+            .then(response => response.json())
+            .then(data => {
+                // Generate move hints table
+                let moveTableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr>';
+                const hints = data.hints || [];
+                const firstEq = hints.length > 0 ? hints[0].eq : null;
+                hints.forEach((hint, index) => {
+                    if (hint.probs && hint.probs.length >= 2) {
+                        const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
+                        const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
+                        const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                        const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
+                        let move = hint.move || '-';
+                        let rowClass = ''; // No highlighting since no gnu move
+                        moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
+                    }
+                });
+                moveTableHtml += '</table>';
+                document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
+                // Show the table
+                document.getElementById('moveHintsTable').classList.add('active');
+                document.getElementById('moveHintsBtn').classList.add('active');
+                document.getElementById('cubeHintsTable').classList.remove('active');
+                document.getElementById('cubeHintsBtn').classList.remove('active');
+            })
+            .catch(error => alert('Error: ' + error));
     });
 
     // Clear button logic

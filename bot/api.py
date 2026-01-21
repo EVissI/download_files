@@ -12,6 +12,7 @@ from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.config import settings
 from bot.db.redis import redis_client
+from bot.common.func.pokaz_func import get_hints_for_xgid
 from loguru import logger
 import traceback
 import json
@@ -22,6 +23,7 @@ BASE_DIR = Path(__file__).parent.parent
 
 static_dir = BASE_DIR / "bot" / "static"
 templates_dir = BASE_DIR / "bot" / "templates"
+
 
 class NoCacheStaticFiles(StaticFiles):
     def __init__(self, *args, **kwargs):
@@ -91,6 +93,15 @@ async def get_pokaz(request: Request, chat_id: str = None):
     return templates.TemplateResponse(
         "pokaz.html", {"request": request, "chat_id": chat_id}
     )
+
+
+@app.get("/pokaz/hints")
+async def get_pokaz_hints(xgid: str):
+    """
+    Возвращает подсказки для заданной позиции XGID.
+    """
+    hints = get_hints_for_xgid(xgid)
+    return {"hints": hints}
 
 
 @app.get("/admin/login", response_class=HTMLResponse)
