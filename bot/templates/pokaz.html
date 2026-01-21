@@ -1566,6 +1566,9 @@
         xgid += ':'
         const conventionPart = currentGameType === 'матч' ? document.getElementById('crawford-select').value : (parseInt(document.getElementById('jacobi-select').value) + 2 * parseInt(document.getElementById('beaver-select').value)).toString();
         xgid += conventionPart;
+        xgid += ':'
+        const matchLengthPart = currentGameType === 'манигейм' ? '0' : document.getElementById('match_lenght').value;
+        xgid += matchLengthPart;
         return xgid;
     }
     function handleDiceChange(changedSelectId, otherSelectId) {
