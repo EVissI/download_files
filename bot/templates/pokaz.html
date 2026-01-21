@@ -10,7 +10,7 @@
             font-family: Arial, sans-serif;
             text-align: center;
             color: white;
-            background-color: #1a1a1a;
+            background-color: #162748;
             margin: 0;
             min-height: 100vh;
         }
@@ -1288,7 +1288,7 @@
         if (blackBar === 0) {
             xgid += "-";
         } else if (blackBar <= 15) {
-            xgid += String.fromCharCode(96 + blackBar); // 'a' to 'p' (97-112)
+            xgid += String.fromCharCode(96 + blackBar); 
         }
         
         for (let point = 24; point >= 1; point--) {
@@ -1297,11 +1297,11 @@
             
             if (whiteCount > 0) {
                 if (whiteCount <= 15) {
-                    xgid += String.fromCharCode(96 + whiteCount); // 'A' to 'P' (65-80)
+                    xgid += String.fromCharCode(96 + whiteCount); 
                 }
             } else if (blackCount > 0) {
                 if (blackCount <= 15) {
-                    xgid += String.fromCharCode(64 + blackCount); // 'a' to 'p' (97-112)
+                    xgid += String.fromCharCode(64 + blackCount); 
                 }
             } else {
                 xgid += "-";
@@ -1312,7 +1312,7 @@
         if (whiteBar === 0) {
             xgid += "-";
         } else if (whiteBar <= 15) {
-            xgid += String.fromCharCode(64 + whiteBar); // 'A' to 'P' (65-80)
+            xgid += String.fromCharCode(64 + whiteBar); 
         }
         
         return xgid;
