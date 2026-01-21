@@ -1007,12 +1007,7 @@
     </div>
 
     <div class="hints-table">
-        <div class="hints-buttons">
-            <button id="moveHintsBtn" class="hint-toggle-btn">Ход</button>
-            <button id="cubeHintsBtn" class="hint-toggle-btn">Куб</button>
-        </div>
-        <div id="moveHintsTable" class="hints-content"></div>
-        <div id="cubeHintsTable" class="hints-content"></div>
+        <div id="hintsTable" class="hints-content active"></div>
     </div>
 </body>
 
@@ -1655,46 +1650,71 @@
         document.getElementById('dice2-select').addEventListener('change', () => handleDiceChange('dice2-select', 'dice1-select'));
         document.getElementById('show-button').addEventListener('click', () => {
             const xgid = generateXGID();
-            const moveHintsTable = document.getElementById('moveHintsTable');
-            const moveHintsBtn = document.getElementById('moveHintsBtn');
-            const cubeHintsTable = document.getElementById('cubeHintsTable');
-            const cubeHintsBtn = document.getElementById('cubeHintsBtn');
+            const hintsTable = document.getElementById('hintsTable');
 
-            if (!moveHintsTable || !moveHintsBtn || !cubeHintsTable || !cubeHintsBtn) {
+            if (!hintsTable) {
                 alert('Error: Required elements not found');
                 return;
             }
 
             // Show loading
-            moveHintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
-            moveHintsTable.classList.add('active');
-            moveHintsBtn.classList.add('active');
-            cubeHintsTable.classList.remove('active');
-            cubeHintsBtn.classList.remove('active');
+            hintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
 
             fetch('/pokaz/hints?xgid=' + xgid, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
                 .then(response => response.json())
                 .then(data => {
-                    // Generate move hints table
-                    let moveTableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr>';
                     const hints = data.hints || [];
-                    const firstEq = hints.length > 0 ? hints[0].eq : null;
-                    hints.forEach((hint, index) => {
-                        if (hint.probs && hint.probs.length >= 2) {
-                            const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
-                            const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
-                            const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                            const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
-                            let move = hint.move || '-';
-                            let rowClass = ''; // No highlighting since no gnu move
-                            moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
+                    if (hints.length === 0) {
+                        hintsTable.innerHTML = '<div class="error">No hints available</div>';
+                        return;
+                    }
+
+                    const firstHint = hints[0];
+                    let tableHtml = '';
+
+                    if (firstHint.type === 'move') {
+                        // Generate move hints table
+                        tableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr>';
+                        const firstEq = hints.length > 0 ? hints[0].eq : null;
+                        hints.forEach((hint, index) => {
+                            if (hint.probs && hint.probs.length >= 2) {
+                                const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
+                                const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
+                                const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                                const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
+                                let move = hint.move || '-';
+                                let rowClass = ''; // No highlighting since no gnu move
+                                tableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
+                            }
+                        });
+                        tableHtml += '</table>';
+                    } else if (firstHint.type === 'cube_hint') {
+                        // Generate cube hints table
+                        tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
+                        if (firstHint.prefer_action) {
+                            tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${firstHint.prefer_action}</td></tr>`;
                         }
-                    });
-                    moveTableHtml += '</table>';
-                    moveHintsTable.innerHTML = moveTableHtml;
+                        const firstCubeEq = firstHint.cubeful_equities && firstHint.cubeful_equities.length > 0 ? firstHint.cubeful_equities[0].eq : null;
+                        (firstHint.cubeful_equities || []).forEach((hint, index) => {
+                            const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                            const displayEq = (firstCubeEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstCubeEq).toFixed(3) : eq;
+                            let displayAction = hint.action_1;
+                            if (hint.action_2) {
+                                displayAction += `, ${hint.action_2}`;
+                            }
+                            let rowClass = '';
+                            tableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${displayEq}</td></tr>`;
+                        });
+                        tableHtml += '</table>';
+                    } else {
+                        hintsTable.innerHTML = '<div class="error">Unknown hint type</div>';
+                        return;
+                    }
+
+                    hintsTable.innerHTML = tableHtml;
                 })
                 .catch(error => {
-                    moveHintsTable.innerHTML = '<div class="error">Error loading hints: ' + error.message + '</div>';
+                    hintsTable.innerHTML = '<div class="error">Error loading hints: ' + error.message + '</div>';
                 });
         });
 
