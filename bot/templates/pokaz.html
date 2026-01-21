@@ -1660,14 +1660,14 @@
 
             // Show loading
             hintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
-
+            hintsTable.style.display = 'block';
             fetch('/pokaz/hints?xgid=' + xgid, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
                 .then(response => response.json())
                 .then(data => {
                     const hints = data.hints || [];
                     if (hints.length === 0) {
                         hintsTable.innerHTML = '<div class="error">невозможный ход</div>';
-                        hintsTable.style.display = 'block';
+                        
                         return;
                     }
 
@@ -1713,7 +1713,6 @@
                     }
 
                     hintsTable.innerHTML = tableHtml;
-                    hintsTable.style.display = 'block';
                 })
                 .catch(error => {
                     hintsTable.innerHTML = '<div class="error">Error loading hints: ' + error.message + '</div>';
