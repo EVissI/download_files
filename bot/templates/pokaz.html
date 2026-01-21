@@ -806,6 +806,13 @@
                 <label for="turn-select">Чей ход?</label>
                 <select id="turn-select" class="selector-size"></select>
             </div>
+            <div class="cube-shown-selector">
+                <label for="cube-shown-select">Показан куб</label>
+                <select id="cube-shown-select" class="selector-size">
+                    <option value="да">да</option>
+                    <option value="нет">нет</option>
+                </select>
+            </div>
             <div class="action-buttons">
                 <button id="clear-button">Очистить</button>
                 <button id="init-button">Начальная позиция</button>
@@ -1450,6 +1457,7 @@
         } else if (cubeOwner === 'black') {
             cubePosition = -1;
         }
+        xgid += ':'
         xgid += cubePosition.toString();
         const turn = document.getElementById('turn-select').value;
         let turnValue = 0;
@@ -1461,7 +1469,6 @@
         xgid += turnValue.toString();
         return xgid;
     }
-    // Add event listeners for elements that affect board drawing
     document.getElementById('turn-select').addEventListener('change', drawBoard);
     document.getElementById('turn-select').addEventListener('change', updateCircleVisibility);
     document.getElementById('cube-value-select').addEventListener('change', drawBoard);
