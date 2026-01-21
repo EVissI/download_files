@@ -1556,8 +1556,24 @@
         document.getElementById('dice2-select').addEventListener('change', () => handleDiceChange('dice2-select', 'dice1-select'));
         document.getElementById('show-button').addEventListener('click', () => {
             const xgid = generateXGID();
-
-            fetch('/pokaz/hints?xgid=' + xgid)
+            const moveHintsTable = document.getElementById('moveHintsTable');
+            const moveHintsBtn = document.getElementById('moveHintsBtn');
+            const cubeHintsTable = document.getElementById('cubeHintsTable');
+            const cubeHintsBtn = document.getElementById('cubeHintsBtn');
+    
+            if (!moveHintsTable || !moveHintsBtn || !cubeHintsTable || !cubeHintsBtn) {
+                alert('Error: Required elements not found');
+                return;
+            }
+    
+            // Show loading
+            moveHintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
+            moveHintsTable.classList.add('active');
+            moveHintsBtn.classList.add('active');
+            cubeHintsTable.classList.remove('active');
+            cubeHintsBtn.classList.remove('active');
+    
+            fetch('/pokaz/hints?xgid=' + xgid, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
                 .then(response => response.json())
                 .then(data => {
                     // Generate move hints table
@@ -1576,14 +1592,11 @@
                         }
                     });
                     moveTableHtml += '</table>';
-                    document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
-                    // Show the table
-                    document.getElementById('moveHintsTable').classList.add('active');
-                    document.getElementById('moveHintsBtn').classList.add('active');
-                    document.getElementById('cubeHintsTable').classList.remove('active');
-                    document.getElementById('cubeHintsBtn').classList.remove('active');
+                    moveHintsTable.innerHTML = moveTableHtml;
                 })
-                .catch(error => alert('Error: ' + error));
+                .catch(error => {
+                    moveHintsTable.innerHTML = '<div class="error">Error loading hints: ' + error.message + '</div>';
+                });
         });
 
         // Clear button logic
