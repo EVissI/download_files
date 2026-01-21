@@ -1321,6 +1321,7 @@
             updateTurnSelect();
             updateCubeOwnerSelect();
             updateCircleVisibility();
+            updateCubeSelectorsVisibility();
             document.getElementById('white-input').addEventListener('input', updateTurnSelect);
             document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
             document.getElementById('white-input').addEventListener('input', drawBoard);
@@ -1426,6 +1427,21 @@
             manigeymPanel.style.display = 'none';
         }
     });
+
+    function updateCubeSelectorsVisibility() {
+        const cubeShown = document.getElementById('cube-shown-select').value;
+        const cubeOwnerSelector = document.querySelector('.cube-owner-selector');
+        const diceSelector = document.querySelector('.dice-selector');
+        if (cubeShown === 'да') {
+            cubeOwnerSelector.style.display = 'none';
+            diceSelector.style.display = 'none';
+        } else {
+            cubeOwnerSelector.style.display = 'flex';
+            diceSelector.style.display = 'flex';
+        }
+    }
+
+    document.getElementById('cube-shown-select').addEventListener('change', updateCubeSelectorsVisibility);
     function generateXGID() {
         let xgid = "";
         const whiteBar = positions.first.bar || 0;
