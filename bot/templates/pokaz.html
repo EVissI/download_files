@@ -1440,6 +1440,7 @@
             exponent = Math.log2(cubeValue);
         }
         xgid += exponent.toString();
+        xgid += ':'
         const cubeOwner = document.getElementById('cube-owner-select').value;
         let cubePosition = 0;
         if (cubeValue === 0) {
@@ -1450,6 +1451,14 @@
             cubePosition = -1;
         }
         xgid += cubePosition.toString();
+        const turn = document.getElementById('turn-select').value;
+        let turnValue = 0;
+        if (turn === 'white') {
+            turnValue = 1;
+        } else if (turn === 'black') {
+            turnValue = -1;
+        }
+        xgid += turnValue.toString();
         return xgid;
     }
     // Add event listeners for elements that affect board drawing
