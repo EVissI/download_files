@@ -826,7 +826,12 @@
                 <label for="cube-shown-select">Показан куб?</label>
                 <select id="cube-shown-select" class="selector-size">
                     <option value="0">Нет</option>
-                    <option value="1">Да</option>
+                    <option value="2">2</option>
+                    <option value="4">4</option>
+                    <option value="8">8</option>
+                    <option value="16">16</option>
+                    <option value="32">32</option>
+                    <option value="64">64</option>
                 </select>
             </div>
             <div class="action-buttons">
@@ -1203,7 +1208,7 @@
         // Draw cube
         const cubeValue = parseInt(document.getElementById('cube-value-select').value);
         const cubeOwner = document.getElementById('cube-owner-select').value;
-        const cubeShown = document.getElementById('cube-shown-select').value;
+        const cubeShown = parseInt(document.getElementById('cube-shown-select').value);
 
         if (cubeValue >= 0) {
             let img;
@@ -1215,7 +1220,7 @@
             if (img) {
                 let cubeX = 375;
                 let cubeY = 350;
-                if (cubeShown === '1' && cubeValue !== 0) {
+                if (cubeShown !== 0 && cubeValue !== 0) {
                     if (cubeOwner === 'white') {
                         cubeX = 575;
                     } else if (cubeOwner === 'black') {
@@ -1440,17 +1445,21 @@
     function updateCubeSelectorsVisibility() {
         const cubeShown = document.getElementById('cube-shown-select').value;
         const diceSelector = document.querySelector('.dice-selector');
-        if (cubeShown === '1') {
+        const cubeValueOptions = document.querySelector('.cube-value-options');
+        if (cubeShown !== '0') {
             diceSelector.style.display = 'none';
+            cubeValueOptions.style.display = 'none';
         } else {
             diceSelector.style.display = 'flex';
+            cubeValueOptions.style.display = 'flex';
         }
     }
 
     document.getElementById('cube-shown-select').addEventListener('change', () => {
         updateCubeSelectorsVisibility();
         const cubeShown = document.getElementById('cube-shown-select').value;
-        if (cubeShown === '1') {
+        if (cubeShown !== '0') {
+            document.getElementById('cube-value-select').value = cubeShown;
             document.getElementById('dice1-select').value = '0';
             document.getElementById('dice2-select').value = '0';
         }
@@ -1553,9 +1562,11 @@
         document.getElementById('jacobi-select').value = '0';
         document.getElementById('beaver-select').value = '0';
         document.getElementById('max-cube-select-m').value = '8';
+        document.getElementById('cube-shown-select').value = '0';
         document.getElementById('cube-value-select').value = '0';
         document.getElementById('dice1-select').value = '0';
         document.getElementById('dice2-select').value = '0';
+        updateCubeSelectorsVisibility();
 
         updateTurnSelect();
         updateCubeOwnerSelect();
@@ -1584,6 +1595,11 @@
         document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
         document.getElementById('white-bar-select').value = '0';
         document.getElementById('black-bar-select').value = '0';
+        document.getElementById('cube-shown-select').value = '0';
+        document.getElementById('cube-value-select').value = '0';
+        document.getElementById('dice1-select').value = '0';
+        document.getElementById('dice2-select').value = '0';
+        updateCubeSelectorsVisibility();
 
         updateSelectOptions('white');
         updateBarSelects();
