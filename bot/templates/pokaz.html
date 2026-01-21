@@ -1564,6 +1564,8 @@
         const UpperScore = currentGameType === 'манигейм' ? '0' : document.getElementById('upper-score').value;
         xgid += UpperScore;
         xgid += ':'
+        const conventionPart = currentGameType === 'матч' ? document.getElementById('crawford-select').value : (parseInt(document.getElementById('jacobi-select').value) + 2 * parseInt(document.getElementById('beaver-select').value)).toString();
+        xgid += conventionPart;
         return xgid;
     }
     function handleDiceChange(changedSelectId, otherSelectId) {
