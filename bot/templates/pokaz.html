@@ -669,11 +669,8 @@
                 </div>
             </div>
             <div class="game-type">
-                <label for="game-type-select">Тип игры</label>
-                <select id="game-type-select">
-                    <option value="манигейм">манигейм</option>
-                    <option value="матч">матч</option>
-                </select>
+                <label>Тип игры</label>
+                <button id="game-type-button">Манигейм</button>
             </div>
         </div>
         <div class="game-panel">
@@ -889,6 +886,8 @@
         first: {},
         second: {}
     };
+
+    let currentGameType = 'манигейм';
 
     const canvas = document.getElementById('boardCanvas');
     const ctx = canvas.getContext('2d');
@@ -1429,18 +1428,17 @@
     Double32.onload = imageLoaded;
     Double64.onload = imageLoaded;
 
-    document.getElementById('game-type-select').addEventListener('change', (e) => {
+    document.getElementById('game-type-button').addEventListener('click', () => {
+        currentGameType = currentGameType === 'манигейм' ? 'матч' : 'манигейм';
+        document.getElementById('game-type-button').textContent = currentGameType === 'манигейм' ? 'Манигейм' : 'Матч';
         const matchPanel = document.querySelector('.match-panel');
         const manigeymPanel = document.querySelector('.manigeym-panel');
-        if (e.target.value === 'матч') {
+        if (currentGameType === 'матч') {
             matchPanel.style.display = 'flex';
             manigeymPanel.style.display = 'none';
-        } else if (e.target.value === 'манигейм') {
-            matchPanel.style.display = 'none';
-            manigeymPanel.style.display = 'flex';
         } else {
             matchPanel.style.display = 'none';
-            manigeymPanel.style.display = 'none';
+            manigeymPanel.style.display = 'flex';
         }
     });
 
@@ -1556,7 +1554,8 @@
         document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
         document.getElementById('white-bar-select').value = '0';
         document.getElementById('black-bar-select').value = '0';
-        document.getElementById('game-type-select').value = 'манигейм';
+        currentGameType = 'манигейм';
+        document.getElementById('game-type-button').textContent = 'Манигейм';
         document.getElementById('lower-score').value = '0';
         document.getElementById('upper-score').value = '0';
         document.getElementById('match_lenght').value = '3';
