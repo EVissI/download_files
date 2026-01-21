@@ -1216,9 +1216,9 @@
                 let cubeX = 375;
                 let cubeY = 350;
                 if (cubeShown === '1' && cubeValue !== 0) {
-                    if (turn === 'white') {
+                    if (cubeOwner === 'white') {
                         cubeX = 575;
-                    } else if (turn === 'black') {
+                    } else if (cubeOwner === 'black') {
                         cubeX = 175;
                     }
                     cubeY = 350;
@@ -1319,9 +1319,8 @@
         }
     }
 
-    // Load images and draw
     let imagesLoaded = 0;
-    const totalImages = 21; // 3 checkers + 12 dice + 6 cubes
+    const totalImages = 21;
 
     function imageLoaded() {
         imagesLoaded++;
@@ -1440,19 +1439,23 @@
 
     function updateCubeSelectorsVisibility() {
         const cubeShown = document.getElementById('cube-shown-select').value;
-        const cubeOwnerSelector = document.querySelector('.cube-owner-selector');
         const diceSelector = document.querySelector('.dice-selector');
         if (cubeShown === '1') {
-            cubeOwnerSelector.style.display = 'none';
             diceSelector.style.display = 'none';
         } else {
-            cubeOwnerSelector.style.display = 'flex';
             diceSelector.style.display = 'flex';
         }
     }
 
-    document.getElementById('cube-shown-select').addEventListener('change', updateCubeSelectorsVisibility);
-    document.getElementById('cube-shown-select').addEventListener('change', drawBoard);
+    document.getElementById('cube-shown-select').addEventListener('change', () => {
+        updateCubeSelectorsVisibility();
+        const cubeShown = document.getElementById('cube-shown-select').value;
+        if (cubeShown === '1') {
+            document.getElementById('dice1-select').value = '0';
+            document.getElementById('dice2-select').value = '0';
+        }
+        drawBoard();
+    });
     function generateXGID() {
         let xgid = "";
         const whiteBar = positions.first.bar || 0;
