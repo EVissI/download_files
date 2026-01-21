@@ -101,6 +101,7 @@ async def get_pokaz_hints(xgid: str):
     Возвращает подсказки для заданной позиции XGID.
     """
     hints = get_hints_for_xgid(xgid)
+    logger.info(hints)
     return {"hints": hints}
 
 

@@ -1125,37 +1125,6 @@
             }
         }
 
-        function updateOffSelects() {
-            const whiteOffSelect = document.getElementById('white-off-select');
-            const blackOffSelect = document.getElementById('black-off-select');
-            if (whiteOffSelect) {
-                const currentOff = parseInt(whiteOffSelect.value) || 0;
-                const totalCheckers = getTotalCheckers(positions.first);
-                const maxForThis = 15 - (totalCheckers - currentOff);
-                whiteOffSelect.innerHTML = '';
-                for (let i = 0; i <= maxForThis; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = i;
-                    whiteOffSelect.appendChild(option);
-                }
-                whiteOffSelect.value = currentOff;
-            }
-            if (blackOffSelect) {
-                const currentOff = parseInt(blackOffSelect.value) || 0;
-                const totalCheckers = getTotalCheckers(positions.second);
-                const maxForThis = 15 - (totalCheckers - currentOff);
-                blackOffSelect.innerHTML = '';
-                for (let i = 0; i <= maxForThis; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = i;
-                    blackOffSelect.appendChild(option);
-                }
-                blackOffSelect.value = currentOff;
-            }
-        }
-
         function createDropdowns() {
             const scale = canvas.offsetWidth / 800;
             for (let point = 1; point <= 24; point++) {
@@ -1465,28 +1434,6 @@
                     drawBoard();
                     updateSelectOptions('black');
                     updateBarSelects();
-                });
-                document.getElementById('white-off-select').addEventListener('change', (e) => {
-                    const count = parseInt(e.target.value);
-                    if (count > 0) {
-                        positions.first.off = count;
-                    } else {
-                        delete positions.first.off;
-                    }
-                    drawBoard();
-                    updateSelectOptions('white');
-                    updateOffSelects();
-                });
-                document.getElementById('black-off-select').addEventListener('change', (e) => {
-                    const count = parseInt(e.target.value);
-                    if (count > 0) {
-                        positions.second.off = count;
-                    } else {
-                        delete positions.second.off;
-                    }
-                    drawBoard();
-                    updateSelectOptions('black');
-                    updateOffSelects();
                 });
             }
         }
