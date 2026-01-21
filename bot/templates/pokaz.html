@@ -613,12 +613,17 @@
         }
 
         .hints-table {
+            display: none;
             padding-top: 1rem;
             background-color: #2d2d2d;
             border-radius: 8px;
             border: 1px solid #444;
             overflow-x: auto;
             padding: 15px;
+        }
+
+        .hints-table.active {
+            display: block;
         }
 
         .hints-buttons {
@@ -1007,7 +1012,7 @@
         </div>
     </div>
 
-    <div class="hints-table", style="display: none;">
+    <div class="hints-table">
         <div id="hintsTable" class="hints-content"></div>
     </div>
 </body>
@@ -1652,13 +1657,13 @@
         document.getElementById('show-button').addEventListener('click', () => {
             const xgid = generateXGID();
             const hintsTable = document.getElementById('hintsTable');
+            const hintsTableContainer = document.querySelector('.hints-table');
 
-            if (!hintsTable) {
+            if (!hintsTable || !hintsTableContainer) {
                 alert('Error: Required elements not found');
                 return;
             }
 
-            hintsTable.style.display = 'block';
             hintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
             fetch('/pokaz/hints?xgid=' + xgid, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
                 .then(response => response.json())
@@ -1666,7 +1671,7 @@
                     const hints = data.hints || [];
                     if (hints.length === 0) {
                         hintsTable.innerHTML = '<div class="error">невозможный ход</div>';
-                        
+
                         return;
                     }
 
@@ -1712,9 +1717,13 @@
                     }
 
                     hintsTable.innerHTML = tableHtml;
+                    hintsTable.classList.add('active');
+                    hintsTableContainer.classList.add('active');
                 })
                 .catch(error => {
                     hintsTable.innerHTML = '<div class="error">Error loading hints: ' + error.message + '</div>';
+                    hintsTable.classList.add('active');
+                    hintsTableContainer.classList.add('active');
                 });
         });
 
@@ -1760,6 +1769,11 @@
             matchPanel.style.display = 'none';
             manigeymPanel.style.display = 'flex';
 
+            const hintsTableContainer = document.querySelector('.hints-table');
+            const hintsTable = document.getElementById('hintsTable');
+            hintsTableContainer.classList.remove('active');
+            hintsTable.classList.remove('active');
+
             drawBoard();
         });
 
@@ -1784,6 +1798,11 @@
                 const select = document.getElementById(`point-${point}`);
                 select.value = positions.first[point.toString()] || 0;
             }
+
+            const hintsTableContainer = document.querySelector('.hints-table');
+            const hintsTable = document.getElementById('hintsTable');
+            hintsTableContainer.classList.remove('active');
+            hintsTable.classList.remove('active');
 
             drawBoard();
         });
