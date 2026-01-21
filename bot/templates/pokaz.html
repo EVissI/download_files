@@ -874,7 +874,7 @@
         for (let point = 1; point <= 24; point++) {
             const select = document.getElementById(`point-${point}`);
             if (!select) continue;
-            const currentOnPoint = parseInt(select.value) || 0;
+            const currentOnPoint = targetPositions[point.toString()] || 0;
             const occupiedByOther = otherPositions[point.toString()] > 0;
             const baseMax = occupiedByOther ? 0 : 15;
             const maxForThis = Math.min(baseMax, 15 - (totalCheckers - currentOnPoint));
