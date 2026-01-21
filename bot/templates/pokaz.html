@@ -1433,6 +1433,10 @@
         } else if (blackBar <= 15) {
             xgid += String.fromCharCode(96 + blackBar);
         }
+        xgid += ':'
+        const cubeValue = parseInt(document.getElementById('cube-value-select').value);
+        const sqrtCube = Math.sqrt(cubeValue);
+        xgid += sqrtCube.toString();
         return xgid;
     }
     // Add event listeners for elements that affect board drawing
