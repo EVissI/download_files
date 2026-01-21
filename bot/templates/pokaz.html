@@ -436,35 +436,6 @@
             text-align: center;
         }
 
-        .crawford-options {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .crawford-options div {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        .crawford-options label {
-            color: white;
-            font-size: 0.8rem;
-            text-align: left;
-            flex-shrink: 0;
-            width: 4rem;
-        }
-
-        .crawford-options select {
-            font-family: Arial, sans-serif;
-            color: white;
-            background-color: #2d2d2d;
-            border: 1px solid #444;
-            border-radius: 0.25rem;
-            -webkit-appearance: none;
-            appearance: none;
-            text-align: center;
-        }
 
         .jacobi-options {
             display: flex;
@@ -774,15 +745,6 @@
                     </div>
                 </div>
                 <div class='right-panel'>
-                    <div class="crawford-options">
-                        <div>
-                            <label for="crawford-select">Кроуфорд</label>
-                            <select id="crawford-select" class="selector-size">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                            </select>
-                        </div>
-                    </div>
                     <div class="max-cube-options">
                         <div>
                             <label for="max-cube-select">Макс куб</label>
@@ -1564,11 +1526,14 @@
         const UpperScore = currentGameType === 'манигейм' ? '0' : document.getElementById('upper-score').value;
         xgid += UpperScore;
         xgid += ':'
-        const conventionPart = currentGameType === 'матч' ? document.getElementById('crawford-select').value : (parseInt(document.getElementById('jacobi-select').value) + 2 * parseInt(document.getElementById('beaver-select').value)).toString();
+        const conventionPart = currentGameType === 'матч' ? '1' : (parseInt(document.getElementById('jacobi-select').value) + 2 * parseInt(document.getElementById('beaver-select').value)).toString();
         xgid += conventionPart;
         xgid += ':'
         const matchLengthPart = currentGameType === 'манигейм' ? '0' : document.getElementById('match_lenght').value;
         xgid += matchLengthPart;
+        xgid += ':'
+        const maxCubePart = currentGameType === 'матч' ? document.getElementById('max-cube-select').value : document.getElementById('max-cube-select-m').value;
+        xgid += maxCubePart;
         return xgid;
     }
     function handleDiceChange(changedSelectId, otherSelectId) {
@@ -1611,7 +1576,6 @@
         document.getElementById('lower-score').value = '0';
         document.getElementById('upper-score').value = '0';
         document.getElementById('match_lenght').value = '3';
-        document.getElementById('crawford-select').value = '0';
         document.getElementById('max-cube-select').value = '8';
         document.getElementById('jacobi-select').value = '0';
         document.getElementById('beaver-select').value = '0';
