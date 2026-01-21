@@ -47,6 +47,23 @@
             flex: 1;
         }
 
+        .green-circles {
+            position: absolute;
+            right: -60px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .circle {
+            width: 20px;
+            height: 20px;
+            background-color: green;
+            border-radius: 50%;
+        }
+
         canvas {
             border: 0.125rem solid #333;
             border-radius: 0.5rem;
@@ -606,6 +623,11 @@
         </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
+            <div class="green-circles">
+                <div class="circle"></div>
+                <div class="circle"></div>
+                <div class="circle"></div>
+            </div>
         </div>
         <div class="selectors-wrapper">
             <div class="selectors-container">
