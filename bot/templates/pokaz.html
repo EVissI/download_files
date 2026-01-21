@@ -611,6 +611,99 @@
             margin: 0;
             flex-shrink: 0;
         }
+
+        .hints-table {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            border: 1px solid #444;
+            overflow-x: auto;
+            padding: 15px;
+        }
+
+        .hints-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .hint-toggle-btn {
+            width: 49%;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .hint-toggle-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .hint-toggle-btn.active {
+            background-color: #0056b3;
+        }
+
+        .hints-content {
+            display: none;
+        }
+
+        .hints-content.active {
+            display: block;
+        }
+
+        table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 800px;
+            background-color: #333;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            border: 1px solid #555;
+            padding: 20px 30px;
+            text-align: left;
+            color: white;
+            word-spacing: 16px;
+        }
+
+        td:nth-child(2),
+        td:nth-child(3),
+        td:nth-child(4) {
+            text-align: center;
+        }
+
+        th {
+            background-color: #444;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+
+        tr:hover {
+            background-color: #3a3a3a;
+        }
+
+        .loading {
+            color: #007bff;
+            font-style: italic;
+        }
+
+        .error {
+            color: #dc3545;
+            background-color: #2d1b1b;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 
