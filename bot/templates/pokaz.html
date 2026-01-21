@@ -1452,6 +1452,7 @@
     }
 
     document.getElementById('cube-shown-select').addEventListener('change', updateCubeSelectorsVisibility);
+    document.getElementById('cube-shown-select').addEventListener('change', drawBoard);
     function generateXGID() {
         let xgid = "";
         const whiteBar = positions.first.bar || 0;
