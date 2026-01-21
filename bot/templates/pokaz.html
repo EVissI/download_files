@@ -1440,6 +1440,16 @@
             exponent = Math.log2(cubeValue);
         }
         xgid += exponent.toString();
+        const cubeOwner = document.getElementById('cube-owner-select').value;
+        let cubePosition = 0;
+        if (cubeValue === 0) {
+            cubePosition = 0;
+        } else if (cubeOwner === 'white') {
+            cubePosition = 1;
+        } else if (cubeOwner === 'black') {
+            cubePosition = -1;
+        }
+        xgid += cubePosition.toString();
         return xgid;
     }
     // Add event listeners for elements that affect board drawing
