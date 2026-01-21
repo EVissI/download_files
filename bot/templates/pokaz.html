@@ -862,802 +862,804 @@
 </body>
 
 <script>
-    let positions = {
-        first: {},
-        second: {}
-    };
-
-    let currentGameType = 'манигейм';
-
-    const canvas = document.getElementById('boardCanvas');
-    const ctx = canvas.getContext('2d');
-    const boardWrapper = document.querySelector('.board-wrapper');
-
-    // Load images
-    const boardImg = new Image();
-    boardImg.src = '/static/board.png';
-    const whiteChecker = new Image();
-    whiteChecker.src = '/static/white_checker.png';
-    const blackChecker = new Image();
-    blackChecker.src = '/static/black_checker.png';
-
-    // Load dice images
-    const Dice1w = new Image();
-    Dice1w.src = '/static/1w.png?t=' + Date.now();
-    const Dice2w = new Image();
-    Dice2w.src = '/static/2w.png?t=' + Date.now();
-    const Dice3w = new Image();
-    Dice3w.src = '/static/3w.png?t=' + Date.now();
-    const Dice4w = new Image();
-    Dice4w.src = '/static/4w.png?t=' + Date.now();
-    const Dice5w = new Image();
-    Dice5w.src = '/static/5w.png?t=' + Date.now();
-    const Dice6w = new Image();
-    Dice6w.src = '/static/6w.png?t=' + Date.now();
-
-    const Dice1b = new Image();
-    Dice1b.src = '/static/1b.png?t=' + Date.now();
-    const Dice2b = new Image();
-    Dice2b.src = '/static/2b.png?t=' + Date.now();
-    const Dice3b = new Image();
-    Dice3b.src = '/static/3b.png?t=' + Date.now();
-    const Dice4b = new Image();
-    Dice4b.src = '/static/4b.png?t=' + Date.now();
-    const Dice5b = new Image();
-    Dice5b.src = '/static/5b.png?t=' + Date.now();
-    const Dice6b = new Image();
-    Dice6b.src = '/static/6b.png?t=' + Date.now();
-
-    // Load cube images
-    const Double2 = new Image();
-    Double2.src = '/static/Double2.png?t=' + Date.now();
-    const Double4 = new Image();
-    Double4.src = '/static/Double4.png?t=' + Date.now();
-    const Double8 = new Image();
-    Double8.src = '/static/Double8.png?t=' + Date.now();
-    const Double16 = new Image();
-    Double16.src = '/static/Double16.png?t=' + Date.now();
-    const Double32 = new Image();
-    Double32.src = '/static/Double32.png?t=' + Date.now();
-    const Double64 = new Image();
-    Double64.src = '/static/Double64.png?t=' + Date.now();
-
-    const diceImages = {
-        white: {
-            1: Dice1w,
-            2: Dice2w,
-            3: Dice3w,
-            4: Dice4w,
-            5: Dice5w,
-            6: Dice6w
-        },
-        black: {
-            1: Dice1b,
-            2: Dice2b,
-            3: Dice3b,
-            4: Dice4b,
-            5: Dice5b,
-            6: Dice6b
-        }
-    };
-
-    const cubeImages = {
-        2: Double2,
-        4: Double4,
-        8: Double8,
-        16: Double16,
-        32: Double32,
-        64: Double64
-    };
-
-    function getX(point) {
-        if (point >= 13 && point <= 18) {
-            const baseX = 50 + (point - 13) * 60;
-            return baseX - (point === 13 ? 8 : 0);
-        } else if (point >= 19 && point <= 24) {
-            return 450 + (point - 19) * 60;
-        } else if (point >= 7 && point <= 12) {
-            const baseX = 50 + (12 - point) * 60;
-            return baseX - (point === 12 ? 4 : 0);
-        } else if (point >= 1 && point <= 6) {
-            return 450 + (6 - point) * 60;
-        }
-        return 0;
-    }
-
-    function getBaseY(point) {
-        return (point > 12) ? 70 : 690;
-    }
-
-    function updateSelectOptions(color) {
-        const targetPositions = color === 'white' ? positions.first : positions.second;
-        const otherPositions = color === 'white' ? positions.second : positions.first;
-        const totalCheckers = getTotalCheckers(targetPositions);
-        for (let point = 1; point <= 24; point++) {
-            const select = document.getElementById(`point-${point}`);
-            if (!select) continue;
-            const currentOnPoint = targetPositions[point.toString()] || 0;
-            const occupiedByOther = otherPositions[point.toString()] > 0;
-            const baseMax = occupiedByOther ? 0 : 15;
-            const maxForThis = Math.min(baseMax, 15 - (totalCheckers - currentOnPoint));
-            select.innerHTML = '';
-            for (let i = 0; i <= maxForThis; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                select.appendChild(option);
-            }
-            select.value = currentOnPoint;
-        }
-    }
-
-    function updateBarSelects() {
-        const whiteBarSelect = document.getElementById('white-bar-select');
-        const blackBarSelect = document.getElementById('black-bar-select');
-        if (whiteBarSelect) {
-            const currentBar = parseInt(whiteBarSelect.value) || 0;
-            const totalCheckers = getTotalCheckers(positions.first);
-            const maxForThis = 15 - (totalCheckers - currentBar);
-            whiteBarSelect.innerHTML = '';
-            for (let i = 0; i <= maxForThis; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                whiteBarSelect.appendChild(option);
-            }
-            whiteBarSelect.value = currentBar;
-        }
-        if (blackBarSelect) {
-            const currentBar = parseInt(blackBarSelect.value) || 0;
-            const totalCheckers = getTotalCheckers(positions.second);
-            const maxForThis = 15 - (totalCheckers - currentBar);
-            blackBarSelect.innerHTML = '';
-            for (let i = 0; i <= maxForThis; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                blackBarSelect.appendChild(option);
-            }
-            blackBarSelect.value = currentBar;
-        }
-    }
-
-    function updateOffSelects() {
-        const whiteOffSelect = document.getElementById('white-off-select');
-        const blackOffSelect = document.getElementById('black-off-select');
-        if (whiteOffSelect) {
-            const currentOff = parseInt(whiteOffSelect.value) || 0;
-            const totalCheckers = getTotalCheckers(positions.first);
-            const maxForThis = 15 - (totalCheckers - currentOff);
-            whiteOffSelect.innerHTML = '';
-            for (let i = 0; i <= maxForThis; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                whiteOffSelect.appendChild(option);
-            }
-            whiteOffSelect.value = currentOff;
-        }
-        if (blackOffSelect) {
-            const currentOff = parseInt(blackOffSelect.value) || 0;
-            const totalCheckers = getTotalCheckers(positions.second);
-            const maxForThis = 15 - (totalCheckers - currentOff);
-            blackOffSelect.innerHTML = '';
-            for (let i = 0; i <= maxForThis; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                blackOffSelect.appendChild(option);
-            }
-            blackOffSelect.value = currentOff;
-        }
-    }
-
-    function createDropdowns() {
-        const scale = canvas.offsetWidth / 800;
-        for (let point = 1; point <= 24; point++) {
-            const select = document.createElement('select');
-            select.id = `point-${point}`;
-            select.className = 'dropdown';
-            select.value = 0;
-
-            updateDropdownPosition(select, point, scale);
-
-            select.addEventListener('change', updateBoard);
-
-            boardWrapper.appendChild(select);
-        }
-        updateSelectOptions('white');
-        updateBarSelects();
-        updateOffSelects();
-        updateCircleVisibility();
-        updateOffSelects();
-    }
-
-    function updateDropdownPosition(select, point, scale) {
-        const x = (getX(point) - (point > 12 ? 25 : 25)) * scale;
-        let y_text;
-        if (point > 12) {
-            y_text = 20;
-        } else {
-            y_text = 750;
-        }
-        const offset = point > 12 ? -70 : 43;
-        const y = (y_text + offset) * scale;
-        select.style.left = x + 'px';
-        select.style.top = y + 'px';
-        select.style.width = (55 * scale) + 'px';
-        select.style.height = (55 * scale) + 'px';
-        select.style.fontSize = (26 * scale) + 'px';
-    }
-
-    function updateAllDropdownPositions() {
-        const scale = canvas.offsetWidth / 800;
-        for (let point = 1; point <= 24; point++) {
-            const select = document.getElementById(`point-${point}`);
-            if (select) {
-                updateDropdownPosition(select, point, scale);
-            }
-        }
-    }
-
-    function drawCheckers(player, img, positions, currentPlayer) {
-        ctx.font = 'bold 1.875rem Arial';
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        if (player === currentPlayer) {
-            for (let point = 1; point <= 24; point++) {
-                const x = getX(point);
-                let y = getBaseY(point);
-                const dy = getDy(point);
-
-                let displayPoint = point;
-                ctx.fillText(displayPoint, x, point > 12 ? y - 50 : y + 60);
-            }
-        }
-
-        for (let pointStr in positions) {
-            if (pointStr === 'bar' || pointStr === 'off') continue;
-            const point = parseInt(pointStr);
-            let count = positions[pointStr];
-            const x = getX(point);
-            let y = getBaseY(point);
-            const dy = getDy(point);
-
-            for (let i = 0; i < Math.min(count, 6); i++) {
-                ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
-            }
-
-            if (count > 6) {
-                const lastCheckerY = y + (5 * dy);
-                ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
-            }
-        }
-
-        const barX = 400;
-        const barY = (player === 'second') ? 220 : 520;
-        const barDy = (player === 'second') ? 55 : -55;
-        if (positions.bar && positions.bar !== 0) {
-            let y = barY;
-            for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
-                ctx.drawImage(img, barX - 31.25, y + (i * barDy) - 31.25, 62.5, 62.5);
-            }
-            if (Math.abs(positions.bar) > 6) {
-                const lastCheckerY = y + (5 * barDy);
-                ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
-            }
-        }
-    }
-
-    function getDy(point) {
-        return (point > 12) ? 55 : -55;
-    }
-
-    function drawBoard() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
-
-        drawCheckers('first', whiteChecker, positions.first, 'first');
-        drawCheckers('second', blackChecker, positions.second, 'second');
-
-        // Draw dice
-        const d1 = parseInt(document.getElementById('dice1-select').value);
-        const d2 = parseInt(document.getElementById('dice2-select').value);
-        const turn = document.getElementById('turn-select').value; // 'white' or 'black'
-
-        if (d1 > 0 || d2 > 0) {
-            const diceY = 350;
-            let diceX1, diceX2;
-            let diceSet;
-            if (turn === 'white') {
-                diceX1 = 530;
-                diceX2 = 620;
-                diceSet = diceImages.white;
-            } else {
-                diceX1 = 130;
-                diceX2 = 220;
-                diceSet = diceImages.black;
-            }
-            if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
-            if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
-        }
-
-        // Draw cube
-        const cubeValue = parseInt(document.getElementById('cube-value-select').value);
-        const cubeOwner = document.getElementById('cube-owner-select').value;
-        const cubeShown = parseInt(document.getElementById('cube-shown-select').value);
-        const dice1 = parseInt(document.getElementById('dice1-select').value);
-        const dice2 = parseInt(document.getElementById('dice2-select').value);
-
-        if (cubeValue >= 0) {
-            let img;
-            if (cubeValue === 0) {
-                img = cubeImages[64];
-            } else {
-                img = cubeImages[cubeValue];
-            }
-            if (img) {
-                let cubeX = 375;
-                let cubeY = 350;
-                if (cubeShown !== 0 && cubeValue !== 0) {
-                    if (cubeOwner === 'white') {
-                        cubeX = 575;
-                    } else if (cubeOwner === 'black') {
-                        cubeX = 175;
-                    }
-                    cubeY = 350;
-                } else {
-                    if (cubeValue !== 0) {
-                        if (cubeOwner === 'white') {
-                            cubeY = 600;
-                        } else if (cubeOwner === 'black') {
-                            cubeY = 100;
-                        }
-                    }
-                }
-                ctx.drawImage(img, cubeX, cubeY, 50, 50);
-            }
-        }
-    }
-
-    function getTotalCheckers(pos) {
-        let total = 0;
-        for (let key in pos) {
-            total += pos[key];
-        }
-        return total;
-    }
-
-    function updateBoard() {
-        // Update positions from dropdowns
-        const color = document.querySelector('input[name="checkerColor"]:checked').value;
-        const targetPositions = color === 'white' ? positions.first : positions.second;
-        const otherPositions = color === 'white' ? positions.second : positions.first;
-
-        for (let point = 1; point <= 24; point++) {
-            const select = document.getElementById(`point-${point}`);
-            const count = parseInt(select.value);
-            const oldCount = targetPositions[point.toString()] || 0;
-
-            if (count > 0) {
-                const newTotal = getTotalCheckers(targetPositions) - oldCount + count;
-                if (newTotal > 15) {
-                    alert('Максимум 15 шашек на цвет!');
-                    select.value = oldCount;
-                    continue;
-                }
-                targetPositions[point.toString()] = count;
-            } else {
-                delete targetPositions[point.toString()];
-            }
-        }
-        drawBoard();
-        updateSelectOptions(color);
-        updateBarSelects();
-        updateOffSelects();
-    }
-
-    function updateTurnSelect() {
-        const whiteNick = document.getElementById('white-input').value || 'Белые';
-        const blackNick = document.getElementById('black-input').value || 'Черные';
-        const turnSelect = document.getElementById('turn-select');
-        turnSelect.innerHTML = '';
-        const optionWhite = document.createElement('option');
-        optionWhite.value = 'white';
-        optionWhite.textContent = whiteNick;
-        turnSelect.appendChild(optionWhite);
-        const optionBlack = document.createElement('option');
-        optionBlack.value = 'black';
-        optionBlack.textContent = blackNick;
-        turnSelect.appendChild(optionBlack);
-    }
-
-    function updateCubeOwnerSelect() {
-        const whiteNick = document.getElementById('white-input').value || 'Белые';
-        const blackNick = document.getElementById('black-input').value || 'Черные';
-        const cubeOwnerSelect = document.getElementById('cube-owner-select');
-        cubeOwnerSelect.innerHTML = '';
-        const optionWhite = document.createElement('option');
-        optionWhite.value = 'white';
-        optionWhite.textContent = whiteNick;
-        cubeOwnerSelect.appendChild(optionWhite);
-        const optionBlack = document.createElement('option');
-        optionBlack.value = 'black';
-        optionBlack.textContent = blackNick;
-        cubeOwnerSelect.appendChild(optionBlack);
-    }
-
-    function updateCircleVisibility() {
-        const turn = document.getElementById('turn-select').value;
-        const aboveCircle = document.querySelector('.above-circle');
-        const belowCircle = document.querySelector('.below-circle');
-        if (turn === 'black') {
-            aboveCircle.style.display = 'block';
-            belowCircle.style.display = 'none';
-        } else if (turn === 'white') {
-            aboveCircle.style.display = 'none';
-            belowCircle.style.display = 'block';
-        } else {
-            aboveCircle.style.display = 'none';
-            belowCircle.style.display = 'none';
-        }
-    }
-
-    let imagesLoaded = 0;
-    const totalImages = 21;
-
-    function imageLoaded() {
-        imagesLoaded++;
-        if (imagesLoaded === totalImages) {
-            createDropdowns();
-            drawBoard();
-            updateTurnSelect();
-            updateCubeOwnerSelect();
-            updateCircleVisibility();
-            updateCubeSelectorsVisibility();
-            document.getElementById('white-input').addEventListener('input', updateTurnSelect);
-            document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
-            document.getElementById('white-input').addEventListener('input', drawBoard);
-            document.getElementById('white-input').addEventListener('click', function () { this.value = ''; updateTurnSelect(); updateCubeOwnerSelect(); drawBoard(); });
-            document.getElementById('black-input').addEventListener('input', updateTurnSelect);
-            document.getElementById('black-input').addEventListener('input', updateCubeOwnerSelect);
-            document.getElementById('black-input').addEventListener('input', drawBoard);
-            document.getElementById('black-input').addEventListener('click', function () { this.value = ''; updateTurnSelect(); updateCubeOwnerSelect(); drawBoard(); });
-            document.getElementById('lower-score').addEventListener('change', drawBoard);
-            document.getElementById('upper-score').addEventListener('change', drawBoard);
-            document.getElementById('match_lenght').addEventListener('change', drawBoard);
-            document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
-                radio.addEventListener('change', () => {
-                    const newColor = radio.value;
-                    updateSelectOptions(newColor);
-                    for (let point = 1; point <= 24; point++) {
-                        const select = document.getElementById(`point-${point}`);
-                        const targetPositions = newColor === 'white' ? positions.first : positions.second;
-                        select.value = targetPositions[point.toString()] || 0;
-                    }
-                    updateBarSelects();
-                    drawBoard();
-                });
-            });
-            document.getElementById('white-bar-select').addEventListener('change', (e) => {
-                const count = parseInt(e.target.value);
-                if (count > 0) {
-                    positions.first.bar = count;
-                } else {
-                    delete positions.first.bar;
-                }
-                drawBoard();
-                updateSelectOptions('white');
-                updateBarSelects();
-            });
-            document.getElementById('black-bar-select').addEventListener('change', (e) => {
-                const count = parseInt(e.target.value);
-                if (count > 0) {
-                    positions.second.bar = count;
-                } else {
-                    delete positions.second.bar;
-                }
-                drawBoard();
-                updateSelectOptions('black');
-                updateBarSelects();
-            });
-            document.getElementById('white-off-select').addEventListener('change', (e) => {
-                const count = parseInt(e.target.value);
-                if (count > 0) {
-                    positions.first.off = count;
-                } else {
-                    delete positions.first.off;
-                }
-                drawBoard();
-                updateSelectOptions('white');
-                updateOffSelects();
-            });
-            document.getElementById('black-off-select').addEventListener('change', (e) => {
-                const count = parseInt(e.target.value);
-                if (count > 0) {
-                    positions.second.off = count;
-                } else {
-                    delete positions.second.off;
-                }
-                drawBoard();
-                updateSelectOptions('black');
-                updateOffSelects();
-            });
-        }
-    }
-
-    boardImg.onload = imageLoaded;
-    whiteChecker.onload = imageLoaded;
-    blackChecker.onload = imageLoaded;
-    Dice1w.onload = imageLoaded;
-    Dice2w.onload = imageLoaded;
-    Dice3w.onload = imageLoaded;
-    Dice4w.onload = imageLoaded;
-    Dice5w.onload = imageLoaded;
-    Dice6w.onload = imageLoaded;
-    Dice1b.onload = imageLoaded;
-    Dice2b.onload = imageLoaded;
-    Dice3b.onload = imageLoaded;
-    Dice4b.onload = imageLoaded;
-    Dice5b.onload = imageLoaded;
-    Dice6b.onload = imageLoaded;
-    Double2.onload = imageLoaded;
-    Double4.onload = imageLoaded;
-    Double8.onload = imageLoaded;
-    Double16.onload = imageLoaded;
-    Double32.onload = imageLoaded;
-    Double64.onload = imageLoaded;
-
-    document.getElementById('game-type-button').addEventListener('click', () => {
-        currentGameType = currentGameType === 'манигейм' ? 'матч' : 'манигейм';
-        document.getElementById('game-type-button').textContent = currentGameType === 'манигейм' ? 'Манигейм' : 'Матч';
-        const matchPanel = document.querySelector('.match-panel');
-        const manigeymPanel = document.querySelector('.manigeym-panel');
-        if (currentGameType === 'матч') {
-            matchPanel.style.display = 'flex';
-            manigeymPanel.style.display = 'none';
-        } else {
-            matchPanel.style.display = 'none';
-            manigeymPanel.style.display = 'flex';
-        }
-    });
-
-    function updateCubeSelectorsVisibility() {
-        const cubeShown = document.getElementById('cube-shown-select').value;
-        const diceSelector = document.querySelector('.dice-selector');
-        const cubeValueOptions = document.querySelector('.cube-value-options');
-        if (cubeShown !== '0') {
-            diceSelector.style.display = 'none';
-            cubeValueOptions.style.display = 'none';
-        } else {
-            diceSelector.style.display = 'flex';
-            cubeValueOptions.style.display = 'flex';
-        }
-    }
-
-    document.getElementById('cube-shown-select').addEventListener('change', () => {
-        updateCubeSelectorsVisibility();
-        const cubeShown = document.getElementById('cube-shown-select').value;
-        if (cubeShown !== '0') {
-            document.getElementById('cube-value-select').value = cubeShown;
-            document.getElementById('dice1-select').value = '0';
-            document.getElementById('dice2-select').value = '0';
-        }
-        drawBoard();
-    });
-    function generateXGID() {
-        let xgid = "";
-        const whiteBar = positions.first.bar || 0;
-        if (whiteBar === 0) {
-            xgid += "-";
-        } else if (whiteBar <= 15) {
-            xgid += String.fromCharCode(64 + whiteBar);
-        }
-        for (let point = 1; point <= 24; point++) {
-            const whiteCount = positions.first[point] || 0;
-            const blackCount = positions.second[point] || 0;
-
-            if (whiteCount > 0) {
-                if (whiteCount <= 15) {
-                    xgid += String.fromCharCode(64 + whiteCount);
-                }
-            } else if (blackCount > 0) {
-                if (blackCount <= 15) {
-                    xgid += String.fromCharCode(96 + blackCount);
-                }
-            } else {
-                xgid += "-";
-            }
-        }
-        const blackBar = positions.second.bar || 0;
-        if (blackBar === 0) {
-            xgid += "-";
-        } else if (blackBar <= 15) {
-            xgid += String.fromCharCode(96 + blackBar);
-        }
-        xgid += ':'
-        const cubeValue = parseInt(document.getElementById('cube-value-select').value);
-        let exponent = 0;
-        if (cubeValue > 0) {
-            exponent = Math.log2(cubeValue);
-        }
-        xgid += exponent.toString();
-        xgid += ':'
-        const cubeOwner = document.getElementById('cube-owner-select').value;
-        const cubeShown = parseInt(document.getElementById('cube-shown-select').value);
-        let cubePosition = 0;
-        if (cubeValue !== 0) {
-            if (cubeOwner === 'white') {
-                cubePosition = 1;
-            } else if (cubeOwner === 'black') {
-                cubePosition = -1;
-            }
-        }
-        xgid += cubePosition.toString();
-        xgid += ':'
-        const turn = document.getElementById('turn-select').value;
-        let turnValue = 0;
-        if (turn === 'white') {
-            turnValue = 1;
-        } else if (turn === 'black') {
-            turnValue = -1;
-        }
-        xgid += turnValue.toString();
-        xgid += ':'
-        let cubePart = '';
-        const dice1 = parseInt(document.getElementById('dice1-select').value);
-        const dice2 = parseInt(document.getElementById('dice2-select').value);
-        if (cubeValue === 0 && dice1 === 0 && dice2 === 0) {
-            cubePart = '00';
-        } else if (cubeShown !== 0) {
-            cubePart = 'D';
-        } else if (dice1 !== 0 || dice2 !== 0) {
-            cubePart = dice1.toString() + dice2.toString();
-        } else {
-            cubePart = cubeValue.toString() + '0';
-        }
-        xgid += cubePart;
-        xgid += ':'
-        const LowerScore = currentGameType === 'манигейм' ? '0' : document.getElementById('lower-score').value;
-        xgid += LowerScore;
-        xgid += ':'
-        const UpperScore = currentGameType === 'манигейм' ? '0' : document.getElementById('upper-score').value;
-        xgid += UpperScore;
-        xgid += ':'
-        const conventionPart = currentGameType === 'матч' ? '1' : (parseInt(document.getElementById('jacobi-select').value) + 2 * parseInt(document.getElementById('beaver-select').value)).toString();
-        xgid += conventionPart;
-        xgid += ':'
-        const matchLengthPart = currentGameType === 'манигейм' ? '0' : document.getElementById('match_lenght').value;
-        xgid += matchLengthPart;
-        xgid += ':'
-        const maxCubePart = currentGameType === 'матч' ? document.getElementById('max-cube-select').value : document.getElementById('max-cube-select-m').value;
-        xgid += maxCubePart;
-        return xgid;
-    }
-    function handleDiceChange(changedSelectId, otherSelectId) {
-        const changedValue = parseInt(document.getElementById(changedSelectId).value);
-        const otherSelect = document.getElementById(otherSelectId);
-        if (changedValue !== 0 && parseInt(otherSelect.value) === 0) {
-            otherSelect.value = '1';
-        } else if (changedValue === 0) {
-            otherSelect.value = '0';
-        }
-        drawBoard();
-    }
-
-    document.getElementById('turn-select').addEventListener('change', drawBoard);
-    document.getElementById('turn-select').addEventListener('change', updateCircleVisibility);
-    document.getElementById('cube-value-select').addEventListener('change', drawBoard);
-    document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
-    document.getElementById('dice1-select').addEventListener('change', () => handleDiceChange('dice1-select', 'dice2-select'));
-    document.getElementById('dice2-select').addEventListener('change', () => handleDiceChange('dice2-select', 'dice1-select'));
-    document.getElementById('show-button').addEventListener('click', () => {
-        const xgid = generateXGID();
-
-        fetch('/pokaz/hints?xgid=' + xgid)
-            .then(response => response.json())
-            .then(data => {
-                // Generate move hints table
-                let moveTableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr>';
-                const hints = data.hints || [];
-                const firstEq = hints.length > 0 ? hints[0].eq : null;
-                hints.forEach((hint, index) => {
-                    if (hint.probs && hint.probs.length >= 2) {
-                        const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
-                        const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
-                        const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                        const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
-                        let move = hint.move || '-';
-                        let rowClass = ''; // No highlighting since no gnu move
-                        moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
-                    }
-                });
-                moveTableHtml += '</table>';
-                document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
-                // Show the table
-                document.getElementById('moveHintsTable').classList.add('active');
-                document.getElementById('moveHintsBtn').classList.add('active');
-                document.getElementById('cubeHintsTable').classList.remove('active');
-                document.getElementById('cubeHintsBtn').classList.remove('active');
-            })
-            .catch(error => alert('Error: ' + error));
-    });
-
-    // Clear button logic
-    document.getElementById('clear-button').addEventListener('click', () => {
-        positions = {
+    document.addEventListener('DOMContentLoaded', function () {
+        let positions = {
             first: {},
             second: {}
         };
 
-        document.getElementById('white-input').value = 'nick_1';
-        document.getElementById('black-input').value = 'nick_2';
-        document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
-        document.getElementById('white-bar-select').value = '0';
-        document.getElementById('black-bar-select').value = '0';
-        currentGameType = 'манигейм';
-        document.getElementById('game-type-button').textContent = 'Манигейм';
-        document.getElementById('lower-score').value = '0';
-        document.getElementById('upper-score').value = '0';
-        document.getElementById('match_lenght').value = '3';
-        document.getElementById('max-cube-select').value = '8';
-        document.getElementById('jacobi-select').value = '0';
-        document.getElementById('beaver-select').value = '0';
-        document.getElementById('max-cube-select-m').value = '8';
-        document.getElementById('cube-shown-select').value = '0';
-        document.getElementById('cube-value-select').value = '0';
-        document.getElementById('dice1-select').value = '0';
-        document.getElementById('dice2-select').value = '0';
-        updateCubeSelectorsVisibility();
+        let currentGameType = 'манигейм';
 
-        updateTurnSelect();
-        updateCubeOwnerSelect();
-        updateSelectOptions('white');
-        updateBarSelects();
-        updateOffSelects();
-        updateCircleVisibility();
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
+        const boardWrapper = document.querySelector('.board-wrapper');
 
-        for (let point = 1; point <= 24; point++) {
-            document.getElementById(`point-${point}`).value = '0';
+        // Load images
+        const boardImg = new Image();
+        boardImg.src = '/static/board.png';
+        const whiteChecker = new Image();
+        whiteChecker.src = '/static/white_checker.png';
+        const blackChecker = new Image();
+        blackChecker.src = '/static/black_checker.png';
+
+        // Load dice images
+        const Dice1w = new Image();
+        Dice1w.src = '/static/1w.png?t=' + Date.now();
+        const Dice2w = new Image();
+        Dice2w.src = '/static/2w.png?t=' + Date.now();
+        const Dice3w = new Image();
+        Dice3w.src = '/static/3w.png?t=' + Date.now();
+        const Dice4w = new Image();
+        Dice4w.src = '/static/4w.png?t=' + Date.now();
+        const Dice5w = new Image();
+        Dice5w.src = '/static/5w.png?t=' + Date.now();
+        const Dice6w = new Image();
+        Dice6w.src = '/static/6w.png?t=' + Date.now();
+
+        const Dice1b = new Image();
+        Dice1b.src = '/static/1b.png?t=' + Date.now();
+        const Dice2b = new Image();
+        Dice2b.src = '/static/2b.png?t=' + Date.now();
+        const Dice3b = new Image();
+        Dice3b.src = '/static/3b.png?t=' + Date.now();
+        const Dice4b = new Image();
+        Dice4b.src = '/static/4b.png?t=' + Date.now();
+        const Dice5b = new Image();
+        Dice5b.src = '/static/5b.png?t=' + Date.now();
+        const Dice6b = new Image();
+        Dice6b.src = '/static/6b.png?t=' + Date.now();
+
+        // Load cube images
+        const Double2 = new Image();
+        Double2.src = '/static/Double2.png?t=' + Date.now();
+        const Double4 = new Image();
+        Double4.src = '/static/Double4.png?t=' + Date.now();
+        const Double8 = new Image();
+        Double8.src = '/static/Double8.png?t=' + Date.now();
+        const Double16 = new Image();
+        Double16.src = '/static/Double16.png?t=' + Date.now();
+        const Double32 = new Image();
+        Double32.src = '/static/Double32.png?t=' + Date.now();
+        const Double64 = new Image();
+        Double64.src = '/static/Double64.png?t=' + Date.now();
+
+        const diceImages = {
+            white: {
+                1: Dice1w,
+                2: Dice2w,
+                3: Dice3w,
+                4: Dice4w,
+                5: Dice5w,
+                6: Dice6w
+            },
+            black: {
+                1: Dice1b,
+                2: Dice2b,
+                3: Dice3b,
+                4: Dice4b,
+                5: Dice5b,
+                6: Dice6b
+            }
+        };
+
+        const cubeImages = {
+            2: Double2,
+            4: Double4,
+            8: Double8,
+            16: Double16,
+            32: Double32,
+            64: Double64
+        };
+
+        function getX(point) {
+            if (point >= 13 && point <= 18) {
+                const baseX = 50 + (point - 13) * 60;
+                return baseX - (point === 13 ? 8 : 0);
+            } else if (point >= 19 && point <= 24) {
+                return 450 + (point - 19) * 60;
+            } else if (point >= 7 && point <= 12) {
+                const baseX = 50 + (12 - point) * 60;
+                return baseX - (point === 12 ? 4 : 0);
+            } else if (point >= 1 && point <= 6) {
+                return 450 + (6 - point) * 60;
+            }
+            return 0;
         }
 
-        const matchPanel = document.querySelector('.match-panel');
-        const manigeymPanel = document.querySelector('.manigeym-panel');
-        matchPanel.style.display = 'none';
-        manigeymPanel.style.display = 'flex';
-
-        drawBoard();
-    });
-
-    // Init button logic
-    document.getElementById('init-button').addEventListener('click', () => {
-        positions.first = { 6: 5, 8: 3, 13: 5, 24: 2 };
-        positions.second = { 1: 2, 12: 5, 17: 3, 19: 5 };
-
-        document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
-        document.getElementById('white-bar-select').value = '0';
-        document.getElementById('black-bar-select').value = '0';
-        document.getElementById('cube-shown-select').value = '0';
-        document.getElementById('cube-value-select').value = '0';
-        document.getElementById('dice1-select').value = '0';
-        document.getElementById('dice2-select').value = '0';
-        updateCubeSelectorsVisibility();
-
-        updateSelectOptions('white');
-        updateBarSelects();
-        updateOffSelects();
-
-        for (let point = 1; point <= 24; point++) {
-            const select = document.getElementById(`point-${point}`);
-            select.value = positions.first[point.toString()] || 0;
+        function getBaseY(point) {
+            return (point > 12) ? 70 : 690;
         }
 
-        drawBoard();
-    });
+        function updateSelectOptions(color) {
+            const targetPositions = color === 'white' ? positions.first : positions.second;
+            const otherPositions = color === 'white' ? positions.second : positions.first;
+            const totalCheckers = getTotalCheckers(targetPositions);
+            for (let point = 1; point <= 24; point++) {
+                const select = document.getElementById(`point-${point}`);
+                if (!select) continue;
+                const currentOnPoint = targetPositions[point.toString()] || 0;
+                const occupiedByOther = otherPositions[point.toString()] > 0;
+                const baseMax = occupiedByOther ? 0 : 15;
+                const maxForThis = Math.min(baseMax, 15 - (totalCheckers - currentOnPoint));
+                select.innerHTML = '';
+                for (let i = 0; i <= maxForThis; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    select.appendChild(option);
+                }
+                select.value = currentOnPoint;
+            }
+        }
 
-    window.addEventListener('resize', updateAllDropdownPositions);
+        function updateBarSelects() {
+            const whiteBarSelect = document.getElementById('white-bar-select');
+            const blackBarSelect = document.getElementById('black-bar-select');
+            if (whiteBarSelect) {
+                const currentBar = parseInt(whiteBarSelect.value) || 0;
+                const totalCheckers = getTotalCheckers(positions.first);
+                const maxForThis = 15 - (totalCheckers - currentBar);
+                whiteBarSelect.innerHTML = '';
+                for (let i = 0; i <= maxForThis; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    whiteBarSelect.appendChild(option);
+                }
+                whiteBarSelect.value = currentBar;
+            }
+            if (blackBarSelect) {
+                const currentBar = parseInt(blackBarSelect.value) || 0;
+                const totalCheckers = getTotalCheckers(positions.second);
+                const maxForThis = 15 - (totalCheckers - currentBar);
+                blackBarSelect.innerHTML = '';
+                for (let i = 0; i <= maxForThis; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    blackBarSelect.appendChild(option);
+                }
+                blackBarSelect.value = currentBar;
+            }
+        }
+
+        function updateOffSelects() {
+            const whiteOffSelect = document.getElementById('white-off-select');
+            const blackOffSelect = document.getElementById('black-off-select');
+            if (whiteOffSelect) {
+                const currentOff = parseInt(whiteOffSelect.value) || 0;
+                const totalCheckers = getTotalCheckers(positions.first);
+                const maxForThis = 15 - (totalCheckers - currentOff);
+                whiteOffSelect.innerHTML = '';
+                for (let i = 0; i <= maxForThis; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    whiteOffSelect.appendChild(option);
+                }
+                whiteOffSelect.value = currentOff;
+            }
+            if (blackOffSelect) {
+                const currentOff = parseInt(blackOffSelect.value) || 0;
+                const totalCheckers = getTotalCheckers(positions.second);
+                const maxForThis = 15 - (totalCheckers - currentOff);
+                blackOffSelect.innerHTML = '';
+                for (let i = 0; i <= maxForThis; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    blackOffSelect.appendChild(option);
+                }
+                blackOffSelect.value = currentOff;
+            }
+        }
+
+        function createDropdowns() {
+            const scale = canvas.offsetWidth / 800;
+            for (let point = 1; point <= 24; point++) {
+                const select = document.createElement('select');
+                select.id = `point-${point}`;
+                select.className = 'dropdown';
+                select.value = 0;
+
+                updateDropdownPosition(select, point, scale);
+
+                select.addEventListener('change', updateBoard);
+
+                boardWrapper.appendChild(select);
+            }
+            updateSelectOptions('white');
+            updateBarSelects();
+            updateOffSelects();
+            updateCircleVisibility();
+            updateOffSelects();
+        }
+
+        function updateDropdownPosition(select, point, scale) {
+            const x = (getX(point) - (point > 12 ? 25 : 25)) * scale;
+            let y_text;
+            if (point > 12) {
+                y_text = 20;
+            } else {
+                y_text = 750;
+            }
+            const offset = point > 12 ? -70 : 43;
+            const y = (y_text + offset) * scale;
+            select.style.left = x + 'px';
+            select.style.top = y + 'px';
+            select.style.width = (55 * scale) + 'px';
+            select.style.height = (55 * scale) + 'px';
+            select.style.fontSize = (26 * scale) + 'px';
+        }
+
+        function updateAllDropdownPositions() {
+            const scale = canvas.offsetWidth / 800;
+            for (let point = 1; point <= 24; point++) {
+                const select = document.getElementById(`point-${point}`);
+                if (select) {
+                    updateDropdownPosition(select, point, scale);
+                }
+            }
+        }
+
+        function drawCheckers(player, img, positions, currentPlayer) {
+            ctx.font = 'bold 1.875rem Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (player === currentPlayer) {
+                for (let point = 1; point <= 24; point++) {
+                    const x = getX(point);
+                    let y = getBaseY(point);
+                    const dy = getDy(point);
+
+                    let displayPoint = point;
+                    ctx.fillText(displayPoint, x, point > 12 ? y - 50 : y + 60);
+                }
+            }
+
+            for (let pointStr in positions) {
+                if (pointStr === 'bar' || pointStr === 'off') continue;
+                const point = parseInt(pointStr);
+                let count = positions[pointStr];
+                const x = getX(point);
+                let y = getBaseY(point);
+                const dy = getDy(point);
+
+                for (let i = 0; i < Math.min(count, 6); i++) {
+                    ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
+                }
+
+                if (count > 6) {
+                    const lastCheckerY = y + (5 * dy);
+                    ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
+                }
+            }
+
+            const barX = 400;
+            const barY = (player === 'second') ? 220 : 520;
+            const barDy = (player === 'second') ? 55 : -55;
+            if (positions.bar && positions.bar !== 0) {
+                let y = barY;
+                for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
+                    ctx.drawImage(img, barX - 31.25, y + (i * barDy) - 31.25, 62.5, 62.5);
+                }
+                if (Math.abs(positions.bar) > 6) {
+                    const lastCheckerY = y + (5 * barDy);
+                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
+                }
+            }
+        }
+
+        function getDy(point) {
+            return (point > 12) ? 55 : -55;
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+
+            drawCheckers('first', whiteChecker, positions.first, 'first');
+            drawCheckers('second', blackChecker, positions.second, 'second');
+
+            // Draw dice
+            const d1 = parseInt(document.getElementById('dice1-select').value);
+            const d2 = parseInt(document.getElementById('dice2-select').value);
+            const turn = document.getElementById('turn-select').value; // 'white' or 'black'
+
+            if (d1 > 0 || d2 > 0) {
+                const diceY = 350;
+                let diceX1, diceX2;
+                let diceSet;
+                if (turn === 'white') {
+                    diceX1 = 530;
+                    diceX2 = 620;
+                    diceSet = diceImages.white;
+                } else {
+                    diceX1 = 130;
+                    diceX2 = 220;
+                    diceSet = diceImages.black;
+                }
+                if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+                if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+            }
+
+            // Draw cube
+            const cubeValue = parseInt(document.getElementById('cube-value-select').value);
+            const cubeOwner = document.getElementById('cube-owner-select').value;
+            const cubeShown = parseInt(document.getElementById('cube-shown-select').value);
+            const dice1 = parseInt(document.getElementById('dice1-select').value);
+            const dice2 = parseInt(document.getElementById('dice2-select').value);
+
+            if (cubeValue >= 0) {
+                let img;
+                if (cubeValue === 0) {
+                    img = cubeImages[64];
+                } else {
+                    img = cubeImages[cubeValue];
+                }
+                if (img) {
+                    let cubeX = 375;
+                    let cubeY = 350;
+                    if (cubeShown !== 0 && cubeValue !== 0) {
+                        if (cubeOwner === 'white') {
+                            cubeX = 575;
+                        } else if (cubeOwner === 'black') {
+                            cubeX = 175;
+                        }
+                        cubeY = 350;
+                    } else {
+                        if (cubeValue !== 0) {
+                            if (cubeOwner === 'white') {
+                                cubeY = 600;
+                            } else if (cubeOwner === 'black') {
+                                cubeY = 100;
+                            }
+                        }
+                    }
+                    ctx.drawImage(img, cubeX, cubeY, 50, 50);
+                }
+            }
+        }
+
+        function getTotalCheckers(pos) {
+            let total = 0;
+            for (let key in pos) {
+                total += pos[key];
+            }
+            return total;
+        }
+
+        function updateBoard() {
+            // Update positions from dropdowns
+            const color = document.querySelector('input[name="checkerColor"]:checked').value;
+            const targetPositions = color === 'white' ? positions.first : positions.second;
+            const otherPositions = color === 'white' ? positions.second : positions.first;
+
+            for (let point = 1; point <= 24; point++) {
+                const select = document.getElementById(`point-${point}`);
+                const count = parseInt(select.value);
+                const oldCount = targetPositions[point.toString()] || 0;
+
+                if (count > 0) {
+                    const newTotal = getTotalCheckers(targetPositions) - oldCount + count;
+                    if (newTotal > 15) {
+                        alert('Максимум 15 шашек на цвет!');
+                        select.value = oldCount;
+                        continue;
+                    }
+                    targetPositions[point.toString()] = count;
+                } else {
+                    delete targetPositions[point.toString()];
+                }
+            }
+            drawBoard();
+            updateSelectOptions(color);
+            updateBarSelects();
+            updateOffSelects();
+        }
+
+        function updateTurnSelect() {
+            const whiteNick = document.getElementById('white-input').value || 'Белые';
+            const blackNick = document.getElementById('black-input').value || 'Черные';
+            const turnSelect = document.getElementById('turn-select');
+            turnSelect.innerHTML = '';
+            const optionWhite = document.createElement('option');
+            optionWhite.value = 'white';
+            optionWhite.textContent = whiteNick;
+            turnSelect.appendChild(optionWhite);
+            const optionBlack = document.createElement('option');
+            optionBlack.value = 'black';
+            optionBlack.textContent = blackNick;
+            turnSelect.appendChild(optionBlack);
+        }
+
+        function updateCubeOwnerSelect() {
+            const whiteNick = document.getElementById('white-input').value || 'Белые';
+            const blackNick = document.getElementById('black-input').value || 'Черные';
+            const cubeOwnerSelect = document.getElementById('cube-owner-select');
+            cubeOwnerSelect.innerHTML = '';
+            const optionWhite = document.createElement('option');
+            optionWhite.value = 'white';
+            optionWhite.textContent = whiteNick;
+            cubeOwnerSelect.appendChild(optionWhite);
+            const optionBlack = document.createElement('option');
+            optionBlack.value = 'black';
+            optionBlack.textContent = blackNick;
+            cubeOwnerSelect.appendChild(optionBlack);
+        }
+
+        function updateCircleVisibility() {
+            const turn = document.getElementById('turn-select').value;
+            const aboveCircle = document.querySelector('.above-circle');
+            const belowCircle = document.querySelector('.below-circle');
+            if (turn === 'black') {
+                aboveCircle.style.display = 'block';
+                belowCircle.style.display = 'none';
+            } else if (turn === 'white') {
+                aboveCircle.style.display = 'none';
+                belowCircle.style.display = 'block';
+            } else {
+                aboveCircle.style.display = 'none';
+                belowCircle.style.display = 'none';
+            }
+        }
+
+        let imagesLoaded = 0;
+        const totalImages = 21;
+
+        function imageLoaded() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) {
+                createDropdowns();
+                drawBoard();
+                updateTurnSelect();
+                updateCubeOwnerSelect();
+                updateCircleVisibility();
+                updateCubeSelectorsVisibility();
+                document.getElementById('white-input').addEventListener('input', updateTurnSelect);
+                document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
+                document.getElementById('white-input').addEventListener('input', drawBoard);
+                document.getElementById('white-input').addEventListener('click', function () { this.value = ''; updateTurnSelect(); updateCubeOwnerSelect(); drawBoard(); });
+                document.getElementById('black-input').addEventListener('input', updateTurnSelect);
+                document.getElementById('black-input').addEventListener('input', updateCubeOwnerSelect);
+                document.getElementById('black-input').addEventListener('input', drawBoard);
+                document.getElementById('black-input').addEventListener('click', function () { this.value = ''; updateTurnSelect(); updateCubeOwnerSelect(); drawBoard(); });
+                document.getElementById('lower-score').addEventListener('change', drawBoard);
+                document.getElementById('upper-score').addEventListener('change', drawBoard);
+                document.getElementById('match_lenght').addEventListener('change', drawBoard);
+                document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        const newColor = radio.value;
+                        updateSelectOptions(newColor);
+                        for (let point = 1; point <= 24; point++) {
+                            const select = document.getElementById(`point-${point}`);
+                            const targetPositions = newColor === 'white' ? positions.first : positions.second;
+                            select.value = targetPositions[point.toString()] || 0;
+                        }
+                        updateBarSelects();
+                        drawBoard();
+                    });
+                });
+                document.getElementById('white-bar-select').addEventListener('change', (e) => {
+                    const count = parseInt(e.target.value);
+                    if (count > 0) {
+                        positions.first.bar = count;
+                    } else {
+                        delete positions.first.bar;
+                    }
+                    drawBoard();
+                    updateSelectOptions('white');
+                    updateBarSelects();
+                });
+                document.getElementById('black-bar-select').addEventListener('change', (e) => {
+                    const count = parseInt(e.target.value);
+                    if (count > 0) {
+                        positions.second.bar = count;
+                    } else {
+                        delete positions.second.bar;
+                    }
+                    drawBoard();
+                    updateSelectOptions('black');
+                    updateBarSelects();
+                });
+                document.getElementById('white-off-select').addEventListener('change', (e) => {
+                    const count = parseInt(e.target.value);
+                    if (count > 0) {
+                        positions.first.off = count;
+                    } else {
+                        delete positions.first.off;
+                    }
+                    drawBoard();
+                    updateSelectOptions('white');
+                    updateOffSelects();
+                });
+                document.getElementById('black-off-select').addEventListener('change', (e) => {
+                    const count = parseInt(e.target.value);
+                    if (count > 0) {
+                        positions.second.off = count;
+                    } else {
+                        delete positions.second.off;
+                    }
+                    drawBoard();
+                    updateSelectOptions('black');
+                    updateOffSelects();
+                });
+            }
+        }
+
+        boardImg.onload = imageLoaded;
+        whiteChecker.onload = imageLoaded;
+        blackChecker.onload = imageLoaded;
+        Dice1w.onload = imageLoaded;
+        Dice2w.onload = imageLoaded;
+        Dice3w.onload = imageLoaded;
+        Dice4w.onload = imageLoaded;
+        Dice5w.onload = imageLoaded;
+        Dice6w.onload = imageLoaded;
+        Dice1b.onload = imageLoaded;
+        Dice2b.onload = imageLoaded;
+        Dice3b.onload = imageLoaded;
+        Dice4b.onload = imageLoaded;
+        Dice5b.onload = imageLoaded;
+        Dice6b.onload = imageLoaded;
+        Double2.onload = imageLoaded;
+        Double4.onload = imageLoaded;
+        Double8.onload = imageLoaded;
+        Double16.onload = imageLoaded;
+        Double32.onload = imageLoaded;
+        Double64.onload = imageLoaded;
+
+        document.getElementById('game-type-button').addEventListener('click', () => {
+            currentGameType = currentGameType === 'манигейм' ? 'матч' : 'манигейм';
+            document.getElementById('game-type-button').textContent = currentGameType === 'манигейм' ? 'Манигейм' : 'Матч';
+            const matchPanel = document.querySelector('.match-panel');
+            const manigeymPanel = document.querySelector('.manigeym-panel');
+            if (currentGameType === 'матч') {
+                matchPanel.style.display = 'flex';
+                manigeymPanel.style.display = 'none';
+            } else {
+                matchPanel.style.display = 'none';
+                manigeymPanel.style.display = 'flex';
+            }
+        });
+
+        function updateCubeSelectorsVisibility() {
+            const cubeShown = document.getElementById('cube-shown-select').value;
+            const diceSelector = document.querySelector('.dice-selector');
+            const cubeValueOptions = document.querySelector('.cube-value-options');
+            if (cubeShown !== '0') {
+                diceSelector.style.display = 'none';
+                cubeValueOptions.style.display = 'none';
+            } else {
+                diceSelector.style.display = 'flex';
+                cubeValueOptions.style.display = 'flex';
+            }
+        }
+
+        document.getElementById('cube-shown-select').addEventListener('change', () => {
+            updateCubeSelectorsVisibility();
+            const cubeShown = document.getElementById('cube-shown-select').value;
+            if (cubeShown !== '0') {
+                document.getElementById('cube-value-select').value = cubeShown;
+                document.getElementById('dice1-select').value = '0';
+                document.getElementById('dice2-select').value = '0';
+            }
+            drawBoard();
+        });
+        function generateXGID() {
+            let xgid = "";
+            const whiteBar = positions.first.bar || 0;
+            if (whiteBar === 0) {
+                xgid += "-";
+            } else if (whiteBar <= 15) {
+                xgid += String.fromCharCode(64 + whiteBar);
+            }
+            for (let point = 1; point <= 24; point++) {
+                const whiteCount = positions.first[point] || 0;
+                const blackCount = positions.second[point] || 0;
+
+                if (whiteCount > 0) {
+                    if (whiteCount <= 15) {
+                        xgid += String.fromCharCode(64 + whiteCount);
+                    }
+                } else if (blackCount > 0) {
+                    if (blackCount <= 15) {
+                        xgid += String.fromCharCode(96 + blackCount);
+                    }
+                } else {
+                    xgid += "-";
+                }
+            }
+            const blackBar = positions.second.bar || 0;
+            if (blackBar === 0) {
+                xgid += "-";
+            } else if (blackBar <= 15) {
+                xgid += String.fromCharCode(96 + blackBar);
+            }
+            xgid += ':'
+            const cubeValue = parseInt(document.getElementById('cube-value-select').value);
+            let exponent = 0;
+            if (cubeValue > 0) {
+                exponent = Math.log2(cubeValue);
+            }
+            xgid += exponent.toString();
+            xgid += ':'
+            const cubeOwner = document.getElementById('cube-owner-select').value;
+            const cubeShown = parseInt(document.getElementById('cube-shown-select').value);
+            let cubePosition = 0;
+            if (cubeValue !== 0) {
+                if (cubeOwner === 'white') {
+                    cubePosition = 1;
+                } else if (cubeOwner === 'black') {
+                    cubePosition = -1;
+                }
+            }
+            xgid += cubePosition.toString();
+            xgid += ':'
+            const turn = document.getElementById('turn-select').value;
+            let turnValue = 0;
+            if (turn === 'white') {
+                turnValue = 1;
+            } else if (turn === 'black') {
+                turnValue = -1;
+            }
+            xgid += turnValue.toString();
+            xgid += ':'
+            let cubePart = '';
+            const dice1 = parseInt(document.getElementById('dice1-select').value);
+            const dice2 = parseInt(document.getElementById('dice2-select').value);
+            if (cubeValue === 0 && dice1 === 0 && dice2 === 0) {
+                cubePart = '00';
+            } else if (cubeShown !== 0) {
+                cubePart = 'D';
+            } else if (dice1 !== 0 || dice2 !== 0) {
+                cubePart = dice1.toString() + dice2.toString();
+            } else {
+                cubePart = cubeValue.toString() + '0';
+            }
+            xgid += cubePart;
+            xgid += ':'
+            const LowerScore = currentGameType === 'манигейм' ? '0' : document.getElementById('lower-score').value;
+            xgid += LowerScore;
+            xgid += ':'
+            const UpperScore = currentGameType === 'манигейм' ? '0' : document.getElementById('upper-score').value;
+            xgid += UpperScore;
+            xgid += ':'
+            const conventionPart = currentGameType === 'матч' ? '1' : (parseInt(document.getElementById('jacobi-select').value) + 2 * parseInt(document.getElementById('beaver-select').value)).toString();
+            xgid += conventionPart;
+            xgid += ':'
+            const matchLengthPart = currentGameType === 'манигейм' ? '0' : document.getElementById('match_lenght').value;
+            xgid += matchLengthPart;
+            xgid += ':'
+            const maxCubePart = currentGameType === 'матч' ? document.getElementById('max-cube-select').value : document.getElementById('max-cube-select-m').value;
+            xgid += maxCubePart;
+            return xgid;
+        }
+        function handleDiceChange(changedSelectId, otherSelectId) {
+            const changedValue = parseInt(document.getElementById(changedSelectId).value);
+            const otherSelect = document.getElementById(otherSelectId);
+            if (changedValue !== 0 && parseInt(otherSelect.value) === 0) {
+                otherSelect.value = '1';
+            } else if (changedValue === 0) {
+                otherSelect.value = '0';
+            }
+            drawBoard();
+        }
+
+        document.getElementById('turn-select').addEventListener('change', drawBoard);
+        document.getElementById('turn-select').addEventListener('change', updateCircleVisibility);
+        document.getElementById('cube-value-select').addEventListener('change', drawBoard);
+        document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
+        document.getElementById('dice1-select').addEventListener('change', () => handleDiceChange('dice1-select', 'dice2-select'));
+        document.getElementById('dice2-select').addEventListener('change', () => handleDiceChange('dice2-select', 'dice1-select'));
+        document.getElementById('show-button').addEventListener('click', () => {
+            const xgid = generateXGID();
+
+            fetch('/pokaz/hints?xgid=' + xgid)
+                .then(response => response.json())
+                .then(data => {
+                    // Generate move hints table
+                    let moveTableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr>';
+                    const hints = data.hints || [];
+                    const firstEq = hints.length > 0 ? hints[0].eq : null;
+                    hints.forEach((hint, index) => {
+                        if (hint.probs && hint.probs.length >= 2) {
+                            const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
+                            const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
+                            const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                            const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
+                            let move = hint.move || '-';
+                            let rowClass = ''; // No highlighting since no gnu move
+                            moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
+                        }
+                    });
+                    moveTableHtml += '</table>';
+                    document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
+                    // Show the table
+                    document.getElementById('moveHintsTable').classList.add('active');
+                    document.getElementById('moveHintsBtn').classList.add('active');
+                    document.getElementById('cubeHintsTable').classList.remove('active');
+                    document.getElementById('cubeHintsBtn').classList.remove('active');
+                })
+                .catch(error => alert('Error: ' + error));
+        });
+
+        // Clear button logic
+        document.getElementById('clear-button').addEventListener('click', () => {
+            positions = {
+                first: {},
+                second: {}
+            };
+
+            document.getElementById('white-input').value = 'nick_1';
+            document.getElementById('black-input').value = 'nick_2';
+            document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
+            document.getElementById('white-bar-select').value = '0';
+            document.getElementById('black-bar-select').value = '0';
+            currentGameType = 'манигейм';
+            document.getElementById('game-type-button').textContent = 'Манигейм';
+            document.getElementById('lower-score').value = '0';
+            document.getElementById('upper-score').value = '0';
+            document.getElementById('match_lenght').value = '3';
+            document.getElementById('max-cube-select').value = '8';
+            document.getElementById('jacobi-select').value = '0';
+            document.getElementById('beaver-select').value = '0';
+            document.getElementById('max-cube-select-m').value = '8';
+            document.getElementById('cube-shown-select').value = '0';
+            document.getElementById('cube-value-select').value = '0';
+            document.getElementById('dice1-select').value = '0';
+            document.getElementById('dice2-select').value = '0';
+            updateCubeSelectorsVisibility();
+
+            updateTurnSelect();
+            updateCubeOwnerSelect();
+            updateSelectOptions('white');
+            updateBarSelects();
+            updateOffSelects();
+            updateCircleVisibility();
+
+            for (let point = 1; point <= 24; point++) {
+                document.getElementById(`point-${point}`).value = '0';
+            }
+
+            const matchPanel = document.querySelector('.match-panel');
+            const manigeymPanel = document.querySelector('.manigeym-panel');
+            matchPanel.style.display = 'none';
+            manigeymPanel.style.display = 'flex';
+
+            drawBoard();
+        });
+
+        // Init button logic
+        document.getElementById('init-button').addEventListener('click', () => {
+            positions.first = { 6: 5, 8: 3, 13: 5, 24: 2 };
+            positions.second = { 1: 2, 12: 5, 17: 3, 19: 5 };
+
+            document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
+            document.getElementById('white-bar-select').value = '0';
+            document.getElementById('black-bar-select').value = '0';
+            document.getElementById('cube-shown-select').value = '0';
+            document.getElementById('cube-value-select').value = '0';
+            document.getElementById('dice1-select').value = '0';
+            document.getElementById('dice2-select').value = '0';
+            updateCubeSelectorsVisibility();
+
+            updateSelectOptions('white');
+            updateBarSelects();
+            updateOffSelects();
+
+            for (let point = 1; point <= 24; point++) {
+                const select = document.getElementById(`point-${point}`);
+                select.value = positions.first[point.toString()] || 0;
+            }
+
+            drawBoard();
+        });
+
+        window.addEventListener('resize', updateAllDropdownPositions);
+    });
 </script>
 </body>
 
