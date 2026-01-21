@@ -1007,7 +1007,7 @@
         </div>
     </div>
 
-    <div class="hints-table">
+    <div class="hints-table", style="display: none;">
         <div id="hintsTable" class="hints-content"></div>
     </div>
 </body>
@@ -1667,7 +1667,7 @@
                     const hints = data.hints || [];
                     if (hints.length === 0) {
                         hintsTable.innerHTML = '<div class="error">невозможный ход</div>';
-                        hintsTable.classList.add('active');
+                        hintsTable.style.display = 'block';
                         return;
                     }
 
@@ -1713,7 +1713,7 @@
                     }
 
                     hintsTable.innerHTML = tableHtml;
-                    hintsTable.classList.add('active');
+                    hintsTable.style.display = 'block';
                 })
                 .catch(error => {
                     hintsTable.innerHTML = '<div class="error">Error loading hints: ' + error.message + '</div>';
