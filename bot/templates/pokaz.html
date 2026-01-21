@@ -677,8 +677,8 @@
                     <div>
                         <label for="jacobi-select">Якоби</label>
                         <select id="jacobi-select" class="selector-size">
-                            <option value="0" selected>0</option>
-                            <option value="1">1</option>
+                            <option value="0">0</option>
+                            <option value="1" selected>1</option>
                         </select>
                     </div>
                 </div>
@@ -1297,11 +1297,11 @@
             
             if (whiteCount > 0) {
                 if (whiteCount <= 15) {
-                    xgid += String.fromCharCode(64 + whiteCount); // 'A' to 'P' (65-80)
+                    xgid += String.fromCharCode(96 + whiteCount); // 'A' to 'P' (65-80)
                 }
             } else if (blackCount > 0) {
                 if (blackCount <= 15) {
-                    xgid += String.fromCharCode(96 + blackCount); // 'a' to 'p' (97-112)
+                    xgid += String.fromCharCode(64 + blackCount); // 'a' to 'p' (97-112)
                 }
             } else {
                 xgid += "-";
