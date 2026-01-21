@@ -1283,15 +1283,13 @@
     });
     function generateXGID() {
         let xgid = "";
-        
-        const blackBar = positions.second.bar || 0;
-        if (blackBar === 0) {
+        const whiteBar = positions.first.bar || 0;
+        if (whiteBar === 0) {
             xgid += "-";
-        } else if (blackBar <= 15) {
-            xgid += String.fromCharCode(96 + blackBar); 
+        } else if (whiteBar <= 15) {
+            xgid += String.fromCharCode(64 + whiteBar); 
         }
-        
-        for (let point = 24; point >= 1; point--) {
+        for (let point = 24; point >= 1; point++) {
             const whiteCount = positions.first[point] || 0;
             const blackCount = positions.second[point] || 0;
             
@@ -1307,14 +1305,12 @@
                 xgid += "-";
             }
         }
-        
-        const whiteBar = positions.first.bar || 0;
-        if (whiteBar === 0) {
+        const blackBar = positions.second.bar || 0;
+        if (blackBar === 0) {
             xgid += "-";
-        } else if (whiteBar <= 15) {
-            xgid += String.fromCharCode(64 + whiteBar); 
+        } else if (blackBar <= 15) {
+            xgid += String.fromCharCode(96 + blackBar); 
         }
-        
         return xgid;
     }
     // Add event listeners for elements that affect board drawing
