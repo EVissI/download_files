@@ -44,7 +44,7 @@ def create_app():
     # === КОНФИГУРАЦИЯ ===
     app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace(
         "+asyncpg", ""
-    ).replace("db", "localhost")
+    )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = settings.SECRET_KEY
     app.config["WTF_CSRF_ENABLED"] = True

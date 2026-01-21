@@ -15,7 +15,13 @@ from bot.db.redis import redis_client
 from loguru import logger
 import traceback
 import json
+import os
+from pathlib import Path
 
+BASE_DIR = Path(__file__).parent.parent
+
+static_dir = BASE_DIR / "bot" / "static"
+templates_dir = BASE_DIR / "bot" / "templates"
 
 class NoCacheStaticFiles(StaticFiles):
     def __init__(self, *args, **kwargs):
@@ -69,8 +75,8 @@ async def admin_security_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-app.mount("/static", NoCacheStaticFiles(directory="bot/static"), name="static")
-templates = Jinja2Templates(directory="bot/templates")
+app.mount("/static", NoCacheStaticFiles(directory=str(static_dir)), name="static")
+templates = Jinja2Templates(directory=str(templates_dir))
 
 # Include routers
 app.include_router(hint_viewer_api_router, prefix="")
