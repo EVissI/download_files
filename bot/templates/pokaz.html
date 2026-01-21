@@ -1339,11 +1339,11 @@
             document.getElementById('white-input').addEventListener('input', updateTurnSelect);
             document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
             document.getElementById('white-input').addEventListener('input', drawBoard);
-            document.getElementById('white-input').addEventListener('click', function () { this.value = ''; });
+            document.getElementById('white-input').addEventListener('click', function () { this.value = ''; updateTurnSelect(); updateCubeOwnerSelect(); drawBoard(); });
             document.getElementById('black-input').addEventListener('input', updateTurnSelect);
             document.getElementById('black-input').addEventListener('input', updateCubeOwnerSelect);
             document.getElementById('black-input').addEventListener('input', drawBoard);
-            document.getElementById('black-input').addEventListener('click', function () { this.value = ''; });
+            document.getElementById('black-input').addEventListener('click', function () { this.value = ''; updateTurnSelect(); updateCubeOwnerSelect(); drawBoard(); });
             document.getElementById('lower-score').addEventListener('change', drawBoard);
             document.getElementById('upper-score').addEventListener('change', drawBoard);
             document.getElementById('match_lenght').addEventListener('change', drawBoard);
