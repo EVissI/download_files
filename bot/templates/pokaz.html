@@ -1665,7 +1665,7 @@
                 .then(data => {
                     const hints = data.hints || [];
                     if (hints.length === 0) {
-                        hintsTable.innerHTML = '<div class="error">No hints available</div>';
+                        hintsTable.innerHTML = '<div class="error">невозможный ход</div>';
                         return;
                     }
 
