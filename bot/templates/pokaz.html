@@ -565,7 +565,7 @@
         .action-buttons {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 1rem;
             justify-content: left;
         }
 
@@ -713,6 +713,7 @@
             </div>
             <div class="action-buttons">
                 <button id="clear-button">Очистить</button>
+                <button id="init-button">Начальная позиция</button>
                 <button id="show-button">Показать</button>
             </div>
         </div>
@@ -1369,6 +1370,27 @@
         const manigeymPanel = document.querySelector('.manigeym-panel');
         matchPanel.style.display = 'none';
         manigeymPanel.style.display = 'flex';
+
+        drawBoard();
+    });
+
+    // Init button logic
+    document.getElementById('init-button').addEventListener('click', () => {
+        positions.first = { 6: 5, 8: 3, 13: 5, 23: 2, 24: 1 };
+        positions.second = { 1: 1, 2: 2, 12: 5, 17: 3, 19: 5 };
+
+        document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
+        document.getElementById('white-bar-select').value = '0';
+        document.getElementById('black-bar-select').value = '0';
+
+        updateSelectOptions('white');
+        updateBarSelects();
+        updateOffSelects();
+
+        for (let point = 1; point <= 24; point++) {
+            const select = document.getElementById(`point-${point}`);
+            select.value = positions.first[point.toString()] || 0;
+        }
 
         drawBoard();
     });
