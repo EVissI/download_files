@@ -1141,9 +1141,7 @@
             }
             updateSelectOptions('white');
             updateBarSelects();
-            updateOffSelects();
             updateCircleVisibility();
-            updateOffSelects();
         }
 
         function updateDropdownPosition(select, point, scale) {
@@ -1328,7 +1326,6 @@
             drawBoard();
             updateSelectOptions(color);
             updateBarSelects();
-            updateOffSelects();
         }
 
         function updateTurnSelect() {
@@ -1679,7 +1676,6 @@
             updateCubeOwnerSelect();
             updateSelectOptions('white');
             updateBarSelects();
-            updateOffSelects();
             updateCircleVisibility();
 
             for (let point = 1; point <= 24; point++) {
@@ -1710,7 +1706,6 @@
 
             updateSelectOptions('white');
             updateBarSelects();
-            updateOffSelects();
 
             for (let point = 1; point <= 24; point++) {
                 const select = document.getElementById(`point-${point}`);
