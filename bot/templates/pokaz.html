@@ -1266,15 +1266,15 @@
         const turn = document.getElementById('turn-select').value;
         const aboveCircle = document.querySelector('.above-circle');
         const belowCircle = document.querySelector('.below-circle');
-        if (turn === 'white') {
+        if (turn === 'black') {
             aboveCircle.style.display = 'block';
             belowCircle.style.display = 'none';
-        } else if (turn === 'black') {
+        } else if (turn === 'white') {
             aboveCircle.style.display = 'none';
             belowCircle.style.display = 'block';
         } else {
-            aboveCircle.style.display = 'block';
-            belowCircle.style.display = 'block';
+            aboveCircle.style.display = 'none';
+            belowCircle.style.display = 'none';
         }
     }
 
