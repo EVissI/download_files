@@ -1658,9 +1658,8 @@
                 return;
             }
 
-            // Show loading
-            hintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
             hintsTable.style.display = 'block';
+            hintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
             fetch('/pokaz/hints?xgid=' + xgid, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
                 .then(response => response.json())
                 .then(data => {
