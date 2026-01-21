@@ -698,7 +698,27 @@
                         </div>
                         <div>
                             <label for="upper-score">Длина матча:</label>
-                            <input type="number" id="match_lenght" class="selector-size" min="0" , value="0">
+                            <select id="match_lenght" class="selector-size">
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                                <option value="13">13</option>
+                                <option value="14">14</option>
+                                <option value="15">15</option>
+                                <option value="16">16</option>
+                                <option value="17">17</option>
+                                <option value="18">18</option>
+                                <option value="19">19</option>
+                                <option value="20">20</option>
+                                <option value="21">21</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -1240,7 +1260,7 @@
             document.getElementById('black-input').addEventListener('input', drawBoard);
             document.getElementById('lower-score').addEventListener('change', drawBoard);
             document.getElementById('upper-score').addEventListener('change', drawBoard);
-            document.getElementById('match_lenght').addEventListener('input', drawBoard);
+            document.getElementById('match_lenght').addEventListener('change', drawBoard);
             document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
                 radio.addEventListener('change', () => {
                     const newColor = radio.value;
@@ -1401,7 +1421,7 @@
         document.getElementById('game-type-select').value = 'манигейм';
         document.getElementById('lower-score').value = '0';
         document.getElementById('upper-score').value = '0';
-        document.getElementById('match_lenght').value = '0';
+        document.getElementById('match_lenght').value = '3';
         document.getElementById('crawford-select').value = '0';
         document.getElementById('max-cube-select').value = '8';
         document.getElementById('jacobi-select').value = '0';
