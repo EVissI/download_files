@@ -1203,6 +1203,7 @@
         // Draw cube
         const cubeValue = parseInt(document.getElementById('cube-value-select').value);
         const cubeOwner = document.getElementById('cube-owner-select').value;
+        const cubeShown = document.getElementById('cube-shown-select').value;
 
         if (cubeValue >= 0) {
             let img;
@@ -1214,11 +1215,20 @@
             if (img) {
                 let cubeX = 375;
                 let cubeY = 350;
-                if (cubeValue !== 0) {
-                    if (cubeOwner === 'white') {
-                        cubeY = 600;
-                    } else if (cubeOwner === 'black') {
-                        cubeY = 100;
+                if (cubeShown === '1') {
+                    if (turn === 'white') {
+                        cubeX = 575;
+                    } else if (turn === 'black') {
+                        cubeX = 175;
+                    }
+                    cubeY = 350;
+                } else {
+                    if (cubeValue !== 0) {
+                        if (cubeOwner === 'white') {
+                            cubeY = 600;
+                        } else if (cubeOwner === 'black') {
+                            cubeY = 100;
+                        }
                     }
                 }
                 ctx.drawImage(img, cubeX, cubeY, 50, 50);
