@@ -1559,12 +1559,23 @@
         xgid += cubePart;
         return xgid;
     }
+    function handleDiceChange(changedSelectId, otherSelectId) {
+        const changedValue = parseInt(document.getElementById(changedSelectId).value);
+        const otherSelect = document.getElementById(otherSelectId);
+        if (changedValue !== 0 && parseInt(otherSelect.value) === 0) {
+            otherSelect.value = '1';
+        } else if (changedValue === 0) {
+            otherSelect.value = '0';
+        }
+        drawBoard();
+    }
+
     document.getElementById('turn-select').addEventListener('change', drawBoard);
     document.getElementById('turn-select').addEventListener('change', updateCircleVisibility);
     document.getElementById('cube-value-select').addEventListener('change', drawBoard);
     document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
-    document.getElementById('dice1-select').addEventListener('change', drawBoard);
-    document.getElementById('dice2-select').addEventListener('change', drawBoard);
+    document.getElementById('dice1-select').addEventListener('change', () => handleDiceChange('dice1-select', 'dice2-select'));
+    document.getElementById('dice2-select').addEventListener('change', () => handleDiceChange('dice2-select', 'dice1-select'));
     document.getElementById('show-button').addEventListener('click', () => {
         const xgid = generateXGID();
 
