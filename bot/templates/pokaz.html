@@ -1557,6 +1557,13 @@
             cubePart = cubeValue.toString() + '0';
         }
         xgid += cubePart;
+        xgid += ':'
+        const LowerScore = currentGameType === 'манигейм' ? '0' : document.getElementById('lower-score').value;
+        xgid += LowerScore;
+        xgid += ':'
+        const UpperScore = currentGameType === 'манигейм' ? '0' : document.getElementById('upper-score').value;
+        xgid += UpperScore;
+        xgid += ':'
         return xgid;
     }
     function handleDiceChange(changedSelectId, otherSelectId) {
