@@ -1007,7 +1007,7 @@
     </div>
 
     <div class="hints-table">
-        <div id="hintsTable" class="hints-content active"></div>
+        <div id="hintsTable" class="hints-content"></div>
     </div>
 </body>
 
@@ -1666,6 +1666,7 @@
                     const hints = data.hints || [];
                     if (hints.length === 0) {
                         hintsTable.innerHTML = '<div class="error">невозможный ход</div>';
+                        hintsTable.classList.add('active');
                         return;
                     }
 
@@ -1689,11 +1690,10 @@
                         });
                         tableHtml += '</table>';
                     } else if (firstHint.type === 'cube_hint') {
-                        // Generate cube hints table
-                        tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
                         if (firstHint.prefer_action) {
                             tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${firstHint.prefer_action}</td></tr>`;
                         }
+                        tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
                         const firstCubeEq = firstHint.cubeful_equities && firstHint.cubeful_equities.length > 0 ? firstHint.cubeful_equities[0].eq : null;
                         (firstHint.cubeful_equities || []).forEach((hint, index) => {
                             const eq = hint.eq ? hint.eq.toFixed(3) : '-';
@@ -1712,6 +1712,7 @@
                     }
 
                     hintsTable.innerHTML = tableHtml;
+                    hintsTable.classList.add('active');
                 })
                 .catch(error => {
                     hintsTable.innerHTML = '<div class="error">Error loading hints: ' + error.message + '</div>';
