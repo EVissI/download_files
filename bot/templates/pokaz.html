@@ -1063,6 +1063,7 @@
         updateSelectOptions('white');
         updateBarSelects();
         updateOffSelects();
+        updateCircleVisibility();
         updateOffSelects();
     }
 
@@ -1261,6 +1262,22 @@
         cubeOwnerSelect.appendChild(optionBlack);
     }
 
+    function updateCircleVisibility() {
+        const turn = document.getElementById('turn-select').value;
+        const aboveCircle = document.querySelector('.above-circle');
+        const belowCircle = document.querySelector('.below-circle');
+        if (turn === 'white') {
+            aboveCircle.style.display = 'block';
+            belowCircle.style.display = 'none';
+        } else if (turn === 'black') {
+            aboveCircle.style.display = 'none';
+            belowCircle.style.display = 'block';
+        } else {
+            aboveCircle.style.display = 'block';
+            belowCircle.style.display = 'block';
+        }
+    }
+
     // Load images and draw
     let imagesLoaded = 0;
     const totalImages = 21; // 3 checkers + 12 dice + 6 cubes
@@ -1272,6 +1289,7 @@
             drawBoard();
             updateTurnSelect();
             updateCubeOwnerSelect();
+            updateCircleVisibility();
             document.getElementById('white-input').addEventListener('input', updateTurnSelect);
             document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
             document.getElementById('white-input').addEventListener('input', drawBoard);
@@ -1411,6 +1429,7 @@
     }
     // Add event listeners for elements that affect board drawing
     document.getElementById('turn-select').addEventListener('change', drawBoard);
+    document.getElementById('turn-select').addEventListener('change', updateCircleVisibility);
     document.getElementById('cube-value-select').addEventListener('change', drawBoard);
     document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
     document.getElementById('dice1-select').addEventListener('change', drawBoard);
@@ -1456,6 +1475,7 @@
         updateSelectOptions('white');
         updateBarSelects();
         updateOffSelects();
+        updateCircleVisibility();
 
         for (let point = 1; point <= 24; point++) {
             document.getElementById(`point-${point}`).value = '0';
