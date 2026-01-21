@@ -1435,8 +1435,11 @@
         }
         xgid += ':'
         const cubeValue = parseInt(document.getElementById('cube-value-select').value);
-        const sqrtCube = Math.sqrt(cubeValue);
-        xgid += sqrtCube.toString();
+        let exponent = 0;
+        if (cubeValue > 0) {
+            exponent = Math.log2(cubeValue);
+        }
+        xgid += exponent.toString();
         return xgid;
     }
     // Add event listeners for elements that affect board drawing
