@@ -1181,16 +1181,24 @@
         const cubeValue = parseInt(document.getElementById('cube-value-select').value);
         const cubeOwner = document.getElementById('cube-owner-select').value;
 
-        if (cubeValue > 0) {
-            const img = cubeImages[cubeValue];
+        if (cubeValue >= 0) {
+            let img;
+            if (cubeValue === 0) {
+                img = cubeImages[64];
+            } else {
+                img = cubeImages[cubeValue];
+            }
             if (img) {
+                let cubeX = 375;
                 let cubeY = 350;
-                if (cubeOwner === 'white') {
-                    cubeY = 600;
-                } else if (cubeOwner === 'black') {
-                    cubeY = 100;
+                if (cubeValue !== 0) {
+                    if (cubeOwner === 'white') {
+                        cubeY = 600;
+                    } else if (cubeOwner === 'black') {
+                        cubeY = 100;
+                    }
                 }
-                ctx.drawImage(img, 375, cubeY, 50, 50);
+                ctx.drawImage(img, cubeX, cubeY, 50, 50);
             }
         }
     }
