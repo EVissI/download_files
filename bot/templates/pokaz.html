@@ -216,19 +216,27 @@
             gap: 0.5rem;
         }
 
+        :root {
+            --checker-size: 38px;
+            --checker-gap: 0.8rem;
+            --checker-pad-y: 0.4rem;
+            --checker-pad-x: 0.8rem;
+            --checker-border-size: 3px;
+        }
+
         .checker-options {
             display: flex;
-            gap: 0.8rem;
+            gap: var(--checker-gap);
             align-items: center;
             background-color: #3b3b3b;
-            border: 3px double #555;
+            border: var(--checker-border-size) double #555;
             border-radius: 999px;
-            padding: 0.4rem 0.8rem;
+            padding: var(--checker-pad-y) var(--checker-pad-x);
         }
 
         .checker-btn {
-            width: 38px;
-            height: 38px;
+            width: var(--checker-size);
+            height: var(--checker-size);
             border-radius: 50%;
             border: 2px solid #222;
             display: inline-flex;
@@ -270,12 +278,12 @@
 
         .bar-options {
             display: flex;
-            gap: 0.8rem;
-            align-items: flex-start;
+            gap: var(--checker-gap);
+            align-items: center;
             background-color: #3b3b3b;
-            border: 3px double #555;
+            border: var(--checker-border-size) double #555;
             border-radius: 999px;
-            padding: 0.4rem 0.8rem;
+            padding: var(--checker-pad-y) var(--checker-pad-x);
         }
 
         .bar-checker {
@@ -285,14 +293,9 @@
             gap: 0.25rem;
         }
 
-        .bar-checker label {
-            font-size: 0.8rem;
-            width: auto;
-        }
-
         .bar-checker-select {
-            width: 38px;
-            height: 38px;
+            width: var(--checker-size);
+            height: var(--checker-size);
             border-radius: 50%;
             border: 2px solid #222;
             padding: 0;
