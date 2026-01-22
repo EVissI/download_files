@@ -27,9 +27,8 @@ class AdminKeyboard:
             if key == 'back':
                 continue
             kb.add(KeyboardButton(text=text))
-    
-        kb.add(KeyboardButton(text=AdminKeyboard.admin_text_kb['back']))
         kb.add(KeyboardButton(text='Позиция',web_app=WebAppInfo(url=f'{settings.MINI_APP_URL}/pokaz?chat_id=123213')))
+        kb.add(KeyboardButton(text=AdminKeyboard.admin_text_kb['back']))
         kb.adjust(2, 2, 2, 1, 1, 1)
         return kb.as_markup(resize_keyboard=True)
 

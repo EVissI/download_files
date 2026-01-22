@@ -230,14 +230,44 @@
             gap: 0.5rem;
         }
 
-
-
-        .checker-selector label {
-            color: white;
-            font-size: 0.96rem;
+        .checker-options {
             display: flex;
+            gap: 0.8rem;
             align-items: center;
-            gap: 0.5rem;
+        }
+
+        .checker-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 2px solid #222;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .checker-btn.white {
+            background: radial-gradient(circle at 30% 30%, #ffffff, #d9d9d9 60%, #bfbfbf);
+        }
+
+        .checker-btn.black {
+            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1e1e1e 60%, #0f0f0f);
+        }
+
+        .checker-btn .checker-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1e90ff;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .checker-btn.selected .checker-dot {
+            opacity: 1;
         }
 
         .bar-selector {
@@ -756,8 +786,15 @@
             <div class="selectors-container">
                 <div class="checker-selector">
                     <div class="checker-label">Шашки:</div>
-                    <label><input type="radio" name="checkerColor" value="white" checked> Белые</label>
-                    <label><input type="radio" name="checkerColor" value="black"> Черные</label>
+                    <div class="checker-options">
+                        <div class="checker-btn white selected" data-color="white" role="button"
+                            aria-label="Белые шашки">
+                            <div class="checker-dot"></div>
+                        </div>
+                        <div class="checker-btn black" data-color="black" role="button" aria-label="Черные шашки">
+                            <div class="checker-dot"></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="bar-selector">
                     <div class="bar-label">На баре:</div>
@@ -1322,9 +1359,20 @@
             return total;
         }
 
+        function getSelectedCheckerColor() {
+            const selectedBtn = document.querySelector('.checker-btn.selected');
+            return selectedBtn ? selectedBtn.dataset.color : 'white';
+        }
+
+        function setSelectedCheckerColor(color) {
+            document.querySelectorAll('.checker-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.color === color);
+            });
+        }
+
         function updateBoard() {
             // Update positions from dropdowns
-            const color = document.querySelector('input[name="checkerColor"]:checked').value;
+            const color = getSelectedCheckerColor();
             const targetPositions = color === 'white' ? positions.first : positions.second;
             const otherPositions = color === 'white' ? positions.second : positions.first;
 
@@ -1419,9 +1467,10 @@
                 document.getElementById('lower-score').addEventListener('change', drawBoard);
                 document.getElementById('upper-score').addEventListener('change', drawBoard);
                 document.getElementById('match_lenght').addEventListener('change', drawBoard);
-                document.querySelectorAll('input[name="checkerColor"]').forEach(radio => {
-                    radio.addEventListener('change', () => {
-                        const newColor = radio.value;
+                document.querySelectorAll('.checker-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const newColor = btn.dataset.color;
+                        setSelectedCheckerColor(newColor);
                         updateSelectOptions(newColor);
                         for (let point = 1; point <= 24; point++) {
                             const select = document.getElementById(`point-${point}`);
@@ -1704,7 +1753,7 @@
 
             document.getElementById('white-input').value = 'nick_1';
             document.getElementById('black-input').value = 'nick_2';
-            document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
+            setSelectedCheckerColor('white');
             document.getElementById('white-bar-select').value = '0';
             document.getElementById('black-bar-select').value = '0';
             currentGameType = 'манигейм';
@@ -1750,7 +1799,7 @@
             positions.first = { 6: 5, 8: 3, 13: 5, 24: 2 };
             positions.second = { 1: 2, 12: 5, 17: 3, 19: 5 };
 
-            document.querySelector('input[name="checkerColor"][value="white"]').checked = true;
+            setSelectedCheckerColor('white');
             document.getElementById('white-bar-select').value = '0';
             document.getElementById('black-bar-select').value = '0';
             document.getElementById('cube-shown-select').value = '0';
