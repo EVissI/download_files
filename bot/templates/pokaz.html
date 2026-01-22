@@ -190,20 +190,6 @@
             text-align: center;
         }
 
-        .game-type select {
-            font-family: Arial, sans-serif;
-            font-size: 0.96rem;
-            color: white;
-            width: 6rem;
-            height: 3rem;
-            background-color: #2d2d2d;
-            border: 1px solid #444;
-            border-radius: 0.25rem;
-            padding: 0.125rem;
-            -webkit-appearance: none;
-            appearance: none;
-            text-align: center;
-        }
 
         #game-type-button {
             font-family: Arial, sans-serif;
@@ -330,6 +316,16 @@
             background: radial-gradient(circle at 30% 30%, #3a3a3a, #1e1e1e 60%, #0f0f0f);
         }
 
+        .bar-checker-select.black option {
+            color: #f2f2f2;
+            background-color: #1e1e1e;
+        }
+
+        .bar-checker-select.white option {
+            color: #111;
+            background-color: #f2f2f2;
+        }
+
 
         .bar-label {
             color: white;
@@ -382,18 +378,6 @@
             width: 8.5rem;
             text-align: left;
             flex-shrink: 0;
-        }
-
-        .score-inputs input {
-            text-align: center;
-            border: 1px solid #444;
-            border-radius: 0.25rem;
-            background-color: #2d2d2d;
-            color: white;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-            -moz-appearance: textfield;
-            appearance: textfield;
         }
 
         .score-inputs select {
@@ -456,11 +440,6 @@
             width: 135px;
         }
 
-        .score-inputs input::-webkit-outer-spin-button,
-        .score-inputs input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
 
         .max-cube-options {
             display: flex;
@@ -681,29 +660,6 @@
             display: block;
         }
 
-        .hints-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-        }
-
-        .hint-toggle-btn {
-            width: 49%;
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-
-        .hint-toggle-btn:hover {
-            background-color: #0056b3;
-        }
-
-        .hint-toggle-btn.active {
-            background-color: #0056b3;
-        }
 
         .hints-content {
             display: none;
@@ -826,13 +782,11 @@
                     <div class="bar-label">На баре:</div>
                     <div class="bar-options">
                         <div class="bar-checker">
-                            <label for="white-bar-select">Белых</label>
                             <select id="white-bar-select" class="bar-checker-select white">
                                 <option value="0">0</option>
                             </select>
                         </div>
                         <div class="bar-checker">
-                            <label for="black-bar-select">Черных</label>
                             <select id="black-bar-select" class="bar-checker-select black">
                                 <option value="0">0</option>
                             </select>
