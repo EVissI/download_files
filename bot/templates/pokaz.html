@@ -513,10 +513,22 @@
         }
 
 
+        .jb-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .jb-title {
+            color: white;
+            font-size: 0.8rem;
+        }
+
         .jacobi-beaver-block {
             display: flex;
             flex-direction: column;
-            gap: 0.6rem;
+            gap: 0.5rem;
             background-color: #3b3b3b;
             border: 3px double #555;
             border-radius: 12px;
@@ -526,15 +538,10 @@
 
         .jb-row {
             display: flex;
+            flex-direction: row;
             align-items: center;
-            justify-content: space-between;
-            gap: 0.8rem;
-        }
-
-        .jb-label {
-            color: white;
-            font-size: 0.8rem;
-            flex-shrink: 0;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
         .toggle-btn {
@@ -930,17 +937,16 @@
         </div>
         <div class="manigeym-panel">
             <div class="centered-options">
-                <div class="jacobi-beaver-block">
-                    <div class="jb-row">
-                        <span class="jb-label">Якоби</span>
-                        <button type="button" class="toggle-btn" data-target="jacobi-select">0</button>
+                <div class="jb-wrap">
+                    <div class="jb-title">Якоби/Бивер</div>
+                    <div class="jacobi-beaver-block">
+                        <div class="jb-row">
+                            <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
+                            <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
+                        </div>
+                        <input type="hidden" id="jacobi-select" value="1">
+                        <input type="hidden" id="beaver-select" value="0">
                     </div>
-                    <div class="jb-row">
-                        <span class="jb-label">Бивер</span>
-                        <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
-                    </div>
-                    <input type="hidden" id="jacobi-select" value="0">
-                    <input type="hidden" id="beaver-select" value="0">
                 </div>
                 <div class="max-cube-options_money">
                     <div>
@@ -1768,7 +1774,7 @@
             document.getElementById('upper-score').value = '0';
             document.getElementById('match_lenght').value = '3';
             document.getElementById('max-cube-select').value = '8';
-            document.getElementById('jacobi-select').value = '0';
+            document.getElementById('jacobi-select').value = '1';
             document.getElementById('beaver-select').value = '0';
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 const el = document.getElementById(btn.dataset.target);
