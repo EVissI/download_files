@@ -455,14 +455,23 @@
             gap: 0.5rem;
         }
 
-        .turn-selector label {
+        .turn-selector .turn-label {
             color: white;
             width: 3.8rem;
             font-size: 0.8rem;
+            flex-shrink: 0;
         }
 
-        .turn-selector select {
-            width: 135px;
+        .turn-btn {
+            min-width: 5.5rem;
+            color: white;
+            background-color: #2d2d2d;
+            border: 2px solid #444;
+        }
+
+        .turn-btn:hover {
+            border-color: #555;
+            background-color: #383838;
         }
 
         .cube-shown-selector {
@@ -566,6 +575,14 @@
             background-color: #007bff;
             color: white;
             border-color: #007bff;
+        }
+
+        .toggle-btn.turn-btn {
+            color: white;
+        }
+
+        .toggle-btn.turn-btn:hover {
+            color: #e8e8e8;
         }
 
         .selector-size {
@@ -965,8 +982,9 @@
     <div class='cube_panel'>
         <div class="left-panel2">
             <div class="turn-selector">
-                <label for="turn-select">Чей ход?</label>
-                <select id="turn-select" class="selector-size"></select>
+                <label for="turn-select-btn" class="turn-label">Чей ход?</label>
+                <button type="button" id="turn-select-btn" class="toggle-btn turn-btn" data-target="turn-select">Белые</button>
+                <input type="hidden" id="turn-select" value="white">
             </div>
             <div class="cube-shown-selector">
                 <label for="cube-shown-select">Показан куб?</label>
@@ -1413,16 +1431,10 @@
         function updateTurnSelect() {
             const whiteNick = document.getElementById('white-input').value || 'Белые';
             const blackNick = document.getElementById('black-input').value || 'Черные';
-            const turnSelect = document.getElementById('turn-select');
-            turnSelect.innerHTML = '';
-            const optionWhite = document.createElement('option');
-            optionWhite.value = 'white';
-            optionWhite.textContent = whiteNick;
-            turnSelect.appendChild(optionWhite);
-            const optionBlack = document.createElement('option');
-            optionBlack.value = 'black';
-            optionBlack.textContent = blackNick;
-            turnSelect.appendChild(optionBlack);
+            const turn = document.getElementById('turn-select').value;
+            const displayName = turn === 'white' ? whiteNick : blackNick;
+            const btn = document.getElementById('turn-select-btn');
+            if (btn) btn.textContent = displayName;
         }
 
         function updateCubeOwnerSelect() {
@@ -1677,8 +1689,14 @@
             drawBoard();
         }
 
-        document.getElementById('turn-select').addEventListener('change', drawBoard);
-        document.getElementById('turn-select').addEventListener('change', updateCircleVisibility);
+        document.getElementById('turn-select-btn').addEventListener('click', function () {
+            const el = document.getElementById(this.dataset.target);
+            if (!el) return;
+            el.value = el.value === 'white' ? 'black' : 'white';
+            updateTurnSelect();
+            drawBoard();
+            updateCircleVisibility();
+        });
         document.getElementById('cube-value-select').addEventListener('change', drawBoard);
         document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
         document.getElementById('dice1-select').addEventListener('change', () => handleDiceChange('dice1-select', 'dice2-select'));
@@ -1776,7 +1794,7 @@
             document.getElementById('max-cube-select').value = '8';
             document.getElementById('jacobi-select').value = '1';
             document.getElementById('beaver-select').value = '0';
-            document.querySelectorAll('.toggle-btn').forEach(btn => {
+            document.querySelectorAll('.jacobi-beaver-block .toggle-btn').forEach(btn => {
                 const el = document.getElementById(btn.dataset.target);
                 if (el) {
                     const val = el.value;
@@ -1791,6 +1809,7 @@
             document.getElementById('dice2-select').value = '0';
             updateCubeSelectorsVisibility();
 
+            document.getElementById('turn-select').value = 'white';
             updateTurnSelect();
             updateCubeOwnerSelect();
             updateSelectOptions('white');
