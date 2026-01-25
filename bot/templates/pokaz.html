@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -455,23 +455,14 @@
             gap: 0.5rem;
         }
 
-        .turn-selector .turn-label {
+        .turn-selector label {
             color: white;
             width: 3.8rem;
             font-size: 0.8rem;
-            flex-shrink: 0;
         }
 
-        .turn-btn {
-            min-width: 5.5rem;
-            color: white;
-            background-color: #2d2d2d;
-            border: 2px solid #444;
-        }
-
-        .turn-btn:hover {
-            border-color: #555;
-            background-color: #383838;
+        .turn-selector select {
+            width: 135px;
         }
 
         .cube-shown-selector {
@@ -522,22 +513,10 @@
         }
 
 
-        .jb-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.35rem;
-        }
-
-        .jb-title {
-            color: white;
-            font-size: 0.8rem;
-        }
-
         .jacobi-beaver-block {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.6rem;
             background-color: #3b3b3b;
             border: 3px double #555;
             border-radius: 12px;
@@ -547,10 +526,15 @@
 
         .jb-row {
             display: flex;
-            flex-direction: row;
             align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
+            justify-content: space-between;
+            gap: 0.8rem;
+        }
+
+        .jb-label {
+            color: white;
+            font-size: 0.8rem;
+            flex-shrink: 0;
         }
 
         .toggle-btn {
@@ -575,14 +559,6 @@
             background-color: #007bff;
             color: white;
             border-color: #007bff;
-        }
-
-        .toggle-btn.turn-btn {
-            color: white;
-        }
-
-        .toggle-btn.turn-btn:hover {
-            color: #e8e8e8;
         }
 
         .selector-size {
@@ -954,16 +930,17 @@
         </div>
         <div class="manigeym-panel">
             <div class="centered-options">
-                <div class="jb-wrap">
-                    <div class="jb-title">Якоби/Бивер</div>
-                    <div class="jacobi-beaver-block">
-                        <div class="jb-row">
-                            <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
-                            <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
-                        </div>
-                        <input type="hidden" id="jacobi-select" value="1">
-                        <input type="hidden" id="beaver-select" value="0">
+                <div class="jacobi-beaver-block">
+                    <div class="jb-row">
+                        <span class="jb-label">Якоби</span>
+                        <button type="button" class="toggle-btn" data-target="jacobi-select">0</button>
                     </div>
+                    <div class="jb-row">
+                        <span class="jb-label">Бивер</span>
+                        <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
+                    </div>
+                    <input type="hidden" id="jacobi-select" value="0">
+                    <input type="hidden" id="beaver-select" value="0">
                 </div>
                 <div class="max-cube-options_money">
                     <div>
@@ -982,9 +959,8 @@
     <div class='cube_panel'>
         <div class="left-panel2">
             <div class="turn-selector">
-                <label for="turn-select-btn" class="turn-label">Чей ход?</label>
-                <button type="button" id="turn-select-btn" class="toggle-btn turn-btn" data-target="turn-select">Белые</button>
-                <input type="hidden" id="turn-select" value="white">
+                <label for="turn-select">Чей ход?</label>
+                <select id="turn-select" class="selector-size"></select>
             </div>
             <div class="cube-shown-selector">
                 <label for="cube-shown-select">Показан куб?</label>
@@ -1431,10 +1407,16 @@
         function updateTurnSelect() {
             const whiteNick = document.getElementById('white-input').value || 'Белые';
             const blackNick = document.getElementById('black-input').value || 'Черные';
-            const turn = document.getElementById('turn-select').value;
-            const displayName = turn === 'white' ? whiteNick : blackNick;
-            const btn = document.getElementById('turn-select-btn');
-            if (btn) btn.textContent = displayName;
+            const turnSelect = document.getElementById('turn-select');
+            turnSelect.innerHTML = '';
+            const optionWhite = document.createElement('option');
+            optionWhite.value = 'white';
+            optionWhite.textContent = whiteNick;
+            turnSelect.appendChild(optionWhite);
+            const optionBlack = document.createElement('option');
+            optionBlack.value = 'black';
+            optionBlack.textContent = blackNick;
+            turnSelect.appendChild(optionBlack);
         }
 
         function updateCubeOwnerSelect() {
@@ -1689,14 +1671,8 @@
             drawBoard();
         }
 
-        document.getElementById('turn-select-btn').addEventListener('click', function () {
-            const el = document.getElementById(this.dataset.target);
-            if (!el) return;
-            el.value = el.value === 'white' ? 'black' : 'white';
-            updateTurnSelect();
-            drawBoard();
-            updateCircleVisibility();
-        });
+        document.getElementById('turn-select').addEventListener('change', drawBoard);
+        document.getElementById('turn-select').addEventListener('change', updateCircleVisibility);
         document.getElementById('cube-value-select').addEventListener('change', drawBoard);
         document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
         document.getElementById('dice1-select').addEventListener('change', () => handleDiceChange('dice1-select', 'dice2-select'));
@@ -1792,9 +1768,9 @@
             document.getElementById('upper-score').value = '0';
             document.getElementById('match_lenght').value = '3';
             document.getElementById('max-cube-select').value = '8';
-            document.getElementById('jacobi-select').value = '1';
+            document.getElementById('jacobi-select').value = '0';
             document.getElementById('beaver-select').value = '0';
-            document.querySelectorAll('.jacobi-beaver-block .toggle-btn').forEach(btn => {
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
                 const el = document.getElementById(btn.dataset.target);
                 if (el) {
                     const val = el.value;
@@ -1809,7 +1785,6 @@
             document.getElementById('dice2-select').value = '0';
             updateCubeSelectorsVisibility();
 
-            document.getElementById('turn-select').value = 'white';
             updateTurnSelect();
             updateCubeOwnerSelect();
             updateSelectOptions('white');
