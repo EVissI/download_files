@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -115,6 +115,7 @@
             margin: 0;
             flex: 1 1 0;
             padding-top: 1rem;
+            max-width: 11rem;
             min-width: 0;
             font-size: 15px;
         }
@@ -122,6 +123,7 @@
         .nickname-bar {
             display: flex;
             align-items: center;
+            flex-direction: column;
             gap: 0.1em;
             background-color: #3b3b3b;
             border: 0.1875em double #4a4a4a;
@@ -152,6 +154,7 @@
             color: white;
             font-size: 1.2em;
             font-weight: bold;
+            padding: 0 0.1em;
         }
 
         .nick-checker {
@@ -335,8 +338,6 @@
             flex-direction: column;
             align-items: center;
             gap: 0.25em;
-            padding-top: 0.1em;
-            padding-bottom: 0.1em;
         }
 
         .bar-checker-select {
@@ -455,26 +456,6 @@
             box-sizing: border-box;
             -webkit-appearance: none;
             appearance: none;
-        }
-
-        .score-selectors {
-            display: flex;
-            gap: 0.3em;
-            justify-content: center;
-            align-items: center;
-            margin-top: 0.5em;
-        }
-
-        .score-selectors select {
-            text-align: center;
-            border: 1px solid #444;
-            border-radius: 0.25em;
-            background-color: #2d2d2d;
-            color: white;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-            appearance: none;
-            font-size: 0.8em;
         }
 
         .left-panel2 {
@@ -863,65 +844,93 @@
                 </div>
                 <div class="nickname_inputs">
                     <div class="nickname-bar">
-                        <span class="nick-checker white" aria-hidden="true">
-                            <div class="green-circle below-circle"></div>
-                        </span>
-                        <label for="white-input" class="sr-only">Белые</label>
-                        <input type="text" id="white-input" class="nickname-input" value="nick_1">
-                        <span class="nick-separator">:</span>
-                        <label for="black-input" class="sr-only">Черные</label>
-                        <input type="text" id="black-input" class="nickname-input" value="nick_2">
-                        <span class="nick-checker black" aria-hidden="true">
-                            <div class="green-circle above-circle"></div>
-                        </span>
+                        <div class="nickname-inputs-container">
+                            <span class="nick-checker white" aria-hidden="true">
+                                <div class="green-circle below-circle"></div>
+                            </span>
+                            <label for="white-input" class="sr-only">Белые</label>
+                            <input type="text" id="white-input" class="nickname-input" value="nick_1">
+                            <span class="nick-separator">:</span>
+                            <label for="black-input" class="sr-only">Черные</label>
+                            <input type="text" id="black-input" class="nickname-input" value="nick_2">
+                            <span class="nick-checker black" aria-hidden="true">
+                                <div class="green-circle above-circle"></div>
+                            </span>
+                        </div>
+                        <div class="score-inputs">
+                            <select id="lower-score" class="selector-size">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                                <option value="13">13</option>
+                                <option value="14">14</option>
+                                <option value="15">15</option>
+                                <option value="16">16</option>
+                                <option value="17">17</option>
+                                <option value="18">18</option>
+                                <option value="19">19</option>
+                                <option value="20">20</option>
+                            </select>
+                            <select id="upper-score" class="selector-size">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                                <option value="13">13</option>
+                                <option value="14">14</option>
+                                <option value="15">15</option>
+                                <option value="16">16</option>
+                                <option value="17">17</option>
+                                <option value="18">18</option>
+                                <option value="19">19</option>
+                                <option value="20">20</option>
+                            </select>
+                        </div>
+                        <div>
+                        <div class="match-length-selector">
+                            <label for="match_lenght">Матч до</label>
+                            <select id="match_lenght" class="selector-size">
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                                <option value="13">13</option>
+                                <option value="14">14</option>
+                                <option value="15">15</option>
+                                <option value="16">16</option>
+                                <option value="17">17</option>
+                                <option value="18">18</option>
+                                <option value="19">19</option>
+                                <option value="20">20</option>
+                                <option value="21">21</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="score-selectors">
-                        <select id="lower-score" class="selector-size">
-                            <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
-                            <option value="11">11</option>
-                            <option value="12">12</option>
-                            <option value="13">13</option>
-                            <option value="14">14</option>
-                            <option value="15">15</option>
-                            <option value="16">16</option>
-                            <option value="17">17</option>
-                            <option value="18">18</option>
-                            <option value="19">19</option>
-                            <option value="20">20</option>
-                        </select>
-                        <select id="upper-score" class="selector-size">
-                            <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
-                            <option value="11">11</option>
-                            <option value="12">12</option>
-                            <option value="13">13</option>
-                            <option value="14">14</option>
-                            <option value="15">15</option>
-                            <option value="16">16</option>
-                            <option value="17">17</option>
-                            <option value="18">18</option>
-                            <option value="19">19</option>
-                            <option value="20">20</option>
-                        </select>
                     </div>
                 </div>
             </div>
@@ -933,6 +942,14 @@
         <div class="game-panel">
             <div class="match-panel" style="display: none;">
                 <div class='left-panel'>
+                    <div class="score-inputs">
+                        <div>
+                            <label for="lower-score">Очки нижнего игрока:</label>
+                        </div>
+                        <div>
+                            <label for="upper-score">Очки верхнего игрока:</label>
+                        </div>
+                    </div>
                 </div>
                 <div class='right-panel'>
                     <div class="max-cube-options">
