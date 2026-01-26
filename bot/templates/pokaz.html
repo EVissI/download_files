@@ -49,9 +49,8 @@
         }
 
         .green-circle {
-            position: absolute;
-            width: 1.5625em;
-            height: 1.5625em;
+            width: 1em;
+            height: 1em;
             border-radius: 50%;
             background-color: green;
         }
@@ -123,14 +122,13 @@
             background-color: #3b3b3b;
             border: 0.1875em double #4a4a4a;
             border-radius: 0.75em;
-            padding: 0.5em 1.6em;
-            box-shadow: inset 0 0.125em 0.25em rgba(255, 255, 255, 0.1),
-                inset 0 -0.125em 0.25em rgba(0, 0, 0, 0.3);
+            padding: 0.5em 0.5em;
+            box-shadow: inset 0 0.125em 0.25em rgba(255, 255, 255, 0.1), inset 0 -0.125em 0.25em rgba(0, 0, 0, 0.3);
         }
 
         .nickname-input {
             width: 7em;
-            padding: 0.2em 0.4em;
+            padding: 1em 0em;
             font-size: 1em;
             text-align: center;
             border: none;
@@ -155,8 +153,8 @@
         }
 
         .nick-checker {
-            width: 1.625em;
-            height: 1.625em;
+            width: 1em;
+            height: 1em;
             border-radius: 50%;
             border: 0.125em solid #222;
             box-shadow: inset 0 0 0 0.125em rgba(0, 0, 0, 0.2);
@@ -267,7 +265,7 @@
 
         .checker-options {
             display: flex;
-            gap: 0.8em;
+            gap: 0.4em;
             align-items: center;
             background-color: #3b3b3b;
             border: 0.075em double #555;
@@ -321,12 +319,12 @@
 
         .bar-options {
             display: flex;
-            gap: 0.8em;
+            gap: 0.6em;
             align-items: center;
             background-color: #3b3b3b;
             border: 0.075em double #555;
             border-radius: 999px;
-            padding: 0.4em 0.8em;
+            padding: 0.2em 0.4em;
         }
 
         .bar-checker {
@@ -338,12 +336,12 @@
 
         .bar-checker-select {
             width: 1em;
-            height: 1em;
+            height: 1.1em;
             border-radius: 50%;
             border: 0.05em solid #222;
             padding: 0;
             text-align: center;
-            font-size: 0.95em;
+            font-size: 1em;
             font-weight: bold;
             cursor: pointer;
             -webkit-appearance: none;
@@ -1437,11 +1435,11 @@
             const aboveCircle = document.querySelector('.above-circle');
             const belowCircle = document.querySelector('.below-circle');
             if (turn === 'black') {
-                aboveCircle.style.display = 'block';
+                aboveCircle.style.display = 'flex';
                 belowCircle.style.display = 'none';
             } else if (turn === 'white') {
                 aboveCircle.style.display = 'none';
-                belowCircle.style.display = 'block';
+                belowCircle.style.display = 'flex';
             } else {
                 aboveCircle.style.display = 'none';
                 belowCircle.style.display = 'none';
