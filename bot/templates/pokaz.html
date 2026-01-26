@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -18,53 +18,8 @@
 
         .container {
             width: 100%;
-            max-width: 100vw;
             display: flex;
             flex-direction: column;
-            padding: 0 0.5rem;
-            box-sizing: border-box;
-        }
-
-        .row-top {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 0.5rem 0;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .row-mid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 0.5rem 0;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .row-bottom {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .cube-block {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            align-items: center;
-            flex: 1 1 auto;
-            min-width: 0;
         }
 
         .left-panel {
@@ -154,8 +109,7 @@
         .nickname_inputs {
             display: flex;
             justify-content: center;
-            margin: 0;
-            flex-shrink: 0;
+            margin: 0.5rem 0 1rem;
         }
 
         .nickname-bar {
@@ -233,11 +187,14 @@
             margin: 1rem 0;
         }
 
-        .money-only {
-            flex-shrink: 0;
+        .game-panel {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            gap: 0.5rem;
         }
 
-        .game-panel {
+        .cube_panel {
             display: flex;
             flex-direction: row;
             width: 100%;
@@ -260,8 +217,8 @@
             flex-direction: column;
             align-items: flex-start;
             gap: 0.5rem;
-            margin: 0;
-            flex-shrink: 0;
+            margin: 0 auto;
+            padding-top: 1.5rem;
         }
 
         .game-type label {
@@ -431,6 +388,18 @@
             flex-direction: row;
             gap: 0.3rem;
             padding-left: 1rem;
+        }
+
+        .manigeym-panel {
+            display: flex;
+            width: 100%;
+            box-sizing: border-box;
+            justify-content: center;
+        }
+
+        .centered-options {
+            display: flex;
+            gap: 1rem;
         }
 
         .score-inputs {
@@ -830,17 +799,6 @@
             td {
                 word-spacing: 4px;
             }
-
-            .row-top,
-            .row-mid,
-            .row-bottom {
-                gap: 0.35rem;
-                padding: 0.35rem 0;
-            }
-
-            .cube-block {
-                gap: 0.35rem;
-            }
         }
     </style>
 </head>
@@ -848,50 +806,56 @@
 <body>
     <div class="container">
         <h1>Backgammon Board Editor</h1>
-        <div class="row-top">
-            <div class="checker-selector">
-                <div class="checker-label">Шашки:</div>
-                <div class="checker-options">
-                    <div class="checker-btn white selected" data-color="white" role="button"
-                        aria-label="Белые шашки">
-                        <div class="checker-dot"></div>
-                    </div>
-                    <div class="checker-btn black" data-color="black" role="button" aria-label="Черные шашки">
-                        <div class="checker-dot"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="bar-selector">
-                <div class="bar-label">На баре:</div>
-                <div class="bar-options">
-                    <div class="bar-checker">
-                        <select id="white-bar-select" class="bar-checker-select white">
-                            <option value="0">0</option>
-                        </select>
-                    </div>
-                    <div class="bar-checker">
-                        <select id="black-bar-select" class="bar-checker-select black">
-                            <option value="0">0</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="nickname_inputs">
-                <div class="nickname-bar">
-                    <span class="nick-checker white" aria-hidden="true"></span>
-                    <label for="white-input" class="sr-only">Белые</label>
-                    <input type="text" id="white-input" class="nickname-input" value="nick_1">
-                    <span class="nick-separator">:</span>
-                    <label for="black-input" class="sr-only">Черные</label>
-                    <input type="text" id="black-input" class="nickname-input" value="nick_2">
-                    <span class="nick-checker black" aria-hidden="true"></span>
-                </div>
+        <div class="nickname_inputs">
+            <div class="nickname-bar">
+                <span class="nick-checker white" aria-hidden="true"></span>
+                <label for="white-input" class="sr-only">Белые</label>
+                <input type="text" id="white-input" class="nickname-input" value="nick_1">
+                <span class="nick-separator">:</span>
+                <label for="black-input" class="sr-only">Черные</label>
+                <input type="text" id="black-input" class="nickname-input" value="nick_2">
+                <span class="nick-checker black" aria-hidden="true"></span>
             </div>
         </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
             <div class="green-circle above-circle"></div>
             <div class="green-circle below-circle"></div>
+        </div>
+        <div class="selectors-wrapper">
+            <div class="selectors-container">
+                <div class="checker-selector">
+                    <div class="checker-label">Шашки:</div>
+                    <div class="checker-options">
+                        <div class="checker-btn white selected" data-color="white" role="button"
+                            aria-label="Белые шашки">
+                            <div class="checker-dot"></div>
+                        </div>
+                        <div class="checker-btn black" data-color="black" role="button" aria-label="Черные шашки">
+                            <div class="checker-dot"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bar-selector">
+                    <div class="bar-label">На баре:</div>
+                    <div class="bar-options">
+                        <div class="bar-checker">
+                            <select id="white-bar-select" class="bar-checker-select white">
+                                <option value="0">0</option>
+                            </select>
+                        </div>
+                        <div class="bar-checker">
+                            <select id="black-bar-select" class="bar-checker-select black">
+                                <option value="0">0</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="game-type">
+                <label>Тип игры</label>
+                <button id="game-type-button">Манигейм</button>
+            </div>
         </div>
         <div class="game-panel">
             <div class="match-panel" style="display: none;">
@@ -990,51 +954,20 @@
                 </div>
             </div>
         </div>
-        <div class="row-mid">
-            <div class="jb-wrap money-only">
-                <div class="jb-title">Якоби / Бивер</div>
-                <div class="jacobi-beaver-block">
-                    <div class="jb-row">
-                        <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
-                        <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
-                    </div>
-                    <input type="hidden" id="jacobi-select" value="1">
-                    <input type="hidden" id="beaver-select" value="0">
-                </div>
-            </div>
-            <div class="cube-block">
-                <div class="cube-shown-selector">
-                    <label for="cube-shown-select">Показан куб?</label>
-                    <select id="cube-shown-select" class="selector-size">
-                        <option value="0">0</option>
-                        <option value="2">2</option>
-                        <option value="4">4</option>
-                        <option value="8">8</option>
-                        <option value="16">16</option>
-                        <option value="32">32</option>
-                        <option value="64">64</option>
-                    </select>
-                </div>
-                <div class="cube-owner-selector">
-                    <label for="cube-owner-select-btn">Чей куб?</label>
-                    <input type="hidden" id="cube-owner-select" value="white">
-                    <button type="button" id="cube-owner-select-btn" class="nick-selector-btn" data-target="cube-owner-select" aria-label="Чей куб?">nick_1</button>
-                </div>
-                <div class="cube-value-options">
-                    <div>
-                        <label for="cube-value-select">Значение куба</label>
-                        <select id="cube-value-select" class="selector-size">
-                            <option value="0">0</option>
-                            <option value="2">2</option>
-                            <option value="4">4</option>
-                            <option value="8">8</option>
-                            <option value="16">16</option>
-                            <option value="32">32</option>
-                            <option value="64">64</option>
-                        </select>
+        <div class="manigeym-panel">
+            <div class="centered-options">
+                <div class="jb-wrap">
+                    <div class="jb-title">Якоби / Бивер</div>
+                    <div class="jacobi-beaver-block">
+                        <div class="jb-row">
+                            <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
+                            <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
+                        </div>
+                        <input type="hidden" id="jacobi-select" value="1">
+                        <input type="hidden" id="beaver-select" value="0">
                     </div>
                 </div>
-                <div class="max-cube-options_money money-only">
+                <div class="max-cube-options_money">
                     <div>
                         <label for="max-cube-select-m">Макс куб</label>
                         <select id="max-cube-select-m" class="selector-size">
@@ -1046,16 +979,52 @@
                     </div>
                 </div>
             </div>
-            <div class="game-type">
-                <label>Тип игры</label>
-                <button id="game-type-button">Манигейм</button>
-            </div>
         </div>
-        <div class="row-bottom">
+    </div>
+    <div class='cube_panel'>
+        <div class="left-panel2">
             <div class="turn-selector">
                 <label for="turn-select-btn">Чей ход?</label>
                 <input type="hidden" id="turn-select" value="white">
                 <button type="button" id="turn-select-btn" class="nick-selector-btn" data-target="turn-select" aria-label="Чей ход?">nick_1</button>
+            </div>
+            <div class="cube-shown-selector">
+                <label for="cube-shown-select">Показан куб?</label>
+                <select id="cube-shown-select" class="selector-size">
+                    <option value="0">0</option>
+                    <option value="2">2</option>
+                    <option value="4">4</option>
+                    <option value="8">8</option>
+                    <option value="16">16</option>
+                    <option value="32">32</option>
+                    <option value="64">64</option>
+                </select>
+            </div>
+            <div class="action-buttons">
+                <button id="clear-button"><i class="fas fa-trash-alt"></i></button>
+                <button id="init-button"><i class="fas fa-home"></i></button>
+                <button id="show-button"><i class="fas fa-eye"></i></button>
+            </div>
+        </div>
+        <div class="right-panel2">
+            <div class="cube-value-options">
+                <div>
+                    <label for="cube-value-select">Значение куба</label>
+                    <select id="cube-value-select" class="selector-size">
+                        <option value="0">0</option>
+                        <option value="2">2</option>
+                        <option value="4">4</option>
+                        <option value="8">8</option>
+                        <option value="16">16</option>
+                        <option value="32">32</option>
+                        <option value="64">64</option>
+                    </select>
+                </div>
+            </div>
+            <div class="cube-owner-selector">
+                <label for="cube-owner-select-btn">Чей куб?</label>
+                <input type="hidden" id="cube-owner-select" value="white">
+                <button type="button" id="cube-owner-select-btn" class="nick-selector-btn" data-target="cube-owner-select" aria-label="Чей куб?">nick_1</button>
             </div>
             <div class="dice-selector">
                 <label>На кубиках:</label>
@@ -1077,11 +1046,6 @@
                     <option value="5">5</option>
                     <option value="6">6</option>
                 </select>
-            </div>
-            <div class="action-buttons">
-                <button id="clear-button"><i class="fas fa-trash-alt"></i></button>
-                <button id="init-button"><i class="fas fa-home"></i></button>
-                <button id="show-button"><i class="fas fa-eye"></i></button>
             </div>
         </div>
     </div>
@@ -1589,13 +1553,13 @@
             currentGameType = currentGameType === 'манигейм' ? 'матч' : 'манигейм';
             document.getElementById('game-type-button').textContent = currentGameType === 'манигейм' ? 'Манигейм' : 'Матч';
             const matchPanel = document.querySelector('.match-panel');
-            document.querySelectorAll('.money-only').forEach(el => {
-                el.style.display = currentGameType === 'матч' ? 'none' : 'flex';
-            });
+            const manigeymPanel = document.querySelector('.manigeym-panel');
             if (currentGameType === 'матч') {
                 matchPanel.style.display = 'flex';
+                manigeymPanel.style.display = 'none';
             } else {
                 matchPanel.style.display = 'none';
+                manigeymPanel.style.display = 'flex';
             }
         });
 
@@ -1862,8 +1826,9 @@
             }
 
             const matchPanel = document.querySelector('.match-panel');
+            const manigeymPanel = document.querySelector('.manigeym-panel');
             matchPanel.style.display = 'none';
-            document.querySelectorAll('.money-only').forEach(el => { el.style.display = 'flex'; });
+            manigeymPanel.style.display = 'flex';
 
             const hintsTableContainer = document.querySelector('.hints-table');
             const hintsTable = document.getElementById('hintsTable');
