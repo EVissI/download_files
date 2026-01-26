@@ -819,6 +819,11 @@
             display:flex;
             flex-direction: row;
         }
+        .nickname-inputs-container-wrapper-inner{
+            display:flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 
@@ -861,6 +866,7 @@
                 <div class="nickname_inputs">
                     <div class="nickname-bar">
                         <div class="nickname-inputs-container-wrapper">
+                        <div class="nickname-inputs-container-wrapper-inner">
                             <div class="nickname-inputs-container">
                                 <span class="nick-checker white" aria-hidden="true">
                                     <div class="green-circle below-circle"></div>
@@ -922,6 +928,7 @@
                                     <option value="20">20</option>
                                 </select>
                             </div>
+                        </div>
                             <div class="match-length-selector">
                                 <label for="match_lenght">Матч до</label>
                                 <select id="match_lenght" class="selector-size">
