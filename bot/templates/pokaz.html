@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -49,6 +49,7 @@
         }
 
         .green-circle {
+            position: absolute;
             width: 0.5em;
             height: 0.5em;
             border-radius: 50%;
@@ -56,13 +57,13 @@
         }
 
         .above-circle {
-            top: -3.75em;
-            right: 0.625em;
+            top: -0.2em;
+            right: -0.2em;
         }
 
         .below-circle {
-            bottom: -3.75em;
-            right: 0.625em;
+            bottom: -0.2em;
+            right: -0.2em;
         }
 
         canvas {
@@ -152,6 +153,7 @@
         }
 
         .nick-checker {
+            position: relative;
             width: 1em;
             height: 1em;
             border-radius: 50%;
@@ -819,16 +821,19 @@
                     </div>
                 </div>
                 <div class="nickname_inputs">
+                    <div class="nickname-label"></div>
                     <div class="nickname-bar">
-                        <div class="green-circle above-circle"></div>
-                        <span class="nick-checker white" aria-hidden="true"></span>
+                        <span class="nick-checker white" aria-hidden="true">
+                            <div class="green-circle above-circle"></div>
+                        </span>
                         <label for="white-input" class="sr-only">Белые</label>
                         <input type="text" id="white-input" class="nickname-input" value="nick_1">
                         <span class="nick-separator">:</span>
                         <label for="black-input" class="sr-only">Черные</label>
                         <input type="text" id="black-input" class="nickname-input" value="nick_2">
-                        <span class="nick-checker black" aria-hidden="true"></span>
-                        <div class="green-circle below-circle"></div>
+                        <span class="nick-checker black" aria-hidden="true">
+                            <div class="green-circle below-circle"></div>
+                        </span>
                     </div>
                 </div>
             </div>
