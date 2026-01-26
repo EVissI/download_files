@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -50,20 +50,20 @@
 
         .green-circle {
             position: absolute;
-            width: 25px;
-            height: 25px;
+            width: 1.5625em;
+            height: 1.5625em;
             border-radius: 50%;
             background-color: green;
         }
 
         .above-circle {
-            top: -60px;
-            right: 10px;
+            top: -3.75em;
+            right: 0.625em;
         }
 
         .below-circle {
-            bottom: -60px;
-            right: 10px;
+            bottom: -3.75em;
+            right: 0.625em;
         }
 
         canvas {
@@ -113,24 +113,25 @@
             margin: 0;
             flex: 1 1 0;
             min-width: 0;
+            font-size: 16px;
         }
 
         .nickname-bar {
             display: flex;
             align-items: center;
-            gap: 0.1rem;
+            gap: 0.1em;
             background-color: #3b3b3b;
-            border: 3px double #4a4a4a;
-            border-radius: 12px;
-            padding: 0.5rem 1.6rem;
-            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1),
-                inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+            border: 0.1875em double #4a4a4a;
+            border-radius: 0.75em;
+            padding: 0.5em 1.6em;
+            box-shadow: inset 0 0.125em 0.25em rgba(255, 255, 255, 0.1),
+                inset 0 -0.125em 0.25em rgba(0, 0, 0, 0.3);
         }
 
         .nickname-input {
-            width: 7rem;
-            padding: 0.2rem 0.4rem;
-            font-size: 1rem;
+            width: 7em;
+            padding: 0.2em 0.4em;
+            font-size: 1em;
             text-align: center;
             border: none;
             background: transparent;
@@ -143,22 +144,22 @@
         }
 
         .nickname-input:focus {
-            text-shadow: 0 0 6px rgba(242, 232, 102, 0.4);
+            text-shadow: 0 0 0.375em rgba(242, 232, 102, 0.4);
         }
 
         .nick-separator {
             color: white;
-            font-size: 1.2rem;
+            font-size: 1.2em;
             font-weight: bold;
-            padding: 0 0.1rem;
+            padding: 0 0.1em;
         }
 
         .nick-checker {
-            width: 26px;
-            height: 26px;
+            width: 1.625em;
+            height: 1.625em;
             border-radius: 50%;
-            border: 2px solid #222;
-            box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+            border: 0.125em solid #222;
+            box-shadow: inset 0 0 0 0.125em rgba(0, 0, 0, 0.2);
         }
 
         .nick-checker.white {
