@@ -806,17 +806,6 @@
 <body>
     <div class="container">
         <h1>Backgammon Board Editor</h1>
-        <div class="nickname_inputs">
-            <div class="nickname-bar">
-                <span class="nick-checker white" aria-hidden="true"></span>
-                <label for="white-input" class="sr-only">Белые</label>
-                <input type="text" id="white-input" class="nickname-input" value="nick_1">
-                <span class="nick-separator">:</span>
-                <label for="black-input" class="sr-only">Черные</label>
-                <input type="text" id="black-input" class="nickname-input" value="nick_2">
-                <span class="nick-checker black" aria-hidden="true"></span>
-            </div>
-        </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
             <div class="green-circle above-circle"></div>
@@ -851,11 +840,22 @@
                         </div>
                     </div>
                 </div>
+                <div class="nickname_inputs">
+                    <div class="nickname-bar">
+                        <span class="nick-checker white" aria-hidden="true"></span>
+                        <label for="white-input" class="sr-only">Белые</label>
+                        <input type="text" id="white-input" class="nickname-input" value="nick_1">
+                        <span class="nick-separator">:</span>
+                        <label for="black-input" class="sr-only">Черные</label>
+                        <input type="text" id="black-input" class="nickname-input" value="nick_2">
+                        <span class="nick-checker black" aria-hidden="true"></span>
+                    </div>
+                </div>
             </div>
-            <div class="game-type">
-                <label>Тип игры</label>
-                <button id="game-type-button">Манигейм</button>
-            </div>
+        </div>
+        <div class="game-type">
+            <label>Тип игры</label>
+            <button id="game-type-button">Манигейм</button>
         </div>
         <div class="game-panel">
             <div class="match-panel" style="display: none;">
