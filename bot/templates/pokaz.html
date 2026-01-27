@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -512,6 +512,31 @@
             border-color: #555;
         }
 
+        .checker-toggle-btn {
+            width: 1.5em;
+            height: 1.5em;
+            border-radius: 50%;
+            border: 0.125em solid #222;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 0 0.125em rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .checker-toggle-btn.white {
+            background: radial-gradient(circle at 30% 30%, #ffffff, #d9d9d9 60%, #bfbfbf);
+        }
+
+        .checker-toggle-btn.black {
+            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1e1e1e 60%, #0f0f0f);
+        }
+
+        .checker-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+
         .cube-shown-selector {
             display: flex;
             align-items: center;
@@ -1019,7 +1044,7 @@
             <div class="turn-selector">
                 <label for="turn-select-btn">Чей ход?</label>
                 <input type="hidden" id="turn-select" value="white">
-                <button type="button" id="turn-select-btn" class="nick-selector-btn" data-target="turn-select" aria-label="Чей ход?">nick_1</button>
+                <button type="button" id="turn-select-btn" class="checker-toggle-btn white" data-target="turn-select" aria-label="Чей ход?" data-color="white"></button>
             </div>
             <div class="cube-shown-selector">
                 <label for="cube-shown-select">Показан куб?</label>
@@ -1057,7 +1082,7 @@
             <div class="cube-owner-selector">
                 <label for="cube-owner-select-btn">Чей куб?</label>
                 <input type="hidden" id="cube-owner-select" value="white">
-                <button type="button" id="cube-owner-select-btn" class="nick-selector-btn" data-target="cube-owner-select" aria-label="Чей куб?">nick_1</button>
+                <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white" data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
             </div>
             <div class="dice-selector">
                 <label>На кубиках:</label>
@@ -1465,21 +1490,23 @@
         }
 
         function updateTurnSelect() {
-            const whiteNick = document.getElementById('white-input').value || 'Белые';
-            const blackNick = document.getElementById('black-input').value || 'Черные';
             const turnInput = document.getElementById('turn-select');
             const turnBtn = document.getElementById('turn-select-btn');
             const val = turnInput.value || 'white';
-            if (turnBtn) turnBtn.textContent = (val === 'white') ? whiteNick : blackNick;
+            if (turnBtn) {
+                turnBtn.className = 'checker-toggle-btn ' + val;
+                turnBtn.dataset.color = val;
+            }
         }
 
         function updateCubeOwnerSelect() {
-            const whiteNick = document.getElementById('white-input').value || 'Белые';
-            const blackNick = document.getElementById('black-input').value || 'Черные';
             const cubeOwnerInput = document.getElementById('cube-owner-select');
             const cubeOwnerBtn = document.getElementById('cube-owner-select-btn');
             const val = cubeOwnerInput.value || 'white';
-            if (cubeOwnerBtn) cubeOwnerBtn.textContent = (val === 'white') ? whiteNick : blackNick;
+            if (cubeOwnerBtn) {
+                cubeOwnerBtn.className = 'checker-toggle-btn ' + val;
+                cubeOwnerBtn.dataset.color = val;
+            }
         }
 
         function updateCircleVisibility() {
@@ -1510,14 +1537,10 @@
                 updateCubeOwnerSelect();
                 updateCircleVisibility();
                 updateCubeSelectorsVisibility();
-                document.getElementById('white-input').addEventListener('input', updateTurnSelect);
-                document.getElementById('white-input').addEventListener('input', updateCubeOwnerSelect);
                 document.getElementById('white-input').addEventListener('input', drawBoard);
-                document.getElementById('white-input').addEventListener('click', function () { this.value = ''; updateTurnSelect(); updateCubeOwnerSelect(); drawBoard(); });
-                document.getElementById('black-input').addEventListener('input', updateTurnSelect);
-                document.getElementById('black-input').addEventListener('input', updateCubeOwnerSelect);
+                document.getElementById('white-input').addEventListener('click', function () { this.value = ''; drawBoard(); });
                 document.getElementById('black-input').addEventListener('input', drawBoard);
-                document.getElementById('black-input').addEventListener('click', function () { this.value = ''; updateTurnSelect(); updateCubeOwnerSelect(); drawBoard(); });
+                document.getElementById('black-input').addEventListener('click', function () { this.value = ''; drawBoard(); });
                 document.getElementById('lower-score').addEventListener('change', drawBoard);
                 document.getElementById('upper-score').addEventListener('change', drawBoard);
                 document.getElementById('match_lenght').addEventListener('change', drawBoard);
@@ -1723,13 +1746,15 @@
         document.getElementById('turn-select').addEventListener('change', updateCircleVisibility);
         document.getElementById('cube-value-select').addEventListener('change', drawBoard);
         document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
-        document.querySelectorAll('.nick-selector-btn').forEach(btn => {
+        document.querySelectorAll('.checker-toggle-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const input = document.getElementById(this.dataset.target);
                 if (!input) return;
-                input.value = input.value === 'white' ? 'black' : 'white';
+                const newColor = input.value === 'white' ? 'black' : 'white';
+                input.value = newColor;
                 if (this.dataset.target === 'turn-select') {
                     updateTurnSelect();
+                    updateCircleVisibility();
                 } else {
                     updateCubeOwnerSelect();
                 }
