@@ -1702,6 +1702,7 @@
                 updateTurnSelect();
                 updateCubeOwnerSelect();
                 updateCubeSelectorsVisibility();
+                setupDropdownCloseHandler();
                 initDiceSelectors();
                 initCubeSelectors();
                 document.getElementById('lower-score').addEventListener('change', drawBoard);
@@ -1965,12 +1966,18 @@
 
         function updateDiceDropdownImages() {
             const turn = document.getElementById('turn-select').value;
-            document.querySelectorAll('.dice-selector-dropdown .dice-option img').forEach(img => {
-                const value = img.alt;
-                if (turn === 'white') {
-                    img.src = `/static/${value}w.png`;
-                } else {
-                    img.src = img.getAttribute('data-black') || `/static/${value}b.png`;
+            // Обновляем только картинки костей (dice1 и dice2), не кубов
+            ['dice1-dropdown', 'dice2-dropdown'].forEach(dropdownId => {
+                const dropdown = document.getElementById(dropdownId);
+                if (dropdown) {
+                    dropdown.querySelectorAll('.dice-option img').forEach(img => {
+                        const value = img.alt;
+                        if (turn === 'white') {
+                            img.src = `/static/${value}w.png`;
+                        } else {
+                            img.src = img.getAttribute('data-black') || `/static/${value}b.png`;
+                        }
+                    });
                 }
             });
         }
@@ -2007,7 +2014,16 @@
                 });
             });
 
-            // Close dropdowns when clicking outside
+            // Update dice selectors when turn changes (will be handled by existing turn-select listener)
+            // We'll update dice selectors in updateTurnSelect function instead
+        }
+
+        // Setup global click handler to close dropdowns when clicking outside (only once)
+        let dropdownCloseHandlerSetup = false;
+        function setupDropdownCloseHandler() {
+            if (dropdownCloseHandlerSetup) return;
+            dropdownCloseHandlerSetup = true;
+            
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.dice-selector-custom')) {
                     document.querySelectorAll('.dice-selector-dropdown').forEach(d => {
@@ -2015,9 +2031,6 @@
                     });
                 }
             });
-
-            // Update dice selectors when turn changes (will be handled by existing turn-select listener)
-            // We'll update dice selectors in updateTurnSelect function instead
         }
 
         // Cube selector functions
