@@ -108,27 +108,7 @@
             background-color: #0056b3;
         }
 
-        .nickname_inputs {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0;
-            flex: 1 1 0;
-            padding-top: 1rem;
-            font-size: 15px;
-        }
 
-        .nickname-bar {
-            display: flex;
-            align-items: center;
-            flex-direction: column;
-            gap: 0.1em;
-            background-color: #3b3b3b;
-            border: 0.1875em double #4a4a4a;
-            border-radius: 0.75em;
-            /* padding: 0.5em 0.5em; */
-            box-shadow: inset 0 0.125em 0.25em rgba(255, 255, 255, 0.1), inset 0 -0.125em 0.25em rgba(0, 0, 0, 0.3);
-        }
 
         .nickname-input {
             width: 40%;
@@ -837,16 +817,6 @@
             flex-direction: row;
             gap: 0.5rem;
         }
-        .nickname-inputs-container-wrapper {
-            display: flex;
-            flex-direction: row;
-            gap: 0.3rem;
-        }
-        .nickname-inputs-container-wrapper-inner{
-            display:flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
     </style>
 </head>
 
@@ -886,24 +856,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="nickname_inputs">
-                    <div class="nickname-bar">
-                        <div class="nickname-inputs-container-wrapper">
-                        <div class="nickname-inputs-container-wrapper-inner">
-                            <div class="nickname-inputs-container">
-                                <span class="nick-checker white" aria-hidden="true">
-                                    <div class="green-circle below-circle"></div>
-                                </span>
-                                <label for="white-input" class="sr-only">Белые</label>
-                                <input type="text" id="white-input" class="nickname-input" value="nick_1">
-                                <span class="nick-separator">:</span>
-                                <label for="black-input" class="sr-only">Черные</label>
-                                <input type="text" id="black-input" class="nickname-input" value="nick_2">
-                                <span class="nick-checker black" aria-hidden="true">
-                                    <div class="green-circle above-circle"></div>
-                                </span>
-                            </div>
-                    </div>
                 </div>
             </div>
         </div>
