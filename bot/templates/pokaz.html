@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -925,7 +925,7 @@
             border: 2px solid #555;
             border-radius: 8px;
             padding: 0.5rem;
-            display: none;
+            display: none !important;
             flex-direction: row;
             flex-wrap: wrap;
             gap: 0.5rem;
@@ -935,7 +935,7 @@
         }
 
         .cube-selector-dropdown.active {
-            display: flex;
+            display: flex !important;
         }
 
         .cube-option {
@@ -1251,7 +1251,7 @@
                 <label for="turn-select-btn">Чей ход?</label>
                 <label>На кубиках:</label>
             </div>
-            
+
             <div class="turn-dice-block">
                 <div class="turn-dice-content">
                     <div class="turn-dice-section">
@@ -2153,6 +2153,11 @@
                 const button = document.getElementById(`cube-${selectorType}-button`);
                 const dropdown = document.getElementById(`cube-${selectorType}-dropdown`);
                 const select = document.getElementById(`cube-${selectorType}-select`);
+                
+                // Убеждаемся, что меню закрыто при инициализации
+                if (dropdown) {
+                    dropdown.classList.remove('active');
+                }
                 
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
