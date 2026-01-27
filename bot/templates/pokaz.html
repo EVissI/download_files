@@ -206,7 +206,7 @@
         .game-type {
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            align-items: flex-end;
             gap: 0.5rem;
             margin: 0 auto;
             padding-top: 1.5rem;
@@ -215,7 +215,6 @@
         .game-type label {
             color: white;
             font-size: 0.96rem;
-            width: 100%;
             text-align: center;
         }
 
@@ -1466,10 +1465,6 @@
                 updateTurnSelect();
                 updateCubeOwnerSelect();
                 updateCubeSelectorsVisibility();
-                document.getElementById('white-input').addEventListener('input', drawBoard);
-                document.getElementById('white-input').addEventListener('click', function () { this.value = ''; drawBoard(); });
-                document.getElementById('black-input').addEventListener('input', drawBoard);
-                document.getElementById('black-input').addEventListener('click', function () { this.value = ''; drawBoard(); });
                 document.getElementById('lower-score').addEventListener('change', drawBoard);
                 document.getElementById('upper-score').addEventListener('change', drawBoard);
                 document.getElementById('match_lenght').addEventListener('change', drawBoard);
