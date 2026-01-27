@@ -1223,7 +1223,7 @@
             <div class="cube-shown-selector">
                 <label for="cube-shown-select">Показан куб?</label>
                 <div class="dice-selector-custom">
-                    <div class="dice-selector-button empty" id="cube-shown-button">0</div>
+                    <div class="dice-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
                     <div class="dice-selector-dropdown" id="cube-shown-dropdown">
                         <div class="dice-option empty" data-value="0">0</div>
                         <div class="dice-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
@@ -1234,7 +1234,7 @@
                         <div class="dice-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
                     </div>
                     <select id="cube-shown-select" class="sr-only" style="display: none;">
-                        <option value="0">0</option>
+                        <option value="0" selected>0</option>
                         <option value="2">2</option>
                         <option value="4">4</option>
                         <option value="8">8</option>
@@ -1255,7 +1255,7 @@
                 <div>
                     <label for="cube-value-select">Значение куба</label>
                     <div class="dice-selector-custom">
-                        <div class="dice-selector-button empty" id="cube-value-button">0</div>
+                        <div class="dice-selector-button empty" id="cube-value-button" data-cube="value">0</div>
                         <div class="dice-selector-dropdown" id="cube-value-dropdown">
                             <div class="dice-option empty" data-value="0">0</div>
                             <div class="dice-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
@@ -1266,7 +1266,7 @@
                             <div class="dice-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
                         </div>
                         <select id="cube-value-select" class="sr-only" style="display: none;">
-                            <option value="0">0</option>
+                            <option value="0" selected>0</option>
                             <option value="2">2</option>
                             <option value="4">4</option>
                             <option value="8">8</option>
@@ -1803,14 +1803,10 @@
             if (cubeShown === '0') {
                 updateAllDiceSelectors();
             }
-            // Update cube selectors display
-            if (typeof updateCubeSelectorDisplay === 'function') {
-                updateCubeSelectorDisplay('cube-shown-select', 'cube-shown-button');
-                updateCubeSelectorDisplay('cube-value-select', 'cube-value-button');
-            }
         }
 
         document.getElementById('cube-shown-select').addEventListener('change', () => {
+            updateCubeSelectorDisplay('shown');
             updateCubeSelectorsVisibility();
             const cubeShown = document.getElementById('cube-shown-select').value;
             if (cubeShown !== '0') {
@@ -1818,9 +1814,7 @@
                 document.getElementById('dice1-select').value = '0';
                 document.getElementById('dice2-select').value = '0';
                 updateAllDiceSelectors();
-                if (typeof updateCubeSelectorDisplay === 'function') {
-                    updateCubeSelectorDisplay('cube-value-select', 'cube-value-button');
-                }
+                updateCubeSelectorDisplay('value');
             }
             drawBoard();
         });
@@ -1925,7 +1919,10 @@
         }
 
         document.getElementById('turn-select').addEventListener('change', drawBoard);
-        document.getElementById('cube-value-select').addEventListener('change', drawBoard);
+        document.getElementById('cube-value-select').addEventListener('change', () => {
+            updateCubeSelectorDisplay('value');
+            drawBoard();
+        });
         document.getElementById('cube-owner-select').addEventListener('change', drawBoard);
         document.querySelectorAll('.checker-toggle-btn').forEach(btn => {
             btn.addEventListener('click', function () {
@@ -2023,10 +2020,10 @@
             // We'll update dice selectors in updateTurnSelect function instead
         }
 
-        // Cube selectors (doubling cube)
-        function updateCubeSelectorDisplay(selectorId, buttonId) {
-            const select = document.getElementById(selectorId);
-            const button = document.getElementById(buttonId);
+        // Cube selector functions
+        function updateCubeSelectorDisplay(selectorType) {
+            const select = document.getElementById(`cube-${selectorType}-select`);
+            const button = document.getElementById(`cube-${selectorType}-button`);
             const value = parseInt(select.value) || 0;
             
             if (value === 0) {
@@ -2040,54 +2037,40 @@
             }
         }
 
+        function updateAllCubeSelectors() {
+            updateCubeSelectorDisplay('value');
+            updateCubeSelectorDisplay('shown');
+        }
+
+        // Initialize cube selectors
         function initCubeSelectors() {
-            // Initialize cube-shown selector
-            updateCubeSelectorDisplay('cube-shown-select', 'cube-shown-button');
-            const cubeShownButton = document.getElementById('cube-shown-button');
-            const cubeShownDropdown = document.getElementById('cube-shown-dropdown');
-            const cubeShownSelect = document.getElementById('cube-shown-select');
+            updateAllCubeSelectors();
             
-            cubeShownButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.dice-selector-dropdown').forEach(d => {
-                    if (d !== cubeShownDropdown) d.classList.remove('active');
-                });
-                cubeShownDropdown.classList.toggle('active');
-            });
-
-            cubeShownDropdown.querySelectorAll('.dice-option').forEach(option => {
-                option.addEventListener('click', (e) => {
+            // Setup click handlers for cube selectors
+            ['value', 'shown'].forEach(selectorType => {
+                const button = document.getElementById(`cube-${selectorType}-button`);
+                const dropdown = document.getElementById(`cube-${selectorType}-dropdown`);
+                const select = document.getElementById(`cube-${selectorType}-select`);
+                
+                button.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const value = option.getAttribute('data-value');
-                    cubeShownSelect.value = value;
-                    cubeShownSelect.dispatchEvent(new Event('change'));
-                    updateCubeSelectorDisplay('cube-shown-select', 'cube-shown-button');
-                    cubeShownDropdown.classList.remove('active');
+                    // Close other dropdowns
+                    document.querySelectorAll('.dice-selector-dropdown').forEach(d => {
+                        if (d !== dropdown) d.classList.remove('active');
+                    });
+                    dropdown.classList.toggle('active');
                 });
-            });
 
-            // Initialize cube-value selector
-            updateCubeSelectorDisplay('cube-value-select', 'cube-value-button');
-            const cubeValueButton = document.getElementById('cube-value-button');
-            const cubeValueDropdown = document.getElementById('cube-value-dropdown');
-            const cubeValueSelect = document.getElementById('cube-value-select');
-            
-            cubeValueButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.dice-selector-dropdown').forEach(d => {
-                    if (d !== cubeValueDropdown) d.classList.remove('active');
-                });
-                cubeValueDropdown.classList.toggle('active');
-            });
-
-            cubeValueDropdown.querySelectorAll('.dice-option').forEach(option => {
-                option.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const value = option.getAttribute('data-value');
-                    cubeValueSelect.value = value;
-                    cubeValueSelect.dispatchEvent(new Event('change'));
-                    updateCubeSelectorDisplay('cube-value-select', 'cube-value-button');
-                    cubeValueDropdown.classList.remove('active');
+                // Setup option click handlers
+                dropdown.querySelectorAll('.dice-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const value = option.getAttribute('data-value');
+                        select.value = value;
+                        select.dispatchEvent(new Event('change'));
+                        updateCubeSelectorDisplay(selectorType);
+                        dropdown.classList.remove('active');
+                    });
                 });
             });
         }
@@ -2099,12 +2082,6 @@
         document.getElementById('dice2-select').addEventListener('change', () => {
             handleDiceChange('dice2-select', 'dice1-select');
             updateDiceSelectorDisplay(2);
-        });
-        document.getElementById('cube-shown-select').addEventListener('change', () => {
-            updateCubeSelectorDisplay('cube-shown-select', 'cube-shown-button');
-        });
-        document.getElementById('cube-value-select').addEventListener('change', () => {
-            updateCubeSelectorDisplay('cube-value-select', 'cube-value-button');
         });
         document.getElementById('show-button').addEventListener('click', () => {
             const xgid = generateXGID();
@@ -2214,10 +2191,7 @@
             document.getElementById('dice2-select').value = '0';
             updateCubeSelectorsVisibility();
             updateAllDiceSelectors();
-            if (typeof updateCubeSelectorDisplay === 'function') {
-                updateCubeSelectorDisplay('cube-shown-select', 'cube-shown-button');
-                updateCubeSelectorDisplay('cube-value-select', 'cube-value-button');
-            }
+            updateAllCubeSelectors();
 
             document.getElementById('turn-select').value = 'white';
             document.getElementById('cube-owner-select').value = 'white';
@@ -2257,10 +2231,7 @@
             document.getElementById('dice2-select').value = '0';
             updateCubeSelectorsVisibility();
             updateAllDiceSelectors();
-            if (typeof updateCubeSelectorDisplay === 'function') {
-                updateCubeSelectorDisplay('cube-shown-select', 'cube-shown-button');
-                updateCubeSelectorDisplay('cube-value-select', 'cube-value-button');
-            }
+            updateAllCubeSelectors();
 
             updateSelectOptions('white');
             updateBarSelects();
