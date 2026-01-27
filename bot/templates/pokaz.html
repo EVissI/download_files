@@ -880,6 +880,94 @@
             font-weight: bold;
         }
 
+        .cube-selector-custom {
+            position: relative;
+            display: inline-block;
+        }
+
+        .cube-selector-button {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #555;
+            border-radius: 8px;
+            background-color: #2d2d2d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, background-color 0.2s;
+            overflow: hidden;
+        }
+
+        .cube-selector-button:hover {
+            border-color: #777;
+            background-color: #3a3a3a;
+        }
+
+        .cube-selector-button img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .cube-selector-button.empty {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .cube-selector-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.25rem;
+            background-color: #3b3b3b;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 0.5rem;
+            display: none;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .cube-selector-dropdown.active {
+            display: flex;
+        }
+
+        .cube-option {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #555;
+            border-radius: 6px;
+            background-color: #2d2d2d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .cube-option:hover {
+            border-color: #007bff;
+            transform: scale(1.1);
+        }
+
+        .cube-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .cube-option.empty {
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
         .turn-dice-divider {
             width: 1px;
             min-height: 40px;
@@ -1222,16 +1310,16 @@
             </div>
             <div class="cube-shown-selector">
                 <label for="cube-shown-select">Показан куб?</label>
-                <div class="dice-selector-custom">
-                    <div class="dice-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
-                    <div class="dice-selector-dropdown" id="cube-shown-dropdown">
-                        <div class="dice-option empty" data-value="0">0</div>
-                        <div class="dice-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
-                        <div class="dice-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
-                        <div class="dice-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
-                        <div class="dice-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
-                        <div class="dice-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
-                        <div class="dice-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
+                <div class="cube-selector-custom">
+                    <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
+                    <div class="cube-selector-dropdown" id="cube-shown-dropdown">
+                        <div class="cube-option empty" data-value="0">0</div>
+                        <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
+                        <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
+                        <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
+                        <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
+                        <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
+                        <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
                     </div>
                     <select id="cube-shown-select" class="sr-only" style="display: none;">
                         <option value="0" selected>0</option>
@@ -1254,16 +1342,16 @@
             <div class="cube-value-options">
                 <div>
                     <label for="cube-value-select">Значение куба</label>
-                    <div class="dice-selector-custom">
-                        <div class="dice-selector-button empty" id="cube-value-button" data-cube="value">0</div>
-                        <div class="dice-selector-dropdown" id="cube-value-dropdown">
-                            <div class="dice-option empty" data-value="0">0</div>
-                            <div class="dice-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
-                            <div class="dice-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
-                            <div class="dice-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
-                            <div class="dice-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
-                            <div class="dice-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
-                            <div class="dice-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
+                    <div class="cube-selector-custom">
+                        <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">0</div>
+                        <div class="cube-selector-dropdown" id="cube-value-dropdown">
+                            <div class="cube-option empty" data-value="0">0</div>
+                            <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
+                            <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
+                            <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
+                            <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
+                            <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
+                            <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
                         </div>
                         <select id="cube-value-select" class="sr-only" style="display: none;">
                             <option value="0" selected>0</option>
@@ -1994,8 +2082,8 @@
                 
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    // Close other dropdowns
-                    document.querySelectorAll('.dice-selector-dropdown').forEach(d => {
+                    // Close other dropdowns (both dice and cube)
+                    document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown').forEach(d => {
                         if (d !== dropdown) d.classList.remove('active');
                     });
                     dropdown.classList.toggle('active');
@@ -2025,8 +2113,8 @@
             dropdownCloseHandlerSetup = true;
             
             document.addEventListener('click', (e) => {
-                if (!e.target.closest('.dice-selector-custom')) {
-                    document.querySelectorAll('.dice-selector-dropdown').forEach(d => {
+                if (!e.target.closest('.dice-selector-custom') && !e.target.closest('.cube-selector-custom')) {
+                    document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown').forEach(d => {
                         d.classList.remove('active');
                     });
                 }
@@ -2040,11 +2128,11 @@
             const value = parseInt(select.value) || 0;
             
             if (value === 0) {
-                button.className = 'dice-selector-button empty';
+                button.className = 'cube-selector-button empty';
                 button.textContent = '0';
                 button.innerHTML = '0';
             } else {
-                button.className = 'dice-selector-button';
+                button.className = 'cube-selector-button';
                 const imgSrc = `/static/Double${value}.png`;
                 button.innerHTML = `<img src="${imgSrc}" alt="${value}">`;
             }
@@ -2067,15 +2155,15 @@
                 
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    // Close other dropdowns
-                    document.querySelectorAll('.dice-selector-dropdown').forEach(d => {
+                    // Close other dropdowns (both dice and cube)
+                    document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown').forEach(d => {
                         if (d !== dropdown) d.classList.remove('active');
                     });
                     dropdown.classList.toggle('active');
                 });
 
                 // Setup option click handlers
-                dropdown.querySelectorAll('.dice-option').forEach(option => {
+                dropdown.querySelectorAll('.cube-option').forEach(option => {
                     option.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const value = option.getAttribute('data-value');
