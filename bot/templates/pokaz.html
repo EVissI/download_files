@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -793,6 +793,94 @@
             align-items: center;
         }
 
+        .dice-selector-custom {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dice-selector-button {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #555;
+            border-radius: 8px;
+            background-color: #2d2d2d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, background-color 0.2s;
+            overflow: hidden;
+        }
+
+        .dice-selector-button:hover {
+            border-color: #777;
+            background-color: #3a3a3a;
+        }
+
+        .dice-selector-button img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .dice-selector-button.empty {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .dice-selector-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.25rem;
+            background-color: #3b3b3b;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 0.5rem;
+            display: none;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .dice-selector-dropdown.active {
+            display: flex;
+        }
+
+        .dice-option {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #555;
+            border-radius: 6px;
+            background-color: #2d2d2d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .dice-option:hover {
+            border-color: #007bff;
+            transform: scale(1.1);
+        }
+
+        .dice-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .dice-option.empty {
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
         .turn-dice-divider {
             width: 1px;
             min-height: 40px;
@@ -1087,24 +1175,48 @@
                     <div class="turn-dice-divider"></div>
                     <div class="turn-dice-section">
                         <div class="dice-controls-wrapper">
-                            <select id="dice1-select" class="selector-size">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                            </select>
-                            <select id="dice2-select" class="selector-size">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                            </select>
+                            <div class="dice-selector-custom">
+                                <div class="dice-selector-button empty" id="dice1-button" data-dice="1">0</div>
+                                <div class="dice-selector-dropdown" id="dice1-dropdown">
+                                    <div class="dice-option empty" data-value="0">0</div>
+                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
+                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
+                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
+                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
+                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
+                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
+                                </div>
+                                <select id="dice1-select" class="sr-only" style="display: none;">
+                                    <option value="0" selected>0</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                </select>
+                            </div>
+                            <div class="dice-selector-custom">
+                                <div class="dice-selector-button empty" id="dice2-button" data-dice="2">0</div>
+                                <div class="dice-selector-dropdown" id="dice2-dropdown">
+                                    <div class="dice-option empty" data-value="0">0</div>
+                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
+                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
+                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
+                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
+                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
+                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
+                                </div>
+                                <select id="dice2-select" class="sr-only" style="display: none;">
+                                    <option value="0" selected>0</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1538,6 +1650,13 @@
                 turnBtn.className = 'checker-toggle-btn ' + val;
                 turnBtn.dataset.color = val;
             }
+            // Update dice selectors when turn changes
+            if (typeof updateAllDiceSelectors === 'function') {
+                updateAllDiceSelectors();
+                if (typeof updateDiceDropdownImages === 'function') {
+                    updateDiceDropdownImages();
+                }
+            }
         }
 
         function updateCubeOwnerSelect() {
@@ -1560,6 +1679,7 @@
                 updateTurnSelect();
                 updateCubeOwnerSelect();
                 updateCubeSelectorsVisibility();
+                initDiceSelectors();
                 document.getElementById('lower-score').addEventListener('change', drawBoard);
                 document.getElementById('upper-score').addEventListener('change', drawBoard);
                 document.getElementById('match_lenght').addEventListener('change', drawBoard);
@@ -1655,6 +1775,10 @@
                 if (diceDivider) diceDivider.style.display = 'block';
                 cubeValueOptions.style.display = 'flex';
             }
+            // Update dice selectors display when visibility changes
+            if (cubeShown === '0') {
+                updateAllDiceSelectors();
+            }
         }
 
         document.getElementById('cube-shown-select').addEventListener('change', () => {
@@ -1664,6 +1788,7 @@
                 document.getElementById('cube-value-select').value = cubeShown;
                 document.getElementById('dice1-select').value = '0';
                 document.getElementById('dice2-select').value = '0';
+                updateAllDiceSelectors();
             }
             drawBoard();
         });
@@ -1784,8 +1909,96 @@
                 input.dispatchEvent(new Event('change'));
             });
         });
-        document.getElementById('dice1-select').addEventListener('change', () => handleDiceChange('dice1-select', 'dice2-select'));
-        document.getElementById('dice2-select').addEventListener('change', () => handleDiceChange('dice2-select', 'dice1-select'));
+        // Custom dice selectors
+        function updateDiceSelectorDisplay(diceNum) {
+            const select = document.getElementById(`dice${diceNum}-select`);
+            const button = document.getElementById(`dice${diceNum}-button`);
+            const value = parseInt(select.value) || 0;
+            const turn = document.getElementById('turn-select').value;
+            
+            if (value === 0) {
+                button.className = 'dice-selector-button empty';
+                button.textContent = '0';
+                button.innerHTML = '0';
+            } else {
+                button.className = 'dice-selector-button';
+                const imgSrc = turn === 'white' 
+                    ? `/static/${value}w.png` 
+                    : `/static/${value}b.png`;
+                button.innerHTML = `<img src="${imgSrc}" alt="${value}">`;
+            }
+        }
+
+        function updateAllDiceSelectors() {
+            updateDiceSelectorDisplay(1);
+            updateDiceSelectorDisplay(2);
+        }
+
+        function updateDiceDropdownImages() {
+            const turn = document.getElementById('turn-select').value;
+            document.querySelectorAll('.dice-selector-dropdown .dice-option img').forEach(img => {
+                const value = img.alt;
+                if (turn === 'white') {
+                    img.src = `/static/${value}w.png`;
+                } else {
+                    img.src = img.getAttribute('data-black') || `/static/${value}b.png`;
+                }
+            });
+        }
+
+        // Initialize dice selectors
+        function initDiceSelectors() {
+            updateAllDiceSelectors();
+            
+            // Setup click handlers for buttons
+            ['1', '2'].forEach(diceNum => {
+                const button = document.getElementById(`dice${diceNum}-button`);
+                const dropdown = document.getElementById(`dice${diceNum}-dropdown`);
+                const select = document.getElementById(`dice${diceNum}-select`);
+                
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Close other dropdowns
+                    document.querySelectorAll('.dice-selector-dropdown').forEach(d => {
+                        if (d !== dropdown) d.classList.remove('active');
+                    });
+                    dropdown.classList.toggle('active');
+                });
+
+                // Setup option click handlers
+                dropdown.querySelectorAll('.dice-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const value = option.getAttribute('data-value');
+                        select.value = value;
+                        select.dispatchEvent(new Event('change'));
+                        updateDiceSelectorDisplay(diceNum);
+                        dropdown.classList.remove('active');
+                    });
+                });
+            });
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.dice-selector-custom')) {
+                    document.querySelectorAll('.dice-selector-dropdown').forEach(d => {
+                        d.classList.remove('active');
+                    });
+                }
+            });
+
+            // Update dice selectors when turn changes (will be handled by existing turn-select listener)
+            // We'll update dice selectors in updateTurnSelect function instead
+        }
+
+        document.getElementById('dice1-select').addEventListener('change', () => {
+            handleDiceChange('dice1-select', 'dice2-select');
+            updateDiceSelectorDisplay(1);
+        });
+        document.getElementById('dice2-select').addEventListener('change', () => {
+            handleDiceChange('dice2-select', 'dice1-select');
+            updateDiceSelectorDisplay(2);
+        });
         document.getElementById('show-button').addEventListener('click', () => {
             const xgid = generateXGID();
             const hintsTable = document.getElementById('hintsTable');
@@ -1893,6 +2106,7 @@
             document.getElementById('dice1-select').value = '0';
             document.getElementById('dice2-select').value = '0';
             updateCubeSelectorsVisibility();
+            updateAllDiceSelectors();
 
             document.getElementById('turn-select').value = 'white';
             document.getElementById('cube-owner-select').value = 'white';
@@ -1931,6 +2145,7 @@
             document.getElementById('dice1-select').value = '0';
             document.getElementById('dice2-select').value = '0';
             updateCubeSelectorsVisibility();
+            updateAllDiceSelectors();
 
             updateSelectOptions('white');
             updateBarSelects();
