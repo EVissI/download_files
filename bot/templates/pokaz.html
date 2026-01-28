@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1174,13 +1174,14 @@
                         </div>
                     </div>
                 </div>
+                </div>
+                <div class="game-type-right">
+                    <label>Тип игры</label>
+                    <button id="game-type-button">Манигейм</button>
+                </div>
             </div>
         </div>
         <div class="game-type">
-            <label>Тип игры</label>
-            <button id="game-type-button">Манигейм</button>
-        </div>
-        <div id="money-controls" class="money-controls">
             <div class="jb-wrap">
                 <div class="jb-title">Якоби / Бивер</div>
                 <div class="jacobi-beaver-block">
@@ -1193,17 +1194,41 @@
                 </div>
             </div>
             <div class="cube-controls-block-wrapper">
-                <div class="cube-controls-labels">
-                    <label for="cube-shown-select">Показан куб?</label>
-                    <label for="cube-value-select">Куб</label>
-                    <label for="cube-owner-select-btn">Чей куб?</label>
-                    <label for="max-cube-select">Макс куб</label>
+            <div class="cube-controls-labels">
+                <label for="cube-shown-select">Показан куб?</label>
+                <label for="cube-value-select">Куб</label>
+                <label for="cube-owner-select-btn">Чей куб?</label>
+                <label for="max-cube-select">Макс куб</label>
+            </div>
+            <div class="cube-controls-block">
+                <div class="cube-shown-selector">
+                    <div class="cube-selector-custom">
+                        <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
+                        <div class="cube-selector-dropdown" id="cube-shown-dropdown">
+                            <div class="cube-option empty" data-value="0">0</div>
+                            <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
+                            <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
+                            <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
+                            <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
+                            <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
+                            <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
+                        </div>
+                        <select id="cube-shown-select" class="sr-only" style="display: none;">
+                            <option value="0" selected>0</option>
+                            <option value="2">2</option>
+                            <option value="4">4</option>
+                            <option value="8">8</option>
+                            <option value="16">16</option>
+                            <option value="32">32</option>
+                            <option value="64">64</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="cube-controls-block">
-                    <div class="cube-shown-selector">
+                <div class="cube-value-options">
+                    <div>
                         <div class="cube-selector-custom">
-                            <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
-                            <div class="cube-selector-dropdown" id="cube-shown-dropdown">
+                            <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">0</div>
+                            <div class="cube-selector-dropdown" id="cube-value-dropdown">
                                 <div class="cube-option empty" data-value="0">0</div>
                                 <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
                                 <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
@@ -1212,7 +1237,7 @@
                                 <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
                                 <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
                             </div>
-                            <select id="cube-shown-select" class="sr-only" style="display: none;">
+                            <select id="cube-value-select" class="sr-only" style="display: none;">
                                 <option value="0" selected>0</option>
                                 <option value="2">2</option>
                                 <option value="4">4</option>
@@ -1223,56 +1248,32 @@
                             </select>
                         </div>
                     </div>
-                    <div class="cube-value-options">
-                        <div>
-                            <div class="cube-selector-custom">
-                                <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">0</div>
-                                <div class="cube-selector-dropdown" id="cube-value-dropdown">
-                                    <div class="cube-option empty" data-value="0">0</div>
-                                    <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
-                                    <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
-                                    <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
-                                    <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
-                                    <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
-                                    <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
-                                </div>
-                                <select id="cube-value-select" class="sr-only" style="display: none;">
-                                    <option value="0" selected>0</option>
-                                    <option value="2">2</option>
-                                    <option value="4">4</option>
-                                    <option value="8">8</option>
-                                    <option value="16">16</option>
-                                    <option value="32">32</option>
-                                    <option value="64">64</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="cube-owner-selector">
-                        <input type="hidden" id="cube-owner-select" value="white">
-                        <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white" data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
-                    </div>
-                    <div class="max-cube-options" id="max-cube-options-match" style="display: none;">
-                        <div>
-                            <select id="max-cube-select" class="selector-size">
-                                <option value="2">2</option>
-                                <option value="4">4</option>
-                                <option value="8" selected>8</option>
-                                <option value="16">16</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="max-cube-options_money" id="max-cube-options-money">
-                        <div>
-                            <select id="max-cube-select-m" class="selector-size">
-                                <option value="1">2</option>
-                                <option value="2">4</option>
-                                <option value="3" selected>8</option>
-                                <option value="4">16</option>
-                            </select>
-                        </div>
+                </div>
+                <div class="cube-owner-selector">
+                    <input type="hidden" id="cube-owner-select" value="white">
+                    <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white" data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
+                </div>
+                <div class="max-cube-options" id="max-cube-options-match" style="display: none;">
+                    <div>
+                        <select id="max-cube-select" class="selector-size">
+                            <option value="2">2</option>
+                            <option value="4">4</option>
+                            <option value="8" selected>8</option>
+                            <option value="16">16</option>
+                        </select>
                     </div>
                 </div>
+                <div class="max-cube-options_money" id="max-cube-options-money">
+                    <div>
+                        <select id="max-cube-select-m" class="selector-size">
+                            <option value="1">2</option>
+                            <option value="2">4</option>
+                            <option value="3" selected>8</option>
+                            <option value="4">16</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
             </div>
         </div>
         <div class="game-panel">
