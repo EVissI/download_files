@@ -1504,9 +1504,9 @@
                     <div class="turn-dice-section">
                         <div class="dice-controls-wrapper">
                             <div class="dice-selector-custom">
-                                <div class="dice-selector-button empty" id="dice1-button" data-dice="1">0</div>
+                                <div class="dice-selector-button empty" id="dice1-button" data-dice="1">нет</div>
                                 <div class="dice-selector-dropdown" id="dice1-dropdown">
-                                    <div class="dice-option empty" data-value="0">0</div>
+                                    <div class="dice-option empty" data-value="0">нет</div>
                                     <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1"
                                             data-black="/static/1b.png"></div>
                                     <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2"
@@ -1531,9 +1531,9 @@
                                 </select>
                             </div>
                             <div class="dice-selector-custom">
-                                <div class="dice-selector-button empty" id="dice2-button" data-dice="2">0</div>
+                                <div class="dice-selector-button empty" id="dice2-button" data-dice="2">нет</div>
                                 <div class="dice-selector-dropdown" id="dice2-dropdown">
-                                    <div class="dice-option empty" data-value="0">0</div>
+                                    <div class="dice-option empty" data-value="0">нет</div>
                                     <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1"
                                             data-black="/static/1b.png"></div>
                                     <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2"
@@ -2231,8 +2231,8 @@
 
             if (value === 0) {
                 button.className = 'dice-selector-button empty';
-                button.textContent = '0';
-                button.innerHTML = '0';
+                button.textContent = 'нет';
+                button.innerHTML = 'нет';
             } else {
                 button.className = 'dice-selector-button';
                 const imgSrc = turn === 'white'
