@@ -223,6 +223,7 @@
             margin: 0;
             padding: clamp(0.15rem, 1vw, 0.3rem) clamp(0.3rem, 2vw, 0.7rem);
         }
+
         .cube-controls-block .cube-shown-selector,
         .cube-controls-block .cube-owner-selector,
         .cube-controls-block .cube-value-options,
@@ -437,7 +438,7 @@
             justify-content: center;
             transition: opacity 0.3s ease-in-out;
         }
-        
+
         .match-panel.hidden {
             display: none;
         }
@@ -452,6 +453,7 @@
             align-items: center;
             width: 100%;
         }
+
         .manigeym-panel {
             display: flex;
             width: 100%;
@@ -477,7 +479,8 @@
             border-radius: clamp(8px, 2vw, 12px);
             box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
         }
-        .score-inputs > div {
+
+        .score-inputs>div {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -489,17 +492,20 @@
             font-size: clamp(0.7rem, 1.3vw, 0.85rem);
             text-align: center;
         }
+
         .match-length-selector {
             display: flex;
             align-items: center;
             flex-direction: column;
             gap: 0.3rem;
         }
+
         .match-length-selector label {
             color: white;
             font-size: clamp(0.7rem, 1.3vw, 0.85rem);
             text-align: center;
         }
+
         .match-length-selector select {
             text-align: center;
             border: 1px solid #555;
@@ -512,10 +518,12 @@
             padding: 0.15rem;
             transition: background-color 0.2s, border-color 0.2s;
         }
+
         .match-length-selector select:hover {
             background-color: #3a3a3a;
             border-color: #666;
         }
+
         .score-inputs select {
             text-align: center;
             border: 1px solid #555;
@@ -528,6 +536,7 @@
             padding: 0.15rem;
             transition: background-color 0.2s, border-color 0.2s;
         }
+
         .score-inputs select:hover {
             background-color: #3a3a3a;
             border-color: #666;
@@ -592,12 +601,14 @@
             background-color: #3a3a3a;
             border-color: #555;
         }
+
         .game-type-right {
             display: flex;
             flex-direction: column;
             gap: 0.3rem;
             align-items: center;
         }
+
         .game-type-right label {
             text-align: center;
             font-size: 0.6rem;
@@ -686,7 +697,7 @@
             font-size: clamp(0.7em, 1.2vw, 0.9em);
             transition: opacity 0.3s ease-in-out;
         }
-        
+
         .jb-wrap.hidden {
             display: none;
         }
@@ -992,11 +1003,13 @@
             position: relative;
             display: inline-block;
         }
+
         .turn-dice-wrapper {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
         }
+
         .cube-selector-button {
             width: clamp(32px, 9vw, 44px);
             height: clamp(32px, 9vw, 44px);
@@ -1120,9 +1133,11 @@
             align-items: center;
             justify-content: center;
         }
-        .cube-owner-select-btn label{
+
+        .cube-owner-select-btn label {
             padding-left: 0.5rem;
         }
+
         .action-buttons-col.right button {
             min-width: clamp(2.2rem, 8.8vw, 3.3rem);
             min-height: clamp(2.2rem, 8.8vw, 3.3rem);
@@ -1209,20 +1224,23 @@
             padding: 10px;
             margin: 10px 0;
         }
+
         .nickname-inputs-container {
             display: flex;
             align-items: center;
             flex-direction: row;
         }
+
         .score-inputs-container {
             display: flex;
             align-items: center;
             flex-direction: row;
             gap: 0.5rem;
         }
+
         .cube-controls-labels label {
             color: white;
-            font-size: clamp(0.6rem, 1.2vw, 0.7rem);  
+            font-size: clamp(0.6rem, 1.2vw, 0.7rem);
             text-align: left;
             flex-shrink: 0;
         }
@@ -1252,7 +1270,7 @@
         <h1>Backgammon Board Editor</h1>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
-            
+
         </div>
         <div class="selectors-wrapper">
             <div class="selectors-container">
@@ -1266,7 +1284,7 @@
                         <div class="checker-btn black" data-color="black" role="button" aria-label="Черные шашки">
                             <div class="checker-dot"></div>
                         </div>
-                    </div>  
+                    </div>
                 </div>
                 <div class="bar-selector">
                     <div class="bar-label">На баре</div>
@@ -1283,162 +1301,138 @@
                         </div>
                     </div>
                 </div>
-                </div>
-                <div class="jb-wrap">
-                    <div class="jb-title">Якоби / Бивер   Макс куб</div>
-                    <div class="jacobi-beaver-block">
-                        <div class="jb-row">
-                            <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
-                            <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
-                            <div class="max-cube-options_money" id="max-cube-options-money">
-                                <div>
-                                    <select id="max-cube-select-m" class="selector-size">
-                                        <option value="1">2</option>
-                                        <option value="2">4</option>
-                                        <option value="3" selected>8</option>
-                                        <option value="4">16</option>
-                                    </select>
-                                </div>
+            </div>
+            <div class="jb-wrap">
+                <div class="jb-title">Якоби / Бивер Макс куб</div>
+                <div class="jacobi-beaver-block">
+                    <div class="jb-row">
+                        <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
+                        <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
+                        <div class="max-cube-options_money" id="max-cube-options-money">
+                            <div>
+                                <select id="max-cube-select-m" class="selector-size">
+                                    <option value="1">2</option>
+                                    <option value="2">4</option>
+                                    <option value="3" selected>8</option>
+                                    <option value="4">16</option>
+                                </select>
                             </div>
                         </div>
-                        <input type="hidden" id="jacobi-select" value="1">
-                        <input type="hidden" id="beaver-select" value="0">
                     </div>
-                </div>
-                <div class="match-panel">
-                    <div class="match-panel-headers">
-                        <div class="match-header">Очки Н.</div>
-                        <div class="match-header">Очки В.</div>
-                        <div class="match-header">Длина матча</div>
-                        <div class="match-header">Макс Куб</div>
-                    </div>
-                    <div class="score-inputs">
-                        <div>
-                            <select id="lower-score" class="selector-size">
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="10">10</option>
-                                <option value="11">11</option>
-                                <option value="12">12</option>
-                                <option value="13">13</option>
-                                <option value="14">14</option>
-                                <option value="15">15</option>
-                                <option value="16">16</option>
-                                <option value="17">17</option>
-                                <option value="18">18</option>
-                                <option value="19">19</option>
-                                <option value="20">20</option>
-                            </select>
-                        </div>
-                        <div>
-                            <select id="upper-score" class="selector-size">
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="10">10</option>
-                                <option value="11">11</option>
-                                <option value="12">12</option>
-                                <option value="13">13</option>
-                                <option value="14">14</option>
-                                <option value="15">15</option>
-                                <option value="16">16</option>
-                                <option value="17">17</option>
-                                <option value="18">18</option>
-                                <option value="19">19</option>
-                                <option value="20">20</option>
-                            </select>
-                        </div>
-                        <div class="match-length-selector">
-                            <select id="match_lenght" class="selector-size">
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="10">10</option>
-                                <option value="11">11</option>
-                                <option value="12">12</option>
-                                <option value="13">13</option>
-                                <option value="14">14</option>
-                                <option value="15">15</option>
-                                <option value="16">16</option>
-                                <option value="17">17</option>
-                                <option value="18">18</option>
-                                <option value="19">19</option>
-                                <option value="20">20</option>
-                                <option value="21">21</option>
-                            </select>
-                        </div>
-                        <div class="match-length-selector">
-                            <select id="max-cube-select" class="selector-size">
-                                <option value="1">2</option>
-                                <option value="2">4</option>
-                                <option value="3" selected>8</option>
-                                <option value="4">16</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="game-type-right">
-                    <label>Тип игры</label>
-                    <button id="game-type-button" title="Манигейм"><i class="fa fa-rub"></i></button>
+                    <input type="hidden" id="jacobi-select" value="1">
+                    <input type="hidden" id="beaver-select" value="0">
                 </div>
             </div>
+            <div class="match-panel">
+                <div class="match-panel-headers">
+                    <div class="match-header">Очки Н.</div>
+                    <div class="match-header">Очки В.</div>
+                    <div class="match-header">Длина матча</div>
+                    <div class="match-header">Макс Куб</div>
+                </div>
+                <div class="score-inputs">
+                    <div>
+                        <select id="lower-score" class="selector-size">
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select id="upper-score" class="selector-size">
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
+                    <div class="match-length-selector">
+                        <select id="match_lenght" class="selector-size">
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                            <option value="21">21</option>
+                        </select>
+                    </div>
+                    <div class="match-length-selector">
+                        <select id="max-cube-select" class="selector-size">
+                            <option value="1">2</option>
+                            <option value="2">4</option>
+                            <option value="3" selected>8</option>
+                            <option value="4">16</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="game-type-right">
+                <label>Тип игры</label>
+                <button id="game-type-button" title="Манигейм"><i class="fa fa-rub"></i></button>
+            </div>
         </div>
+    </div>
 
-        <div class="controls-row">
+    <div class="controls-row">
         <div class="cube-controls-block-wrapper">
-        <div class="cube-controls-labels">
-            <label for="cube-shown-select">Показан куб?</label>
-            <label for="cube-value-select">Куб</label>
-            <label for="cube-owner-select-btn">Чей куб?</label>
-        </div>
-        <div class="cube-controls-block">
-            <div class="cube-shown-selector">
-                <div class="cube-selector-custom">
-                    <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
-                    <div class="cube-selector-dropdown" id="cube-shown-dropdown">
-                        <div class="cube-option empty" data-value="0">0</div>
-                        <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
-                        <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
-                        <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
-                        <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
-                        <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
-                        <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
-                    </div>
-                    <select id="cube-shown-select" class="sr-only" style="display: none;">
-                        <option value="0" selected>0</option>
-                        <option value="2">2</option>
-                        <option value="4">4</option>
-                        <option value="8">8</option>
-                        <option value="16">16</option>
-                        <option value="32">32</option>
-                        <option value="64">64</option>
-                    </select>
-                </div>
+            <div class="cube-controls-labels">
+                <label for="cube-shown-select">Показан куб?</label>
+                <label for="cube-value-select">Куб</label>
+                <label for="cube-owner-select-btn">Чей куб?</label>
             </div>
-            <div class="cube-value-options">
-                <div>
+            <div class="cube-controls-block">
+                <div class="cube-shown-selector">
                     <div class="cube-selector-custom">
-                        <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">0</div>
-                        <div class="cube-selector-dropdown" id="cube-value-dropdown">
+                        <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
+                        <div class="cube-selector-dropdown" id="cube-shown-dropdown">
                             <div class="cube-option empty" data-value="0">0</div>
                             <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
                             <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
@@ -1447,7 +1441,7 @@
                             <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
                             <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
                         </div>
-                        <select id="cube-value-select" class="sr-only" style="display: none;">
+                        <select id="cube-shown-select" class="sr-only" style="display: none;">
                             <option value="0" selected>0</option>
                             <option value="2">2</option>
                             <option value="4">4</option>
@@ -1458,12 +1452,37 @@
                         </select>
                     </div>
                 </div>
+                <div class="cube-value-options">
+                    <div>
+                        <div class="cube-selector-custom">
+                            <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">0</div>
+                            <div class="cube-selector-dropdown" id="cube-value-dropdown">
+                                <div class="cube-option empty" data-value="0">0</div>
+                                <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
+                                <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
+                                <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
+                                <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
+                                <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
+                                <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
+                            </div>
+                            <select id="cube-value-select" class="sr-only" style="display: none;">
+                                <option value="0" selected>0</option>
+                                <option value="2">2</option>
+                                <option value="4">4</option>
+                                <option value="8">8</option>
+                                <option value="16">16</option>
+                                <option value="32">32</option>
+                                <option value="64">64</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="cube-owner-selector">
+                    <input type="hidden" id="cube-owner-select" value="white">
+                    <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white"
+                        data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
+                </div>
             </div>
-            <div class="cube-owner-selector">
-                <input type="hidden" id="cube-owner-select" value="white">
-                <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white" data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
-            </div>
-        </div>
         </div>
         <div class="turn-dice-wrapper">
             <div class="turn-dice-labels">
@@ -1475,7 +1494,8 @@
                     <div class="turn-dice-section">
                         <div class="turn-dice-controls">
                             <input type="hidden" id="turn-select" value="white">
-                            <button type="button" id="turn-select-btn" class="checker-toggle-btn white" data-target="turn-select" aria-label="Чей ход?" data-color="white"></button>
+                            <button type="button" id="turn-select-btn" class="checker-toggle-btn white"
+                                data-target="turn-select" aria-label="Чей ход?" data-color="white"></button>
                         </div>
                     </div>
                     <div class="turn-dice-divider"></div>
@@ -1485,12 +1505,18 @@
                                 <div class="dice-selector-button empty" id="dice1-button" data-dice="1">0</div>
                                 <div class="dice-selector-dropdown" id="dice1-dropdown">
                                     <div class="dice-option empty" data-value="0">0</div>
-                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
-                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
-                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
-                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
-                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
-                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
+                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1"
+                                            data-black="/static/1b.png"></div>
+                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2"
+                                            data-black="/static/2b.png"></div>
+                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3"
+                                            data-black="/static/3b.png"></div>
+                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4"
+                                            data-black="/static/4b.png"></div>
+                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5"
+                                            data-black="/static/5b.png"></div>
+                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6"
+                                            data-black="/static/6b.png"></div>
                                 </div>
                                 <select id="dice1-select" class="sr-only" style="display: none;">
                                     <option value="0" selected>0</option>
@@ -1506,12 +1532,18 @@
                                 <div class="dice-selector-button empty" id="dice2-button" data-dice="2">0</div>
                                 <div class="dice-selector-dropdown" id="dice2-dropdown">
                                     <div class="dice-option empty" data-value="0">0</div>
-                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
-                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
-                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
-                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
-                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
-                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
+                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1"
+                                            data-black="/static/1b.png"></div>
+                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2"
+                                            data-black="/static/2b.png"></div>
+                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3"
+                                            data-black="/static/3b.png"></div>
+                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4"
+                                            data-black="/static/4b.png"></div>
+                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5"
+                                            data-black="/static/5b.png"></div>
+                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6"
+                                            data-black="/static/6b.png"></div>
                                 </div>
                                 <select id="dice2-select" class="sr-only" style="display: none;">
                                     <option value="0" selected>0</option>
@@ -1537,7 +1569,7 @@
                 <button id="show-button"><i class="fa fa-eye"></i></button>
             </div>
         </div>
-        </div>
+    </div>
     </div>
 
     <div class="hints-table">
@@ -1722,7 +1754,7 @@
                 boardWrapper.appendChild(select);
             }
             updateSelectOptions('white');
-            updateBarSelects(); 
+            updateBarSelects();
         }
 
         function updateDropdownPosition(select, point, scale) {
@@ -2040,8 +2072,8 @@
                 if (cubeValueLabel) cubeValueLabel.style.display = 'none';
             } else {
                 if (diceSection) diceSection.style.display = 'flex';
-                if (diceLabel) diceLabel.style.display = 'block';
-                if (diceDivider) diceDivider.style.display = 'block';
+                if (diceLabel) diceLabel.style.display = 'flex';
+                if (diceDivider) diceDivider.style.display = 'flex';
                 if (cubeValueOptions) cubeValueOptions.style.display = 'flex';
                 if (cubeValueLabel) cubeValueLabel.style.display = '';
             }
@@ -2190,15 +2222,15 @@
             const button = document.getElementById(`dice${diceNum}-button`);
             const value = parseInt(select.value) || 0;
             const turn = document.getElementById('turn-select').value;
-            
+
             if (value === 0) {
                 button.className = 'dice-selector-button empty';
                 button.textContent = '0';
                 button.innerHTML = '0';
             } else {
                 button.className = 'dice-selector-button';
-                const imgSrc = turn === 'white' 
-                    ? `/static/${value}w.png` 
+                const imgSrc = turn === 'white'
+                    ? `/static/${value}w.png`
                     : `/static/${value}b.png`;
                 button.innerHTML = `<img src="${imgSrc}" alt="${value}">`;
             }
@@ -2230,13 +2262,13 @@
         // Initialize dice selectors
         function initDiceSelectors() {
             updateAllDiceSelectors();
-            
+
             // Setup click handlers for buttons
             ['1', '2'].forEach(diceNum => {
                 const button = document.getElementById(`dice${diceNum}-button`);
                 const dropdown = document.getElementById(`dice${diceNum}-dropdown`);
                 const select = document.getElementById(`dice${diceNum}-select`);
-                
+
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
                     // Close other dropdowns (both dice and cube)
@@ -2268,7 +2300,7 @@
         function setupDropdownCloseHandler() {
             if (dropdownCloseHandlerSetup) return;
             dropdownCloseHandlerSetup = true;
-            
+
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.dice-selector-custom') && !e.target.closest('.cube-selector-custom')) {
                     document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown').forEach(d => {
@@ -2283,7 +2315,7 @@
             const select = document.getElementById(`cube-${selectorType}-select`);
             const button = document.getElementById(`cube-${selectorType}-button`);
             const value = parseInt(select.value) || 0;
-            
+
             if (value === 0) {
                 button.className = 'cube-selector-button empty';
                 button.textContent = '0';
@@ -2303,18 +2335,18 @@
         // Initialize cube selectors
         function initCubeSelectors() {
             updateAllCubeSelectors();
-            
+
             // Setup click handlers for cube selectors
             ['value', 'shown'].forEach(selectorType => {
                 const button = document.getElementById(`cube-${selectorType}-button`);
                 const dropdown = document.getElementById(`cube-${selectorType}-dropdown`);
                 const select = document.getElementById(`cube-${selectorType}-select`);
-                
+
                 // Убеждаемся, что меню закрыто при инициализации
                 if (dropdown) {
                     dropdown.classList.remove('active');
                 }
-                
+
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
                     // Close other dropdowns (both dice and cube)
@@ -2529,7 +2561,7 @@
             const jbWrap = document.querySelector('.jb-wrap');
             const matchPanel = document.querySelector('.match-panel');
             const gameTypeButton = document.getElementById('game-type-button');
-            
+
             // Toggle visibility
             if (jbWrap.style.display === 'none') {
                 // Switch to money game
