@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -182,10 +182,7 @@
         }
 
         .cube_panel {
-            display: flex;
-            flex-direction: row;
-            width: 100%;
-            gap: 0.5rem;
+            display: none;
         }
 
         .selectors-container {
@@ -203,11 +200,14 @@
 
         .game-type {
             display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0.5rem;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(0.3rem, 2vw, 0.8rem);
             margin: 0 auto;
-            padding-top: 0.5rem;
+            padding-top: clamp(0.3rem, 1.5vw, 0.6rem);
+            flex-wrap: wrap;
+            max-width: 100%;
         }
 
         .money-controls {
@@ -223,13 +223,13 @@
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 0.4rem;
+            gap: clamp(0.2rem, 1.5vw, 0.4rem);
             background-color: #3b3b3b;
-            border: 3px double #555;
-            border-radius: 12px;
+            border: clamp(2px, 0.5vw, 3px) double #555;
+            border-radius: clamp(8px, 2vw, 12px);
             box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
-            margin: 0 auto;
-            padding: 0.2rem 0.7rem;
+            margin: 0;
+            padding: clamp(0.15rem, 1vw, 0.3rem) clamp(0.3rem, 2vw, 0.7rem);
         }
         .cube-controls-block .cube-shown-selector,
         .cube-controls-block .cube-owner-selector,
@@ -497,20 +497,11 @@
         }
 
         .left-panel2 {
-            width: 50%;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            padding-top: 1rem;
+            display: none;
         }
 
         .right-panel2 {
-            width: 50%;
-            display: flex;
-            flex-direction: column;
-            padding-top: 1rem;
-            gap: 0.5rem;
-            align-items: center;
+            display: none;
         }
 
         .turn-selector {
@@ -578,8 +569,8 @@
         }
 
         .checker-toggle-btn {
-            width: 3em;
-            height: 3em;
+            width: clamp(2em, 6vw, 3em);
+            height: clamp(2em, 6vw, 3em);
             border-radius: 50%;
             border: 0.125em solid #222;
             cursor: pointer;
@@ -814,26 +805,23 @@
         .turn-dice-block {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: clamp(0.25rem, 1.5vw, 0.5rem);
             background-color: #3b3b3b;
-            border: 3px double #555;
-            border-radius: 12px;
-            padding: 0.8rem 1rem;
+            border: clamp(2px, 0.5vw, 3px) double #555;
+            border-radius: clamp(8px, 2vw, 12px);
+            padding: clamp(0.3rem, 2vw, 0.6rem) clamp(0.4rem, 2.5vw, 0.8rem);
             box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
-            margin: 0 auto;
+            margin: 0;
             max-width: 100%;
         }
 
         .turn-dice-labels {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-around;
-            align-items: center;
+            display: none;
         }
 
         .turn-dice-labels label {
             color: white;
-            font-size: 0.8rem;
+            font-size: clamp(0.6rem, 1.5vw, 0.8rem);
             text-align: center;
         }
 
@@ -868,7 +856,7 @@
 
         .dice-controls-wrapper {
             display: flex;
-            gap: 0.5rem;
+            gap: clamp(0.3rem, 1.5vw, 0.5rem);
             align-items: center;
         }
 
@@ -966,10 +954,10 @@
         }
 
         .cube-selector-button {
-            width: 40px;
-            height: 40px;
-            border: 2px solid #555;
-            border-radius: 8px;
+            width: clamp(30px, 8vw, 40px);
+            height: clamp(30px, 8vw, 40px);
+            border: clamp(1px, 0.4vw, 2px) solid #555;
+            border-radius: clamp(6px, 1.5vw, 8px);
             background-color: #2d2d2d;
             cursor: pointer;
             display: flex;
@@ -1049,26 +1037,32 @@
         }
 
         .turn-dice-divider {
-            width: 1px;
-            min-height: 40px;
+            width: clamp(1px, 0.3vw, 2px);
+            min-height: clamp(30px, 8vw, 40px);
             background-color: #555;
-            margin: 0 0.5rem;
+            margin: 0 clamp(0.2rem, 1vw, 0.5rem);
             align-self: stretch;
         }
 
         .action-buttons {
             display: flex;
             flex-direction: row;
-            gap: 1rem;
-            justify-content: left;
+            gap: clamp(0.3rem, 2vw, 0.6rem);
+            justify-content: center;
+            align-items: center;
         }
 
         .action-buttons button {
-            padding: 0.6rem 1.2rem;
-            font-size: 0.8rem;
-            border-radius: 0.3rem;
+            padding: clamp(0.3rem, 2vw, 0.5rem) clamp(0.5rem, 2.5vw, 0.8rem);
+            font-size: clamp(0.7rem, 2vw, 1rem);
+            border-radius: clamp(0.2rem, 1vw, 0.4rem);
             margin: 0;
             flex-shrink: 0;
+            min-width: clamp(2rem, 8vw, 3rem);
+            min-height: clamp(2rem, 8vw, 3rem);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .hints-table {
@@ -1156,18 +1150,27 @@
             gap: 0.5rem;
         }
         .cube-controls-labels {
-            display: flex;
-            flex-direction: row;
-            gap: 0.5rem;
-            padding-bottom: 0.2rem  ;
+            display: none;
         }
         .cube-controls-labels label {
             color: white;
-            font-size: 0.7rem;  
+            font-size: clamp(0.5rem, 1.2vw, 0.7rem);  
             text-align: left;
             flex-shrink: 0;
         }
 
+        .cube-controls-block-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        /* Обертка для всех контролов в одну строку */
+        .game-type,
+        .cube-controls-block-wrapper,
+        .cube_panel {
+            padding-top: clamp(0.3rem, 1.5vw, 0.6rem);
+        }
     </style>
 </head>
 
@@ -1233,21 +1236,42 @@
                     <label>Тип игры</label>
                     <button id="game-type-button" title="Манигейм"><i class="fa fa-rub"></i></button>
                 </div>
-            </div>
+        
+        <div class="cube-controls-block-wrapper">
+        <div class="cube-controls-labels">
+            <label for="cube-shown-select">Показан куб?</label>
+            <label for="cube-value-select">Куб</label>
+            <label for="cube-owner-select-btn">Чей куб?</label>
         </div>
-        <div class="game-type">
-
-            <div class="cube-controls-block-wrapper">
-            <div class="cube-controls-labels">
-                <label for="cube-shown-select">Показан куб?</label>
-                <label for="cube-value-select">Куб</label>
-                <label for="cube-owner-select-btn">Чей куб?</label>
+        <div class="cube-controls-block">
+            <div class="cube-shown-selector">
+                <div class="cube-selector-custom">
+                    <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
+                    <div class="cube-selector-dropdown" id="cube-shown-dropdown">
+                        <div class="cube-option empty" data-value="0">0</div>
+                        <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
+                        <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
+                        <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
+                        <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
+                        <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
+                        <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
+                    </div>
+                    <select id="cube-shown-select" class="sr-only" style="display: none;">
+                        <option value="0" selected>0</option>
+                        <option value="2">2</option>
+                        <option value="4">4</option>
+                        <option value="8">8</option>
+                        <option value="16">16</option>
+                        <option value="32">32</option>
+                        <option value="64">64</option>
+                    </select>
+                </div>
             </div>
-            <div class="cube-controls-block">
-                <div class="cube-shown-selector">
+            <div class="cube-value-options">
+                <div>
                     <div class="cube-selector-custom">
-                        <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
-                        <div class="cube-selector-dropdown" id="cube-shown-dropdown">
+                        <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">0</div>
+                        <div class="cube-selector-dropdown" id="cube-value-dropdown">
                             <div class="cube-option empty" data-value="0">0</div>
                             <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
                             <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
@@ -1256,7 +1280,7 @@
                             <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
                             <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
                         </div>
-                        <select id="cube-shown-select" class="sr-only" style="display: none;">
+                        <select id="cube-value-select" class="sr-only" style="display: none;">
                             <option value="0" selected>0</option>
                             <option value="2">2</option>
                             <option value="4">4</option>
@@ -1267,39 +1291,81 @@
                         </select>
                     </div>
                 </div>
-                <div class="cube-value-options">
-                    <div>
-                        <div class="cube-selector-custom">
-                            <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">0</div>
-                            <div class="cube-selector-dropdown" id="cube-value-dropdown">
-                                <div class="cube-option empty" data-value="0">0</div>
-                                <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
-                                <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
-                                <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
-                                <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
-                                <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
-                                <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
+            </div>
+            <div class="cube-owner-selector">
+                <input type="hidden" id="cube-owner-select" value="white">
+                <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white" data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
+            </div>
+        </div>
+        </div>
+        
+        <div class="turn-dice-block">
+            <div class="turn-dice-content">
+                <div class="turn-dice-section">
+                    <div class="turn-dice-controls">
+                        <input type="hidden" id="turn-select" value="white">
+                        <button type="button" id="turn-select-btn" class="checker-toggle-btn white" data-target="turn-select" aria-label="Чей ход?" data-color="white"></button>
+                    </div>
+                </div>
+                <div class="turn-dice-divider"></div>
+                <div class="turn-dice-section">
+                    <div class="dice-controls-wrapper">
+                        <div class="dice-selector-custom">
+                            <div class="dice-selector-button empty" id="dice1-button" data-dice="1">0</div>
+                            <div class="dice-selector-dropdown" id="dice1-dropdown">
+                                <div class="dice-option empty" data-value="0">0</div>
+                                <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
+                                <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
+                                <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
+                                <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
+                                <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
+                                <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
                             </div>
-                            <select id="cube-value-select" class="sr-only" style="display: none;">
+                            <select id="dice1-select" class="sr-only" style="display: none;">
                                 <option value="0" selected>0</option>
+                                <option value="1">1</option>
                                 <option value="2">2</option>
+                                <option value="3">3</option>
                                 <option value="4">4</option>
-                                <option value="8">8</option>
-                                <option value="16">16</option>
-                                <option value="32">32</option>
-                                <option value="64">64</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                            </select>
+                        </div>
+                        <div class="dice-selector-custom">
+                            <div class="dice-selector-button empty" id="dice2-button" data-dice="2">0</div>
+                            <div class="dice-selector-dropdown" id="dice2-dropdown">
+                                <div class="dice-option empty" data-value="0">0</div>
+                                <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
+                                <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
+                                <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
+                                <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
+                                <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
+                                <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
+                            </div>
+                            <select id="dice2-select" class="sr-only" style="display: none;">
+                                <option value="0" selected>0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
                             </select>
                         </div>
                     </div>
                 </div>
-                <div class="cube-owner-selector">
-                    <input type="hidden" id="cube-owner-select" value="white">
-                    <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white" data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
-                </div>
-            </div>
             </div>
         </div>
-        <div class="game-panel">
+        
+        <div class="action-buttons">
+            <button id="clear-button"><i class="fa fa-trash"></i></button>
+            <button id="init-button"><i class="fa fa-home"></i></button>
+            <button id="show-button"><i class="fa fa-eye"></i></button>
+        </div>
+
+            </div>
+        </div>
+        <!-- <div class="game-panel">
             <div class="match-panel" style="display: none;">
                 <div class='left-panel'>
                     <div class="score-inputs">
@@ -1389,80 +1455,7 @@
             <div class="centered-options">
             </div>
         </div>
-    </div>
-    <div class='cube_panel'>
-        <div class="left-panel2">
-            <div class="turn-dice-labels">
-                <label for="turn-select-btn">Чей ход?</label>
-                <label>На кубиках:</label>
-            </div>
-
-            <div class="turn-dice-block">
-                <div class="turn-dice-content">
-                    <div class="turn-dice-section">
-                        <div class="turn-dice-controls">
-                            <input type="hidden" id="turn-select" value="white">
-                            <button type="button" id="turn-select-btn" class="checker-toggle-btn white" data-target="turn-select" aria-label="Чей ход?" data-color="white"></button>
-                        </div>
-                    </div>
-                    <div class="turn-dice-divider"></div>
-                    <div class="turn-dice-section">
-                        <div class="dice-controls-wrapper">
-                            <div class="dice-selector-custom">
-                                <div class="dice-selector-button empty" id="dice1-button" data-dice="1">0</div>
-                                <div class="dice-selector-dropdown" id="dice1-dropdown">
-                                    <div class="dice-option empty" data-value="0">0</div>
-                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
-                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
-                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
-                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
-                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
-                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
-                                </div>
-                                <select id="dice1-select" class="sr-only" style="display: none;">
-                                    <option value="0" selected>0</option>
-                                    <option value="1">1</option>
-                                    <option value="2">2</option>
-                                    <option value="3">3</option>
-                                    <option value="4">4</option>
-                                    <option value="5">5</option>
-                                    <option value="6">6</option>
-                                </select>
-                            </div>
-                            <div class="dice-selector-custom">
-                                <div class="dice-selector-button empty" id="dice2-button" data-dice="2">0</div>
-                                <div class="dice-selector-dropdown" id="dice2-dropdown">
-                                    <div class="dice-option empty" data-value="0">0</div>
-                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
-                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
-                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
-                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
-                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
-                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
-                                </div>
-                                <select id="dice2-select" class="sr-only" style="display: none;">
-                                    <option value="0" selected>0</option>
-                                    <option value="1">1</option>
-                                    <option value="2">2</option>
-                                    <option value="3">3</option>
-                                    <option value="4">4</option>
-                                    <option value="5">5</option>
-                                    <option value="6">6</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="action-buttons">
-                <button id="clear-button"><i class="fa fa-trash"></i></button>
-                <button id="init-button"><i class="fa fa-home"></i></button>
-                <button id="show-button"><i class="fa fa-eye"></i></button>
-            </div>
-        </div>
-        <div class="right-panel2">
-        </div>
-    </div>
+    </div> -->
 
     <div class="hints-table">
         <div id="hintsTable" class="hints-content"></div>
