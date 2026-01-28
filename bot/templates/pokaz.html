@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -209,11 +209,21 @@
             padding-top: 0.5rem;
         }
 
+        .money-controls {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 1rem;
+        }
+
         .game-type-right {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
             margin-left: 10%;
+        }
+        .game-type-right label {
+            text-align: center;
         }
 
         .cube-controls-block {
@@ -1173,33 +1183,29 @@
                         </div>
                     </div>
                 </div>
-                </div>
-                <div class="game-type-right">
-                    <label>Тип игры</label>
-                    <button id="game-type-button">Манигейм</button>
-                </div>
             </div>
         </div>
         <div class="game-type">
-            <div class="jb-wrap">
-                <div class="jb-title">Якоби / Бивер</div>
-                <div class="jacobi-beaver-block">
-                    <div class="jb-row">
-                        <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
-                        <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
+            <div id="money-controls" class="money-controls">
+                <div class="jb-wrap">
+                    <div class="jb-title">Якоби / Бивер</div>
+                    <div class="jacobi-beaver-block">
+                        <div class="jb-row">
+                            <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
+                            <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
+                        </div>
+                        <input type="hidden" id="jacobi-select" value="1">
+                        <input type="hidden" id="beaver-select" value="0">
                     </div>
-                    <input type="hidden" id="jacobi-select" value="1">
-                    <input type="hidden" id="beaver-select" value="0">
                 </div>
-            </div>
-            <div class="cube-controls-block-wrapper">
-            <div class="cube-controls-labels">
-                <label for="cube-shown-select">Показан куб?</label>
-                <label for="cube-value-select">Куб</label>
-                <label for="cube-owner-select-btn">Чей куб?</label>
-                <label for="max-cube-select">Макс куб</label>
-            </div>
-            <div class="cube-controls-block">
+                <div class="cube-controls-block-wrapper">
+                    <div class="cube-controls-labels">
+                        <label for="cube-shown-select">Показан куб?</label>
+                        <label for="cube-value-select">Куб</label>
+                        <label for="cube-owner-select-btn">Чей куб?</label>
+                        <label for="max-cube-select">Макс куб</label>
+                    </div>
+                    <div class="cube-controls-block">
                 <div class="cube-shown-selector">
                     <div class="cube-selector-custom">
                         <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
@@ -1273,6 +1279,11 @@
                     </div>
                 </div>
             </div>
+                </div>
+            </div>
+            <div class="game-type-right">
+                <label>Тип игры</label>
+                <button id="game-type-button">Манигейм</button>
             </div>
         </div>
         <div class="game-panel">
@@ -1931,16 +1942,41 @@
             const manigeymPanel = document.querySelector('.manigeym-panel');
             const maxCubeMatch = document.getElementById('max-cube-options-match');
             const maxCubeMoney = document.getElementById('max-cube-options-money');
+            const moneyControls = document.getElementById('money-controls');
             if (currentGameType === 'матч') {
                 matchPanel.style.display = 'flex';
                 manigeymPanel.style.display = 'none';
                 if (maxCubeMatch) maxCubeMatch.style.display = 'flex';
                 if (maxCubeMoney) maxCubeMoney.style.display = 'none';
+                if (moneyControls) moneyControls.style.display = 'none';
+
+                // Обнуляем значения в скрытом блоке
+                const jacobiEl = document.getElementById('jacobi-select');
+                const beaverEl = document.getElementById('beaver-select');
+                if (jacobiEl) jacobiEl.value = '0';
+                if (beaverEl) beaverEl.value = '0';
+                document.querySelectorAll('.toggle-btn').forEach(btn => {
+                    const el = document.getElementById(btn.dataset.target);
+                    if (!el) return;
+                    const val = el.value;
+                    btn.textContent = val;
+                    btn.classList.toggle('on', val === '1');
+                });
+
+                const cubeShownSelect = document.getElementById('cube-shown-select');
+                const cubeValueSelect = document.getElementById('cube-value-select');
+                if (cubeShownSelect) cubeShownSelect.value = '0';
+                if (cubeValueSelect) cubeValueSelect.value = '0';
+                updateCubeSelectorDisplay('shown');
+                updateCubeSelectorDisplay('value');
+                updateCubeSelectorsVisibility();
+                drawBoard();
             } else {
                 matchPanel.style.display = 'none';
                 manigeymPanel.style.display = 'flex';
                 if (maxCubeMatch) maxCubeMatch.style.display = 'none';
                 if (maxCubeMoney) maxCubeMoney.style.display = 'flex';
+                if (moneyControls) moneyControls.style.display = 'flex';
             }
         });
 
@@ -1950,16 +1986,19 @@
             const diceLabel = document.querySelectorAll('.turn-dice-labels label')[1];
             const diceDivider = document.querySelector('.turn-dice-divider');
             const cubeValueOptions = document.querySelector('.cube-value-options');
+            const cubeValueLabel = document.querySelector('.cube-controls-labels label[for="cube-value-select"]');
             if (cubeShown !== '0') {
                 if (diceSection) diceSection.style.display = 'none';
                 if (diceLabel) diceLabel.style.display = 'none';
                 if (diceDivider) diceDivider.style.display = 'none';
-                cubeValueOptions.style.display = 'none';
+                if (cubeValueOptions) cubeValueOptions.style.display = 'none';
+                if (cubeValueLabel) cubeValueLabel.style.display = 'none';
             } else {
                 if (diceSection) diceSection.style.display = 'flex';
                 if (diceLabel) diceLabel.style.display = 'block';
                 if (diceDivider) diceDivider.style.display = 'block';
-                cubeValueOptions.style.display = 'flex';
+                if (cubeValueOptions) cubeValueOptions.style.display = 'flex';
+                if (cubeValueLabel) cubeValueLabel.style.display = '';
             }
             // Update dice selectors display when visibility changes
             if (cubeShown === '0') {
@@ -2387,10 +2426,12 @@
             const manigeymPanel = document.querySelector('.manigeym-panel');
             const maxCubeMatch = document.getElementById('max-cube-options-match');
             const maxCubeMoney = document.getElementById('max-cube-options-money');
+            const moneyControls = document.getElementById('money-controls');
             matchPanel.style.display = 'none';
             manigeymPanel.style.display = 'flex';
             if (maxCubeMatch) maxCubeMatch.style.display = 'none';
             if (maxCubeMoney) maxCubeMoney.style.display = 'flex';
+            if (moneyControls) moneyControls.style.display = 'flex';
 
             const hintsTableContainer = document.querySelector('.hints-table');
             const hintsTable = document.getElementById('hintsTable');
