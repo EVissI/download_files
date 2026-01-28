@@ -271,10 +271,10 @@
 
         #game-type-button {
             font-family: Arial, sans-serif;
-            font-size: 1.2rem;
+            font-size: clamp(1rem, 2vw, 1.4rem);
             color: white;
-            width: 2.5rem;
-            height: 2.5rem;
+            width: clamp(2.2rem, 5vw, 3.2rem);
+            height: clamp(2.2rem, 5vw, 3.2rem);
             background-color: #818181;
             border: 0.15rem double #4d4d4d;
             border-radius: 8px;
@@ -292,7 +292,7 @@
         }
 
         #game-type-button i {
-            font-size: 1.1rem;
+            font-size: clamp(0.9rem, 2vw, 1.3rem);
         }
 
         .checker-selector {
@@ -301,7 +301,7 @@
             align-items: center;
             gap: 0.2em;
             flex-shrink: 0;
-            font-size: 3em;
+            font-size: clamp(1.8em, 4vw, 3em);
         }
 
         .checker-options {
@@ -355,7 +355,7 @@
             gap: 0.2em;
             color: white;
             flex-shrink: 0;
-            font-size: 3em;
+            font-size: clamp(1.8em, 4vw, 3em);
         }
 
         .bar-options {
@@ -654,8 +654,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.175rem;
-            font-size: 0.5em;
+            gap: clamp(0.1rem, 0.3vw, 0.2rem);
+            font-size: clamp(0.45em, 1vw, 0.65em);
         }
 
         .jb-title {
@@ -666,11 +666,11 @@
         .jacobi-beaver-block {
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: clamp(0.15rem, 0.4vw, 0.3rem);
             background-color: #3b3b3b;
             border: 2px double #555;
             border-radius: 6px;
-            padding: 0.3rem 0.5rem;
+            padding: clamp(0.2rem, 0.5vw, 0.4rem) clamp(0.3rem, 0.8vw, 0.6rem);
             box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
         }
 
@@ -683,9 +683,9 @@
         }
 
         .toggle-btn {
-            min-width: 22px;
-            padding: 0.15rem 0.35rem;
-            font-size: 0.7rem;
+            min-width: clamp(18px, 4vw, 26px);
+            padding: clamp(0.1rem, 0.3vw, 0.2rem) clamp(0.25rem, 0.6vw, 0.4rem);
+            font-size: clamp(0.6rem, 1.2vw, 0.75rem);
             font-weight: 600;
             color: #999;
             background-color: #2d2d2d;
@@ -707,16 +707,16 @@
         }
 
         .selector-size {
-            width: 28px;
-            height: 20px;
-            font-size: 0.6rem;
+            width: clamp(22px, 5vw, 32px);
+            height: clamp(16px, 3.5vw, 24px);
+            font-size: clamp(0.5rem, 1vw, 0.7rem);
             padding: 0.15rem;
         }
 
         .jb-wrap .selector-size {
-            width: 24px;
-            height: 18px;
-            font-size: 0.55rem;
+            width: clamp(20px, 4vw, 28px);
+            height: clamp(14px, 3vw, 20px);
+            font-size: clamp(0.45rem, 0.9vw, 0.6rem);
         }
 
 
@@ -1168,83 +1168,6 @@
             flex-shrink: 0;
         }
 
-        /* Адаптивные стили для selectors-wrapper */
-        @media (min-width: 480px) {
-            .checker-selector {
-                font-size: 2.2em;
-            }
-            .bar-selector {
-                font-size: 2.2em;
-            }
-            .jb-wrap {
-                font-size: 0.55em;
-            }
-            #game-type-button {
-                width: 2.8rem;
-                height: 2.8rem;
-                font-size: 1.3rem;
-            }
-            #game-type-button i {
-                font-size: 1.2rem;
-            }
-        }
-
-        @media (min-width: 768px) {
-            .selectors-wrapper {
-                padding-top: 2.5rem;
-            }
-            .checker-selector {
-                font-size: 2.5em;
-            }
-            .bar-selector {
-                font-size: 2.5em;
-            }
-            .jb-wrap {
-                font-size: 0.6em;
-                gap: 0.2rem;
-            }
-            .jacobi-beaver-block {
-                gap: 0.3rem;
-                padding: 0.4rem 0.6rem;
-            }
-            .toggle-btn {
-                min-width: 26px;
-                padding: 0.2rem 0.4rem;
-                font-size: 0.75rem;
-            }
-            .jb-wrap .selector-size {
-                width: 28px;
-                height: 20px;
-                font-size: 0.6rem;
-            }
-            #game-type-button {
-                width: 3rem;
-                height: 3rem;
-                font-size: 1.4rem;
-            }
-            #game-type-button i {
-                font-size: 1.3rem;
-            }
-            .game-type-right label {
-                display: block;
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .checker-selector {
-                font-size: 2.8em;
-            }
-            .bar-selector {
-                font-size: 2.8em;
-            }
-            .jb-wrap {
-                font-size: 0.65em;
-            }
-            #game-type-button {
-                width: 3.2rem;
-                height: 3.2rem;
-            }
-        }
     </style>
 </head>
 
