@@ -857,7 +857,7 @@
         }
 
         .turn-dice-labels {
-            display: none;
+            flex-direction: row;
         }
 
         .turn-dice-labels label {
@@ -992,7 +992,11 @@
             position: relative;
             display: inline-block;
         }
-
+        .turn-dice-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
         .cube-selector-button {
             width: clamp(32px, 9vw, 44px);
             height: clamp(32px, 9vw, 44px);
@@ -1461,69 +1465,69 @@
             </div>
         </div>
         </div>
-        
-        <div class="turn-dice-block">
+        <div class="turn-dice-wrapper">
             <div class="turn-dice-labels">
                 <label for="turn-select">Чей ход?</label>
                 <label for="dice-select">Кости</label>
             </div>
-            <div class="turn-dice-content">
-                <div class="turn-dice-section">
-                    <div class="turn-dice-controls">
-                        <input type="hidden" id="turn-select" value="white">
-                        <button type="button" id="turn-select-btn" class="checker-toggle-btn white" data-target="turn-select" aria-label="Чей ход?" data-color="white"></button>
-                    </div>
-                </div>
-                <div class="turn-dice-divider"></div>
-                <div class="turn-dice-section">
-                    <div class="dice-controls-wrapper">
-                        <div class="dice-selector-custom">
-                            <div class="dice-selector-button empty" id="dice1-button" data-dice="1">0</div>
-                            <div class="dice-selector-dropdown" id="dice1-dropdown">
-                                <div class="dice-option empty" data-value="0">0</div>
-                                <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
-                                <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
-                                <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
-                                <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
-                                <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
-                                <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
-                            </div>
-                            <select id="dice1-select" class="sr-only" style="display: none;">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                            </select>
+            <div class="turn-dice-block">
+                <div class="turn-dice-content">
+                    <div class="turn-dice-section">
+                        <div class="turn-dice-controls">
+                            <input type="hidden" id="turn-select" value="white">
+                            <button type="button" id="turn-select-btn" class="checker-toggle-btn white" data-target="turn-select" aria-label="Чей ход?" data-color="white"></button>
                         </div>
-                        <div class="dice-selector-custom">
-                            <div class="dice-selector-button empty" id="dice2-button" data-dice="2">0</div>
-                            <div class="dice-selector-dropdown" id="dice2-dropdown">
-                                <div class="dice-option empty" data-value="0">0</div>
-                                <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
-                                <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
-                                <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
-                                <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
-                                <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
-                                <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
+                    </div>
+                    <div class="turn-dice-divider"></div>
+                    <div class="turn-dice-section">
+                        <div class="dice-controls-wrapper">
+                            <div class="dice-selector-custom">
+                                <div class="dice-selector-button empty" id="dice1-button" data-dice="1">0</div>
+                                <div class="dice-selector-dropdown" id="dice1-dropdown">
+                                    <div class="dice-option empty" data-value="0">0</div>
+                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
+                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
+                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
+                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
+                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
+                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
+                                </div>
+                                <select id="dice1-select" class="sr-only" style="display: none;">
+                                    <option value="0" selected>0</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                </select>
                             </div>
-                            <select id="dice2-select" class="sr-only" style="display: none;">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                            </select>
+                            <div class="dice-selector-custom">
+                                <div class="dice-selector-button empty" id="dice2-button" data-dice="2">0</div>
+                                <div class="dice-selector-dropdown" id="dice2-dropdown">
+                                    <div class="dice-option empty" data-value="0">0</div>
+                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1" data-black="/static/1b.png"></div>
+                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2" data-black="/static/2b.png"></div>
+                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3" data-black="/static/3b.png"></div>
+                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4" data-black="/static/4b.png"></div>
+                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5" data-black="/static/5b.png"></div>
+                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6" data-black="/static/6b.png"></div>
+                                </div>
+                                <select id="dice2-select" class="sr-only" style="display: none;">
+                                    <option value="0" selected>0</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
         <div class="action-buttons">
             <div class="action-buttons-col left">
                 <button id="init-button"><i class="fa fa-home"></i></button>
