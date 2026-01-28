@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -430,9 +430,9 @@
             display: none;
             width: 100%;
             box-sizing: border-box;
-            flex-direction: row;
-            gap: 0.8rem;
-            padding: 0.3rem;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: clamp(0.6rem, 1.5vw, 1rem);
             background-color: #3b3b3b;
             border: clamp(2px, 0.5vw, 3px) double #555;
             border-radius: clamp(8px, 2vw, 12px);
@@ -444,6 +444,27 @@
         
         .match-panel.hidden {
             display: none;
+        }
+
+        .match-panel-headers {
+            display: flex;
+            flex-direction: row;
+            gap: clamp(0.5rem, 1.5vw, 0.8rem);
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .match-header {
+            color: #e8e8e8;
+            font-size: clamp(0.75rem, 1.4vw, 0.9rem);
+            font-weight: 600;
+            text-align: center;
+            min-width: clamp(60px, 12vw, 90px);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            padding: 0.2rem 0.3rem;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+            border-radius: 4px;
         }
 
         .manigeym-panel {
@@ -460,11 +481,12 @@
 
         .score-inputs {
             display: flex;
-            gap: clamp(0.3rem, 1.5vw, 0.8rem);
+            gap: clamp(0.5rem, 1.5vw, 0.8rem);
             flex-direction: row;
             align-items: center;
             justify-content: center;
             flex-wrap: wrap;
+            width: 100%;
         }
 
         .score-inputs > div {
@@ -472,6 +494,7 @@
             flex-direction: column;
             align-items: center;
             gap: 0.3rem;
+            min-width: clamp(60px, 12vw, 90px);
         }
 
         .score-inputs label {
@@ -1297,7 +1320,12 @@
                     </div>
                 </div>
                 <div class="match-panel">
-                    <div class="jb-title">Очки Н. Очки В. Длина матча Макс Куб</div>
+                    <div class="match-panel-headers">
+                        <div class="match-header">Очки Н.</div>
+                        <div class="match-header">Очки В.</div>
+                        <div class="match-header">Длина матча</div>
+                        <div class="match-header">Макс Куб</div>
+                    </div>
                     <div class="score-inputs">
                         <div>
                             <select id="lower-score" class="selector-size">
