@@ -43,6 +43,23 @@
             display: none;
         }
 
+        /* DEBUG: XGID Display - удалить потом */
+        .xgid-display {
+            padding: 5px;
+            background: #333;
+            color: white;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .xgid-close {
+            margin-left: 10px;
+            cursor: pointer;
+            background: #555;
+            border: none;
+            color: white;
+            padding: 2px 8px;
+        }
+
         .board-wrapper {
             position: relative;
             margin-top: 1.5rem;
@@ -1456,6 +1473,11 @@
 <body>
     <div class="container">
         <h1>Backgammon Board Editor</h1>
+        <!-- DEBUG: XGID - удалить потом -->
+        <div id="xgid-display" class="xgid-display" style="display: none;">
+            XGID: <span id="xgid-text"></span>
+            <button id="xgid-close" class="xgid-close">X</button>
+        </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
 
@@ -2729,12 +2751,19 @@
             handleDiceChange('dice2-select', 'dice1-select');
             updateDiceSelectorDisplay(2);
         });
+        // DEBUG: XGID - удалить потом
+        function showXGID(xgid) {
+            document.getElementById('xgid-text').textContent = xgid;
+            document.getElementById('xgid-display').style.display = 'block';
+        }
+        function hideXGID() {
+            document.getElementById('xgid-display').style.display = 'none';
+        }
+        document.getElementById('xgid-close').addEventListener('click', hideXGID);
+
         document.getElementById('show-button').addEventListener('click', () => {
             const xgid = generateXGID();
-            
-            // Show alert with generated XGID string
-            alert('XGID: ' + xgid);
-            
+            showXGID(xgid); // DEBUG - удалить потом
             const hintsTable = document.getElementById('hintsTable');
             const hintsTableContainer = document.querySelector('.hints-table');
 
@@ -2875,6 +2904,7 @@
             hintsTableContainer.classList.remove('active');
             hintsTable.classList.remove('active');
 
+            hideXGID(); // DEBUG - удалить потом
             drawBoard();
             hideClearModal();
         }
@@ -2937,6 +2967,7 @@
             hintsTableContainer.classList.remove('active');
             hintsTable.classList.remove('active');
 
+            hideXGID(); // DEBUG - удалить потом
             drawBoard();
         });
 
