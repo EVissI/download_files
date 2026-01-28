@@ -7,90 +7,157 @@
     <title>Backgammon Board Editor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* CSS Variables для легкой настройки */
-        :root {
-            --color-bg-primary: #1a1a1a;
-            --color-bg-secondary: #2a2a2a;
-            --color-bg-tertiary: #2d2d2d;
-            --color-bg-panel: #3b3b3b;
-            --color-border: #444;
-            --color-border-dark: #555;
-            --color-text: white;
-            --color-text-muted: #999;
-            --color-primary: #007bff;
-            --color-primary-hover: #0056b3;
-            --color-error: #dc3545;
-            --gradient-white: radial-gradient(circle at 30% 30%, #ffffff, #d9d9d9 60%, #bfbfbf);
-            --gradient-black: radial-gradient(circle at 30% 30%, #3a3a3a, #1e1e1e 60%, #0f0f0f);
-            --border-radius-sm: 0.25rem;
-            --border-radius-md: 0.5rem;
-            --border-radius-lg: 12px;
-            --spacing-xs: 0.2rem;
-            --spacing-sm: 0.5rem;
-            --spacing-md: 1rem;
-            --spacing-lg: 1.5rem;
-        }
-
-        /* Базовые стили */
         * {
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            color: var(--color-text);
-            background-color: var(--color-bg-primary);
+            color: white;
+            background-color: #1a1a1a;
             margin: 0;
-            padding: 0;
+            padding: 0.5rem;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1800px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        /* Draggable panels */
+        .draggable-panel {
+            cursor: default;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 1rem;
+            background: linear-gradient(145deg, #2a2a2a, #252525);
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .draggable-panel:hover {
+            border-color: #007bff;
+            box-shadow: 0 4px 16px rgba(0, 123, 255, 0.2);
+        }
+
+        .draggable-panel.dragging {
+            opacity: 0.6;
+            transform: scale(0.98) rotate(2deg);
+            cursor: grabbing;
+            z-index: 1000;
+            box-shadow: 0 8px 24px rgba(0, 123, 255, 0.4);
+        }
+
+        .draggable-panel.drag-over {
+            border-color: #28a745;
+            background: linear-gradient(145deg, #2d3a2d, #283328);
+            box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
+        }
+
+        .drag-handle {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            cursor: move;
+            color: #666;
+            font-size: 1.2rem;
+            z-index: 10;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .drag-handle:hover {
+            color: #007bff;
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+
+        .drag-handle:active {
+            color: #0056b3;
+            background-color: rgba(0, 123, 255, 0.2);
+        }
+
+        /* Пульсирующая анимация для первого посещения */
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+        }
+
+        .drag-handle.pulse {
+            animation: pulse 2s ease-in-out 3;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            gap: 1rem;
+            align-items: center;
+            box-sizing: border-box;
         }
 
         h1 {
             display: none;
         }
 
-        /* Контейнеры */
-        .container {
-            width: 100%;
-            max-width: 100vw;
-            display: flex;
-            flex-direction: column;
-            padding: 0 var(--spacing-sm);
-        }
-
-        /* Flexbox блоки с возможностью изменения порядка через data-order */
-        [data-order] {
-            order: attr(data-order number, 0);
-        }
-
-        /* Панели - объединенные стили */
-        .left-panel,
-        .right-panel,
-        .left-panel2,
-        .right-panel2 {
-            display: flex;
-            flex-direction: column;
-            width: 50%;
-            gap: var(--spacing-sm);
-            padding-top: var(--spacing-md);
-        }
-
-        .right-panel,
-        .right-panel2 {
-            align-items: center;
-        }
-
-        /* Board Wrapper */
         .board-wrapper {
             position: relative;
-            margin-top: var(--spacing-lg);
-            flex: 1;
-            max-width: 100%;
+            margin: 1rem auto;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .green-circle {
+            position: absolute;
+            width: 0.5em;
+            height: 0.5em;
+            border-radius: 50%;
+            background-color: green;
+        }
+
+        .above-circle {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .below-circle {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
 
         canvas {
             border: 0.125rem solid #333;
-            border-radius: var(--border-radius-md);
-            background-color: var(--color-bg-secondary);
+            border-radius: 0.5rem;
+            background-color: #2a2a2a;
             width: 100%;
             max-width: 800px;
             aspect-ratio: 1 / 1;
@@ -98,43 +165,81 @@
             margin: 0 auto;
         }
 
-        /* Dropdown */
         .dropdown {
             position: absolute;
             font-size: 0.8rem;
         }
 
-        /* Общие стили для кнопок и select */
-        select,
-        .bar-checker-select,
-        .nick-selector-btn {
+        select {
             font-family: Arial, sans-serif;
             font-size: 0.8rem;
-            color: var(--color-text);
-            background-color: var(--color-bg-tertiary);
-            border: 1px solid var(--color-border);
-            border-radius: var(--border-radius-sm);
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
             padding: 0.125rem;
-            cursor: pointer;
-            text-align: center;
             -webkit-appearance: none;
             appearance: none;
+            text-align: center;
         }
 
         button {
-            background-color: var(--color-primary);
-            color: var(--color-text);
+            background-color: #007bff;
+            color: white;
             border: none;
             border-radius: 0.375rem;
             cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
+            transition: background-color 0.3s;
         }
 
         button:hover {
-            background-color: var(--color-primary-hover);
+            background-color: #0056b3;
         }
 
-        /* Утилиты */
+
+
+        .nickname-input {
+            width: 40%;
+            font-size: 0.8em;
+            text-align: center;
+            border: none;
+            background: transparent;
+            color: white;
+            outline: none;
+        }
+
+        .nickname-input::placeholder {
+            color: white;
+        }
+
+        .nickname-input:focus {
+            text-shadow: 0 0 0.375em rgba(242, 232, 102, 0.4);
+        }
+
+        .nick-separator {
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 0 0.1em;
+        }
+
+        .nick-checker {
+            position: relative;
+            width: 1em;
+            height: 1em;
+            border-radius: 50%;
+            border: 0.125em solid #222;
+            box-shadow: inset 0 0 0 0.125em rgba(0, 0, 0, 0.2);
+        }
+
+        .nick-checker.white {
+            background: radial-gradient(circle at 30% 30%, #ffffff, #d9d9d9 60%, #bfbfbf);
+        }
+
+        .nick-checker.black {
+            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1e1e1e 60%, #0f0f0f);
+        }
+
         .sr-only {
             position: absolute;
             width: 1px;
@@ -147,16 +252,29 @@
             border: 0;
         }
 
-        /* Selectors Wrapper */
         .selectors-wrapper {
             display: flex;
-            flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            padding-top: var(--spacing-lg);
+            padding-top: 2rem;
             font-size: clamp(0.7rem, 1.5vw, 1.1rem);
-            gap: var(--spacing-md);
+            box-sizing: border-box;
             max-width: 100%;
+            overflow-x: clip;
+        }
+
+        .game-panel {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            gap: 0.5rem;
+        }
+
+        .cube_panel {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            gap: 0.5rem;
         }
 
         .selectors-container {
@@ -167,90 +285,135 @@
             gap: 0.5em;
             justify-content: center;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        /* Game Type - можно перемещать через порядок в HTML */
         .game-type {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: var(--spacing-sm);
-            padding: var(--spacing-sm);
-            order: 3;
+            align-items: flex-end;
+            gap: 0.5rem;
+            margin: 0 auto;
+            padding-top: 0.5rem;
         }
 
-        .game-type-right {
+        .money-controls {
             display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
+            flex-direction: row;
             align-items: center;
-            order: 4;
+            gap: 1rem;
+            margin: 0 auto;
+            padding-top: 0.5rem;
         }
 
-        .game-type-right label {
+        .cube-controls-block {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.4rem;
+            background-color: #3b3b3b;
+            border: 3px double #555;
+            border-radius: 12px;
+            box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
+            margin: 0 auto;
+            padding: 0.2rem 0.7rem;
+        }
+        .cube-controls-block .cube-shown-selector,
+        .cube-controls-block .cube-owner-selector,
+        .cube-controls-block .cube-value-options,
+        .cube-controls-block .max-cube-options,
+        .cube-controls-block .max-cube-options_money {
+            margin: 0;
+        }
+
+        .cube-controls-block .cube-shown-selector label,
+        .cube-controls-block .cube-owner-selector label,
+        .cube-controls-block .cube-value-options label,
+        .cube-controls-block .max-cube-options label,
+        .cube-controls-block .max-cube-options_money label {
+            display: none;
+        }
+
+        .cube-controls-block .cube-shown-selector,
+        .cube-controls-block .cube-owner-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cube-controls-block .cube-value-options,
+        .cube-controls-block .max-cube-options,
+        .cube-controls-block .max-cube-options_money {
+            display: flex;
+            align-items: center;
+        }
+
+        .cube-controls-block .cube-value-options div,
+        .cube-controls-block .max-cube-options div,
+        .cube-controls-block .max-cube-options_money div {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #game-type-button {
+            font-family: Arial, sans-serif;
+            font-size: 0.96rem;
+            color: white;
+            width: 6rem;
+            height: 2.5rem;
+            background-color: #818181;
+            border: 0.2rem double #4d4d4d;
+            padding: 0.125rem;
+            cursor: pointer;
             text-align: center;
+            transition: background-color 0.3s;
         }
 
-        /* Checker & Bar Selectors */
-        .checker-selector,
-        .bar-selector {
+        #game-type-button:hover {
+            background-color: #666;
+        }
+
+        .checker-selector {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 0.2em;
             flex-shrink: 0;
             font-size: 1em;
-            order: 1;
         }
 
-        .bar-selector {
-            order: 2;
-        }
-
-        .checker-options,
-        .bar-options {
+        .checker-options {
             display: flex;
             gap: 0.3em;
             align-items: center;
-            background-color: var(--color-bg-panel);
-            border: 0.075em double var(--color-border-dark);
+            background-color: #3b3b3b;
+            border: 0.075em double #555;
             border-radius: 0.3em;
-            padding: 0.2em;
-        }
-
-        /* Чекеры - общие стили */
-        .checker-btn,
-        .bar-checker-select,
-        .checker-toggle-btn,
-        .nick-checker {
-            border-radius: 50%;
-            border: 0.05em solid #222;
-            box-shadow: inset 0 0 0 0.05em rgba(0, 0, 0, 0.2);
-        }
-
-        .checker-btn.white,
-        .bar-checker-select.white,
-        .checker-toggle-btn.white,
-        .nick-checker.white {
-            background: var(--gradient-white);
-        }
-
-        .checker-btn.black,
-        .bar-checker-select.black,
-        .checker-toggle-btn.black,
-        .nick-checker.black {
-            background: var(--gradient-black);
+            padding: 0.2em 0.2em;
         }
 
         .checker-btn {
             width: 1em;
             height: 1em;
+            border-radius: 50%;
+            border: 0.05em solid #222;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             position: relative;
+            box-shadow: inset 0 0 0 0.05em rgba(0, 0, 0, 0.2);
+        }
+
+        .checker-btn.white {
+            background: radial-gradient(circle at 30% 30%, #ffffff, #d9d9d9 60%, #bfbfbf);
+        }
+
+        .checker-btn.black {
+            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1e1e1e 60%, #0f0f0f);
         }
 
         .checker-btn .checker-dot {
@@ -266,18 +429,58 @@
             opacity: 1;
         }
 
+        .bar-selector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2em;
+            color: white;
+            flex-shrink: 0;
+            font-size: 1em;
+        }
+
+        .bar-options {
+            display: flex;
+            gap: 0.3em;
+            align-items: center;
+            background-color: #3b3b3b;
+            border: 0.075em double #555;
+            border-radius: 0.3em;
+            padding: 0.1em 0.3em;
+        }
+
+        .bar-checker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25em;
+        }
+
         .bar-checker-select {
+            border-radius: 50%;
+            border: 0.05em solid #222;
+            padding: 0;
+            text-align: center;
+            display: inline-block;
             width: 1.8em;
             height: 1.8em;
+            font-size: 1em;
             font-weight: bold;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            box-shadow: inset 0 0 0 0.05em rgba(0, 0, 0, 0.2);
         }
 
         .bar-checker-select.white {
             color: #111;
+            background: radial-gradient(circle at 30% 30%, #ffffff, #d9d9d9 60%, #bfbfbf);
         }
 
         .bar-checker-select.black {
             color: #f2f2f2;
+            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1e1e1e 60%, #0f0f0f);
         }
 
         .bar-checker-select.black option {
@@ -290,327 +493,41 @@
             background-color: #f2f2f2;
         }
 
-        .checker-toggle-btn {
-            width: 3em;
-            height: 3em;
-            border: 0.125em solid #222;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
 
-        .checker-toggle-btn:hover {
-            transform: scale(1.1);
-        }
-
-        /* Labels */
-        .bar-label,
-        .checker-label {
-            color: var(--color-text);
+        .bar-label {
+            color: white;
             font-size: 0.5em;
             text-align: center;
         }
 
-        /* Jacobi/Beaver Block */
-        .jb-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.35rem;
-            order: 5;
-        }
-
-        .jb-title {
-            color: var(--color-text);
-            font-size: 0.8rem;
-        }
-
-        .jacobi-beaver-block,
-        .cube-controls-block,
-        .turn-dice-block {
-            display: flex;
-            gap: var(--spacing-sm);
-            background-color: var(--color-bg-panel);
-            border: 3px double var(--color-border-dark);
-            border-radius: var(--border-radius-lg);
-            padding: 0.6rem 1rem;
-            box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
-        }
-
-        .jacobi-beaver-block {
-            flex-direction: column;
-        }
-
-        .cube-controls-block {
-            flex-direction: row;
-            align-items: center;
-            gap: 0.4rem;
-            margin: 0 auto;
-            padding: 0.2rem 0.7rem;
-        }
-
-        .turn-dice-block {
-            flex-direction: column;
-            margin: 0 auto;
-            max-width: 100%;
-            padding: 0.8rem 1rem;
-        }
-
-        .jb-row {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: center;
-            gap: var(--spacing-sm);
-        }
-
-        .toggle-btn {
-            min-width: 44px;
-            padding: 0.35rem 0.75rem;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--color-text-muted);
-            background-color: var(--color-bg-tertiary);
-            border: 2px solid var(--color-border);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .toggle-btn:hover {
-            color: #bbb;
-            border-color: var(--color-border-dark);
-        }
-
-        .toggle-btn.on {
-            background-color: var(--color-primary);
-            color: var(--color-text);
-            border-color: var(--color-primary);
-        }
-
-        /* Game Type Button */
-        #game-type-button {
-            font-size: 0.96rem;
-            width: 6rem;
-            height: 2.5rem;
-            background-color: #818181;
-            border: 0.2rem double #4d4d4d;
-            padding: 0.125rem;
+        .checker-label {
+            color: white;
+            font-size: 0.5em;
             text-align: center;
-        }
-
-        #game-type-button:hover {
-            background-color: #666;
-        }
-
-        /* Cube Controls */
-        .cube-controls-block .cube-shown-selector,
-        .cube-controls-block .cube-owner-selector,
-        .cube-controls-block .cube-value-options,
-        .cube-controls-block .max-cube-options,
-        .cube-controls-block .max-cube-options_money {
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .cube-controls-block label,
-        .cube-value-options label,
-        .max-cube-options label,
-        .max-cube-options_money label {
-            display: none;
-        }
-
-        .cube-controls-labels {
-            display: flex;
-            flex-direction: row;
-            gap: var(--spacing-sm);
-            padding-bottom: var(--spacing-xs);
-        }
-
-        .cube-controls-labels label {
-            color: var(--color-text);
-            font-size: 0.7rem;
-            text-align: left;
-            flex-shrink: 0;
-        }
-
-        /* Dice & Cube Selectors */
-        .dice-selector-custom,
-        .cube-selector-custom {
-            position: relative;
-            display: inline-block;
-        }
-
-        .dice-selector-button,
-        .cube-selector-button {
-            width: 40px;
-            height: 40px;
-            border: 2px solid var(--color-border-dark);
-            border-radius: 8px;
-            background-color: var(--color-bg-tertiary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: border-color 0.2s, background-color 0.2s;
-            overflow: hidden;
-        }
-
-        .dice-selector-button:hover,
-        .cube-selector-button:hover {
-            border-color: #777;
-            background-color: #3a3a3a;
-        }
-
-        .dice-selector-button img,
-        .cube-selector-button img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .dice-selector-button.empty,
-        .cube-selector-button.empty {
-            color: var(--color-text);
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
-        .dice-selector-dropdown,
-        .cube-selector-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            margin-top: 0.25rem;
-            background-color: var(--color-bg-panel);
-            border: 2px solid var(--color-border-dark);
-            border-radius: 8px;
-            padding: var(--spacing-sm);
-            display: none;
-            flex-direction: row;
-            flex-wrap: wrap;
-            gap: var(--spacing-sm);
-            z-index: 1000;
-            max-width: 300px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .dice-selector-dropdown.active,
-        .cube-selector-dropdown.active {
-            display: flex !important;
-        }
-
-        .dice-option,
-        .cube-option {
-            width: 50px;
-            height: 50px;
-            border: 2px solid var(--color-border-dark);
-            border-radius: 6px;
-            background-color: var(--color-bg-tertiary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: border-color 0.2s, transform 0.1s;
-        }
-
-        .dice-option:hover,
-        .cube-option:hover {
-            border-color: var(--color-primary);
-            transform: scale(1.1);
-        }
-
-        .dice-option img,
-        .cube-option img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .dice-option.empty,
-        .cube-option.empty {
-            color: var(--color-text);
-            font-size: 1rem;
-            font-weight: bold;
-        }
-
-        /* Turn & Dice */
-        .turn-dice-labels {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-around;
-            align-items: center;
-        }
-
-        .turn-dice-labels label {
-            color: var(--color-text);
-            font-size: 0.8rem;
-            text-align: center;
-        }
-
-        .turn-dice-content {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-around;
-            gap: var(--spacing-md);
-            flex-wrap: wrap;
-        }
-
-        .turn-dice-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: var(--spacing-sm);
-            flex: 1;
-            min-width: 120px;
-        }
-
-        .turn-dice-controls,
-        .dice-controls-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--spacing-sm);
-        }
-
-        .turn-dice-divider {
-            width: 1px;
-            min-height: 40px;
-            background-color: var(--color-border-dark);
-            margin: 0 var(--spacing-sm);
-            align-self: stretch;
-        }
-
-        /* Panels */
-        .game-panel,
-        .cube_panel {
-            display: flex;
-            flex-direction: row;
-            width: 100%;
-            gap: var(--spacing-sm);
-            flex-wrap: wrap;
+            align-self: center;
         }
 
         .match-panel {
             display: flex;
             width: 100%;
+            box-sizing: border-box;
             flex-direction: row;
             gap: 0.3rem;
-            padding-left: var(--spacing-md);
-            flex-wrap: wrap;
+            padding-left: 1rem;
         }
 
         .manigeym-panel {
             display: flex;
             width: 100%;
+            box-sizing: border-box;
             justify-content: center;
         }
 
-        /* Score Inputs */
+        .centered-options {
+            display: flex;
+            gap: 1rem;
+        }
+
         .score-inputs {
             display: flex;
             gap: 0.3rem;
@@ -620,27 +537,249 @@
         .score-inputs div {
             display: flex;
             align-items: center;
-            gap: var(--spacing-sm);
         }
 
         .score-inputs label {
-            color: var(--color-text);
+            color: white;
             font-size: 0.8rem;
             width: 8.5rem;
             text-align: left;
             flex-shrink: 0;
         }
-
         .match-length-selector {
             display: flex;
             align-items: center;
             flex-direction: column;
-            gap: var(--spacing-sm);
+            gap: 0.5rem;
+        }
+        .match-length-selector label {
+            color: white;
+            font-size: 0.8rem;
+        }
+        .match-length-selector select {
+            text-align: center;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            background-color: #2d2d2d;
+            color: white;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .score-inputs select {
+            text-align: center;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            background-color: #2d2d2d;
+            color: white;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            appearance: none;
         }
 
-        .match-length-selector label {
-            color: var(--color-text);
+        .left-panel2 {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding-top: 1rem;
+        }
+
+        .right-panel2 {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            padding-top: 1rem;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .turn-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .turn-selector label {
+            color: white;
+            width: 3.8rem;
             font-size: 0.8rem;
+        }
+
+        .turn-selector-standalone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .turn-selector-standalone label {
+            color: white;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .nick-selector-btn {
+            width: 120px;
+            height: 30px;
+            min-width: 120px;
+            min-height: 30px;
+            padding: 0 0.25rem;
+            font-family: Arial, sans-serif;
+            font-size: 0.8rem;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            text-align: center;
+            box-sizing: border-box;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .nick-selector-btn:hover {
+            background-color: #3a3a3a;
+            border-color: #555;
+        }
+        .game-type-right {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .game-type-right label {
+            text-align: center;
+        }
+
+        .checker-toggle-btn {
+            width: 3em;
+            height: 3em;
+            border-radius: 50%;
+            border: 0.125em solid #222;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 0 0.125em rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .checker-toggle-btn.white {
+            background: radial-gradient(circle at 30% 30%, #ffffff, #d9d9d9 60%, #bfbfbf);
+        }
+
+        .checker-toggle-btn.black {
+            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1e1e1e 60%, #0f0f0f);
+        }
+
+        .checker-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .cube-shown-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cube-shown-selector label {
+            color: white;
+            width: 3.8rem;
+            font-size: 0.8rem;
+        }
+
+        .cube-shown-selector select {
+            width: 135px;
+        }
+
+
+        .max-cube-options {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .max-cube-options div {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .max-cube-options label {
+            color: white;
+            font-size: 0.8rem;
+            text-align: left;
+            flex-shrink: 0;
+            width: 4rem;
+        }
+
+        .max-cube-options select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
+        }
+
+
+        .jb-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .jb-title {
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .jacobi-beaver-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background-color: #3b3b3b;
+            border: 3px double #555;
+            border-radius: 12px;
+            padding: 0.6rem 1rem;
+            box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
+        }
+
+        .jb-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .toggle-btn {
+            min-width: 44px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #999;
+            background-color: #2d2d2d;
+            border: 2px solid #444;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+
+        .toggle-btn:hover {
+            color: #bbb;
+            border-color: #555;
+        }
+
+        .toggle-btn.on {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
         }
 
         .selector-size {
@@ -650,36 +789,442 @@
             padding: 0.3125rem;
         }
 
-        /* Action Buttons */
+
+        .max-cube-options_money {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .max-cube-options_money div {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .max-cube-options_money label {
+            color: white;
+            font-size: 0.8rem;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        .max-cube-options_money select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
+            margin-left: 0.2rem;
+        }
+
+        .cube-value-options {
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+
+        .cube-value-options div {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .cube-value-options label {
+            color: white;
+            font-size: 0.8rem;
+            text-align: left;
+            flex-shrink: 0;
+            padding-left: 0.8rem;
+            width: 5.5rem;
+        }
+
+        .cube-value-options select {
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 0.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
+        }
+
+        .cube-owner-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+        }
+
+        .cube-owner-selector label {
+            color: white;
+            width: 3.8rem;
+            font-size: 0.8rem;
+        }
+
+        .dice-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+        }
+
+        .dice-selector label {
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .dice-selector select {
+            width: 48px;
+        }
+
+        .turn-dice-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background-color: #3b3b3b;
+            border: 3px double #555;
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
+            margin: 0 auto;
+            max-width: 100%;
+        }
+
+        .turn-dice-labels {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .turn-dice-labels label {
+            color: white;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .turn-dice-content {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-around;
+            gap: 1rem;
+        }
+
+        .turn-dice-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .turn-dice-section label {
+            color: white;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .turn-dice-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .dice-controls-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .dice-selector-custom {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dice-selector-button {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #555;
+            border-radius: 8px;
+            background-color: #2d2d2d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, background-color 0.2s;
+            overflow: hidden;
+        }
+
+        .dice-selector-button:hover {
+            border-color: #777;
+            background-color: #3a3a3a;
+        }
+
+        .dice-selector-button img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .dice-selector-button.empty {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .dice-selector-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.25rem;
+            background-color: #3b3b3b;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 0.5rem;
+            display: none;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .dice-selector-dropdown.active {
+            display: flex;
+        }
+
+        .dice-option {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #555;
+            border-radius: 6px;
+            background-color: #2d2d2d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .dice-option:hover {
+            border-color: #007bff;
+            transform: scale(1.1);
+        }
+
+        .dice-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .dice-option.empty {
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .cube-selector-custom {
+            position: relative;
+            display: inline-block;
+        }
+
+        .cube-selector-button {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #555;
+            border-radius: 8px;
+            background-color: #2d2d2d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, background-color 0.2s;
+            overflow: hidden;
+        }
+
+        .cube-selector-button:hover {
+            border-color: #777;
+            background-color: #3a3a3a;
+        }
+
+        .cube-selector-button img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .cube-selector-button.empty {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .cube-selector-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.25rem;
+            background-color: #3b3b3b;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 0.5rem;
+            display: none !important;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .cube-selector-dropdown.active {
+            display: flex !important;
+        }
+
+        .cube-option {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #555;
+            border-radius: 6px;
+            background-color: #2d2d2d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .cube-option:hover {
+            border-color: #007bff;
+            transform: scale(1.1);
+        }
+
+        .cube-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .cube-option.empty {
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .turn-dice-divider {
+            width: 1px;
+            min-height: 40px;
+            background-color: #555;
+            margin: 0 0.5rem;
+            align-self: stretch;
+        }
+
         .action-buttons {
             display: flex;
             flex-direction: row;
-            gap: var(--spacing-md);
-            justify-content: flex-start;
-            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: left;
         }
 
         .action-buttons button {
             padding: 0.6rem 1.2rem;
             font-size: 0.8rem;
             border-radius: 0.3rem;
+            margin: 0;
             flex-shrink: 0;
         }
 
-        /* Hints Table */
         .hints-table {
-            padding-top: var(--spacing-md);
+            padding-top: 1rem;
             display: none;
-            background-color: var(--color-bg-tertiary);
+            background-color: transparent;
             border-radius: 8px;
-            border: 1px solid var(--color-border);
             overflow-x: auto;
-            margin: var(--spacing-md) 0;
         }
 
         .hints-table.active {
             display: block;
         }
+
+        .reset-layout-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 0.8rem 1.2rem;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .reset-layout-btn:hover {
+            background-color: #c82333;
+            transform: scale(1.05);
+        }
+
+        .reset-layout-btn:active {
+            transform: scale(0.95);
+        }
+
+        .info-tooltip {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 123, 255, 0.95);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            display: none;
+            max-width: 90%;
+            text-align: center;
+            animation: slideDown 0.3s ease;
+        }
+
+        .info-tooltip.show {
+            display: block;
+        }
+
+        .info-tooltip button {
+            margin-top: 0.5rem;
+            padding: 0.4rem 1rem;
+            background-color: white;
+            color: #007bff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .info-tooltip button:hover {
+            background-color: #f0f0f0;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
 
         .hints-content {
             display: none;
@@ -700,10 +1245,10 @@
 
         th,
         td {
-            border: 1px solid var(--color-border-dark);
+            border: 1px solid #555;
             padding: 20px 30px;
             text-align: left;
-            color: var(--color-text);
+            color: white;
             word-spacing: 16px;
         }
 
@@ -714,13 +1259,13 @@
         }
 
         th {
-            background-color: var(--color-border);
+            background-color: #444;
             font-weight: bold;
             text-align: center;
         }
 
         tr:nth-child(even) {
-            background-color: var(--color-bg-secondary);
+            background-color: #2a2a2a;
         }
 
         tr:hover {
@@ -728,135 +1273,439 @@
         }
 
         .loading {
-            color: var(--color-primary);
+            color: #007bff;
             font-style: italic;
-            padding: var(--spacing-md);
-            text-align: center;
         }
 
         .error {
-            color: var(--color-error);
+            color: #dc3545;
             background-color: #2d1b1b;
-            border: 1px solid var(--color-error);
+            border: 1px solid #dc3545;
             border-radius: 4px;
             padding: 10px;
             margin: 10px 0;
         }
+        .nickname-inputs-container {
+            display: flex;
+            align-items: center;
+            flex-direction: row;
+        }
+        .score-inputs-container {
+            display: flex;
+            align-items: center;
+            flex-direction: row;
+            gap: 0.5rem;
+        }
+        .cube-controls-labels {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            padding-bottom: 0.2rem  ;
+        }
+        .cube-controls-labels label {
+            color: white;
+            font-size: 0.7rem;  
+            text-align: left;
+            flex-shrink: 0;
+        }
 
-        /* Адаптивность */
-        @media (max-width: 768px) {
-            .selectors-wrapper {
-                flex-direction: column;
-                padding-top: var(--spacing-md);
+        /* Адаптивная верстка для разных размеров экранов */
+        
+        /* Большие экраны (desktops) */
+        @media (min-width: 1200px) {
+            .container {
+                grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+                max-width: 100%;
             }
+            
+            body {
+                padding: 1rem;
+            }
+            
+            .draggable-panel {
+                min-height: auto;
+            }
+        }
 
-            .selectors-container {
+        /* Средние экраны (tablets landscape) */
+        @media (min-width: 768px) and (max-width: 1199px) {
+            .container {
+                grid-template-columns: 1fr;
+                max-width: 100%;
+            }
+            
+            body {
+                padding: 0.75rem;
+            }
+            
+            .board-wrapper {
+                max-width: 600px;
+            }
+            
+            canvas {
+                max-width: 600px;
+            }
+            
+            .selectors-wrapper {
+                font-size: clamp(0.6rem, 1.2vw, 0.9rem);
+            }
+            
+            .draggable-panel {
+                padding: 0.75rem;
+            }
+            
+            .info-tooltip {
+                font-size: 0.9rem;
+                padding: 0.75rem 1.5rem;
+            }
+        }
+
+        /* Маленькие экраны (phones) */
+        @media (max-width: 767px) {
+            body {
+                padding: 0.25rem;
+            }
+            
+            .container {
+                gap: 0.5rem;
+            }
+            
+            .board-wrapper {
+                max-width: 100%;
+                margin: 0.5rem auto;
+            }
+            
+            canvas {
+                max-width: 100%;
+            }
+            
+            .draggable-panel {
+                padding: 0.5rem;
+            }
+            
+            .selectors-wrapper {
+                font-size: clamp(0.5rem, 2vw, 0.8rem);
+                padding-top: 1rem;
+            }
+            
+            .checker-selector,
+            .bar-selector,
+            .jb-wrap {
+                font-size: 0.9em;
+            }
+            
+            .action-buttons {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .action-buttons button {
+                padding: 0.5rem 1rem;
+                font-size: 0.7rem;
+            }
+            
+            .cube-controls-block {
                 flex-wrap: wrap;
                 justify-content: center;
             }
-
+            
+            .turn-dice-block {
+                padding: 0.5rem;
+            }
+            
+            .turn-dice-content {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .turn-dice-divider {
+                width: 100%;
+                height: 1px;
+                min-height: 1px;
+            }
+            
             .game-panel,
-            .cube_panel,
-            .match-panel {
+            .cube_panel {
                 flex-direction: column;
             }
-
+            
             .left-panel,
             .right-panel,
             .left-panel2,
             .right-panel2 {
                 width: 100%;
             }
-
-            .turn-dice-content {
+            
+            .match-panel {
                 flex-direction: column;
-                gap: var(--spacing-sm);
+                padding-left: 0;
             }
-
-            .turn-dice-divider {
-                display: none;
-            }
-
-            th,
-            td {
-                padding: 10px 15px;
-                font-size: 0.85rem;
-            }
-
-            .board-wrapper {
-                margin-top: var(--spacing-md);
-            }
-
-            canvas {
-                max-width: 100%;
+            
+            .score-inputs label {
+                font-size: 0.7rem;
+                width: auto;
             }
         }
 
+        /* Очень маленькие экраны */
         @media (max-width: 480px) {
             .selectors-wrapper {
-                font-size: 0.7rem;
+                font-size: clamp(0.45rem, 2.5vw, 0.7rem);
             }
-
-            .action-buttons {
-                justify-content: center;
+            
+            .checker-btn,
+            .bar-checker-select {
+                transform: scale(0.9);
             }
-
-            .checker-selector,
-            .bar-selector,
-            .jb-wrap,
-            .game-type-right {
-                width: 100%;
+            
+            .jacobi-beaver-block,
+            .turn-dice-block,
+            .cube-controls-block {
+                padding: 0.4rem 0.5rem;
             }
-
-            th,
-            td {
-                padding: 8px 10px;
+            
+            #game-type-button {
                 font-size: 0.75rem;
+                width: 5rem;
+                height: 2rem;
             }
+            
+            .dice-selector-button,
+            .cube-selector-button {
+                width: 35px;
+                height: 35px;
+            }
+            
+            .checker-toggle-btn {
+                width: 2.5em;
+                height: 2.5em;
+            }
+            
+            .reset-layout-btn {
+                bottom: 10px;
+                right: 10px;
+                padding: 0.6rem 1rem;
+                font-size: 0.8rem;
+            }
+            
+            .info-tooltip {
+                top: 10px;
+                font-size: 0.75rem;
+                padding: 0.75rem 1rem;
+                max-width: 95%;
+            }
+            
+            .info-tooltip button {
+                font-size: 0.85rem;
+                padding: 0.3rem 0.8rem;
+            }
+        }
+
+        /* Очень широкие экраны */
+        @media (min-width: 1600px) {
+            .container {
+                grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+                gap: 1.5rem;
+            }
+            
+            .board-wrapper {
+                max-width: 900px;
+            }
+            
+            canvas {
+                max-width: 900px;
+            }
+        }
+
+        /* Планшеты в портретной ориентации */
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .board-wrapper {
+                max-width: 90vw;
+            }
+            
+            canvas {
+                max-width: 90vw;
+            }
+        }
+
+        /* Телефоны в ландшафтной ориентации */
+        @media (max-width: 896px) and (orientation: landscape) {
+            .container {
+                grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            }
+            
+            .board-wrapper {
+                max-width: 500px;
+            }
+            
+            canvas {
+                max-width: 500px;
+            }
+            
+            .draggable-panel {
+                padding: 0.5rem;
+            }
+            
+            body {
+                padding: 0.25rem;
+            }
+        }
+
+        /* Печать */
+        @media print {
+            .drag-handle,
+            .reset-layout-btn,
+            .info-tooltip {
+                display: none !important;
+            }
+            
+            .draggable-panel {
+                border: 1px solid #333 !important;
+                box-shadow: none !important;
+                background: white !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            
+            body {
+                background-color: white !important;
+            }
+        }
+
+        /* Анимация для изменения размера */
+        @media (prefers-reduced-motion: no-preference) {
+            .container,
+            .draggable-panel,
+            .board-wrapper,
+            canvas {
+                transition: all 0.3s ease;
+            }
+        }
+
+        /* Уменьшение анимаций для пользователей с настройками доступности */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* Поддержка темной темы (если пользователь предпочитает темную тему) */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #0d0d0d;
+            }
+            
+            .draggable-panel {
+                background: linear-gradient(145deg, #1a1a1a, #151515);
+                border-color: #2a2a2a;
+            }
+        }
+
+        /* Улучшенная видимость при фокусе для клавиатурной навигации */
+        button:focus-visible,
+        select:focus-visible,
+        input:focus-visible,
+        .draggable-panel:focus-visible {
+            outline: 3px solid #007bff;
+            outline-offset: 2px;
+        }
+
+        /* Скрываем outline для мышки, показываем только для клавиатуры */
+        button:focus:not(:focus-visible),
+        select:focus:not(:focus-visible),
+        input:focus:not(:focus-visible) {
+            outline: none;
+        }
+
+        /* Улучшение контрастности для кнопок */
+        button {
+            font-weight: 500;
+        }
+
+        /* Accessibility: Skip to content link */
+        .skip-to-content {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #007bff;
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            z-index: 3000;
+        }
+
+        .skip-to-content:focus {
+            top: 0;
+        }
+
+        /* Индикатор загрузки */
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #007bff;
+            font-size: 1.2rem;
+            display: none;
+        }
+
+        .loading-indicator.active {
+            display: block;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .loading-indicator i {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        /* Оптимизация производительности */
+        .draggable-panel {
+            will-change: transform, opacity;
+        }
+
+        canvas {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
         }
     </style>
 </head>
 
 <body>
-    <!-- 
-    ===================================
-    ИНСТРУКЦИЯ ПО ИЗМЕНЕНИЮ ПОРЯДКА БЛОКОВ:
-    ===================================
-    
-    Все основные блоки имеют атрибут data-order.
-    Чтобы изменить порядок блоков на странице, просто измените значение data-order в HTML.
-    
-    Например:
-    - data-order="1" - первый блок
-    - data-order="2" - второй блок
-    - data-order="3" - третий блок
-    
-    Блоки будут автоматически переставлены согласно указанному порядку.
-    Чем меньше число - тем выше блок на странице.
-    
-    Основные блоки:
-    - .checker-selector (Шашки)
-    - .bar-selector (На баре)
-    - .jb-wrap (Якоби/Бивер)
-    - .game-type-right (Тип игры)
-    - .game-type (Управление кубом)
-    - .game-panel (Панель игры)
-    - .cube_panel (Панель хода и костей)
-    - .hints-table (Таблица подсказок)
-    
-    Не нужно трогать CSS - просто меняйте data-order!
-    ===================================
-    -->
-    <div class="container">
+    <a href="#main-container" class="skip-to-content">Перейти к содержимому</a>
+    <div class="container" id="main-container">
         <h1>Backgammon Board Editor</h1>
-        <div class="board-wrapper">
-            <canvas id="boardCanvas" width="800" height="800"></canvas>
-            
+        
+        <!-- Секция с доской -->
+        <div class="board-section draggable-panel" draggable="true" data-panel="board">
+            <span class="drag-handle" title="Перетащить">⠿</span>
+            <div class="board-wrapper">
+                <div class="loading-indicator active" id="canvas-loader">
+                    <i class="fas fa-spinner"></i> Загрузка...
+                </div>
+                <canvas id="boardCanvas" width="800" height="800"></canvas>
+            </div>
         </div>
-        <div class="selectors-wrapper">
+        
+        <!-- Секция с селекторами шашек -->
+        <div class="draggable-panel" draggable="true" data-panel="checkers">
+            <span class="drag-handle" title="Перетащить">⠿</span>
+            <div class="selectors-wrapper">
             <div class="selectors-container">
-                <!-- Блок 1: Шашки - можно изменить порядок через data-order -->
-                <div class="checker-selector" data-order="1">
+                <div class="checker-selector">
                     <div class="checker-label">Шашки</div>
                     <div class="checker-options">
                         <div class="checker-btn white selected" data-color="white" role="button"
@@ -868,9 +1717,7 @@
                         </div>
                     </div>  
                 </div>
-                
-                <!-- Блок 2: На баре -->
-                <div class="bar-selector" data-order="1">
+                <div class="bar-selector">
                     <div class="bar-label">На баре</div>
                     <div class="bar-options">
                         <div class="bar-checker">
@@ -885,9 +1732,8 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Блок 3: Якоби/Бивер -->
-                <div class="jb-wrap" data-order="3">
+                </div>
+                <div class="jb-wrap">
                     <div class="jb-title">Якоби / Бивер   Макс куб</div>
                     <div class="jacobi-beaver-block">
                         <div class="jb-row">
@@ -908,17 +1754,19 @@
                         <input type="hidden" id="beaver-select" value="0">
                     </div>
                 </div>
-                
-                <!-- Блок 4: Тип игры -->
-                <div class="game-type-right" data-order="4">
+                <div class="game-type-right">
                     <label>Тип игры</label>
                     <button id="game-type-button">Манигейм</button>
                 </div>
             </div>
         </div>
+        </div>
         
-        <!-- Блок управления кубом - можно перемещать изменяя data-order -->
-        <div class="game-type" data-order="5">
+        <!-- Секция с настройками куба -->
+        <div class="draggable-panel" draggable="true" data-panel="cube">
+            <span class="drag-handle" title="Перетащить">⠿</span>
+            <div class="game-type">
+
             <div class="cube-controls-block-wrapper">
             <div class="cube-controls-labels">
                 <label for="cube-shown-select">Показан куб?</label>
@@ -981,10 +1829,14 @@
             </div>
             </div>
         </div>
-        <!-- Панель игры - можно перемещать через data-order -->
-        <div class="game-panel" data-order="6">
+        </div>
+        
+        <!-- Секция с настройками матча -->
+        <div class="draggable-panel" draggable="true" data-panel="match">
+            <span class="drag-handle" title="Перетащить">⠿</span>
+            <div class="game-panel">
             <div class="match-panel" style="display: none;">
-                <div class='left-panel' data-order="1">
+                <div class='left-panel'>
                     <div class="score-inputs">
                         <div>
                             <label for="lower-score">Очки нижнего игрока:</label>
@@ -1064,19 +1916,26 @@
                         </div>
                     </div>
                 </div>
-                <div class='right-panel' data-order="2">
+                <div class='right-panel'>
                 </div>
             </div>
         </div>
-        <div class="manigeym-panel">
+        </div>
+        
+        <!-- Секция Манигейм -->
+        <div class="draggable-panel" draggable="true" data-panel="manigeym">
+            <span class="drag-handle" title="Перетащить">⠿</span>
+            <div class="manigeym-panel">
             <div class="centered-options">
             </div>
         </div>
-    </div>
-    
-    <!-- Панель хода и костей - можно перемещать через data-order -->
-    <div class='cube_panel' data-order="7">
-        <div class="left-panel2" data-order="1">
+        </div>
+        
+        <!-- Секция с ходом и костями -->
+        <div class="draggable-panel" draggable="true" data-panel="turn-dice">
+            <span class="drag-handle" title="Перетащить">⠿</span>
+            <div class='cube_panel'>
+        <div class="left-panel2">
             <div class="turn-dice-labels">
                 <label for="turn-select-btn">Чей ход?</label>
                 <label>На кубиках:</label>
@@ -1145,13 +2004,31 @@
                 <button id="show-button"><i class="fas fa-eye"></i></button>
             </div>
         </div>
-        <div class="right-panel2" data-order="2">
+        <div class="right-panel2">
         </div>
     </div>
-
-    <!-- Таблица подсказок -->
-    <div class="hints-table" data-order="8">
-        <div id="hintsTable" class="hints-content"></div>
+        </div>
+        
+        <!-- Секция с подсказками -->
+        <div class="draggable-panel" draggable="true" data-panel="hints">
+            <span class="drag-handle" title="Перетащить">⠿</span>
+            <div class="hints-table">
+                <div id="hintsTable" class="hints-content"></div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="reset-layout-btn" id="reset-layout-btn" title="Сбросить расположение панелей">
+        <i class="fas fa-undo"></i> Сбросить
+    </button>
+    
+    <div class="info-tooltip" id="info-tooltip">
+        <div>
+            <strong>💡 Подсказка:</strong> Панели можно перетаскивать!<br>
+            Используйте значок <strong>⠿</strong> в правом верхнем углу каждой панели.<br>
+            Порядок будет сохранен автоматически.
+        </div>
+        <button id="close-tooltip">Понятно</button>
     </div>
 </body>
 
@@ -1562,6 +2439,12 @@
         function imageLoaded() {
             imagesLoaded++;
             if (imagesLoaded === totalImages) {
+                // Скрываем индикатор загрузки
+                const loader = document.getElementById('canvas-loader');
+                if (loader) {
+                    loader.classList.remove('active');
+                }
+                
                 createDropdowns();
                 drawBoard();
                 updateTurnSelect();
@@ -2184,6 +3067,276 @@
         });
 
         window.addEventListener('resize', updateAllDropdownPositions);
+
+        // Drag and Drop функционал для панелей
+        function initDragAndDrop() {
+            const container = document.getElementById('main-container');
+            const draggablePanels = document.querySelectorAll('.draggable-panel');
+            let draggedElement = null;
+            let touchDragElement = null;
+
+            draggablePanels.forEach(panel => {
+                // Desktop drag events
+                panel.addEventListener('dragstart', function(e) {
+                    draggedElement = this;
+                    this.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', this.innerHTML);
+                });
+
+                panel.addEventListener('dragend', function(e) {
+                    this.classList.remove('dragging');
+                    draggedElement = null;
+                    // Удаляем все drag-over классы
+                    draggablePanels.forEach(p => p.classList.remove('drag-over'));
+                });
+
+                panel.addEventListener('dragover', function(e) {
+                    if (e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    e.dataTransfer.dropEffect = 'move';
+                    
+                    if (draggedElement !== this) {
+                        this.classList.add('drag-over');
+                    }
+                    return false;
+                });
+
+                panel.addEventListener('dragenter', function(e) {
+                    if (draggedElement !== this) {
+                        this.classList.add('drag-over');
+                    }
+                });
+
+                panel.addEventListener('dragleave', function(e) {
+                    this.classList.remove('drag-over');
+                });
+
+                panel.addEventListener('drop', function(e) {
+                    if (e.stopPropagation) {
+                        e.stopPropagation();
+                    }
+                    
+                    this.classList.remove('drag-over');
+                    
+                    if (draggedElement !== this) {
+                        // Определяем позицию для вставки
+                        const rect = this.getBoundingClientRect();
+                        const mouseY = e.clientY;
+                        const insertBefore = mouseY < (rect.top + rect.height / 2);
+                        
+                        if (insertBefore) {
+                            container.insertBefore(draggedElement, this);
+                        } else {
+                            container.insertBefore(draggedElement, this.nextSibling);
+                        }
+                        
+                        // Сохраняем порядок в localStorage
+                        savePanelOrder();
+                    }
+                    
+                    return false;
+                });
+
+                // Touch events для мобильных устройств
+                panel.addEventListener('touchstart', function(e) {
+                    if (!e.target.classList.contains('drag-handle') && 
+                        !e.target.closest('.drag-handle')) {
+                        return;
+                    }
+                    
+                    touchDragElement = this;
+                    this.classList.add('dragging');
+                    
+                    // Предотвращаем скроллинг при перетаскивании
+                    e.preventDefault();
+                }, { passive: false });
+
+                panel.addEventListener('touchmove', function(e) {
+                    if (!touchDragElement) return;
+                    
+                    e.preventDefault();
+                    
+                    const touch = e.touches[0];
+                    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                    const dropTarget = elementBelow?.closest('.draggable-panel');
+                    
+                    // Удаляем все drag-over классы
+                    draggablePanels.forEach(p => p.classList.remove('drag-over'));
+                    
+                    if (dropTarget && dropTarget !== touchDragElement) {
+                        dropTarget.classList.add('drag-over');
+                    }
+                }, { passive: false });
+
+                panel.addEventListener('touchend', function(e) {
+                    if (!touchDragElement) return;
+                    
+                    e.preventDefault();
+                    
+                    this.classList.remove('dragging');
+                    
+                    const touch = e.changedTouches[0];
+                    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                    const dropTarget = elementBelow?.closest('.draggable-panel');
+                    
+                    // Удаляем все drag-over классы
+                    draggablePanels.forEach(p => p.classList.remove('drag-over'));
+                    
+                    if (dropTarget && dropTarget !== touchDragElement) {
+                        const rect = dropTarget.getBoundingClientRect();
+                        const touchY = touch.clientY;
+                        const insertBefore = touchY < (rect.top + rect.height / 2);
+                        
+                        if (insertBefore) {
+                            container.insertBefore(touchDragElement, dropTarget);
+                        } else {
+                            container.insertBefore(touchDragElement, dropTarget.nextSibling);
+                        }
+                        
+                        savePanelOrder();
+                    }
+                    
+                    touchDragElement = null;
+                }, { passive: false });
+            });
+
+            // Сохранение порядка панелей
+            function savePanelOrder() {
+                const panels = Array.from(container.querySelectorAll('.draggable-panel'));
+                const order = panels.map(panel => panel.dataset.panel);
+                localStorage.setItem('panelOrder', JSON.stringify(order));
+            }
+
+            // Восстановление порядка панелей
+            function restorePanelOrder() {
+                const savedOrder = localStorage.getItem('panelOrder');
+                if (!savedOrder) return;
+                
+                try {
+                    const order = JSON.parse(savedOrder);
+                    const panels = {};
+                    
+                    // Собираем все панели
+                    container.querySelectorAll('.draggable-panel').forEach(panel => {
+                        panels[panel.dataset.panel] = panel;
+                    });
+                    
+                    // Перестраиваем в нужном порядке
+                    order.forEach(panelId => {
+                        if (panels[panelId]) {
+                            container.appendChild(panels[panelId]);
+                        }
+                    });
+                } catch (e) {
+                    console.error('Ошибка восстановления порядка панелей:', e);
+                }
+            }
+
+            // Восстанавливаем порядок при загрузке
+            restorePanelOrder();
+
+            // Кнопка сброса расположения
+            const resetBtn = document.getElementById('reset-layout-btn');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    if (confirm('Вы уверены, что хотите сбросить расположение панелей на начальное?')) {
+                        localStorage.removeItem('panelOrder');
+                        location.reload();
+                    }
+                });
+            }
+
+            // Показываем подсказку при первом посещении
+            const tooltip = document.getElementById('info-tooltip');
+            const closeTooltipBtn = document.getElementById('close-tooltip');
+            const hasSeenTooltip = localStorage.getItem('hasSeenDragTooltip');
+            
+            if (!hasSeenTooltip && tooltip) {
+                setTimeout(() => {
+                    tooltip.classList.add('show');
+                    
+                    // Анимируем drag-handles
+                    document.querySelectorAll('.drag-handle').forEach(handle => {
+                        handle.classList.add('pulse');
+                    });
+                }, 1000);
+            }
+            
+            if (closeTooltipBtn) {
+                closeTooltipBtn.addEventListener('click', function() {
+                    tooltip.classList.remove('show');
+                    localStorage.setItem('hasSeenDragTooltip', 'true');
+                    
+                    // Убираем анимацию с drag-handles
+                    document.querySelectorAll('.drag-handle').forEach(handle => {
+                        handle.classList.remove('pulse');
+                    });
+                });
+            }
+
+            // Автоматически скрываем подсказку через 10 секунд
+            if (!hasSeenTooltip && tooltip) {
+                setTimeout(() => {
+                    tooltip.classList.remove('show');
+                    localStorage.setItem('hasSeenDragTooltip', 'true');
+                    
+                    // Убираем анимацию с drag-handles
+                    document.querySelectorAll('.drag-handle').forEach(handle => {
+                        handle.classList.remove('pulse');
+                    });
+                }, 11000);
+            }
+
+            // Убираем pulse класс после завершения анимации
+            document.querySelectorAll('.drag-handle').forEach(handle => {
+                handle.addEventListener('animationend', function() {
+                    this.classList.remove('pulse');
+                });
+            });
+
+            // Клавиатурная навигация для панелей
+            let focusedPanelIndex = -1;
+            const panels = Array.from(draggablePanels);
+
+            document.addEventListener('keydown', function(e) {
+                // Ctrl + стрелки для перемещения панелей
+                if (e.ctrlKey && focusedPanelIndex >= 0) {
+                    const focusedPanel = panels[focusedPanelIndex];
+                    
+                    if (e.key === 'ArrowUp' && focusedPanelIndex > 0) {
+                        e.preventDefault();
+                        const prevPanel = panels[focusedPanelIndex - 1];
+                        container.insertBefore(focusedPanel, prevPanel);
+                        focusedPanel.focus();
+                        savePanelOrder();
+                    } else if (e.key === 'ArrowDown' && focusedPanelIndex < panels.length - 1) {
+                        e.preventDefault();
+                        const nextPanel = panels[focusedPanelIndex + 1];
+                        container.insertBefore(focusedPanel, nextPanel.nextSibling);
+                        focusedPanel.focus();
+                        savePanelOrder();
+                    }
+                }
+            });
+
+            // Отслеживаем фокус на панелях
+            panels.forEach((panel, index) => {
+                panel.setAttribute('tabindex', '0');
+                panel.addEventListener('focus', function() {
+                    focusedPanelIndex = index;
+                });
+                panel.addEventListener('blur', function() {
+                    if (focusedPanelIndex === index) {
+                        focusedPanelIndex = -1;
+                    }
+                });
+            });
+        }
+
+        // Инициализируем drag and drop после загрузки страницы
+        initDragAndDrop();
     });
 </script>
 </body>
