@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1467,7 +1467,71 @@
         .modal-btn:active {
             transform: scale(0.98);
         }
+
+        /* Стили для кнопок скриншотов */
+        .screenshot-controls {
+            display: none;
+            flex-direction: row;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .screenshot-controls.active {
+            display: flex;
+        }
+
+        #screenshotBtn,
+        #screenSaveBtn,
+        #screenUploadBtn {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            color: transparent;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        #screenshotBtn:hover,
+        #screenSaveBtn:hover,
+        #screenUploadBtn:hover {
+            background-color: transparent;
+            opacity: 0.8;
+        }
+
+        #screenshotBtn:disabled,
+        #screenSaveBtn:disabled,
+        #screenUploadBtn:disabled {
+            opacity: 0.5;
+            background-color: transparent;
+            cursor: not-allowed;
+        }
     </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+        // Установка изображений для кнопок скриншотов с кэш-бастингом
+        document.addEventListener('DOMContentLoaded', function () {
+            const screenshotBtn = document.getElementById('screenshotBtn');
+            const screenSaveBtn = document.getElementById('screenSaveBtn');
+            const screenUploadBtn = document.getElementById('screenUploadBtn');
+            
+            if (screenshotBtn) {
+                screenshotBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
+            }
+            if (screenSaveBtn) {
+                screenSaveBtn.style.backgroundImage = "url('/static/ScreenSave.png?t=" + Date.now() + "')";
+            }
+            if (screenUploadBtn) {
+                screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.png?t=" + Date.now() + "')";
+            }
+        });
+    </script>
 </head>
 
 <body>
@@ -1821,6 +1885,12 @@
             </div>
         </div>
     </div>
+    </div>
+
+    <div class="screenshot-controls" id="screenshotControls">
+        <button onclick="takeScreenshot()" id="screenshotBtn" title="Сделать скриншот"></button>
+        <button onclick="saveScreenshot()" id="screenSaveBtn" title="Сохранить скриншот в буфер"></button>
+        <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Отправить скриншоты"></button>
     </div>
 
     <div class="hints-table">
@@ -2827,11 +2897,23 @@
                     hintsTable.innerHTML = tableHtml;
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
+                    
+                    // Показываем кнопки скриншотов после появления таблицы
+                    const screenshotControls = document.getElementById('screenshotControls');
+                    if (screenshotControls) {
+                        screenshotControls.classList.add('active');
+                    }
                 })
                 .catch(error => {
                     hintsTable.innerHTML = '<div class="error">Error loading hints: ' + error.message + '</div>';
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
+                    
+                    // Показываем кнопки скриншотов даже при ошибке
+                    const screenshotControls = document.getElementById('screenshotControls');
+                    if (screenshotControls) {
+                        screenshotControls.classList.add('active');
+                    }
                 });
         });
 
@@ -2903,6 +2985,12 @@
             const hintsTable = document.getElementById('hintsTable');
             hintsTableContainer.classList.remove('active');
             hintsTable.classList.remove('active');
+            
+            // Скрываем кнопки скриншотов при очистке
+            const screenshotControls = document.getElementById('screenshotControls');
+            if (screenshotControls) {
+                screenshotControls.classList.remove('active');
+            }
 
             hideXGID(); // DEBUG - удалить потом
             drawBoard();
@@ -3007,6 +3095,174 @@
         });
 
         window.addEventListener('resize', updateAllDropdownPositions);
+
+        // Функция для создания скриншота
+        function takeScreenshot() {
+            // Скрываем элементы управления перед созданием скриншота
+            const screenshotControls = document.getElementById('screenshotControls');
+            const actionButtons = document.querySelector('.action-buttons');
+            const selectorsWrapper = document.querySelector('.selectors-wrapper');
+            const xgidDisplay = document.getElementById('xgid-display');
+            
+            const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
+            const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
+            const originalSelectorsDisplay = selectorsWrapper ? selectorsWrapper.style.display : null;
+            const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
+            
+            // Функция для восстановления элементов
+            function restoreControls() {
+                if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
+                if (actionButtons && originalActionButtonsDisplay !== null) actionButtons.style.display = originalActionButtonsDisplay;
+                if (selectorsWrapper && originalSelectorsDisplay !== null) selectorsWrapper.style.display = originalSelectorsDisplay;
+                if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
+            }
+            
+            // Скрываем элементы
+            if (screenshotControls) screenshotControls.style.display = 'none';
+            if (actionButtons) actionButtons.style.display = 'none';
+            if (selectorsWrapper) selectorsWrapper.style.display = 'none';
+            if (xgidDisplay) xgidDisplay.style.display = 'none';
+            
+            // Создаем скриншот
+            html2canvas(document.body, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#1a1a1a'
+            }).then(canvas => {
+                restoreControls();
+                // Конвертируем canvas в blob
+                canvas.toBlob(blob => {
+                    // Создаем файл из blob
+                    const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+                    
+                    // Отправляем файл в Telegram
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        const formData = new FormData();
+                        formData.append('photo', file);
+                        
+                        // Получаем chat_id из Telegram WebApp
+                        const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
+                        const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
+                        
+                        if (chatId) {
+                            fetch(`/api/send_screenshot?chat_id=${chatId}`, {
+                                method: 'POST',
+                                body: formData
+                            }).then(response => {
+                                if (response.ok) {
+                                    console.log('Скриншот отправлен успешно');
+                                } else {
+                                    response.text().then(text => {
+                                        console.error('Ошибка сервера:', text);
+                                        alert('Ошибка при отправке скриншота');
+                                    });
+                                }
+                            }).catch(error => {
+                                console.error('Error sending screenshot:', error);
+                                alert('Ошибка при отправке скриншота: ' + error);
+                            });
+                        } else {
+                            alert('Не удалось получить chat_id');
+                        }
+                    } else {
+                        // Если не в Telegram, скачиваем файл
+                        const link = document.createElement('a');
+                        link.download = 'screenshot.png';
+                        link.href = canvas.toDataURL();
+                        link.click();
+                    }
+                });
+            }).catch(error => {
+                console.error('Error creating screenshot:', error);
+                alert('Ошибка при создании скриншота: ' + error.message);
+                restoreControls();
+            });
+        }
+        
+        // Функция для сохранения скриншота в буфер
+        function saveScreenshot() {
+            // Скрываем элементы управления перед созданием скриншота
+            const screenshotControls = document.getElementById('screenshotControls');
+            const actionButtons = document.querySelector('.action-buttons');
+            const selectorsWrapper = document.querySelector('.selectors-wrapper');
+            const xgidDisplay = document.getElementById('xgid-display');
+            
+            const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
+            const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
+            const originalSelectorsDisplay = selectorsWrapper ? selectorsWrapper.style.display : null;
+            const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
+            
+            // Функция для восстановления элементов
+            function restoreControls() {
+                if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
+                if (actionButtons && originalActionButtonsDisplay !== null) actionButtons.style.display = originalActionButtonsDisplay;
+                if (selectorsWrapper && originalSelectorsDisplay !== null) selectorsWrapper.style.display = originalSelectorsDisplay;
+                if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
+            }
+            
+            // Скрываем элементы
+            if (screenshotControls) screenshotControls.style.display = 'none';
+            if (actionButtons) actionButtons.style.display = 'none';
+            if (selectorsWrapper) selectorsWrapper.style.display = 'none';
+            if (xgidDisplay) xgidDisplay.style.display = 'none';
+            
+            html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
+                canvas.toBlob(blob => {
+                    // Получаем chat_id из Telegram WebApp
+                    const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
+                    const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
+                    
+                    if (chatId) {
+                        const formData = new FormData();
+                        formData.append('photo', blob);
+                        fetch(`/api/save_screenshot?chat_id=${chatId}`, {
+                            method: 'POST',
+                            body: formData
+                        }).then(response => {
+                            if (response.ok) {
+                                alert('Скриншот сохранен в буфер');
+                            } else {
+                                alert('Ошибка при сохранении скриншота');
+                            }
+                            restoreControls();
+                        }).catch(error => {
+                            console.error('Error saving screenshot:', error);
+                            alert('Ошибка при сохранении скриншота');
+                            restoreControls();
+                        });
+                    } else {
+                        alert('Не удалось получить chat_id');
+                        restoreControls();
+                    }
+                });
+            }).catch(error => {
+                console.error('Error creating screenshot:', error);
+                alert('Ошибка при создании скриншота');
+                restoreControls();
+            });
+        }
+        
+        // Функция для отправки сохраненных скриншотов
+        function uploadScreenshots() {
+            // Получаем chat_id из Telegram WebApp
+            const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
+            const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
+            
+            if (chatId) {
+                fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(response => {
+                    if (response.ok) {
+                        alert('Скриншоты отправлены');
+                    } else {
+                        alert('Ошибка при отправке скриншотов');
+                    }
+                }).catch(error => {
+                    console.error('Error uploading screenshots:', error);
+                    alert('Ошибка при отправке скриншотов');
+                });
+            } else {
+                alert('Не удалось получить chat_id');
+            }
+        }
     });
 </script>
 </body>
