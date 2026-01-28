@@ -166,8 +166,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 0.5rem;
-            padding-top: 1.5rem;
+            gap: clamp(0.5rem, 1.5vw, 1rem);
+            padding-top: clamp(1.5rem, 4vw, 3rem);
             font-size: clamp(0.6rem, 1.2vw, 1rem);
             box-sizing: border-box;
             max-width: 100%;
@@ -660,7 +660,7 @@
 
         .jb-title {
             color: white;
-            font-size: 0.8em;
+            font-size: 1.6em;
         }
 
         .jacobi-beaver-block {
