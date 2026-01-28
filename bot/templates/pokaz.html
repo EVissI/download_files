@@ -199,15 +199,7 @@
         }
 
         .game-type {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: center;
-            gap: clamp(0.3rem, 2vw, 0.8rem);
-            margin: 0 auto;
-            padding-top: clamp(0.3rem, 1.5vw, 0.6rem);
-            flex-wrap: wrap;
-            max-width: 100%;
+            display: none;
         }
 
         .money-controls {
@@ -1066,12 +1058,14 @@
         }
 
         .hints-table {
-            padding-top: 1rem;
+            padding-top: clamp(0.5rem, 2vw, 1rem);
             display: none;
             background-color: #2d2d2d;
-            border-radius: 8px;
+            border-radius: clamp(6px, 1.5vw, 8px);
             border: 1px solid #444;
             overflow-x: auto;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .hints-table.active {
@@ -1165,11 +1159,17 @@
             gap: 0;
         }
 
-        /* Обертка для всех контролов в одну строку */
-        .game-type,
-        .cube-controls-block-wrapper,
-        .cube_panel {
+        /* Строка для контролов кубов, костей и кнопок */
+        .controls-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            gap: clamp(0.3rem, 2vw, 0.8rem);
+            flex-wrap: wrap;
             padding-top: clamp(0.3rem, 1.5vw, 0.6rem);
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -1236,7 +1236,10 @@
                     <label>Тип игры</label>
                     <button id="game-type-button" title="Манигейм"><i class="fa fa-rub"></i></button>
                 </div>
-        
+            </div>
+        </div>
+
+        <div class="controls-row">
         <div class="cube-controls-block-wrapper">
         <div class="cube-controls-labels">
             <label for="cube-shown-select">Показан куб?</label>
@@ -1362,9 +1365,8 @@
             <button id="init-button"><i class="fa fa-home"></i></button>
             <button id="show-button"><i class="fa fa-eye"></i></button>
         </div>
-
-            </div>
         </div>
+
         <!-- <div class="game-panel">
             <div class="match-panel" style="display: none;">
                 <div class='left-panel'>
