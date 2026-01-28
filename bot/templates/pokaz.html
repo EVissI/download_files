@@ -1547,13 +1547,6 @@
             <canvas id="boardCanvas" width="800" height="800"></canvas>
 
         </div>
-        
-        <div class="screenshot-controls" id="screenshotControls">
-            <button onclick="takeScreenshot()" id="screenshotBtn" title="Сделать скриншот"></button>
-            <button onclick="saveScreenshot()" id="screenSaveBtn" title="Сохранить скриншот в буфер"></button>
-            <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Отправить скриншоты"></button>
-        </div>
-        
         <div class="selectors-wrapper">
             <div class="selectors-container">
                 <div class="checker-selector">
@@ -1897,6 +1890,12 @@
 
     <div class="hints-table">
         <div id="hintsTable" class="hints-content"></div>
+    </div>
+
+    <div class="screenshot-controls" id="screenshotControls">
+        <button onclick="takeScreenshot()" id="screenshotBtn" title="Сделать скриншот"></button>
+        <button onclick="saveScreenshot()" id="screenSaveBtn" title="Сохранить скриншот в буфер"></button>
+        <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Отправить скриншоты"></button>
     </div>
 
     <!-- Modal window for clear confirmation -->
@@ -2870,7 +2869,8 @@
                                 const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
                                 let move = hint.move || '-';
                                 let rowClass = ''; // No highlighting since no gnu move
-                                tableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
+                                let rowStyle = index === 0 ? ' style="background-color: green;"' : '';
+                                tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
                             }
                         });
                         tableHtml += '</table>';
@@ -2888,7 +2888,8 @@
                                 displayAction += `, ${hint.action_2}`;
                             }
                             let rowClass = '';
-                            tableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${displayEq}</td></tr>`;
+                            let rowStyle = index === 0 ? ' style="background-color: green;"' : '';
+                            tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${displayAction}</td><td>${displayEq}</td></tr>`;
                         });
                         tableHtml += '</table>';
                     } else {
