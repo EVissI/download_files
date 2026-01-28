@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -12,6 +12,9 @@
             color: white;
             background-color: #1a1a1a;
             margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         .container {
@@ -1094,15 +1097,6 @@
             font-size: 0.5rem;
             font-weight: bold;
         }
-
-        .turn-dice-divider {
-            width: clamp(1px, 0.3vw, 2px);
-            min-height: clamp(32px, 9vw, 44px);
-            background-color: #555;
-            margin: 0 clamp(0.2rem, 1vw, 0.5rem);
-            align-self: stretch;
-        }
-
         .action-buttons {
             display: flex;
             flex-direction: row;
@@ -1156,10 +1150,10 @@
 
         .hints-table {
             padding-top: clamp(0.5rem, 2vw, 1rem);
-            display: none;
             overflow-x: auto;
             width: 100%;
             box-sizing: border-box;
+            min-height: 300px;
         }
 
         .hints-table.active {
@@ -1500,7 +1494,6 @@
                                 data-target="turn-select" aria-label="Чей ход?" data-color="white"></button>
                         </div>
                     </div>
-                    <div class="turn-dice-divider"></div>
                     <div class="turn-dice-section">
                         <div class="dice-controls-wrapper">
                             <div class="dice-selector-custom">
@@ -2083,19 +2076,16 @@
             const cubeShown = document.getElementById('cube-shown-select').value;
             const diceSection = document.querySelectorAll('.turn-dice-section')[1];
             const diceLabel = document.querySelectorAll('.turn-dice-labels label')[1];
-            const diceDivider = document.querySelector('.turn-dice-divider');
             const cubeValueOptions = document.querySelector('.cube-value-options');
             const cubeValueLabel = document.querySelector('.cube-controls-labels label[for="cube-value-select"]');
             if (cubeShown !== '0') {
                 if (diceSection) diceSection.style.display = 'none';
                 if (diceLabel) diceLabel.style.display = 'none';
-                if (diceDivider) diceDivider.style.display = 'none';
                 if (cubeValueOptions) cubeValueOptions.style.display = 'none';
                 if (cubeValueLabel) cubeValueLabel.style.display = 'none';
             } else {
                 if (diceSection) diceSection.style.display = 'flex';
                 if (diceLabel) diceLabel.style.display = '';
-                if (diceDivider) diceDivider.style.display = 'flex';
                 if (cubeValueOptions) cubeValueOptions.style.display = 'flex';
                 if (cubeValueLabel) cubeValueLabel.style.display = '';
             }
