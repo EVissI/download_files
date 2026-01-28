@@ -3104,11 +3104,17 @@
         const actionButtons = document.querySelector('.action-buttons');
         const selectorsWrapper = document.querySelector('.selectors-wrapper');
         const xgidDisplay = document.getElementById('xgid-display');
+        const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
+        const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
+        const dropdowns = document.querySelectorAll('.dropdown');
         
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
         const originalSelectorsDisplay = selectorsWrapper ? selectorsWrapper.style.display : null;
         const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
+        const originalCubeControlsDisplay = cubeControlsWrapper ? cubeControlsWrapper.style.display : null;
+        const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
+        const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
         
         // Функция для восстановления элементов
         function restoreControls() {
@@ -3116,6 +3122,11 @@
             if (actionButtons && originalActionButtonsDisplay !== null) actionButtons.style.display = originalActionButtonsDisplay;
             if (selectorsWrapper && originalSelectorsDisplay !== null) selectorsWrapper.style.display = originalSelectorsDisplay;
             if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
+            if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
+            if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
+            dropdowns.forEach((d, i) => {
+                if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
+            });
         }
         
         // Скрываем элементы
@@ -3123,6 +3134,9 @@
         if (actionButtons) actionButtons.style.display = 'none';
         if (selectorsWrapper) selectorsWrapper.style.display = 'none';
         if (xgidDisplay) xgidDisplay.style.display = 'none';
+        if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
+        if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
+        dropdowns.forEach(d => d.style.display = 'none');
         
         // Создаем скриншот
         html2canvas(document.body, {
@@ -3187,11 +3201,17 @@
         const actionButtons = document.querySelector('.action-buttons');
         const selectorsWrapper = document.querySelector('.selectors-wrapper');
         const xgidDisplay = document.getElementById('xgid-display');
+        const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
+        const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
+        const dropdowns = document.querySelectorAll('.dropdown');
         
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
         const originalSelectorsDisplay = selectorsWrapper ? selectorsWrapper.style.display : null;
         const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
+        const originalCubeControlsDisplay = cubeControlsWrapper ? cubeControlsWrapper.style.display : null;
+        const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
+        const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
         
         // Функция для восстановления элементов
         function restoreControls() {
@@ -3199,6 +3219,11 @@
             if (actionButtons && originalActionButtonsDisplay !== null) actionButtons.style.display = originalActionButtonsDisplay;
             if (selectorsWrapper && originalSelectorsDisplay !== null) selectorsWrapper.style.display = originalSelectorsDisplay;
             if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
+            if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
+            if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
+            dropdowns.forEach((d, i) => {
+                if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
+            });
         }
         
         // Скрываем элементы
@@ -3206,6 +3231,9 @@
         if (actionButtons) actionButtons.style.display = 'none';
         if (selectorsWrapper) selectorsWrapper.style.display = 'none';
         if (xgidDisplay) xgidDisplay.style.display = 'none';
+        if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
+        if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
+        dropdowns.forEach(d => d.style.display = 'none');
         
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
             canvas.toBlob(blob => {
