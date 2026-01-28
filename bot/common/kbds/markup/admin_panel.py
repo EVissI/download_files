@@ -36,5 +36,6 @@ class AdminKeyboard:
         kb = InlineKeyboardBuilder()
         admin_url = f"{settings.MINI_APP_URL}/admin/login"
         kb.button(text="🚀 Войти в Админ-панель", web_app=WebAppInfo(url=admin_url))
-        kb.add(KeyboardButton(text='Позиция',web_app=WebAppInfo(url=f'{settings.MINI_APP_URL}/pokaz?chat_id={chat_id}')))
+        kb.button(text='Позиция', web_app=WebAppInfo(url=f'{settings.MINI_APP_URL}/pokaz?chat_id={chat_id}'))
+        kb.adjust(1)    
         return kb.as_markup()
