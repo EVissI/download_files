@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1308,8 +1308,8 @@
                 <div class="jb-title">Якоби  Бивер Макс куб</div>
                 <div class="jacobi-beaver-block">
                     <div class="jb-row">
-                        <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
-                        <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
+                        <button type="button" class="toggle-btn on" data-target="jacobi-select">Да</button>
+                        <button type="button" class="toggle-btn" data-target="beaver-select">Нет</button>
                         <div class="max-cube-options_money" id="max-cube-options-money">
                             <div>
                                 <select id="max-cube-select-m" class="selector-size">
@@ -2482,7 +2482,7 @@
                 const el = document.getElementById(btn.dataset.target);
                 if (el) {
                     const val = el.value;
-                    btn.textContent = val;
+                    btn.textContent = val === '1' ? 'Да' : 'Нет';
                     btn.classList.toggle('on', val === '1');
                 }
             });
@@ -2557,7 +2557,7 @@
                 if (!el) return;
                 const next = el.value === '1' ? '0' : '1';
                 el.value = next;
-                this.textContent = next;
+                this.textContent = next === '1' ? 'Да' : 'Нет';
                 this.classList.toggle('on', next === '1');
             });
         });
