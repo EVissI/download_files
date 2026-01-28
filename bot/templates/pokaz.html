@@ -221,8 +221,9 @@
 
         .cube-controls-block {
             display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
+            flex-direction: row;
+            align-items: center;
+            gap: 1rem;
             background-color: #3b3b3b;
             border: 3px double #555;
             border-radius: 12px;
@@ -244,8 +245,7 @@
         .cube-controls-block .cube-value-options label,
         .cube-controls-block .max-cube-options label,
         .cube-controls-block .max-cube-options_money label {
-            color: white;
-            font-size: 0.8rem;
+            display: none;
         }
 
         .cube-controls-block .cube-shown-selector,
@@ -253,6 +253,13 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+        }
+
+        .cube-controls-block .cube-value-options,
+        .cube-controls-block .max-cube-options,
+        .cube-controls-block .max-cube-options_money {
+            display: flex;
+            align-items: center;
         }
 
         .cube-controls-block .cube-value-options div,
@@ -1148,7 +1155,7 @@
                         <div class="checker-btn black" data-color="black" role="button" aria-label="Черные шашки">
                             <div class="checker-dot"></div>
                         </div>
-                    </div>
+                    </div>  
                 </div>
                 <div class="bar-selector">
                     <div class="bar-label">На баре</div>
@@ -1182,7 +1189,6 @@
             </div>
             <div class="cube-controls-block">
                 <div class="cube-shown-selector">
-                    <label for="cube-shown-select">Показан куб?</label>
                     <div class="cube-selector-custom">
                         <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
                         <div class="cube-selector-dropdown" id="cube-shown-dropdown">
@@ -1207,7 +1213,6 @@
                 </div>
                 <div class="cube-value-options">
                     <div>
-                        <label for="cube-value-select">Значение куба</label>
                         <div class="cube-selector-custom">
                             <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">0</div>
                             <div class="cube-selector-dropdown" id="cube-value-dropdown">
@@ -1232,13 +1237,11 @@
                     </div>
                 </div>
                 <div class="cube-owner-selector">
-                    <label for="cube-owner-select-btn">Чей куб?</label>
                     <input type="hidden" id="cube-owner-select" value="white">
                     <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white" data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
                 </div>
                 <div class="max-cube-options" id="max-cube-options-match" style="display: none;">
                     <div>
-                        <label for="max-cube-select">Макс куб</label>
                         <select id="max-cube-select" class="selector-size">
                             <option value="2">2</option>
                             <option value="4">4</option>
@@ -1249,7 +1252,6 @@
                 </div>
                 <div class="max-cube-options_money" id="max-cube-options-money">
                     <div>
-                        <label for="max-cube-select-m">Макс куб</label>
                         <select id="max-cube-select-m" class="selector-size">
                             <option value="1">2</option>
                             <option value="2">4</option>
