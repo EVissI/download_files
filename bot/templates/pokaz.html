@@ -1987,12 +1987,14 @@
             const maxCubeMatch = document.getElementById('max-cube-options-match');
             const maxCubeMoney = document.getElementById('max-cube-options-money');
             const moneyControls = document.getElementById('money-controls');
+            const jbWrap = document.querySelector('.jb-wrap');
             if (currentGameType === 'матч') {
                 matchPanel.style.display = 'flex';
                 manigeymPanel.style.display = 'none';
                 if (maxCubeMatch) maxCubeMatch.style.display = 'flex';
                 if (maxCubeMoney) maxCubeMoney.style.display = 'none';
                 if (moneyControls) moneyControls.style.display = 'none';
+                if (jbWrap) jbWrap.style.display = 'none';
 
                 // Обнуляем значения в скрытом блоке
                 const jacobiEl = document.getElementById('jacobi-select');
@@ -2021,6 +2023,7 @@
                 if (maxCubeMatch) maxCubeMatch.style.display = 'none';
                 if (maxCubeMoney) maxCubeMoney.style.display = 'flex';
                 if (moneyControls) moneyControls.style.display = 'flex';
+                if (jbWrap) jbWrap.style.display = 'flex';
             }
         });
 
@@ -2472,11 +2475,13 @@
             const maxCubeMatch = document.getElementById('max-cube-options-match');
             const maxCubeMoney = document.getElementById('max-cube-options-money');
             const moneyControls = document.getElementById('money-controls');
+            const jbWrap = document.querySelector('.jb-wrap');
             matchPanel.style.display = 'none';
             manigeymPanel.style.display = 'flex';
             if (maxCubeMatch) maxCubeMatch.style.display = 'none';
             if (maxCubeMoney) maxCubeMoney.style.display = 'flex';
             if (moneyControls) moneyControls.style.display = 'flex';
+            if (jbWrap) jbWrap.style.display = 'flex';
 
             const hintsTableContainer = document.querySelector('.hints-table');
             const hintsTable = document.getElementById('hintsTable');
