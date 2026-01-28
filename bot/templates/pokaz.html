@@ -1472,10 +1472,11 @@
         .screenshot-controls {
             display: none;
             flex-direction: row;
-            gap: 10px;
+            gap: 12px;
             justify-content: center;
             align-items: center;
-            padding: 10px 0;
+            padding: 15px 0;
+            margin-top: 10px;
         }
 
         .screenshot-controls.active {
@@ -1488,8 +1489,8 @@
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            width: 32px;
-            height: 32px;
+            width: 38.4px;
+            height: 38.4px;
             padding: 0;
             color: transparent;
             background-color: transparent;
@@ -1546,6 +1547,13 @@
             <canvas id="boardCanvas" width="800" height="800"></canvas>
 
         </div>
+        
+        <div class="screenshot-controls" id="screenshotControls">
+            <button onclick="takeScreenshot()" id="screenshotBtn" title="Сделать скриншот"></button>
+            <button onclick="saveScreenshot()" id="screenSaveBtn" title="Сохранить скриншот в буфер"></button>
+            <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Отправить скриншоты"></button>
+        </div>
+        
         <div class="selectors-wrapper">
             <div class="selectors-container">
                 <div class="checker-selector">
@@ -1885,12 +1893,6 @@
             </div>
         </div>
     </div>
-    </div>
-
-    <div class="screenshot-controls" id="screenshotControls">
-        <button onclick="takeScreenshot()" id="screenshotBtn" title="Сделать скриншот"></button>
-        <button onclick="saveScreenshot()" id="screenSaveBtn" title="Сохранить скриншот в буфер"></button>
-        <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Отправить скриншоты"></button>
     </div>
 
     <div class="hints-table">
