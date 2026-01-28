@@ -168,9 +168,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            margin: 1rem 0;
+            padding-top: 2rem;
             box-sizing: border-box;
             max-width: 100%;
             overflow-x: clip;
@@ -205,11 +203,20 @@
 
         .game-type {
             display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 1rem;
+            margin: 0 auto;
+            padding-top: 0.5rem;
+        }
+
+        .game-type-right {
+            display: flex;
             flex-direction: column;
             align-items: flex-end;
             gap: 0.5rem;
-            margin: 0 auto;
-            padding-top: 1.5rem;
+            margin-left: auto;
         }
 
         .game-type label {
@@ -244,7 +251,7 @@
             align-items: center;
             gap: 0.2em;
             flex-shrink: 0;
-            font-size: 22px;
+            font-size: 30px;
         }
 
         .checker-options {
@@ -298,7 +305,7 @@
             gap: 0.2em;
             color: white;
             flex-shrink: 0;
-            font-size: 22px;
+            font-size: 30px;
         }
 
         .bar-options {
@@ -1118,8 +1125,21 @@
             </div>
         </div>
         <div class="game-type">
-            <label>Тип игры</label>
-            <button id="game-type-button">Манигейм</button>
+            <div class="jb-wrap">
+                <div class="jb-title">Якоби / Бивер</div>
+                <div class="jacobi-beaver-block">
+                    <div class="jb-row">
+                        <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
+                        <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
+                    </div>
+                    <input type="hidden" id="jacobi-select" value="1">
+                    <input type="hidden" id="beaver-select" value="0">
+                </div>
+            </div>
+            <div class="game-type-right">
+                <label>Тип игры</label>
+                <button id="game-type-button">Манигейм</button>
+            </div>
         </div>
         <div class="game-panel">
             <div class="match-panel" style="display: none;">
@@ -1220,17 +1240,6 @@
         </div>
         <div class="manigeym-panel">
             <div class="centered-options">
-                <div class="jb-wrap">
-                    <div class="jb-title">Якоби / Бивер</div>
-                    <div class="jacobi-beaver-block">
-                        <div class="jb-row">
-                            <button type="button" class="toggle-btn on" data-target="jacobi-select">1</button>
-                            <button type="button" class="toggle-btn" data-target="beaver-select">0</button>
-                        </div>
-                        <input type="hidden" id="jacobi-select" value="1">
-                        <input type="hidden" id="beaver-select" value="0">
-                    </div>
-                </div>
                 <div class="max-cube-options_money">
                     <div>
                         <label for="max-cube-select-m">Макс куб</label>
