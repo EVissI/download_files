@@ -1387,7 +1387,7 @@
                         <select id="match_lenght" class="selector-size">
                             <option value="3">3</option>
                             <option value="4">4</option>
-                            <option value="5">5</option>
+                            <option value="5" selected>5</option>
                             <option value="6">6</option>
                             <option value="7">7</option>
                             <option value="8">8</option>
@@ -2472,8 +2472,8 @@
             document.getElementById('game-type-button').title = 'Манигейм';
             document.getElementById('lower-score').value = '0';
             document.getElementById('upper-score').value = '0';
-            document.getElementById('match_lenght').value = '3';
-            document.getElementById('max-cube-select').value = '8';
+            document.getElementById('match_lenght').value = '5';
+            document.getElementById('max-cube-select').value = '3';
             document.getElementById('jacobi-select').value = '1';
             document.getElementById('beaver-select').value = '0';
             document.querySelectorAll('.toggle-btn').forEach(btn => {
@@ -2484,7 +2484,7 @@
                     btn.classList.toggle('on', val === '1');
                 }
             });
-            document.getElementById('max-cube-select-m').value = '8';
+            document.getElementById('max-cube-select-m').value = '3';
             document.getElementById('cube-shown-select').value = '0';
             document.getElementById('cube-value-select').value = '0';
             document.getElementById('dice1-select').value = '0';
