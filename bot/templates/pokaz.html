@@ -7,117 +7,30 @@
     <title>Backgammon Board Editor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
         body {
             font-family: Arial, sans-serif;
             color: white;
             background-color: #1a1a1a;
             margin: 0;
-            padding: 0.5rem;
-            overflow-x: hidden;
         }
 
         .container {
             width: 100%;
-            max-width: 1800px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        /* Draggable panels */
-        .draggable-panel {
-            cursor: default;
-            border: 2px solid #333;
-            border-radius: 12px;
-            padding: 1rem;
-            background: linear-gradient(145deg, #2a2a2a, #252525);
-            transition: all 0.3s ease;
-            position: relative;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .draggable-panel:hover {
-            border-color: #007bff;
-            box-shadow: 0 4px 16px rgba(0, 123, 255, 0.2);
-        }
-
-        .draggable-panel.dragging {
-            opacity: 0.6;
-            transform: scale(0.98) rotate(2deg);
-            cursor: grabbing;
-            z-index: 1000;
-            box-shadow: 0 8px 24px rgba(0, 123, 255, 0.4);
-        }
-
-        .draggable-panel.drag-over {
-            border-color: #28a745;
-            background: linear-gradient(145deg, #2d3a2d, #283328);
-            box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
-        }
-
-        .drag-handle {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            cursor: move;
-            color: #666;
-            font-size: 1.2rem;
-            z-index: 10;
-            padding: 0.5rem;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-        }
-
-        .drag-handle:hover {
-            color: #007bff;
-            background-color: rgba(0, 123, 255, 0.1);
-        }
-
-        .drag-handle:active {
-            color: #0056b3;
-            background-color: rgba(0, 123, 255, 0.2);
-        }
-
-        /* Пульсирующая анимация для первого посещения */
-        @keyframes pulse {
-            0%, 100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: scale(1.2);
-                opacity: 0.7;
-            }
-        }
-
-        .drag-handle.pulse {
-            animation: pulse 2s ease-in-out 3;
+            display: flex;
+            flex-direction: column;
         }
 
         .left-panel {
             display: flex;
             flex-direction: column;
-            width: 100%;
+            width: 50%;
             box-sizing: border-box;
         }
 
         .right-panel {
             display: flex;
             flex-direction: column;
-            width: 100%;
+            width: 50%;
             gap: 1rem;
             align-items: center;
             box-sizing: border-box;
@@ -129,9 +42,8 @@
 
         .board-wrapper {
             position: relative;
-            margin: 1rem auto;
-            width: 100%;
-            max-width: 800px;
+            margin-top: 1.5rem;
+            flex: 1;
         }
 
         .green-circle {
@@ -158,11 +70,9 @@
             border: 0.125rem solid #333;
             border-radius: 0.5rem;
             background-color: #2a2a2a;
-            width: 100%;
-            max-width: 800px;
+            width: 99%;
             aspect-ratio: 1 / 1;
             display: block;
-            margin: 0 auto;
         }
 
         .dropdown {
@@ -1144,85 +1054,14 @@
         .hints-table {
             padding-top: 1rem;
             display: none;
-            background-color: transparent;
+            background-color: #2d2d2d;
             border-radius: 8px;
+            border: 1px solid #444;
             overflow-x: auto;
         }
 
         .hints-table.active {
             display: block;
-        }
-
-        .reset-layout-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 0.8rem 1.2rem;
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-
-        .reset-layout-btn:hover {
-            background-color: #c82333;
-            transform: scale(1.05);
-        }
-
-        .reset-layout-btn:active {
-            transform: scale(0.95);
-        }
-
-        .info-tooltip {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 123, 255, 0.95);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            z-index: 2000;
-            display: none;
-            max-width: 90%;
-            text-align: center;
-            animation: slideDown 0.3s ease;
-        }
-
-        .info-tooltip.show {
-            display: block;
-        }
-
-        .info-tooltip button {
-            margin-top: 0.5rem;
-            padding: 0.4rem 1rem;
-            background-color: white;
-            color: #007bff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .info-tooltip button:hover {
-            background-color: #f0f0f0;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
         }
 
 
@@ -1308,402 +1147,17 @@
             text-align: left;
             flex-shrink: 0;
         }
-
-        /* Адаптивная верстка для разных размеров экранов */
-        
-        /* Большие экраны (desktops) */
-        @media (min-width: 1200px) {
-            .container {
-                grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-                max-width: 100%;
-            }
-            
-            body {
-                padding: 1rem;
-            }
-            
-            .draggable-panel {
-                min-height: auto;
-            }
-        }
-
-        /* Средние экраны (tablets landscape) */
-        @media (min-width: 768px) and (max-width: 1199px) {
-            .container {
-                grid-template-columns: 1fr;
-                max-width: 100%;
-            }
-            
-            body {
-                padding: 0.75rem;
-            }
-            
-            .board-wrapper {
-                max-width: 600px;
-            }
-            
-            canvas {
-                max-width: 600px;
-            }
-            
-            .selectors-wrapper {
-                font-size: clamp(0.6rem, 1.2vw, 0.9rem);
-            }
-            
-            .draggable-panel {
-                padding: 0.75rem;
-            }
-            
-            .info-tooltip {
-                font-size: 0.9rem;
-                padding: 0.75rem 1.5rem;
-            }
-        }
-
-        /* Маленькие экраны (phones) */
-        @media (max-width: 767px) {
-            body {
-                padding: 0.25rem;
-            }
-            
-            .container {
-                gap: 0.5rem;
-            }
-            
-            .board-wrapper {
-                max-width: 100%;
-                margin: 0.5rem auto;
-            }
-            
-            canvas {
-                max-width: 100%;
-            }
-            
-            .draggable-panel {
-                padding: 0.5rem;
-            }
-            
-            .selectors-wrapper {
-                font-size: clamp(0.5rem, 2vw, 0.8rem);
-                padding-top: 1rem;
-            }
-            
-            .checker-selector,
-            .bar-selector,
-            .jb-wrap {
-                font-size: 0.9em;
-            }
-            
-            .action-buttons {
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-            
-            .action-buttons button {
-                padding: 0.5rem 1rem;
-                font-size: 0.7rem;
-            }
-            
-            .cube-controls-block {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            
-            .turn-dice-block {
-                padding: 0.5rem;
-            }
-            
-            .turn-dice-content {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-            
-            .turn-dice-divider {
-                width: 100%;
-                height: 1px;
-                min-height: 1px;
-            }
-            
-            .game-panel,
-            .cube_panel {
-                flex-direction: column;
-            }
-            
-            .left-panel,
-            .right-panel,
-            .left-panel2,
-            .right-panel2 {
-                width: 100%;
-            }
-            
-            .match-panel {
-                flex-direction: column;
-                padding-left: 0;
-            }
-            
-            .score-inputs label {
-                font-size: 0.7rem;
-                width: auto;
-            }
-        }
-
-        /* Очень маленькие экраны */
-        @media (max-width: 480px) {
-            .selectors-wrapper {
-                font-size: clamp(0.45rem, 2.5vw, 0.7rem);
-            }
-            
-            .checker-btn,
-            .bar-checker-select {
-                transform: scale(0.9);
-            }
-            
-            .jacobi-beaver-block,
-            .turn-dice-block,
-            .cube-controls-block {
-                padding: 0.4rem 0.5rem;
-            }
-            
-            #game-type-button {
-                font-size: 0.75rem;
-                width: 5rem;
-                height: 2rem;
-            }
-            
-            .dice-selector-button,
-            .cube-selector-button {
-                width: 35px;
-                height: 35px;
-            }
-            
-            .checker-toggle-btn {
-                width: 2.5em;
-                height: 2.5em;
-            }
-            
-            .reset-layout-btn {
-                bottom: 10px;
-                right: 10px;
-                padding: 0.6rem 1rem;
-                font-size: 0.8rem;
-            }
-            
-            .info-tooltip {
-                top: 10px;
-                font-size: 0.75rem;
-                padding: 0.75rem 1rem;
-                max-width: 95%;
-            }
-            
-            .info-tooltip button {
-                font-size: 0.85rem;
-                padding: 0.3rem 0.8rem;
-            }
-        }
-
-        /* Очень широкие экраны */
-        @media (min-width: 1600px) {
-            .container {
-                grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
-                gap: 1.5rem;
-            }
-            
-            .board-wrapper {
-                max-width: 900px;
-            }
-            
-            canvas {
-                max-width: 900px;
-            }
-        }
-
-        /* Планшеты в портретной ориентации */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            
-            .board-wrapper {
-                max-width: 90vw;
-            }
-            
-            canvas {
-                max-width: 90vw;
-            }
-        }
-
-        /* Телефоны в ландшафтной ориентации */
-        @media (max-width: 896px) and (orientation: landscape) {
-            .container {
-                grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            }
-            
-            .board-wrapper {
-                max-width: 500px;
-            }
-            
-            canvas {
-                max-width: 500px;
-            }
-            
-            .draggable-panel {
-                padding: 0.5rem;
-            }
-            
-            body {
-                padding: 0.25rem;
-            }
-        }
-
-        /* Печать */
-        @media print {
-            .drag-handle,
-            .reset-layout-btn,
-            .info-tooltip {
-                display: none !important;
-            }
-            
-            .draggable-panel {
-                border: 1px solid #333 !important;
-                box-shadow: none !important;
-                background: white !important;
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }
-            
-            body {
-                background-color: white !important;
-            }
-        }
-
-        /* Анимация для изменения размера */
-        @media (prefers-reduced-motion: no-preference) {
-            .container,
-            .draggable-panel,
-            .board-wrapper,
-            canvas {
-                transition: all 0.3s ease;
-            }
-        }
-
-        /* Уменьшение анимаций для пользователей с настройками доступности */
-        @media (prefers-reduced-motion: reduce) {
-            *,
-            *::before,
-            *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-                scroll-behavior: auto !important;
-            }
-        }
-
-        /* Поддержка темной темы (если пользователь предпочитает темную тему) */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #0d0d0d;
-            }
-            
-            .draggable-panel {
-                background: linear-gradient(145deg, #1a1a1a, #151515);
-                border-color: #2a2a2a;
-            }
-        }
-
-        /* Улучшенная видимость при фокусе для клавиатурной навигации */
-        button:focus-visible,
-        select:focus-visible,
-        input:focus-visible,
-        .draggable-panel:focus-visible {
-            outline: 3px solid #007bff;
-            outline-offset: 2px;
-        }
-
-        /* Скрываем outline для мышки, показываем только для клавиатуры */
-        button:focus:not(:focus-visible),
-        select:focus:not(:focus-visible),
-        input:focus:not(:focus-visible) {
-            outline: none;
-        }
-
-        /* Улучшение контрастности для кнопок */
-        button {
-            font-weight: 500;
-        }
-
-        /* Accessibility: Skip to content link */
-        .skip-to-content {
-            position: absolute;
-            top: -40px;
-            left: 0;
-            background: #007bff;
-            color: white;
-            padding: 8px;
-            text-decoration: none;
-            z-index: 3000;
-        }
-
-        .skip-to-content:focus {
-            top: 0;
-        }
-
-        /* Индикатор загрузки */
-        .loading-indicator {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #007bff;
-            font-size: 1.2rem;
-            display: none;
-        }
-
-        .loading-indicator.active {
-            display: block;
-        }
-
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
-        .loading-indicator i {
-            animation: spin 1s linear infinite;
-            display: inline-block;
-        }
-
-        /* Оптимизация производительности */
-        .draggable-panel {
-            will-change: transform, opacity;
-        }
-
-        canvas {
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: crisp-edges;
-        }
     </style>
 </head>
 
 <body>
-    <a href="#main-container" class="skip-to-content">Перейти к содержимому</a>
-    <div class="container" id="main-container">
+    <div class="container">
         <h1>Backgammon Board Editor</h1>
-        
-        <!-- Секция с доской -->
-        <div class="board-section draggable-panel" draggable="true" data-panel="board">
-            <span class="drag-handle" title="Перетащить">⠿</span>
-            <div class="board-wrapper">
-                <div class="loading-indicator active" id="canvas-loader">
-                    <i class="fas fa-spinner"></i> Загрузка...
-                </div>
-                <canvas id="boardCanvas" width="800" height="800"></canvas>
-            </div>
+        <div class="board-wrapper">
+            <canvas id="boardCanvas" width="800" height="800"></canvas>
+            
         </div>
-        
-        <!-- Секция с селекторами шашек -->
-        <div class="draggable-panel" draggable="true" data-panel="checkers">
-            <span class="drag-handle" title="Перетащить">⠿</span>
-            <div class="selectors-wrapper">
+        <div class="selectors-wrapper">
             <div class="selectors-container">
                 <div class="checker-selector">
                     <div class="checker-label">Шашки</div>
@@ -1760,12 +1214,7 @@
                 </div>
             </div>
         </div>
-        </div>
-        
-        <!-- Секция с настройками куба -->
-        <div class="draggable-panel" draggable="true" data-panel="cube">
-            <span class="drag-handle" title="Перетащить">⠿</span>
-            <div class="game-type">
+        <div class="game-type">
 
             <div class="cube-controls-block-wrapper">
             <div class="cube-controls-labels">
@@ -1829,12 +1278,7 @@
             </div>
             </div>
         </div>
-        </div>
-        
-        <!-- Секция с настройками матча -->
-        <div class="draggable-panel" draggable="true" data-panel="match">
-            <span class="drag-handle" title="Перетащить">⠿</span>
-            <div class="game-panel">
+        <div class="game-panel">
             <div class="match-panel" style="display: none;">
                 <div class='left-panel'>
                     <div class="score-inputs">
@@ -1920,21 +1364,12 @@
                 </div>
             </div>
         </div>
-        </div>
-        
-        <!-- Секция Манигейм -->
-        <div class="draggable-panel" draggable="true" data-panel="manigeym">
-            <span class="drag-handle" title="Перетащить">⠿</span>
-            <div class="manigeym-panel">
+        <div class="manigeym-panel">
             <div class="centered-options">
             </div>
         </div>
-        </div>
-        
-        <!-- Секция с ходом и костями -->
-        <div class="draggable-panel" draggable="true" data-panel="turn-dice">
-            <span class="drag-handle" title="Перетащить">⠿</span>
-            <div class='cube_panel'>
+    </div>
+    <div class='cube_panel'>
         <div class="left-panel2">
             <div class="turn-dice-labels">
                 <label for="turn-select-btn">Чей ход?</label>
@@ -2007,28 +1442,9 @@
         <div class="right-panel2">
         </div>
     </div>
-        </div>
-        
-        <!-- Секция с подсказками -->
-        <div class="draggable-panel" draggable="true" data-panel="hints">
-            <span class="drag-handle" title="Перетащить">⠿</span>
-            <div class="hints-table">
-                <div id="hintsTable" class="hints-content"></div>
-            </div>
-        </div>
-    </div>
-    
-    <button class="reset-layout-btn" id="reset-layout-btn" title="Сбросить расположение панелей">
-        <i class="fas fa-undo"></i> Сбросить
-    </button>
-    
-    <div class="info-tooltip" id="info-tooltip">
-        <div>
-            <strong>💡 Подсказка:</strong> Панели можно перетаскивать!<br>
-            Используйте значок <strong>⠿</strong> в правом верхнем углу каждой панели.<br>
-            Порядок будет сохранен автоматически.
-        </div>
-        <button id="close-tooltip">Понятно</button>
+
+    <div class="hints-table">
+        <div id="hintsTable" class="hints-content"></div>
     </div>
 </body>
 
@@ -2439,12 +1855,6 @@
         function imageLoaded() {
             imagesLoaded++;
             if (imagesLoaded === totalImages) {
-                // Скрываем индикатор загрузки
-                const loader = document.getElementById('canvas-loader');
-                if (loader) {
-                    loader.classList.remove('active');
-                }
-                
                 createDropdowns();
                 drawBoard();
                 updateTurnSelect();
@@ -3067,276 +2477,6 @@
         });
 
         window.addEventListener('resize', updateAllDropdownPositions);
-
-        // Drag and Drop функционал для панелей
-        function initDragAndDrop() {
-            const container = document.getElementById('main-container');
-            const draggablePanels = document.querySelectorAll('.draggable-panel');
-            let draggedElement = null;
-            let touchDragElement = null;
-
-            draggablePanels.forEach(panel => {
-                // Desktop drag events
-                panel.addEventListener('dragstart', function(e) {
-                    draggedElement = this;
-                    this.classList.add('dragging');
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/html', this.innerHTML);
-                });
-
-                panel.addEventListener('dragend', function(e) {
-                    this.classList.remove('dragging');
-                    draggedElement = null;
-                    // Удаляем все drag-over классы
-                    draggablePanels.forEach(p => p.classList.remove('drag-over'));
-                });
-
-                panel.addEventListener('dragover', function(e) {
-                    if (e.preventDefault) {
-                        e.preventDefault();
-                    }
-                    e.dataTransfer.dropEffect = 'move';
-                    
-                    if (draggedElement !== this) {
-                        this.classList.add('drag-over');
-                    }
-                    return false;
-                });
-
-                panel.addEventListener('dragenter', function(e) {
-                    if (draggedElement !== this) {
-                        this.classList.add('drag-over');
-                    }
-                });
-
-                panel.addEventListener('dragleave', function(e) {
-                    this.classList.remove('drag-over');
-                });
-
-                panel.addEventListener('drop', function(e) {
-                    if (e.stopPropagation) {
-                        e.stopPropagation();
-                    }
-                    
-                    this.classList.remove('drag-over');
-                    
-                    if (draggedElement !== this) {
-                        // Определяем позицию для вставки
-                        const rect = this.getBoundingClientRect();
-                        const mouseY = e.clientY;
-                        const insertBefore = mouseY < (rect.top + rect.height / 2);
-                        
-                        if (insertBefore) {
-                            container.insertBefore(draggedElement, this);
-                        } else {
-                            container.insertBefore(draggedElement, this.nextSibling);
-                        }
-                        
-                        // Сохраняем порядок в localStorage
-                        savePanelOrder();
-                    }
-                    
-                    return false;
-                });
-
-                // Touch events для мобильных устройств
-                panel.addEventListener('touchstart', function(e) {
-                    if (!e.target.classList.contains('drag-handle') && 
-                        !e.target.closest('.drag-handle')) {
-                        return;
-                    }
-                    
-                    touchDragElement = this;
-                    this.classList.add('dragging');
-                    
-                    // Предотвращаем скроллинг при перетаскивании
-                    e.preventDefault();
-                }, { passive: false });
-
-                panel.addEventListener('touchmove', function(e) {
-                    if (!touchDragElement) return;
-                    
-                    e.preventDefault();
-                    
-                    const touch = e.touches[0];
-                    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-                    const dropTarget = elementBelow?.closest('.draggable-panel');
-                    
-                    // Удаляем все drag-over классы
-                    draggablePanels.forEach(p => p.classList.remove('drag-over'));
-                    
-                    if (dropTarget && dropTarget !== touchDragElement) {
-                        dropTarget.classList.add('drag-over');
-                    }
-                }, { passive: false });
-
-                panel.addEventListener('touchend', function(e) {
-                    if (!touchDragElement) return;
-                    
-                    e.preventDefault();
-                    
-                    this.classList.remove('dragging');
-                    
-                    const touch = e.changedTouches[0];
-                    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-                    const dropTarget = elementBelow?.closest('.draggable-panel');
-                    
-                    // Удаляем все drag-over классы
-                    draggablePanels.forEach(p => p.classList.remove('drag-over'));
-                    
-                    if (dropTarget && dropTarget !== touchDragElement) {
-                        const rect = dropTarget.getBoundingClientRect();
-                        const touchY = touch.clientY;
-                        const insertBefore = touchY < (rect.top + rect.height / 2);
-                        
-                        if (insertBefore) {
-                            container.insertBefore(touchDragElement, dropTarget);
-                        } else {
-                            container.insertBefore(touchDragElement, dropTarget.nextSibling);
-                        }
-                        
-                        savePanelOrder();
-                    }
-                    
-                    touchDragElement = null;
-                }, { passive: false });
-            });
-
-            // Сохранение порядка панелей
-            function savePanelOrder() {
-                const panels = Array.from(container.querySelectorAll('.draggable-panel'));
-                const order = panels.map(panel => panel.dataset.panel);
-                localStorage.setItem('panelOrder', JSON.stringify(order));
-            }
-
-            // Восстановление порядка панелей
-            function restorePanelOrder() {
-                const savedOrder = localStorage.getItem('panelOrder');
-                if (!savedOrder) return;
-                
-                try {
-                    const order = JSON.parse(savedOrder);
-                    const panels = {};
-                    
-                    // Собираем все панели
-                    container.querySelectorAll('.draggable-panel').forEach(panel => {
-                        panels[panel.dataset.panel] = panel;
-                    });
-                    
-                    // Перестраиваем в нужном порядке
-                    order.forEach(panelId => {
-                        if (panels[panelId]) {
-                            container.appendChild(panels[panelId]);
-                        }
-                    });
-                } catch (e) {
-                    console.error('Ошибка восстановления порядка панелей:', e);
-                }
-            }
-
-            // Восстанавливаем порядок при загрузке
-            restorePanelOrder();
-
-            // Кнопка сброса расположения
-            const resetBtn = document.getElementById('reset-layout-btn');
-            if (resetBtn) {
-                resetBtn.addEventListener('click', function() {
-                    if (confirm('Вы уверены, что хотите сбросить расположение панелей на начальное?')) {
-                        localStorage.removeItem('panelOrder');
-                        location.reload();
-                    }
-                });
-            }
-
-            // Показываем подсказку при первом посещении
-            const tooltip = document.getElementById('info-tooltip');
-            const closeTooltipBtn = document.getElementById('close-tooltip');
-            const hasSeenTooltip = localStorage.getItem('hasSeenDragTooltip');
-            
-            if (!hasSeenTooltip && tooltip) {
-                setTimeout(() => {
-                    tooltip.classList.add('show');
-                    
-                    // Анимируем drag-handles
-                    document.querySelectorAll('.drag-handle').forEach(handle => {
-                        handle.classList.add('pulse');
-                    });
-                }, 1000);
-            }
-            
-            if (closeTooltipBtn) {
-                closeTooltipBtn.addEventListener('click', function() {
-                    tooltip.classList.remove('show');
-                    localStorage.setItem('hasSeenDragTooltip', 'true');
-                    
-                    // Убираем анимацию с drag-handles
-                    document.querySelectorAll('.drag-handle').forEach(handle => {
-                        handle.classList.remove('pulse');
-                    });
-                });
-            }
-
-            // Автоматически скрываем подсказку через 10 секунд
-            if (!hasSeenTooltip && tooltip) {
-                setTimeout(() => {
-                    tooltip.classList.remove('show');
-                    localStorage.setItem('hasSeenDragTooltip', 'true');
-                    
-                    // Убираем анимацию с drag-handles
-                    document.querySelectorAll('.drag-handle').forEach(handle => {
-                        handle.classList.remove('pulse');
-                    });
-                }, 11000);
-            }
-
-            // Убираем pulse класс после завершения анимации
-            document.querySelectorAll('.drag-handle').forEach(handle => {
-                handle.addEventListener('animationend', function() {
-                    this.classList.remove('pulse');
-                });
-            });
-
-            // Клавиатурная навигация для панелей
-            let focusedPanelIndex = -1;
-            const panels = Array.from(draggablePanels);
-
-            document.addEventListener('keydown', function(e) {
-                // Ctrl + стрелки для перемещения панелей
-                if (e.ctrlKey && focusedPanelIndex >= 0) {
-                    const focusedPanel = panels[focusedPanelIndex];
-                    
-                    if (e.key === 'ArrowUp' && focusedPanelIndex > 0) {
-                        e.preventDefault();
-                        const prevPanel = panels[focusedPanelIndex - 1];
-                        container.insertBefore(focusedPanel, prevPanel);
-                        focusedPanel.focus();
-                        savePanelOrder();
-                    } else if (e.key === 'ArrowDown' && focusedPanelIndex < panels.length - 1) {
-                        e.preventDefault();
-                        const nextPanel = panels[focusedPanelIndex + 1];
-                        container.insertBefore(focusedPanel, nextPanel.nextSibling);
-                        focusedPanel.focus();
-                        savePanelOrder();
-                    }
-                }
-            });
-
-            // Отслеживаем фокус на панелях
-            panels.forEach((panel, index) => {
-                panel.setAttribute('tabindex', '0');
-                panel.addEventListener('focus', function() {
-                    focusedPanelIndex = index;
-                });
-                panel.addEventListener('blur', function() {
-                    if (focusedPanelIndex === index) {
-                        focusedPanelIndex = -1;
-                    }
-                });
-            });
-        }
-
-        // Инициализируем drag and drop после загрузки страницы
-        initDragAndDrop();
     });
 </script>
 </body>
