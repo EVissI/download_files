@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1826,12 +1826,12 @@
             const barDy = (player === 'second') ? 55 : -55;
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
-                for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
+                for (let i = 0; i < Math.min(Math.abs(positions.bar), 2); i++) {
                     ctx.drawImage(img, barX - 31.25, y + (i * barDy) - 31.25, 62.5, 62.5);
                 }
-                if (Math.abs(positions.bar) > 6) {
-                    const lastCheckerY = y + (5 * barDy);
-                    ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
+                if (Math.abs(positions.bar) > 2) {
+                    const lastCheckerY = y + (1 * barDy);
+                    ctx.fillText(`${Math.abs(positions.bar)}`, barX, lastCheckerY);
                 }
             }
         }
