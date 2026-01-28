@@ -45,7 +45,7 @@ async def handle_admin_panel(message: Message, state: FSMContext):
     """
     await message.answer(
         "Выберите раздел или используйте кнопку ниже для входа в веб-админку:",
-        reply_markup=AdminKeyboard.get_inline_admin_web()
+        reply_markup=AdminKeyboard.get_inline_admin_web(message.from_user.id)
     )
     await message.answer(
         "Разделы управления:",

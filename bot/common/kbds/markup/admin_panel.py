@@ -27,14 +27,14 @@ class AdminKeyboard:
             if key == 'back':
                 continue
             kb.add(KeyboardButton(text=text))
-        kb.add(KeyboardButton(text='Позиция',web_app=WebAppInfo(url=f'{settings.MINI_APP_URL}/pokaz?chat_id=123213')))
         kb.add(KeyboardButton(text=AdminKeyboard.admin_text_kb['back']))
         kb.adjust(2, 2, 2, 1, 1, 1)
         return kb.as_markup(resize_keyboard=True)
 
     @staticmethod
-    def get_inline_admin_web() -> InlineKeyboardMarkup:
+    def get_inline_admin_web(chat_id: int) -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
         admin_url = f"{settings.MINI_APP_URL}/admin/login"
         kb.button(text="🚀 Войти в Админ-панель", web_app=WebAppInfo(url=admin_url))
+        kb.add(KeyboardButton(text='Позиция',web_app=WebAppInfo(url=f'{settings.MINI_APP_URL}/pokaz?chat_id={chat_id}')))
         return kb.as_markup()
