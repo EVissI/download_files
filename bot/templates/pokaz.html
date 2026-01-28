@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1984,6 +1984,17 @@
                 cubeOwnerBtn.dataset.color = val;
             }
         }
+
+        // Функция синхронизации цветов куба и хода
+        function syncCubeOwnerAndTurn() {
+            const cubeShown = document.getElementById('cube-shown-select').value;
+            if (cubeShown !== '0') {
+                const cubeOwner = document.getElementById('cube-owner-select').value;
+                const oppositeColor = cubeOwner === 'white' ? 'black' : 'white';
+                document.getElementById('turn-select').value = oppositeColor;
+                updateTurnSelect();
+            }
+        }
         let imagesLoaded = 0;
         const totalImages = 21;
 
@@ -1998,6 +2009,11 @@
                 setupDropdownCloseHandler();
                 initDiceSelectors();
                 initCubeSelectors();
+                // Синхронизация цветов при загрузке
+                const cubeShown = document.getElementById('cube-shown-select').value;
+                if (cubeShown !== '0') {
+                    syncCubeOwnerAndTurn();
+                }
                 document.getElementById('lower-score').addEventListener('change', drawBoard);
                 document.getElementById('upper-score').addEventListener('change', drawBoard);
                 document.getElementById('match_lenght').addEventListener('change', drawBoard);
@@ -2099,6 +2115,14 @@
                 document.getElementById('dice2-select').value = '0';
                 updateAllDiceSelectors();
                 updateCubeSelectorDisplay('value');
+                // Синхронизация: сделать цвета противоположными
+                syncCubeOwnerAndTurn();
+            } else {
+                // При значении 0, оба должны быть белыми
+                document.getElementById('turn-select').value = 'white';
+                document.getElementById('cube-owner-select').value = 'white';
+                updateTurnSelect();
+                updateCubeOwnerSelect();
             }
             drawBoard();
         });
@@ -2216,8 +2240,13 @@
                 input.value = newColor;
                 if (this.dataset.target === 'turn-select') {
                     updateTurnSelect();
-                } else {
+                } else if (this.dataset.target === 'cube-owner-select') {
                     updateCubeOwnerSelect();
+                    // При изменении куба синхронизируем с ходом
+                    const cubeShown = document.getElementById('cube-shown-select').value;
+                    if (cubeShown !== '0') {
+                        syncCubeOwnerAndTurn();
+                    }
                 }
                 input.dispatchEvent(new Event('change'));
             });
