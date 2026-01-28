@@ -2731,6 +2731,10 @@
         });
         document.getElementById('show-button').addEventListener('click', () => {
             const xgid = generateXGID();
+            
+            // Show alert with generated XGID string
+            alert('XGID: ' + xgid);
+            
             const hintsTable = document.getElementById('hintsTable');
             const hintsTableContainer = document.querySelector('.hints-table');
 
