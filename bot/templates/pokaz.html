@@ -1214,9 +1214,6 @@
             flex-direction: row;
             gap: 0.5rem;
         }
-        .cube-controls-labels {
-            display: none;
-        }
         .cube-controls-labels label {
             color: white;
             font-size: clamp(0.5rem, 1.2vw, 0.7rem);  
@@ -1465,6 +1462,10 @@
         </div>
         
         <div class="turn-dice-block">
+            <div class="turn-dice-labels">
+                <label for="turn-select">Чей ход?</label>
+                <label for="dice-select">Кости</label>
+            </div>
             <div class="turn-dice-content">
                 <div class="turn-dice-section">
                     <div class="turn-dice-controls">
