@@ -1433,9 +1433,9 @@
             <div class="cube-controls-block">
                 <div class="cube-shown-selector">
                     <div class="cube-selector-custom">
-                        <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">0</div>
+                        <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">нет</div>
                         <div class="cube-selector-dropdown" id="cube-shown-dropdown">
-                            <div class="cube-option empty" data-value="0">0</div>
+                            <div class="cube-option empty" data-value="0">нет</div>
                             <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
                             <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
                             <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
@@ -1457,9 +1457,9 @@
                 <div class="cube-value-options">
                     <div>
                         <div class="cube-selector-custom">
-                            <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">0</div>
+                            <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">нет</div>
                             <div class="cube-selector-dropdown" id="cube-value-dropdown">
-                                <div class="cube-option empty" data-value="0">0</div>
+                                <div class="cube-option empty" data-value="0">нет</div>
                                 <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
                                 <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
                                 <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
@@ -2324,8 +2324,8 @@
 
             if (value === 0) {
                 button.className = 'cube-selector-button empty';
-                button.textContent = '0';
-                button.innerHTML = '0';
+                button.textContent = 'нет';
+                button.innerHTML = 'нет';
             } else {
                 button.className = 'cube-selector-button';
                 const imgSrc = `/static/Double${value}.png`;
