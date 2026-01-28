@@ -1831,7 +1831,11 @@
                 }
                 if (Math.abs(positions.bar) > 2) {
                     const lastCheckerY = y + (1 * barDy);
+                    // Черный текст для белых шашек, белый для черных
+                    ctx.fillStyle = (player === 'first') ? '#000000' : '#ffffff';
                     ctx.fillText(`${Math.abs(positions.bar)}`, barX, lastCheckerY);
+                    // Возвращаем белый цвет для остального текста
+                    ctx.fillStyle = '#ffffff';
                 }
             }
         }
