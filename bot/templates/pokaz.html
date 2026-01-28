@@ -273,14 +273,22 @@
             border-radius: 8px;
             cursor: pointer;
             text-align: center;
-            transition: background-color 0.3s;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
 
         #game-type-button:hover {
             background-color: #666;
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        #game-type-button:active {
+            transform: scale(0.98);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         #game-type-button i {
@@ -419,12 +427,23 @@
         }
 
         .match-panel {
-            display: flex;
+            display: none;
             width: 100%;
             box-sizing: border-box;
             flex-direction: row;
-            gap: 0.3rem;
-            padding-left: 1rem;
+            gap: 0.8rem;
+            padding: 1rem;
+            background-color: #3b3b3b;
+            border: clamp(2px, 0.5vw, 3px) double #555;
+            border-radius: clamp(8px, 2vw, 12px);
+            box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .match-panel.hidden {
+            display: none;
         }
 
         .manigeym-panel {
@@ -441,51 +460,67 @@
 
         .score-inputs {
             display: flex;
-            gap: 0.3rem;
-            flex-direction: column;
+            gap: clamp(0.5rem, 1.5vw, 0.8rem);
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
-        .score-inputs div {
+        .score-inputs > div {
             display: flex;
+            flex-direction: column;
             align-items: center;
+            gap: 0.3rem;
         }
 
         .score-inputs label {
             color: white;
-            font-size: 0.8rem;
-            width: 8.5rem;
-            text-align: left;
-            flex-shrink: 0;
+            font-size: clamp(0.7rem, 1.3vw, 0.85rem);
+            text-align: center;
         }
         .match-length-selector {
             display: flex;
             align-items: center;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.3rem;
         }
         .match-length-selector label {
             color: white;
-            font-size: 0.8rem;
+            font-size: clamp(0.7rem, 1.3vw, 0.85rem);
+            text-align: center;
         }
         .match-length-selector select {
             text-align: center;
-            border: 1px solid #444;
+            border: 1px solid #555;
             border-radius: 0.25rem;
             background-color: #2d2d2d;
             color: white;
             box-sizing: border-box;
             -webkit-appearance: none;
             appearance: none;
+            padding: 0.15rem;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .match-length-selector select:hover {
+            background-color: #3a3a3a;
+            border-color: #666;
         }
         .score-inputs select {
             text-align: center;
-            border: 1px solid #444;
+            border: 1px solid #555;
             border-radius: 0.25rem;
             background-color: #2d2d2d;
             color: white;
             box-sizing: border-box;
             -webkit-appearance: none;
             appearance: none;
+            padding: 0.15rem;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .score-inputs select:hover {
+            background-color: #3a3a3a;
+            border-color: #666;
         }
 
         .left-panel2 {
@@ -639,6 +674,11 @@
             align-items: center;
             gap: clamp(0.1rem, 0.3vw, 0.2rem);
             font-size: clamp(0.7em, 1.2vw, 0.9em);
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .jb-wrap.hidden {
+            display: none;
         }
 
         .jb-title {
@@ -1396,97 +1436,96 @@
         </div>
         </div>
 
-        <!-- <div class="game-panel">
-            <div class="match-panel" style="display: none;">
-                <div class='left-panel'>
-                    <div class="score-inputs">
-                        <div>
-                            <label for="lower-score">Очки нижнего игрока:</label>
-                            <select id="lower-score" class="selector-size">
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="10">10</option>
-                                <option value="11">11</option>
-                                <option value="12">12</option>
-                                <option value="13">13</option>
-                                <option value="14">14</option>
-                                <option value="15">15</option>
-                                <option value="16">16</option>
-                                <option value="17">17</option>
-                                <option value="18">18</option>
-                                <option value="19">19</option>
-                                <option value="20">20</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="upper-score">Очки верхнего игрока:</label>
-                            <select id="upper-score" class="selector-size">
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="10">10</option>
-                                <option value="11">11</option>
-                                <option value="12">12</option>
-                                <option value="13">13</option>
-                                <option value="14">14</option>
-                                <option value="15">15</option>
-                                <option value="16">16</option>
-                                <option value="17">17</option>
-                                <option value="18">18</option>
-                                <option value="19">19</option>
-                                <option value="20">20</option>
-                            </select>
-                        </div>
-                        <div class="match-length-selector">
-                            <label for="match_lenght">Матч до</label>
-                            <select id="match_lenght" class="selector-size">
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="10">10</option>
-                                <option value="11">11</option>
-                                <option value="12">12</option>
-                                <option value="13">13</option>
-                                <option value="14">14</option>
-                                <option value="15">15</option>
-                                <option value="16">16</option>
-                                <option value="17">17</option>
-                                <option value="18">18</option>
-                                <option value="19">19</option>
-                                <option value="20">20</option>
-                                <option value="21">21</option>
-                            </select>
-                        </div>
-                    </div>
+        <div class="match-panel">
+            <div class="score-inputs">
+                <div>
+                    <label for="lower-score">Очки нижнего игрока:</label>
+                    <select id="lower-score" class="selector-size">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18">18</option>
+                        <option value="19">19</option>
+                        <option value="20">20</option>
+                    </select>
                 </div>
-                <div class='right-panel'>
+                <div>
+                    <label for="upper-score">Очки верхнего игрока:</label>
+                    <select id="upper-score" class="selector-size">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18">18</option>
+                        <option value="19">19</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+                <div class="match-length-selector">
+                    <label for="match_lenght">Матч до</label>
+                    <select id="match_lenght" class="selector-size">
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18">18</option>
+                        <option value="19">19</option>
+                        <option value="20">20</option>
+                        <option value="21">21</option>
+                    </select>
+                </div>
+                <div class="match-length-selector">
+                    <label for="max-cube-select">Макс куб</label>
+                    <select id="max-cube-select" class="selector-size">
+                        <option value="1">2</option>
+                        <option value="2">4</option>
+                        <option value="3" selected>8</option>
+                        <option value="4">16</option>
+                    </select>
                 </div>
             </div>
         </div>
-        <div class="manigeym-panel">
-            <div class="centered-options">
-            </div>
-        </div>
-    </div> -->
+    </div>
 
     <div class="hints-table">
         <div id="hintsTable" class="hints-content"></div>
@@ -1972,60 +2011,6 @@
         Double32.onload = imageLoaded;
         Double64.onload = imageLoaded;
 
-        document.getElementById('game-type-button').addEventListener('click', () => {
-            currentGameType = currentGameType === 'манигейм' ? 'матч' : 'манигейм';
-            const gameTypeBtn = document.getElementById('game-type-button');
-            if (currentGameType === 'манигейм') {
-                gameTypeBtn.innerHTML = '<i class="fa fa-rub"></i>';
-                gameTypeBtn.title = 'Манигейм';
-            } else {
-                gameTypeBtn.innerHTML = '<i class="fa fa-leanpub"></i>';
-                gameTypeBtn.title = 'Матч';
-            }
-            const matchPanel = document.querySelector('.match-panel');
-            const manigeymPanel = document.querySelector('.manigeym-panel');
-            const maxCubeMatch = document.getElementById('max-cube-options-match');
-            const maxCubeMoney = document.getElementById('max-cube-options-money');
-            const moneyControls = document.getElementById('money-controls');
-            const jbWrap = document.querySelector('.jb-wrap');
-            if (currentGameType === 'матч') {
-                matchPanel.style.display = 'flex';
-                manigeymPanel.style.display = 'none';
-                if (maxCubeMatch) maxCubeMatch.style.display = 'flex';
-                if (maxCubeMoney) maxCubeMoney.style.display = 'none';
-                if (moneyControls) moneyControls.style.display = 'none';
-                if (jbWrap) jbWrap.style.display = 'none';
-
-                // Обнуляем значения в скрытом блоке
-                const jacobiEl = document.getElementById('jacobi-select');
-                const beaverEl = document.getElementById('beaver-select');
-                if (jacobiEl) jacobiEl.value = '0';
-                if (beaverEl) beaverEl.value = '0';
-                document.querySelectorAll('.toggle-btn').forEach(btn => {
-                    const el = document.getElementById(btn.dataset.target);
-                    if (!el) return;
-                    const val = el.value;
-                    btn.textContent = val;
-                    btn.classList.toggle('on', val === '1');
-                });
-
-                const cubeShownSelect = document.getElementById('cube-shown-select');
-                const cubeValueSelect = document.getElementById('cube-value-select');
-                if (cubeShownSelect) cubeShownSelect.value = '0';
-                if (cubeValueSelect) cubeValueSelect.value = '0';
-                updateCubeSelectorDisplay('shown');
-                updateCubeSelectorDisplay('value');
-                updateCubeSelectorsVisibility();
-                drawBoard();
-            } else {
-                matchPanel.style.display = 'none';
-                manigeymPanel.style.display = 'flex';
-                if (maxCubeMatch) maxCubeMatch.style.display = 'none';
-                if (maxCubeMoney) maxCubeMoney.style.display = 'flex';
-                if (moneyControls) moneyControls.style.display = 'flex';
-                if (jbWrap) jbWrap.style.display = 'flex';
-            }
-        });
 
         function updateCubeSelectorsVisibility() {
             const cubeShown = document.getElementById('cube-shown-select').value;
@@ -2471,16 +2456,8 @@
             }
 
             const matchPanel = document.querySelector('.match-panel');
-            const manigeymPanel = document.querySelector('.manigeym-panel');
-            const maxCubeMatch = document.getElementById('max-cube-options-match');
-            const maxCubeMoney = document.getElementById('max-cube-options-money');
-            const moneyControls = document.getElementById('money-controls');
             const jbWrap = document.querySelector('.jb-wrap');
-            matchPanel.style.display = 'none';
-            manigeymPanel.style.display = 'flex';
-            if (maxCubeMatch) maxCubeMatch.style.display = 'none';
-            if (maxCubeMoney) maxCubeMoney.style.display = 'flex';
-            if (moneyControls) moneyControls.style.display = 'flex';
+            if (matchPanel) matchPanel.style.display = 'none';
             if (jbWrap) jbWrap.style.display = 'flex';
 
             const hintsTableContainer = document.querySelector('.hints-table');
@@ -2532,6 +2509,30 @@
                 this.textContent = next;
                 this.classList.toggle('on', next === '1');
             });
+        });
+
+        // Game type button toggle between money game and match
+        document.getElementById('game-type-button').addEventListener('click', () => {
+            const jbWrap = document.querySelector('.jb-wrap');
+            const matchPanel = document.querySelector('.match-panel');
+            const gameTypeButton = document.getElementById('game-type-button');
+            
+            // Toggle visibility
+            if (jbWrap.style.display === 'none') {
+                // Switch to money game
+                jbWrap.style.display = 'flex';
+                matchPanel.style.display = 'none';
+                gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
+                gameTypeButton.title = 'Манигейм';
+                currentGameType = 'манигейм';
+            } else {
+                // Switch to match
+                jbWrap.style.display = 'none';
+                matchPanel.style.display = 'flex';
+                gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
+                gameTypeButton.title = 'Матч';
+                currentGameType = 'матч';
+            }
         });
 
         window.addEventListener('resize', updateAllDropdownPositions);
