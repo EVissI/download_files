@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -2424,7 +2424,105 @@
                     updateSelectOptions('black');
                     updateBarSelects();
                 });
+
+                // Add click handler for canvas to place checkers
+                canvas.addEventListener('click', handleCanvasClick);
+                canvas.addEventListener('touchend', handleCanvasTouchEnd);
             }
+        }
+
+        // Function to determine which point was clicked based on canvas coordinates
+        function getPointFromCoordinates(canvasX, canvasY) {
+            const scale = canvas.offsetWidth / 800;
+            const x = canvasX / scale;
+            const y = canvasY / scale;
+
+            // Check each point to see if click is within its area
+            for (let point = 1; point <= 24; point++) {
+                const pointX = getX(point);
+                const pointY = getBaseY(point);
+                
+                // Define clickable area for each point (triangle area)
+                const triangleWidth = 50; // approximate width of triangle
+                const triangleHeight = 200; // approximate height of triangle
+                
+                // Check if click is within the triangle bounds
+                const isInXRange = Math.abs(x - pointX) <= triangleWidth / 2;
+                const isInYRange = point > 12 
+                    ? (y >= pointY && y <= pointY + triangleHeight)  // upper points (13-24)
+                    : (y <= pointY && y >= pointY - triangleHeight); // lower points (1-12)
+                
+                if (isInXRange && isInYRange) {
+                    return point;
+                }
+            }
+            
+            return null; // No point found
+        }
+
+        // Handle canvas click event
+        function handleCanvasClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            addCheckerAtPosition(x, y);
+        }
+
+        // Handle canvas touch event
+        function handleCanvasTouchEnd(event) {
+            event.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = event.changedTouches[0];
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            
+            addCheckerAtPosition(x, y);
+        }
+
+        // Add one checker at the clicked position
+        function addCheckerAtPosition(x, y) {
+            const point = getPointFromCoordinates(x, y);
+            
+            if (point === null) {
+                return; // Click was not on a valid point
+            }
+
+            const color = getSelectedCheckerColor();
+            const targetPositions = color === 'white' ? positions.first : positions.second;
+            const otherPositions = color === 'white' ? positions.second : positions.first;
+            
+            // Check if the point is occupied by the other color
+            const occupiedByOther = (otherPositions[point.toString()] || 0) > 0;
+            if (occupiedByOther) {
+                return; // Cannot place checker on opponent's point
+            }
+
+            // Get current count and check if we can add one more
+            const currentCount = targetPositions[point.toString()] || 0;
+            const totalCheckers = getTotalCheckers(targetPositions);
+            
+            if (totalCheckers >= 15) {
+                return; // Already have 15 checkers placed
+            }
+
+            if (currentCount >= 15) {
+                return; // Cannot have more than 15 checkers on one point
+            }
+
+            // Add one checker
+            const newCount = currentCount + 1;
+            targetPositions[point.toString()] = newCount;
+
+            // Update the select element
+            const select = document.getElementById(`point-${point}`);
+            if (select) {
+                select.value = newCount;
+            }
+
+            // Redraw board and update options
+            drawBoard();
+            updateSelectOptions(color);
         }
 
         boardImg.onload = imageLoaded;
