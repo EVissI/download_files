@@ -2480,7 +2480,7 @@
             addCheckerAtPosition(x, y);
         }
 
-        // Add one checker at the clicked position
+        // Add or remove checker at the clicked position
         function addCheckerAtPosition(x, y) {
             const point = getPointFromCoordinates(x, y);
             
@@ -2492,26 +2492,45 @@
             const targetPositions = color === 'white' ? positions.first : positions.second;
             const otherPositions = color === 'white' ? positions.second : positions.first;
             
-            // Check if the point is occupied by the other color
+            // Get current count on this point
+            const currentCount = targetPositions[point.toString()] || 0;
             const occupiedByOther = (otherPositions[point.toString()] || 0) > 0;
+            
+            // If there are checkers of selected color on this point, remove one
+            if (currentCount > 0) {
+                const newCount = currentCount - 1;
+                if (newCount === 0) {
+                    delete targetPositions[point.toString()];
+                } else {
+                    targetPositions[point.toString()] = newCount;
+                }
+
+                // Update the select element
+                const select = document.getElementById(`point-${point}`);
+                if (select) {
+                    select.value = newCount;
+                }
+
+                // Redraw board and update options
+                drawBoard();
+                updateSelectOptions(color);
+                return;
+            }
+            
+            // If point is occupied by the other color, cannot place checker
             if (occupiedByOther) {
                 return; // Cannot place checker on opponent's point
             }
 
-            // Get current count and check if we can add one more
-            const currentCount = targetPositions[point.toString()] || 0;
+            // Try to add one checker
             const totalCheckers = getTotalCheckers(targetPositions);
             
             if (totalCheckers >= 15) {
                 return; // Already have 15 checkers placed
             }
 
-            if (currentCount >= 15) {
-                return; // Cannot have more than 15 checkers on one point
-            }
-
             // Add one checker
-            const newCount = currentCount + 1;
+            const newCount = 1;
             targetPositions[point.toString()] = newCount;
 
             // Update the select element
