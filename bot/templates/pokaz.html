@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1511,6 +1511,40 @@
             background-color: transparent;
             cursor: not-allowed;
         }
+
+        .mode-toggle-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 10px;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        .mode-toggle-btn:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+
+        .mode-toggle-btn:active {
+            transform: scale(0.98);
+        }
+
+        .mode-toggle-btn.delete-mode {
+            background-color: #f44336;
+        }
+
+        .mode-toggle-btn.delete-mode:hover {
+            background-color: #da190b;
+        }
+
+        .mode-toggle-btn i {
+            margin-right: 8px;
+        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -1542,6 +1576,10 @@
             XGID: <span id="xgid-text"></span>
             <button id="xgid-close" class="xgid-close">X</button>
         </div>
+        <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place">
+            <i class="fa fa-mouse-pointer"></i>
+            <span id="modeText">Установка шашек</span>
+        </button>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
 
@@ -2480,8 +2518,65 @@
             addCheckerAtPosition(x, y);
         }
 
+        // Remove one checker at the clicked position
+        function removeCheckerAtPosition(x, y) {
+            const point = getPointFromCoordinates(x, y);
+            
+            if (point === null) {
+                return; // Click was not on a valid point
+            }
+
+            // Check both colors to see which one has checkers here
+            const whiteCount = positions.first[point.toString()] || 0;
+            const blackCount = positions.second[point.toString()] || 0;
+            
+            if (whiteCount > 0) {
+                // Remove white checker
+                const newCount = whiteCount - 1;
+                if (newCount === 0) {
+                    delete positions.first[point.toString()];
+                } else {
+                    positions.first[point.toString()] = newCount;
+                }
+                
+                // Update the select element
+                const select = document.getElementById(`point-${point}`);
+                if (select) {
+                    select.value = newCount;
+                }
+                
+                // Redraw board and update options
+                drawBoard();
+                updateSelectOptions('white');
+            } else if (blackCount > 0) {
+                // Remove black checker
+                const newCount = blackCount - 1;
+                if (newCount === 0) {
+                    delete positions.second[point.toString()];
+                } else {
+                    positions.second[point.toString()] = newCount;
+                }
+                
+                // Update the select element
+                const select = document.getElementById(`point-${point}`);
+                if (select) {
+                    select.value = newCount;
+                }
+                
+                // Redraw board and update options
+                drawBoard();
+                updateSelectOptions('black');
+            }
+        }
+
         // Add one checker at the clicked position
         function addCheckerAtPosition(x, y) {
+            // Check current mode
+            if (currentMode === 'delete') {
+                removeCheckerAtPosition(x, y);
+                return;
+            }
+            
             const point = getPointFromCoordinates(x, y);
             
             if (point === null) {
@@ -3170,6 +3265,23 @@
             });
         });
 
+        // Mode toggle button for placing/removing checkers
+        let currentMode = 'place'; // 'place' or 'delete'
+        const modeToggleBtn = document.getElementById('modeToggleBtn');
+        const modeText = document.getElementById('modeText');
+        
+        modeToggleBtn.addEventListener('click', () => {
+            if (currentMode === 'place') {
+                currentMode = 'delete';
+                modeToggleBtn.classList.add('delete-mode');
+                modeToggleBtn.innerHTML = '<i class="fa fa-times"></i><span id="modeText">Удаление шашек</span>';
+            } else {
+                currentMode = 'place';
+                modeToggleBtn.classList.remove('delete-mode');
+                modeToggleBtn.innerHTML = '<i class="fa fa-mouse-pointer"></i><span id="modeText">Установка шашек</span>';
+            }
+        });
+
         // Game type button toggle between money game and match
         document.getElementById('game-type-button').addEventListener('click', () => {
             const jbWrap = document.querySelector('.jb-wrap');
@@ -3206,6 +3318,7 @@
         const xgidDisplay = document.getElementById('xgid-display');
         const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
+        const modeToggleBtn = document.getElementById('modeToggleBtn');
         const dropdowns = document.querySelectorAll('.dropdown');
         
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
@@ -3214,6 +3327,7 @@
         const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
         const originalCubeControlsDisplay = cubeControlsWrapper ? cubeControlsWrapper.style.display : null;
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
+        const originalModeToggleBtnDisplay = modeToggleBtn ? modeToggleBtn.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
         
         // Функция для восстановления элементов
@@ -3224,6 +3338,7 @@
             if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
             if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
+            if (modeToggleBtn && originalModeToggleBtnDisplay !== null) modeToggleBtn.style.display = originalModeToggleBtnDisplay;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -3236,6 +3351,7 @@
         if (xgidDisplay) xgidDisplay.style.display = 'none';
         if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
+        if (modeToggleBtn) modeToggleBtn.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
         
         // Создаем скриншот
@@ -3303,6 +3419,7 @@
         const xgidDisplay = document.getElementById('xgid-display');
         const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
+        const modeToggleBtn = document.getElementById('modeToggleBtn');
         const dropdowns = document.querySelectorAll('.dropdown');
         
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
@@ -3311,6 +3428,7 @@
         const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
         const originalCubeControlsDisplay = cubeControlsWrapper ? cubeControlsWrapper.style.display : null;
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
+        const originalModeToggleBtnDisplay = modeToggleBtn ? modeToggleBtn.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
         
         // Функция для восстановления элементов
@@ -3321,6 +3439,7 @@
             if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
             if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
+            if (modeToggleBtn && originalModeToggleBtnDisplay !== null) modeToggleBtn.style.display = originalModeToggleBtnDisplay;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -3333,6 +3452,7 @@
         if (xgidDisplay) xgidDisplay.style.display = 'none';
         if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
+        if (modeToggleBtn) modeToggleBtn.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
         
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
