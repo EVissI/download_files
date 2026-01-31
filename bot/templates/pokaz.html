@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -2479,8 +2479,23 @@
 
                 // Add click handler for canvas to place checkers
                 canvas.addEventListener('click', handleCanvasClick);
+                canvas.addEventListener('touchstart', handleCanvasTouchStart);
                 canvas.addEventListener('touchend', handleCanvasTouchEnd);
             }
+        }
+
+        // Variables to track touch start position for swipe detection
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+
+        // Handle canvas touch start event
+        function handleCanvasTouchStart(event) {
+            const touch = event.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            touchStartX = touch.clientX - rect.left;
+            touchStartY = touch.clientY - rect.top;
+            touchStartTime = Date.now();
         }
 
         // Function to determine which point was clicked based on canvas coordinates
@@ -2529,7 +2544,23 @@
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
             
-            addCheckerAtPosition(x, y);
+            // Calculate distance from touch start to touch end
+            const deltaX = Math.abs(x - touchStartX);
+            const deltaY = Math.abs(y - touchStartY);
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            // Calculate touch duration
+            const touchDuration = Date.now() - touchStartTime;
+            
+            // Only add checker if it's a tap (not a swipe)
+            // Threshold: less than 15px movement and duration between 50ms and 500ms
+            const isSwipe = distance > 15;
+            const isTooQuick = touchDuration < 50;
+            const isTooLong = touchDuration > 500;
+            
+            if (!isSwipe && !isTooQuick && !isTooLong) {
+                addCheckerAtPosition(x, y);
+            }
         }
 
         // Remove one checker at the clicked position
