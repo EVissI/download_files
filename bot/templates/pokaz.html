@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -2290,6 +2290,24 @@
             return totalPips;
         }
 
+        // Draw pip count box
+        function drawPipBox(x, y, pips, isWhite) {
+            const boxWidth = 110;
+            const boxHeight = 35;
+            const fontSize = 24;
+            
+            // Draw background
+            ctx.fillStyle = isWhite ? '#ffffff' : '#000000';
+            ctx.fillRect(x - boxWidth / 2, y - boxHeight / 2, boxWidth, boxHeight);
+            
+            // Draw text
+            ctx.fillStyle = isWhite ? '#000000' : '#ffffff';
+            ctx.font = `bold ${fontSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${pips}`, x, y);
+        }
+
         function drawBoard() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
@@ -2360,23 +2378,13 @@
             const whitePips = calculatePips(positions.first, 'first');
             const blackPips = calculatePips(positions.second, 'second');
 
-            // Draw black pips (above center)
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(345, 270, 110, 35);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 24px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${blackPips}`, 400, 375);
+            // Coordinates for pip boxes (center x, center y)
+            const pipCenterX = 400;
+            const blackPipsY = 290;  // Above center
+            const whitePipsY = 510;  // Below center
 
-            // Draw white pips (below center)
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(345, 495, 110, 35);
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 24px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${whitePips}`, 400, 435);
+            drawPipBox(pipCenterX, blackPipsY, blackPips, false);  // Black background
+            drawPipBox(pipCenterX, whitePipsY, whitePips, true);   // White background
         }
 
         function getTotalCheckers(pos) {
