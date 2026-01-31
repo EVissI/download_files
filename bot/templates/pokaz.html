@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1514,8 +1514,25 @@
 
         .mode-toggle-container {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 10px;
+        }
+
+        .hide-pips-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .hide-pips-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
         }
 
         .mode-toggle-btn {
@@ -1589,6 +1606,10 @@
             <button id="xgid-close" class="xgid-close">X</button>
         </div>
         <div class="mode-toggle-container">
+            <label class="hide-pips-label">
+                <input type="checkbox" id="hidePipsCheckbox">
+                <span>Скрыть пипсы</span>
+            </label>
             <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
                 <i class="fa fa-mouse-pointer"></i>
             </button>
@@ -2374,17 +2395,22 @@
                 }
             }
 
-            // Draw pips (pip count)
-            const whitePips = calculatePips(positions.first, 'first');
-            const blackPips = calculatePips(positions.second, 'second');
+            // Draw pips (pip count) if not hidden
+            const hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
+            const hidePips = hidePipsCheckbox && hidePipsCheckbox.checked;
 
-            // Coordinates for pip boxes (center x, center y)
-            const pipCenterX = 400;
-            const blackPipsY = 340;  // Above center
-            const whitePipsY = 420;  // Below center
+            if (!hidePips) {
+                const whitePips = calculatePips(positions.first, 'first');
+                const blackPips = calculatePips(positions.second, 'second');
 
-            drawPipBox(pipCenterX, blackPipsY, blackPips, false);  // Black background
-            drawPipBox(pipCenterX, whitePipsY, whitePips, true);   // White background
+                // Coordinates for pip boxes (center x, center y)
+                const pipCenterX = 400;
+                const blackPipsY = 340;  // Above center
+                const whitePipsY = 420;  // Below center
+
+                drawPipBox(pipCenterX, blackPipsY, blackPips, false);  // Black background
+                drawPipBox(pipCenterX, whitePipsY, whitePips, true);   // White background
+            }
         }
 
         function getTotalCheckers(pos) {
@@ -3381,6 +3407,14 @@
                 modeToggleBtn.title = 'Установка шашек';
             }
         });
+
+        // Hide pips checkbox handler
+        const hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
+        if (hidePipsCheckbox) {
+            hidePipsCheckbox.addEventListener('change', () => {
+                drawBoard();
+            });
+        }
 
         // Game type button toggle between money game and match
         document.getElementById('game-type-button').addEventListener('click', () => {
