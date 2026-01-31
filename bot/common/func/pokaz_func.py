@@ -1,4 +1,4 @@
-﻿import pexpect
+import pexpect
 import time
 from loguru import logger
 from .hint_viewer import read_hint_output, parse_hint_output
@@ -23,7 +23,17 @@ def get_hints_for_xgid(xgid: str) -> list:
             pass
 
         child.sendline(f"set gnubgid {xgid}")
-        time.sleep(0.1)
+        time.sleep(0.2)
+        
+        # Проверяем, не появилось ли диалоговое окно о смене игроков
+        try:
+            output = child.read_nonblocking(size=4096, timeout=0.3)
+            if "Swap players" in output or "player on roll appearing on top" in output:
+                child.sendline("y")
+                time.sleep(0.1)
+        except Exception:
+            pass
+        
         child.sendline("hint")
         time.sleep(0.1)
 
