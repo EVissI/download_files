@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -2299,11 +2299,9 @@
                     const count = positions[pointStr];
                     let effectivePoint;
                     if (player === 'first') {
-                        // White moves from 24 to 1, so distance is (25 - point)
-                        effectivePoint = 25 - point;
-                    } else {
-                        // Black moves from 1 to 24, so distance is point
                         effectivePoint = point;
+                    } else {
+                        effectivePoint = 25 - point;
                     }
                     totalPips += count * effectivePoint;
                 }
