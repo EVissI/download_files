@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -2420,19 +2420,19 @@
             const whiteCheckersOff = 15 - whiteTotalOnBoard;
             const blackCheckersOff = 15 - blackTotalOnBoard;
 
-            const offX = 795;
-            const whiteOffY = 700;  // Bottom for white
-            const blackOffY = 100;  // Top for black
+            const offX = 790;
+            const whiteOffY = 600;  // Bottom for white
+            const blackOffY = 200;  // Top for black
 
             // Draw white checkers off (bottom)
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 24px Arial';
+            ctx.font = 'bold 30px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(`${whiteCheckersOff}`, offX, whiteOffY);
 
             // Draw black checkers off (top)
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = '#ffffff';
             ctx.fillText(`${blackCheckersOff}`, offX, blackOffY);
         }
 
