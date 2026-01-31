@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -471,19 +471,19 @@
 
         .bar-selector-dropdown {
             position: absolute;
-            top: 100%;
+            bottom: 100%;
             left: 50%;
             transform: translateX(-50%);
-            margin-top: 0.15em;
+            margin-bottom: 0.15em;
             background-color: #3b3b3b;
             border: 0.05em solid #555;
             border-radius: 0.2em;
             padding: 0.15em;
             display: none;
             flex-direction: column;
-            gap: 0.1em;
+            gap: 0.05em;
             z-index: 1000;
-            max-height: 12em;
+            max-height: 6em;
             overflow-y: auto;
             box-shadow: 0 0.2em 0.4em rgba(0, 0, 0, 0.3);
         }
@@ -493,11 +493,11 @@
         }
 
         .bar-option {
-            padding: 0.15em 0.4em;
+            padding: 0.1em 0.3em;
             cursor: pointer;
             border-radius: 0.15em;
             text-align: center;
-            font-size: 0.85em;
+            font-size: 0.7em;
             font-weight: bold;
             transition: background-color 0.2s;
             white-space: nowrap;
@@ -1047,9 +1047,9 @@
 
         .dice-selector-dropdown {
             position: absolute;
-            top: 100%;
+            bottom: 100%;
             left: 0;
-            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
             background-color: #3b3b3b;
             border: 2px solid #555;
             border-radius: 4px;
@@ -1141,9 +1141,9 @@
 
         .cube-selector-dropdown {
             position: absolute;
-            top: 100%;
+            bottom: 100%;
             left: 0;
-            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
             background-color: #3b3b3b;
             border: 2px solid #555;
             border-radius: 4px;
@@ -1575,6 +1575,70 @@
         .mode-toggle-btn span {
             display: none;
         }
+
+        /* Match panel custom selectors */
+        .match-selector-custom {
+            position: relative;
+            display: inline-block;
+        }
+
+        .match-selector-button {
+            padding: 0.4rem 0.8rem;
+            background-color: #2d2d2d;
+            border: 2px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: white;
+            min-width: 50px;
+            text-align: center;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .match-selector-button:hover {
+            border-color: #007bff;
+            background-color: #3b3b3b;
+        }
+
+        .match-selector-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 0.25rem;
+            background-color: #3b3b3b;
+            border: 2px solid #555;
+            border-radius: 4px;
+            padding: 0.25rem;
+            display: none;
+            flex-direction: column;
+            gap: 0.1rem;
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .match-selector-dropdown.active {
+            display: flex;
+        }
+
+        .match-option {
+            padding: 0.3rem 0.6rem;
+            cursor: pointer;
+            border-radius: 3px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+            color: white;
+        }
+
+        .match-option:hover {
+            background-color: #007bff;
+        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -1716,11 +1780,35 @@
                     <div class="match-header">Очки Н.</div>
                     <div class="match-header">Очки В.</div>
                     <div class="match-header">Длина матча</div>
-                    <div class="match-header">Макс Куб</div>
+                    <div class="match-header">Макс куб</div>
                 </div>
                 <div class="score-inputs">
-                    <div>
-                        <select id="lower-score" class="selector-size">
+                    <div class="match-selector-custom">
+                        <div class="match-selector-button" id="lower-score-button">0</div>
+                        <div class="match-selector-dropdown" id="lower-score-dropdown">
+                            <div class="match-option" data-value="0">0</div>
+                            <div class="match-option" data-value="1">1</div>
+                            <div class="match-option" data-value="2">2</div>
+                            <div class="match-option" data-value="3">3</div>
+                            <div class="match-option" data-value="4">4</div>
+                            <div class="match-option" data-value="5">5</div>
+                            <div class="match-option" data-value="6">6</div>
+                            <div class="match-option" data-value="7">7</div>
+                            <div class="match-option" data-value="8">8</div>
+                            <div class="match-option" data-value="9">9</div>
+                            <div class="match-option" data-value="10">10</div>
+                            <div class="match-option" data-value="11">11</div>
+                            <div class="match-option" data-value="12">12</div>
+                            <div class="match-option" data-value="13">13</div>
+                            <div class="match-option" data-value="14">14</div>
+                            <div class="match-option" data-value="15">15</div>
+                            <div class="match-option" data-value="16">16</div>
+                            <div class="match-option" data-value="17">17</div>
+                            <div class="match-option" data-value="18">18</div>
+                            <div class="match-option" data-value="19">19</div>
+                            <div class="match-option" data-value="20">20</div>
+                        </div>
+                        <select id="lower-score" style="display: none;">
                             <option value="0">0</option>
                             <option value="1">1</option>
                             <option value="2">2</option>
@@ -1744,8 +1832,32 @@
                             <option value="20">20</option>
                         </select>
                     </div>
-                    <div>
-                        <select id="upper-score" class="selector-size">
+                    <div class="match-selector-custom">
+                        <div class="match-selector-button" id="upper-score-button">0</div>
+                        <div class="match-selector-dropdown" id="upper-score-dropdown">
+                            <div class="match-option" data-value="0">0</div>
+                            <div class="match-option" data-value="1">1</div>
+                            <div class="match-option" data-value="2">2</div>
+                            <div class="match-option" data-value="3">3</div>
+                            <div class="match-option" data-value="4">4</div>
+                            <div class="match-option" data-value="5">5</div>
+                            <div class="match-option" data-value="6">6</div>
+                            <div class="match-option" data-value="7">7</div>
+                            <div class="match-option" data-value="8">8</div>
+                            <div class="match-option" data-value="9">9</div>
+                            <div class="match-option" data-value="10">10</div>
+                            <div class="match-option" data-value="11">11</div>
+                            <div class="match-option" data-value="12">12</div>
+                            <div class="match-option" data-value="13">13</div>
+                            <div class="match-option" data-value="14">14</div>
+                            <div class="match-option" data-value="15">15</div>
+                            <div class="match-option" data-value="16">16</div>
+                            <div class="match-option" data-value="17">17</div>
+                            <div class="match-option" data-value="18">18</div>
+                            <div class="match-option" data-value="19">19</div>
+                            <div class="match-option" data-value="20">20</div>
+                        </div>
+                        <select id="upper-score" style="display: none;">
                             <option value="0">0</option>
                             <option value="1">1</option>
                             <option value="2">2</option>
@@ -1769,8 +1881,30 @@
                             <option value="20">20</option>
                         </select>
                     </div>
-                    <div class="match-length-selector">
-                        <select id="match_lenght" class="selector-size">
+                    <div class="match-selector-custom">
+                        <div class="match-selector-button" id="match-lenght-button">5</div>
+                        <div class="match-selector-dropdown" id="match-lenght-dropdown">
+                            <div class="match-option" data-value="3">3</div>
+                            <div class="match-option" data-value="4">4</div>
+                            <div class="match-option" data-value="5">5</div>
+                            <div class="match-option" data-value="6">6</div>
+                            <div class="match-option" data-value="7">7</div>
+                            <div class="match-option" data-value="8">8</div>
+                            <div class="match-option" data-value="9">9</div>
+                            <div class="match-option" data-value="10">10</div>
+                            <div class="match-option" data-value="11">11</div>
+                            <div class="match-option" data-value="12">12</div>
+                            <div class="match-option" data-value="13">13</div>
+                            <div class="match-option" data-value="14">14</div>
+                            <div class="match-option" data-value="15">15</div>
+                            <div class="match-option" data-value="16">16</div>
+                            <div class="match-option" data-value="17">17</div>
+                            <div class="match-option" data-value="18">18</div>
+                            <div class="match-option" data-value="19">19</div>
+                            <div class="match-option" data-value="20">20</div>
+                            <div class="match-option" data-value="21">21</div>
+                        </div>
+                        <select id="match_lenght" style="display: none;">
                             <option value="3">3</option>
                             <option value="4">4</option>
                             <option value="5" selected>5</option>
@@ -1792,8 +1926,15 @@
                             <option value="21">21</option>
                         </select>
                     </div>
-                    <div class="match-length-selector">
-                        <select id="max-cube-select" class="selector-size">
+                    <div class="match-selector-custom">
+                        <div class="match-selector-button" id="max-cube-button">8</div>
+                        <div class="match-selector-dropdown" id="max-cube-dropdown">
+                            <div class="match-option" data-value="1">2</div>
+                            <div class="match-option" data-value="2">4</div>
+                            <div class="match-option" data-value="3">8</div>
+                            <div class="match-option" data-value="4">16</div>
+                        </div>
+                        <select id="max-cube-select" style="display: none;">
                             <option value="1">2</option>
                             <option value="2">4</option>
                             <option value="3" selected>8</option>
@@ -2535,6 +2676,7 @@
                 initDiceSelectors();
                 initCubeSelectors();
                 initBarSelectors();
+                initMatchSelectors();
                 // Синхронизация цветов при загрузке
                 const cubeShown = document.getElementById('cube-shown-select').value;
                 if (cubeShown !== '0') {
@@ -3048,8 +3190,9 @@
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.dice-selector-custom') && 
                     !e.target.closest('.cube-selector-custom') && 
-                    !e.target.closest('.bar-selector-custom')) {
-                    document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown').forEach(d => {
+                    !e.target.closest('.bar-selector-custom') &&
+                    !e.target.closest('.match-selector-custom')) {
+                    document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown, .match-selector-dropdown').forEach(d => {
                         d.classList.remove('active');
                     });
                 }
@@ -3148,6 +3291,57 @@
                         select.value = value;
                         select.dispatchEvent(new Event('change'));
                         updateBarSelectorDisplay(barType);
+                        dropdown.classList.remove('active');
+                    });
+                });
+            });
+        }
+
+        function initMatchSelectors() {
+            // Setup match panel selectors
+            const matchSelectors = [
+                { id: 'lower-score', buttonId: 'lower-score-button', dropdownId: 'lower-score-dropdown' },
+                { id: 'upper-score', buttonId: 'upper-score-button', dropdownId: 'upper-score-dropdown' },
+                { id: 'match_lenght', buttonId: 'match-lenght-button', dropdownId: 'match-lenght-dropdown' },
+                { id: 'max-cube-select', buttonId: 'max-cube-button', dropdownId: 'max-cube-dropdown' }
+            ];
+
+            matchSelectors.forEach(selector => {
+                const button = document.getElementById(selector.buttonId);
+                const dropdown = document.getElementById(selector.dropdownId);
+                const select = document.getElementById(selector.id);
+
+                if (!button || !dropdown || !select) return;
+
+                // Close dropdown by default
+                dropdown.classList.remove('active');
+
+                // Button click handler
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Close all other match dropdowns
+                    document.querySelectorAll('.match-selector-dropdown').forEach(d => {
+                        if (d !== dropdown) d.classList.remove('active');
+                    });
+                    dropdown.classList.toggle('active');
+                });
+
+                // Option click handlers
+                dropdown.querySelectorAll('.match-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const value = option.getAttribute('data-value');
+                        select.value = value;
+                        
+                        // Update button text
+                        if (selector.id === 'max-cube-select') {
+                            // For max cube, display the actual cube value (not the option value)
+                            button.textContent = option.textContent;
+                        } else {
+                            button.textContent = value;
+                        }
+                        
+                        select.dispatchEvent(new Event('change'));
                         dropdown.classList.remove('active');
                     });
                 });
