@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -2258,8 +2258,12 @@
                 }
 
                 if (count > 5) {
-                    const lastCheckerY = y + (5 * dy);
-                    ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
+                    const lastCheckerY = y + (4 * dy);
+                    // Устанавливаем противоположный цвет текста
+                    ctx.fillStyle = (player === 'first') ? '#000000' : '#ffffff';
+                    ctx.fillText(`${count}`, x, lastCheckerY);
+                    // Возвращаем белый цвет для остального текста
+                    ctx.fillStyle = '#ffffff';
                 }
             }
 
