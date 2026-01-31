@@ -2311,7 +2311,7 @@
 
         // Draw pip count box
         function drawPipBox(x, y, pips, isWhite) {
-            const boxWidth = 45;
+            const boxWidth = 35;
             const boxHeight = 35;
             const fontSize = 24;
             
@@ -2403,8 +2403,8 @@
 
                 // Coordinates for pip boxes (center x, center y)
                 const pipCenterX = 400;
-                const blackPipsY = 340;  // Above center
-                const whitePipsY = 420;  // Below center
+                const blackPipsY = 20;  // Above center
+                const whitePipsY = 760;  // Below center
 
                 drawPipBox(pipCenterX, blackPipsY, blackPips, false);  // Black background
                 drawPipBox(pipCenterX, whitePipsY, whitePips, true);   // White background
