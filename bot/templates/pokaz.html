@@ -2253,11 +2253,11 @@
                 let y = getBaseY(point);
                 const dy = getDy(point);
 
-                for (let i = 0; i < Math.min(count, 6); i++) {
+                for (let i = 0; i < Math.min(count, 5); i++) {
                     ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
                 }
 
-                if (count > 6) {
+                if (count > 5) {
                     const lastCheckerY = y + (5 * dy);
                     ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
                 }
