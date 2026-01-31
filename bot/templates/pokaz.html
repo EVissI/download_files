@@ -1562,7 +1562,6 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script>
-        // Установка изображений для кнопок скриншотов с кэш-бастингом
         document.addEventListener('DOMContentLoaded', function () {
             const screenshotBtn = document.getElementById('screenshotBtn');
             const screenSaveBtn = document.getElementById('screenSaveBtn');
@@ -2266,6 +2265,31 @@
             return (point > 12) ? 55 : -55;
         }
 
+        // Calculate pips (pip count) for a player
+        function calculatePips(positions, player) {
+            let totalPips = 0;
+            for (let pointStr in positions) {
+                if (pointStr === 'bar') {
+                    totalPips += Math.abs(positions[pointStr]) * 25;
+                } else if (pointStr === 'off') {
+                    // Checkers that are off don't count
+                } else {
+                    const point = parseInt(pointStr);
+                    const count = positions[pointStr];
+                    let effectivePoint;
+                    if (player === 'first') {
+                        // White moves from 24 to 1, so distance is (25 - point)
+                        effectivePoint = 25 - point;
+                    } else {
+                        // Black moves from 1 to 24, so distance is point
+                        effectivePoint = point;
+                    }
+                    totalPips += count * effectivePoint;
+                }
+            }
+            return totalPips;
+        }
+
         function drawBoard() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
@@ -2331,6 +2355,28 @@
                     ctx.drawImage(img, cubeX, cubeY, 50, 50);
                 }
             }
+
+            // Draw pips (pip count)
+            const whitePips = calculatePips(positions.first, 'first');
+            const blackPips = calculatePips(positions.second, 'second');
+
+            // Draw black pips (above center)
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(345, 270, 110, 35);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${blackPips}`, 400, 287.5);
+
+            // Draw white pips (below center)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(345, 495, 110, 35);
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${whitePips}`, 400, 512.5);
         }
 
         function getTotalCheckers(pos) {
