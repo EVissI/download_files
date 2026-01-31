@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1513,25 +1513,29 @@
         }
 
         .mode-toggle-btn {
-            display: inline-block;
-            padding: 10px 20px;
+            width: 50px;
+            height: 50px;
+            padding: 0;
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 50%;
             cursor: pointer;
-            font-size: 16px;
-            margin-bottom: 10px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: background-color 0.3s, transform 0.1s;
+            margin-bottom: 10px;
         }
 
         .mode-toggle-btn:hover {
             background-color: #45a049;
-            transform: scale(1.05);
+            transform: scale(1.1);
         }
 
         .mode-toggle-btn:active {
-            transform: scale(0.98);
+            transform: scale(0.95);
         }
 
         .mode-toggle-btn.delete-mode {
@@ -1543,7 +1547,11 @@
         }
 
         .mode-toggle-btn i {
-            margin-right: 8px;
+            margin: 0;
+        }
+
+        .mode-toggle-btn span {
+            display: none;
         }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -1576,9 +1584,8 @@
             XGID: <span id="xgid-text"></span>
             <button id="xgid-close" class="xgid-close">X</button>
         </div>
-        <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place">
+        <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
             <i class="fa fa-mouse-pointer"></i>
-            <span id="modeText">Установка шашек</span>
         </button>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
@@ -3268,17 +3275,18 @@
         // Mode toggle button for placing/removing checkers
         let currentMode = 'place'; // 'place' or 'delete'
         const modeToggleBtn = document.getElementById('modeToggleBtn');
-        const modeText = document.getElementById('modeText');
         
         modeToggleBtn.addEventListener('click', () => {
             if (currentMode === 'place') {
                 currentMode = 'delete';
                 modeToggleBtn.classList.add('delete-mode');
-                modeToggleBtn.innerHTML = '<i class="fa fa-times"></i><span id="modeText">Удаление шашек</span>';
+                modeToggleBtn.innerHTML = '<i class="fa fa-times"></i>';
+                modeToggleBtn.title = 'Удаление шашек';
             } else {
                 currentMode = 'place';
                 modeToggleBtn.classList.remove('delete-mode');
-                modeToggleBtn.innerHTML = '<i class="fa fa-mouse-pointer"></i><span id="modeText">Установка шашек</span>';
+                modeToggleBtn.innerHTML = '<i class="fa fa-mouse-pointer"></i>';
+                modeToggleBtn.title = 'Установка шашек';
             }
         });
 
