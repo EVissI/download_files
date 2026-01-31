@@ -1512,6 +1512,12 @@
             cursor: not-allowed;
         }
 
+        .mode-toggle-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+
         .mode-toggle-btn {
             width: 50px;
             height: 50px;
@@ -1519,14 +1525,13 @@
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 50%;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: background-color 0.3s, transform 0.1s;
-            margin-bottom: 10px;
         }
 
         .mode-toggle-btn:hover {
@@ -1584,9 +1589,11 @@
             XGID: <span id="xgid-text"></span>
             <button id="xgid-close" class="xgid-close">X</button>
         </div>
-        <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
-            <i class="fa fa-mouse-pointer"></i>
-        </button>
+        <div class="mode-toggle-container">
+            <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
+                <i class="fa fa-mouse-pointer"></i>
+            </button>
+        </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
 
@@ -3326,7 +3333,7 @@
         const xgidDisplay = document.getElementById('xgid-display');
         const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
-        const modeToggleBtn = document.getElementById('modeToggleBtn');
+        const modeToggleContainer = document.querySelector('.mode-toggle-container');
         const dropdowns = document.querySelectorAll('.dropdown');
         
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
@@ -3335,7 +3342,7 @@
         const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
         const originalCubeControlsDisplay = cubeControlsWrapper ? cubeControlsWrapper.style.display : null;
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
-        const originalModeToggleBtnDisplay = modeToggleBtn ? modeToggleBtn.style.display : null;
+        const originalModeToggleContainerDisplay = modeToggleContainer ? modeToggleContainer.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
         
         // Функция для восстановления элементов
@@ -3346,7 +3353,7 @@
             if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
             if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
-            if (modeToggleBtn && originalModeToggleBtnDisplay !== null) modeToggleBtn.style.display = originalModeToggleBtnDisplay;
+            if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -3359,7 +3366,7 @@
         if (xgidDisplay) xgidDisplay.style.display = 'none';
         if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
-        if (modeToggleBtn) modeToggleBtn.style.display = 'none';
+        if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
         
         // Создаем скриншот
@@ -3427,7 +3434,7 @@
         const xgidDisplay = document.getElementById('xgid-display');
         const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
-        const modeToggleBtn = document.getElementById('modeToggleBtn');
+        const modeToggleContainer = document.querySelector('.mode-toggle-container');
         const dropdowns = document.querySelectorAll('.dropdown');
         
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
@@ -3436,7 +3443,7 @@
         const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
         const originalCubeControlsDisplay = cubeControlsWrapper ? cubeControlsWrapper.style.display : null;
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
-        const originalModeToggleBtnDisplay = modeToggleBtn ? modeToggleBtn.style.display : null;
+        const originalModeToggleContainerDisplay = modeToggleContainer ? modeToggleContainer.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
         
         // Функция для восстановления элементов
@@ -3447,7 +3454,7 @@
             if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
             if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
-            if (modeToggleBtn && originalModeToggleBtnDisplay !== null) modeToggleBtn.style.display = originalModeToggleBtnDisplay;
+            if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -3460,7 +3467,7 @@
         if (xgidDisplay) xgidDisplay.style.display = 'none';
         if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
-        if (modeToggleBtn) modeToggleBtn.style.display = 'none';
+        if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
         
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
