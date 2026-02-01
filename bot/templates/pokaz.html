@@ -2621,8 +2621,19 @@
             const hidePips = hidePipsCheckbox && hidePipsCheckbox.checked;
 
             if (!hidePips) {
-                const whitePips = calculatePips(positions.first, 'first');
-                const blackPips = calculatePips(positions.second, 'second');
+                // Расчет пипсов с учетом инвертирования
+                // Когда upperPlayerColor === 'white', белые идут "сверху вниз" (как 'second')
+                // и черные идут "снизу вверх" (как 'first')
+                let whitePips, blackPips;
+                if (upperPlayerColor === 'white') {
+                    // Инвертировано: белые теперь идут от 24 к 1, черные от 1 к 24
+                    whitePips = calculatePips(positions.first, 'second');
+                    blackPips = calculatePips(positions.second, 'first');
+                } else {
+                    // Стандартно: белые от 1 к 24, черные от 24 к 1
+                    whitePips = calculatePips(positions.first, 'first');
+                    blackPips = calculatePips(positions.second, 'second');
+                }
 
                 // Coordinates for pip boxes (center x, center y)
                 const pipCenterX = 760;
@@ -3097,12 +3108,12 @@
                 if (lowerCount > 0) {
                     if (lowerCount <= 15) {
                         // Нижний = заглавные (A-O)
-                        xgid += String.fromCharCode(96 + lowerCount);
+                        xgid += String.fromCharCode(64 + lowerCount);
                     }
                 } else if (upperCount > 0) {
                     if (upperCount <= 15) {
                         // Верхний = строчные (a-o)
-                        xgid += String.fromCharCode(64 + upperCount);
+                        xgid += String.fromCharCode(96 + upperCount);
                     }
                 } else {
                     xgid += "-";
