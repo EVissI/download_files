@@ -3673,8 +3673,18 @@
 
         // Init button logic
         document.getElementById('init-button').addEventListener('click', () => {
-            positions.first = { 6: 5, 8: 3, 13: 5, 24: 2 };
-            positions.second = { 1: 2, 12: 5, 17: 3, 19: 5 };
+            // Standard starting positions for backgammon
+            const standardWhitePos = { 6: 5, 8: 3, 13: 5, 24: 2 };
+            const standardBlackPos = { 1: 2, 12: 5, 17: 3, 19: 5 };
+            
+            // If upper player is white, invert positions
+            if (upperPlayerColor === 'white') {
+                positions.first = { ...standardBlackPos };
+                positions.second = { ...standardWhitePos };
+            } else {
+                positions.first = { ...standardWhitePos };
+                positions.second = { ...standardBlackPos };
+            }
 
             setSelectedCheckerColor('white');
             document.getElementById('white-bar-select').value = '0';
