@@ -2658,7 +2658,7 @@
             // Determine which player is upper/lower based on upperPlayerColor
             if (upperPlayerColor === 'black') {
                 // Standard: black upper, white lower
-                ctx.fillStyle = '#000000';
+                ctx.fillStyle = '#ffffff';
                 ctx.fillText(`${blackCheckersOff}`, offX, upperOffY);
                 ctx.fillStyle = '#ffffff';
                 ctx.fillText(`${whiteCheckersOff}`, offX, lowerOffY);
@@ -2666,7 +2666,7 @@
                 // Inverted: white upper, black lower
                 ctx.fillStyle = '#ffffff';
                 ctx.fillText(`${whiteCheckersOff}`, offX, upperOffY);
-                ctx.fillStyle = '#000000';
+                ctx.fillStyle = '#ffffff';
                 ctx.fillText(`${blackCheckersOff}`, offX, lowerOffY);
             }
         }
