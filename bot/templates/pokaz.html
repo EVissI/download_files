@@ -2407,12 +2407,16 @@
             ctx.textBaseline = 'middle';
 
             if (player === currentPlayer) {
+                // Check if black player is on turn for inverted numbering
+                const turn = document.getElementById('turn-select').value;
+                const invertNumbers = (turn === 'black');
+                
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
                     let y = getBaseY(point);
                     const dy = getDy(point);
 
-                    let displayPoint = point;
+                    let displayPoint = invertNumbers ? (25 - point) : point;
                     ctx.fillText(displayPoint, x, point > 12 ? y - 50 : y + 60);
                 }
             }
@@ -2694,6 +2698,7 @@
         }
         let imagesLoaded = 0;
         const totalImages = 21;
+        let invertPointNumbers = false; // Flag for inverted point numbering
 
         function imageLoaded() {
             imagesLoaded++;
@@ -2785,10 +2790,8 @@
                 const pointX = getX(point);
                 const pointY = getBaseY(point);
                 
-                // Define clickable area for each point (triangle area)
-                const triangleWidth = 50; // approximate width of triangle
-                const triangleHeight = 300; // approximate height of triangle
-                
+                const triangleWidth = 50; 
+                const triangleHeight = 300; 
                 // Check if click is within the triangle bounds
                 const isInXRange = Math.abs(x - pointX) <= triangleWidth / 2;
                 const isInYRange = point > 12 
