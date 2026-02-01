@@ -3682,6 +3682,12 @@
                     if (cubeValueOptions) cubeValueOptions.style.display = '';
                     if (cubeValueLabel) cubeValueLabel.style.display = '';
                     
+                    // Show dice section
+                    const diceSection = document.querySelectorAll('.turn-dice-section')[1];
+                    const diceLabel = document.querySelectorAll('.turn-dice-labels label')[1];
+                    if (diceSection) diceSection.style.display = '';
+                    if (diceLabel) diceLabel.style.display = '';
+                    
                     // Block and clear all cube controls
                     cubeShownButton.style.pointerEvents = 'none';
                     cubeShownButton.style.opacity = '0.5';
