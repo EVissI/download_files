@@ -3524,11 +3524,16 @@
             }
 
             hintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
-            fetch(`/pokaz/hints?xgid=${xgid}&chat_id=${chatId}`, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
+            console.log('Requesting hints with chat_id:', chatId, 'xgid:', xgid);
+            fetch(`/pokaz/hints?xgid=${encodeURIComponent(xgid)}&chat_id=${chatId}`, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
                 .then(response => {
+                    console.log('Response status:', response.status);
                     if (!response.ok) {
                         if (response.status === 402) {
                             throw new Error('Недостаточно баланса для получения подсказок');
+                        }
+                        if (response.status === 400) {
+                            throw new Error('Отсутствует chat_id. Запустите через Telegram.');
                         }
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }

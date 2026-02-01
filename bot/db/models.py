@@ -220,7 +220,7 @@ class ServiceType(str, enum.Enum):
     MONEYGAME = "Moneygame"
     SHORT_BOARD = "Плеер"
     HINTS = "Ошибки"
-    POKAZ = "Показ"
+    POKAZ = "Позиция"
 
 
 service_type_enum = Enum(ServiceType, name="servicetype", metadata=Base.metadata)

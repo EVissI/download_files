@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.wsgi import WSGIMiddleware
+from typing import Optional
 import secrets
 
 from bot.routers.hint_viewer_router import hint_viewer_api_router
@@ -99,12 +100,19 @@ async def get_pokaz(request: Request, chat_id: str = None):
 
 
 @app.get("/pokaz/hints")
-async def get_pokaz_hints(xgid: str, chat_id: int):
+async def get_pokaz_hints(xgid: str, chat_id: Optional[int] = None):
     """
     Возвращает подсказки для заданной позиции XGID.
     Проверяет баланс пользователя и списывает при успешной обработке.
     """
     try:
+        logger.info(f"Получен запрос /pokaz/hints с параметрами: xgid={xgid}, chat_id={chat_id}")
+        
+        # Проверяем наличие chat_id
+        if chat_id is None:
+            logger.warning("Запрос без chat_id")
+            raise HTTPException(status_code=400, detail="Параметр chat_id обязателен")
+        
         # Создаем сессию БД
         async with async_session_maker() as session:
             user_dao = UserDAO(session)
