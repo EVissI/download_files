@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -3084,25 +3084,25 @@
             if (lowerBar === 0) {
                 xgid += "-";
             } else if (lowerBar <= 15) {
-                // Нижний игрок = заглавные буквы
+                // Нижний игрок = заглавные буквы (A-O)
                 xgid += String.fromCharCode(64 + lowerBar);
             }
             
             for (let point = 1; point <= 24; point++) {
-                // Если инвертируем, берем позиции наоборот
-                const actualPoint = invertPositions ? (25 - point) : point;
-                const lowerCount = lowerPositions[actualPoint] || 0;
-                const upperCount = upperPositions[actualPoint] || 0;
+                // XGID позиции не инвертируются, всегда идут от 1 до 24
+                // Меняется только то, какие шашки считаются нижними/верхними
+                const lowerCount = lowerPositions[point] || 0;
+                const upperCount = upperPositions[point] || 0;
 
                 if (lowerCount > 0) {
                     if (lowerCount <= 15) {
-                        // Нижний = заглавные
-                        xgid += String.fromCharCode(96 + lowerCount);
+                        // Нижний = заглавные (A-O)
+                        xgid += String.fromCharCode(64 + lowerCount);
                     }
                 } else if (upperCount > 0) {
                     if (upperCount <= 15) {
-                        // Верхний = строчные
-                        xgid += String.fromCharCode(64 + upperCount);
+                        // Верхний = строчные (a-o)
+                        xgid += String.fromCharCode(96 + upperCount);
                     }
                 } else {
                     xgid += "-";
@@ -3114,7 +3114,7 @@
             if (upperBar === 0) {
                 xgid += "-";
             } else if (upperBar <= 15) {
-                // Верхний игрок = строчные буквы
+                // Верхний игрок = строчные буквы (a-o)
                 xgid += String.fromCharCode(96 + upperBar);
             }
             xgid += ':'
