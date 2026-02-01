@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1338,6 +1338,24 @@
             gap: 0;
         }
 
+        .crawford-checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crawford-checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        #crawford-label {
+            color: white;
+            font-size: clamp(0.5rem, 1.5vw, 0.7rem);
+            text-align: center;
+        }
+
         /* Строка для контролов кубов, костей и кнопок */
         .controls-row {
             display: flex;
@@ -1959,6 +1977,7 @@
                 <label for="cube-shown-select">Показан куб?</label>
                 <label for="cube-value-select">Куб</label>
                 <label for="cube-owner-select-btn">Чей куб?</label>
+                <label for="crawford-checkbox" id="crawford-label" style="display: none;">Кроуфорд</label>
             </div>
             <div class="cube-controls-block">
                 <div class="cube-shown-selector">
@@ -2013,6 +2032,9 @@
                     <input type="hidden" id="cube-owner-select" value="white">
                     <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white"
                         data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
+                </div>
+                <div class="crawford-checkbox-wrapper" style="display: none;">
+                    <input type="checkbox" id="crawford-checkbox">
                 </div>
             </div>
         </div>
@@ -3636,6 +3658,55 @@
             });
         }
 
+        // Crawford checkbox handler
+        const crawfordCheckbox = document.getElementById('crawford-checkbox');
+        const crawfordLabel = document.getElementById('crawford-label');
+        const crawfordWrapper = document.querySelector('.crawford-checkbox-wrapper');
+        
+        if (crawfordCheckbox) {
+            crawfordCheckbox.addEventListener('change', () => {
+                const cubeShownButton = document.getElementById('cube-shown-button');
+                const cubeShownDropdown = document.getElementById('cube-shown-dropdown');
+                const cubeValueButton = document.getElementById('cube-value-button');
+                const cubeValueDropdown = document.getElementById('cube-value-dropdown');
+                const cubeOwnerBtn = document.getElementById('cube-owner-select-btn');
+                
+                if (crawfordCheckbox.checked) {
+                    // Block and clear all cube controls
+                    cubeShownButton.style.pointerEvents = 'none';
+                    cubeShownButton.style.opacity = '0.5';
+                    cubeValueButton.style.pointerEvents = 'none';
+                    cubeValueButton.style.opacity = '0.5';
+                    cubeOwnerBtn.style.pointerEvents = 'none';
+                    cubeOwnerBtn.style.opacity = '0.5';
+                    
+                    // Clear values
+                    document.getElementById('cube-shown-select').value = '0';
+                    document.getElementById('cube-value-select').value = '0';
+                    document.getElementById('cube-owner-select').value = 'white';
+                    
+                    // Update displays
+                    cubeShownButton.textContent = 'нет';
+                    cubeShownButton.classList.add('empty');
+                    cubeValueButton.textContent = 'нет';
+                    cubeValueButton.classList.add('empty');
+                    cubeOwnerBtn.classList.remove('black');
+                    cubeOwnerBtn.classList.add('white');
+                    cubeOwnerBtn.setAttribute('data-color', 'white');
+                    
+                    drawBoard();
+                } else {
+                    // Unblock cube controls
+                    cubeShownButton.style.pointerEvents = '';
+                    cubeShownButton.style.opacity = '';
+                    cubeValueButton.style.pointerEvents = '';
+                    cubeValueButton.style.opacity = '';
+                    cubeOwnerBtn.style.pointerEvents = '';
+                    cubeOwnerBtn.style.opacity = '';
+                }
+            });
+        }
+
         // Game type button toggle between money game and match
         document.getElementById('game-type-button').addEventListener('click', () => {
             const jbWrap = document.querySelector('.jb-wrap');
@@ -3650,6 +3721,14 @@
                 gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
                 gameTypeButton.title = 'Манигейм';
                 currentGameType = 'манигейм';
+                
+                // Hide Crawford checkbox
+                if (crawfordLabel) crawfordLabel.style.display = 'none';
+                if (crawfordWrapper) crawfordWrapper.style.display = 'none';
+                if (crawfordCheckbox) {
+                    crawfordCheckbox.checked = false;
+                    crawfordCheckbox.dispatchEvent(new Event('change'));
+                }
             } else {
                 // Switch to match
                 jbWrap.style.display = 'none';
@@ -3657,6 +3736,10 @@
                 gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
                 gameTypeButton.title = 'Матч';
                 currentGameType = 'матч';
+                
+                // Show Crawford checkbox
+                if (crawfordLabel) crawfordLabel.style.display = 'block';
+                if (crawfordWrapper) crawfordWrapper.style.display = 'flex';
             }
         });
 
