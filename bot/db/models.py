@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 from collections import defaultdict
 import enum
 from typing import Optional
@@ -220,6 +220,7 @@ class ServiceType(str, enum.Enum):
     MONEYGAME = "Moneygame"
     SHORT_BOARD = "Плеер"
     HINTS = "Ошибки"
+    POKAZ = "Показ"
 
 
 service_type_enum = Enum(ServiceType, name="servicetype", metadata=Base.metadata)

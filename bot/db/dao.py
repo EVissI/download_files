@@ -1,4 +1,4 @@
-﻿from loguru import logger
+from loguru import logger
 import pytz
 import codecs
 from bot.db.base import BaseDAO
@@ -127,6 +127,7 @@ class UserDAO(BaseDAO[User]):
                 ServiceType.MONEYGAME,
                 ServiceType.SHORT_BOARD,
                 ServiceType.HINTS,
+                ServiceType.POKAZ,
             ]
 
             for service_type in service_types:
