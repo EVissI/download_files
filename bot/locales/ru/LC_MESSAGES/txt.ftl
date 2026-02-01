@@ -1,4 +1,4 @@
-﻿
+
 user-static-hello = Привет! Я бот для анализа игр в короткие нарды. Я проанализирую Ваши игры и соберу статистику
 
 keyboard-user-reply-autoanalyze = 🔮 Анализ
@@ -23,6 +23,7 @@ user-profile-text =
     ├ 📊 Манигеймы: <b>{ $analiz_balance }</b>
     ├ 💎 Плеер <b>{ $short_board_balance }</b>
     ├ 👁️ Ошибки <b>{ $hints_balance }</b>
+    ├ 🎯 Показ <b>{ $pokaz_balance }</b>
     └ 🌐 Язык: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = Моя статистика
 user-profile-inline_button-change_language = Изменить язык

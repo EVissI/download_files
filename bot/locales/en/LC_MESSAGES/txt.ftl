@@ -1,4 +1,4 @@
-﻿
+
 user-static-hello = Hello! I'm an analysis bot.I can help you analyze your backgammon games and collect statistics.
 
 keyboard-user-reply-autoanalyze = 🔮 Autoanalyze
@@ -19,6 +19,7 @@ user-profile-text =
     ├ 📊 Moneygames: <b>{ $analiz_balance }</b>
     ├ 💎 Pleer <b>{ $short_board_balance }</b>
     ├ 👁️ Error View <b>{ $hints_balance }</b>
+    ├ 🎯 Pokaz <b>{ $pokaz_balance }</b>
     └ 🌐 Language: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = My Statistics
 user-profile-inline_button-change_language = Change Language

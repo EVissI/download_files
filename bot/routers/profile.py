@@ -1,4 +1,4 @@
-﻿from aiogram import Router, F
+from aiogram import Router, F
 from bot.common.filters.user_info import UserInfo
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +35,7 @@ async def profile_command(message: Message, user_info: User, i18n: TranslatorRun
     match_balance = balance_dict.get(ServiceType.MATCH.name, '∞')
     short_board_balance = balance_dict.get(ServiceType.SHORT_BOARD.name, '∞')
     hints_balance = balance_dict.get(ServiceType.HINTS.name, '∞')
+    pokaz_balance = balance_dict.get(ServiceType.POKAZ.name, '∞')
     await message.answer(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
@@ -42,6 +43,7 @@ async def profile_command(message: Message, user_info: User, i18n: TranslatorRun
             match_balance=match_balance if match_balance is not None else '∞',
             short_board_balance=short_board_balance if short_board_balance is not None else '∞',
             hints_balance = hints_balance if hints_balance is not None else '∞',
+            pokaz_balance = pokaz_balance if pokaz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
@@ -72,6 +74,7 @@ async def change_language_back_callback(
     match_balance = balance_dict.get(ServiceType.MATCH.name, '∞')
     short_board_balance = balance_dict.get(ServiceType.SHORT_BOARD.name, '∞')
     hints_balance = balance_dict.get(ServiceType.HINTS.name, '∞')
+    pokaz_balance = balance_dict.get(ServiceType.POKAZ.name, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
@@ -79,6 +82,7 @@ async def change_language_back_callback(
             match_balance=match_balance if match_balance is not None else '∞',
             short_board_balance=short_board_balance if short_board_balance is not None else '∞',
             hints_balance = hints_balance if hints_balance is not None else '∞',
+            pokaz_balance = pokaz_balance if pokaz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
@@ -119,6 +123,7 @@ async def back_to_profile(
     match_balance = balance_dict.get(ServiceType.MATCH.name, '∞')
     short_board_balance = balance_dict.get(ServiceType.SHORT_BOARD.name, '∞')
     hints_balance = balance_dict.get(ServiceType.HINTS.name, '∞')
+    pokaz_balance = balance_dict.get(ServiceType.POKAZ.name, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
@@ -126,6 +131,7 @@ async def back_to_profile(
             match_balance=match_balance if match_balance is not None else '∞',
             short_board_balance=short_board_balance if short_board_balance is not None else '∞',
             hints_balance = hints_balance if hints_balance is not None else '∞',
+            pokaz_balance = pokaz_balance if pokaz_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
