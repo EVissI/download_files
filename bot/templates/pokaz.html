@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1708,8 +1708,8 @@
                 <span>Скрыть пипсы</span>
             </label>
             <div class="player-position-toggle">
-                <span>Верхний игрок:</span>
-                <button id="upperPlayerBtn" class="checker-toggle-btn black" data-color="black" title="Переключить верхнего игрока"></button>
+                <span>Нижний игрок:</span>
+                <button id="upperPlayerBtn" class="checker-toggle-btn black" data-color="black" title="Переключить нижнего игрока"></button>
             </div>
             <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
                 <i class="fa fa-mouse-pointer"></i>
@@ -2769,7 +2769,7 @@
         let imagesLoaded = 0;
         const totalImages = 21;
         let invertPointNumbers = false; // Flag for inverted point numbering
-        let upperPlayerColor = 'black'; // 'black' or 'white' - который игрок сверху
+        let upperPlayerColor = 'white'; // 'black' or 'white' - который игрок сверху (инвертировано для отображения нижнего)
 
         function imageLoaded() {
             imagesLoaded++;
@@ -3813,11 +3813,11 @@
             });
         }
 
-        // Upper player toggle button handler
+        // Lower player toggle button handler (показывает нижнего игрока)
         const upperPlayerBtn = document.getElementById('upperPlayerBtn');
         if (upperPlayerBtn) {
             upperPlayerBtn.addEventListener('click', () => {
-                // Toggle upper player color
+                // Toggle - кнопка показывает нижнего игрока (противоположный upperPlayerColor)
                 if (upperPlayerColor === 'black') {
                     upperPlayerColor = 'white';
                     upperPlayerBtn.classList.remove('black');
