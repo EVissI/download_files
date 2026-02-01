@@ -2423,9 +2423,17 @@
             ctx.textBaseline = 'middle';
 
             if (player === currentPlayer) {
-                // Check if black player is on turn for inverted numbering
+                // Check if upper player is on turn for inverted numbering
                 const turn = document.getElementById('turn-select').value;
-                const invertNumbers = (turn === 'black');
+                // Invert numbers when the upper player has the turn
+                let invertNumbers;
+                if (upperPlayerColor === 'black') {
+                    // Standard: black is upper, invert when black's turn
+                    invertNumbers = (turn === 'black');
+                } else {
+                    // Inverted: white is upper, invert when white's turn
+                    invertNumbers = (turn === 'white');
+                }
                 
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
