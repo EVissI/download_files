@@ -2591,20 +2591,25 @@
                 if (img) {
                     let cubeX = 375;
                     let cubeY = 350;
+                    
+                    // Determine if cube owner is upper or lower player
+                    let isUpperPlayer;
+                    if (upperPlayerColor === 'black') {
+                        // Standard: black is upper, white is lower
+                        isUpperPlayer = (cubeOwner === 'black');
+                    } else {
+                        // Inverted: white is upper, black is lower
+                        isUpperPlayer = (cubeOwner === 'white');
+                    }
+                    
                     if (cubeShown !== 0 && cubeValue !== 0) {
-                        if (cubeOwner === 'white') {
-                            cubeX = 575;
-                        } else if (cubeOwner === 'black') {
-                            cubeX = 175;
-                        }
+                        // Cube shown (on bar): upper player left, lower player right
+                        cubeX = isUpperPlayer ? 175 : 575;
                         cubeY = 350;
                     } else {
                         if (cubeValue !== 0) {
-                            if (cubeOwner === 'white') {
-                                cubeY = 600;
-                            } else if (cubeOwner === 'black') {
-                                cubeY = 100;
-                            }
+                            // Cube not shown: upper player top, lower player bottom
+                            cubeY = isUpperPlayer ? 100 : 600;
                         }
                     }
                     ctx.drawImage(img, cubeX, cubeY, 50, 50);
