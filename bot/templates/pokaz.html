@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -3097,12 +3097,12 @@
                 if (lowerCount > 0) {
                     if (lowerCount <= 15) {
                         // Нижний = заглавные (A-O)
-                        xgid += String.fromCharCode(64 + lowerCount);
+                        xgid += String.fromCharCode(96 + lowerCount);
                     }
                 } else if (upperCount > 0) {
                     if (upperCount <= 15) {
                         // Верхний = строчные (a-o)
-                        xgid += String.fromCharCode(96 + upperCount);
+                        xgid += String.fromCharCode(64 + upperCount);
                     }
                 } else {
                     xgid += "-";
