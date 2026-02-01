@@ -3504,9 +3504,36 @@
                 return;
             }
 
+            // Получаем chat_id из Telegram WebApp
+            let chatId = null;
+            if (window.Telegram && window.Telegram.WebApp) {
+                const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
+                chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
+            }
+
+            // Проверяем наличие chat_id (для отладки можно использовать тестовый ID)
+            if (!chatId) {
+                // Попробуем получить из URL параметра (для тестирования)
+                const urlParams = new URLSearchParams(window.location.search);
+                chatId = urlParams.get('chat_id');
+                
+                if (!chatId) {
+                    alert('Не удалось получить chat_id. Запустите приложение через Telegram.');
+                    return;
+                }
+            }
+
             hintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
-            fetch('/pokaz/hints?xgid=' + xgid, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
-                .then(response => response.json())
+            fetch(`/pokaz/hints?xgid=${xgid}&chat_id=${chatId}`, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 402) {
+                            throw new Error('Недостаточно баланса для получения подсказок');
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     const hints = data.hints || [];
                     if (hints.length === 0) {

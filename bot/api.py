@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -13,6 +13,9 @@ from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.config import settings
 from bot.db.redis import redis_client
 from bot.common.func.pokaz_func import get_hints_for_xgid
+from bot.db.database import async_session_maker
+from bot.db.dao import UserDAO
+from bot.db.models import ServiceType
 from loguru import logger
 import traceback
 import json
@@ -96,13 +99,50 @@ async def get_pokaz(request: Request, chat_id: str = None):
 
 
 @app.get("/pokaz/hints")
-async def get_pokaz_hints(xgid: str):
+async def get_pokaz_hints(xgid: str, chat_id: int):
     """
     Возвращает подсказки для заданной позиции XGID.
+    Проверяет баланс пользователя и списывает при успешной обработке.
     """
-    hints = get_hints_for_xgid(xgid)
-    logger.info(hints)
-    return {"hints": hints}
+    try:
+        # Создаем сессию БД
+        async with async_session_maker() as session:
+            user_dao = UserDAO(session)
+            
+            # Получаем баланс пользователя для сервиса POKAZ
+            balance = await user_dao.get_total_analiz_balance(chat_id, ServiceType.POKAZ)
+            
+            # Проверяем баланс (None означает безлимитный)
+            if balance is not None and balance < 1:
+                logger.warning(f"Недостаточно баланса для пользователя {chat_id}. Баланс: {balance}")
+                raise HTTPException(status_code=402, detail="Недостаточно баланса")
+            
+            # Получаем подсказки
+            hints = get_hints_for_xgid(xgid)
+            logger.info(f"Hints для пользователя {chat_id}: {hints}")
+            
+            # Списываем баланс только если массив hints не пустой
+            if hints and len(hints) > 0:
+                success = await user_dao.decrease_analiz_balance(
+                    user_id=chat_id, 
+                    service_type=ServiceType.POKAZ.name
+                )
+                if success:
+                    await session.commit()
+                    logger.info(f"Баланс успешно списан для пользователя {chat_id}")
+                else:
+                    logger.warning(f"Не удалось списать баланс для пользователя {chat_id}")
+            else:
+                logger.info(f"Hints пустой, баланс не списан для пользователя {chat_id}")
+            
+            return {"hints": hints}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка при обработке запроса pokaz/hints: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Ошибка сервера: {str(e)}")
 
 
 @app.get("/admin/login", response_class=HTMLResponse)
