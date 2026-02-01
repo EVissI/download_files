@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -3672,6 +3672,10 @@
                 const cubeOwnerBtn = document.getElementById('cube-owner-select-btn');
                 
                 if (crawfordCheckbox.checked) {
+                    // Close all cube dropdowns
+                    cubeShownDropdown.classList.remove('active');
+                    cubeValueDropdown.classList.remove('active');
+                    
                     // Block and clear all cube controls
                     cubeShownButton.style.pointerEvents = 'none';
                     cubeShownButton.style.opacity = '0.5';
