@@ -2599,11 +2599,19 @@
 
                 // Coordinates for pip boxes (center x, center y)
                 const pipCenterX = 760;
-                const blackPipsY = 360;  // Above center
-                const whitePipsY = 400;  // Below center
+                const upperPipsY = 360;  // Above center
+                const lowerPipsY = 400;  // Below center
 
-                drawPipBox(pipCenterX, blackPipsY, blackPips, false);  // Black background
-                drawPipBox(pipCenterX, whitePipsY, whitePips, true);   // White background
+                // Determine which player is upper/lower based on upperPlayerColor
+                if (upperPlayerColor === 'black') {
+                    // Standard: black upper, white lower
+                    drawPipBox(pipCenterX, upperPipsY, blackPips, false);  // Black background upper
+                    drawPipBox(pipCenterX, lowerPipsY, whitePips, true);   // White background lower
+                } else {
+                    // Inverted: white upper, black lower
+                    drawPipBox(pipCenterX, upperPipsY, whitePips, true);   // White background upper
+                    drawPipBox(pipCenterX, lowerPipsY, blackPips, false);  // Black background lower
+                }
             }
 
             // Draw checkers off (выброшенные шашки)
@@ -2613,19 +2621,27 @@
             const blackCheckersOff = 15 - blackTotalOnBoard;
 
             const offX = 785;
-            const whiteOffY = 600;  // Bottom for white
-            const blackOffY = 200;  // Top for black
+            const upperOffY = 200;  // Top position
+            const lowerOffY = 600;  // Bottom position
 
-            // Draw white checkers off (bottom)
-            ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 30px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(`${whiteCheckersOff}`, offX, whiteOffY);
 
-            // Draw black checkers off (top)
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(`${blackCheckersOff}`, offX, blackOffY);
+            // Determine which player is upper/lower based on upperPlayerColor
+            if (upperPlayerColor === 'black') {
+                // Standard: black upper, white lower
+                ctx.fillStyle = '#000000';
+                ctx.fillText(`${blackCheckersOff}`, offX, upperOffY);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`${whiteCheckersOff}`, offX, lowerOffY);
+            } else {
+                // Inverted: white upper, black lower
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`${whiteCheckersOff}`, offX, upperOffY);
+                ctx.fillStyle = '#000000';
+                ctx.fillText(`${blackCheckersOff}`, offX, lowerOffY);
+            }
         }
 
         function getTotalCheckers(pos) {
