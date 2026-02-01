@@ -3575,17 +3575,15 @@
                     if (firstHint.type === 'move') {
                         // Generate move hints table
                         tableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr>';
-                        const firstEq = hints.length > 0 ? hints[0].eq : null;
                         hints.forEach((hint, index) => {
                             if (hint.probs && hint.probs.length >= 2) {
                                 const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
                                 const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
                                 const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                                const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
                                 let move = hint.move || '-';
                                 let rowClass = ''; // No highlighting since no gnu move
                                 let rowStyle = index === 0 ? ' style="background-color: green;"' : '';
-                                tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
+                                tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td></tr>`;
                             }
                         });
                         tableHtml += '</table>';
@@ -3594,17 +3592,15 @@
                             tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${firstHint.prefer_action}</td></tr>`;
                         }
                         tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
-                        const firstCubeEq = firstHint.cubeful_equities && firstHint.cubeful_equities.length > 0 ? firstHint.cubeful_equities[0].eq : null;
                         (firstHint.cubeful_equities || []).forEach((hint, index) => {
                             const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                            const displayEq = (firstCubeEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstCubeEq).toFixed(3) : eq;
                             let displayAction = hint.action_1;
                             if (hint.action_2) {
                                 displayAction += `, ${hint.action_2}`;
                             }
                             let rowClass = '';
                             let rowStyle = index === 0 ? ' style="background-color: green;"' : '';
-                            tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${displayAction}</td><td>${displayEq}</td></tr>`;
+                            tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${displayAction}</td><td>${eq}</td></tr>`;
                         });
                         tableHtml += '</table>';
                     } else {
