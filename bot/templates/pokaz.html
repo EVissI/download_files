@@ -1552,6 +1552,18 @@
             cursor: pointer;
         }
 
+        .player-position-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .player-position-toggle span {
+            white-space: nowrap;
+        }
+
         .mode-toggle-btn {
             width: 50px;
             height: 30px;
@@ -1695,6 +1707,10 @@
                 <input type="checkbox" id="hidePipsCheckbox">
                 <span>Скрыть пипсы</span>
             </label>
+            <div class="player-position-toggle">
+                <span>Верхний игрок:</span>
+                <button id="upperPlayerBtn" class="checker-toggle-btn black" data-color="black" title="Переключить верхнего игрока"></button>
+            </div>
             <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
                 <i class="fa fa-mouse-pointer"></i>
             </button>
@@ -2699,6 +2715,7 @@
         let imagesLoaded = 0;
         const totalImages = 21;
         let invertPointNumbers = false; // Flag for inverted point numbering
+        let upperPlayerColor = 'black'; // 'black' or 'white' - который игрок сверху
 
         function imageLoaded() {
             imagesLoaded++;
@@ -3013,33 +3030,49 @@
         });
         function generateXGID() {
             let xgid = "";
-            const whiteBar = positions.first.bar || 0;
-            if (whiteBar === 0) {
+            const invertPositions = (upperPlayerColor === 'white');
+            
+            // Определяем какие позиции использовать для верхнего и нижнего игроков
+            const upperPositions = invertPositions ? positions.first : positions.second;
+            const lowerPositions = invertPositions ? positions.second : positions.first;
+            
+            // Bar для нижнего игрока (в XGID всегда первый)
+            const lowerBar = lowerPositions.bar || 0;
+            if (lowerBar === 0) {
                 xgid += "-";
-            } else if (whiteBar <= 15) {
-                xgid += String.fromCharCode(64 + whiteBar);
+            } else if (lowerBar <= 15) {
+                // Нижний игрок = заглавные буквы
+                xgid += String.fromCharCode(64 + lowerBar);
             }
+            
             for (let point = 1; point <= 24; point++) {
-                const whiteCount = positions.first[point] || 0;
-                const blackCount = positions.second[point] || 0;
+                // Если инвертируем, берем позиции наоборот
+                const actualPoint = invertPositions ? (25 - point) : point;
+                const lowerCount = lowerPositions[actualPoint] || 0;
+                const upperCount = upperPositions[actualPoint] || 0;
 
-                if (whiteCount > 0) {
-                    if (whiteCount <= 15) {
-                        xgid += String.fromCharCode(64 + whiteCount);
+                if (lowerCount > 0) {
+                    if (lowerCount <= 15) {
+                        // Нижний = заглавные
+                        xgid += String.fromCharCode(64 + lowerCount);
                     }
-                } else if (blackCount > 0) {
-                    if (blackCount <= 15) {
-                        xgid += String.fromCharCode(96 + blackCount);
+                } else if (upperCount > 0) {
+                    if (upperCount <= 15) {
+                        // Верхний = строчные
+                        xgid += String.fromCharCode(96 + upperCount);
                     }
                 } else {
                     xgid += "-";
                 }
             }
-            const blackBar = positions.second.bar || 0;
-            if (blackBar === 0) {
+            
+            // Bar для верхнего игрока (в XGID всегда второй)
+            const upperBar = upperPositions.bar || 0;
+            if (upperBar === 0) {
                 xgid += "-";
-            } else if (blackBar <= 15) {
-                xgid += String.fromCharCode(96 + blackBar);
+            } else if (upperBar <= 15) {
+                // Верхний игрок = строчные буквы
+                xgid += String.fromCharCode(96 + upperBar);
             }
             xgid += ':'
             const cubeValue = parseInt(document.getElementById('cube-value-select').value);
@@ -3053,21 +3086,33 @@
             const cubeShown = parseInt(document.getElementById('cube-shown-select').value);
             let cubePosition = 0;
             if (cubeValue !== 0) {
-                if (cubeOwner === 'white') {
-                    cubePosition = 1;
-                } else if (cubeOwner === 'black') {
-                    cubePosition = -1;
+                // Определяем владельца куба в терминах upper/lower
+                // В XGID: 1 = lower (нижний), -1 = upper (верхний)
+                let isLowerPlayer;
+                if (invertPositions) {
+                    // white стал верхним, black стал нижним
+                    isLowerPlayer = (cubeOwner === 'black');
+                } else {
+                    // white нижний, black верхний (стандартное)
+                    isLowerPlayer = (cubeOwner === 'white');
                 }
+                cubePosition = isLowerPlayer ? 1 : -1;
             }
             xgid += cubePosition.toString();
             xgid += ':'
             const turn = document.getElementById('turn-select').value;
             let turnValue = 0;
-            if (turn === 'white') {
-                turnValue = 1;
-            } else if (turn === 'black') {
-                turnValue = -1;
+            // Определяем чей ход в терминах upper/lower
+            // В XGID: 1 = lower (нижний), -1 = upper (верхний)
+            let isLowerPlayerTurn;
+            if (invertPositions) {
+                // white стал верхним, black стал нижним
+                isLowerPlayerTurn = (turn === 'black');
+            } else {
+                // white нижний, black верхний (стандартное)
+                isLowerPlayerTurn = (turn === 'white');
             }
+            turnValue = isLowerPlayerTurn ? 1 : -1;
             xgid += turnValue.toString();
             xgid += ':'
             let cubePart = '';
@@ -3668,6 +3713,26 @@
         const hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
         if (hidePipsCheckbox) {
             hidePipsCheckbox.addEventListener('change', () => {
+                drawBoard();
+            });
+        }
+
+        // Upper player toggle button handler
+        const upperPlayerBtn = document.getElementById('upperPlayerBtn');
+        if (upperPlayerBtn) {
+            upperPlayerBtn.addEventListener('click', () => {
+                // Toggle upper player color
+                if (upperPlayerColor === 'black') {
+                    upperPlayerColor = 'white';
+                    upperPlayerBtn.classList.remove('black');
+                    upperPlayerBtn.classList.add('white');
+                    upperPlayerBtn.setAttribute('data-color', 'white');
+                } else {
+                    upperPlayerColor = 'black';
+                    upperPlayerBtn.classList.remove('white');
+                    upperPlayerBtn.classList.add('black');
+                    upperPlayerBtn.setAttribute('data-color', 'black');
+                }
                 drawBoard();
             });
         }
