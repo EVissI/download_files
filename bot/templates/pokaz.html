@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -3097,12 +3097,12 @@
                 if (lowerCount > 0) {
                     if (lowerCount <= 15) {
                         // Нижний = заглавные
-                        xgid += String.fromCharCode(64 + lowerCount);
+                        xgid += String.fromCharCode(96 + lowerCount);
                     }
                 } else if (upperCount > 0) {
                     if (upperCount <= 15) {
                         // Верхний = строчные
-                        xgid += String.fromCharCode(96 + upperCount);
+                        xgid += String.fromCharCode(64 + upperCount);
                     }
                 } else {
                     xgid += "-";
@@ -3601,7 +3601,7 @@
                     }
                 })
                 .catch(error => {
-                    hintsTable.innerHTML = '<div class="error">Error loading hints: ' + error.message + '</div>';
+                    hintsTable.innerHTML = '<div class="error">' + error.message + '</div>';
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
                     
