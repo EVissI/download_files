@@ -3081,7 +3081,15 @@
             const UpperScore = currentGameType === 'манигейм' ? '0' : document.getElementById('upper-score').value;
             xgid += UpperScore;
             xgid += ':'
-            const conventionPart = currentGameType === 'матч' ? '0' : (parseInt(document.getElementById('jacobi-select').value) + 2 * parseInt(document.getElementById('beaver-select').value)).toString();
+            let conventionPart;
+            if (currentGameType === 'матч') {
+                // При матче: 1 если Кроуфорд активен, 0 если нет
+                const crawfordCheckbox = document.getElementById('crawford-checkbox');
+                conventionPart = (crawfordCheckbox && crawfordCheckbox.checked) ? '1' : '0';
+            } else {
+                // При манигейме: jacobi + 2*beaver
+                conventionPart = (parseInt(document.getElementById('jacobi-select').value) + 2 * parseInt(document.getElementById('beaver-select').value)).toString();
+            }
             xgid += conventionPart;
             xgid += ':'
             const matchLengthPart = currentGameType === 'манигейм' ? '0' : document.getElementById('match_lenght').value;
@@ -3202,11 +3210,8 @@
                 });
             });
 
-            // Update dice selectors when turn changes (will be handled by existing turn-select listener)
-            // We'll update dice selectors in updateTurnSelect function instead
         }
 
-        // Setup global click handler to close dropdowns when clicking outside (only once)
         let dropdownCloseHandlerSetup = false;
         function setupDropdownCloseHandler() {
             if (dropdownCloseHandlerSetup) return;
@@ -3817,17 +3822,13 @@
             backgroundColor: '#1a1a1a'
         }).then(canvas => {
             restoreControls();
-            // Конвертируем canvas в blob
             canvas.toBlob(blob => {
-                // Создаем файл из blob
                 const file = new File([blob], 'screenshot.png', { type: 'image/png' });
                 
-                // Отправляем файл в Telegram
                 if (window.Telegram && window.Telegram.WebApp) {
                     const formData = new FormData();
                     formData.append('photo', file);
                     
-                    // Получаем chat_id из Telegram WebApp
                     const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
                     const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
                     
@@ -3868,7 +3869,6 @@
     
     // Функция для сохранения скриншота в буфер
     function saveScreenshot() {
-        // Скрываем элементы управления перед созданием скриншота
         const screenshotControls = document.getElementById('screenshotControls');
         const actionButtons = document.querySelector('.action-buttons');
         const selectorsWrapper = document.querySelector('.selectors-wrapper');
@@ -3901,7 +3901,6 @@
             });
         }
         
-        // Скрываем элементы
         if (screenshotControls) screenshotControls.style.display = 'none';
         if (actionButtons) actionButtons.style.display = 'none';
         if (selectorsWrapper) selectorsWrapper.style.display = 'none';
@@ -3913,7 +3912,6 @@
         
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
             canvas.toBlob(blob => {
-                // Получаем chat_id из Telegram WebApp
                 const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
                 const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
                 
@@ -3947,9 +3945,7 @@
         });
     }
     
-    // Функция для отправки сохраненных скриншотов
     function uploadScreenshots() {
-        // Получаем chat_id из Telegram WebApp
         const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
         const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
         
