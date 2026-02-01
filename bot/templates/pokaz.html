@@ -2468,8 +2468,19 @@
             }
 
             const barX = 400;
-            const barY = (player === 'second') ? 220 : 520;
-            const barDy = (player === 'second') ? 55 : -55;
+            
+            // Определяем позицию бара с учетом инвертирования
+            let barY, barDy;
+            if (upperPlayerColor === 'black') {
+                // Стандартно: second (черные) сверху, first (белые) снизу
+                barY = (player === 'second') ? 220 : 520;
+                barDy = (player === 'second') ? 55 : -55;
+            } else {
+                // Инвертировано: first (белые) сверху, second (черные) снизу
+                barY = (player === 'first') ? 220 : 520;
+                barDy = (player === 'first') ? 55 : -55;
+            }
+            
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
                 for (let i = 0; i < Math.min(Math.abs(positions.bar), 2); i++) {
