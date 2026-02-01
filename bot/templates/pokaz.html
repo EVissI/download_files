@@ -2547,15 +2547,29 @@
                 const diceY = 350;
                 let diceX1, diceX2;
                 let diceSet;
-                if (turn === 'white') {
-                    diceX1 = 530;
-                    diceX2 = 620;
-                    diceSet = diceImages.white;
+                
+                // Determine if current turn player is upper or lower
+                let isUpperPlayer;
+                if (upperPlayerColor === 'black') {
+                    // Standard: black is upper, white is lower
+                    isUpperPlayer = (turn === 'black');
                 } else {
+                    // Inverted: white is upper, black is lower
+                    isUpperPlayer = (turn === 'white');
+                }
+                
+                // Upper player dice on left, lower player dice on right
+                if (isUpperPlayer) {
                     diceX1 = 130;
                     diceX2 = 220;
-                    diceSet = diceImages.black;
+                } else {
+                    diceX1 = 530;
+                    diceX2 = 620;
                 }
+                
+                // Select dice images based on player color
+                diceSet = (turn === 'white') ? diceImages.white : diceImages.black;
+                
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
