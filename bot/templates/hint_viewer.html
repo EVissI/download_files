@@ -926,9 +926,25 @@
 
         <!-- animation-controls перенесены в модальное окно настроек -->
 
-        <div class="settings-container">
-            <button id="settingsBtn" onclick="openSettingsModal()" title="Настройки">⚙️</button>
-            <span>Настройки</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 20px 0 10px 0;">
+            <div class="settings-container" style="margin: 0;">
+                <button id="settingsBtn" onclick="openSettingsModal()" title="Настройки">⚙️</button>
+                <span>Настройки</span>
+            </div>
+            <button onclick="openPokazEditor()" style="
+                padding: 10px 20px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                transition: background-color 0.3s;
+            " onmouseover="this.style.backgroundColor='#0056b3'" onmouseout="this.style.backgroundColor='#007bff'">
+                Открыть редактор
+            </button>
         </div>
         <div class="support-container">
             <button id="supportBtn" onclick="openSupportModal()" title="Техподержка"></button>
@@ -3633,24 +3649,6 @@
             }
         }
     </script>
-    
-    <!-- Button to open pokaz editor -->
-    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
-        <button onclick="openPokazEditor()" style="
-            padding: 12px 24px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: background-color 0.3s;
-        " onmouseover="this.style.backgroundColor='#0056b3'" onmouseout="this.style.backgroundColor='#007bff'">
-            Открыть редактор
-        </button>
-    </div>
 </body>
 
 </html>
