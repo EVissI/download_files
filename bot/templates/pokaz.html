@@ -3101,13 +3101,13 @@
             const upperPositions = invertPositions ? positions.first : positions.second;
             const lowerPositions = invertPositions ? positions.second : positions.first;
             
-            // Bar для нижнего игрока (в XGID всегда первый)
-            const lowerBar = lowerPositions.bar || 0;
-            if (lowerBar === 0) {
+            // Bar для верхнего игрока (первый символ в XGID)
+            const upperBar = upperPositions.bar || 0;
+            if (upperBar === 0) {
                 xgid += "-";
-            } else if (lowerBar <= 15) {
-                // Нижний игрок = заглавные буквы (A-O)
-                xgid += String.fromCharCode(64 + lowerBar);
+            } else if (upperBar <= 15) {
+                // Верхний игрок = строчные буквы (a-o)
+                xgid += String.fromCharCode(96 + upperBar);
             }
             
             for (let point = 1; point <= 24; point++) {
@@ -3131,13 +3131,13 @@
                 }
             }
             
-            // Bar для верхнего игрока (в XGID всегда второй)
-            const upperBar = upperPositions.bar || 0;
-            if (upperBar === 0) {
+            // Bar для нижнего игрока (последний символ перед ':' в XGID)
+            const lowerBar = lowerPositions.bar || 0;
+            if (lowerBar === 0) {
                 xgid += "-";
-            } else if (upperBar <= 15) {
-                // Верхний игрок = строчные буквы (a-o)
-                xgid += String.fromCharCode(96 + upperBar);
+            } else if (lowerBar <= 15) {
+                // Нижний игрок = заглавные буквы (A-O)
+                xgid += String.fromCharCode(64 + lowerBar);
             }
             xgid += ':'
             const cubeValue = parseInt(document.getElementById('cube-value-select').value);
