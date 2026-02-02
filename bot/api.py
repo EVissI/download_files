@@ -90,12 +90,13 @@ app.include_router(short_board_api_router, prefix="")
 
 
 @app.get("/pokaz")
-async def get_pokaz(request: Request, chat_id: str = None):
+async def get_pokaz(request: Request, chat_id: str = None, xgid: str = None):
     """
     Возвращает HTML-страницу редактора доски нардов.
+    Может принимать XGID строку для автоматической загрузки позиции.
     """
     return templates.TemplateResponse(
-        "pokaz.html", {"request": request, "chat_id": chat_id}
+        "pokaz.html", {"request": request, "chat_id": chat_id, "xgid": xgid}
     )
 
 

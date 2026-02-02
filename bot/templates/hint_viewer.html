@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -3443,7 +3443,214 @@
                 }
             }
         });
+
+        function generateXGID() {
+            if (!dataLoaded || !data || current === undefined) {
+                console.error('Data not loaded');
+                return '';
+            }
+
+            let xgid = "";
+            
+            // Get current positions
+            let redPositions, blackPositions;
+            if (current === 0) {
+                if (invertColors) {
+                    redPositions = { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 };
+                    blackPositions = { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 };
+                } else {
+                    redPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
+                    blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
+                }
+            } else {
+                const prevTurn = current - 1;
+                if (invertColors) {
+                    redPositions = data[prevTurn].inverted_positions['red'];
+                    blackPositions = data[prevTurn].inverted_positions['black'];
+                } else {
+                    redPositions = data[prevTurn].positions['red'];
+                    blackPositions = data[prevTurn].positions['black'];
+                }
+            }
+
+            // Determine upper and lower positions based on invertColors
+            // In XGID: upper = строчные (a-o), lower = заглавные (A-O)
+            // In hint_viewer: red = white (нижний), black = black (верхний) when not inverted
+            // When inverted: red = верхний, black = нижний
+            const upperPositions = invertColors ? redPositions : blackPositions;
+            const lowerPositions = invertColors ? blackPositions : redPositions;
+            
+            // Bar для верхнего игрока (первый символ в XGID)
+            const upperBar = upperPositions.bar || 0;
+            if (upperBar === 0) {
+                xgid += "-";
+            } else if (upperBar <= 15) {
+                // Верхний игрок = строчные буквы (a-o)
+                xgid += String.fromCharCode(96 + upperBar);
+            }
+            
+            // Positions 1-24
+            for (let point = 1; point <= 24; point++) {
+                const lowerCount = lowerPositions[point.toString()] || 0;
+                const upperCount = upperPositions[point.toString()] || 0;
+
+                if (lowerCount > 0) {
+                    if (lowerCount <= 15) {
+                        // Нижний = заглавные (A-O)
+                        xgid += String.fromCharCode(64 + lowerCount);
+                    }
+                } else if (upperCount > 0) {
+                    if (upperCount <= 15) {
+                        // Верхний = строчные (a-o)
+                        xgid += String.fromCharCode(96 + upperCount);
+                    }
+                } else {
+                    xgid += "-";
+                }
+            }
+            
+            // Bar для нижнего игрока (последний символ перед ':' в XGID)
+            const lowerBar = lowerPositions.bar || 0;
+            if (lowerBar === 0) {
+                xgid += "-";
+            } else if (lowerBar <= 15) {
+                // Нижний игрок = заглавные буквы (A-O)
+                xgid += String.fromCharCode(64 + lowerBar);
+            }
+            
+            xgid += ':';
+            
+            // Cube exponent (part 1)
+            let cubeValue = 0;
+            if (currentCube) {
+                // Find cube value from currentCube image
+                const cubeValues = { Double2: 2, Double4: 4, Double8: 8, Double16: 16, Double32: 32, Double64: 64 };
+                cubeValue = cubeValues[currentCube] || 0;
+            }
+            let exponent = 0;
+            if (cubeValue > 0) {
+                exponent = Math.log2(cubeValue);
+            }
+            xgid += exponent.toString();
+            
+            xgid += ':';
+            
+            // Cube position (part 2): 1 = lower, -1 = upper, 0 = no cube
+            let cubePosition = 0;
+            if (cubeValue !== 0 && currentCubePlayer) {
+                const isLowerPlayer = invertColors ? 
+                    (currentCubePlayer === 'Black') : 
+                    (currentCubePlayer === 'Red');
+                cubePosition = isLowerPlayer ? 1 : -1;
+            }
+            xgid += cubePosition.toString();
+            
+            xgid += ':';
+            
+            // Turn (part 3): 1 = lower, -1 = upper
+            const currentItem = data[current];
+            const currentPlayer = currentItem.player || '';
+            let turnValue = 0;
+            if (currentPlayer) {
+                const isLowerPlayerTurn = invertColors ? 
+                    (currentPlayer === 'Black') : 
+                    (currentPlayer === 'Red');
+                turnValue = isLowerPlayerTurn ? 1 : -1;
+            }
+            xgid += turnValue.toString();
+            
+            xgid += ':';
+            
+            // Cube part (part 4): dice or 'D' or '00'
+            let cubePart = '00';
+            if (currentItem.dice && currentItem.dice.length >= 2 && !['double', 'take', 'win'].includes(currentItem.action)) {
+                const [d1, d2] = currentItem.dice;
+                cubePart = d1.toString() + d2.toString();
+            } else if (cubeValue > 0 && currentCubePlayer) {
+                // Cube is shown
+                cubePart = 'D';
+            }
+            xgid += cubePart;
+            
+            xgid += ':';
+            
+            // Scores (parts 5-6)
+            const lowerScore = matchLength > 0 ? (invertColors ? gameBlackScore : gameRedScore) : '0';
+            const upperScore = matchLength > 0 ? (invertColors ? gameRedScore : gameBlackScore) : '0';
+            xgid += lowerScore.toString();
+            xgid += ':';
+            xgid += upperScore.toString();
+            
+            xgid += ':';
+            
+            // Convention (part 7)
+            let conventionPart = '0';
+            if (matchLength > 0) {
+                // Match: 1 if Crawford, 0 otherwise
+                const isCrawford = enable_crawford_game_number !== null && currentGameNum >= enable_crawford_game_number;
+                conventionPart = isCrawford ? '1' : '0';
+            } else {
+                // Money game: jacobi + 2*beaver (default 0)
+                conventionPart = '0';
+            }
+            xgid += conventionPart;
+            
+            xgid += ':';
+            
+            // Match length (part 8)
+            const matchLengthPart = matchLength > 0 ? matchLength.toString() : '0';
+            xgid += matchLengthPart;
+            
+            xgid += ':';
+            
+            // Max cube (part 9) - default to 3 (8) if not available
+            const maxCubePart = '3'; // Default value, can be extracted from gameInfo if available
+            xgid += maxCubePart;
+            
+            return xgid;
+        }
+        
+        function openPokazEditor() {
+            try {
+                const xgidString = generateXGID();
+                if (!xgidString) {
+                    alert('Не удалось сгенерировать XGID строку');
+                    return;
+                }
+                
+                // Get chat_id from URL or use current
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentChatId = urlParams.get('chat_id') || chatId || '';
+                
+                // Build URL with XGID and chat_id
+                const pokazUrl = `/pokaz?xgid=${encodeURIComponent(xgidString)}${currentChatId ? '&chat_id=' + encodeURIComponent(currentChatId) : ''}`;
+                
+                // Open pokaz.html in new tab
+                window.open(pokazUrl, '_blank');
+            } catch (error) {
+                console.error('Error opening pokaz editor:', error);
+                alert('Ошибка при открытии редактора: ' + error.message);
+            }
+        }
     </script>
+    
+    <!-- Button to open pokaz editor -->
+    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+        <button onclick="openPokazEditor()" style="
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.3s;
+        " onmouseover="this.style.backgroundColor='#0056b3'" onmouseout="this.style.backgroundColor='#007bff'">
+            Открыть редактор
+        </button>
+    </div>
 </body>
 
 </html>

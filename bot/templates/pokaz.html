@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1673,6 +1673,9 @@
 </head>
 
 <body>
+    {% if xgid %}
+    <script type="application/json" id="initial-xgid-data">{{ xgid|tojson }}</script>
+    {% endif %}
     <div class="container">
         <h1>Backgammon Board Editor</h1>
         <!-- DEBUG: XGID - удалить потом -->
@@ -2768,6 +2771,10 @@
         const totalImages = 21;
         let invertPointNumbers = false; // Flag for inverted point numbering
         let upperPlayerColor = 'white'; // 'black' or 'white' - который игрок сверху (инвертировано для отображения нижнего)
+        
+        // XGID string from server (if provided) - read from hidden script element
+        const initialXgidElement = document.getElementById('initial-xgid-data');
+        const initialXgid = initialXgidElement ? JSON.parse(initialXgidElement.textContent) : null;
 
         function imageLoaded() {
             imagesLoaded++;
@@ -2839,6 +2846,28 @@
             
             // Initialize cube options filter
             filterCubeOptions();
+            
+            // Check if XGID string is provided via URL parameter or template variable
+            let xgidString = null;
+            
+            // First, try to get from URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            xgidString = urlParams.get('xgid');
+            
+            // If not in URL, try to get from template variable (if passed from server)
+            if (!xgidString && initialXgid) {
+                xgidString = initialXgid;
+            }
+            
+            // Parse XGID if provided
+            if (xgidString) {
+                try {
+                    parseXGID(xgidString);
+                } catch (error) {
+                    console.error('Error parsing XGID:', error);
+                    alert('Ошибка при загрузке позиции из XGID строки: ' + error.message);
+                }
+            }
         }
 
         // Variables to track touch start position for swipe detection
@@ -3210,6 +3239,252 @@
             xgid += maxCubePart;
             return xgid;
         }
+        
+        function parseXGID(xgidString) {
+            if (!xgidString || typeof xgidString !== 'string') {
+                console.error('Invalid XGID string');
+                return;
+            }
+            
+            const parts = xgidString.split(':');
+            if (parts.length < 10) {
+                console.error('Invalid XGID format: not enough parts');
+                return;
+            }
+            
+            // Parse board positions
+            const boardPart = parts[0];
+            if (boardPart.length < 26) {
+                console.error('Invalid XGID format: board part too short');
+                return;
+            }
+            
+            // First character: upper bar
+            const upperBarChar = boardPart[0];
+            const upperBar = (upperBarChar === '-' || upperBarChar === '') ? 0 : 
+                            (upperBarChar >= 'a' && upperBarChar <= 'o') ? upperBarChar.charCodeAt(0) - 96 : 0;
+            
+            // Last character before ':': lower bar
+            const lowerBarChar = boardPart[boardPart.length - 1];
+            const lowerBar = (lowerBarChar === '-' || lowerBarChar === '') ? 0 : 
+                            (lowerBarChar >= 'A' && lowerBarChar <= 'O') ? lowerBarChar.charCodeAt(0) - 64 : 0;
+            
+            // Positions 1-24 (characters 1-24)
+            const positionsPart = boardPart.substring(1, 25);
+            
+            // Clear current positions
+            positions.first = {};
+            positions.second = {};
+            
+            // Determine which positions are upper/lower based on upperPlayerColor
+            const invertPositions = (upperPlayerColor === 'white');
+            const upperPositions = invertPositions ? positions.first : positions.second;
+            const lowerPositions = invertPositions ? positions.second : positions.first;
+            
+            // Parse positions
+            for (let i = 0; i < 24; i++) {
+                const point = i + 1;
+                const char = positionsPart[i];
+                
+                if (char === '-' || !char) {
+                    // Empty point
+                    continue;
+                } else if (char >= 'A' && char <= 'O') {
+                    // Lower player (заглавные)
+                    const count = char.charCodeAt(0) - 64;
+                    lowerPositions[point.toString()] = count;
+                } else if (char >= 'a' && char <= 'o') {
+                    // Upper player (строчные)
+                    const count = char.charCodeAt(0) - 96;
+                    upperPositions[point.toString()] = count;
+                }
+            }
+            
+            // Set bars
+            if (upperBar > 0) {
+                upperPositions.bar = upperBar;
+            }
+            if (lowerBar > 0) {
+                lowerPositions.bar = lowerBar;
+            }
+            
+            // Parse cube exponent (part 1)
+            const exponent = parseInt(parts[1]) || 0;
+            const cubeValue = exponent > 0 ? Math.pow(2, exponent) : 0;
+            
+            // Parse cube position (part 2)
+            const cubePosition = parseInt(parts[2]) || 0;
+            
+            // Parse turn (part 3)
+            const turnValue = parseInt(parts[3]) || 0;
+            
+            // Parse cube part (part 4)
+            const cubePart = parts[4] || '00';
+            
+            // Parse scores (parts 5-6)
+            const lowerScore = parts[5] || '0';
+            const upperScore = parts[6] || '0';
+            
+            // Parse convention (part 7)
+            const conventionPart = parts[7] || '0';
+            
+            // Parse match length (part 8)
+            const matchLengthPart = parts[8] || '0';
+            
+            // Parse max cube (part 9)
+            const maxCubePart = parts[9] || '3';
+            
+            // Determine game type based on match length
+            const isMatch = matchLengthPart !== '0';
+            if (isMatch) {
+                // Switch to match mode
+                const jbWrap = document.querySelector('.jb-wrap');
+                const matchPanel = document.querySelector('.match-panel');
+                const gameTypeButton = document.getElementById('game-type-button');
+                if (jbWrap && matchPanel && gameTypeButton) {
+                    jbWrap.style.display = 'none';
+                    matchPanel.style.display = 'flex';
+                    gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
+                    gameTypeButton.title = 'Матч';
+                    currentGameType = 'матч';
+                }
+            } else {
+                // Switch to money game mode
+                const jbWrap = document.querySelector('.jb-wrap');
+                const matchPanel = document.querySelector('.match-panel');
+                const gameTypeButton = document.getElementById('game-type-button');
+                if (jbWrap && matchPanel && gameTypeButton) {
+                    jbWrap.style.display = 'flex';
+                    matchPanel.style.display = 'none';
+                    gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
+                    gameTypeButton.title = 'Манигейм';
+                    currentGameType = 'манигейм';
+                }
+            }
+            
+            // Set cube value
+            const cubeValueSelect = document.getElementById('cube-value-select');
+            if (cubeValueSelect) {
+                cubeValueSelect.value = cubeValue.toString();
+                updateCubeSelectorDisplay('value');
+            }
+            
+            // Set cube shown
+            let cubeShown = 0;
+            if (cubePart === 'D') {
+                cubeShown = cubeValue;
+            }
+            const cubeShownSelect = document.getElementById('cube-shown-select');
+            if (cubeShownSelect) {
+                cubeShownSelect.value = cubeShown.toString();
+                updateCubeSelectorDisplay('shown');
+            }
+            
+            // Set cube owner based on cubePosition
+            let cubeOwner = 'white';
+            if (cubePosition === 1) {
+                // Lower player owns cube
+                cubeOwner = invertPositions ? 'black' : 'white';
+            } else if (cubePosition === -1) {
+                // Upper player owns cube
+                cubeOwner = invertPositions ? 'white' : 'black';
+            }
+            const cubeOwnerSelect = document.getElementById('cube-owner-select');
+            if (cubeOwnerSelect) {
+                cubeOwnerSelect.value = cubeOwner;
+                updateCubeOwnerSelect();
+            }
+            
+            // Set turn based on turnValue
+            let turn = 'white';
+            if (turnValue === 1) {
+                // Lower player's turn
+                turn = invertPositions ? 'black' : 'white';
+            } else if (turnValue === -1) {
+                // Upper player's turn
+                turn = invertPositions ? 'white' : 'black';
+            }
+            const turnSelect = document.getElementById('turn-select');
+            if (turnSelect) {
+                turnSelect.value = turn;
+                updateTurnSelect();
+            }
+            
+            // Set dice
+            let dice1 = 0, dice2 = 0;
+            if (cubePart !== '00' && cubePart !== 'D' && cubePart.length === 2) {
+                dice1 = parseInt(cubePart[0]) || 0;
+                dice2 = parseInt(cubePart[1]) || 0;
+            }
+            const dice1Select = document.getElementById('dice1-select');
+            const dice2Select = document.getElementById('dice2-select');
+            if (dice1Select) dice1Select.value = dice1.toString();
+            if (dice2Select) dice2Select.value = dice2.toString();
+            if (dice1 > 0 || dice2 > 0) {
+                updateDiceSelectorDisplay(1);
+                updateDiceSelectorDisplay(2);
+            }
+            
+            // Set scores
+            if (isMatch) {
+                const lowerScoreSelect = document.getElementById('lower-score');
+                const upperScoreSelect = document.getElementById('upper-score');
+                if (lowerScoreSelect) lowerScoreSelect.value = lowerScore;
+                if (upperScoreSelect) upperScoreSelect.value = upperScore;
+            }
+            
+            // Set convention
+            if (isMatch) {
+                // Crawford checkbox
+                const crawfordCheckbox = document.getElementById('crawford-checkbox');
+                if (crawfordCheckbox) {
+                    crawfordCheckbox.checked = (conventionPart === '1');
+                    crawfordCheckbox.dispatchEvent(new Event('change'));
+                }
+            } else {
+                // Jacobi and beaver
+                // conventionPart = jacobi + 2*beaver
+                const jacobi = conventionPart % 2;
+                const beaver = Math.floor(conventionPart / 2);
+                const jacobiSelect = document.getElementById('jacobi-select');
+                const beaverSelect = document.getElementById('beaver-select');
+                if (jacobiSelect) jacobiSelect.value = jacobi.toString();
+                if (beaverSelect) beaverSelect.value = beaver.toString();
+            }
+            
+            // Set match length
+            if (isMatch) {
+                const matchLengthSelect = document.getElementById('match_lenght');
+                if (matchLengthSelect) matchLengthSelect.value = matchLengthPart;
+            }
+            
+            // Set max cube
+            const maxCubeSelect = isMatch ? 
+                document.getElementById('max-cube-select') : 
+                document.getElementById('max-cube-select-m');
+            if (maxCubeSelect) {
+                maxCubeSelect.value = maxCubePart;
+                // Update button text
+                const maxCubeButton = isMatch ? 
+                    document.getElementById('max-cube-button') : 
+                    document.getElementById('max-cube-button-m');
+                if (maxCubeButton) {
+                    const optionText = maxCubeSelect.options[maxCubeSelect.selectedIndex].text;
+                    maxCubeButton.textContent = optionText;
+                }
+                // Filter cube options
+                filterCubeOptions();
+            }
+            
+            // Update all selects for positions
+            updateSelectOptions('white');
+            updateSelectOptions('black');
+            updateBarSelects();
+            
+            // Redraw board
+            drawBoard();
+        }
+        
         function handleDiceChange(changedSelectId, otherSelectId) {
             const changedValue = parseInt(document.getElementById(changedSelectId).value);
             const otherSelect = document.getElementById(otherSelectId);
