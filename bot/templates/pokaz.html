@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -3177,14 +3177,12 @@
             let cubePart = '';
             const dice1 = parseInt(document.getElementById('dice1-select').value);
             const dice2 = parseInt(document.getElementById('dice2-select').value);
-            if (cubeValue === 0 && dice1 === 0 && dice2 === 0) {
+            if (dice1 === 0 && dice2 === 0) {
                 cubePart = '00';
             } else if (cubeShown !== 0) {
                 cubePart = 'D';
             } else if (dice1 !== 0 || dice2 !== 0) {
                 cubePart = dice1.toString() + dice2.toString();
-            } else {
-                cubePart = cubeValue.toString() + '0';
             }
             xgid += cubePart;
             xgid += ':'
