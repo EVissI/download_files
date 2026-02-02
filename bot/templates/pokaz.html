@@ -1724,11 +1724,11 @@
                 <div class="checker-selector">
                     <div class="checker-label">Шашки</div>
                     <div class="checker-options">
-                        <div class="checker-btn white selected" data-color="white" role="button"
+                        <div class="checker-btn white" data-color="white" role="button"
                             aria-label="Белые шашки">
                             <div class="checker-dot"></div>
                         </div>
-                        <div class="checker-btn black" data-color="black" role="button" aria-label="Черные шашки">
+                        <div class="checker-btn black selected" data-color="black" role="button" aria-label="Черные шашки">
                             <div class="checker-dot"></div>
                         </div>
                     </div>
@@ -3830,11 +3830,15 @@
                     upperPlayerBtn.classList.remove('black');
                     upperPlayerBtn.classList.add('white');
                     upperPlayerBtn.setAttribute('data-color', 'white');
+                    // Нижний игрок теперь черный, выбираем черную шашку
+                    setSelectedCheckerColor('black');
                 } else {
                     upperPlayerColor = 'black';
                     upperPlayerBtn.classList.remove('white');
                     upperPlayerBtn.classList.add('black');
                     upperPlayerBtn.setAttribute('data-color', 'black');
+                    // Нижний игрок теперь белый, выбираем белую шашку
+                    setSelectedCheckerColor('white');
                 }
                 drawBoard();
             });
