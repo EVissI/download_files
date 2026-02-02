@@ -3825,20 +3825,24 @@
         if (upperPlayerBtn) {
             upperPlayerBtn.addEventListener('click', () => {
                 // Toggle - кнопка показывает нижнего игрока (противоположный upperPlayerColor)
-                if (upperPlayerColor === 'black') {
-                    upperPlayerColor = 'white';
+                if (upperPlayerColor === 'white') {
+                    // Было: белые сверху, черные снизу
+                    // Станет: черные сверху, белые снизу
+                    upperPlayerColor = 'black';
                     upperPlayerBtn.classList.remove('black');
                     upperPlayerBtn.classList.add('white');
                     upperPlayerBtn.setAttribute('data-color', 'white');
-                    // Нижний игрок теперь черный, выбираем черную шашку
-                    setSelectedCheckerColor('black');
+                    // Нижний игрок теперь белый, выбираем белую шашку
+                    setSelectedCheckerColor('white');
                 } else {
-                    upperPlayerColor = 'black';
+                    // Было: черные сверху, белые снизу
+                    // Станет: белые сверху, черные снизу
+                    upperPlayerColor = 'white';
                     upperPlayerBtn.classList.remove('white');
                     upperPlayerBtn.classList.add('black');
                     upperPlayerBtn.setAttribute('data-color', 'black');
-                    // Нижний игрок теперь белый, выбираем белую шашку
-                    setSelectedCheckerColor('white');
+                    // Нижний игрок теперь черный, выбираем черную шашку
+                    setSelectedCheckerColor('black');
                 }
                 drawBoard();
             });
