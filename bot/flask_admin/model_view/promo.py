@@ -86,15 +86,19 @@ class PromocodeModelView(ModelView):
         return super().get_count_query().options(joinedload(Promocode.services))
 
 
-    def on_model_change(self, form, model, is_created):
-        """Преобразуем 0 в None для полей max_usage и duration_days"""
-        if model.max_usage == 0:
-            model.max_usage = None
-        if model.duration_days == 0:
-            model.duration_days = None
+    def _normalize_limits(self, item):
+        """Преобразуем 0 в None для полей max_usage и duration_days."""
+        if item.max_usage == 0:
+            item.max_usage = None
+        if item.duration_days == 0:
+            item.duration_days = None
 
     def pre_add(self, item):
+        self._normalize_limits(item)
         item.activate_count = 0
+
+    def pre_update(self, item):
+        self._normalize_limits(item)
 
     def post_add(self, item):
         if item.activate_count is None:
