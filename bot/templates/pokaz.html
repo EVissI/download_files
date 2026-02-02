@@ -1798,8 +1798,17 @@
                         <button type="button" class="toggle-btn on" data-target="jacobi-select">Да</button>
                         <button type="button" class="toggle-btn" data-target="beaver-select">Нет</button>
                         <div class="max-cube-options_money" id="max-cube-options-money">
-                            <div>
-                                <select id="max-cube-select-m" class="selector-size">
+                            <div class="match-selector-custom">
+                                <div class="match-selector-button" id="max-cube-button-m">8</div>
+                                <div class="match-selector-dropdown" id="max-cube-dropdown-m">
+                                    <div class="match-option" data-value="1">2</div>
+                                    <div class="match-option" data-value="2">4</div>
+                                    <div class="match-option" data-value="3">8</div>
+                                    <div class="match-option" data-value="4">16</div>
+                                    <div class="match-option" data-value="5">32</div>
+                                    <div class="match-option" data-value="6">64</div>
+                                </div>
+                                <select id="max-cube-select-m" style="display: none;">
                                     <option value="1">2</option>
                                     <option value="2">4</option>
                                     <option value="3" selected>8</option>
@@ -3452,7 +3461,8 @@
                 { id: 'lower-score', buttonId: 'lower-score-button', dropdownId: 'lower-score-dropdown' },
                 { id: 'upper-score', buttonId: 'upper-score-button', dropdownId: 'upper-score-dropdown' },
                 { id: 'match_lenght', buttonId: 'match-lenght-button', dropdownId: 'match-lenght-dropdown' },
-                { id: 'max-cube-select', buttonId: 'max-cube-button', dropdownId: 'max-cube-dropdown' }
+                { id: 'max-cube-select', buttonId: 'max-cube-button', dropdownId: 'max-cube-dropdown' },
+                { id: 'max-cube-select-m', buttonId: 'max-cube-button-m', dropdownId: 'max-cube-dropdown-m' }
             ];
 
             matchSelectors.forEach(selector => {
@@ -3483,7 +3493,7 @@
                         select.value = value;
                         
                         // Update button text
-                        if (selector.id === 'max-cube-select') {
+                        if (selector.id === 'max-cube-select' || selector.id === 'max-cube-select-m') {
                             // For max cube, display the actual cube value (not the option value)
                             button.textContent = option.textContent;
                         } else {
