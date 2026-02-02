@@ -3622,11 +3622,18 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const currentChatId = urlParams.get('chat_id') || chatId || '';
                 
-                // Build URL with XGID and chat_id
-                const pokazUrl = `/pokaz?xgid=${encodeURIComponent(xgidString)}${currentChatId ? '&chat_id=' + encodeURIComponent(currentChatId) : ''}`;
+                // Build full URL with XGID and chat_id
+                const baseUrl = window.location.origin;
+                const pokazUrl = `${baseUrl}/pokaz?xgid=${encodeURIComponent(xgidString)}${currentChatId ? '&chat_id=' + encodeURIComponent(currentChatId) : ''}`;
                 
-                // Open pokaz.html in new tab
-                window.open(pokazUrl, '_blank');
+                // Use Telegram WebApp API if available, otherwise use regular navigation
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                    // Open in same Telegram WebApp
+                    window.Telegram.WebApp.openLink(pokazUrl);
+                } else {
+                    // Fallback: navigate in same window
+                    window.location.href = pokazUrl;
+                }
             } catch (error) {
                 console.error('Error opening pokaz editor:', error);
                 alert('Ошибка при открытии редактора: ' + error.message);
