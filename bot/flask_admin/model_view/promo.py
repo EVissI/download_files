@@ -1,4 +1,4 @@
-﻿from flask_appbuilder import ModelView, CompactCRUDMixin
+from flask_appbuilder import ModelView, CompactCRUDMixin
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from wtforms import BooleanField
 from flask_babel import lazy_gettext as _
@@ -85,6 +85,13 @@ class PromocodeModelView(ModelView):
     def get_count_query(self):
         return super().get_count_query().options(joinedload(Promocode.services))
 
+
+    def on_model_change(self, form, model, is_created):
+        """Преобразуем 0 в None для полей max_usage и duration_days"""
+        if model.max_usage == 0:
+            model.max_usage = None
+        if model.duration_days == 0:
+            model.duration_days = None
 
     def pre_add(self, item):
         item.activate_count = 0
