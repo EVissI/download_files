@@ -2854,6 +2854,9 @@
                 canvas.addEventListener('touchstart', handleCanvasTouchStart);
                 canvas.addEventListener('touchend', handleCanvasTouchEnd);
             }
+            
+            // Initialize cube options filter
+            filterCubeOptions();
         }
 
         // Variables to track touch start position for swipe detection
@@ -3507,6 +3510,65 @@
             });
         }
 
+        // Filter cube options based on max cube value
+        function filterCubeOptions() {
+            const currentGameType = document.getElementById('game-type-button').getAttribute('title');
+            const maxCubeSelect = currentGameType === 'Матч' ? 
+                document.getElementById('max-cube-select') : 
+                document.getElementById('max-cube-select-m');
+            
+            if (!maxCubeSelect) return;
+            
+            // Get max cube value (option text, not value)
+            const maxCubeValue = parseInt(maxCubeSelect.options[maxCubeSelect.selectedIndex].text);
+            
+            // Filter cube-shown dropdown options
+            const cubeShownDropdown = document.getElementById('cube-shown-dropdown');
+            const cubeShownSelect = document.getElementById('cube-shown-select');
+            if (cubeShownDropdown && cubeShownSelect) {
+                cubeShownDropdown.querySelectorAll('.cube-option').forEach(option => {
+                    const value = parseInt(option.getAttribute('data-value'));
+                    if (value > maxCubeValue) {
+                        option.style.display = 'none';
+                    } else {
+                        option.style.display = '';
+                    }
+                });
+                
+                // Check if current value exceeds max cube
+                const currentValue = parseInt(cubeShownSelect.value);
+                if (currentValue > maxCubeValue) {
+                    cubeShownSelect.value = maxCubeValue.toString();
+                    updateCubeSelectorDisplay('shown');
+                }
+            }
+            
+            // Filter cube-value dropdown options
+            const cubeValueDropdown = document.getElementById('cube-value-dropdown');
+            const cubeValueSelect = document.getElementById('cube-value-select');
+            if (cubeValueDropdown && cubeValueSelect) {
+                cubeValueDropdown.querySelectorAll('.cube-option').forEach(option => {
+                    const value = parseInt(option.getAttribute('data-value'));
+                    if (value > maxCubeValue) {
+                        option.style.display = 'none';
+                    } else {
+                        option.style.display = '';
+                    }
+                });
+                
+                // Check if current value exceeds max cube
+                const currentValue = parseInt(cubeValueSelect.value);
+                if (currentValue > maxCubeValue) {
+                    cubeValueSelect.value = maxCubeValue.toString();
+                    updateCubeSelectorDisplay('value');
+                }
+            }
+        }
+
+        // Add event listeners for max cube changes
+        document.getElementById('max-cube-select').addEventListener('change', filterCubeOptions);
+        document.getElementById('max-cube-select-m').addEventListener('change', filterCubeOptions);
+
         document.getElementById('dice1-select').addEventListener('change', () => {
             handleDiceChange('dice1-select', 'dice2-select');
             updateDiceSelectorDisplay(1);
@@ -3944,6 +4006,9 @@
                     crawfordCheckbox.checked = false;
                     crawfordCheckbox.dispatchEvent(new Event('change'));
                 }
+                
+                // Filter cube options based on money game max cube
+                filterCubeOptions();
             } else {
                 // Switch to match
                 jbWrap.style.display = 'none';
@@ -3955,6 +4020,9 @@
                 // Show Crawford checkbox
                 if (crawfordLabel) crawfordLabel.style.display = '';
                 if (crawfordWrapper) crawfordWrapper.style.display = 'flex';
+                
+                // Filter cube options based on match max cube
+                filterCubeOptions();
             }
         });
 
