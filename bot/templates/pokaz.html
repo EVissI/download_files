@@ -3832,8 +3832,6 @@
                     upperPlayerBtn.classList.remove('black');
                     upperPlayerBtn.classList.add('white');
                     upperPlayerBtn.setAttribute('data-color', 'white');
-                    // Нижний игрок теперь белый, выбираем белую шашку
-                    setSelectedCheckerColor('white');
                 } else {
                     // Было: черные сверху, белые снизу
                     // Станет: белые сверху, черные снизу
@@ -3841,8 +3839,6 @@
                     upperPlayerBtn.classList.remove('white');
                     upperPlayerBtn.classList.add('black');
                     upperPlayerBtn.setAttribute('data-color', 'black');
-                    // Нижний игрок теперь черный, выбираем черную шашку
-                    setSelectedCheckerColor('black');
                 }
                 drawBoard();
             });
