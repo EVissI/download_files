@@ -3477,25 +3477,17 @@
 
             let xgid = "";
             
-            // Get current positions
+            // Get current positions (всегда используем обычные positions, инверсия применяется ниже)
             let redPositions, blackPositions;
             if (current === 0) {
-                if (invertColors) {
-                    redPositions = { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 };
-                    blackPositions = { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 };
-                } else {
-                    redPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
-                    blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
-                }
+                // Начальная позиция (всегда без инверсии)
+                redPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
+                blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
             } else {
                 const prevTurn = current - 1;
-                if (invertColors) {
-                    redPositions = data[prevTurn].inverted_positions['red'];
-                    blackPositions = data[prevTurn].inverted_positions['black'];
-                } else {
-                    redPositions = data[prevTurn].positions['red'];
-                    blackPositions = data[prevTurn].positions['black'];
-                }
+                // Всегда берем обычные positions
+                redPositions = data[prevTurn].positions['red'];
+                blackPositions = data[prevTurn].positions['black'];
             }
 
             // Determine upper and lower positions based on invertColors
