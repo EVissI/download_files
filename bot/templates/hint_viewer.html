@@ -3477,25 +3477,35 @@
 
             let xgid = "";
             
-            // Get current positions (всегда используем обычные positions, инверсия применяется ниже)
+            // Get current positions - используем нужные positions в зависимости от инверсии
             let redPositions, blackPositions;
             if (current === 0) {
-                // Начальная позиция (всегда без инверсии)
-                redPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
-                blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
+                // Начальная позиция
+                if (invertColors) {
+                    redPositions = { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 };
+                    blackPositions = { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 };
+                } else {
+                    redPositions = { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 };
+                    blackPositions = { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 };
+                }
             } else {
                 const prevTurn = current - 1;
-                // Всегда берем обычные positions
-                redPositions = data[prevTurn].positions['red'];
-                blackPositions = data[prevTurn].positions['black'];
+                // Берем нужные positions в зависимости от инверсии
+                if (invertColors) {
+                    redPositions = data[prevTurn].inverted_positions['red'];
+                    blackPositions = data[prevTurn].inverted_positions['black'];
+                } else {
+                    redPositions = data[prevTurn].positions['red'];
+                    blackPositions = data[prevTurn].positions['black'];
+                }
             }
 
-            // Determine upper and lower positions based on invertColors
+            // Determine upper and lower positions for XGID format
             // In XGID: upper = строчные (a-o), lower = заглавные (A-O)
-            // In hint_viewer: red = white (нижний), black = black (верхний) when not inverted
-            // When inverted: red = верхний, black = нижний
-            const upperPositions = invertColors ? redPositions : blackPositions;
-            const lowerPositions = invertColors ? blackPositions : redPositions;
+            // Всегда: red = нижний (lower), black = верхний (upper)
+            // Потому что мы уже взяли правильные позиции выше с учетом инверсии
+            const upperPositions = blackPositions;
+            const lowerPositions = redPositions;
             
             // Bar для верхнего игрока (первый символ в XGID)
             const upperBar = upperPositions.bar || 0;
@@ -3555,9 +3565,8 @@
             // Cube position (part 2): 1 = lower, -1 = upper, 0 = no cube
             let cubePosition = 0;
             if (cubeValue !== 0 && currentCubePlayer) {
-                const isLowerPlayer = invertColors ? 
-                    (currentCubePlayer === 'Black') : 
-                    (currentCubePlayer === 'Red');
+                // Red всегда lower (1), Black всегда upper (-1) в XGID
+                const isLowerPlayer = (currentCubePlayer === 'Red');
                 cubePosition = isLowerPlayer ? 1 : -1;
             }
             xgid += cubePosition.toString();
@@ -3569,9 +3578,8 @@
             const currentPlayer = currentItem.player || '';
             let turnValue = 0;
             if (currentPlayer) {
-                const isLowerPlayerTurn = invertColors ? 
-                    (currentPlayer === 'Black') : 
-                    (currentPlayer === 'Red');
+                // Red всегда lower (1), Black всегда upper (-1) в XGID
+                const isLowerPlayerTurn = (currentPlayer === 'Red');
                 turnValue = isLowerPlayerTurn ? 1 : -1;
             }
             xgid += turnValue.toString();
@@ -3592,8 +3600,9 @@
             xgid += ':';
             
             // Scores (parts 5-6)
-            const lowerScore = matchLength > 0 ? (invertColors ? gameBlackScore : gameRedScore) : '0';
-            const upperScore = matchLength > 0 ? (invertColors ? gameRedScore : gameBlackScore) : '0';
+            // Red всегда lower score, Black всегда upper score в XGID
+            const lowerScore = matchLength > 0 ? gameRedScore : '0';
+            const upperScore = matchLength > 0 ? gameBlackScore : '0';
             xgid += lowerScore.toString();
             xgid += ':';
             xgid += upperScore.toString();
