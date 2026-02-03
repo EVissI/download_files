@@ -3287,6 +3287,42 @@
             // Positions 1-24 (characters 1-24)
             const positionsPart = boardPart.substring(1, 25);
             
+            // Determine inversion from XGID: check if upper player (lowercase) has checkers in upper part of board
+            // Standard: black upper (positions 13-24), white lower (positions 1-12)
+            // Inverted: white upper (positions 13-24), black lower (positions 1-12)
+            let detectedInversion = false;
+            // Check upper part of board (positions 13-24, indices 12-23 in string)
+            for (let i = 12; i < 24; i++) {
+                const char = positionsPart[i];
+                if (char >= 'a' && char <= 'o') {
+                    // Upper player (lowercase) has checkers in upper part - this is inverted
+                    detectedInversion = true;
+                    break;
+                }
+            }
+            
+            // Update upperPlayerColor based on detected inversion
+            if (detectedInversion) {
+                upperPlayerColor = 'white';
+            } else {
+                upperPlayerColor = 'black';
+            }
+            
+            // Update button color
+            const upperPlayerBtn = document.getElementById('upperPlayerBtn');
+            if (upperPlayerBtn) {
+                if (detectedInversion) {
+                    upperPlayerBtn.classList.remove('black');
+                    upperPlayerBtn.classList.add('white');
+                    upperPlayerBtn.setAttribute('data-color', 'white');
+                } else {
+                    upperPlayerBtn.classList.remove('white');
+                    upperPlayerBtn.classList.add('black');
+                    upperPlayerBtn.setAttribute('data-color', 'black');
+                }
+                console.log('Inversion detected:', detectedInversion, '- updated upperPlayerColor to', upperPlayerColor);
+            }
+            
             // Clear current positions
             positions.first = {};
             positions.second = {};
@@ -3502,10 +3538,26 @@
                 if (beaverSelect) beaverSelect.value = beaver.toString();
             }
             
-            // Set match length
+            // Set match length (pre-last part, part 8)
             if (isMatch) {
                 const matchLengthSelect = document.getElementById('match_lenght');
-                if (matchLengthSelect) matchLengthSelect.value = matchLengthPart;
+                const matchLengthButton = document.getElementById('match-lenght-button');
+                
+                console.log('Setting match length:', matchLengthPart);
+                
+                if (matchLengthSelect) {
+                    matchLengthSelect.value = matchLengthPart;
+                    console.log('Set match_lenght select value to:', matchLengthPart);
+                    
+                    if (matchLengthButton) {
+                        matchLengthButton.textContent = matchLengthPart;
+                        console.log('Set match-lenght button text to:', matchLengthPart);
+                    } else {
+                        console.warn('match-lenght-button not found');
+                    }
+                } else {
+                    console.warn('match_lenght select not found');
+                }
             }
             
             // Set max cube
