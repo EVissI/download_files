@@ -2859,12 +2859,21 @@
                 xgidString = initialXgid;
             }
             
+            // Log incoming XGID string
+            if (xgidString) {
+                console.log('Incoming XGID string:', xgidString);
+                console.log('XGID source:', urlParams.get('xgid') ? 'URL parameter' : 'template variable');
+            } else {
+                console.log('No XGID string provided');
+            }
+            
             // Parse XGID if provided
             if (xgidString) {
                 try {
                     parseXGID(xgidString);
                 } catch (error) {
                     console.error('Error parsing XGID:', error);
+                    console.error('Failed XGID string:', xgidString);
                     alert('Ошибка при загрузке позиции из XGID строки: ' + error.message);
                 }
             }
@@ -3241,14 +3250,20 @@
         }
         
         function parseXGID(xgidString) {
+            console.log('parseXGID called with string:', xgidString);
+            console.log('XGID string length:', xgidString ? xgidString.length : 0);
+            
             if (!xgidString || typeof xgidString !== 'string') {
-                console.error('Invalid XGID string');
+                console.error('Invalid XGID string:', xgidString);
                 return;
             }
             
             const parts = xgidString.split(':');
+            console.log('XGID parts count:', parts.length);
+            console.log('XGID parts:', parts);
+            
             if (parts.length < 10) {
-                console.error('Invalid XGID format: not enough parts');
+                console.error('Invalid XGID format: not enough parts. Expected 10, got', parts.length);
                 return;
             }
             
