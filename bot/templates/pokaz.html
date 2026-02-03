@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -3286,43 +3286,6 @@
             
             // Positions 1-24 (characters 1-24)
             const positionsPart = boardPart.substring(1, 25);
-            
-            // Determine inversion from XGID: check if upper player (lowercase) has checkers in upper part of board
-            // Standard: black upper (positions 13-24), white lower (positions 1-12)
-            // Inverted: white upper (positions 13-24), black lower (positions 1-12)
-            let detectedInversion = false;
-            // Check upper part of board (positions 13-24, indices 12-23 in string)
-            for (let i = 12; i < 24; i++) {
-                const char = positionsPart[i];
-                if (char >= 'a' && char <= 'o') {
-                    // Upper player (lowercase) has checkers in upper part - this is inverted
-                    detectedInversion = true;
-                    break;
-                }
-            }
-            
-            // Update upperPlayerColor based on detected inversion
-            if (detectedInversion) {
-                upperPlayerColor = 'white';
-            } else {
-                upperPlayerColor = 'black';
-            }
-            
-            // Update button color
-            const upperPlayerBtn = document.getElementById('upperPlayerBtn');
-            if (upperPlayerBtn) {
-                if (detectedInversion) {
-                    upperPlayerBtn.classList.remove('black');
-                    upperPlayerBtn.classList.add('white');
-                    upperPlayerBtn.setAttribute('data-color', 'white');
-                } else {
-                    upperPlayerBtn.classList.remove('white');
-                    upperPlayerBtn.classList.add('black');
-                    upperPlayerBtn.setAttribute('data-color', 'black');
-                }
-                console.log('Inversion detected:', detectedInversion, '- updated upperPlayerColor to', upperPlayerColor);
-            }
-            
             // Clear current positions
             positions.first = {};
             positions.second = {};
