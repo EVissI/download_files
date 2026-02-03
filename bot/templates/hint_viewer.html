@@ -1188,6 +1188,10 @@
                         data = json.moves.filter(item => item.turn !== undefined || item.action === 'win');
                         data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
 
+                        // Сбросить current при загрузке новой игры
+                        current = 0;
+                        dataLoaded = true;
+
                         // Добавьте поле is_visible
                         data.forEach(item => {
                             if (item.hints && item.hints.length > 0) {
@@ -1414,7 +1418,7 @@
         let currentCubePlayer = null;
 
         function updateVisibility() {
-            if (!dataLoaded) return;
+            if (!dataLoaded || !data || data.length === 0) return;
             data.forEach(item => {
                 if (item.hints && item.hints.length > 0) {
                     const firstEq = item.hints[0].eq;
@@ -1433,15 +1437,20 @@
                     (error === '2' && ((item.player_name === redPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error) ||
                     (error === '3' && ((item.player_name === blackPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error);
             });
+            // Проверить границы перед обращением к data[current]
+            if (current < 0 || current >= data.length) {
+                current = 0;
+            }
             // Найти новый current, если текущий не видим
-            if (!data[current].is_visible) {
+            if (data[current] && !data[current].is_visible) {
                 let newCurrent = current;
-                while (newCurrent >= 0 && !data[newCurrent].is_visible) newCurrent--;
+                while (newCurrent >= 0 && newCurrent < data.length && !data[newCurrent].is_visible) newCurrent--;
                 if (newCurrent < 0) {
                     newCurrent = current;
                     while (newCurrent < data.length && !data[newCurrent].is_visible) newCurrent++;
                 }
                 if (newCurrent >= data.length) newCurrent = data.length - 1;
+                if (newCurrent < 0) newCurrent = 0;
                 current = newCurrent;
             }
             render(current, invertColors);
