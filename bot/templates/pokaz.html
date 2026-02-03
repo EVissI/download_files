@@ -3337,8 +3337,10 @@
             const cubePart = parts[4] || '00';
             
             // Parse scores (parts 5-6)
+            // First number after cube/dice is lower score, second is upper score
             const lowerScore = parts[5] || '0';
             const upperScore = parts[6] || '0';
+            console.log('Parsed scores - lower:', lowerScore, 'upper:', upperScore);
             
             // Parse convention (part 7)
             const conventionPart = parts[7] || '0';
@@ -3376,6 +3378,47 @@
                     currentGameType = 'манигейм';
                 }
             }
+            
+            // Set scores immediately after switching game type (for match games)
+            // Use setTimeout to ensure DOM is updated
+            setTimeout(() => {
+                if (isMatch) {
+                    const lowerScoreSelect = document.getElementById('lower-score');
+                    const upperScoreSelect = document.getElementById('upper-score');
+                    const lowerScoreButton = document.getElementById('lower-score-button');
+                    const upperScoreButton = document.getElementById('upper-score-button');
+                    
+                    console.log('Setting scores after game type switch - lower:', lowerScore, 'upper:', upperScore);
+                    console.log('Score elements found:', {
+                        lowerScoreSelect: !!lowerScoreSelect,
+                        upperScoreSelect: !!upperScoreSelect,
+                        lowerScoreButton: !!lowerScoreButton,
+                        upperScoreButton: !!upperScoreButton
+                    });
+                    
+                    if (lowerScoreSelect) {
+                        lowerScoreSelect.value = lowerScore;
+                        console.log('Set lower-score select value to:', lowerScore);
+                        if (lowerScoreButton) {
+                            lowerScoreButton.textContent = lowerScore;
+                            console.log('Set lower-score button text to:', lowerScore);
+                        }
+                    } else {
+                        console.warn('lower-score select not found');
+                    }
+                    
+                    if (upperScoreSelect) {
+                        upperScoreSelect.value = upperScore;
+                        console.log('Set upper-score select value to:', upperScore);
+                        if (upperScoreButton) {
+                            upperScoreButton.textContent = upperScore;
+                            console.log('Set upper-score button text to:', upperScore);
+                        }
+                    } else {
+                        console.warn('upper-score select not found');
+                    }
+                }
+            }, 0);
             
             // Set cube value
             const cubeValueSelect = document.getElementById('cube-value-select');
@@ -3438,14 +3481,6 @@
             if (dice1 > 0 || dice2 > 0) {
                 updateDiceSelectorDisplay(1);
                 updateDiceSelectorDisplay(2);
-            }
-            
-            // Set scores
-            if (isMatch) {
-                const lowerScoreSelect = document.getElementById('lower-score');
-                const upperScoreSelect = document.getElementById('upper-score');
-                if (lowerScoreSelect) lowerScoreSelect.value = lowerScore;
-                if (upperScoreSelect) upperScoreSelect.value = upperScore;
             }
             
             // Set convention
