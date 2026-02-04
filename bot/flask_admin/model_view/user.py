@@ -7,6 +7,19 @@ from sqlalchemy import func, select
 from flask import request
 
 
+class CustomUserSQLAInterface(SQLAInterface):
+    """Кастомный SQLAInterface для обработки сортировки по промокодам"""
+    
+    def apply_order_by(self, query, order_column, order_direction):
+        """Переопределяем сортировку для пропуска active_promocodes"""
+        # Если сортировка по active_promocodes, пропускаем её здесь,
+        # так как она уже применена в get_query()
+        if order_column == 'active_promocodes':
+            return query
+        # Для остальных колонок применяем стандартную сортировку
+        return super().apply_order_by(query, order_column, order_direction)
+
+
 class UserPromocodeInline(ModelView):
     """Инлайн-вьюха для активированных промокодов пользователя"""
 
@@ -35,7 +48,7 @@ class UserAnalizePaymentInline(ModelView):
 
 
 class UserModelView(ModelView):
-    datamodel = SQLAInterface(User)
+    datamodel = CustomUserSQLAInterface(User)
     base_permissions = ['can_list', 'can_show']
     
     list_columns = [
@@ -73,17 +86,16 @@ class UserModelView(ModelView):
             joinedload(User.used_promocodes).joinedload(UserPromocode.promocode)
         )
         
-        # Проверяем параметры сортировки (flask_appbuilder может использовать разные имена)
-        order_column = (
-            request.args.get('order_column') or 
-            request.args.get('_oc') or 
-            request.args.get('oc')
-        )
-        order_direction = (
-            request.args.get('order_direction') or 
-            request.args.get('_od') or 
-            request.args.get('od', 'asc')
-        )
+        # Проверяем параметры сортировки (flask_appbuilder использует формат _oc_ViewName и _od_ViewName)
+        order_column = None
+        order_direction = 'asc'
+        
+        # Ищем параметры сортировки в разных форматах
+        for key, value in request.args.items():
+            if key.startswith('_oc_') or key == '_oc' or key == 'order_column':
+                order_column = value
+            elif key.startswith('_od_') or key == '_od' or key == 'order_direction':
+                order_direction = value
         
         if order_column == 'active_promocodes':
             # Создаем подзапрос для сортировки по первому активному промокоду
