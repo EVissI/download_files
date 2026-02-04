@@ -3277,12 +3277,12 @@
             // First character: upper bar
             const upperBarChar = boardPart[0];
             const upperBar = (upperBarChar === '-' || upperBarChar === '') ? 0 : 
-                            (upperBarChar >= 'a' && upperBarChar <= 'o') ? upperBarChar.charCodeAt(0) - 64 : 0;
+                            (upperBarChar >= 'a' && upperBarChar <= 'o') ? upperBarChar.charCodeAt(0) - 96 : 0;
             
             // Last character before ':': lower bar
             const lowerBarChar = boardPart[boardPart.length - 1];
             const lowerBar = (lowerBarChar === '-' || lowerBarChar === '') ? 0 : 
-                            (lowerBarChar >= 'A' && lowerBarChar <= 'O') ? lowerBarChar.charCodeAt(0) - 96 : 0;
+                            (lowerBarChar >= 'A' && lowerBarChar <= 'O') ? lowerBarChar.charCodeAt(0) - 64 : 0;
             
             // Positions 1-24 (characters 1-24)
             const positionsPart = boardPart.substring(1, 25);
@@ -3306,11 +3306,11 @@
                 } else if (char >= 'A' && char <= 'O') {
                     // Lower player (заглавные)
                     const count = char.charCodeAt(0) - 64;
-                    lowerPositions[point.toString()] = count;
+                    upperPositions[point.toString()] = count;
                 } else if (char >= 'a' && char <= 'o') {
                     // Upper player (строчные)
                     const count = char.charCodeAt(0) - 96;
-                    upperPositions[point.toString()] = count;
+                    lowerPositions[point.toString()] = count;
                 }
             }
             
