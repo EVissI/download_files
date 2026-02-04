@@ -2,7 +2,7 @@ from flask_appbuilder import ModelView
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_appbuilder.models.decorators import renders
 from bot.db.models import User, UserPromocode, UserAnalizePayment, Promocode
-from sqlalchemy.orm import joinedload, selectinload, Session
+from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy import func, select
 from flask import request
 
@@ -83,7 +83,7 @@ class UserModelView(ModelView):
         """Переопределяем запрос для поддержки сортировки по промокодам"""
         query = super().get_query()
         
-ix        # Проверяем параметры сортировки (flask_appbuilder использует формат _oc_ViewName и _od_ViewName)
+        # Проверяем параметры сортировки (flask_appbuilder использует формат _oc_ViewName и _od_ViewName)
         order_column = None
         order_direction = 'asc'
         
