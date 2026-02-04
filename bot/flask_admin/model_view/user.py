@@ -10,14 +10,14 @@ from flask import request
 class CustomUserSQLAInterface(SQLAInterface):
     """Кастомный SQLAInterface для обработки сортировки по промокодам"""
     
-    def apply_order_by(self, query, order_column, order_direction):
+    def apply_order_by(self, query, order_column, order_direction, **kwargs):
         """Переопределяем сортировку для пропуска active_promocodes"""
         # Если сортировка по active_promocodes, пропускаем её здесь,
         # так как она уже применена в get_query()
         if order_column == 'active_promocodes':
             return query
         # Для остальных колонок применяем стандартную сортировку
-        return super().apply_order_by(query, order_column, order_direction)
+        return super().apply_order_by(query, order_column, order_direction, **kwargs)
 
 
 class UserPromocodeInline(ModelView):
