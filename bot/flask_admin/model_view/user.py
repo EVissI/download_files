@@ -2,7 +2,7 @@ from flask_appbuilder import ModelView
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_appbuilder.models.decorators import renders
 from bot.db.models import User, UserPromocode, UserAnalizePayment, Promocode
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, Session
 from sqlalchemy import func, select
 from flask import request
 
@@ -83,16 +83,7 @@ class UserModelView(ModelView):
         """Переопределяем запрос для поддержки сортировки по промокодам"""
         query = super().get_query()
         
-        # Всегда загружаем связанные данные для отображения промокодов и платежей
-        # Используем selectinload, который работает лучше с подзапросами
-        query = query.options(
-            selectinload(User.used_promocodes).selectinload(UserPromocode.promocode),
-            selectinload(User.used_promocodes).selectinload(UserPromocode.remaining_services),
-            selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.analize_payment),
-            selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.remaining_services),
-        )
-        
-        # Проверяем параметры сортировки (flask_appbuilder использует формат _oc_ViewName и _od_ViewName)
+ix        # Проверяем параметры сортировки (flask_appbuilder использует формат _oc_ViewName и _od_ViewName)
         order_column = None
         order_direction = 'asc'
         
@@ -122,8 +113,14 @@ class UserModelView(ModelView):
                 query = query.order_by(subquery.c.min_promo_code.asc().nullslast())
             else:
                 query = query.order_by(subquery.c.min_promo_code.desc().nullslast())
-            
-            # Используем distinct() чтобы избежать дублирования записей при outerjoin
-            query = query.distinct()
+        
+        # Всегда загружаем связанные данные для отображения промокодов и платежей
+        # Используем selectinload, который выполняется отдельными запросами и не конфликтует с подзапросом
+        query = query.options(
+            selectinload(User.used_promocodes).selectinload(UserPromocode.promocode),
+            selectinload(User.used_promocodes).selectinload(UserPromocode.remaining_services),
+            selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.analize_payment),
+            selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.remaining_services),
+        )
         
         return query
