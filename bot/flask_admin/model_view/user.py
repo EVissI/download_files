@@ -113,14 +113,64 @@ class UserModelView(ModelView):
                 query = query.order_by(subquery.c.min_promo_code.asc().nullslast())
             else:
                 query = query.order_by(subquery.c.min_promo_code.desc().nullslast())
-        
-        # Всегда загружаем связанные данные для отображения промокодов и платежей
-        # Используем selectinload, который выполняется отдельными запросами и не конфликтует с подзапросом
-        query = query.options(
-            selectinload(User.used_promocodes).selectinload(UserPromocode.promocode),
-            selectinload(User.used_promocodes).selectinload(UserPromocode.remaining_services),
-            selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.analize_payment),
-            selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.remaining_services),
-        )
+        else:
+            # Для остальных случаев загружаем связанные данные через selectinload
+            query = query.options(
+                selectinload(User.used_promocodes).selectinload(UserPromocode.promocode),
+                selectinload(User.used_promocodes).selectinload(UserPromocode.remaining_services),
+                selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.analize_payment),
+                selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.remaining_services),
+            )
         
         return query
+    
+    def _get_list_widget(self, filters, order_column, order_direction, page=None, page_size=None, **kwargs):
+        """Переопределяем для правильной загрузки данных при сортировке по промокодам"""
+        widgets = super()._get_list_widget(
+            filters=filters,
+            order_column=order_column,
+            order_direction=order_direction,
+            page=page,
+            page_size=page_size,
+            **kwargs
+        )
+        
+        # Если сортировка по промокодам, загружаем связанные данные отдельно
+        if order_column == 'active_promocodes':
+            # Получаем список записей из виджета (может быть словарь или объект)
+            items = None
+            if isinstance(widgets, dict):
+                items = widgets.get('list')
+            elif hasattr(widgets, 'list'):
+                items = widgets.list
+            
+            if items and len(items) > 0:
+                # Получаем ID всех пользователей
+                user_ids = [item.id for item in items]
+                
+                # Загружаем связанные данные для всех записей отдельным запросом
+                # Используем сессию из datamodel
+                users_with_data = (
+                    self.datamodel.session.query(User)
+                    .filter(User.id.in_(user_ids))
+                    .options(
+                        selectinload(User.used_promocodes).selectinload(UserPromocode.promocode),
+                        selectinload(User.used_promocodes).selectinload(UserPromocode.remaining_services),
+                        selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.analize_payment),
+                        selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.remaining_services),
+                    )
+                    .all()
+                )
+                
+                # Создаем словарь для быстрого доступа
+                users_dict = {user.id: user for user in users_with_data}
+                
+                # Обновляем записи в списке загруженными данными
+                for item in items:
+                    if item.id in users_dict:
+                        loaded_user = users_dict[item.id]
+                        # Копируем загруженные связанные данные
+                        item.used_promocodes = loaded_user.used_promocodes
+                        item.analize_payments_assoc = loaded_user.analize_payments_assoc
+        
+        return widgets
