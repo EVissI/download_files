@@ -1111,6 +1111,32 @@ class BackgammonPositionTracker:
     def _inc(self, side, k):
         self.positions[side][k] = self.positions[side].get(k, 0) + 1
 
+    def check_hit(self, player, to_point):
+        """
+        Проверяет, является ли ход на точку to_point хитом.
+        Хит происходит, если на точке назначения есть ровно одна шашка противника.
+        
+        Args:
+            player: игрок, делающий ход ("red" или "black")
+            to_point: точка назначения (в системе координат игрока, БЕЗ инверсии)
+        """
+        if to_point in (0, 25):  # off или bar - не может быть хитом
+            return False
+        
+        # Применяем инверсию координат для получения внутренней координаты
+        if self.invert_colors:
+            if player == "red":
+                to_point = self.invert_point(to_point)
+        else:
+            if player == "black":
+                to_point = self.invert_point(to_point)
+        
+        opp = "red" if player == "black" else "black"
+        key_to = self._key(to_point)
+        opp_count = self.positions[opp].get(key_to, 0)
+        # Хит происходит, если на точке назначения ровно одна шашка противника
+        return opp_count == 1
+
     def apply_move(self, player, move):
         fr, to, hit = move.get("from"), move.get("to"), move.get("hit", False)
         if self.invert_colors:
@@ -1124,6 +1150,12 @@ class BackgammonPositionTracker:
 
         key_fr, key_to = self._key(fr), self._key(to)
         opp = "red" if player == "black" else "black"
+
+        # Если хит не указан явно, определяем его автоматически
+        # Используем исходную координату to (до инверсии), так как check_hit сам применяет инверсию
+        if not hit and move.get("to") not in (0, 25):
+            original_to = move.get("to")
+            hit = self.check_hit(player, original_to)
 
         self._dec(player, key_fr)
 
@@ -1171,6 +1203,14 @@ class BackgammonPositionTracker:
             # обработка обычных ходов
             moves = e.get("moves")
             if moves:
+                # Определяем хиты автоматически, если они не указаны явно
+                for m in moves:
+                    if not m.get("hit", False) and m.get("to") not in (0, 25):
+                        # Проверяем, является ли это хитом на основе текущей позиции
+                        to_point = m.get("to")
+                        if self.check_hit(player, to_point):
+                            m["hit"] = True
+                
                 for m in moves:
                     self.apply_move(player, m)
 
