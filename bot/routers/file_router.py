@@ -12,6 +12,7 @@ from bot.routers.short_board import ShortBoardDialog
 from bot.routers.hint_viewer_router import HintViewerStates
 from bot.routers.autoanalize.autoanaliz import AutoAnalyzeDialog
 from bot.config import bot
+from bot.db.models import User
 
 file_router = Router()
 
