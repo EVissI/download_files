@@ -109,20 +109,18 @@ def parse_backgammon_mat(content):
             continue
 
         # Проверяем победу (может быть с ведущими пробелами)
-        # Поддерживаем форматы: "Wins 1 points", "Wins 2 point", "Wins 1 point and the match"
-        win_match = re.match(r".*Wins (\d+) point(?:s)?(?:\s+and\s+the\s+match)?", line, re.I)
+        win_match = re.match(r".*Wins (\d+) points", line)
         if win_match:
             points = int(win_match.group(1))
             # Определяем победителя по количеству ведущих пробелов
-            # Если победа на отдельной строке с большим отступом, это обычно Red
+
             logger.info(f"ledding space: {leading_spaces}")
             winner = "Red" if leading_spaces > 5 else "Black"
             moves_list.append({"action": "win", "player": winner, "points": points})
             continue
 
         # Проверяем строку с номером хода
-        # Поддерживаем формат с пробелами перед номером: " 1)" или "1)"
-        num_match = re.match(r"\s*(\d+)\)\s*(.*)", line)
+        num_match = re.match(r"(\d+)\)\s*(.*)", line)
         if not num_match:
             continue
         turn = int(num_match.group(1))
@@ -186,13 +184,10 @@ def parse_backgammon_mat(content):
                 return res
 
             # Иначе парсим обычный ход
-            # Поддерживаем формат с пробелом перед двоеточием: "43 :" или "43:"
-            dice_match = re.match(r"(\d)(\d)\s*:\s*(.*)?", side_str)
+            dice_match = re.match(r"(\d)(\d):(?:\s*(.*))?", side_str)
             if dice_match:
                 dice = [int(dice_match.group(1)), int(dice_match.group(2))]
-                moves_str = dice_match.group(3) or "" if dice_match.group(3) else ""
-                # Игнорируем "???" в ходах
-                moves_str = moves_str.replace("???", "").strip()
+                moves_str = dice_match.group(3) or ""
                 move_list = []
                 for m in moves_str.split():
                     hit = False
@@ -222,29 +217,23 @@ def parse_backgammon_mat(content):
         # Check for double in the line
         double_pos = rest.find("Doubles =>")
         if double_pos != -1:
-            left_part = rest[:double_pos].strip()
-            right_part = rest[double_pos + len("Doubles =>") :].strip()
+            left = rest[:double_pos].strip()
+            right = rest[double_pos + len("Doubles =>") :].strip()
 
-            right_match = re.match(r"(\d+)(?:\s*(Takes|Drops|Take|Drop))?", right_part, re.I)
+            right_match = re.match(r"(\d+)(?:\s*(Takes|Drops|Take|Drop))?", right, re.I)
             if right_match:
                 value = int(right_match.group(1))
                 response = (
                     right_match.group(2).lower() if right_match.group(2) else None
                 )
 
-                # Определяем, кто удваивает:
-                # Если "Doubles =>" находится справа (после большого пробела), то удваивает Red
-                # Если "Doubles =>" находится слева, то удваивает Black
-                # Проверяем, есть ли ход слева от "Doubles =>"
-                if left_part:
-                    # Есть ход слева - значит "Doubles =>" справа, удваивает Red
+                if left:
+                    red_part = left
                     double_player = "Red"
-                    # Парсим ход Black (слева)
-                    black_move = parse_side(left_part, "Black")
-                    if black_move:
-                        moves_list.append(black_move)
+                    red_move = parse_side(red_part, "Black")
+                    if red_move:
+                        moves_list.append(red_move)
                 else:
-                    # Нет хода слева - значит "Doubles =>" слева, удваивает Black
                     double_player = "Black"
 
                 moves_list.append(
@@ -283,8 +272,7 @@ def parse_backgammon_mat(content):
 
         if len(parts) == 1:
             rest_single = rest.strip()
-            # Поддерживаем формат с пробелом перед двоеточием
-            dice_matches = list(re.finditer(r"(\d)(\d)\s*:", rest_single))
+            dice_matches = list(re.finditer(r"(\d)(\d):", rest_single))
             if len(dice_matches) >= 2:
                 red_dice_str = dice_matches[0].group(0)
                 red_moves_start = dice_matches[0].end()
@@ -296,8 +284,7 @@ def parse_backgammon_mat(content):
                 black_moves_str = rest_single[black_moves_start:].strip()
                 right = f"{black_dice_str} {black_moves_str}".strip()
             elif len(dice_matches) == 1:
-                # Поддерживаем формат с пробелом перед двоеточием
-                dice_match_original = re.search(r"(\d)(\d)\s*:", rest)
+                dice_match_original = re.search(r"(\d)(\d):", rest)
                 if dice_match_original:
                     dice_pos = dice_match_original.start()
                     pre_dice = rest[:dice_pos].strip()
@@ -741,10 +728,8 @@ def parse_hint_output(text: str):
 def extract_player_names(content: str) -> tuple[str, str]:
     """
     Извлекает ники игроков из .mat файла.
-    Поддерживает форматы:
-    - "Peppa : 0                          Bbsm : 0" (PPNards формат)
-    - "Ruslan Efimenko : 0             Anton Bulatov : 0" (Tournament формат)
-    => ("Red", "Black")
+    Пример: "Peppa : 0                          Bbsm : 0"
+    => ("Peppa", "Bbsm")
     """
     lines = content.splitlines()
 
@@ -753,11 +738,9 @@ def extract_player_names(content: str) -> tuple[str, str]:
             if i + 1 < len(lines):
                 players_line = lines[i + 1].strip()
                 # Находим все пары вида "Имя : число"
-                # Используем более гибкий паттерн для поддержки имен с пробелами
-                matches = re.findall(r"([^:]+?)\s*:\s*(\d+)", players_line)
+                matches = re.findall(r"(\S.*?)\s*:\s*\d+", players_line)
                 if len(matches) >= 2:
-                    black_player = matches[0][0].strip()
-                    red_player = matches[1][0].strip()
+                    black_player, red_player = matches[0].strip(), matches[1].strip()
                     logger.info(
                         f"Extracted players: Red={red_player}, Black={black_player}"
                     )
@@ -787,21 +770,14 @@ def extract_match_length(content: str) -> int:
 def extract_jacobi_rule(content: str) -> bool:
     """
     Извлекает правило Якоби из .mat файла.
-    Поддерживает форматы:
-    - ";Jacobi rule: True" (PPNards формат)
-    - "; [Jacobi "True"]" (Tournament формат)
+    Пример: ";Jacobi rule: False"
+    => False
     По умолчанию True, если не найдено.
     """
     lines = content.splitlines()
 
     for line in lines:
-        # Формат PPNards: ";Jacobi rule: True"
         match = re.match(r";Jacobi rule:\s*(True|False)", line.strip(), re.I)
-        if match:
-            return match.group(1).lower() == "true"
-        
-        # Формат Tournament: "; [Jacobi "True"]"
-        match = re.search(r'\[Jacobi\s+"(True|False)"\]', line, re.I)
         if match:
             return match.group(1).lower() == "true"
 
@@ -1227,14 +1203,13 @@ def parse_mat_games(content):
         elif current_game is not None:
             game_content.append(line)
             # Ищем строку с именами игроков и счетами
-            # Используем более гибкий паттерн для поддержки имен с пробелами
             if ":" in line and not red_player:
-                matches = re.findall(r"([^:]+?)\s*:\s*(\d+)", line)
+                matches = re.findall(r"(\S.*?)\s*:\s*(\d+)", line)
                 if len(matches) >= 2:
-                    black_player = matches[0][0].strip()
-                    black_score = int(matches[0][1])
-                    red_player = matches[1][0].strip()
-                    red_score = int(matches[1][1])
+                    black_player, black_score = matches[0][0].strip(), int(
+                        matches[0][1]
+                    )
+                    red_player, red_score = matches[1][0].strip(), int(matches[1][1])
 
     # Сохраняем последнюю игру
     if current_game is not None:
