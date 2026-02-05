@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 class CustomUserSQLAInterface(SQLAInterface):
     """Кастомный SQLAInterface для обработки сортировки по активным промокодам"""
     
-    def apply_order_by(self, query, order_column, order_direction):
+    def apply_order_by(self, query, order_column, order_direction, **kwargs):
         """Переопределяем метод для обработки сортировки по кастомным полям"""
         # Если сортировка по active_promocodes, используем подзапрос
         if order_column == 'active_promocodes':
@@ -27,7 +27,7 @@ class CustomUserSQLAInterface(SQLAInterface):
                 return query.order_by(active_promocodes_count.desc())
         
         # Для остальных колонок используем стандартную логику
-        return super().apply_order_by(query, order_column, order_direction)
+        return super().apply_order_by(query, order_column, order_direction, **kwargs)
 
 
 class UserPromocodeInline(ModelView):
