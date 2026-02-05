@@ -12,6 +12,7 @@ import time
 import select
 import threading
 import pexpect
+from typing import Optional
 from loguru import logger
 
 
@@ -109,7 +110,8 @@ def parse_backgammon_mat(content):
             continue
 
         # Проверяем победу (может быть с ведущими пробелами)
-        win_match = re.match(r".*Wins (\d+) points", line)
+        # Поддерживаем форматы: "Wins X point", "Wins X points", "Wins X point and the match"
+        win_match = re.match(r".*Wins (\d+) point(?:s)?(?:\s+and\s+the\s+match)?", line, re.I)
         if win_match:
             points = int(win_match.group(1))
             # Определяем победителя по количеству ведущих пробелов
@@ -770,19 +772,48 @@ def extract_match_length(content: str) -> int:
 def extract_jacobi_rule(content: str) -> bool:
     """
     Извлекает правило Якоби из .mat файла.
-    Пример: ";Jacobi rule: False"
-    => False
+    Поддерживает форматы:
+    - Старый: ";Jacobi rule: True/False"
+    - Новый: "; [Jacobi "On"]" или "; [Jacobi "Off"]"
     По умолчанию True, если не найдено.
     """
     lines = content.splitlines()
 
     for line in lines:
-        match = re.match(r";Jacobi rule:\s*(True|False)", line.strip(), re.I)
+        line_stripped = line.strip()
+        # Старый формат: ";Jacobi rule: True/False"
+        match = re.match(r";Jacobi rule:\s*(True|False)", line_stripped, re.I)
         if match:
             return match.group(1).lower() == "true"
+        
+        # Новый формат: "; [Jacobi "On"]" или "; [Jacobi "Off"]"
+        match = re.search(r'\[Jacobi\s+"(On|Off)"\]', line_stripped, re.I)
+        if match:
+            return match.group(1).lower() == "on"
 
     logger.warning("Could not extract Jacobi rule from .mat file, defaulting to True")
     return True
+
+
+def extract_crawford_enabled(content: str) -> Optional[bool]:
+    """
+    Извлекает информацию о том, включено ли правило Кроуфорда в матче.
+    Поддерживает формат: "; [Crawford "On"]" или "; [Crawford "Off"]"
+    Returns:
+        True - если указано "On"
+        False - если указано "Off"
+        None - если не найдено (правило Кроуфорда определяется автоматически по счету)
+    """
+    lines = content.splitlines()
+
+    for line in lines:
+        line_stripped = line.strip()
+        match = re.search(r'\[Crawford\s+"(On|Off)"\]', line_stripped, re.I)
+        if match:
+            return match.group(1).lower() == "on"
+
+    # Если не указано явно, возвращаем None - правило будет определено автоматически по счету
+    return None
 
 
 def normalize_move(move_str: str) -> str:
@@ -1649,16 +1680,20 @@ def process_mat_file(input_file, output_file, chat_id):
         black_score = first_game["black_score"]
         match_length = extract_match_length(content)
         jacobi_rule = extract_jacobi_rule(content)
+        crawford_enabled = extract_crawford_enabled(content)
 
         # Находим первую игру, где счет достигает match_length - 1
+        # Если правило Кроуфорда явно отключено в метаданных ("Off"), не ищем Кроуфорд-игру
+        # Если включено ("On") или не указано (None), определяем автоматически по счету
         crawford_game = None
-        for game in games:
-            if (
-                game["black_score"] == match_length - 1
-                or game["red_score"] == match_length - 1
-            ):
-                crawford_game = game["game_number"]
-                break
+        if crawford_enabled is not False:  # True или None - определяем автоматически
+            for game in games:
+                if (
+                    game["black_score"] == match_length - 1
+                    or game["red_score"] == match_length - 1
+                ):
+                    crawford_game = game["game_number"]
+                    break
 
         # Создаем директорию для результатов
         output_dir = output_file.rsplit(".", 1)[0] + "_games"
