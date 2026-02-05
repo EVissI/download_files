@@ -65,9 +65,6 @@ translator_hub: TranslatorHub = create_translator_hub()
 bot = Bot(
     token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
-test_bot = Bot(
-    token=settings.TEST_BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
 admins = settings.ROOT_ADMIN_IDS
 SUPPORT_TG_ID = 826161194
 
