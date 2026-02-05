@@ -565,6 +565,15 @@ async def process_hint_viewer_file(
                 self.chat = type('obj', (object,), {'id': chat_id})()
                 self.bot = bot
                 self.from_user = type('obj', (object,), {'id': user_id})()
+                self._chat_id = chat_id
+            
+            async def answer(self, text, **kwargs):
+                """Отправляет сообщение в чат через bot.send_message"""
+                return await self.bot.send_message(chat_id=self._chat_id, text=text, **kwargs)
+            
+            async def reply(self, text, **kwargs):
+                """Отправляет ответ на сообщение"""
+                return await self.bot.send_message(chat_id=self._chat_id, text=text, **kwargs)
         
         fake_message = FakeMessage(chat_id, bot, user_info.id)
         asyncio.create_task(
