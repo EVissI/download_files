@@ -138,17 +138,35 @@ class UserModelView(ModelView):
         # Если сортировка по промокодам, загружаем связанные данные отдельно
         if order_column == 'active_promocodes':
             try:
-                # Получаем записи напрямую из datamodel с теми же фильтрами и сортировкой
-                count, items = self.datamodel.query(
-                    filters=filters,
-                    order_column=order_column,
-                    order_direction=order_direction,
-                    page=page,
-                    page_size=page_size
-                )
+                # Получаем записи из виджета (они уже отсортированы через get_query())
+                list_widget = None
+                if isinstance(widgets, dict):
+                    list_widget = widgets.get('list')
+                elif hasattr(widgets, 'list'):
+                    list_widget = widgets.list
+                
+                # Получаем список записей из виджета
+                items = None
+                if list_widget:
+                    # Пробуем разные способы получить список
+                    if hasattr(list_widget, '_list'):
+                        items = list_widget._list
+                    elif hasattr(list_widget, 'get_list'):
+                        items = list_widget.get_list()
+                    else:
+                        # Если не можем получить из виджета, используем запрос напрямую
+                        # но с применением сортировки из get_query()
+                        query = self.get_query()
+                        # Применяем фильтры через datamodel
+                        if filters:
+                            query = self.datamodel.apply_filters(query, filters)
+                        # Применяем пагинацию
+                        page_size_val = page_size or getattr(self, 'page_size', 20)
+                        offset = (page or 0) * page_size_val
+                        items = query.offset(offset).limit(page_size_val).all()
                 
                 if items:
-                    # Получаем ID всех пользователей
+                    # Получаем ID всех пользователей (сохраняя порядок из items)
                     user_ids = [item.id for item in items]
                     
                     # Загружаем связанные данные для всех записей отдельным запросом
@@ -167,7 +185,7 @@ class UserModelView(ModelView):
                     # Создаем словарь для быстрого доступа
                     users_dict = {user.id: user for user in users_with_data}
                     
-                    # Обновляем записи загруженными данными
+                    # Обновляем записи загруженными данными на месте
                     for item in items:
                         if item.id in users_dict:
                             loaded_user = users_dict[item.id]
@@ -175,11 +193,26 @@ class UserModelView(ModelView):
                             item.used_promocodes = loaded_user.used_promocodes
                             item.analize_payments_assoc = loaded_user.analize_payments_assoc
                     
-                    # Обновляем виджет с обновленными данными
-                    if isinstance(widgets, dict) and 'list' in widgets:
-                        widgets['list']._list = items
-                    elif hasattr(widgets, 'list') and hasattr(widgets.list, '_list'):
-                        widgets.list._list = items
+                    # Пересортируем записи по промокодам (на случай, если порядок потерялся)
+                    # Получаем направление сортировки
+                    order_direction = order_direction or 'asc'
+                    # Создаем функцию для получения значения промокода для сортировки
+                    def get_promo_sort_key(user):
+                        if user.used_promocodes:
+                            active_promos = [p.promocode.code for p in user.used_promocodes if p.is_active]
+                            if active_promos:
+                                return min(active_promos)
+                        return None
+                    
+                    # Сортируем записи
+                    if order_direction == 'asc':
+                        items.sort(key=lambda u: (get_promo_sort_key(u) is None, get_promo_sort_key(u)))
+                    else:
+                        items.sort(key=lambda u: (get_promo_sort_key(u) is None, get_promo_sort_key(u)), reverse=True)
+                    
+                    # Обновляем виджет с пересортированными данными
+                    if list_widget and hasattr(list_widget, '_list'):
+                        list_widget._list = items
             except Exception as e:
                 # Если возникла ошибка, просто пропускаем загрузку данных
                 # Это не критично - данные просто не будут отображаться
