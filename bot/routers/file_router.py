@@ -435,14 +435,27 @@ async def process_hint_viewer_file(
         estimate_processing_time,
         random_filename,
     )
+    from bot.common.service.sync_folder_service import SyncthingSync
     from bot.db.redis import redis_client
-    from rq import Queue
-    from redis import Redis
-    from bot.config import settings
+    from bot.routers.hint_viewer_router import (
+        can_enqueue_job,
+        add_active_job,
+        task_queue,
+        redis_rq,
+        get_queue_position_message,
+        check_job_status,
+    )
+    from bot.db.dao import UserDAO
+    from bot.db.schemas import SUser
+    from bot.db.models import User
+    from bot.config import translator_hub
     import json
     import uuid
+    import asyncio
+    import os
     
     messages_dao = MessagesTextsDAO(session_without_commit)
+    syncthing_sync = SyncthingSync()
     
     try:
         # Генерируем уникальный ID для задачи
@@ -451,12 +464,22 @@ async def process_hint_viewer_file(
         job_id = f"hint_{user_info.id}_{uuid.uuid4().hex[:8]}"
         
         # Проверяем возможность добавления задачи
-        from bot.routers.hint_viewer_router import can_enqueue_job, add_active_job
         if not can_enqueue_job(user_info.id):
             await bot.send_message(
                 chat_id,
                 await messages_dao.get_text("hint_viewer_sin_active_job_err", user_info.lang_code)
             )
+            await state.clear()
+            return
+        
+        logger.info(f"Файл готов к обработке: {file_path}")
+        
+        # Синхронизация с Syncthing (если нужно)
+        if not await syncthing_sync.sync_and_wait(max_wait=30):
+            logger.warning("Ошибка синхронизации Syncthing")
+        
+        if not await syncthing_sync.wait_for_file(file_path, max_wait=30):
+            await bot.send_message(chat_id, "❌ Файл не найден после синхронизации")
             await state.clear()
             return
         
@@ -467,10 +490,7 @@ async def process_hint_viewer_file(
         red_player, black_player = extract_player_names(content)
         estimated_time = estimate_processing_time(file_path)
         
-        # Добавляем задачу в очередь
-        redis_rq = Redis.from_url(settings.REDIS_URL, decode_responses=False)
-        task_queue = Queue("backgammon_analysis", connection=redis_rq, default_timeout=1800)
-        
+        # Добавляем задачу в очередь (используем task_queue из модуля)
         job = task_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_job",
             file_path,
@@ -480,14 +500,19 @@ async def process_hint_viewer_file(
             game_id=game_id,
         )
         
+        # Используем реальный ID job, если он отличается от переданного
+        actual_job_id = job.id if hasattr(job, 'id') and job.id else job_id
+        logger.info(f"Job created: requested_job_id={job_id}, actual_job_id={actual_job_id}")
+        
         # Сохраняем mat_path
         await redis_client.set(f"mat_path:{game_id}", file_path, expire=86400)
         
-        add_active_job(user_info.id, job_id)
+        add_active_job(user_info.id, actual_job_id)
+        logger.info(f"Added active job: user_id={user_info.id}, job_id={actual_job_id}")
         
-        # Сохраняем информацию о задаче
+        # Сохраняем информацию о задаче (используем actual_job_id)
         await redis_client.set(
-            f"job_info:{job_id}",
+            f"job_info:{actual_job_id}",
             json.dumps({
                 "game_id": game_id,
                 "mat_path": file_path,
@@ -499,27 +524,51 @@ async def process_hint_viewer_file(
             expire=3600,
         )
         
+        # Проверяем позицию в очереди
+        queue_warning = await get_queue_position_message(
+            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"], session_without_commit, user_info
+        )
+        if queue_warning:
+            user_dao = UserDAO(session_without_commit)
+            admins = await user_dao.find_all(filters=SUser(role=User.Role.ADMIN.value))
+            for admin in admins:
+                try:
+                    await bot.send_message(
+                        chat_id=admin.id,
+                        text=f"Пользователь в очереди на анализ ошибок. Его сообщение:{queue_warning}\n",
+                    )
+                except Exception as e:
+                    logger.error(f"Не удалось отправить уведомление админу {admin.id}: {e}")
+            await bot.send_message(chat_id, queue_warning)
+        
         status_text = await messages_dao.get_text(
             "hint_viewer_sin_file_accepted", user_info.lang_code, estimated_time=estimated_time
         )
         await bot.send_message(chat_id, status_text, parse_mode="Markdown")
         
-        # Запускаем проверку статуса
-        from bot.routers.hint_viewer_router import check_job_status
-        from bot.config import translator_hub
+        # Сохраняем данные в состояние для проверки статуса
+        await state.update_data(
+            job_id=actual_job_id,
+            game_id=game_id,
+            mat_path=file_path,
+            json_path=json_path,
+            red_player=red_player,
+            black_player=black_player,
+        )
+        
+        # Запускаем проверку статуса (используем actual_job_id)
         i18n = translator_hub.get_translator_by_locale(user_info.lang_code or "en")
         
         # Создаем фиктивное сообщение для check_job_status
         class FakeMessage:
-            def __init__(self, chat_id, bot):
+            def __init__(self, chat_id, bot, user_id):
                 self.chat = type('obj', (object,), {'id': chat_id})()
                 self.bot = bot
-                self.from_user = type('obj', (object,), {'id': user_info.id})()
+                self.from_user = type('obj', (object,), {'id': user_id})()
         
-        fake_message = FakeMessage(chat_id, bot)
-        import asyncio
+        fake_message = FakeMessage(chat_id, bot, user_info.id)
         asyncio.create_task(
-            check_job_status(fake_message, job_id, state, i18n, session_without_commit, user_info)
+            check_job_status(fake_message, actual_job_id, state, i18n, session_without_commit, user_info)
         )
         
     except Exception as e:
