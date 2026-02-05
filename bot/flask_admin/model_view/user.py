@@ -137,40 +137,52 @@ class UserModelView(ModelView):
         
         # Если сортировка по промокодам, загружаем связанные данные отдельно
         if order_column == 'active_promocodes':
-            # Получаем список записей из виджета (может быть словарь или объект)
-            items = None
-            if isinstance(widgets, dict):
-                items = widgets.get('list')
-            elif hasattr(widgets, 'list'):
-                items = widgets.list
-            
-            if items and len(items) > 0:
-                # Получаем ID всех пользователей
-                user_ids = [item.id for item in items]
-                
-                # Загружаем связанные данные для всех записей отдельным запросом
-                # Используем сессию из datamodel
-                users_with_data = (
-                    self.datamodel.session.query(User)
-                    .filter(User.id.in_(user_ids))
-                    .options(
-                        selectinload(User.used_promocodes).selectinload(UserPromocode.promocode),
-                        selectinload(User.used_promocodes).selectinload(UserPromocode.remaining_services),
-                        selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.analize_payment),
-                        selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.remaining_services),
-                    )
-                    .all()
+            try:
+                # Получаем записи напрямую из datamodel с теми же фильтрами и сортировкой
+                count, items = self.datamodel.query(
+                    filters=filters,
+                    order_column=order_column,
+                    order_direction=order_direction,
+                    page=page,
+                    page_size=page_size
                 )
                 
-                # Создаем словарь для быстрого доступа
-                users_dict = {user.id: user for user in users_with_data}
-                
-                # Обновляем записи в списке загруженными данными
-                for item in items:
-                    if item.id in users_dict:
-                        loaded_user = users_dict[item.id]
-                        # Копируем загруженные связанные данные
-                        item.used_promocodes = loaded_user.used_promocodes
-                        item.analize_payments_assoc = loaded_user.analize_payments_assoc
+                if items:
+                    # Получаем ID всех пользователей
+                    user_ids = [item.id for item in items]
+                    
+                    # Загружаем связанные данные для всех записей отдельным запросом
+                    users_with_data = (
+                        self.datamodel.session.query(User)
+                        .filter(User.id.in_(user_ids))
+                        .options(
+                            selectinload(User.used_promocodes).selectinload(UserPromocode.promocode),
+                            selectinload(User.used_promocodes).selectinload(UserPromocode.remaining_services),
+                            selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.analize_payment),
+                            selectinload(User.analize_payments_assoc).selectinload(UserAnalizePayment.remaining_services),
+                        )
+                        .all()
+                    )
+                    
+                    # Создаем словарь для быстрого доступа
+                    users_dict = {user.id: user for user in users_with_data}
+                    
+                    # Обновляем записи загруженными данными
+                    for item in items:
+                        if item.id in users_dict:
+                            loaded_user = users_dict[item.id]
+                            # Копируем загруженные связанные данные
+                            item.used_promocodes = loaded_user.used_promocodes
+                            item.analize_payments_assoc = loaded_user.analize_payments_assoc
+                    
+                    # Обновляем виджет с обновленными данными
+                    if isinstance(widgets, dict) and 'list' in widgets:
+                        widgets['list']._list = items
+                    elif hasattr(widgets, 'list') and hasattr(widgets.list, '_list'):
+                        widgets.list._list = items
+            except Exception as e:
+                # Если возникла ошибка, просто пропускаем загрузку данных
+                # Это не критично - данные просто не будут отображаться
+                pass
         
         return widgets
