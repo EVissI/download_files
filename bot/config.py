@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     LOG_ROTATION: str = "10 MB"
 
     BOT_TOKEN: str
-    TEST_BOT_TOKEN: str
     CHAT_GROUP_ID: int
     ROOT_ADMIN_IDS: List[int]
     YA_API_TOKEN: str
