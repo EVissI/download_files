@@ -1,10 +1,33 @@
 from flask_appbuilder import ModelView
 from flask_appbuilder.models.sqla.interface import SQLAInterface
-from flask_appbuilder.models.decorators import renders
 from bot.db.models import User, UserPromocode, UserAnalizePayment
-from sqlalchemy.orm import joinedload
 from sqlalchemy import func, select
-from flask import request
+
+
+class CustomUserSQLAInterface(SQLAInterface):
+    """Кастомный SQLAInterface для обработки сортировки по активным промокодам"""
+    
+    def apply_order_by(self, query, order_column, order_direction):
+        """Переопределяем метод для обработки сортировки по кастомным полям"""
+        # Если сортировка по active_promocodes, используем подзапрос
+        if order_column == 'active_promocodes':
+            active_promocodes_count = (
+                select(func.count(UserPromocode.id))
+                .where(
+                    UserPromocode.user_id == User.id,
+                    UserPromocode.is_active == True
+                )
+                .correlate(User)
+                .scalar_subquery()
+            )
+            
+            if order_direction == 'asc':
+                return query.order_by(active_promocodes_count.asc())
+            else:
+                return query.order_by(active_promocodes_count.desc())
+        
+        # Для остальных колонок используем стандартную логику
+        return super().apply_order_by(query, order_column, order_direction)
 
 
 class UserPromocodeInline(ModelView):
@@ -35,7 +58,7 @@ class UserAnalizePaymentInline(ModelView):
 
 
 class UserModelView(ModelView):
-    datamodel = SQLAInterface(User)
+    datamodel = CustomUserSQLAInterface(User)
     base_permissions = ['can_list', 'can_show']
     
     list_columns = [
@@ -65,34 +88,3 @@ class UserModelView(ModelView):
     }
 
     search_columns = ["id", "username"]
-
-    def get_query(self):
-        """Переопределяем запрос для поддержки сортировки по активным промокодам"""
-        query = super().get_query()
-        
-        # Проверяем параметры сортировки из запроса
-        # Flask-AppBuilder может использовать разные форматы параметров
-        order_column = request.args.get('order_column') or request.args.get('order_col')
-        order_direction = request.args.get('order_direction', 'asc').lower()
-        
-        # Если запрошена сортировка по active_promocodes
-        if order_column == 'active_promocodes':
-            # Создаем подзапрос для подсчета активных промокодов
-            # Используем корреляционный подзапрос для правильной работы с JOIN
-            active_promocodes_count = (
-                select(func.count(UserPromocode.id))
-                .where(
-                    UserPromocode.user_id == User.id,
-                    UserPromocode.is_active == True
-                )
-                .correlate(User)
-                .scalar_subquery()
-            )
-            
-            # Применяем сортировку по подзапросу
-            if order_direction == 'asc':
-                query = query.order_by(active_promocodes_count.asc())
-            else:
-                query = query.order_by(active_promocodes_count.desc())
-        
-        return query
