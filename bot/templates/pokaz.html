@@ -4170,7 +4170,7 @@
 
                     if (firstHint.type === 'move') {
                         // Generate move hints table
-                        tableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr>';
+                        tableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th><th></th></tr>';
                         hints.forEach((hint, index) => {
                             if (hint.probs && hint.probs.length >= 2) {
                                 const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
@@ -4179,7 +4179,7 @@
                                 let move = hint.move || '-';
                                 let rowClass = ''; // No highlighting since no gnu move
                                 let rowStyle = index === 0 ? ' style="background-color: green;"' : '';
-                                tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td></tr>`;
+                                tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td><td><i class="fa fa-eye"></i></td></tr>`;
                             }
                         });
                         tableHtml += '</table>';
