@@ -350,6 +350,10 @@ async def process_batch_files(
                 i18n.auto.analyze.complete(),
                 reply_markup=keyboard.as_markup(),
             )
+            # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок после выбора игрока
+            await redis_client.set(
+                f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
+            )
             await state.set_state(BatchAnalyzeDialog.select_player)
             return  
     await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
@@ -414,6 +418,15 @@ async def process_single_analysis(
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
+        # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
+        await redis_client.set(
+            f"auto_analyze_file_path:{user_info.id}", file_path, expire=3600
+        )
+        # Добавляем кнопку для отправки этого файла на анализ ошибок
+        await message.answer(
+            i18n.auto.analyze.ask_hints(),
+            reply_markup=get_hint_viewer_kb(i18n, 'solo')
+        )
         return True
     else:
         await message.answer(i18n.auto.analyze.error.balance(), reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n))
@@ -456,8 +469,14 @@ async def handle_batch_player_selection(
                 selected_player, session=session_without_commit, duration=duration
             )
         
-        all_analysis_datas.append({'data': analysis_data, 'file_name': original_name})
+        all_analysis_datas.append({
+            'data': analysis_data, 
+            'file_name': original_name,
+            'file_path': file_path
+        })
         successful_count += 1
+        
+        # Кнопка для отправки на анализ ошибок уже добавлена в process_single_analysis
         
         # Update state for next file
         file_paths = data.get("file_paths", [])[1:]  # Remaining files
@@ -514,11 +533,12 @@ async def handle_batch_player_selection(
                         selected_player, session=session_without_commit, duration=duration
                     )
                     all_analysis_datas.append({
-                'data': analysis_data, 
-                'file_name': original_name,
-                'file_path': new_file_path
-            })
+                        'data': analysis_data, 
+                        'file_name': original_name,
+                        'file_path': new_file_path
+                    })
                     successful_count += 1
+                    # Кнопка для отправки на анализ ошибок уже добавлена в process_single_analysis
                     if not process_result:
                         break
                 else:
@@ -543,6 +563,10 @@ async def handle_batch_player_selection(
                     await callback.message.answer(
                         await message_dao.get_text('analyze_complete_ch_player', user_info.lang_code),
                         reply_markup=keyboard.as_markup(),
+                    )
+                    # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок после выбора игрока
+                    await redis_client.set(
+                        f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
                     )
                     await state.set_state(BatchAnalyzeDialog.select_player)
                     return
