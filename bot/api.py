@@ -12,6 +12,7 @@ from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.config import settings
+from bot.config import bot, SUPPORT_TG_ID
 from bot.db.redis import redis_client
 from bot.common.func.pokaz_func import get_hints_for_xgid
 from bot.db.database import async_session_maker
@@ -22,6 +23,7 @@ import traceback
 import json
 import os
 from pathlib import Path
+from aiogram.types import BufferedInputFile, InlineKeyboardMarkup, InlineKeyboardButton
 
 BASE_DIR = Path(__file__).parent.parent
 
@@ -198,6 +200,85 @@ async def admin_verify(request: Request, response: Response):
         max_age=86400,
     )
     return {"status": "ok"}
+
+
+@app.post("/api/send_to_admin")
+async def send_to_admin(request: Request):
+    """
+    Принимает скриншот и комментарий, отправляет в админку с рейлимитом.
+    """
+    try:
+        form_data = await request.form()
+        photo = form_data.get("photo")
+        text = form_data.get("text", "Без описания")
+        chat_id = request.query_params.get("chat_id") or form_data.get("chat_id")
+
+        if not chat_id:
+            logger.warning("Admin comment request received without chat_id")
+            raise HTTPException(status_code=400, detail="No chat_id provided")
+
+        if not photo:
+            logger.warning("Admin comment request received without photo")
+            raise HTTPException(status_code=400, detail="No photo provided")
+
+        # Рейлимит: 5 запросов за 10 минут (600 секунд)
+        rate_limit_key = f"rate_limit:admin_comment:{chat_id}"
+        current_requests = await redis_client.get(rate_limit_key)
+
+        if current_requests and int(current_requests) >= 5:
+            ttl = await redis_client.ttl(rate_limit_key)
+            minutes = ttl // 60
+            seconds = ttl % 60
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "message": "Слишком много запросов",
+                    "retry_after": ttl,
+                    "wait_text": (
+                        f"{minutes} мин {seconds} сек"
+                        if minutes > 0
+                        else f"{seconds} сек"
+                    ),
+                },
+            )
+
+        # Читаем файл
+        photo_bytes = await photo.read()
+
+        photo_file = BufferedInputFile(photo_bytes, filename="admin_comment_screenshot.png")
+
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Ответить",
+                        callback_data=f"admin_reply:{chat_id}",
+                    )
+                ]
+            ]
+        )
+
+        await bot.send_photo(
+            chat_id=SUPPORT_TG_ID,
+            photo=photo_file,
+            caption=f"❓ Вопрос от пользователя\nUser ID: {chat_id}\n\n{text}",
+            reply_markup=keyboard,
+        )
+
+        # Обновляем счетчик в Redis
+        if not current_requests:
+            await redis_client.set(rate_limit_key, 1, expire=600)
+        else:
+            await redis_client.incr(rate_limit_key)
+
+        logger.info(f"Admin comment sent to {SUPPORT_TG_ID} from {chat_id}")
+        return {"status": "success"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending admin comment: {e}")
+        raise HTTPException(status_code=500, detail="Error sending admin comment")
 
 
 flask_app, _ = create_app()

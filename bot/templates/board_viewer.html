@@ -2260,7 +2260,6 @@
                     formData.append('photo', blob);
                     formData.append('text', text);
                     formData.append('chat_id', chat_id);
-                    formData.append('context', 'support');
 
                     fetch('/api/send_to_support', {
                         method: 'POST',

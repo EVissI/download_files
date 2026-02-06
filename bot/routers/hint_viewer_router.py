@@ -714,7 +714,6 @@ async def send_to_support(request: Request):
         photo = form_data.get("photo")
         text = form_data.get("text", "Без описания")
         chat_id = request.query_params.get("chat_id") or form_data.get("chat_id")
-        context = form_data.get("context", "support")  # "support" или "comment"
 
         if not chat_id:
             logger.warning("Support request received without chat_id")
@@ -764,16 +763,10 @@ async def send_to_support(request: Request):
             ]
         )
 
-        # Определяем заголовок в зависимости от контекста
-        if context == "comment":
-            caption_header = "❓ Вопрос от пользователя"
-        else:
-            caption_header = "🆘 Сообщение в техподдержку"
-        
         await bot.send_photo(
             chat_id=SUPPORT_TG_ID,
             photo=photo_file,
-            caption=f"{caption_header}\nUser ID: {chat_id}\n\n{text}",
+            caption=f"🆘 Сообщение в техподдержку\nUser ID: {chat_id}\n\n{text}",
             reply_markup=keyboard,
         )
 
@@ -810,25 +803,63 @@ async def support_reply_start(callback: CallbackQuery, state: FSMContext):
     )
 
 
+@hint_viewer_router.callback_query(F.data.startswith("admin_reply:"))
+async def admin_reply_start(callback: CallbackQuery, state: FSMContext):
+    """
+    Хендлер для кнопки 'Ответить' в сообщении из send_to_admin.
+    Переводит оператора в состояние ожидания текста ответа и сохраняет user_id и photo_file_id.
+    """
+    await callback.answer()
+    user_id = int(callback.data.split(":", 1)[1])
+
+    # Сохраняем file_id фото из сообщения админу
+    photo_file_id = None
+    if callback.message.photo:
+        # Берем самое большое фото (последний элемент в списке)
+        photo_file_id = callback.message.photo[-1].file_id
+
+    await state.set_state(SupportStates.waiting_reply)
+    await state.update_data(
+        reply_user_id=user_id,
+        photo_file_id=photo_file_id
+    )
+
+    await callback.message.answer(
+        f"Напишите ответ пользователю {user_id}. Сообщение будет отправлено от бота."
+    )
+
+
 @hint_viewer_router.message(StateFilter(SupportStates.waiting_reply))
 async def support_reply_send(message: Message, state: FSMContext):
     """
     Получает текст ответа от оператора и отправляет его пользователю из состояния FSM.
+    Если есть photo_file_id в state (из admin_reply), прикрепляет фото.
     """
     from bot.config import bot
 
     data = await state.get_data()
     reply_user_id = data.get("reply_user_id")
+    photo_file_id = data.get("photo_file_id")
 
     if not reply_user_id:
         await message.answer("Не удалось определить пользователя для ответа.")
         await state.clear()
         return
 
-    await bot.send_message(
-        chat_id=int(reply_user_id),
-        text=f"✉️ Ответ от техподдержки:\n\n{message.text}",
-    )
+    reply_text = f"✉️ Ответ от техподдержки:\n\n{message.text}"
+
+    # Если есть photo_file_id (из admin_reply), отправляем с фото
+    if photo_file_id:
+        await bot.send_photo(
+            chat_id=int(reply_user_id),
+            photo=photo_file_id,
+            caption=reply_text,
+        )
+    else:
+        await bot.send_message(
+            chat_id=int(reply_user_id),
+            text=reply_text,
+        )
 
     await message.answer("Ответ отправлен пользователю.")
     await state.clear()

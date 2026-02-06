@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -4815,12 +4815,11 @@
                 formData.append('photo', blob);
                 formData.append('text', text);
                 formData.append('chat_id', chatId);
-                formData.append('context', 'comment');
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-                fetch('/api/send_to_support', {
+                fetch('/api/send_to_admin', {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
