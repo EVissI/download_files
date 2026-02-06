@@ -26,3 +26,14 @@ def get_download_pdf_kb(i18n, context, include_hint_viewer=False) -> InlineKeybo
         )
     kb.adjust(1)
     return kb.as_markup()
+
+
+def get_hint_viewer_kb(i18n, context="solo") -> InlineKeyboardMarkup:
+    """Создает клавиатуру с кнопкой отправки на анализ ошибок"""
+    kb = InlineKeyboardBuilder()
+    kb.button(
+        text=i18n.auto.analyze.send_to_hints(),
+        callback_data=SendToHintViewerCallback(action="yes", context=context).pack(),
+    )
+    kb.adjust(1)
+    return kb.as_markup()

@@ -119,6 +119,7 @@ user-profile-expire_notice = ⏳ { $amount } analyses from { $source } have expi
 
 auto-analyze-download_pdf = 📄 Download PDF
 auto-analyze-send_to_hints = 👁️ Error Analysis
+auto-analyze-ask_hints = Would you like to send this file for error analysis?
 auto-analyze-no_thanks = ❌ No, thanks
 auto-analyze-ask_pdf = Would you like to get the analysis as a PDF?
 auto-analyze-pdf_ready = Your analysis in PDF format:

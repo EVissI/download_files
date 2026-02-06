@@ -21,7 +21,12 @@ from bot.common.func.generate_pdf import html_to_pdf_bytes
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
-from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, SendToHintViewerCallback, get_download_pdf_kb
+from bot.common.kbds.inline.autoanalize import (
+    DownloadPDFCallback, 
+    SendToHintViewerCallback, 
+    get_download_pdf_kb,
+    get_hint_viewer_kb,
+)
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import DetailedAnalysisDAO, UserDAO, MessagesTextsDAO
@@ -317,9 +322,18 @@ async def handle_mat_file(
                         keyboard.button(text=player, callback_data=f"auto_player:{player}")
                     keyboard.adjust(1)
                     await waiting_manager.stop()
+                    # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
+                    await redis_client.set(
+                        f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
+                    )
                     await message.answer(
                         await message_dao.get_text('analyze_complete_ch_player', user_info.lang_code),
                         reply_markup=keyboard.as_markup(),
+                    )
+                    # Добавляем кнопку для отправки на анализ ошибок
+                    await message.answer(
+                        i18n.auto.analyze.ask_hints(),
+                        reply_markup=get_hint_viewer_kb(i18n, 'solo')
                     )
                 else:
                     # Single player
@@ -334,9 +348,14 @@ async def handle_mat_file(
                         parse_mode="HTML",
                         reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
                     )
+                    # Добавляем кнопку для отправки на анализ ошибок
+                    await message.answer(
+                        i18n.auto.analyze.ask_hints(),
+                        reply_markup=get_hint_viewer_kb(i18n, 'solo')
+                    )
                     await message.answer(
                         await message_dao.get_text('analyze_ask_pdf', user_info.lang_code),
-                        reply_markup=get_download_pdf_kb(i18n, 'solo', include_hint_viewer=True)
+                        reply_markup=get_download_pdf_kb(i18n, 'solo')
                     )
                     await session_without_commit.commit()
 
@@ -455,9 +474,14 @@ async def handle_player_selection(
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
         )
+        # Добавляем кнопку для отправки на анализ ошибок
+        await callback.message.answer(
+            i18n.auto.analyze.ask_hints(),
+            reply_markup=get_hint_viewer_kb(i18n, 'solo')
+        )
         await callback.message.answer(
             await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), 
-            reply_markup=get_download_pdf_kb(i18n, 'solo', include_hint_viewer=True)
+            reply_markup=get_download_pdf_kb(i18n, 'solo')
         )
         await session_without_commit.commit()
         await state.clear()

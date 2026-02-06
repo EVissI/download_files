@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -27,11 +27,17 @@ from bot.common.func.generate_pdf import html_to_pdf_bytes, make_page, merge_pag
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
-from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, get_download_pdf_kb
+from bot.common.kbds.inline.autoanalize import (
+    DownloadPDFCallback, 
+    SendToHintViewerCallback,
+    get_download_pdf_kb,
+    get_hint_viewer_kb,
+)
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import DetailedAnalysisDAO, UserDAO, MessagesTextsDAO
 from bot.db.models import ServiceType, User
+from bot.db.redis import redis_client
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.db.schemas import SDetailedAnalysis
 from bot.db.redis import redis_client
@@ -314,7 +320,11 @@ async def process_batch_files(
                 message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
                 selected_player, session=session_without_commit, duration=duration
             )
-            all_analysis_datas.append({'data': analysis_data, 'file_name': original_name})
+            all_analysis_datas.append({
+                'data': analysis_data, 
+                'file_name': original_name,
+                'file_path': new_file_path
+            })
             successful_count += 1
             if not process_result:
                 break
@@ -503,7 +513,11 @@ async def handle_batch_player_selection(
                         callback.message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
                         selected_player, session=session_without_commit, duration=duration
                     )
-                    all_analysis_datas.append({'data': analysis_data, 'file_name': original_name})
+                    all_analysis_datas.append({
+                'data': analysis_data, 
+                'file_name': original_name,
+                'file_path': new_file_path
+            })
                     successful_count += 1
                     if not process_result:
                         break
@@ -620,13 +634,28 @@ async def finalize_batch(
             )
         except Exception as e:
             logger.error(f"Error sending group PR message: {e}")
+        # Сохраняем пути к файлам в Redis для возможности отправки на анализ ошибок
+        file_paths_list = [item.get('file_path') for item in all_analysis_datas if item.get('file_path')]
+        if file_paths_list:
+            await redis_client.set(
+                f"batch_analyze_file_paths:{user_info.id}", 
+                json.dumps(file_paths_list), 
+                expire=3600
+            )
+        
         await message.answer(
             user_pr_msg,
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
+        # Добавляем кнопку для отправки на анализ ошибок
         await message.answer(
-            await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), reply_markup=get_download_pdf_kb(i18n, 'batch')
+            i18n.auto.analyze.ask_hints(),
+            reply_markup=get_hint_viewer_kb(i18n, 'batch')
+        )
+        await message.answer(
+            await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), 
+            reply_markup=get_download_pdf_kb(i18n, 'batch')
         )
     else:
         await message.answer(i18n.auto.batch.no_matches(), reply_markup=MainKeyboard.build(user_info.role, i18n))
@@ -638,6 +667,77 @@ def calculate_average_analysis(pr_values: list) -> float:
     if not pr_values:
         return 0.0
     return sum(pr_values) / len(pr_values)
+
+@batch_auto_analyze_router.callback_query(SendToHintViewerCallback.filter(F.context == 'batch'), UserInfo())
+async def handle_send_batch_to_hint_viewer(
+    callback: CallbackQuery,
+    callback_data: SendToHintViewerCallback,
+    session_without_commit: AsyncSession,
+    user_info: User,
+    state: FSMContext,
+    i18n: TranslatorRunner,
+):
+    """Обрабатывает отправку batch файлов на анализ ошибок после автоанализа"""
+    # Ленивый импорт для избежания циклического импорта
+    from bot.routers.hint_viewer_router import (
+        HintViewerStates,
+        process_batch_hint_files,
+        can_enqueue_job,
+    )
+    
+    message_dao = MessagesTextsDAO(session_without_commit)
+    await callback.message.delete()
+    
+    if callback_data.action == "yes":
+        # Получаем список путей к файлам из Redis
+        file_paths_json = await redis_client.get(f"batch_analyze_file_paths:{user_info.id}")
+        
+        if not file_paths_json:
+            await callback.message.answer(
+                await message_dao.get_text('analyze_file_not_found', user_info.lang_code) or 
+                "Файлы не найдены. Пожалуйста, загрузите файлы снова."
+            )
+            return
+        
+        file_paths = json.loads(file_paths_json.decode('utf-8') if isinstance(file_paths_json, bytes) else file_paths_json)
+        
+        # Проверяем существование файлов
+        existing_file_paths = [fp for fp in file_paths if os.path.exists(fp)]
+        
+        if not existing_file_paths:
+            await callback.message.answer(
+                await message_dao.get_text('analyze_file_not_found', user_info.lang_code) or 
+                "Файлы не найдены. Пожалуйста, загрузите файлы снова."
+            )
+            await redis_client.delete(f"batch_analyze_file_paths:{user_info.id}")
+            return
+        
+        # Удаляем ключ из Redis
+        await redis_client.delete(f"batch_analyze_file_paths:{user_info.id}")
+        
+        # Устанавливаем состояние для batch hint_viewer
+        await state.set_state(HintViewerStates.uploading_sequential)
+        await state.update_data(file_paths=existing_file_paths)
+        
+        # Вызываем обработчик batch hint files
+        try:
+            await process_batch_hint_files(
+                callback.message,
+                state,
+                existing_file_paths,
+                callback.message.chat.id,
+                i18n,
+                user_info,
+                session_without_commit,
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при отправке batch файлов на анализ ошибок: {e}")
+            await callback.message.answer(
+                await message_dao.get_text('analyze_error_sending_to_hints', user_info.lang_code) or
+                f"Произошла ошибка при отправке файлов на анализ ошибок: {e}"
+            )
+            await state.clear()
+
 
 @batch_auto_analyze_router.callback_query(DownloadPDFCallback.filter(F.context == 'batch'), UserInfo())
 async def handle_download_pdf(
