@@ -111,11 +111,11 @@ async def handle_mat_file_outside_fsm(
         
         # Создаем инлайн клавиатуру с выбором обработчика
         keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
+            inline_keyboard=[             
                 [
                     InlineKeyboardButton(
-                        text=await messages_dao.get_text("file_router_short_board", user_info.lang_code) or "Просмотр доски",
-                        callback_data=f"file_handler:short_board:{temp_file_id}",
+                        text=await messages_dao.get_text("file_router_auto_analyze", user_info.lang_code) or "Автоанализ",
+                        callback_data=f"file_handler:auto_analyze:{temp_file_id}",
                     )
                 ],
                 [
@@ -126,8 +126,8 @@ async def handle_mat_file_outside_fsm(
                 ],
                 [
                     InlineKeyboardButton(
-                        text=await messages_dao.get_text("file_router_auto_analyze", user_info.lang_code) or "Автоанализ",
-                        callback_data=f"file_handler:auto_analyze:{temp_file_id}",
+                        text=await messages_dao.get_text("file_router_short_board", user_info.lang_code) or "Просмотр доски",
+                        callback_data=f"file_handler:short_board:{temp_file_id}",
                     )
                 ],
             ]
