@@ -34,7 +34,6 @@ from bot.config import translator_hub, settings
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
 from bot.routers.hint_viewer_router import (
-    HintViewerStates,
     can_enqueue_job,
     add_active_job,
     task_queue,
@@ -554,7 +553,8 @@ async def handle_send_to_hint_viewer(
         # Удаляем ключ из Redis
         await redis_client.delete(f"auto_analyze_file_path:{user_info.id}")
         
-        # Устанавливаем состояние для hint_viewer
+        # Устанавливаем состояние для hint_viewer (ленивый импорт для избежания циклического импорта)
+        from bot.routers.hint_viewer_router import HintViewerStates
         await state.set_state(HintViewerStates.waiting_file)
         
         try:
