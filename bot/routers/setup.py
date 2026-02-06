@@ -12,6 +12,7 @@ from bot.routers.short_board import short_board_router
 from bot.routers.hint_viewer_router import hint_viewer_router
 from bot.routers.file_router import file_router
 from bot.routers.pokaz import pokaz_router
+from bot.routers.support_reply_router import support_reply_router
 setup_router = Router()
 
 short_board_router.message.middleware(ShortBoardMiddleware())
@@ -29,5 +30,6 @@ setup_router.include_routers(
     contact_router,
     short_board_router,
     hint_viewer_router,
-    pokaz_router
+    pokaz_router,
+    support_reply_router
 )
