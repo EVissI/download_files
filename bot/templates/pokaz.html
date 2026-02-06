@@ -1276,6 +1276,31 @@
             background-color: #3a3a3a;
         }
 
+        .eye-button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .eye-button:hover {
+            background-color: #007bff;
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+        .eye-button:active {
+            transform: scale(0.95);
+        }
+
+        td:last-child {
+            text-align: center;
+        }
+
         .loading {
             color: #007bff;
             font-style: italic;
@@ -4179,7 +4204,7 @@
                                 let move = hint.move || '-';
                                 let rowClass = ''; // No highlighting since no gnu move
                                 let rowStyle = index === 0 ? ' style="background-color: green;"' : '';
-                                tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td><td><i class="fa fa-eye"></i></td></tr>`;
+                                tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td><td><button class="eye-button" type="button"><i class="fa fa-eye"></i></button></td></tr>`;
                             }
                         });
                         tableHtml += '</table>';
