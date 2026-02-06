@@ -5,6 +5,7 @@ import asyncio
 import shutil
 import zipfile
 import io
+import hashlib
 from datetime import datetime
 import pytz
 from aiogram import Router, F
@@ -648,11 +649,6 @@ async def process_auto_analyze_file(
             # Single player
             formatted_analysis, new_file_path = result
             await waiting_manager.stop()
-            # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
-            from bot.db.redis import redis_client
-            await redis_client.set(
-                f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
-            )
             await bot.send_message(
                 chat_id,
                 f"{formatted_analysis}\n\n",
@@ -660,12 +656,19 @@ async def process_auto_analyze_file(
                 reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
             )
             from bot.common.kbds.inline.autoanalize import get_download_pdf_kb, get_hint_viewer_kb
+            # Генерируем уникальный ID для файла
+            file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
+            # Сохраняем путь к файлу в Redis с уникальным идентификатором
+            from bot.db.redis import redis_client
+            await redis_client.set(
+                f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
+            )
             # Добавляем кнопку для отправки на анализ ошибок
             await bot.send_message(
                 chat_id,
                 await messages_dao.get_text('analyze_ask_hints', user_info.lang_code) or 
                 "Хотите отправить этот файл на анализ ошибок?",
-                reply_markup=get_hint_viewer_kb(i18n, 'solo')
+                reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
             )
             await bot.send_message(
                 chat_id,

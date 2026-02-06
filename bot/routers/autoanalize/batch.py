@@ -17,6 +17,7 @@ from loguru import logger
 import os
 import json
 import zipfile
+import hashlib
 
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.func import (
@@ -316,9 +317,11 @@ async def process_batch_files(
             file_paths = file_paths[1:] 
             await state.update_data(file_paths=file_paths)
             selected_player = user_info.player_username
+            # Генерируем уникальный ID для файла
+            file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
             process_result = await process_single_analysis(
                 message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
-                selected_player, session=session_without_commit, duration=duration
+                selected_player, session=session_without_commit, duration=duration, file_id=file_id
             )
             all_analysis_datas.append({
                 'data': analysis_data, 
@@ -350,10 +353,14 @@ async def process_batch_files(
                 i18n.auto.analyze.complete(),
                 reply_markup=keyboard.as_markup(),
             )
-            # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок после выбора игрока
+            # Генерируем уникальный ID для файла
+            file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
+            # Сохраняем путь к файлу в Redis с уникальным идентификатором для возможности отправки на анализ ошибок после выбора игрока
             await redis_client.set(
-                f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
+                f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
             )
+            # Сохраняем file_id в state для использования после выбора игрока
+            await state.update_data(file_id=file_id)
             await state.set_state(BatchAnalyzeDialog.select_player)
             return  
     await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
@@ -370,7 +377,8 @@ async def process_single_analysis(
     file_path: str,
     selected_player: str,
     session: AsyncSession,
-    duration: int
+    duration: int,
+    file_id: str = None
 ):
     game_id = f"batch_auto_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     player_data = {
@@ -418,14 +426,17 @@ async def process_single_analysis(
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
-        # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
+        # Генерируем уникальный ID для файла
+        import hashlib
+        file_id = hashlib.md5(file_path.encode()).hexdigest()[:8]
+        # Сохраняем путь к файлу в Redis с уникальным идентификатором
         await redis_client.set(
-            f"auto_analyze_file_path:{user_info.id}", file_path, expire=3600
+            f"auto_analyze_file_path:{user_info.id}:{file_id}", file_path, expire=3600
         )
         # Добавляем кнопку для отправки этого файла на анализ ошибок
         await message.answer(
             i18n.auto.analyze.ask_hints(),
-            reply_markup=get_hint_viewer_kb(i18n, 'solo')
+            reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
         )
         return True
     else:
@@ -464,9 +475,15 @@ async def handle_batch_player_selection(
             logger.info(f"Updated player_username for user {user_info.id} to {selected_player}")
         
 
+        # Получаем file_id из state (если был сохранен при показе выбора игрока)
+        file_id = data.get("file_id", "")
+        if not file_id:
+            # Генерируем уникальный ID для файла, если его нет
+            file_id = hashlib.md5(file_path.encode()).hexdigest()[:8]
+        
         process_result = await process_single_analysis(
                 callback.message, state, user_info, i18n, analysis_data, file_name, file_path,
-                selected_player, session=session_without_commit, duration=duration
+                selected_player, session=session_without_commit, duration=duration, file_id=file_id
             )
         
         all_analysis_datas.append({
@@ -528,9 +545,11 @@ async def handle_batch_player_selection(
                     file_paths = file_paths[1:] 
                     await state.update_data(file_paths=file_paths)
                     selected_player = user_info.player_username
+                    # Генерируем уникальный ID для файла
+                    file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
                     process_result = await process_single_analysis(
                         callback.message, state, user_info, i18n, analysis_data, new_file_name, new_file_path,
-                        selected_player, session=session_without_commit, duration=duration
+                        selected_player, session=session_without_commit, duration=duration, file_id=file_id
                     )
                     all_analysis_datas.append({
                         'data': analysis_data, 
@@ -564,10 +583,14 @@ async def handle_batch_player_selection(
                         await message_dao.get_text('analyze_complete_ch_player', user_info.lang_code),
                         reply_markup=keyboard.as_markup(),
                     )
-                    # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок после выбора игрока
+                    # Генерируем уникальный ID для файла
+                    file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
+                    # Сохраняем путь к файлу в Redis с уникальным идентификатором для возможности отправки на анализ ошибок после выбора игрока
                     await redis_client.set(
-                        f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
+                        f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
                     )
+                    # Сохраняем file_id в state для использования после выбора игрока
+                    await state.update_data(file_id=file_id)
                     await state.set_state(BatchAnalyzeDialog.select_player)
                     return
         try:

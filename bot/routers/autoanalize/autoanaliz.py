@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 import os
 import json
+import hashlib
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.func import (
     format_detailed_analysis,
@@ -322,9 +323,12 @@ async def handle_mat_file(
                         keyboard.button(text=player, callback_data=f"auto_player:{player}")
                     keyboard.adjust(1)
                     await waiting_manager.stop()
-                    # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
+                    # Генерируем уникальный ID для файла
+                    import hashlib
+                    file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
+                    # Сохраняем путь к файлу в Redis с уникальным идентификатором
                     await redis_client.set(
-                        f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
+                        f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
                     )
                     await message.answer(
                         await message_dao.get_text('analyze_complete_ch_player', user_info.lang_code),
@@ -333,15 +337,18 @@ async def handle_mat_file(
                     # Добавляем кнопку для отправки на анализ ошибок
                     await message.answer(
                         i18n.auto.analyze.ask_hints(),
-                        reply_markup=get_hint_viewer_kb(i18n, 'solo')
+                        reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
                     )
                 else:
                     # Single player
                     formatted_analysis, new_file_path = result
                     await waiting_manager.stop()
-                    # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
+                    # Генерируем уникальный ID для файла
+                    import hashlib
+                    file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
+                    # Сохраняем путь к файлу в Redis с уникальным идентификатором
                     await redis_client.set(
-                        f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
+                        f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
                     )
                     await message.answer(
                         f"{formatted_analysis}\n\n",
@@ -351,7 +358,7 @@ async def handle_mat_file(
                     # Добавляем кнопку для отправки на анализ ошибок
                     await message.answer(
                         i18n.auto.analyze.ask_hints(),
-                        reply_markup=get_hint_viewer_kb(i18n, 'solo')
+                        reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
                     )
                     await message.answer(
                         await message_dao.get_text('analyze_ask_pdf', user_info.lang_code),
@@ -465,9 +472,11 @@ async def handle_player_selection(
                 )
             except Exception as e:
                 logger.error(f"Ошибка при отправке сообщения с PDF в группу: {e}")
-        # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
+        # Генерируем уникальный ID для файла
+        file_id = hashlib.md5(file_path.encode()).hexdigest()[:8]
+        # Сохраняем путь к файлу в Redis с уникальным идентификатором
         await redis_client.set(
-            f"auto_analyze_file_path:{user_info.id}", file_path, expire=3600
+            f"auto_analyze_file_path:{user_info.id}:{file_id}", file_path, expire=3600
         )
         await callback.message.answer(
             f"{formatted_analysis}\n\n",
@@ -477,7 +486,7 @@ async def handle_player_selection(
         # Добавляем кнопку для отправки на анализ ошибок
         await callback.message.answer(
             i18n.auto.analyze.ask_hints(),
-            reply_markup=get_hint_viewer_kb(i18n, 'solo')
+            reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
         )
         await callback.message.answer(
             await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), 
@@ -541,8 +550,18 @@ async def handle_send_to_hint_viewer(
     await callback.message.delete()
     
     if callback_data.action == "yes":
+        # Получаем file_id из callback_data
+        file_id = callback_data.file_id if callback_data.file_id else ""
+        
         # Получаем путь к файлу из Redis
-        file_path = await redis_client.get(f"auto_analyze_file_path:{user_info.id}")
+        if file_id:
+            # Для батчевого анализа используем уникальный ключ с file_id
+            redis_key = f"auto_analyze_file_path:{user_info.id}:{file_id}"
+        else:
+            # Для обратной совместимости (старые кнопки без file_id)
+            redis_key = f"auto_analyze_file_path:{user_info.id}"
+        
+        file_path = await redis_client.get(redis_key)
         
         if not file_path:
             await callback.message.answer(
@@ -558,11 +577,11 @@ async def handle_send_to_hint_viewer(
                 await message_dao.get_text('analyze_file_not_found', user_info.lang_code) or 
                 "Файл не найден. Пожалуйста, загрузите файл снова."
             )
-            await redis_client.delete(f"auto_analyze_file_path:{user_info.id}")
+            await redis_client.delete(redis_key)
             return
         
-        # Удаляем ключ из Redis
-        await redis_client.delete(f"auto_analyze_file_path:{user_info.id}")
+        # Удаляем ключ из Redis только для этого конкретного файла
+        await redis_client.delete(redis_key)
         
         # Ленивый импорт для избежания циклического импорта
         from bot.routers.hint_viewer_router import (
