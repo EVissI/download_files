@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1768,6 +1768,68 @@
             background-color: #6c757d;
             cursor: not-allowed;
         }
+
+        .custom-alert {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 30000;
+            background-color: #2d2d2d;
+            border: 2px solid #007bff;
+            border-radius: 12px;
+            padding: 30px 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            min-width: 300px;
+            max-width: 90%;
+            animation: fadeInScale 0.3s ease-out;
+        }
+
+        .custom-alert.show {
+            display: block;
+        }
+
+        .custom-alert-content {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .custom-alert-icon {
+            font-size: 48px;
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+        }
+
+        .custom-alert.fade-out {
+            animation: fadeOut 0.3s ease-out;
+        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -2290,14 +2352,20 @@
 
     <div id="adminCommentModal" class="admin-modal">
         <div class="admin-modal-content">
-            <h2>Отправить комментарий</h2>
-            <p>Опишите проблему или оставьте комментарий:</p>
+            <p>Задайте вопрос по расставленной позиции</p>
             <textarea id="adminCommentText" placeholder="Введите текст сообщения..."></textarea>
             <div class="admin-modal-footer">
                 <button class="admin-cancel-btn" onclick="closeAdminCommentModal()">Отмена</button>
                 <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()">Отправить</button>
             </div>
         </div>
+    </div>
+
+    <div id="customAlert" class="custom-alert">
+        <div class="custom-alert-icon">
+            <i class="fa fa-check-circle"></i>
+        </div>
+        <p class="custom-alert-content">Ваше сообщение отправлено, ожидайте ответа.</p>
     </div>
 </body>
 
@@ -4748,6 +4816,7 @@
                 formData.append('photo', blob);
                 formData.append('text', text);
                 formData.append('chat_id', chatId);
+                formData.append('context', 'comment');
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -4759,7 +4828,8 @@
                 }).then(async response => {
                     clearTimeout(timeoutId);
                     if (response.ok) {
-                        alert('Сообщение отправлено в админку');
+                        showCustomAlert();
+                        closeAdminCommentModal();
                     } else if (response.status === 429) {
                         const data = await response.json();
                         const waitText = (data.detail && data.detail.wait_text) ? data.detail.wait_text : 'некоторое время';
@@ -4802,6 +4872,19 @@
             }
         }
     });
+
+    function showCustomAlert() {
+        const alert = document.getElementById('customAlert');
+        alert.classList.add('show');
+        alert.classList.remove('fade-out');
+        
+        setTimeout(() => {
+            alert.classList.add('fade-out');
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 300);
+        }, 3000);
+    }
 </script>
 </body>
 

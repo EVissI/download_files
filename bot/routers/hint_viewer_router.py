@@ -1,4 +1,4 @@
-﻿import time
+import time
 from aiogram import Router, F
 from aiogram.filters import Command, CommandObject
 from aiogram.types import (
@@ -714,6 +714,7 @@ async def send_to_support(request: Request):
         photo = form_data.get("photo")
         text = form_data.get("text", "Без описания")
         chat_id = request.query_params.get("chat_id") or form_data.get("chat_id")
+        context = form_data.get("context", "support")  # "support" или "comment"
 
         if not chat_id:
             logger.warning("Support request received without chat_id")
@@ -763,10 +764,16 @@ async def send_to_support(request: Request):
             ]
         )
 
+        # Определяем заголовок в зависимости от контекста
+        if context == "comment":
+            caption_header = "❓ Вопрос от пользователя"
+        else:
+            caption_header = "🆘 Сообщение в техподдержку"
+        
         await bot.send_photo(
             chat_id=SUPPORT_TG_ID,
             photo=photo_file,
-            caption=f"🆘 Сообщение в техподдержку\nUser ID: {chat_id}\n\n{text}",
+            caption=f"{caption_header}\nUser ID: {chat_id}\n\n{text}",
             reply_markup=keyboard,
         )
 
