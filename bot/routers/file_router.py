@@ -179,8 +179,6 @@ async def handle_file_handler_selection(
         if handler_type == "short_board":
             # Перенаправляем в short_board_router
             await state.set_state(ShortBoardDialog.file)
-            # Создаем объект сообщения с документом
-            from aiogram.types import Document
             
             # Скачиваем файл в нужное место для short_board
             dir_name = str(uuid.uuid4())
@@ -190,8 +188,8 @@ async def handle_file_handler_selection(
             file_name = original_file_name.replace(" ", "").replace(".txt", ".mat")
             file_path = os.path.join(files_dir, file_name)
             
-        # Копируем файл
-        shutil.copy(temp_file_path, file_path)
+            # Копируем файл
+            shutil.copy(temp_file_path, file_path)
             
             # Удаляем временный файл
             try:
