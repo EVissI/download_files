@@ -672,11 +672,6 @@ async def finalize_batch(
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
-        # Добавляем кнопку для отправки на анализ ошибок
-        await message.answer(
-            i18n.auto.analyze.ask_hints(),
-            reply_markup=get_hint_viewer_kb(i18n, 'batch')
-        )
         await message.answer(
             await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), 
             reply_markup=get_download_pdf_kb(i18n, 'batch')
