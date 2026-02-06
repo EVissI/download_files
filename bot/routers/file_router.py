@@ -311,13 +311,13 @@ async def handle_auto_type_selection(
         await state.set_state(AutoAnalyzeDialog.file)
         await state.update_data(analysis_type=analysis_type)
         
-            # Перемещаем файл в нужное место
-            files_dir = os.path.join(os.getcwd(), "files")
-            os.makedirs(files_dir, exist_ok=True)
-            file_name = original_file_name.replace(" ", "").replace(".txt", ".mat")
-            file_path = os.path.join(files_dir, file_name)
-            
-            shutil.copy(temp_file_path, file_path)
+        # Перемещаем файл в нужное место
+        files_dir = os.path.join(os.getcwd(), "files")
+        os.makedirs(files_dir, exist_ok=True)
+        file_name = original_file_name.replace(" ", "").replace(".txt", ".mat")
+        file_path = os.path.join(files_dir, file_name)
+        
+        shutil.copy(temp_file_path, file_path)
         
         # Удаляем временный файл
         try:
