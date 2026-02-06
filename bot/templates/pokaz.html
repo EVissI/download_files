@@ -1650,6 +1650,124 @@
         .match-option:hover {
             background-color: #007bff;
         }
+
+        .admin-comment-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 10px;
+            color: #ccc;
+            font-size: 16px;
+        }
+
+        #adminCommentBtn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+
+        #adminCommentBtn:hover {
+            background-color: #0056b3;
+        }
+
+        #adminCommentBtn i {
+            font-size: 18px;
+        }
+
+        .admin-modal {
+            display: none;
+            position: fixed;
+            z-index: 20000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .admin-modal-content {
+            background-color: #2d2d2d;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            color: white;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            min-height: 300px;
+        }
+
+        .admin-modal-content h2 {
+            margin-top: 0;
+            color: #007bff;
+        }
+
+        .admin-modal-content textarea {
+            width: 100%;
+            height: 100px;
+            background-color: #1a1a1a;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        .admin-modal-footer {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .admin-modal-footer button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .admin-cancel-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+        }
+
+        .admin-cancel-btn:hover {
+            background-color: #5a6268;
+        }
+
+        .admin-send-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+        }
+
+        .admin-send-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .admin-send-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -2159,6 +2277,25 @@
             <div class="modal-footer">
                 <button id="modal-cancel" class="modal-btn modal-btn-cancel">Отмена</button>
                 <button id="modal-confirm" class="modal-btn modal-btn-confirm">Очистить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-comment-container">
+        <button id="adminCommentBtn" onclick="openAdminCommentModal()">
+            <i class="fa fa-commenting-o"></i>
+            <span>Коментарий</span>
+        </button>
+    </div>
+
+    <div id="adminCommentModal" class="admin-modal">
+        <div class="admin-modal-content">
+            <h2>Отправить комментарий</h2>
+            <p>Опишите проблему или оставьте комментарий:</p>
+            <textarea id="adminCommentText" placeholder="Введите текст сообщения..."></textarea>
+            <div class="admin-modal-footer">
+                <button class="admin-cancel-btn" onclick="closeAdminCommentModal()">Отмена</button>
+                <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()">Отправить</button>
             </div>
         </div>
     </div>
@@ -4543,6 +4680,128 @@
             alert('Не удалось получить chat_id');
         }
     }
+
+    function openAdminCommentModal() {
+        document.getElementById('adminCommentModal').style.display = 'block';
+        document.getElementById('adminCommentText').value = '';
+    }
+
+    function closeAdminCommentModal() {
+        document.getElementById('adminCommentModal').style.display = 'none';
+    }
+
+    window.addEventListener('click', function (event) {
+        const modal = document.getElementById('adminCommentModal');
+        if (event.target == modal) {
+            closeAdminCommentModal();
+        }
+    });
+
+    function sendToAdmin() {
+        const text = document.getElementById('adminCommentText').value;
+        if (!text.trim()) {
+            alert('Пожалуйста, введите описание проблемы');
+            return;
+        }
+
+        const sendBtn = document.getElementById('sendAdminCommentBtn');
+        const originalBtnText = sendBtn.innerText;
+        sendBtn.disabled = true;
+        sendBtn.innerText = 'Отправка...';
+
+        const adminContainer = document.querySelector('.admin-comment-container');
+        const originalAdminDisplay = adminContainer.style.display;
+        adminContainer.style.display = 'none';
+
+        const modal = document.getElementById('adminCommentModal');
+        const originalModalDisplay = modal.style.display;
+        modal.style.display = 'none';
+
+        html2canvas(document.body, {
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#1a1a1a'
+        }).then(canvas => {
+            canvas.toBlob(blob => {
+                const initDataUnsafe = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.initDataUnsafe : null;
+                let chatId = null;
+                
+                if (initDataUnsafe && initDataUnsafe.user) {
+                    chatId = initDataUnsafe.user.id;
+                }
+                
+                if (!chatId) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    chatId = urlParams.get('chat_id');
+                }
+
+                if (!chatId) {
+                    alert('Не удалось получить chat_id. Запустите приложение через Telegram.');
+                    sendBtn.disabled = false;
+                    sendBtn.innerText = originalBtnText;
+                    adminContainer.style.display = originalAdminDisplay;
+                    modal.style.display = originalModalDisplay;
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('photo', blob);
+                formData.append('text', text);
+                formData.append('chat_id', chatId);
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                fetch('/api/send_to_support', {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                }).then(async response => {
+                    clearTimeout(timeoutId);
+                    if (response.ok) {
+                        alert('Сообщение отправлено в админку');
+                    } else if (response.status === 429) {
+                        const data = await response.json();
+                        const waitText = (data.detail && data.detail.wait_text) ? data.detail.wait_text : 'некоторое время';
+                        alert(`Слишком много запросов. Пожалуйста, подождите ${waitText} перед следующей отправкой.`);
+                        modal.style.display = originalModalDisplay;
+                    } else {
+                        alert('Ошибка при отправке сообщения');
+                        modal.style.display = originalModalDisplay;
+                    }
+                }).catch(error => {
+                    clearTimeout(timeoutId);
+                    console.error('Error sending to admin:', error);
+                    if (error.name === 'AbortError') {
+                        alert('Плохое соединение. Таймаут 10 секунд. Попробуйте позже.');
+                    } else {
+                        alert('Ошибка при отправке сообщения');
+                    }
+                    modal.style.display = originalModalDisplay;
+                }).finally(() => {
+                    sendBtn.disabled = false;
+                    sendBtn.innerText = originalBtnText;
+                    adminContainer.style.display = originalAdminDisplay;
+                });
+            });
+        }).catch(error => {
+            console.error('Error creating screenshot:', error);
+            alert('Ошибка при создании скриншота');
+            modal.style.display = originalModalDisplay;
+            sendBtn.disabled = false;
+            sendBtn.innerText = originalBtnText;
+            adminContainer.style.display = originalAdminDisplay;
+        });
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            const adminModal = document.getElementById('adminCommentModal');
+            if (adminModal.style.display === 'block') {
+                closeAdminCommentModal();
+            }
+        }
+    });
 </script>
 </body>
 
