@@ -1163,3 +1163,4 @@ async def check_job_status(
         await message.answer("❌ Ошибка при проверке статуса задачи")
     finally:
         remove_active_job(message.from_user.id, job_id)
+        await state.clear()
