@@ -122,6 +122,7 @@ user-profile-payment_text = Выберите пакет для покупки:
 user-profile-expire_notice = ⏳ { $amount } анализов по { $source } сгорели.
 
 auto-analyze-download_pdf = 📄 Скачать PDF
+auto-analyze-send_to_hints = 👁️ Анализ ошибок
 auto-analyze-no_thanks = ❌ Нет, спасибо
 auto-analyze-ask_pdf = Хотите ли получить анализ в формате PDF?
 auto-analyze-pdf_ready = Ваш анализ в формате PDF:

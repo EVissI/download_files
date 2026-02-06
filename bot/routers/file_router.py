@@ -1,18 +1,55 @@
 import os
 import uuid
+import json
+import asyncio
+import shutil
+import zipfile
+import io
+from datetime import datetime
+import pytz
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    Message, 
+    CallbackQuery, 
+    InlineKeyboardMarkup, 
+    InlineKeyboardButton,
+    BufferedInputFile,
+    WebAppInfo,
+    Document,
+)
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.common.filters.user_info import UserInfo
-from bot.db.dao import MessagesTextsDAO
-from bot.routers.short_board import ShortBoardDialog
-from bot.routers.hint_viewer_router import HintViewerStates
-from bot.routers.autoanalize.autoanaliz import AutoAnalyzeDialog
-from bot.config import bot
+from bot.db.dao import MessagesTextsDAO, UserDAO
+from bot.db.schemas import SUser
 from bot.db.models import User
+from bot.db.redis import redis_client
+from bot.routers.short_board import ShortBoardDialog
+from bot.routers.hint_viewer_router import (
+    HintViewerStates,
+    can_enqueue_job,
+    add_active_job,
+    task_queue,
+    redis_rq,
+    get_queue_position_message,
+    check_job_status,
+)
+from bot.routers.autoanalize.autoanaliz import AutoAnalyzeDialog, analyze_file_by_path
+from bot.common.func.game_parser import parse_file, get_names
+from bot.common.func.yadisk import save_file_to_yandex_disk
+from bot.common.func.hint_viewer import (
+    extract_player_names,
+    estimate_processing_time,
+    random_filename,
+)
+from bot.common.func.waiting_message import WaitingMessageManager
+from bot.common.service.sync_folder_service import SyncthingSync
+from bot.common.kbds.markup.main_kb import MainKeyboard
+from bot.common.kbds.inline.autoanalize import get_download_pdf_kb
+from bot.config import bot, settings, translator_hub
 
 file_router = Router()
 
@@ -153,9 +190,8 @@ async def handle_file_handler_selection(
             file_name = original_file_name.replace(" ", "").replace(".txt", ".mat")
             file_path = os.path.join(files_dir, file_name)
             
-            # Копируем файл
-            import shutil
-            shutil.copy(temp_file_path, file_path)
+        # Копируем файл
+        shutil.copy(temp_file_path, file_path)
             
             # Удаляем временный файл
             try:
@@ -187,7 +223,6 @@ async def handle_file_handler_selection(
             os.makedirs(files_dir, exist_ok=True)
             file_path = os.path.join(files_dir, original_file_name)
             
-            import shutil
             shutil.copy(temp_file_path, file_path)
             
             # Удаляем временный файл
@@ -278,14 +313,13 @@ async def handle_auto_type_selection(
         await state.set_state(AutoAnalyzeDialog.file)
         await state.update_data(analysis_type=analysis_type)
         
-        # Перемещаем файл в нужное место
-        files_dir = os.path.join(os.getcwd(), "files")
-        os.makedirs(files_dir, exist_ok=True)
-        file_name = original_file_name.replace(" ", "").replace(".txt", ".mat")
-        file_path = os.path.join(files_dir, file_name)
-        
-        import shutil
-        shutil.copy(temp_file_path, file_path)
+            # Перемещаем файл в нужное место
+            files_dir = os.path.join(os.getcwd(), "files")
+            os.makedirs(files_dir, exist_ok=True)
+            file_name = original_file_name.replace(" ", "").replace(".txt", ".mat")
+            file_path = os.path.join(files_dir, file_name)
+            
+            shutil.copy(temp_file_path, file_path)
         
         # Удаляем временный файл
         try:
@@ -318,24 +352,6 @@ async def process_short_board_file(
     state: FSMContext,
 ):
     """Обрабатывает файл для short_board"""
-    from bot.routers.short_board import handle_document
-    from aiogram.types import Document, Message as MessageType
-    
-    # Создаем фиктивное сообщение
-    # Вместо этого вызываем логику напрямую из handle_document
-    # Но проще использовать существующую логику
-    
-    # Импортируем необходимые функции
-    from bot.common.func.game_parser import parse_file, get_names
-    from bot.common.func.yadisk import save_file_to_yandex_disk
-    import asyncio
-    import zipfile
-    import io
-    from datetime import datetime
-    import pytz
-    from aiogram.types import BufferedInputFile, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
-    from bot.config import settings
-    
     messages_dao = MessagesTextsDAO(session_without_commit)
     
     try:
@@ -401,7 +417,6 @@ async def process_short_board_file(
             reply_markup=keyboard,
         )
         
-        from bot.db.dao import UserDAO
         await UserDAO(session_without_commit).decrease_analiz_balance(
             user_id=user_info.id, service_type="SHORT_BOARD"
         )
@@ -423,37 +438,6 @@ async def process_hint_viewer_file(
     state: FSMContext,
 ):
     """Обрабатывает файл для hint_viewer"""
-    from bot.routers.hint_viewer_router import hint_viewer_menu
-    from aiogram.types import Document, Message as MessageType
-    
-    # Создаем фиктивное сообщение для передачи в обработчик
-    # Но проще вызвать логику напрямую
-    
-    # Импортируем необходимые функции
-    from bot.common.func.hint_viewer import (
-        extract_player_names,
-        estimate_processing_time,
-        random_filename,
-    )
-    from bot.common.service.sync_folder_service import SyncthingSync
-    from bot.db.redis import redis_client
-    from bot.routers.hint_viewer_router import (
-        can_enqueue_job,
-        add_active_job,
-        task_queue,
-        redis_rq,
-        get_queue_position_message,
-        check_job_status,
-    )
-    from bot.db.dao import UserDAO
-    from bot.db.schemas import SUser
-    from bot.db.models import User
-    from bot.config import translator_hub
-    import json
-    import uuid
-    import asyncio
-    import os
-    
     messages_dao = MessagesTextsDAO(session_without_commit)
     syncthing_sync = SyncthingSync()
     
@@ -596,9 +580,6 @@ async def process_auto_analyze_file(
     state: FSMContext,
 ):
     """Обрабатывает файл для auto_analyze"""
-    from bot.routers.autoanalize.autoanaliz import handle_mat_file
-    from aiogram.types import Document, Message as MessageType
-    
     # Создаем фиктивное сообщение для передачи в обработчик
     class FakeDocument:
         def __init__(self, file_name, file_id):
@@ -619,16 +600,6 @@ async def process_auto_analyze_file(
     # Устанавливаем состояние и данные
     await state.set_state(AutoAnalyzeDialog.file)
     await state.update_data(analysis_type=analysis_type)
-    
-    # Вызываем обработчик напрямую
-    # Но это сложно, так как handle_mat_file ожидает реальное сообщение
-    # Вместо этого вызовем логику напрямую
-    
-    from bot.routers.autoanalize.autoanaliz import analyze_file_by_path
-    from bot.common.func.waiting_message import WaitingMessageManager
-    from bot.common.kbds.markup.main_kb import MainKeyboard
-    from bot.config import translator_hub
-    from aiogram.utils.keyboard import InlineKeyboardBuilder
     
     messages_dao = MessagesTextsDAO(session_without_commit)
     i18n = translator_hub.get_translator_by_locale(user_info.lang_code or "en")
@@ -679,6 +650,11 @@ async def process_auto_analyze_file(
             # Single player
             formatted_analysis, new_file_path = result
             await waiting_manager.stop()
+            # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
+            from bot.db.redis import redis_client
+            await redis_client.set(
+                f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
+            )
             await bot.send_message(
                 chat_id,
                 f"{formatted_analysis}\n\n",
@@ -689,9 +665,11 @@ async def process_auto_analyze_file(
             await bot.send_message(
                 chat_id,
                 await messages_dao.get_text('analyze_ask_pdf', user_info.lang_code),
-                reply_markup=get_download_pdf_kb(i18n, 'solo')
+                reply_markup=get_download_pdf_kb(i18n, 'solo', include_hint_viewer=True)
             )
             await session_without_commit.commit()
+            # Очищаем состояние после успешной обработки
+            await state.clear()
             
     except Exception as e:
         await session_without_commit.rollback()

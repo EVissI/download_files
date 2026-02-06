@@ -118,6 +118,7 @@ user-profile-payment_text = Select a package to buy:
 user-profile-expire_notice = ⏳ { $amount } analyses from { $source } have expired.
 
 auto-analyze-download_pdf = 📄 Download PDF
+auto-analyze-send_to_hints = 👁️ Error Analysis
 auto-analyze-no_thanks = ❌ No, thanks
 auto-analyze-ask_pdf = Would you like to get the analysis as a PDF?
 auto-analyze-pdf_ready = Your analysis in PDF format:

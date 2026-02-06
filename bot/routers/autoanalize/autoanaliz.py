@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
@@ -21,7 +21,7 @@ from bot.common.func.generate_pdf import html_to_pdf_bytes
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
-from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, get_download_pdf_kb
+from bot.common.kbds.inline.autoanalize import DownloadPDFCallback, SendToHintViewerCallback, get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import DetailedAnalysisDAO, UserDAO, MessagesTextsDAO
@@ -29,13 +29,25 @@ from bot.db.models import PromocodeServiceQuantity, ServiceType, User
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.db.schemas import SDetailedAnalysis, SUser
 from bot.db.redis import redis_client
-
-
 from bot.common.utils.i18n import get_all_locales_for_key
-from bot.config import translator_hub
+from bot.config import translator_hub, settings
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
-from bot.config import settings
+from bot.routers.hint_viewer_router import (
+    HintViewerStates,
+    can_enqueue_job,
+    add_active_job,
+    task_queue,
+    redis_rq,
+    get_queue_position_message,
+    check_job_status,
+)
+from bot.common.func.hint_viewer import (
+    extract_player_names,
+    estimate_processing_time,
+    random_filename,
+)
+from bot.common.service.sync_folder_service import SyncthingSync
 
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -327,6 +339,10 @@ async def handle_mat_file(
                     # Single player
                     formatted_analysis, new_file_path = result
                     await waiting_manager.stop()
+                    # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
+                    await redis_client.set(
+                        f"auto_analyze_file_path:{user_info.id}", new_file_path, expire=3600
+                    )
                     await message.answer(
                         f"{formatted_analysis}\n\n",
                         parse_mode="HTML",
@@ -334,7 +350,7 @@ async def handle_mat_file(
                     )
                     await message.answer(
                         await message_dao.get_text('analyze_ask_pdf', user_info.lang_code),
-                        reply_markup=get_download_pdf_kb(i18n, 'solo')
+                        reply_markup=get_download_pdf_kb(i18n, 'solo', include_hint_viewer=True)
                     )
                     await session_without_commit.commit()
 
@@ -444,20 +460,27 @@ async def handle_player_selection(
                 )
             except Exception as e:
                 logger.error(f"Ошибка при отправке сообщения с PDF в группу: {e}")
+        # Сохраняем путь к файлу в Redis для возможности отправки на анализ ошибок
+        await redis_client.set(
+            f"auto_analyze_file_path:{user_info.id}", file_path, expire=3600
+        )
         await callback.message.answer(
             f"{formatted_analysis}\n\n",
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
         )
         await callback.message.answer(
-            await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), reply_markup=get_download_pdf_kb(i18n, 'solo')
+            await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), 
+            reply_markup=get_download_pdf_kb(i18n, 'solo', include_hint_viewer=True)
         )
         await session_without_commit.commit()
+        await state.clear()
 
     except Exception as e:
         await session_without_commit.rollback()
         logger.error(f"Ошибка при ѝохранении выбора игрока: {e}")
         await callback.message.answer(i18n.auto.analyze.error.save())
+        await state.clear()
 
 
 @auto_analyze_router.callback_query(DownloadPDFCallback.filter(F.context == 'solo'), UserInfo())
@@ -492,3 +515,173 @@ async def handle_download_pdf(
             
             caption=await message_dao.get_text('analyze_pdf_ready', user_info.lang_code),
         )
+
+
+@auto_analyze_router.callback_query(SendToHintViewerCallback.filter(F.context == 'solo'), UserInfo())
+async def handle_send_to_hint_viewer(
+    callback: CallbackQuery,
+    callback_data: SendToHintViewerCallback,
+    user_info: User,
+    state: FSMContext,
+    i18n: TranslatorRunner,
+    session_without_commit: AsyncSession,
+):
+    """Обрабатывает отправку файла на анализ ошибок после автоанализа"""
+    message_dao = MessagesTextsDAO(session_without_commit)
+    await callback.message.delete()
+    
+    if callback_data.action == "yes":
+        # Получаем путь к файлу из Redis
+        file_path = await redis_client.get(f"auto_analyze_file_path:{user_info.id}")
+        
+        if not file_path:
+            await callback.message.answer(
+                await message_dao.get_text('analyze_file_not_found', user_info.lang_code) or 
+                "Файл не найден. Пожалуйста, загрузите файл снова."
+            )
+            return
+        
+        file_path = file_path.decode('utf-8') if isinstance(file_path, bytes) else file_path
+        
+        if not os.path.exists(file_path):
+            await callback.message.answer(
+                await message_dao.get_text('analyze_file_not_found', user_info.lang_code) or 
+                "Файл не найден. Пожалуйста, загрузите файл снова."
+            )
+            await redis_client.delete(f"auto_analyze_file_path:{user_info.id}")
+            return
+        
+        # Удаляем ключ из Redis
+        await redis_client.delete(f"auto_analyze_file_path:{user_info.id}")
+        
+        # Устанавливаем состояние для hint_viewer
+        await state.set_state(HintViewerStates.waiting_file)
+        
+        try:
+            # Генерируем уникальный ID для задачи
+            game_id = random_filename(ext="")
+            json_path = f"files/{game_id}.json"
+            job_id = f"hint_{user_info.id}_{uuid.uuid4().hex[:8]}"
+            
+            # Проверяем возможность добавления задачи
+            if not can_enqueue_job(user_info.id):
+                await callback.message.answer(
+                    await message_dao.get_text("hint_viewer_sin_active_job_err", user_info.lang_code)
+                )
+                await state.clear()
+                return
+            
+            syncthing_sync = SyncthingSync()
+            logger.info(f"Файл готов к обработке: {file_path}")
+            
+            # Синхронизация с Syncthing (если нужно)
+            if not await syncthing_sync.sync_and_wait(max_wait=30):
+                logger.warning("Ошибка синхронизации Syncthing")
+            
+            if not await syncthing_sync.wait_for_file(file_path, max_wait=30):
+                await callback.message.answer("❌ Файл не найден после синхронизации")
+                await state.clear()
+                return
+            
+            # Читаем содержимое файла
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            red_player, black_player = extract_player_names(content)
+            estimated_time = estimate_processing_time(file_path)
+            
+            # Добавляем задачу в очередь
+            job = task_queue.enqueue(
+                "bot.workers.hint_worker.analyze_backgammon_job",
+                file_path,
+                json_path,
+                str(user_info.id),
+                job_id=job_id,
+                game_id=game_id,
+            )
+            
+            # Используем реальный ID job
+            actual_job_id = job.id if hasattr(job, 'id') and job.id else job_id
+            logger.info(f"Job created: requested_job_id={job_id}, actual_job_id={actual_job_id}")
+            
+            # Сохраняем mat_path
+            await redis_client.set(f"mat_path:{game_id}", file_path, expire=86400)
+            
+            add_active_job(user_info.id, actual_job_id)
+            logger.info(f"Added active job: user_id={user_info.id}, job_id={actual_job_id}")
+            
+            # Сохраняем информацию о задаче
+            await redis_client.set(
+                f"job_info:{actual_job_id}",
+                json.dumps({
+                    "game_id": game_id,
+                    "mat_path": file_path,
+                    "json_path": json_path,
+                    "red_player": red_player,
+                    "black_player": black_player,
+                    "user_id": user_info.id,
+                }),
+                expire=3600,
+            )
+            
+            # Проверяем позицию в очереди
+            queue_warning = await get_queue_position_message(
+                redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"], session_without_commit, user_info
+            )
+            if queue_warning:
+                user_dao = UserDAO(session_without_commit)
+                admins = await user_dao.find_all(filters=SUser(role=User.Role.ADMIN.value))
+                for admin in admins:
+                    try:
+                        await callback.bot.send_message(
+                            chat_id=admin.id,
+                            text=f"Пользователь в очереди на анализ ошибок. Его сообщение:{queue_warning}\n",
+                        )
+                    except Exception as e:
+                        logger.error(f"Не удалось отправить уведомление админу {admin.id}: {e}")
+                await callback.message.answer(queue_warning)
+            
+            status_text = await message_dao.get_text(
+                "hint_viewer_sin_file_accepted", user_info.lang_code, estimated_time=estimated_time
+            )
+            await callback.message.answer(status_text, parse_mode="Markdown")
+            
+            # Сохраняем данные в состояние для проверки статуса
+            await state.update_data(
+                job_id=actual_job_id,
+                game_id=game_id,
+                mat_path=file_path,
+                json_path=json_path,
+                red_player=red_player,
+                black_player=black_player,
+            )
+            
+            # Запускаем проверку статуса
+            # Создаем фиктивное сообщение для check_job_status
+            class FakeMessage:
+                def __init__(self, chat_id, bot, user_id):
+                    self.chat = type('obj', (object,), {'id': chat_id})()
+                    self.bot = bot
+                    self.from_user = type('obj', (object,), {'id': user_id})()
+                    self._chat_id = chat_id
+                
+                async def answer(self, text, **kwargs):
+                    """Отправляет сообщение в чат через bot.send_message"""
+                    return await self.bot.send_message(chat_id=self._chat_id, text=text, **kwargs)
+                
+                async def reply(self, text, **kwargs):
+                    """Отправляет ответ на сообщение"""
+                    return await self.bot.send_message(chat_id=self._chat_id, text=text, **kwargs)
+            
+            fake_message = FakeMessage(callback.message.chat.id, callback.bot, user_info.id)
+            asyncio.create_task(
+                check_job_status(fake_message, actual_job_id, state, i18n, session_without_commit, user_info)
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка при отправке файла на анализ ошибок: {e}")
+            await callback.message.answer(
+                await message_dao.get_text('analyze_error_sending_to_hints', user_info.lang_code) or
+                f"Произошла ошибка при отправке файла на анализ ошибок: {e}"
+            )
+            await state.clear()
