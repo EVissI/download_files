@@ -33,19 +33,6 @@ from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import translator_hub, settings
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
-from bot.routers.hint_viewer_router import (
-    can_enqueue_job,
-    add_active_job,
-    task_queue,
-    redis_rq,
-    get_queue_position_message,
-    check_job_status,
-)
-from bot.common.func.hint_viewer import (
-    extract_player_names,
-    estimate_processing_time,
-    random_filename,
-)
 from bot.common.service.sync_folder_service import SyncthingSync
 
 if TYPE_CHECKING:
@@ -553,8 +540,24 @@ async def handle_send_to_hint_viewer(
         # Удаляем ключ из Redis
         await redis_client.delete(f"auto_analyze_file_path:{user_info.id}")
         
-        # Устанавливаем состояние для hint_viewer (ленивый импорт для избежания циклического импорта)
-        from bot.routers.hint_viewer_router import HintViewerStates
+        # Ленивый импорт для избежания циклического импорта
+        from bot.routers.hint_viewer_router import (
+            HintViewerStates,
+            can_enqueue_job,
+            add_active_job,
+            task_queue,
+            redis_rq,
+            get_queue_position_message,
+            check_job_status,
+        )
+        from bot.common.func.hint_viewer import (
+            extract_player_names,
+            estimate_processing_time,
+            random_filename,
+        )
+        import uuid
+        
+        # Устанавливаем состояние для hint_viewer
         await state.set_state(HintViewerStates.waiting_file)
         
         try:
