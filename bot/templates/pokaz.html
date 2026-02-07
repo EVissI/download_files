@@ -1326,6 +1326,10 @@
             text-align: center;
         }
 
+        th:last-child {
+            text-align: center;
+        }
+
         .loading {
             color: #007bff;
             font-style: italic;
@@ -4655,7 +4659,7 @@
 
                     if (firstHint.type === 'move') {
                         // Generate move hints table
-                        tableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th><th></th></tr>';
+                        tableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th><th><button class="eye-button" type="button" id="random-move-btn" title="Случайный ход"><i class="fa fa-random"></i></button></th></tr>';
                         hints.forEach((hint, index) => {
                             if (hint.probs && hint.probs.length >= 2) {
                                 const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
