@@ -4701,6 +4701,43 @@
                     if (firstHint.type === 'move') {
                         const eyeButtons = hintsTable.querySelectorAll('.eye-button');
                         eyeButtons.forEach((button, index) => {
+                            // Пропускаем кнопку random-move-btn в заголовке
+                            if (button.id === 'random-move-btn') {
+                                button.addEventListener('click', () => {
+                                    // Генерируем случайные значения для кубиков (1-6)
+                                    const dice1 = Math.floor(Math.random() * 6) + 1;
+                                    const dice2 = Math.floor(Math.random() * 6) + 1;
+                                    
+                                    // Генерируем случайный ход (white или black)
+                                    const randomTurn = Math.random() < 0.5 ? 'white' : 'black';
+                                    
+                                    // Устанавливаем значения кубиков
+                                    const dice1Select = document.getElementById('dice1-select');
+                                    const dice2Select = document.getElementById('dice2-select');
+                                    if (dice1Select) dice1Select.value = dice1.toString();
+                                    if (dice2Select) dice2Select.value = dice2.toString();
+                                    
+                                    // Устанавливаем ход
+                                    const turnSelect = document.getElementById('turn-select');
+                                    if (turnSelect) {
+                                        turnSelect.value = randomTurn;
+                                        updateTurnSelect();
+                                    }
+                                    
+                                    // Обновляем отображение кубиков
+                                    if (typeof updateDiceSelectorDisplay === 'function') {
+                                        updateDiceSelectorDisplay(1);
+                                        updateDiceSelectorDisplay(2);
+                                    }
+                                    
+                                    // Перерисовываем доску
+                                    if (typeof drawBoard === 'function') {
+                                        drawBoard();
+                                    }
+                                });
+                                return;
+                            }
+                            
                             button.addEventListener('click', () => {
                                 const row = button.closest('tr');
                                 const moveCell = row.querySelector('td:first-child');
