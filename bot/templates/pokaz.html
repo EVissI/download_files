@@ -4950,6 +4950,8 @@
         const originalAdminCommentDisplay = adminCommentContainer ? adminCommentContainer.style.display : null;
         const gameTypeLabel = document.getElementById('game-type-label');
         const originalGameTypeLabelDisplay = gameTypeLabel ? gameTypeLabel.style.display : null;
+        const body = document.body;
+        const originalBodyPaddingTop = body ? body.style.paddingTop : null;
 
         // Функция для восстановления элементов
         function restoreControls() {
@@ -4962,6 +4964,7 @@
             if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
             if (adminCommentContainer && originalAdminCommentDisplay !== null) adminCommentContainer.style.display = originalAdminCommentDisplay;
             if (gameTypeLabel && originalGameTypeLabelDisplay !== null) gameTypeLabel.style.display = originalGameTypeLabelDisplay;
+            if (body && originalBodyPaddingTop !== null) body.style.paddingTop = originalBodyPaddingTop;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -4977,6 +4980,9 @@
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
+        
+        // Добавляем отступ сверху для текста типа игры на скриншотах
+        if (body) body.style.paddingTop = '5px';
         
         // Показываем текст типа игры для скриншота
         if (gameTypeLabel) gameTypeLabel.style.display = 'block';
@@ -5056,6 +5062,8 @@
         const originalAdminCommentDisplay = adminCommentContainer ? adminCommentContainer.style.display : null;
         const gameTypeLabel = document.getElementById('game-type-label');
         const originalGameTypeLabelDisplay = gameTypeLabel ? gameTypeLabel.style.display : null;
+        const body = document.body;
+        const originalBodyPaddingTop = body ? body.style.paddingTop : null;
 
         // Функция для восстановления элементов
         function restoreControls() {
@@ -5068,6 +5076,7 @@
             if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
             if (adminCommentContainer && originalAdminCommentDisplay !== null) adminCommentContainer.style.display = originalAdminCommentDisplay;
             if (gameTypeLabel && originalGameTypeLabelDisplay !== null) gameTypeLabel.style.display = originalGameTypeLabelDisplay;
+            if (body && originalBodyPaddingTop !== null) body.style.paddingTop = originalBodyPaddingTop;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -5082,6 +5091,9 @@
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
+        
+        // Добавляем отступ сверху для текста типа игры на скриншотах
+        if (body) body.style.paddingTop = '5px';
         
         // Показываем текст типа игры для скриншота
         if (gameTypeLabel) gameTypeLabel.style.display = 'block';
