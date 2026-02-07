@@ -2431,7 +2431,14 @@
             
             if (currentGameType === 'матч') {
                 const matchLength = document.getElementById('match_lenght')?.value || '5';
-                gameTypeLabel.textContent = `Матч до ${matchLength}`;
+                const lowerScore = parseInt(document.getElementById('lower-score')?.value || '0');
+                const upperScore = parseInt(document.getElementById('upper-score')?.value || '0');
+                
+                // Находим наибольшее и наименьшее значение
+                const maxScore = Math.max(lowerScore, upperScore);
+                const minScore = Math.min(lowerScore, upperScore);
+                
+                gameTypeLabel.textContent = `Матч до ${matchLength} Счет ${maxScore}-${minScore}`;
             } else {
                 gameTypeLabel.textContent = 'Манигейм';
             }
@@ -3062,8 +3069,14 @@
                 if (cubeShown !== '0') {
                     syncCubeOwnerAndTurn();
                 }
-                document.getElementById('lower-score').addEventListener('change', drawBoard);
-                document.getElementById('upper-score').addEventListener('change', drawBoard);
+                document.getElementById('lower-score').addEventListener('change', () => {
+                    drawBoard();
+                    updateGameTypeLabel();
+                });
+                document.getElementById('upper-score').addEventListener('change', () => {
+                    drawBoard();
+                    updateGameTypeLabel();
+                });
                 document.getElementById('match_lenght').addEventListener('change', () => {
                     drawBoard();
                     updateGameTypeLabel();
@@ -3689,6 +3702,9 @@
                     } else {
                         console.warn('upper-score select not found');
                     }
+                    
+                    // Update game type label after setting scores
+                    updateGameTypeLabel();
                 }
             }, 0);
 
@@ -4101,8 +4117,8 @@
 
                         select.dispatchEvent(new Event('change'));
                         
-                        // Update game type label if match length changed
-                        if (selector.id === 'match_lenght') {
+                        // Update game type label if match length or scores changed
+                        if (selector.id === 'match_lenght' || selector.id === 'lower-score' || selector.id === 'upper-score') {
                             updateGameTypeLabel();
                         }
                         
