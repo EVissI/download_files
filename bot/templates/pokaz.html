@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -51,6 +51,7 @@
             font-size: 24px;
             font-family: monospace;
         }
+
         .xgid-close {
             margin-left: 10px;
             cursor: pointer;
@@ -280,7 +281,7 @@
             align-items: center;
             gap: 0.5rem;
         }
-        
+
         .cube-controls-block .max-cube-options_money .match-selector-custom {
             display: inline-block;
         }
@@ -1167,6 +1168,7 @@
             font-size: 0.5rem;
             font-weight: bold;
         }
+
         .action-buttons {
             display: flex;
             flex-direction: row;
@@ -1395,6 +1397,7 @@
             from {
                 opacity: 0;
             }
+
             to {
                 opacity: 1;
             }
@@ -1416,6 +1419,7 @@
                 transform: translateY(-50px);
                 opacity: 0;
             }
+
             to {
                 transform: translateY(0);
                 opacity: 1;
@@ -1834,6 +1838,7 @@
                 opacity: 0;
                 transform: translate(-50%, -50%) scale(0.8);
             }
+
             to {
                 opacity: 1;
                 transform: translate(-50%, -50%) scale(1);
@@ -1845,6 +1850,7 @@
                 opacity: 1;
                 transform: translate(-50%, -50%) scale(1);
             }
+
             to {
                 opacity: 0;
                 transform: translate(-50%, -50%) scale(0.8);
@@ -1862,7 +1868,7 @@
             const screenshotBtn = document.getElementById('screenshotBtn');
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
-            
+
             if (screenshotBtn) {
                 screenshotBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
             }
@@ -1894,7 +1900,8 @@
             </label>
             <div class="player-position-toggle">
                 <span>Нижний игрок:</span>
-                <button id="upperPlayerBtn" class="checker-toggle-btn black" data-color="black" title="Переключить нижнего игрока"></button>
+                <button id="upperPlayerBtn" class="checker-toggle-btn black" data-color="black"
+                    title="Переключить нижнего игрока"></button>
             </div>
             <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
                 <i class="fa fa-mouse-pointer"></i>
@@ -1909,11 +1916,11 @@
                 <div class="checker-selector">
                     <div class="checker-label">Шашки</div>
                     <div class="checker-options">
-                        <div class="checker-btn white" data-color="white" role="button"
-                            aria-label="Белые шашки">
+                        <div class="checker-btn white" data-color="white" role="button" aria-label="Белые шашки">
                             <div class="checker-dot"></div>
                         </div>
-                        <div class="checker-btn black selected" data-color="black" role="button" aria-label="Черные шашки">
+                        <div class="checker-btn black selected" data-color="black" role="button"
+                            aria-label="Черные шашки">
                             <div class="checker-dot"></div>
                         </div>
                     </div>
@@ -2543,7 +2550,7 @@
             const blackBarSelect = document.getElementById('black-bar-select');
             const whiteBarDropdown = document.getElementById('white-bar-dropdown');
             const blackBarDropdown = document.getElementById('black-bar-dropdown');
-            
+
             if (whiteBarSelect) {
                 const currentBar = parseInt(whiteBarSelect.value) || 0;
                 const totalCheckers = getTotalCheckers(positions.first);
@@ -2556,7 +2563,7 @@
                     whiteBarSelect.appendChild(option);
                 }
                 whiteBarSelect.value = currentBar;
-                
+
                 // Update dropdown options visibility
                 if (whiteBarDropdown) {
                     whiteBarDropdown.querySelectorAll('.bar-option').forEach(opt => {
@@ -2578,7 +2585,7 @@
                     blackBarSelect.appendChild(option);
                 }
                 blackBarSelect.value = currentBar;
-                
+
                 // Update dropdown options visibility
                 if (blackBarDropdown) {
                     blackBarDropdown.querySelectorAll('.bar-option').forEach(opt => {
@@ -2653,7 +2660,7 @@
                     // Inverted: white is upper, invert when white's turn
                     invertNumbers = (turn === 'white');
                 }
-                
+
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
                     let y = getBaseY(point);
@@ -2687,7 +2694,7 @@
             }
 
             const barX = 400;
-            
+
             // Определяем позицию бара с учетом инвертирования
             let barY, barDy;
             if (upperPlayerColor === 'black') {
@@ -2699,7 +2706,7 @@
                 barY = (player === 'first') ? 220 : 520;
                 barDy = (player === 'first') ? 55 : -55;
             }
-            
+
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
                 for (let i = 0; i < Math.min(Math.abs(positions.bar), 2); i++) {
@@ -2748,11 +2755,11 @@
             const boxWidth = 60;
             const boxHeight = 40;
             const fontSize = 30;
-            
+
             // Draw background
             ctx.fillStyle = isWhite ? '#ffffff' : '#000000';
             ctx.fillRect(x - boxWidth / 2, y - boxHeight / 2, boxWidth, boxHeight);
-            
+
             // Draw text
             ctx.fillStyle = isWhite ? '#000000' : '#ffffff';
             ctx.font = `bold ${fontSize}px Arial`;
@@ -2777,7 +2784,7 @@
                 const diceY = 350;
                 let diceX1, diceX2;
                 let diceSet;
-                
+
                 // Determine if current turn player is upper or lower
                 let isUpperPlayer;
                 if (upperPlayerColor === 'black') {
@@ -2787,7 +2794,7 @@
                     // Inverted: white is upper, black is lower
                     isUpperPlayer = (turn === 'white');
                 }
-                
+
                 // Upper player dice on left, lower player dice on right
                 if (isUpperPlayer) {
                     diceX1 = 130;
@@ -2796,10 +2803,10 @@
                     diceX1 = 530;
                     diceX2 = 620;
                 }
-                
+
                 // Select dice images based on player color
                 diceSet = (turn === 'white') ? diceImages.white : diceImages.black;
-                
+
                 if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
@@ -2821,7 +2828,7 @@
                 if (img) {
                     let cubeX = 375;
                     let cubeY = 350;
-                    
+
                     // Determine if cube owner is upper or lower player
                     let isUpperPlayer;
                     if (upperPlayerColor === 'black') {
@@ -2831,7 +2838,7 @@
                         // Inverted: white is upper, black is lower
                         isUpperPlayer = (cubeOwner === 'white');
                     }
-                    
+
                     if (cubeShown !== 0 && cubeValue !== 0) {
                         // Cube shown (on bar): upper player left, lower player right
                         cubeX = isUpperPlayer ? 175 : 575;
@@ -3000,7 +3007,7 @@
         const totalImages = 21;
         let invertPointNumbers = false; // Flag for inverted point numbering
         let upperPlayerColor = 'white'; // 'black' or 'white' - который игрок сверху (инвертировано для отображения нижнего)
-        
+
         // XGID string from server (if provided) - read from hidden script element
         const initialXgidElement = document.getElementById('initial-xgid-data');
         const initialXgid = initialXgidElement ? JSON.parse(initialXgidElement.textContent) : null;
@@ -3072,22 +3079,22 @@
                 canvas.addEventListener('touchstart', handleCanvasTouchStart);
                 canvas.addEventListener('touchend', handleCanvasTouchEnd);
             }
-            
+
             // Initialize cube options filter
             filterCubeOptions();
-            
+
             // Check if XGID string is provided via URL parameter or template variable
             let xgidString = null;
-            
+
             // First, try to get from URL parameter
             const urlParams = new URLSearchParams(window.location.search);
             xgidString = urlParams.get('xgid');
-            
+
             // If not in URL, try to get from template variable (if passed from server)
             if (!xgidString && initialXgid) {
                 xgidString = initialXgid;
             }
-            
+
             // Log incoming XGID string
             if (xgidString) {
                 console.log('Incoming XGID string:', xgidString);
@@ -3095,7 +3102,7 @@
             } else {
                 console.log('No XGID string provided');
             }
-            
+
             // Parse XGID if provided
             if (xgidString) {
                 try {
@@ -3132,20 +3139,20 @@
             for (let point = 1; point <= 24; point++) {
                 const pointX = getX(point);
                 const pointY = getBaseY(point);
-                
-                const triangleWidth = 50; 
-                const triangleHeight = 300; 
+
+                const triangleWidth = 50;
+                const triangleHeight = 300;
                 // Check if click is within the triangle bounds
                 const isInXRange = Math.abs(x - pointX) <= triangleWidth / 2;
-                const isInYRange = point > 12 
+                const isInYRange = point > 12
                     ? (y >= pointY && y <= pointY + triangleHeight)  // upper points (13-24)
                     : (y <= pointY && y >= pointY - triangleHeight); // lower points (1-12)
-                
+
                 if (isInXRange && isInYRange) {
                     return point;
                 }
             }
-            
+
             return null; // No point found
         }
 
@@ -3154,7 +3161,7 @@
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
-            
+
             addCheckerAtPosition(x, y);
         }
 
@@ -3165,21 +3172,21 @@
             const touch = event.changedTouches[0];
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
-            
+
             // Calculate distance from touch start to touch end
             const deltaX = Math.abs(x - touchStartX);
             const deltaY = Math.abs(y - touchStartY);
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            
+
             // Calculate touch duration
             const touchDuration = Date.now() - touchStartTime;
-            
+
             // Only add checker if it's a tap (not a swipe)
             // Threshold: less than 15px movement and duration between 50ms and 500ms
             const isSwipe = distance > 15;
             const isTooQuick = touchDuration < 50;
             const isTooLong = touchDuration > 500;
-            
+
             if (!isSwipe && !isTooQuick && !isTooLong) {
                 addCheckerAtPosition(x, y);
             }
@@ -3188,7 +3195,7 @@
         // Remove one checker at the clicked position
         function removeCheckerAtPosition(x, y) {
             const point = getPointFromCoordinates(x, y);
-            
+
             if (point === null) {
                 return; // Click was not on a valid point
             }
@@ -3196,7 +3203,7 @@
             // Check both colors to see which one has checkers here
             const whiteCount = positions.first[point.toString()] || 0;
             const blackCount = positions.second[point.toString()] || 0;
-            
+
             if (whiteCount > 0) {
                 // Remove white checker
                 const newCount = whiteCount - 1;
@@ -3205,13 +3212,13 @@
                 } else {
                     positions.first[point.toString()] = newCount;
                 }
-                
+
                 // Update the select element
                 const select = document.getElementById(`point-${point}`);
                 if (select) {
                     select.value = newCount;
                 }
-                
+
                 // Redraw board and update options
                 drawBoard();
                 updateSelectOptions('white');
@@ -3223,13 +3230,13 @@
                 } else {
                     positions.second[point.toString()] = newCount;
                 }
-                
+
                 // Update the select element
                 const select = document.getElementById(`point-${point}`);
                 if (select) {
                     select.value = newCount;
                 }
-                
+
                 // Redraw board and update options
                 drawBoard();
                 updateSelectOptions('black');
@@ -3243,9 +3250,9 @@
                 removeCheckerAtPosition(x, y);
                 return;
             }
-            
+
             const point = getPointFromCoordinates(x, y);
-            
+
             if (point === null) {
                 return; // Click was not on a valid point
             }
@@ -3253,7 +3260,7 @@
             const color = getSelectedCheckerColor();
             const targetPositions = color === 'white' ? positions.first : positions.second;
             const otherPositions = color === 'white' ? positions.second : positions.first;
-            
+
             // Check if the point is occupied by the other color
             const occupiedByOther = (otherPositions[point.toString()] || 0) > 0;
             if (occupiedByOther) {
@@ -3263,7 +3270,7 @@
             // Get current count and check if we can add one more
             const currentCount = targetPositions[point.toString()] || 0;
             const totalCheckers = getTotalCheckers(targetPositions);
-            
+
             if (totalCheckers >= 15) {
                 return; // Already have 15 checkers placed
             }
@@ -3357,11 +3364,11 @@
         function generateXGID() {
             let xgid = "";
             const invertPositions = (upperPlayerColor === 'white');
-            
+
             // Определяем какие позиции использовать для верхнего и нижнего игроков
             const upperPositions = invertPositions ? positions.first : positions.second;
             const lowerPositions = invertPositions ? positions.second : positions.first;
-            
+
             // Bar для верхнего игрока (первый символ в XGID)
             const upperBar = upperPositions.bar || 0;
             if (upperBar === 0) {
@@ -3370,7 +3377,7 @@
                 // Верхний игрок = строчные буквы (a-o)
                 xgid += String.fromCharCode(96 + upperBar);
             }
-            
+
             for (let point = 1; point <= 24; point++) {
                 // XGID позиции не инвертируются, всегда идут от 1 до 24
                 // Меняется только то, какие шашки считаются нижними/верхними
@@ -3391,7 +3398,7 @@
                     xgid += "-";
                 }
             }
-            
+
             // Bar для нижнего игрока (последний символ перед ':' в XGID)
             const lowerBar = lowerPositions.bar || 0;
             if (lowerBar === 0) {
@@ -3477,58 +3484,58 @@
             xgid += maxCubePart;
             return xgid;
         }
-        
+
         function parseXGID(xgidString) {
             console.log('parseXGID called with string:', xgidString);
             console.log('XGID string length:', xgidString ? xgidString.length : 0);
-            
+
             if (!xgidString || typeof xgidString !== 'string') {
                 console.error('Invalid XGID string:', xgidString);
                 return;
             }
-            
+
             const parts = xgidString.split(':');
             console.log('XGID parts count:', parts.length);
             console.log('XGID parts:', parts);
-            
+
             if (parts.length < 10) {
                 console.error('Invalid XGID format: not enough parts. Expected 10, got', parts.length);
                 return;
             }
-            
+
             // Parse board positions
             const boardPart = parts[0];
             if (boardPart.length < 26) {
                 console.error('Invalid XGID format: board part too short');
                 return;
             }
-            
+
             // First character: upper bar
             const upperBarChar = boardPart[0];
-            const upperBar = (upperBarChar === '-' || upperBarChar === '') ? 0 : 
-                            (upperBarChar >= 'a' && upperBarChar <= 'o') ? upperBarChar.charCodeAt(0) - 96 : 0;
-            
+            const upperBar = (upperBarChar === '-' || upperBarChar === '') ? 0 :
+                (upperBarChar >= 'a' && upperBarChar <= 'o') ? upperBarChar.charCodeAt(0) - 96 : 0;
+
             // Last character before ':': lower bar
             const lowerBarChar = boardPart[boardPart.length - 1];
-            const lowerBar = (lowerBarChar === '-' || lowerBarChar === '') ? 0 : 
-                            (lowerBarChar >= 'A' && lowerBarChar <= 'O') ? lowerBarChar.charCodeAt(0) - 64 : 0;
-            
+            const lowerBar = (lowerBarChar === '-' || lowerBarChar === '') ? 0 :
+                (lowerBarChar >= 'A' && lowerBarChar <= 'O') ? lowerBarChar.charCodeAt(0) - 64 : 0;
+
             // Positions 1-24 (characters 1-24)
             const positionsPart = boardPart.substring(1, 25);
             // Clear current positions
             positions.first = {};
             positions.second = {};
-            
+
             // Determine which positions are upper/lower based on upperPlayerColor
             const invertPositions = (upperPlayerColor === 'white');
             const upperPositions = invertPositions ? positions.first : positions.second;
             const lowerPositions = invertPositions ? positions.second : positions.first;
-            
+
             // Parse positions
             for (let i = 0; i < 24; i++) {
                 const point = i + 1;
                 const char = positionsPart[i];
-                
+
                 if (char === '-' || !char) {
                     // Empty point
                     continue;
@@ -3542,7 +3549,7 @@
                     lowerPositions[point.toString()] = count;
                 }
             }
-            
+
             // Set bars
             if (upperBar > 0) {
                 upperPositions.bar = upperBar;
@@ -3550,35 +3557,35 @@
             if (lowerBar > 0) {
                 lowerPositions.bar = lowerBar;
             }
-            
+
             // Parse cube exponent (part 1)
             const exponent = parseInt(parts[1]) || 0;
             const cubeValue = exponent > 0 ? Math.pow(2, exponent) : 0;
-            
+
             // Parse cube position (part 2)
             const cubePosition = parseInt(parts[2]) || 0;
-            
+
             // Parse turn (part 3)
             const turnValue = parseInt(parts[3]) || 0;
-            
+
             // Parse cube part (part 4)
             const cubePart = parts[4] || '00';
-            
+
             // Parse scores (parts 5-6)
             // First number after cube/dice is lower score, second is upper score
             const lowerScore = parts[5] || '0';
             const upperScore = parts[6] || '0';
             console.log('Parsed scores - lower:', lowerScore, 'upper:', upperScore);
-            
+
             // Parse convention (part 7)
             const conventionPart = parts[7] || '0';
-            
+
             // Parse match length (part 8)
             const matchLengthPart = parts[8] || '0';
-            
+
             // Parse max cube (part 9)
             const maxCubePart = parts[9] || '3';
-            
+
             // Determine game type based on match length
             const isMatch = matchLengthPart !== '0';
             if (isMatch) {
@@ -3606,7 +3613,7 @@
                     currentGameType = 'манигейм';
                 }
             }
-            
+
             // Set scores immediately after switching game type (for match games)
             // Use setTimeout to ensure DOM is updated
             setTimeout(() => {
@@ -3615,7 +3622,7 @@
                     const upperScoreSelect = document.getElementById('upper-score');
                     const lowerScoreButton = document.getElementById('lower-score-button');
                     const upperScoreButton = document.getElementById('upper-score-button');
-                    
+
                     console.log('Setting scores after game type switch - lower:', lowerScore, 'upper:', upperScore);
                     console.log('Score elements found:', {
                         lowerScoreSelect: !!lowerScoreSelect,
@@ -3623,7 +3630,7 @@
                         lowerScoreButton: !!lowerScoreButton,
                         upperScoreButton: !!upperScoreButton
                     });
-                    
+
                     if (lowerScoreSelect) {
                         lowerScoreSelect.value = lowerScore;
                         console.log('Set lower-score select value to:', lowerScore);
@@ -3634,7 +3641,7 @@
                     } else {
                         console.warn('lower-score select not found');
                     }
-                    
+
                     if (upperScoreSelect) {
                         upperScoreSelect.value = upperScore;
                         console.log('Set upper-score select value to:', upperScore);
@@ -3647,14 +3654,14 @@
                     }
                 }
             }, 0);
-            
+
             // Set cube value
             const cubeValueSelect = document.getElementById('cube-value-select');
             if (cubeValueSelect) {
                 cubeValueSelect.value = cubeValue.toString();
                 updateCubeSelectorDisplay('value');
             }
-            
+
             // Set cube shown
             let cubeShown = 0;
             if (cubePart === 'D') {
@@ -3665,7 +3672,7 @@
                 cubeShownSelect.value = cubeShown.toString();
                 updateCubeSelectorDisplay('shown');
             }
-            
+
             // Set cube owner based on cubePosition
             let cubeOwner = 'white';
             if (cubePosition === 1) {
@@ -3680,7 +3687,7 @@
                 cubeOwnerSelect.value = cubeOwner;
                 updateCubeOwnerSelect();
             }
-            
+
             // Set turn based on turnValue
             let turn = 'white';
             if (turnValue === 1) {
@@ -3695,7 +3702,7 @@
                 turnSelect.value = turn;
                 updateTurnSelect();
             }
-            
+
             // Set dice
             let dice1 = 0, dice2 = 0;
             if (cubePart !== '00' && cubePart !== 'D' && cubePart.length === 2) {
@@ -3710,7 +3717,7 @@
                 updateDiceSelectorDisplay(1);
                 updateDiceSelectorDisplay(2);
             }
-            
+
             // Set convention
             if (isMatch) {
                 // Crawford checkbox
@@ -3729,18 +3736,18 @@
                 if (jacobiSelect) jacobiSelect.value = jacobi.toString();
                 if (beaverSelect) beaverSelect.value = beaver.toString();
             }
-            
+
             // Set match length (pre-last part, part 8)
             if (isMatch) {
                 const matchLengthSelect = document.getElementById('match_lenght');
                 const matchLengthButton = document.getElementById('match-lenght-button');
-                
+
                 console.log('Setting match length:', matchLengthPart);
-                
+
                 if (matchLengthSelect) {
                     matchLengthSelect.value = matchLengthPart;
                     console.log('Set match_lenght select value to:', matchLengthPart);
-                    
+
                     if (matchLengthButton) {
                         matchLengthButton.textContent = matchLengthPart;
                         console.log('Set match-lenght button text to:', matchLengthPart);
@@ -3751,16 +3758,16 @@
                     console.warn('match_lenght select not found');
                 }
             }
-            
+
             // Set max cube
-            const maxCubeSelect = isMatch ? 
-                document.getElementById('max-cube-select') : 
+            const maxCubeSelect = isMatch ?
+                document.getElementById('max-cube-select') :
                 document.getElementById('max-cube-select-m');
             if (maxCubeSelect) {
                 maxCubeSelect.value = maxCubePart;
                 // Update button text
-                const maxCubeButton = isMatch ? 
-                    document.getElementById('max-cube-button') : 
+                const maxCubeButton = isMatch ?
+                    document.getElementById('max-cube-button') :
                     document.getElementById('max-cube-button-m');
                 if (maxCubeButton) {
                     const optionText = maxCubeSelect.options[maxCubeSelect.selectedIndex].text;
@@ -3769,16 +3776,16 @@
                 // Filter cube options
                 filterCubeOptions();
             }
-            
+
             // Update all selects for positions
             updateSelectOptions('white');
             updateSelectOptions('black');
             updateBarSelects();
-            
+
             // Redraw board
             drawBoard();
         }
-        
+
         function handleDiceChange(changedSelectId, otherSelectId) {
             const changedValue = parseInt(document.getElementById(changedSelectId).value);
             const otherSelect = document.getElementById(otherSelectId);
@@ -3898,8 +3905,8 @@
             dropdownCloseHandlerSetup = true;
 
             document.addEventListener('click', (e) => {
-                if (!e.target.closest('.dice-selector-custom') && 
-                    !e.target.closest('.cube-selector-custom') && 
+                if (!e.target.closest('.dice-selector-custom') &&
+                    !e.target.closest('.cube-selector-custom') &&
                     !e.target.closest('.bar-selector-custom') &&
                     !e.target.closest('.match-selector-custom')) {
                     document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown, .match-selector-dropdown').forEach(d => {
@@ -4043,7 +4050,7 @@
                         e.stopPropagation();
                         const value = option.getAttribute('data-value');
                         select.value = value;
-                        
+
                         // Update button text
                         if (selector.id === 'max-cube-select' || selector.id === 'max-cube-select-m') {
                             // For max cube, display the actual cube value (not the option value)
@@ -4051,7 +4058,7 @@
                         } else {
                             button.textContent = value;
                         }
-                        
+
                         select.dispatchEvent(new Event('change'));
                         dropdown.classList.remove('active');
                     });
@@ -4062,15 +4069,15 @@
         // Filter cube options based on max cube value
         function filterCubeOptions() {
             const currentGameType = document.getElementById('game-type-button').getAttribute('title');
-            const maxCubeSelect = currentGameType === 'Матч' ? 
-                document.getElementById('max-cube-select') : 
+            const maxCubeSelect = currentGameType === 'Матч' ?
+                document.getElementById('max-cube-select') :
                 document.getElementById('max-cube-select-m');
-            
+
             if (!maxCubeSelect) return;
-            
+
             // Get max cube value (option text, not value)
             const maxCubeValue = parseInt(maxCubeSelect.options[maxCubeSelect.selectedIndex].text);
-            
+
             // Filter cube-shown dropdown options
             const cubeShownDropdown = document.getElementById('cube-shown-dropdown');
             const cubeShownSelect = document.getElementById('cube-shown-select');
@@ -4083,7 +4090,7 @@
                         option.style.display = '';
                     }
                 });
-                
+
                 // Check if current value exceeds max cube
                 const currentValue = parseInt(cubeShownSelect.value);
                 if (currentValue > maxCubeValue) {
@@ -4091,7 +4098,7 @@
                     updateCubeSelectorDisplay('shown');
                 }
             }
-            
+
             // Filter cube-value dropdown options
             const cubeValueDropdown = document.getElementById('cube-value-dropdown');
             const cubeValueSelect = document.getElementById('cube-value-select');
@@ -4104,7 +4111,7 @@
                         option.style.display = '';
                     }
                 });
-                
+
                 // Check if current value exceeds max cube
                 const currentValue = parseInt(cubeValueSelect.value);
                 if (currentValue > maxCubeValue) {
@@ -4136,6 +4143,294 @@
         }
         document.getElementById('xgid-close').addEventListener('click', hideXGID);
 
+        /**
+         * Парсит GNU move строку и возвращает удобный объект для получения информации о ходах.
+         * 
+         *   - moves: массив всех ходов, каждый элемент - объект с ключами from, to, hit
+         *   - fromPositions: массив всех позиций, откуда пошли шашки (без дубликатов, отсортирован)
+         *   - toPositions: массив всех позиций, куда пошли шашки (без дубликатов, отсортирован)
+         *   - hitPositions: массив позиций, где были хиты (без дубликатов, отсортирован)
+         *   - totalMoves: общее количество ходов
+         *   - hasHits: true если есть хотя бы один хит
+         *   - fromBar: true если есть ход с бара
+         *   - toOff: true если есть ход в дом (off)
+         * 
+         * parseGnuMoveToDict("24/22 13/8")
+         * // Returns: {
+         * //   moves: [{from: 24, to: 22, hit: false}, {from: 13, to: 8, hit: false}],
+         * //   fromPositions: [13, 24],
+         * //   toPositions: [8, 22],
+         * //   hitPositions: [],
+         * //   totalMoves: 2,
+         * //   hasHits: false,
+         * //   fromBar: false,
+         * //   toOff: false
+         * // }
+         */
+        function parseGnuMoveToDict(gnuMoveStr) {
+            if (!gnuMoveStr || !gnuMoveStr.trim()) {
+                return {
+                    moves: [],
+                    fromPositions: [],
+                    toPositions: [],
+                    hitPositions: [],
+                    totalMoves: 0,
+                    hasHits: false,
+                    fromBar: false,
+                    toOff: false
+                };
+            }
+
+            // Парсим GNU move строку
+            const parts = gnuMoveStr.trim().split(/\s+/);
+            const moves = [];
+
+            for (const part of parts) {
+                let movePart = part;
+                let hit = false;
+
+                // Проверяем наличие звездочки в конце (хит)
+                if (movePart.endsWith('*')) {
+                    hit = true;
+                    movePart = movePart.slice(0, -1);
+                }
+
+                // Извлекаем количество (например, "24/22(2)")
+                let count = 1;
+                let base = movePart;
+                if (movePart.includes('(') && movePart.endsWith(')')) {
+                    const lastParen = movePart.lastIndexOf('(');
+                    base = movePart.substring(0, lastParen);
+                    const countStr = movePart.substring(lastParen + 1, movePart.length - 1);
+                    count = parseInt(countStr, 10) || 1;
+                }
+
+                // Разбиваем на сегменты по "/"
+                const segments = base.split('/').filter(s => s.length > 0).map(s => s.toLowerCase());
+                if (segments.length === 0) {
+                    continue;
+                }
+
+                // Парсим начальную позицию
+                let frStr = segments[0];
+                let hitFr = false;
+                if (frStr.endsWith('*')) {
+                    hitFr = true;
+                    frStr = frStr.slice(0, -1);
+                }
+
+                let fr;
+                if (frStr === 'bar') {
+                    fr = 25;
+                } else if (frStr === 'off') {
+                    fr = 0;
+                } else {
+                    const num = parseInt(frStr, 10);
+                    if (isNaN(num)) {
+                        continue;
+                    }
+                    fr = num;
+                }
+
+                // Обрабатываем каждый сегмент пути
+                for (let i = 0; i < count; i++) {
+                    let prev = fr;
+                    for (let j = 1; j < segments.length; j++) {
+                        let seg = segments[j];
+                        let hitSeg = false;
+                        if (seg.endsWith('*')) {
+                            hitSeg = true;
+                            seg = seg.slice(0, -1);
+                        }
+
+                        let to;
+                        if (seg === 'bar') {
+                            to = 25;
+                        } else if (seg === 'off') {
+                            to = 0;
+                        } else {
+                            const num = parseInt(seg, 10);
+                            if (isNaN(num)) {
+                                break;
+                            }
+                            to = num;
+                        }
+
+                        moves.push({
+                            from: prev,
+                            to: to,
+                            hit: hitSeg
+                        });
+                        prev = to;
+                    }
+                }
+
+                // Применяем хиты
+                if (hitFr && moves.length > 0) {
+                    // Находим первый ход с этой начальной позицией
+                    for (let i = 0; i < moves.length; i++) {
+                        if (moves[i].from === fr) {
+                            moves[i].hit = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (hit && moves.length > 0) {
+                    // Находим последний ход с этой конечной позицией
+                    for (let i = moves.length - 1; i >= 0; i--) {
+                        if (moves[i].to === prev) {
+                            moves[i].hit = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (moves.length === 0) {
+                return {
+                    moves: [],
+                    fromPositions: [],
+                    toPositions: [],
+                    hitPositions: [],
+                    totalMoves: 0,
+                    hasHits: false,
+                    fromBar: false,
+                    toOff: false
+                };
+            }
+
+            // Извлекаем уникальные позиции
+            const fromPositionsSet = new Set();
+            const toPositionsSet = new Set();
+            const hitPositionsSet = new Set();
+
+            for (const move of moves) {
+                fromPositionsSet.add(move.from);
+                toPositionsSet.add(move.to);
+                if (move.hit) {
+                    hitPositionsSet.add(move.to);
+                }
+            }
+
+            const fromPositions = Array.from(fromPositionsSet).sort((a, b) => a - b);
+            const toPositions = Array.from(toPositionsSet).sort((a, b) => a - b);
+            const hitPositions = Array.from(hitPositionsSet).sort((a, b) => a - b);
+
+            // Проверяем специальные случаи
+            const hasHits = hitPositions.length > 0;
+            const fromBar = fromPositions.includes(25);
+            const toOff = toPositions.includes(0);
+
+            return {
+                moves: moves,
+                fromPositions: fromPositions,
+                toPositions: toPositions,
+                hitPositions: hitPositions,
+                totalMoves: moves.length,
+                hasHits: hasHits,
+                fromBar: fromBar,
+                toOff: toOff
+            };
+        }
+
+        /**
+         * Применяет ход к позициям на доске
+         * @param {string} gnuMoveStr - строка GNU move
+         * @param {string} playerColor - цвет игрока ('white' или 'black')
+         */
+        function applyMoveToBoard(gnuMoveStr, playerColor) {
+            if (!gnuMoveStr || !gnuMoveStr.trim()) {
+                return;
+            }
+
+            const moveData = parseGnuMoveToDict(gnuMoveStr);
+            if (moveData.totalMoves === 0) {
+                return;
+            }
+
+            // Определяем позиции игрока и противника
+            const playerPositions = playerColor === 'white' ? positions.first : positions.second;
+            const opponentPositions = playerColor === 'white' ? positions.second : positions.first;
+
+            // Функция для инверсии координат точки
+            function invertPoint(point) {
+                if (point === 0 || point === 25) {
+                    return point;
+                }
+                return 25 - point;
+            }
+
+            // Определяем нужно ли инвертировать координаты
+            const needInvert = (playerColor === 'white' && upperPlayerColor === 'white') ||
+                (playerColor === 'black' && upperPlayerColor === 'black');
+
+            // Применяем каждый ход
+            for (const move of moveData.moves) {
+                let from = move.from;
+                let to = move.to;
+
+                // Инвертируем координаты если нужно
+                if (needInvert) {
+                    from = invertPoint(from);
+                    to = invertPoint(to);
+                }
+
+                // Обрабатываем ход с бара
+                if (from === 25) {
+                    const barCount = playerPositions.bar || 0;
+                    if (barCount > 0) {
+                        if (barCount === 1) {
+                            delete playerPositions.bar;
+                        } else {
+                            playerPositions.bar = barCount - 1;
+                        }
+                    }
+                } else {
+                    // Убираем шашку с начальной позиции
+                    const fromKey = from.toString();
+                    const fromCount = playerPositions[fromKey] || 0;
+                    if (fromCount > 1) {
+                        playerPositions[fromKey] = fromCount - 1;
+                    } else if (fromCount === 1) {
+                        delete playerPositions[fromKey];
+                    }
+                }
+
+                // Обрабатываем хит
+                if (move.hit && to !== 0 && to !== 25) {
+                    const toKey = to.toString();
+                    const opponentCount = opponentPositions[toKey] || 0;
+                    if (opponentCount > 0) {
+                        // Убираем шашку противника
+                        if (opponentCount === 1) {
+                            delete opponentPositions[toKey];
+                        } else {
+                            opponentPositions[toKey] = opponentCount - 1;
+                        }
+                        // Добавляем на бар противника
+                        opponentPositions.bar = (opponentPositions.bar || 0) + 1;
+                    }
+                }
+
+                // Добавляем шашку на конечную позицию
+                if (to === 25) {
+                    // На бар (не должно происходить в нормальном ходе)
+                    playerPositions.bar = (playerPositions.bar || 0) + 1;
+                } else if (to === 0) {
+                    // В дом (off) - не храним отдельно, просто убираем с доски
+                } else {
+                    const toKey = to.toString();
+                    playerPositions[toKey] = (playerPositions[toKey] || 0) + 1;
+                }
+            }
+
+            // Обновляем селекты и перерисовываем доску
+            updateSelectOptions(playerColor);
+            updateBarSelects();
+            drawBoard();
+        }
+
         document.getElementById('show-button').addEventListener('click', () => {
             const xgid = generateXGID();
             showXGID(xgid); // DEBUG - удалить потом
@@ -4159,7 +4454,7 @@
                 // Попробуем получить из URL параметра (для тестирования)
                 const urlParams = new URLSearchParams(window.location.search);
                 chatId = urlParams.get('chat_id');
-                
+
                 if (!chatId) {
                     alert('Не удалось получить chat_id. Запустите приложение через Telegram.');
                     return;
@@ -4232,7 +4527,25 @@
                     hintsTable.innerHTML = tableHtml;
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
-                    
+
+                    // Добавляем обработчики клика на кнопки eye-button
+                    if (firstHint.type === 'move') {
+                        const eyeButtons = hintsTable.querySelectorAll('.eye-button');
+                        eyeButtons.forEach((button, index) => {
+                            button.addEventListener('click', () => {
+                                const row = button.closest('tr');
+                                const moveCell = row.querySelector('td:first-child');
+                                const gnuMoveStr = moveCell.textContent.trim();
+
+                                // Определяем текущего игрока
+                                const currentTurn = document.getElementById('turn-select').value;
+
+                                // Применяем ход к доске
+                                applyMoveToBoard(gnuMoveStr, currentTurn);
+                            });
+                        });
+                    }
+
                     // Показываем кнопки скриншотов после появления таблицы
                     const screenshotControls = document.getElementById('screenshotControls');
                     if (screenshotControls) {
@@ -4243,7 +4556,7 @@
                     hintsTable.innerHTML = '<div class="error">' + error.message + '</div>';
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
-                    
+
                     // Показываем кнопки скриншотов даже при ошибке
                     const screenshotControls = document.getElementById('screenshotControls');
                     if (screenshotControls) {
@@ -4320,7 +4633,7 @@
             const hintsTable = document.getElementById('hintsTable');
             hintsTableContainer.classList.remove('active');
             hintsTable.classList.remove('active');
-            
+
             // Скрываем кнопки скриншотов при очистке
             const screenshotControls = document.getElementById('screenshotControls');
             if (screenshotControls) {
@@ -4366,7 +4679,7 @@
             // Standard starting positions for backgammon
             const standardWhitePos = { 6: 5, 8: 3, 13: 5, 24: 2 };
             const standardBlackPos = { 1: 2, 12: 5, 17: 3, 19: 5 };
-            
+
             // If upper player is white, invert positions
             if (upperPlayerColor === 'white') {
                 positions.first = { ...standardBlackPos };
@@ -4418,7 +4731,7 @@
         // Mode toggle button for placing/removing checkers
         let currentMode = 'place'; // 'place' or 'delete'
         const modeToggleBtn = document.getElementById('modeToggleBtn');
-        
+
         modeToggleBtn.addEventListener('click', () => {
             if (currentMode === 'place') {
                 currentMode = 'delete';
@@ -4469,7 +4782,7 @@
         const crawfordCheckbox = document.getElementById('crawford-checkbox');
         const crawfordLabel = document.getElementById('crawford-label');
         const crawfordWrapper = document.querySelector('.crawford-checkbox-wrapper');
-        
+
         if (crawfordCheckbox) {
             crawfordCheckbox.addEventListener('change', () => {
                 const cubeShownButton = document.getElementById('cube-shown-button');
@@ -4477,24 +4790,24 @@
                 const cubeValueButton = document.getElementById('cube-value-button');
                 const cubeValueDropdown = document.getElementById('cube-value-dropdown');
                 const cubeOwnerBtn = document.getElementById('cube-owner-select-btn');
-                
+
                 if (crawfordCheckbox.checked) {
                     // Close all cube dropdowns
                     cubeShownDropdown.classList.remove('active');
                     cubeValueDropdown.classList.remove('active');
-                    
+
                     // Show cube-value-options and label
                     const cubeValueOptions = document.querySelector('.cube-value-options');
                     const cubeValueLabel = document.querySelector('.cube-controls-labels label[for="cube-value-select"]');
                     if (cubeValueOptions) cubeValueOptions.style.display = '';
                     if (cubeValueLabel) cubeValueLabel.style.display = '';
-                    
+
                     // Show dice section
                     const diceSection = document.querySelectorAll('.turn-dice-section')[1];
                     const diceLabel = document.querySelectorAll('.turn-dice-labels label')[1];
                     if (diceSection) diceSection.style.display = '';
                     if (diceLabel) diceLabel.style.display = '';
-                    
+
                     // Block and clear all cube controls
                     cubeShownButton.style.pointerEvents = 'none';
                     cubeShownButton.style.opacity = '0.5';
@@ -4502,12 +4815,12 @@
                     cubeValueButton.style.opacity = '0.5';
                     cubeOwnerBtn.style.pointerEvents = 'none';
                     cubeOwnerBtn.style.opacity = '0.5';
-                    
+
                     // Clear values
                     document.getElementById('cube-shown-select').value = '0';
                     document.getElementById('cube-value-select').value = '0';
                     document.getElementById('cube-owner-select').value = 'white';
-                    
+
                     // Update displays
                     cubeShownButton.textContent = 'нет';
                     cubeShownButton.classList.add('empty');
@@ -4516,7 +4829,7 @@
                     cubeOwnerBtn.classList.remove('black');
                     cubeOwnerBtn.classList.add('white');
                     cubeOwnerBtn.setAttribute('data-color', 'white');
-                    
+
                     drawBoard();
                 } else {
                     // Unblock cube controls
@@ -4526,7 +4839,7 @@
                     cubeValueButton.style.opacity = '';
                     cubeOwnerBtn.style.pointerEvents = '';
                     cubeOwnerBtn.style.opacity = '';
-                    
+
                     // Restore proper visibility based on cube-shown value
                     updateCubeSelectorsVisibility();
                 }
@@ -4547,7 +4860,7 @@
                 gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
                 gameTypeButton.title = 'Манигейм';
                 currentGameType = 'манигейм';
-                
+
                 // Hide Crawford checkbox
                 if (crawfordLabel) crawfordLabel.style.display = 'none';
                 if (crawfordWrapper) crawfordWrapper.style.display = 'none';
@@ -4555,7 +4868,7 @@
                     crawfordCheckbox.checked = false;
                     crawfordCheckbox.dispatchEvent(new Event('change'));
                 }
-                
+
                 // Filter cube options based on money game max cube
                 filterCubeOptions();
             } else {
@@ -4565,11 +4878,11 @@
                 gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
                 gameTypeButton.title = 'Матч';
                 currentGameType = 'матч';
-                
+
                 // Show Crawford checkbox
                 if (crawfordLabel) crawfordLabel.style.display = '';
                 if (crawfordWrapper) crawfordWrapper.style.display = 'flex';
-                
+
                 // Filter cube options based on match max cube
                 filterCubeOptions();
             }
@@ -4589,7 +4902,7 @@
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
         const modeToggleContainer = document.querySelector('.mode-toggle-container');
         const dropdowns = document.querySelectorAll('.dropdown');
-        
+
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
         const originalSelectorsDisplay = selectorsWrapper ? selectorsWrapper.style.display : null;
@@ -4598,7 +4911,7 @@
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
         const originalModeToggleContainerDisplay = modeToggleContainer ? modeToggleContainer.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
-        
+
         // Функция для восстановления элементов
         function restoreControls() {
             if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
@@ -4612,7 +4925,7 @@
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
         }
-        
+
         // Скрываем элементы
         if (screenshotControls) screenshotControls.style.display = 'none';
         if (actionButtons) actionButtons.style.display = 'none';
@@ -4622,7 +4935,7 @@
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
-        
+
         // Создаем скриншот
         html2canvas(document.body, {
             useCORS: true,
@@ -4632,14 +4945,14 @@
             restoreControls();
             canvas.toBlob(blob => {
                 const file = new File([blob], 'screenshot.png', { type: 'image/png' });
-                
+
                 if (window.Telegram && window.Telegram.WebApp) {
                     const formData = new FormData();
                     formData.append('photo', file);
-                    
+
                     const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
                     const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
-                    
+
                     if (chatId) {
                         fetch(`/api/send_screenshot?chat_id=${chatId}`, {
                             method: 'POST',
@@ -4674,7 +4987,7 @@
             restoreControls();
         });
     }
-    
+
     // Функция для сохранения скриншота в буфер
     function saveScreenshot() {
         const screenshotControls = document.getElementById('screenshotControls');
@@ -4685,7 +4998,7 @@
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
         const modeToggleContainer = document.querySelector('.mode-toggle-container');
         const dropdowns = document.querySelectorAll('.dropdown');
-        
+
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
         const originalSelectorsDisplay = selectorsWrapper ? selectorsWrapper.style.display : null;
@@ -4694,7 +5007,7 @@
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
         const originalModeToggleContainerDisplay = modeToggleContainer ? modeToggleContainer.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
-        
+
         // Функция для восстановления элементов
         function restoreControls() {
             if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
@@ -4708,7 +5021,7 @@
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
         }
-        
+
         if (screenshotControls) screenshotControls.style.display = 'none';
         if (actionButtons) actionButtons.style.display = 'none';
         if (selectorsWrapper) selectorsWrapper.style.display = 'none';
@@ -4717,12 +5030,12 @@
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
-        
+
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
             canvas.toBlob(blob => {
                 const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
                 const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
-                
+
                 if (chatId) {
                     const formData = new FormData();
                     formData.append('photo', blob);
@@ -4752,11 +5065,11 @@
             restoreControls();
         });
     }
-    
+
     function uploadScreenshots() {
         const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
         const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
-        
+
         if (chatId) {
             fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(response => {
                 if (response.ok) {
@@ -4817,11 +5130,11 @@
             canvas.toBlob(blob => {
                 const initDataUnsafe = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.initDataUnsafe : null;
                 let chatId = null;
-                
+
                 if (initDataUnsafe && initDataUnsafe.user) {
                     chatId = initDataUnsafe.user.id;
                 }
-                
+
                 if (!chatId) {
                     const urlParams = new URLSearchParams(window.location.search);
                     chatId = urlParams.get('chat_id');
@@ -4900,7 +5213,7 @@
         const alert = document.getElementById('customAlert');
         alert.classList.add('show');
         alert.classList.remove('fade-out');
-        
+
         setTimeout(() => {
             alert.classList.add('fade-out');
             setTimeout(() => {
