@@ -69,7 +69,7 @@
 
         .game-type-label {
             position: absolute;
-            top: -35px;
+            top: -30px;
             left: 50%;
             transform: translateX(-50%);
             color: white;
@@ -2424,6 +2424,19 @@
 
         let currentGameType = 'манигейм';
 
+        // Функция для обновления текста типа игры
+        function updateGameTypeLabel() {
+            const gameTypeLabel = document.getElementById('game-type-label');
+            if (!gameTypeLabel) return;
+            
+            if (currentGameType === 'матч') {
+                const matchLength = document.getElementById('match_lenght')?.value || '5';
+                gameTypeLabel.textContent = `Матч до ${matchLength}`;
+            } else {
+                gameTypeLabel.textContent = 'Манигейм';
+            }
+        }
+
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
         const boardWrapper = document.querySelector('.board-wrapper');
@@ -3051,7 +3064,10 @@
                 }
                 document.getElementById('lower-score').addEventListener('change', drawBoard);
                 document.getElementById('upper-score').addEventListener('change', drawBoard);
-                document.getElementById('match_lenght').addEventListener('change', drawBoard);
+                document.getElementById('match_lenght').addEventListener('change', () => {
+                    drawBoard();
+                    updateGameTypeLabel();
+                });
                 document.querySelectorAll('.checker-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const newColor = btn.dataset.color;
@@ -3616,8 +3632,7 @@
                     currentGameType = 'матч';
                     
                     // Update game type label
-                    const gameTypeLabel = document.getElementById('game-type-label');
-                    if (gameTypeLabel) gameTypeLabel.textContent = 'Матч';
+                    updateGameTypeLabel();
                 }
             } else {
                 // Switch to money game mode
@@ -3632,8 +3647,7 @@
                     currentGameType = 'манигейм';
                     
                     // Update game type label
-                    const gameTypeLabel = document.getElementById('game-type-label');
-                    if (gameTypeLabel) gameTypeLabel.textContent = 'Манигейм';
+                    updateGameTypeLabel();
                 }
             }
 
@@ -3777,6 +3791,9 @@
                     } else {
                         console.warn('match-lenght-button not found');
                     }
+                    
+                    // Update game type label
+                    updateGameTypeLabel();
                 } else {
                     console.warn('match_lenght select not found');
                 }
@@ -4083,6 +4100,12 @@
                         }
 
                         select.dispatchEvent(new Event('change'));
+                        
+                        // Update game type label if match length changed
+                        if (selector.id === 'match_lenght') {
+                            updateGameTypeLabel();
+                        }
+                        
                         dropdown.classList.remove('active');
                     });
                 });
@@ -4615,8 +4638,7 @@
             document.getElementById('game-type-button').title = 'Манигейм';
             
             // Update game type label
-            const gameTypeLabel = document.getElementById('game-type-label');
-            if (gameTypeLabel) gameTypeLabel.textContent = 'Манигейм';
+            updateGameTypeLabel();
             document.getElementById('lower-score').value = '0';
             document.getElementById('upper-score').value = '0';
             document.getElementById('match_lenght').value = '5';
@@ -4889,8 +4911,7 @@
                 currentGameType = 'манигейм';
                 
                 // Update game type label
-                const gameTypeLabel = document.getElementById('game-type-label');
-                if (gameTypeLabel) gameTypeLabel.textContent = 'Манигейм';
+                updateGameTypeLabel();
 
                 // Hide Crawford checkbox
                 if (crawfordLabel) crawfordLabel.style.display = 'none';
@@ -4911,8 +4932,7 @@
                 currentGameType = 'матч';
                 
                 // Update game type label
-                const gameTypeLabel = document.getElementById('game-type-label');
-                if (gameTypeLabel) gameTypeLabel.textContent = 'Матч';
+                updateGameTypeLabel();
 
                 // Show Crawford checkbox
                 if (crawfordLabel) crawfordLabel.style.display = '';
