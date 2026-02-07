@@ -80,6 +80,16 @@
             display: none;
         }
 
+        .turn-label {
+            text-align: center;
+            margin-top: 10px;
+            color: #007bff;
+            font-size: 20px;
+            font-weight: bold;
+            white-space: nowrap;
+            display: none;
+        }
+
         .green-circle {
             position: absolute;
             width: 0.5em;
@@ -1924,7 +1934,6 @@
         <div class="board-wrapper">
             <div id="game-type-label" class="game-type-label">Манигейм</div>
             <canvas id="boardCanvas" width="800" height="800"></canvas>
-
         </div>
         <div class="selectors-wrapper">
             <div class="selectors-container">
@@ -2365,6 +2374,7 @@
 
     <div class="hints-table">
         <div id="hintsTable" class="hints-content"></div>
+        <div id="turn-label" class="turn-label"></div>
     </div>
 
     <div class="screenshot-controls" id="screenshotControls">
@@ -3016,6 +3026,23 @@
                     updateDiceDropdownImages();
                 }
             }
+            // Update turn label
+            updateTurnLabel();
+        }
+
+        // Функция для обновления текста текущего хода
+        function updateTurnLabel() {
+            const turnLabel = document.getElementById('turn-label');
+            if (!turnLabel) return;
+            
+            const turnInput = document.getElementById('turn-select');
+            const turn = turnInput?.value || 'white';
+            
+            if (turn === 'white') {
+                turnLabel.textContent = 'Ход белых';
+            } else {
+                turnLabel.textContent = 'Ход черных';
+            }
         }
 
         function updateCubeOwnerSelect() {
@@ -3064,6 +3091,8 @@
                 document.querySelectorAll('.match-selector-dropdown').forEach(d => {
                     d.classList.remove('active');
                 });
+                // Initialize turn label
+                updateTurnLabel();
                 // Синхронизация цветов при загрузке
                 const cubeShown = document.getElementById('cube-shown-select').value;
                 if (cubeShown !== '0') {
@@ -3853,7 +3882,10 @@
             drawBoard();
         }
 
-        document.getElementById('turn-select').addEventListener('change', drawBoard);
+        document.getElementById('turn-select').addEventListener('change', () => {
+            drawBoard();
+            updateTurnLabel();
+        });
         document.getElementById('cube-value-select').addEventListener('change', () => {
             updateCubeSelectorDisplay('value');
             drawBoard();
@@ -4986,6 +5018,8 @@
         const originalAdminCommentDisplay = adminCommentContainer ? adminCommentContainer.style.display : null;
         const gameTypeLabel = document.getElementById('game-type-label');
         const originalGameTypeLabelDisplay = gameTypeLabel ? gameTypeLabel.style.display : null;
+        const turnLabel = document.getElementById('turn-label');
+        const originalTurnLabelDisplay = turnLabel ? turnLabel.style.display : null;
         const body = document.body;
         const originalBodyPaddingTop = body ? body.style.paddingTop : null;
 
@@ -5000,6 +5034,7 @@
             if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
             if (adminCommentContainer && originalAdminCommentDisplay !== null) adminCommentContainer.style.display = originalAdminCommentDisplay;
             if (gameTypeLabel && originalGameTypeLabelDisplay !== null) gameTypeLabel.style.display = originalGameTypeLabelDisplay;
+            if (turnLabel && originalTurnLabelDisplay !== null) turnLabel.style.display = originalTurnLabelDisplay;
             if (body && originalBodyPaddingTop !== null) body.style.paddingTop = originalBodyPaddingTop;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
@@ -5020,8 +5055,12 @@
         // Добавляем отступ сверху для текста типа игры на скриншотах
         if (body) body.style.paddingTop = '5px';
         
-        // Показываем текст типа игры для скриншота
+        // Показываем текст типа игры и текущего хода для скриншота
         if (gameTypeLabel) gameTypeLabel.style.display = 'block';
+        if (turnLabel) {
+            updateTurnLabel();
+            turnLabel.style.display = 'block';
+        }
 
         // Создаем скриншот
         html2canvas(document.body, {
@@ -5098,6 +5137,8 @@
         const originalAdminCommentDisplay = adminCommentContainer ? adminCommentContainer.style.display : null;
         const gameTypeLabel = document.getElementById('game-type-label');
         const originalGameTypeLabelDisplay = gameTypeLabel ? gameTypeLabel.style.display : null;
+        const turnLabel = document.getElementById('turn-label');
+        const originalTurnLabelDisplay = turnLabel ? turnLabel.style.display : null;
         const body = document.body;
         const originalBodyPaddingTop = body ? body.style.paddingTop : null;
 
@@ -5112,6 +5153,7 @@
             if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
             if (adminCommentContainer && originalAdminCommentDisplay !== null) adminCommentContainer.style.display = originalAdminCommentDisplay;
             if (gameTypeLabel && originalGameTypeLabelDisplay !== null) gameTypeLabel.style.display = originalGameTypeLabelDisplay;
+            if (turnLabel && originalTurnLabelDisplay !== null) turnLabel.style.display = originalTurnLabelDisplay;
             if (body && originalBodyPaddingTop !== null) body.style.paddingTop = originalBodyPaddingTop;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
@@ -5131,8 +5173,12 @@
         // Добавляем отступ сверху для текста типа игры на скриншотах
         if (body) body.style.paddingTop = '5px';
         
-        // Показываем текст типа игры для скриншота
+        // Показываем текст типа игры и текущего хода для скриншота
         if (gameTypeLabel) gameTypeLabel.style.display = 'block';
+        if (turnLabel) {
+            updateTurnLabel();
+            turnLabel.style.display = 'block';
+        }
 
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
             canvas.toBlob(blob => {
