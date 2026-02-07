@@ -3030,20 +3030,6 @@
             updateTurnLabel();
         }
 
-        // Функция для обновления текста текущего хода
-        function updateTurnLabel() {
-            const turnLabel = document.getElementById('turn-label');
-            if (!turnLabel) return;
-            
-            const turnInput = document.getElementById('turn-select');
-            const turn = turnInput?.value || 'white';
-            
-            if (turn === 'white') {
-                turnLabel.textContent = 'Ход белых';
-            } else {
-                turnLabel.textContent = 'Ход черных';
-            }
-        }
 
         function updateCubeOwnerSelect() {
             const cubeOwnerInput = document.getElementById('cube-owner-select');
@@ -4993,6 +4979,21 @@
 
         window.addEventListener('resize', updateAllDropdownPositions);
     });
+
+    // Функция для обновления текста текущего хода (в глобальной области видимости)
+    function updateTurnLabel() {
+        const turnLabel = document.getElementById('turn-label');
+        if (!turnLabel) return;
+        
+        const turnInput = document.getElementById('turn-select');
+        const turn = turnInput?.value || 'white';
+        
+        if (turn === 'white') {
+            turnLabel.textContent = 'Ход белых';
+        } else {
+            turnLabel.textContent = 'Ход черных';
+        }
+    }
 
     // Функции для работы со скриншотами (в глобальной области видимости)
     function takeScreenshot() {
