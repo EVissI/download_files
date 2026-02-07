@@ -3077,6 +3077,8 @@
                 document.querySelectorAll('.match-selector-dropdown').forEach(d => {
                     d.classList.remove('active');
                 });
+                // Initialize score options filter
+                filterScoreOptions();
                 // Initialize turn label
                 updateTurnLabel();
                 // Синхронизация цветов при загрузке
@@ -3085,14 +3087,17 @@
                     syncCubeOwnerAndTurn();
                 }
                 document.getElementById('lower-score').addEventListener('change', () => {
+                    filterScoreOptions();
                     drawBoard();
                     updateGameTypeLabel();
                 });
                 document.getElementById('upper-score').addEventListener('change', () => {
+                    filterScoreOptions();
                     drawBoard();
                     updateGameTypeLabel();
                 });
                 document.getElementById('match_lenght').addEventListener('change', () => {
+                    filterScoreOptions();
                     drawBoard();
                     updateGameTypeLabel();
                 });
@@ -3718,6 +3723,9 @@
                         console.warn('upper-score select not found');
                     }
                     
+                    // Filter score options to ensure they don't exceed match length
+                    filterScoreOptions();
+                    
                     // Update game type label after setting scores
                     updateGameTypeLabel();
                 }
@@ -4123,6 +4131,20 @@
                     option.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const value = option.getAttribute('data-value');
+                        
+                        // Check if selecting score option that exceeds match length
+                        if (selector.id === 'lower-score' || selector.id === 'upper-score') {
+                            const matchLengthSelect = document.getElementById('match_lenght');
+                            if (matchLengthSelect) {
+                                const matchLength = parseInt(matchLengthSelect.value) || 5;
+                                const scoreValue = parseInt(value) || 0;
+                                if (scoreValue > matchLength) {
+                                    // Don't allow selection of score greater than match length
+                                    return;
+                                }
+                            }
+                        }
+                        
                         select.value = value;
 
                         // Update button text
@@ -4134,6 +4156,11 @@
                         }
 
                         select.dispatchEvent(new Event('change'));
+                        
+                        // Filter score options if match length changed
+                        if (selector.id === 'match_lenght') {
+                            filterScoreOptions();
+                        }
                         
                         // Update game type label if match length or scores changed
                         if (selector.id === 'match_lenght' || selector.id === 'lower-score' || selector.id === 'upper-score') {
@@ -4197,6 +4224,64 @@
                 if (currentValue > maxCubeValue) {
                     cubeValueSelect.value = maxCubeValue.toString();
                     updateCubeSelectorDisplay('value');
+                }
+            }
+        }
+
+        // Filter score options based on match length
+        function filterScoreOptions() {
+            const matchLengthSelect = document.getElementById('match_lenght');
+            if (!matchLengthSelect) return;
+
+            const matchLength = parseInt(matchLengthSelect.value) || 5;
+
+            // Filter lower score dropdown options
+            const lowerScoreDropdown = document.getElementById('lower-score-dropdown');
+            const lowerScoreSelect = document.getElementById('lower-score');
+            const lowerScoreButton = document.getElementById('lower-score-button');
+            if (lowerScoreDropdown && lowerScoreSelect) {
+                lowerScoreDropdown.querySelectorAll('.match-option').forEach(option => {
+                    const value = parseInt(option.getAttribute('data-value'));
+                    if (value > matchLength) {
+                        option.style.display = 'none';
+                    } else {
+                        option.style.display = '';
+                    }
+                });
+
+                // Check if current value exceeds match length
+                const currentValue = parseInt(lowerScoreSelect.value) || 0;
+                if (currentValue > matchLength) {
+                    lowerScoreSelect.value = matchLength.toString();
+                    if (lowerScoreButton) {
+                        lowerScoreButton.textContent = matchLength.toString();
+                    }
+                    lowerScoreSelect.dispatchEvent(new Event('change'));
+                }
+            }
+
+            // Filter upper score dropdown options
+            const upperScoreDropdown = document.getElementById('upper-score-dropdown');
+            const upperScoreSelect = document.getElementById('upper-score');
+            const upperScoreButton = document.getElementById('upper-score-button');
+            if (upperScoreDropdown && upperScoreSelect) {
+                upperScoreDropdown.querySelectorAll('.match-option').forEach(option => {
+                    const value = parseInt(option.getAttribute('data-value'));
+                    if (value > matchLength) {
+                        option.style.display = 'none';
+                    } else {
+                        option.style.display = '';
+                    }
+                });
+
+                // Check if current value exceeds match length
+                const currentValue = parseInt(upperScoreSelect.value) || 0;
+                if (currentValue > matchLength) {
+                    upperScoreSelect.value = matchLength.toString();
+                    if (upperScoreButton) {
+                        upperScoreButton.textContent = matchLength.toString();
+                    }
+                    upperScoreSelect.dispatchEvent(new Event('change'));
                 }
             }
         }
