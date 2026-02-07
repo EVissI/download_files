@@ -1018,8 +1018,12 @@ async def check_job_status(
                             f"mat_path:{game_id}", result["mat_path"], expire=7200
                         )
 
-                        # Создаём ZIP архив если есть игры
+                        # Получаем информацию об игроках
+                        red_player = job_info["red_player"]
+                        black_player = job_info["black_player"]
                         games_dir = result["games_dir"]
+
+                        # Создаём ZIP архив если есть игры
                         if os.path.exists(games_dir) and result["has_games"]:
                             # Создаём ZIP
                             zip_buffer = io.BytesIO()
@@ -1033,9 +1037,6 @@ async def check_job_status(
                             zip_buffer.seek(0)
 
                             # Отправляем кнопки для просмотра
-                            red_player = job_info["red_player"]
-                            black_player = job_info["black_player"]
-
                             mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
                             mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
                             mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
@@ -1086,7 +1087,50 @@ async def check_job_status(
                                 text = await message_dao.get_text("hint_viewer_finished", user_info.lang_code, red_player=red_player, black_player=black_player),
                                 reply_markup=keyboard,
                             )
-                            await session_without_commit.commit()
+                            
+                        # Отправляем JSON файлы только админу, который запросил анализ
+                        if user_info.role == User.Role.ADMIN.value:
+                            try:
+                                json_files_to_send = []
+                                
+                                # Если есть игры, собираем все JSON файлы из games_dir
+                                if os.path.exists(games_dir) and result["has_games"]:
+                                    for root, _, files in os.walk(games_dir):
+                                        for file in files:
+                                            if file.endswith(".json"):
+                                                file_path = os.path.join(root, file)
+                                                json_files_to_send.append(file_path)
+                                else:
+                                    # Если игр нет, отправляем основной JSON файл
+                                    if os.path.exists(result["json_path"]):
+                                        json_files_to_send.append(result["json_path"])
+                                
+                                if json_files_to_send:
+                                    # Создаем ZIP архив со всеми JSON файлами
+                                    zip_buffer = io.BytesIO()
+                                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                                        for json_file in json_files_to_send:
+                                            arcname = os.path.basename(json_file)
+                                            zip_file.write(json_file, arcname)
+                                    
+                                    zip_buffer.seek(0)
+                                    zip_data = zip_buffer.getvalue()
+                                    zip_file_obj = BufferedInputFile(zip_data, filename=f"{game_id}_json_files.zip")
+                                    
+                                    # Отправляем ZIP архив только админу, который запросил анализ
+                                    try:
+                                        await message.bot.send_document(
+                                            chat_id=message.from_user.id,
+                                            document=zip_file_obj,
+                                            caption=f"📊 JSON файлы по игре {game_id}\nИгроки: {red_player} vs {black_player}\nФайлов: {len(json_files_to_send)}",
+                                        )
+                                        logger.info(f"Отправлены JSON файлы админу {message.from_user.id} для игры {game_id}")
+                                    except Exception as e:
+                                        logger.error(f"Не удалось отправить JSON файлы админу {message.from_user.id}: {e}")
+                            except Exception as e:
+                                logger.error(f"Ошибка при отправке JSON файлов админу: {e}")
+                        
+                        await session_without_commit.commit()
                     else:
                         error_msg = result.get("error", "Неизвестная ошибка")
                         await message.answer(f"❌ Ошибка при анализе: {error_msg}")
