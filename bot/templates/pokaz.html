@@ -1682,6 +1682,7 @@
 
         .admin-comment-container {
             display: flex;
+            display: flex;
             align-items: center;
             justify-content: flex-start;
             gap: 10px;
@@ -4902,6 +4903,7 @@
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
         const modeToggleContainer = document.querySelector('.mode-toggle-container');
         const dropdowns = document.querySelectorAll('.dropdown');
+        const adminCommentContainer = document.querySelector('.admin-comment-container');
 
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
@@ -4911,6 +4913,7 @@
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
         const originalModeToggleContainerDisplay = modeToggleContainer ? modeToggleContainer.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
+        const originalAdminCommentDisplay = adminCommentContainer ? adminCommentContainer.style.display : null;
 
         // Функция для восстановления элементов
         function restoreControls() {
@@ -4921,6 +4924,7 @@
             if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
             if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
+            if (adminCommentContainer && originalAdminCommentDisplay !== null) adminCommentContainer.style.display = originalAdminCommentDisplay;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -4934,6 +4938,7 @@
         if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
+        if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
 
         // Создаем скриншот
@@ -5014,7 +5019,25 @@
                 headerText = `Матч до ${matchLength}, Счет ${lowerScore} – ${upperScore}`;
             }
             
-            // Находим таблицу подсказок для определения позиции текста
+            // Находим доску для определения позиции текста над ней
+            const boardCanvas = document.getElementById('boardCanvas');
+            let headerY = 50; // По умолчанию сверху
+            
+            if (boardCanvas) {
+                const rect = boardCanvas.getBoundingClientRect();
+                const bodyRect = document.body.getBoundingClientRect();
+                // Позиция над доской
+                headerY = rect.top - bodyRect.top - 40;
+            }
+            
+            // Рисуем заголовок над доской белым цветом по центру
+            ctx.fillStyle = '#ffffff'; // Белый цвет
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(headerText, canvas.width / 2, headerY);
+            
+            // Находим таблицу подсказок для определения позиции остального текста
             const hintsTableContainer = document.querySelector('.hints-table');
             let textY = canvas.height - 50; // По умолчанию внизу
             
@@ -5025,20 +5048,17 @@
                 textY = rect.bottom - bodyRect.top + 30;
             }
             
-            // Рисуем текст
+            // Рисуем остальной текст (пипсы и ход) синим цветом под таблицей
             ctx.fillStyle = '#007bff'; // Синий цвет
             ctx.font = 'bold 20px Arial';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
             
-            // Рисуем заголовок
-            ctx.fillText(headerText, 20, textY);
-            
             // Рисуем пипсы
-            ctx.fillText(pipsText, 20, textY + 30);
+            ctx.fillText(pipsText, 20, textY);
             
             // Рисуем "Ход белых/черных"
-            ctx.fillText(`Ход ${turnText}`, 20, textY + 60);
+            ctx.fillText(`Ход ${turnText}`, 20, textY + 30);
             
             restoreControls();
             canvas.toBlob(blob => {
@@ -5096,6 +5116,7 @@
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
         const modeToggleContainer = document.querySelector('.mode-toggle-container');
         const dropdowns = document.querySelectorAll('.dropdown');
+        const adminCommentContainer = document.querySelector('.admin-comment-container');
 
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
@@ -5105,6 +5126,7 @@
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
         const originalModeToggleContainerDisplay = modeToggleContainer ? modeToggleContainer.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
+        const originalAdminCommentDisplay = adminCommentContainer ? adminCommentContainer.style.display : null;
 
         // Функция для восстановления элементов
         function restoreControls() {
@@ -5115,6 +5137,7 @@
             if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
             if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
+            if (adminCommentContainer && originalAdminCommentDisplay !== null) adminCommentContainer.style.display = originalAdminCommentDisplay;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -5127,6 +5150,7 @@
         if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
+        if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
 
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
@@ -5202,7 +5226,25 @@
                 headerText = `Матч до ${matchLength}, Счет ${lowerScore} – ${upperScore}`;
             }
             
-            // Находим таблицу подсказок для определения позиции текста
+            // Находим доску для определения позиции текста над ней
+            const boardCanvas = document.getElementById('boardCanvas');
+            let headerY = 50; // По умолчанию сверху
+            
+            if (boardCanvas) {
+                const rect = boardCanvas.getBoundingClientRect();
+                const bodyRect = document.body.getBoundingClientRect();
+                // Позиция над доской
+                headerY = rect.top - bodyRect.top - 40;
+            }
+            
+            // Рисуем заголовок над доской белым цветом по центру
+            ctx.fillStyle = '#ffffff'; // Белый цвет
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(headerText, canvas.width / 2, headerY);
+            
+            // Находим таблицу подсказок для определения позиции остального текста
             const hintsTableContainer = document.querySelector('.hints-table');
             let textY = canvas.height - 50; // По умолчанию внизу
             
@@ -5213,20 +5255,17 @@
                 textY = rect.bottom - bodyRect.top + 30;
             }
             
-            // Рисуем текст
+            // Рисуем остальной текст (пипсы и ход) синим цветом под таблицей
             ctx.fillStyle = '#007bff'; // Синий цвет
             ctx.font = 'bold 20px Arial';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
             
-            // Рисуем заголовок
-            ctx.fillText(headerText, 20, textY);
-            
             // Рисуем пипсы
-            ctx.fillText(pipsText, 20, textY + 30);
+            ctx.fillText(pipsText, 20, textY);
             
             // Рисуем "Ход белых/черных"
-            ctx.fillText(`Ход ${turnText}`, 20, textY + 60);
+            ctx.fillText(`Ход ${turnText}`, 20, textY + 30);
             
             canvas.toBlob(blob => {
                 const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
