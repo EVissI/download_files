@@ -67,6 +67,19 @@
             flex: 1;
         }
 
+        .game-type-label {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 10;
+            white-space: nowrap;
+            display: none;
+        }
+
         .green-circle {
             position: absolute;
             width: 0.5em;
@@ -1909,6 +1922,7 @@
             </button>
         </div>
         <div class="board-wrapper">
+            <div id="game-type-label" class="game-type-label">Манигейм</div>
             <canvas id="boardCanvas" width="800" height="800"></canvas>
 
         </div>
@@ -3600,6 +3614,10 @@
                     gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
                     gameTypeButton.title = 'Матч';
                     currentGameType = 'матч';
+                    
+                    // Update game type label
+                    const gameTypeLabel = document.getElementById('game-type-label');
+                    if (gameTypeLabel) gameTypeLabel.textContent = 'Матч';
                 }
             } else {
                 // Switch to money game mode
@@ -3612,6 +3630,10 @@
                     gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
                     gameTypeButton.title = 'Манигейм';
                     currentGameType = 'манигейм';
+                    
+                    // Update game type label
+                    const gameTypeLabel = document.getElementById('game-type-label');
+                    if (gameTypeLabel) gameTypeLabel.textContent = 'Манигейм';
                 }
             }
 
@@ -4591,6 +4613,10 @@
             currentGameType = 'манигейм';
             document.getElementById('game-type-button').innerHTML = '<i class="fa fa-rub"></i>';
             document.getElementById('game-type-button').title = 'Манигейм';
+            
+            // Update game type label
+            const gameTypeLabel = document.getElementById('game-type-label');
+            if (gameTypeLabel) gameTypeLabel.textContent = 'Манигейм';
             document.getElementById('lower-score').value = '0';
             document.getElementById('upper-score').value = '0';
             document.getElementById('match_lenght').value = '5';
@@ -4861,6 +4887,10 @@
                 gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
                 gameTypeButton.title = 'Манигейм';
                 currentGameType = 'манигейм';
+                
+                // Update game type label
+                const gameTypeLabel = document.getElementById('game-type-label');
+                if (gameTypeLabel) gameTypeLabel.textContent = 'Манигейм';
 
                 // Hide Crawford checkbox
                 if (crawfordLabel) crawfordLabel.style.display = 'none';
@@ -4879,6 +4909,10 @@
                 gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
                 gameTypeButton.title = 'Матч';
                 currentGameType = 'матч';
+                
+                // Update game type label
+                const gameTypeLabel = document.getElementById('game-type-label');
+                if (gameTypeLabel) gameTypeLabel.textContent = 'Матч';
 
                 // Show Crawford checkbox
                 if (crawfordLabel) crawfordLabel.style.display = '';
@@ -4914,6 +4948,8 @@
         const originalModeToggleContainerDisplay = modeToggleContainer ? modeToggleContainer.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
         const originalAdminCommentDisplay = adminCommentContainer ? adminCommentContainer.style.display : null;
+        const gameTypeLabel = document.getElementById('game-type-label');
+        const originalGameTypeLabelDisplay = gameTypeLabel ? gameTypeLabel.style.display : null;
 
         // Функция для восстановления элементов
         function restoreControls() {
@@ -4925,6 +4961,7 @@
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
             if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
             if (adminCommentContainer && originalAdminCommentDisplay !== null) adminCommentContainer.style.display = originalAdminCommentDisplay;
+            if (gameTypeLabel && originalGameTypeLabelDisplay !== null) gameTypeLabel.style.display = originalGameTypeLabelDisplay;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -4940,6 +4977,9 @@
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
+        
+        // Показываем текст типа игры для скриншота
+        if (gameTypeLabel) gameTypeLabel.style.display = 'block';
 
         // Создаем скриншот
         html2canvas(document.body, {
@@ -5014,6 +5054,8 @@
         const originalModeToggleContainerDisplay = modeToggleContainer ? modeToggleContainer.style.display : null;
         const originalDropdownsDisplay = Array.from(dropdowns).map(d => d.style.display);
         const originalAdminCommentDisplay = adminCommentContainer ? adminCommentContainer.style.display : null;
+        const gameTypeLabel = document.getElementById('game-type-label');
+        const originalGameTypeLabelDisplay = gameTypeLabel ? gameTypeLabel.style.display : null;
 
         // Функция для восстановления элементов
         function restoreControls() {
@@ -5025,6 +5067,7 @@
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
             if (modeToggleContainer && originalModeToggleContainerDisplay !== null) modeToggleContainer.style.display = originalModeToggleContainerDisplay;
             if (adminCommentContainer && originalAdminCommentDisplay !== null) adminCommentContainer.style.display = originalAdminCommentDisplay;
+            if (gameTypeLabel && originalGameTypeLabelDisplay !== null) gameTypeLabel.style.display = originalGameTypeLabelDisplay;
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
@@ -5039,6 +5082,9 @@
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
+        
+        // Показываем текст типа игры для скриншота
+        if (gameTypeLabel) gameTypeLabel.style.display = 'block';
 
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
             canvas.toBlob(blob => {
