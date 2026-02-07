@@ -1206,10 +1206,17 @@
                             } else {
                                 item.is_error = false;
                             }
+                            // Определяем, есть ли ошибка по кубу
+                            const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') && 
+                                                item.is_best_move_cube === false;
+                            // Определяем, есть ли ошибка по ходу
+                            const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) && 
+                                               item.is_best_move === false && item.is_error;
+                            
                             item.is_visible = (error === '0') ||
-                                (error === '1' && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take') && item.is_error) ||
-                                (error === '2' && ((item.player_name === redPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error) ||
-                                (error === '3' && ((item.player_name === blackPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error);
+                                (error === '1' && (hasMoveError || hasCubeError || (item.action === 'win' && item.is_error))) ||
+                                (error === '2' && ((item.player_name === redPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error))) ||
+                                (error === '3' && ((item.player_name === blackPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error)));
                         });
 
                         // Проверить, есть ли видимые ходы помимо win
@@ -1432,10 +1439,17 @@
                 } else {
                     item.is_error = false;
                 }
+                // Определяем, есть ли ошибка по кубу
+                const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') && 
+                                    item.is_best_move_cube === false;
+                // Определяем, есть ли ошибка по ходу
+                const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) && 
+                                   item.is_best_move === false && item.is_error;
+                
                 item.is_visible = (error === '0') ||
-                    (error === '1' && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take') && item.is_error) ||
-                    (error === '2' && ((item.player_name === redPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error) ||
-                    (error === '3' && ((item.player_name === blackPlayer && !item.is_best_move && (Array.isArray(item.moves) && item.moves.length > 0 || item.action === 'win' || item.action === 'double' || item.action === 'take')) || item.action === 'win') && item.is_error);
+                    (error === '1' && (hasMoveError || hasCubeError || (item.action === 'win' && item.is_error))) ||
+                    (error === '2' && ((item.player_name === redPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error))) ||
+                    (error === '3' && ((item.player_name === blackPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error)));
             });
             // Проверить границы перед обращением к data[current]
             if (current < 0 || current >= data.length) {
@@ -2388,6 +2402,42 @@
                 document.getElementById('cubeHintsTable').innerHTML = '';
             } else {
                 document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
+            }
+            
+            // Автоматическое открытие таблицы при error != 0
+            if (error !== '0' && item.is_visible) {
+                const moveHintsBtn = document.getElementById('moveHintsBtn');
+                const cubeHintsBtn = document.getElementById('cubeHintsBtn');
+                const moveHintsTable = document.getElementById('moveHintsTable');
+                const cubeHintsTable = document.getElementById('cubeHintsTable');
+                
+                // Определяем, есть ли ошибки (проверяем явно false, чтобы не учитывать undefined)
+                const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) && 
+                                   item.is_best_move === false;
+                const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') && 
+                                    item.is_best_move_cube === false;
+                
+                // Если оба параметра False - открываем таблицу по ходу
+                if (hasMoveError && hasCubeError) {
+                    moveHintsTable.classList.add('active');
+                    moveHintsBtn.classList.add('active');
+                    cubeHintsTable.classList.remove('active');
+                    cubeHintsBtn.classList.remove('active');
+                }
+                // Если только ошибка по кубу - открываем таблицу куба
+                else if (hasCubeError && !hasMoveError) {
+                    cubeHintsTable.classList.add('active');
+                    cubeHintsBtn.classList.add('active');
+                    moveHintsTable.classList.remove('active');
+                    moveHintsBtn.classList.remove('active');
+                }
+                // Если только ошибка по ходу - открываем таблицу ходов
+                else if (hasMoveError && !hasCubeError) {
+                    moveHintsTable.classList.add('active');
+                    moveHintsBtn.classList.add('active');
+                    cubeHintsTable.classList.remove('active');
+                    cubeHintsBtn.classList.remove('active');
+                }
             }
         }
 

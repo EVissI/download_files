@@ -1449,6 +1449,9 @@ def process_single_game(game_data, output_dir, game_number):
 
     # Сравниваем ходы с подсказками
     for idx, entry in enumerate(aug):
+        # Инициализируем is_best_move_cube для всех записей
+        entry["is_best_move_cube"] = False
+        
         if entry.get("gnu_move"):
             if (
                 "gnu_move" in entry
@@ -1555,8 +1558,10 @@ def process_single_game(game_data, output_dir, game_number):
                     ):
                         if compare_record["eq"] > no_double_record["eq"]:
                             entry["is_best_move"] = True
+                            entry["is_best_move_cube"] = True
                         else:
                             entry["is_best_move"] = False
+                            entry["is_best_move_cube"] = False
 
                         logger.info(
                             f"Result: {entry['is_best_move']} (Double Eq: {compare_record['eq']} vs NoDouble Eq: {no_double_record['eq']})"
@@ -1565,12 +1570,14 @@ def process_single_game(game_data, output_dir, game_number):
                         logger.warning(
                             f"Game {game_number}: Could not find equity records to compare"
                         )
+                        entry["is_best_move_cube"] = False
 
                 except Exception as e:
                     logger.warning(
                         f"Game {game_number} error evaluating double: {e}",
                         exc_info=True,
                     )
+                    entry["is_best_move_cube"] = False
             elif entry.get("cube_hints") and entry.get("gnu_move").lower() == "take":
                 cubeful_equities = (entry.get("cube_hints") or [{}])[0].get(
                     "cubeful_equities"
@@ -1601,10 +1608,72 @@ def process_single_game(game_data, output_dir, game_number):
                         entry["is_best_move"] = take_record.get("eq") > pass_record.get(
                             "eq"
                         )
+                        entry["is_best_move_cube"] = take_record.get("eq") > pass_record.get(
+                            "eq"
+                        )
                     else:
                         entry["is_best_move"] = False
+                        entry["is_best_move_cube"] = False
                 else:
                     entry["is_best_move"] = False
+                    entry["is_best_move_cube"] = False
+            elif entry.get("cube_hints") and entry.get("gnu_move") and entry.get("gnu_move").lower() == "pass":
+                # Случай, когда игрок отказывается от куба (drop/pass)
+                cubeful_equities = (entry.get("cube_hints") or [{}])[0].get(
+                    "cubeful_equities"
+                )
+                if cubeful_equities:
+                    pass_record = next(
+                        (
+                            item
+                            for item in cubeful_equities
+                            if str(item.get("action_2") or "").lower() == "pass"
+                        ),
+                        None,
+                    )
+                    take_record = next(
+                        (
+                            item
+                            for item in cubeful_equities
+                            if str(item.get("action_2") or "").lower() == "take"
+                        ),
+                        None,
+                    )
+                    if (
+                        pass_record
+                        and take_record
+                        and pass_record.get("eq") is not None
+                        and take_record.get("eq") is not None
+                    ):
+                        # pass является лучшим, если его эквити больше эквити take
+                        entry["is_best_move_cube"] = pass_record.get("eq") > take_record.get(
+                            "eq"
+                        )
+                    else:
+                        entry["is_best_move_cube"] = False
+                else:
+                    entry["is_best_move_cube"] = False
+            elif entry.get("cube_hints") and entry.get("gnu_move") and entry.get("gnu_move").lower() not in ("double", "take", "pass"):
+                # Случай, когда игрок не удваивает и не берет (No double)
+                # Проверяем, является ли "No double" первым вариантом (hint-best)
+                cubeful_equities = (entry.get("cube_hints") or [{}])[0].get(
+                    "cubeful_equities", []
+                )
+                if cubeful_equities:
+                    # Ищем запись с action_1 === 'No double' и проверяем её индекс
+                    no_double_index = None
+                    for idx, item in enumerate(cubeful_equities):
+                        if str(item.get("action_1") or "").lower() == "no double":
+                            no_double_index = idx
+                            break
+                    
+                    # Если "No double" на первом месте (index 0), это hint-best
+                    if no_double_index == 0:
+                        entry["is_best_move_cube"] = True
+                    else:
+                        entry["is_best_move_cube"] = False
+                else:
+                    entry["is_best_move_cube"] = False
             else:
                 entry["is_best_move"] = False
         else:
