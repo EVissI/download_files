@@ -4985,8 +4985,6 @@
         if (lowerPlayerButton) {
             lowerPlayerButton.addEventListener('click', () => {
                 // Toggle - кнопка показывает нижнего игрока (противоположный upperPlayerColor)
-                // Закомментировано инвертирование позиций при смене нижнего игрока
-                /*
                 if (upperPlayerColor === 'white') {
                     // Было: белые сверху, черные снизу
                     // Станет: черные сверху, белые снизу
@@ -5003,7 +5001,6 @@
                     lowerPlayerButton.setAttribute('data-color', 'black');
                 }
                 drawBoard();
-                */
             });
         }
 
