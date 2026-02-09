@@ -741,7 +741,6 @@
             width: clamp(2em, 6vw, 3em);
             height: clamp(2em, 6vw, 3em);
             border-radius: 50%;
-            border: 0.125em solid #222;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
@@ -752,10 +751,12 @@
 
         .checker-toggle-btn.white {
             background: radial-gradient(circle at 30% 30%, #ffffff, #d9d9d9 60%, #bfbfbf);
+            border: 0.125em solid #000;
         }
 
         .checker-toggle-btn.black {
             background: radial-gradient(circle at 30% 30%, #3a3a3a, #1e1e1e 60%, #0f0f0f);
+            border: 0.125em solid #fff;
         }
 
         .checker-toggle-btn:hover {
@@ -1320,6 +1321,16 @@
 
         .eye-button:active {
             transform: scale(0.95);
+        }
+
+        #random-move-btn {
+            background-color: #ff8c00;
+            color: #fff;
+        }
+
+        #random-move-btn:hover {
+            background-color: #ff7f00;
+            color: #fff;
         }
 
         td:last-child {
@@ -1928,7 +1939,7 @@
             </label>
             <div class="player-position-toggle">
                 <span>Нижний игрок:</span>
-                <button id="upperPlayerBtn" class="checker-toggle-btn black" data-color="black"
+                <button id="lowerPlayerButton" class="checker-toggle-btn black" data-color="black"
                     title="Переключить нижнего игрока"></button>
             </div>
             <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
@@ -4964,24 +4975,24 @@
         }
 
         // Lower player toggle button handler (показывает нижнего игрока)
-        const upperPlayerBtn = document.getElementById('upperPlayerBtn');
-        if (upperPlayerBtn) {
-            upperPlayerBtn.addEventListener('click', () => {
+        const lowerPlayerButton = document.getElementById('lowerPlayerButton');
+        if (lowerPlayerButton) {
+            lowerPlayerButton.addEventListener('click', () => {
                 // Toggle - кнопка показывает нижнего игрока (противоположный upperPlayerColor)
                 if (upperPlayerColor === 'white') {
                     // Было: белые сверху, черные снизу
                     // Станет: черные сверху, белые снизу
                     upperPlayerColor = 'black';
-                    upperPlayerBtn.classList.remove('black');
-                    upperPlayerBtn.classList.add('white');
-                    upperPlayerBtn.setAttribute('data-color', 'white');
+                    lowerPlayerButton.classList.remove('black');
+                    lowerPlayerButton.classList.add('white');
+                    lowerPlayerButton.setAttribute('data-color', 'white');
                 } else {
                     // Было: черные сверху, белые снизу
                     // Станет: белые сверху, черные снизу
                     upperPlayerColor = 'white';
-                    upperPlayerBtn.classList.remove('white');
-                    upperPlayerBtn.classList.add('black');
-                    upperPlayerBtn.setAttribute('data-color', 'black');
+                    lowerPlayerButton.classList.remove('white');
+                    lowerPlayerButton.classList.add('black');
+                    lowerPlayerButton.setAttribute('data-color', 'black');
                 }
                 drawBoard();
             });
