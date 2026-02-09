@@ -2716,24 +2716,23 @@
 
             if (player === currentPlayer) {
                 // Check if upper player is on turn for inverted numbering
-                // const turn = document.getElementById('turn-select').value;
-                // // Invert numbers when the upper player has the turn
-                // let invertNumbers;
-                // if (upperPlayerColor === 'black') {
-                //     // Standard: black is upper, invert when black's turn
-                //     invertNumbers = (turn === 'black');
-                // } else {
-                //     // Inverted: white is upper, invert when white's turn
-                //     invertNumbers = (turn === 'white');
-                // }
+                const turn = document.getElementById('turn-select').value;
+                // Invert numbers when the upper player has the turn
+                let invertNumbers;
+                if (upperPlayerColor === 'black') {
+                    // Standard: black is upper, invert when black's turn
+                    invertNumbers = (turn === 'black');
+                } else {
+                    // Inverted: white is upper, invert when white's turn
+                    invertNumbers = (turn === 'white');
+                }
 
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
                     let y = getBaseY(point);
                     const dy = getDy(point);
 
-                    // let displayPoint = invertNumbers ? (25 - point) : point;
-                    let displayPoint = point;
+                    let displayPoint = invertNumbers ? (25 - point) : point;
                     ctx.fillText(displayPoint, x, point > 12 ? y - 50 : y + 60);
                 }
             }
@@ -2763,20 +2762,16 @@
             const barX = 400;
 
             // Определяем позицию бара с учетом инвертирования
-            // let barY, barDy;
-            // if (upperPlayerColor === 'black') {
-            //     // Стандартно: second (черные) сверху, first (белые) снизу
-            //     barY = (player === 'second') ? 220 : 520;
-            //     barDy = (player === 'second') ? 55 : -55;
-            // } else {
-            //     // Инвертировано: first (белые) сверху, second (черные) снизу
-            //     barY = (player === 'first') ? 220 : 520;
-            //     barDy = (player === 'first') ? 55 : -55;
-            // }
-            // Стандартные позиции без инвертирования
             let barY, barDy;
-            barY = (player === 'second') ? 220 : 520;
-            barDy = (player === 'second') ? 55 : -55;
+            if (upperPlayerColor === 'black') {
+                // Стандартно: second (черные) сверху, first (белые) снизу
+                barY = (player === 'second') ? 220 : 520;
+                barDy = (player === 'second') ? 55 : -55;
+            } else {
+                // Инвертировано: first (белые) сверху, second (черные) снизу
+                barY = (player === 'first') ? 220 : 520;
+                barDy = (player === 'first') ? 55 : -55;
+            }
 
             if (positions.bar && positions.bar !== 0) {
                 let y = barY;
@@ -2933,18 +2928,15 @@
                 // Когда upperPlayerColor === 'white', белые идут "сверху вниз" (как 'second')
                 // и черные идут "снизу вверх" (как 'first')
                 let whitePips, blackPips;
-                // if (upperPlayerColor === 'white') {
-                //     // Инвертировано: белые теперь идут от 24 к 1, черные от 1 к 24
-                //     whitePips = calculatePips(positions.first, 'second');
-                //     blackPips = calculatePips(positions.second, 'first');
-                // } else {
-                //     // Стандартно: белые от 1 к 24, черные от 24 к 1
-                //     whitePips = calculatePips(positions.first, 'first');
-                //     blackPips = calculatePips(positions.second, 'second');
-                // }
-                // Стандартные позиции без инвертирования
-                whitePips = calculatePips(positions.first, 'first');
-                blackPips = calculatePips(positions.second, 'second');
+                if (upperPlayerColor === 'white') {
+                    // Инвертировано: белые теперь идут от 24 к 1, черные от 1 к 24
+                    whitePips = calculatePips(positions.first, 'second');
+                    blackPips = calculatePips(positions.second, 'first');
+                } else {
+                    // Стандартно: белые от 1 к 24, черные от 24 к 1
+                    whitePips = calculatePips(positions.first, 'first');
+                    blackPips = calculatePips(positions.second, 'second');
+                }
 
                 // Coordinates for pip boxes (center x, center y)
                 const pipCenterX = 760;
@@ -2952,18 +2944,15 @@
                 const lowerPipsY = 400;  // Below center
 
                 // Determine which player is upper/lower based on upperPlayerColor
-                // if (upperPlayerColor === 'black') {
-                //     // Standard: black upper, white lower
-                //     drawPipBox(pipCenterX, upperPipsY, blackPips, false);  // Black background upper
-                //     drawPipBox(pipCenterX, lowerPipsY, whitePips, true);   // White background lower
-                // } else {
-                //     // Inverted: white upper, black lower
-                //     drawPipBox(pipCenterX, upperPipsY, whitePips, true);   // White background upper
-                //     drawPipBox(pipCenterX, lowerPipsY, blackPips, false);  // Black background lower
-                // }
-                // Стандартные позиции без инвертирования
-                drawPipBox(pipCenterX, upperPipsY, blackPips, false);  // Black background upper
-                drawPipBox(pipCenterX, lowerPipsY, whitePips, true);   // White background lower
+                if (upperPlayerColor === 'black') {
+                    // Standard: black upper, white lower
+                    drawPipBox(pipCenterX, upperPipsY, blackPips, false);  // Black background upper
+                    drawPipBox(pipCenterX, lowerPipsY, whitePips, true);   // White background lower
+                } else {
+                    // Inverted: white upper, black lower
+                    drawPipBox(pipCenterX, upperPipsY, whitePips, true);   // White background upper
+                    drawPipBox(pipCenterX, lowerPipsY, blackPips, false);  // Black background lower
+                }
             }
 
             // Draw checkers off (выброшенные шашки)
@@ -2981,24 +2970,19 @@
             ctx.textBaseline = 'middle';
 
             // Determine which player is upper/lower based on upperPlayerColor
-            // if (upperPlayerColor === 'black') {
-            //     // Standard: black upper, white lower
-            //     ctx.fillStyle = '#ffffff';
-            //     ctx.fillText(`${blackCheckersOff}`, offX, upperOffY);
-            //     ctx.fillStyle = '#ffffff';
-            //     ctx.fillText(`${whiteCheckersOff}`, offX, lowerOffY);
-            // } else {
-            //     // Inverted: white upper, black lower
-            //     ctx.fillStyle = '#ffffff';
-            //     ctx.fillText(`${whiteCheckersOff}`, offX, upperOffY);
-            //     ctx.fillStyle = '#ffffff';
-            //     ctx.fillText(`${blackCheckersOff}`, offX, lowerOffY);
-            // }
-            // Стандартные позиции без инвертирования
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(`${blackCheckersOff}`, offX, upperOffY);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(`${whiteCheckersOff}`, offX, lowerOffY);
+            if (upperPlayerColor === 'black') {
+                // Standard: black upper, white lower
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`${blackCheckersOff}`, offX, upperOffY);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`${whiteCheckersOff}`, offX, lowerOffY);
+            } else {
+                // Inverted: white upper, black lower
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`${whiteCheckersOff}`, offX, upperOffY);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`${blackCheckersOff}`, offX, lowerOffY);
+            }
         }
 
         function getTotalCheckers(pos) {
@@ -5001,6 +4985,8 @@
         if (lowerPlayerButton) {
             lowerPlayerButton.addEventListener('click', () => {
                 // Toggle - кнопка показывает нижнего игрока (противоположный upperPlayerColor)
+                // Закомментировано инвертирование позиций при смене нижнего игрока
+                /*
                 if (upperPlayerColor === 'white') {
                     // Было: белые сверху, черные снизу
                     // Станет: черные сверху, белые снизу
@@ -5017,6 +5003,7 @@
                     lowerPlayerButton.setAttribute('data-color', 'black');
                 }
                 drawBoard();
+                */
             });
         }
 
