@@ -4370,13 +4370,21 @@
                 };
             }
 
-            // Парсим GNU move строку
-            const parts = gnuMoveStr.trim().split(/\s+/);
+            // Нормализуем: убираем пробел перед * (например "13/8 *" -> "13/8*"), чтобы хит учитывался.
+            // Форматы: "13/11 7/2*" (два хода, хит на 2) или "13/7/2*" (цепочка 13→7→2 с хитом на 2)
+            const normalizedStr = gnuMoveStr.trim().replace(/\s+\*/g, '*');
+            const parts = normalizedStr.split(/\s+/);
             const moves = [];
 
             for (const part of parts) {
                 let movePart = part;
                 let hit = false;
+
+                // Часть только "*" — хит относится к последнему ходу (предыдущая часть)
+                if (movePart === '*' && moves.length > 0) {
+                    moves[moves.length - 1].hit = true;
+                    continue;
+                }
 
                 // Проверяем наличие звездочки в конце (хит)
                 if (movePart.endsWith('*')) {
