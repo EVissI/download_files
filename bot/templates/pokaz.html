@@ -81,17 +81,13 @@
         }
 
         .turn-label {
-            flex: 1;
             text-align: center;
+            margin-top: 10px;
             color: #007bff;
             font-size: 20px;
             font-weight: bold;
             white-space: nowrap;
             display: none;
-        }
-
-        .hints-table-header.active .turn-label {
-            display: block;
         }
 
         .green-circle {
@@ -1272,26 +1268,21 @@
             opacity: 1;
         }
 
-        .hints-table-header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            min-height: 36px;
-        }
-
         .hints-table-toggle {
-            flex-shrink: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 28px;
             height: 28px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px 0 4px 0;
             background: #444;
             color: #fff;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 10;
             transition: background 0.2s, transform 0.2s;
         }
 
@@ -1315,6 +1306,17 @@
 
         .hints-content.active {
             display: block;
+        }
+
+        /* Отступ первой ячейки под кнопку */
+        .hints-content.active table tr:first-child th:first-child,
+        .hints-content.active table tr:first-child td:first-child {
+            padding-left: 38px;
+        }
+
+        .hints-content.active table tr:first-child th,
+        .hints-content.active table tr:first-child td {
+            padding-top: 26px;
         }
 
         table {
@@ -2459,13 +2461,11 @@
 
     <div class="hints-table" id="hintsTableContainer">
         <div class="hints-table-body">
-            <div class="hints-table-header">
-                <button type="button" class="hints-table-toggle" id="hintsTableToggle" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
-                    <i class="fa fa-chevron-down"></i>
-                </button>
-                <div id="turn-label" class="turn-label"></div>
-            </div>
+            <button type="button" class="hints-table-toggle" id="hintsTableToggle" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
+                <i class="fa fa-chevron-down"></i>
+            </button>
             <div id="hintsTable" class="hints-content"></div>
+            <div id="turn-label" class="turn-label"></div>
         </div>
     </div>
 
@@ -4806,8 +4806,6 @@
                     hintsTable.innerHTML = tableHtml;
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
-                    hintsTableContainer.querySelector('.hints-table-header')?.classList.add('active');
-                    if (typeof updateTurnLabel === 'function') updateTurnLabel();
 
                     // Добавляем обработчики клика на кнопки eye-button
                     if (firstHint.type === 'move') {
@@ -4895,7 +4893,6 @@
                     hintsTable.innerHTML = '<div class="error">' + error.message + '</div>';
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
-                    hintsTableContainer.querySelector('.hints-table-header')?.classList.add('active');
 
                     // Показываем кнопки скриншотов даже при ошибке
                     const screenshotControls = document.getElementById('screenshotControls');
@@ -4976,7 +4973,6 @@
             const hintsTable = document.getElementById('hintsTable');
             hintsTableContainer.classList.remove('active');
             hintsTable.classList.remove('active');
-            hintsTableContainer.querySelector('.hints-table-header')?.classList.remove('active');
 
             // Скрываем кнопки скриншотов при очистке
             const screenshotControls = document.getElementById('screenshotControls');
@@ -5056,7 +5052,6 @@
             const hintsTable = document.getElementById('hintsTable');
             hintsTableContainer.classList.remove('active');
             hintsTable.classList.remove('active');
-            hintsTableContainer.querySelector('.hints-table-header')?.classList.remove('active');
 
             hideXGID(); // DEBUG - удалить потом
             drawBoard();
