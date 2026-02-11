@@ -2462,16 +2462,16 @@
         function updateGameTypeLabel() {
             const gameTypeLabel = document.getElementById('game-type-label');
             if (!gameTypeLabel) return;
-
+            
             if (currentGameType === 'матч') {
                 const matchLength = document.getElementById('match_lenght')?.value || '5';
                 const lowerScore = parseInt(document.getElementById('lower-score')?.value || '0');
                 const upperScore = parseInt(document.getElementById('upper-score')?.value || '0');
-
+                
                 // Находим наибольшее и наименьшее значение
                 const maxScore = Math.max(lowerScore, upperScore);
                 const minScore = Math.min(lowerScore, upperScore);
-
+                
                 gameTypeLabel.textContent = `Матч до ${matchLength} Счет ${maxScore}-${minScore}`;
             } else {
                 gameTypeLabel.textContent = 'Манигейм';
@@ -3687,7 +3687,7 @@
                     gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
                     gameTypeButton.title = 'Матч';
                     currentGameType = 'матч';
-
+                    
                     // Update game type label
                     updateGameTypeLabel();
                 }
@@ -3702,7 +3702,7 @@
                     gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
                     gameTypeButton.title = 'Манигейм';
                     currentGameType = 'манигейм';
-
+                    
                     // Update game type label
                     updateGameTypeLabel();
                 }
@@ -3746,10 +3746,10 @@
                     } else {
                         console.warn('upper-score select not found');
                     }
-
+                    
                     // Filter score options to ensure they don't exceed match length
                     filterScoreOptions();
-
+                    
                     // Update game type label after setting scores
                     updateGameTypeLabel();
                 }
@@ -3854,7 +3854,7 @@
                     } else {
                         console.warn('match-lenght-button not found');
                     }
-
+                    
                     // Update game type label
                     updateGameTypeLabel();
                 } else {
@@ -4014,9 +4014,7 @@
                 if (!e.target.closest('.dice-selector-custom') &&
                     !e.target.closest('.cube-selector-custom') &&
                     !e.target.closest('.bar-selector-custom') &&
-                    !e.target.closest('.match-selector-custom') &&
-                    !e.target.closest('.eye-button') &&
-                    !e.target.closest('.hints-table')) {
+                    !e.target.closest('.match-selector-custom')) {
                     document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown, .match-selector-dropdown').forEach(d => {
                         d.classList.remove('active');
                     });
@@ -4157,7 +4155,7 @@
                     option.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const value = option.getAttribute('data-value');
-
+                        
                         // Check if selecting score option that exceeds match length
                         if (selector.id === 'lower-score' || selector.id === 'upper-score') {
                             const matchLengthSelect = document.getElementById('match_lenght');
@@ -4170,7 +4168,7 @@
                                 }
                             }
                         }
-
+                        
                         select.value = value;
 
                         // Update button text
@@ -4182,17 +4180,17 @@
                         }
 
                         select.dispatchEvent(new Event('change'));
-
+                        
                         // Filter score options if match length changed
                         if (selector.id === 'match_lenght') {
                             filterScoreOptions();
                         }
-
+                        
                         // Update game type label if match length or scores changed
                         if (selector.id === 'match_lenght' || selector.id === 'lower-score' || selector.id === 'upper-score') {
                             updateGameTypeLabel();
                         }
-
+                        
                         dropdown.classList.remove('active');
                     });
                 });
@@ -4748,7 +4746,7 @@
                                     // Генерируем случайные значения для кубиков (1-6)
                                     const dice1 = Math.floor(Math.random() * 6) + 1;
                                     const dice2 = Math.floor(Math.random() * 6) + 1;
-
+                                    
                                     // Чей ход: в обратной зависимости от turn в showButtonSnapshot (противоположный игрок)
                                     let newTurn;
                                     if (showButtonSnapshot && showButtonSnapshot.turn) {
@@ -4756,26 +4754,26 @@
                                     } else {
                                         newTurn = Math.random() < 0.5 ? 'white' : 'black';
                                     }
-
+                                    
                                     // Устанавливаем значения кубиков
                                     const dice1Select = document.getElementById('dice1-select');
                                     const dice2Select = document.getElementById('dice2-select');
                                     if (dice1Select) dice1Select.value = dice1.toString();
                                     if (dice2Select) dice2Select.value = dice2.toString();
-
+                                    
                                     // Устанавливаем ход
                                     const turnSelect = document.getElementById('turn-select');
                                     if (turnSelect) {
                                         turnSelect.value = newTurn;
                                         updateTurnSelect();
                                     }
-
+                                    
                                     // Обновляем отображение кубиков
                                     if (typeof updateDiceSelectorDisplay === 'function') {
                                         updateDiceSelectorDisplay(1);
                                         updateDiceSelectorDisplay(2);
                                     }
-
+                                    
                                     // Перерисовываем доску
                                     if (typeof drawBoard === 'function') {
                                         drawBoard();
@@ -4783,31 +4781,26 @@
                                 });
                                 return;
                             }
-
+                            
                             button.addEventListener('click', () => {
                                 const row = button.closest('tr');
                                 const moveCell = row.querySelector('td:first-child');
                                 const gnuMoveStr = moveCell.textContent.trim();
-
-                                // Сохраняем текущие значения куба — не откатывать их при применении хода
-                                const cubeShown = document.getElementById('cube-shown-select').value;
-                                const cubeValue = document.getElementById('cube-value-select').value;
-                                const cubeOwner = document.getElementById('cube-owner-select').value;
 
                                 let playerTurn;
                                 if (showButtonSnapshot && showButtonSnapshot.positions) {
                                     // Восстанавливаем позиции шашек из снимка
                                     positions.first = { ...showButtonSnapshot.positions.first };
                                     positions.second = { ...showButtonSnapshot.positions.second };
-                                    playerTurn = showButtonSnapshot.turn || document.getElementById('turn-select').value;
-                                    // Синхронизируем UI: чей ход и селекты
-                                    const turnSelect = document.getElementById('turn-select');
-                                    if (turnSelect) {
-                                        turnSelect.value = playerTurn;
-                                        updateTurnSelect();
-                                    }
-                                    updateSelectOptions('white');
-                                    updateSelectOptions('black');
+                                    // playerTurn = showButtonSnapshot.turn || document.getElementById('turn-select').value;
+                                    // // Синхронизируем UI: чей ход и селекты
+                                    // const turnSelect = document.getElementById('turn-select');
+                                    // if (turnSelect) {
+                                    //     turnSelect.value = playerTurn;
+                                    //     updateTurnSelect();
+                                    // }
+                                    // updateSelectOptions('white');
+                                    // updateSelectOptions('black');
                                     updateBarSelects();
                                 } else {
                                     playerTurn = document.getElementById('turn-select').value;
@@ -4815,15 +4808,6 @@
 
                                 // Применяем ход к доске
                                 applyMoveToBoard(gnuMoveStr, playerTurn);
-
-                                // Восстанавливаем сохранённые значения куба
-                                document.getElementById('cube-shown-select').value = cubeShown;
-                                document.getElementById('cube-value-select').value = cubeValue;
-                                document.getElementById('cube-owner-select').value = cubeOwner;
-                                if (typeof updateAllCubeSelectors === 'function') updateAllCubeSelectors();
-                                if (typeof updateCubeOwnerSelect === 'function') updateCubeOwnerSelect();
-                                if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
-                                drawBoard();
                             });
                         });
                     }
@@ -4872,7 +4856,7 @@
             currentGameType = 'манигейм';
             document.getElementById('game-type-button').innerHTML = '<i class="fa fa-rub"></i>';
             document.getElementById('game-type-button').title = 'Манигейм';
-
+            
             // Update game type label
             updateGameTypeLabel();
             document.getElementById('lower-score').value = '0';
@@ -5145,7 +5129,7 @@
                 gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
                 gameTypeButton.title = 'Манигейм';
                 currentGameType = 'манигейм';
-
+                
                 // Update game type label
                 updateGameTypeLabel();
 
@@ -5166,7 +5150,7 @@
                 gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
                 gameTypeButton.title = 'Матч';
                 currentGameType = 'матч';
-
+                
                 // Update game type label
                 updateGameTypeLabel();
 
@@ -5186,10 +5170,10 @@
     function updateTurnLabel() {
         const turnLabel = document.getElementById('turn-label');
         if (!turnLabel) return;
-
+        
         const turnInput = document.getElementById('turn-select');
         const turn = turnInput?.value || 'white';
-
+        
         if (turn === 'white') {
             turnLabel.textContent = 'Ход белых';
         } else {
@@ -5254,10 +5238,10 @@
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
-
+        
         // Добавляем отступ сверху для текста типа игры на скриншотах
         if (body) body.style.paddingTop = '5px';
-
+        
         // Показываем текст типа игры и текущего хода для скриншота
         if (gameTypeLabel) gameTypeLabel.style.display = 'block';
         if (turnLabel) {
@@ -5372,10 +5356,10 @@
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
-
+        
         // Добавляем отступ сверху для текста типа игры на скриншотах
         if (body) body.style.paddingTop = '5px';
-
+        
         // Показываем текст типа игры и текущего хода для скриншота
         if (gameTypeLabel) gameTypeLabel.style.display = 'block';
         if (turnLabel) {
