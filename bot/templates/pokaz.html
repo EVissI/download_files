@@ -2490,6 +2490,22 @@
         </div>
     </div>
 
+    <!-- Modal window for init confirmation -->
+    <div id="init-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Подтверждение</h3>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите расставить начальную позицию?</p>
+            </div>
+            <div class="modal-footer">
+                <button id="init-modal-cancel" class="modal-btn modal-btn-cancel">Отмена</button>
+                <button id="init-modal-confirm" class="modal-btn modal-btn-confirm">Расставить</button>
+            </div>
+        </div>
+    </div>
+
     <div class="admin-comment-container">
         <button id="adminCommentBtn" onclick="openAdminCommentModal()">
             <i class="fa fa-commenting-o"></i>
@@ -5014,10 +5030,25 @@
             if (e.key === 'Escape' && clearModal.classList.contains('active')) {
                 hideClearModal();
             }
+            if (e.key === 'Escape' && initModal.classList.contains('active')) {
+                hideInitModal();
+            }
         });
 
-        // Init button logic
-        document.getElementById('init-button').addEventListener('click', () => {
+        // Init modal functions
+        const initModal = document.getElementById('init-modal');
+        const initModalCancel = document.getElementById('init-modal-cancel');
+        const initModalConfirm = document.getElementById('init-modal-confirm');
+
+        function showInitModal() {
+            initModal.classList.add('active');
+        }
+
+        function hideInitModal() {
+            initModal.classList.remove('active');
+        }
+
+        function performInit() {
             // Standard starting positions for backgammon
             const standardWhitePos = { 6: 5, 8: 3, 13: 5, 24: 2 };
             const standardBlackPos = { 1: 2, 12: 5, 17: 3, 19: 5 };
@@ -5058,6 +5089,29 @@
 
             hideXGID(); // DEBUG - удалить потом
             drawBoard();
+            hideInitModal();
+        }
+
+        // Init button logic - show modal
+        document.getElementById('init-button').addEventListener('click', () => {
+            showInitModal();
+        });
+
+        // Init modal cancel button
+        initModalCancel.addEventListener('click', () => {
+            hideInitModal();
+        });
+
+        // Init modal confirm button
+        initModalConfirm.addEventListener('click', () => {
+            performInit();
+        });
+
+        // Close init modal on background click
+        initModal.addEventListener('click', (e) => {
+            if (e.target === initModal) {
+                hideInitModal();
+            }
         });
 
         document.querySelectorAll('.toggle-btn').forEach(btn => {
