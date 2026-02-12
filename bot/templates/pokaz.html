@@ -343,6 +343,15 @@
             font-size: clamp(1.4rem, 2.5vw, 1.7rem);
         }
 
+        #game-type-button.dice-mode {
+            background-color: #ff8c00;
+            border-color: #e67e00;
+        }
+
+        #game-type-button.dice-mode:hover {
+            background-color: #e67e00;
+        }
+
         .checker-selector {
             display: flex;
             flex-direction: column;
@@ -5189,9 +5198,11 @@
             if (isTableOpen) {
                 gameTypeButton.innerHTML = '<i class="fa fa-random"></i>';
                 gameTypeButton.title = 'Случайные кубики';
+                gameTypeButton.classList.add('dice-mode');
             } else {
                 gameTypeButton.innerHTML = currentGameType === 'матч' ? '<i class="fa fa-trophy"></i>' : '<i class="fa fa-rub"></i>';
                 gameTypeButton.title = currentGameType === 'матч' ? 'Матч' : 'Манигейм';
+                gameTypeButton.classList.remove('dice-mode');
             }
         }
         window.updateGameTypeButtonMode = updateGameTypeButtonMode;
