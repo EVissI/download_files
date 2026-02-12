@@ -1976,6 +1976,7 @@
                     hintsTableContainer.classList.toggle('collapsed');
                     const isCollapsed = hintsTableContainer.classList.contains('collapsed');
                     hintsTableToggle.setAttribute('aria-label', isCollapsed ? 'Развернуть таблицу' : 'Свернуть таблицу');
+                    if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
                 });
             }
         });
@@ -4796,6 +4797,8 @@
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
 
+                    if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
+
                     // Добавляем обработчики клика на кнопки eye-button
                     if (firstHint.type === 'move') {
                         const eyeButtons = hintsTable.querySelectorAll('.eye-button');
@@ -4962,6 +4965,7 @@
             const hintsTable = document.getElementById('hintsTable');
             hintsTableContainer.classList.remove('active');
             hintsTable.classList.remove('active');
+            if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
 
             // Скрываем кнопки скриншотов при очистке
             const screenshotControls = document.getElementById('screenshotControls');
@@ -5041,6 +5045,7 @@
             const hintsTable = document.getElementById('hintsTable');
             hintsTableContainer.classList.remove('active');
             hintsTable.classList.remove('active');
+            if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
 
             hideXGID(); // DEBUG - удалить потом
             drawBoard();
@@ -5175,11 +5180,57 @@
             });
         }
 
-        // Game type button toggle between money game and match
+        // Функция обновления кнопки: при открытой таблице подсказок — кнопка «Случайные кубики», иначе — переключатель манигейм/матч
+        function updateGameTypeButtonMode() {
+            const hintsTableContainer = document.getElementById('hintsTableContainer');
+            const gameTypeButton = document.getElementById('game-type-button');
+            if (!hintsTableContainer || !gameTypeButton) return;
+            const isTableOpen = hintsTableContainer.classList.contains('active') && !hintsTableContainer.classList.contains('collapsed');
+            if (isTableOpen) {
+                gameTypeButton.innerHTML = '<i class="fa fa-random"></i>';
+                gameTypeButton.title = 'Случайные кубики';
+            } else {
+                gameTypeButton.innerHTML = currentGameType === 'матч' ? '<i class="fa fa-trophy"></i>' : '<i class="fa fa-rub"></i>';
+                gameTypeButton.title = currentGameType === 'матч' ? 'Матч' : 'Манигейм';
+            }
+        }
+        window.updateGameTypeButtonMode = updateGameTypeButtonMode;
+
+        // Game type button toggle between money game and match (или случайные кубики, если таблица подсказок открыта)
         document.getElementById('game-type-button').addEventListener('click', () => {
+            const hintsTableContainer = document.getElementById('hintsTableContainer');
+            const gameTypeButton = document.getElementById('game-type-button');
+            const isTableOpen = hintsTableContainer && hintsTableContainer.classList.contains('active') && !hintsTableContainer.classList.contains('collapsed');
+
+            if (isTableOpen) {
+                // Режим случайных кубиков
+                const dice1 = Math.floor(Math.random() * 6) + 1;
+                const dice2 = Math.floor(Math.random() * 6) + 1;
+                let newTurn;
+                if (showButtonSnapshot && showButtonSnapshot.turn) {
+                    newTurn = showButtonSnapshot.turn === 'white' ? 'black' : 'white';
+                } else {
+                    newTurn = Math.random() < 0.5 ? 'white' : 'black';
+                }
+                const dice1Select = document.getElementById('dice1-select');
+                const dice2Select = document.getElementById('dice2-select');
+                if (dice1Select) dice1Select.value = dice1.toString();
+                if (dice2Select) dice2Select.value = dice2.toString();
+                const turnSelect = document.getElementById('turn-select');
+                if (turnSelect) {
+                    turnSelect.value = newTurn;
+                    updateTurnSelect();
+                }
+                if (typeof updateDiceSelectorDisplay === 'function') {
+                    updateDiceSelectorDisplay(1);
+                    updateDiceSelectorDisplay(2);
+                }
+                if (typeof drawBoard === 'function') drawBoard();
+                return;
+            }
+
             const jbWrap = document.querySelector('.jb-wrap');
             const matchPanel = document.querySelector('.match-panel');
-            const gameTypeButton = document.getElementById('game-type-button');
 
             // Toggle visibility
             if (jbWrap.style.display === 'none') {
