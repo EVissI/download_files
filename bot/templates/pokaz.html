@@ -2058,7 +2058,7 @@
             </label>
             <div class="player-position-toggle">
                 <span>Нижний игрок:</span>
-                <button id="lowerPlayerButton" class="checker-toggle-btn black" data-color="black"
+                <button id="lowerPlayerButton" class="checker-toggle-btn white" data-color="white"
                     title="Переключить нижнего игрока"></button>
             </div>
             <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
@@ -3208,7 +3208,7 @@
         }
         let imagesLoaded = 0;
         const totalImages = 21;
-        let upperPlayerColor = 'white'; // 'black' or 'white' - который игрок сверху (инвертировано для отображения нижнего)
+        let upperPlayerColor = 'black'; // 'black' or 'white' - который игрок сверху (при 'black' нижний игрок — белые)
 
         // XGID string from server (if provided) - read from hidden script element
         const initialXgidElement = document.getElementById('initial-xgid-data');
