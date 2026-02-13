@@ -124,6 +124,86 @@
             font-size: 0.8rem;
         }
 
+        /* Point selector (число шашек на позиции) — кастомный дропдаун как в проекте */
+        .point-selector-custom {
+            position: absolute;
+            display: inline-block;
+        }
+
+        .point-selector-button {
+            padding: 0;
+            background-color: #2d2d2d;
+            border: 2px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: inherit;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, background-color 0.2s;
+            min-width: 100%;
+            min-height: 100%;
+            box-sizing: border-box;
+        }
+
+        .point-selector-button:hover {
+            border-color: #007bff;
+            background-color: #3b3b3b;
+        }
+
+        .point-selector-dropdown {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 0.25rem;
+            background-color: #3b3b3b;
+            border: 2px solid #555;
+            border-radius: 4px;
+            padding: 0.25rem;
+            display: none;
+            flex-direction: column;
+            gap: 0.1rem;
+            z-index: 1001;
+            max-height: 180px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .point-selector-dropdown.point-dropdown-upper {
+            top: 100%;
+            margin-top: 0.25rem;
+            margin-bottom: 0;
+        }
+
+        .point-selector-dropdown.point-dropdown-lower {
+            bottom: 100%;
+            margin-bottom: 0.25rem;
+            margin-top: 0;
+        }
+
+        .point-selector-dropdown.active {
+            display: flex;
+        }
+
+        .point-option {
+            padding: 0.3rem 0.6rem;
+            cursor: pointer;
+            border-radius: 3px;
+            text-align: center;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+            color: white;
+        }
+
+        .point-option:hover {
+            background-color: #007bff;
+        }
+
         select {
             font-family: Arial, sans-serif;
             font-size: 0.8rem;
@@ -2723,19 +2803,27 @@
             const totalCheckers = getTotalCheckers(targetPositions);
             for (let point = 1; point <= 24; point++) {
                 const select = document.getElementById(`point-${point}`);
+                const dropdown = document.getElementById(`point-${point}-dropdown`);
                 if (!select) continue;
                 const currentOnPoint = targetPositions[point.toString()] || 0;
                 const occupiedByOther = otherPositions[point.toString()] > 0;
                 const baseMax = occupiedByOther ? 0 : 15;
                 const maxForThis = Math.min(baseMax, 15 - (totalCheckers - currentOnPoint));
                 select.innerHTML = '';
-                for (let i = 0; i <= maxForThis; i++) {
+                for (let i = 0; i <= 15; i++) {
                     const option = document.createElement('option');
                     option.value = i;
                     option.textContent = i;
                     select.appendChild(option);
                 }
                 select.value = currentOnPoint;
+                if (dropdown) {
+                    dropdown.querySelectorAll('.point-option').forEach(opt => {
+                        const val = parseInt(opt.getAttribute('data-value'));
+                        opt.style.display = val <= maxForThis ? '' : 'none';
+                    });
+                }
+                updatePointSelectorDisplay(point);
             }
         }
 
@@ -2808,22 +2896,54 @@
         function createDropdowns() {
             const scale = canvas.offsetWidth / 800;
             for (let point = 1; point <= 24; point++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'point-selector-custom';
+                wrapper.dataset.point = point.toString();
+
+                const button = document.createElement('div');
+                button.className = 'point-selector-button';
+                button.id = `point-${point}-button`;
+                button.textContent = '0';
+
+                const dropdown = document.createElement('div');
+                dropdown.className = 'point-selector-dropdown ' + (point > 12 ? 'point-dropdown-upper' : 'point-dropdown-lower');
+                dropdown.id = `point-${point}-dropdown`;
+                for (let i = 0; i <= 15; i++) {
+                    const opt = document.createElement('div');
+                    opt.className = 'point-option';
+                    opt.setAttribute('data-value', i.toString());
+                    opt.textContent = i.toString();
+                    dropdown.appendChild(opt);
+                }
+
                 const select = document.createElement('select');
                 select.id = `point-${point}`;
-                select.className = 'dropdown';
+                select.className = 'sr-only';
+                select.style.display = 'none';
                 select.value = 0;
+                for (let i = 0; i <= 15; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = i;
+                    select.appendChild(opt);
+                }
 
-                updateDropdownPosition(select, point, scale);
+                wrapper.appendChild(button);
+                wrapper.appendChild(dropdown);
+                wrapper.appendChild(select);
+
+                updateDropdownPosition(wrapper, point, scale);
 
                 select.addEventListener('change', updateBoard);
 
-                boardWrapper.appendChild(select);
+                boardWrapper.appendChild(wrapper);
             }
             updateSelectOptions('white');
             updateBarSelects();
+            initPointSelectors();
         }
 
-        function updateDropdownPosition(select, point, scale) {
+        function updateDropdownPosition(wrapper, point, scale) {
             const x = (getX(point) - (point > 12 ? 25 : 25)) * scale;
             let y_text;
             if (point > 12) {
@@ -2833,20 +2953,60 @@
             }
             const offset = point > 12 ? -70 : 43;
             const y = (y_text + offset) * scale;
-            select.style.left = x + 'px';
-            select.style.top = y + 'px';
-            select.style.width = (55 * scale) + 'px';
-            select.style.height = (55 * scale) + 'px';
-            select.style.fontSize = (26 * scale) + 'px';
+            const size = 55 * scale;
+            wrapper.style.left = x + 'px';
+            wrapper.style.top = y + 'px';
+            wrapper.style.width = size + 'px';
+            wrapper.style.height = size + 'px';
+            wrapper.style.fontSize = (26 * scale) + 'px';
         }
 
         function updateAllDropdownPositions() {
             const scale = canvas.offsetWidth / 800;
             for (let point = 1; point <= 24; point++) {
-                const select = document.getElementById(`point-${point}`);
-                if (select) {
-                    updateDropdownPosition(select, point, scale);
+                const wrapper = document.querySelector(`.point-selector-custom[data-point="${point}"]`);
+                if (wrapper) {
+                    updateDropdownPosition(wrapper, point, scale);
                 }
+            }
+        }
+
+        function updatePointSelectorDisplay(point) {
+            const select = document.getElementById(`point-${point}`);
+            const button = document.getElementById(`point-${point}-button`);
+            if (!select || !button) return;
+            const value = parseInt(select.value) || 0;
+            button.textContent = value.toString();
+        }
+
+        function initPointSelectors() {
+            for (let point = 1; point <= 24; point++) {
+                const button = document.getElementById(`point-${point}-button`);
+                const dropdown = document.getElementById(`point-${point}-dropdown`);
+                const select = document.getElementById(`point-${point}`);
+
+                if (!button || !dropdown || !select) continue;
+
+                dropdown.classList.remove('active');
+
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.point-selector-dropdown, .dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown, .match-selector-dropdown').forEach(d => {
+                        if (d !== dropdown) d.classList.remove('active');
+                    });
+                    dropdown.classList.toggle('active');
+                });
+
+                dropdown.querySelectorAll('.point-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const value = option.getAttribute('data-value');
+                        select.value = value;
+                        select.dispatchEvent(new Event('change'));
+                        updatePointSelectorDisplay(point);
+                        dropdown.classList.remove('active');
+                    });
+                });
             }
         }
 
@@ -4144,8 +4304,9 @@
                 if (!e.target.closest('.dice-selector-custom') &&
                     !e.target.closest('.cube-selector-custom') &&
                     !e.target.closest('.bar-selector-custom') &&
-                    !e.target.closest('.match-selector-custom')) {
-                    document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown, .match-selector-dropdown').forEach(d => {
+                    !e.target.closest('.match-selector-custom') &&
+                    !e.target.closest('.point-selector-custom')) {
+                    document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown, .match-selector-dropdown, .point-selector-dropdown').forEach(d => {
                         d.classList.remove('active');
                     });
                 }
@@ -5458,7 +5619,7 @@
         const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
         const modeToggleContainer = document.querySelector('.mode-toggle-container');
-        const dropdowns = document.querySelectorAll('.dropdown');
+        const dropdowns = document.querySelectorAll('.dropdown, .point-selector-custom');
         const adminCommentContainer = document.querySelector('.admin-comment-container');
 
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
@@ -5580,7 +5741,7 @@
         const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
         const modeToggleContainer = document.querySelector('.mode-toggle-container');
-        const dropdowns = document.querySelectorAll('.dropdown');
+        const dropdowns = document.querySelectorAll('.dropdown, .point-selector-custom');
         const adminCommentContainer = document.querySelector('.admin-comment-container');
 
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
