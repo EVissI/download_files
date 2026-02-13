@@ -5280,13 +5280,16 @@
         }
 
         // При открытой доске: скрыть selectors-wrapper и controls-row, показать board-open-controls
+        // При свёрнутой таблице — восстанавливаем старые элементы
         function updateBoardOpenState() {
             const hintsTableContainer = document.getElementById('hintsTableContainer');
             const selectorsWrapper = document.querySelector('.selectors-wrapper');
             const controlsRow = document.querySelector('.controls-row');
             const boardOpenControls = document.getElementById('boardOpenControls');
             if (!hintsTableContainer || !selectorsWrapper || !boardOpenControls) return;
-            const isBoardOpen = hintsTableContainer.classList.contains('active');
+            const isTableActive = hintsTableContainer.classList.contains('active');
+            const isTableCollapsed = hintsTableContainer.classList.contains('collapsed');
+            const isBoardOpen = isTableActive && !isTableCollapsed;
             if (isBoardOpen) {
                 selectorsWrapper.style.display = 'none';
                 if (controlsRow) controlsRow.style.display = 'none';
