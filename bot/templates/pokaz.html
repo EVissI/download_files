@@ -2804,14 +2804,9 @@
             ctx.textBaseline = 'middle';
 
             if (player === currentPlayer) {
-                // Инвертировать номера при ходе верхнего игрока
+                // Инвертировать номера при ходе чёрных (не зависит от переключения нижнего игрока)
                 const turn = document.getElementById('turn-select').value;
-                let invertNumbers;
-                if (upperPlayerColor === 'black') {
-                    invertNumbers = (turn === 'black');
-                } else {
-                    invertNumbers = (turn === 'white');
-                }
+                const invertNumbers = (turn === 'black');
 
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
