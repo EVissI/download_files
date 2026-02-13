@@ -5279,18 +5279,21 @@
             });
         }
 
-        // При открытой доске: скрыть selectors-wrapper, показать board-open-controls
+        // При открытой доске: скрыть selectors-wrapper и controls-row, показать board-open-controls
         function updateBoardOpenState() {
             const hintsTableContainer = document.getElementById('hintsTableContainer');
             const selectorsWrapper = document.querySelector('.selectors-wrapper');
+            const controlsRow = document.querySelector('.controls-row');
             const boardOpenControls = document.getElementById('boardOpenControls');
             if (!hintsTableContainer || !selectorsWrapper || !boardOpenControls) return;
             const isBoardOpen = hintsTableContainer.classList.contains('active');
             if (isBoardOpen) {
                 selectorsWrapper.style.display = 'none';
+                if (controlsRow) controlsRow.style.display = 'none';
                 boardOpenControls.classList.add('active');
             } else {
                 selectorsWrapper.style.display = '';
+                if (controlsRow) controlsRow.style.display = '';
                 boardOpenControls.classList.remove('active');
             }
         }
