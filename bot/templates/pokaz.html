@@ -2804,15 +2804,12 @@
             ctx.textBaseline = 'middle';
 
             if (player === currentPlayer) {
-                // Check if upper player is on turn for inverted numbering
+                // Инвертировать номера при ходе верхнего игрока
                 const turn = document.getElementById('turn-select').value;
-                // Invert numbers when the upper player has the turn
                 let invertNumbers;
                 if (upperPlayerColor === 'black') {
-                    // Standard: black is upper, invert when black's turn
                     invertNumbers = (turn === 'black');
                 } else {
-                    // Inverted: white is upper, invert when white's turn
                     invertNumbers = (turn === 'white');
                 }
 
@@ -2821,7 +2818,7 @@
                     let y = getBaseY(point);
                     const dy = getDy(point);
 
-                    let displayPoint = invertNumbers ? (25 - point) : point;
+                    const displayPoint = invertNumbers ? (25 - point) : point;
                     ctx.fillText(displayPoint, x, point > 12 ? y - 50 : y + 60);
                 }
             }
@@ -3163,7 +3160,6 @@
         }
         let imagesLoaded = 0;
         const totalImages = 21;
-        let invertPointNumbers = false; // Flag for inverted point numbering
         let upperPlayerColor = 'white'; // 'black' or 'white' - который игрок сверху (инвертировано для отображения нижнего)
 
         // XGID string from server (if provided) - read from hidden script element
