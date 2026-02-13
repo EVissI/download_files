@@ -1603,6 +1603,54 @@
             display: flex;
         }
 
+        .board-open-controls {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: clamp(0.5rem, 2vw, 1rem);
+            padding-top: clamp(1.5rem, 4vw, 3rem);
+        }
+
+        .board-open-controls.active {
+            display: flex;
+        }
+
+        .board-open-controls button {
+            padding: clamp(0.3rem, 2vw, 0.5rem) clamp(0.5rem, 2.5vw, 0.8rem);
+            font-size: clamp(0.7rem, 2vw, 1rem);
+            border-radius: clamp(0.2rem, 1vw, 0.4rem);
+            min-width: clamp(2.2rem, 8.8vw, 3.3rem);
+            min-height: clamp(2.2rem, 8.8vw, 3.3rem);
+            border: 1px solid #555;
+            cursor: pointer;
+            background-color: #3b3b3b;
+            color: white;
+        }
+
+        .board-open-controls button:hover {
+            background-color: #555;
+        }
+
+        .board-open-controls button i {
+            font-size: clamp(1.2rem, 3.5vw, 2rem);
+        }
+
+        #board-open-eye-btn {
+            background-color: rgb(34, 177, 34);
+        }
+
+        #board-open-eye-btn:hover {
+            background-color: rgb(45, 200, 45);
+        }
+
+        #board-open-random-dice-btn {
+            background-color: #ff8c00;
+        }
+
+        #board-open-random-dice-btn:hover {
+            background-color: #e67e00;
+        }
+
         #screenshotBtn,
         #screenSaveBtn,
         #screenUploadBtn {
@@ -2456,6 +2504,11 @@
             </div>
         </div>
     </div>
+    </div>
+
+    <div class="board-open-controls" id="boardOpenControls">
+        <button type="button" id="board-open-eye-btn" title="Анализ позиции"><i class="fa fa-eye"></i></button>
+        <button type="button" id="board-open-random-dice-btn" title="Случайные кубики"><i class="fa fa-random"></i></button>
     </div>
 
     <div class="hints-table" id="hintsTableContainer">
@@ -5226,8 +5279,56 @@
             });
         }
 
+        // При открытой доске: скрыть selectors-wrapper, показать board-open-controls
+        function updateBoardOpenState() {
+            const hintsTableContainer = document.getElementById('hintsTableContainer');
+            const selectorsWrapper = document.querySelector('.selectors-wrapper');
+            const boardOpenControls = document.getElementById('boardOpenControls');
+            if (!hintsTableContainer || !selectorsWrapper || !boardOpenControls) return;
+            const isBoardOpen = hintsTableContainer.classList.contains('active');
+            if (isBoardOpen) {
+                selectorsWrapper.style.display = 'none';
+                boardOpenControls.classList.add('active');
+            } else {
+                selectorsWrapper.style.display = '';
+                boardOpenControls.classList.remove('active');
+            }
+        }
+
+        // Кнопка зелёного глаза в board-open-controls — запуск анализа
+        document.getElementById('board-open-eye-btn').addEventListener('click', () => {
+            document.getElementById('show-button').click();
+        });
+
+        // Кнопка случайных кубиков в board-open-controls
+        document.getElementById('board-open-random-dice-btn').addEventListener('click', () => {
+            const dice1 = Math.floor(Math.random() * 6) + 1;
+            const dice2 = Math.floor(Math.random() * 6) + 1;
+            let newTurn;
+            if (showButtonSnapshot && showButtonSnapshot.turn) {
+                newTurn = showButtonSnapshot.turn === 'white' ? 'black' : 'white';
+            } else {
+                newTurn = Math.random() < 0.5 ? 'white' : 'black';
+            }
+            const dice1Select = document.getElementById('dice1-select');
+            const dice2Select = document.getElementById('dice2-select');
+            if (dice1Select) dice1Select.value = dice1.toString();
+            if (dice2Select) dice2Select.value = dice2.toString();
+            const turnSelect = document.getElementById('turn-select');
+            if (turnSelect) {
+                turnSelect.value = newTurn;
+                updateTurnSelect();
+            }
+            if (typeof updateDiceSelectorDisplay === 'function') {
+                updateDiceSelectorDisplay(1);
+                updateDiceSelectorDisplay(2);
+            }
+            if (typeof drawBoard === 'function') drawBoard();
+        });
+
         // Функция обновления кнопки: при открытой таблице подсказок — кнопка «Случайные кубики», иначе — переключатель манигейм/матч
         function updateGameTypeButtonMode() {
+            updateBoardOpenState();
             const hintsTableContainer = document.getElementById('hintsTableContainer');
             const gameTypeButton = document.getElementById('game-type-button');
             if (!hintsTableContainer || !gameTypeButton) return;
@@ -5346,6 +5447,7 @@
         const screenshotControls = document.getElementById('screenshotControls');
         const actionButtons = document.querySelector('.action-buttons');
         const selectorsWrapper = document.querySelector('.selectors-wrapper');
+        const boardOpenControls = document.getElementById('boardOpenControls');
         const xgidDisplay = document.getElementById('xgid-display');
         const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
@@ -5356,6 +5458,7 @@
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
         const originalSelectorsDisplay = selectorsWrapper ? selectorsWrapper.style.display : null;
+        const originalBoardOpenDisplay = boardOpenControls ? boardOpenControls.style.display : null;
         const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
         const originalCubeControlsDisplay = cubeControlsWrapper ? cubeControlsWrapper.style.display : null;
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
@@ -5374,6 +5477,7 @@
             if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
             if (actionButtons && originalActionButtonsDisplay !== null) actionButtons.style.display = originalActionButtonsDisplay;
             if (selectorsWrapper && originalSelectorsDisplay !== null) selectorsWrapper.style.display = originalSelectorsDisplay;
+            if (boardOpenControls && originalBoardOpenDisplay !== null) boardOpenControls.style.display = originalBoardOpenDisplay;
             if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
             if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
@@ -5388,9 +5492,9 @@
         }
 
         // Скрываем элементы
-        if (screenshotControls) screenshotControls.style.display = 'none';
         if (actionButtons) actionButtons.style.display = 'none';
         if (selectorsWrapper) selectorsWrapper.style.display = 'none';
+        if (boardOpenControls) boardOpenControls.style.display = 'none';
         if (xgidDisplay) xgidDisplay.style.display = 'none';
         if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
@@ -5465,6 +5569,7 @@
         const screenshotControls = document.getElementById('screenshotControls');
         const actionButtons = document.querySelector('.action-buttons');
         const selectorsWrapper = document.querySelector('.selectors-wrapper');
+        const boardOpenControls = document.getElementById('boardOpenControls');
         const xgidDisplay = document.getElementById('xgid-display');
         const cubeControlsWrapper = document.querySelector('.cube-controls-block-wrapper');
         const turnDiceWrapper = document.querySelector('.turn-dice-wrapper');
@@ -5475,6 +5580,7 @@
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
         const originalSelectorsDisplay = selectorsWrapper ? selectorsWrapper.style.display : null;
+        const originalBoardOpenDisplay = boardOpenControls ? boardOpenControls.style.display : null;
         const originalXgidDisplay = xgidDisplay ? xgidDisplay.style.display : null;
         const originalCubeControlsDisplay = cubeControlsWrapper ? cubeControlsWrapper.style.display : null;
         const originalTurnDiceDisplay = turnDiceWrapper ? turnDiceWrapper.style.display : null;
@@ -5493,6 +5599,7 @@
             if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
             if (actionButtons && originalActionButtonsDisplay !== null) actionButtons.style.display = originalActionButtonsDisplay;
             if (selectorsWrapper && originalSelectorsDisplay !== null) selectorsWrapper.style.display = originalSelectorsDisplay;
+            if (boardOpenControls && originalBoardOpenDisplay !== null) boardOpenControls.style.display = originalBoardOpenDisplay;
             if (xgidDisplay && originalXgidDisplay !== null) xgidDisplay.style.display = originalXgidDisplay;
             if (cubeControlsWrapper && originalCubeControlsDisplay !== null) cubeControlsWrapper.style.display = originalCubeControlsDisplay;
             if (turnDiceWrapper && originalTurnDiceDisplay !== null) turnDiceWrapper.style.display = originalTurnDiceDisplay;
@@ -5509,6 +5616,7 @@
         if (screenshotControls) screenshotControls.style.display = 'none';
         if (actionButtons) actionButtons.style.display = 'none';
         if (selectorsWrapper) selectorsWrapper.style.display = 'none';
+        if (boardOpenControls) boardOpenControls.style.display = 'none';
         if (xgidDisplay) xgidDisplay.style.display = 'none';
         if (cubeControlsWrapper) cubeControlsWrapper.style.display = 'none';
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
