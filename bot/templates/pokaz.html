@@ -1775,25 +1775,18 @@
             border: none;
             background: transparent;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            object-fit: contain;
             opacity: 0.7;
         }
 
-        .history-nav-btn:hover:not(:disabled) {
+        .history-nav-btn:hover:not(.disabled) {
             opacity: 1;
         }
 
-        .history-nav-btn:disabled {
+        .history-nav-btn.disabled {
             opacity: 0.3;
             cursor: not-allowed;
-        }
-
-        .history-nav-btn img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+            pointer-events: none;
         }
 
         #screenshotBtn,
@@ -2653,12 +2646,8 @@
 
     <div class="board-open-controls" id="boardOpenControls">
         <div class="history-nav">
-            <button type="button" id="history-back-btn" class="history-nav-btn" title="Назад по истории" disabled>
-                <img src="/static/left.png" alt="Назад">
-            </button>
-            <button type="button" id="history-forward-btn" class="history-nav-btn" title="Вперёд по истории" disabled>
-                <img src="/static/right.png" alt="Вперёд">
-            </button>
+            <img src="/static/left.png" id="history-back-btn" class="history-nav-btn" alt="Назад по истории" title="Назад по истории" role="button" tabindex="0">
+            <img src="/static/right.png" id="history-forward-btn" class="history-nav-btn" alt="Вперёд по истории" title="Вперёд по истории" role="button" tabindex="0">
         </div>
         <div class="board-open-controls-buttons">
             <button type="button" id="board-open-eye-btn" title="Анализ позиции"><i class="fa fa-eye"></i></button>
@@ -2829,13 +2818,16 @@
             const backBtn = document.getElementById('history-back-btn');
             const forwardBtn = document.getElementById('history-forward-btn');
             if (!backBtn || !forwardBtn) return;
-            backBtn.disabled = historyIndex <= 0 || moveHistory.length === 0;
-            forwardBtn.disabled = historyIndex >= moveHistory.length || moveHistory.length === 0;
+            const canGoBack = historyIndex > 0 && moveHistory.length > 0;
+            const canGoForward = historyIndex < moveHistory.length && moveHistory.length > 0;
+            backBtn.classList.toggle('disabled', !canGoBack);
+            forwardBtn.classList.toggle('disabled', !canGoForward);
         }
 
         /** Переход назад по истории */
         function goBackInHistory() {
             if (historyIndex <= 0 || moveHistory.length === 0) return;
+            if (document.getElementById('history-back-btn')?.classList.contains('disabled')) return;
             historyIndex--;
             if (historyIndex === 0) {
                 applyInitialPosition();
@@ -2848,6 +2840,7 @@
         /** Переход вперёд по истории */
         function goForwardInHistory() {
             if (historyIndex >= moveHistory.length || moveHistory.length === 0) return;
+            if (document.getElementById('history-forward-btn')?.classList.contains('disabled')) return;
             historyIndex++;
             if (historyIndex === moveHistory.length) {
                 const last = moveHistory[moveHistory.length - 1];
