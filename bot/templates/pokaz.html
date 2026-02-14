@@ -1769,18 +1769,16 @@
         }
 
         .history-nav-btn {
-            width: clamp(3rem, 8vw, 4rem);
-            height: clamp(1.725rem, 4.6vw, 2.3rem);
-            padding: 0;
-            border: none;
-            background-color: transparent;
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            cursor: pointer;
+            width: 42px;
+            height: 42px;
+            padding: 0;
             color: transparent;
-            opacity: 0.7;
-            box-shadow: none;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
         }
 
         #history-back-btn {
@@ -1792,19 +1790,35 @@
         }
 
         .history-nav-btn:hover:not(.disabled) {
-            opacity: 1;
-            background-color: transparent;
-        }
-
-        .history-nav-btn:active {
             background-color: transparent;
         }
 
         .history-nav-btn.disabled {
-            opacity: 0.3;
+            opacity: 0.5;
             cursor: not-allowed;
             pointer-events: none;
             background-color: transparent;
+        }
+
+        @media (max-width: 768px) {
+            .history-nav-btn {
+                width: 62px;
+                height: 62px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .history-nav-btn {
+                width: 37px;
+                height: 37px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .history-nav-btn {
+                width: 104px;
+                height: 104px;
+            }
         }
 
         #screenshotBtn,
