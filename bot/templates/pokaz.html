@@ -2809,8 +2809,8 @@
 
         /**
          * Строит HTML таблицы подсказок из данных API.
-         * @param {Object} hintsData - { hints: [...] } при успехе или { error: string } при ошибке
-         * @returns {{ html: string, firstHint: Object|null }}
+         * @param {Object} hintsData - hints: [...] при успехе или error: string при ошибке
+         * @returns Object с полями html (string) и firstHint (Object|null)
          */
         function buildHintsTableFromData(hintsData) {
             if (!hintsData) return { html: '', firstHint: null };
