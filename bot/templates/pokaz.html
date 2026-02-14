@@ -2807,6 +2807,133 @@
             historyIndex = 0;
         }
 
+        /**
+         * Строит HTML таблицы подсказок из данных API.
+         * @param {Object} hintsData - { hints: [...] } при успехе или { error: string } при ошибке
+         * @returns {{ html: string, firstHint: Object|null }}
+         */
+        function buildHintsTableFromData(hintsData) {
+            if (!hintsData) return { html: '', firstHint: null };
+            if (hintsData.error) {
+                return { html: '<div class="error">' + hintsData.error + '</div>', firstHint: null };
+            }
+            const hints = hintsData.hints || [];
+            if (hints.length === 0) {
+                return { html: '<div class="error">невозможный ход</div>', firstHint: null };
+            }
+            const firstHint = hints[0];
+            let tableHtml = '';
+            if (firstHint.type === 'move') {
+                tableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th><th><button class="eye-button" type="button" id="restore-position-btn" title="Восстановить сохранённую позицию"><i class="fa fa-reply"></i></button></th></tr>';
+                hints.forEach((hint, index) => {
+                    if (hint.probs && hint.probs.length >= 2) {
+                        const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
+                        const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
+                        const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                        const move = hint.move || '-';
+                        const rowStyle = index === 0 ? ' style="background-color: green;"' : '';
+                        tableHtml += `<tr${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td><td><button class="eye-button" type="button"><i class="fa fa-eye"></i></button></td></tr>`;
+                    }
+                });
+                tableHtml += '</table>';
+            } else if (firstHint.type === 'cube_hint') {
+                tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
+                if (firstHint.prefer_action) {
+                    tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${firstHint.prefer_action}</td></tr>`;
+                }
+                (firstHint.cubeful_equities || []).forEach((hint, index) => {
+                    const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                    let displayAction = hint.action_1 || '';
+                    if (hint.action_2) displayAction += `, ${hint.action_2}`;
+                    const rowStyle = index === 0 ? ' style="background-color: green;"' : '';
+                    tableHtml += `<tr${rowStyle}><td>${displayAction}</td><td>${eq}</td></tr>`;
+                });
+                tableHtml += '</table>';
+            } else {
+                return { html: '<div class="error">Unknown hint type</div>', firstHint: null };
+            }
+            return { html: tableHtml, firstHint };
+        }
+
+        /** Привязывает обработчики к кнопкам eye-button в таблице подсказок */
+        function attachHintsTableEyeButtons(hintsTable, snapshot) {
+            if (!hintsTable || !snapshot) return;
+            const eyeButtons = hintsTable.querySelectorAll('.eye-button');
+            eyeButtons.forEach((button) => {
+                if (button.id === 'restore-position-btn') {
+                    button.addEventListener('click', () => {
+                        if (!showButtonSnapshot || !showButtonSnapshot.positions) return;
+                        positions.first = { ...showButtonSnapshot.positions.first };
+                        positions.second = { ...showButtonSnapshot.positions.second };
+                        const whiteBar = positions.first.bar || 0;
+                        const blackBar = positions.second.bar || 0;
+                        const whiteBarSelect = document.getElementById('white-bar-select');
+                        const blackBarSelect = document.getElementById('black-bar-select');
+                        if (whiteBarSelect) whiteBarSelect.value = whiteBar.toString();
+                        if (blackBarSelect) blackBarSelect.value = blackBar.toString();
+                        if (showButtonSnapshot.turn) {
+                            const turnSelect = document.getElementById('turn-select');
+                            if (turnSelect) {
+                                turnSelect.value = showButtonSnapshot.turn;
+                                updateTurnSelect();
+                            }
+                        }
+                        const dice1Select = document.getElementById('dice1-select');
+                        const dice2Select = document.getElementById('dice2-select');
+                        if (dice1Select) dice1Select.value = '0';
+                        if (dice2Select) dice2Select.value = '0';
+                        if (typeof updateDiceSelectorDisplay === 'function') {
+                            updateDiceSelectorDisplay(1);
+                            updateDiceSelectorDisplay(2);
+                        }
+                        updateSelectOptions(getSelectedCheckerColor());
+                        updateBarSelects();
+                        if (typeof drawBoard === 'function') drawBoard();
+                    });
+                    return;
+                }
+                button.addEventListener('click', () => {
+                    const row = button.closest('tr');
+                    const moveCell = row ? row.querySelector('td:first-child') : null;
+                    const gnuMoveStr = moveCell ? moveCell.textContent.trim() : '';
+                    if (!gnuMoveStr) return;
+                    if (showButtonSnapshot && showButtonSnapshot.positions) {
+                        positions.first = { ...showButtonSnapshot.positions.first };
+                        positions.second = { ...showButtonSnapshot.positions.second };
+                        updateBarSelects();
+                    }
+                    const playerTurn = (showButtonSnapshot && showButtonSnapshot.turn) || document.getElementById('turn-select').value;
+                    applyMoveToBoard(gnuMoveStr, playerTurn);
+                });
+            });
+        }
+
+        /** Восстанавливает таблицу подсказок из записи истории (по данным API) */
+        function applyHintsTableFromEntry(entry) {
+            const hintsTable = document.getElementById('hintsTable');
+            const hintsTableContainer = document.querySelector('.hints-table');
+            if (!hintsTable || !hintsTableContainer) return;
+
+            if (entry.hintsData) {
+                const { html, firstHint } = buildHintsTableFromData(entry.hintsData);
+                hintsTable.innerHTML = html;
+                hintsTable.classList.add('active');
+                hintsTableContainer.classList.add('active');
+                showButtonSnapshot = {
+                    positions: { first: { ...entry.positionsAfter.first }, second: { ...entry.positionsAfter.second } },
+                    turn: entry.turnAfter
+                };
+                if (firstHint && firstHint.type === 'move') {
+                    attachHintsTableEyeButtons(hintsTable, showButtonSnapshot);
+                }
+                if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
+            } else {
+                hintsTable.innerHTML = '';
+                hintsTable.classList.remove('active');
+                hintsTableContainer.classList.remove('active');
+            }
+        }
+
         /** Восстанавливает позиции и ход из записи истории */
         function applyHistoryEntry(entry) {
             positions.first = { ...entry.positionsAfter.first };
@@ -2827,6 +2954,7 @@
                 updatePointSelectorDisplay(point);
             }
             drawBoard();
+            applyHintsTableFromEntry(entry);
         }
 
         /** Восстанавливает начальную позицию (до первого хода) */
@@ -2897,6 +3025,7 @@
                     updatePointSelectorDisplay(point);
                 }
                 drawBoard();
+                applyHintsTableFromEntry(last);
             } else {
                 applyHistoryEntry(moveHistory[historyIndex - 1]);
             }
@@ -5225,125 +5354,18 @@
                     return response.json();
                 })
                 .then(data => {
-                    const hints = data.hints || [];
-                    if (hints.length === 0) {
-                        hintsTable.innerHTML = '<div class="error">невозможный ход</div>';
-
-                        return;
+                    const hintsData = { hints: data.hints || [] };
+                    if (moveHistory.length > 0) {
+                        moveHistory[moveHistory.length - 1].hintsData = hintsData;
                     }
-
-                    const firstHint = hints[0];
-                    let tableHtml = '';
-
-                    if (firstHint.type === 'move') {
-                        // Generate move hints table
-                        tableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th><th><button class="eye-button" type="button" id="restore-position-btn" title="Восстановить сохранённую позицию"><i class="fa fa-reply"></i></button></th></tr>';
-                        hints.forEach((hint, index) => {
-                            if (hint.probs && hint.probs.length >= 2) {
-                                const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
-                                const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
-                                const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                                let move = hint.move || '-';
-                                let rowClass = ''; // No highlighting since no gnu move
-                                let rowStyle = index === 0 ? ' style="background-color: green;"' : '';
-                                tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td><td><button class="eye-button" type="button"><i class="fa fa-eye"></i></button></td></tr>`;
-                            }
-                        });
-                        tableHtml += '</table>';
-                    } else if (firstHint.type === 'cube_hint') {
-                        if (firstHint.prefer_action) {
-                            tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${firstHint.prefer_action}</td></tr>`;
-                        }
-                        tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
-                        (firstHint.cubeful_equities || []).forEach((hint, index) => {
-                            const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                            let displayAction = hint.action_1;
-                            if (hint.action_2) {
-                                displayAction += `, ${hint.action_2}`;
-                            }
-                            let rowClass = '';
-                            let rowStyle = index === 0 ? ' style="background-color: green;"' : '';
-                            tableHtml += `<tr class="${rowClass}"${rowStyle}><td>${displayAction}</td><td>${eq}</td></tr>`;
-                        });
-                        tableHtml += '</table>';
-                    } else {
-                        hintsTable.innerHTML = '<div class="error">Unknown hint type</div>';
-                        return;
-                    }
-
-                    hintsTable.innerHTML = tableHtml;
+                    const { html, firstHint } = buildHintsTableFromData(hintsData);
+                    hintsTable.innerHTML = html;
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
-
-                    if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
-
-                    // Добавляем обработчики клика на кнопки eye-button
-                    if (firstHint.type === 'move') {
-                        const eyeButtons = hintsTable.querySelectorAll('.eye-button');
-                        eyeButtons.forEach((button, index) => {
-                            // Кнопка restore-position-btn — восстановить сохранённую позицию
-                            if (button.id === 'restore-position-btn') {
-                                button.addEventListener('click', () => {
-                                    if (!showButtonSnapshot || !showButtonSnapshot.positions) {
-                                        return;
-                                    }
-                                    // Восстанавливаем позиции шашек из снимка
-                                    positions.first = { ...showButtonSnapshot.positions.first };
-                                    positions.second = { ...showButtonSnapshot.positions.second };
-                                    // Восстанавливаем бар
-                                    const whiteBar = positions.first.bar || 0;
-                                    const blackBar = positions.second.bar || 0;
-                                    const whiteBarSelect = document.getElementById('white-bar-select');
-                                    const blackBarSelect = document.getElementById('black-bar-select');
-                                    if (whiteBarSelect) whiteBarSelect.value = whiteBar.toString();
-                                    if (blackBarSelect) blackBarSelect.value = blackBar.toString();
-                                    // Восстанавливаем ход
-                                    if (showButtonSnapshot.turn) {
-                                        const turnSelect = document.getElementById('turn-select');
-                                        if (turnSelect) {
-                                            turnSelect.value = showButtonSnapshot.turn;
-                                            updateTurnSelect();
-                                        }
-                                    }
-                                    // Сбрасываем кубики
-                                    const dice1Select = document.getElementById('dice1-select');
-                                    const dice2Select = document.getElementById('dice2-select');
-                                    if (dice1Select) dice1Select.value = '0';
-                                    if (dice2Select) dice2Select.value = '0';
-                                    if (typeof updateDiceSelectorDisplay === 'function') {
-                                        updateDiceSelectorDisplay(1);
-                                        updateDiceSelectorDisplay(2);
-                                    }
-                                    updateSelectOptions(getSelectedCheckerColor());
-                                    updateBarSelects();
-                                    if (typeof drawBoard === 'function') {
-                                        drawBoard();
-                                    }
-                                });
-                                return;
-                            }
-                            
-                            button.addEventListener('click', () => {
-                                const row = button.closest('tr');
-                                const moveCell = row.querySelector('td:first-child');
-                                const gnuMoveStr = moveCell.textContent.trim();
-
-                                let playerTurn;
-                                if (showButtonSnapshot && showButtonSnapshot.positions) {
-                                    // Восстанавливаем позиции шашек из снимка
-                                    positions.first = { ...showButtonSnapshot.positions.first };
-                                    positions.second = { ...showButtonSnapshot.positions.second };
-                                    playerTurn = showButtonSnapshot.turn || document.getElementById('turn-select').value;
-                                    updateBarSelects();
-                                } else {
-                                    playerTurn = document.getElementById('turn-select').value;
-                                }
-
-                                // Применяем ход к доске
-                                applyMoveToBoard(gnuMoveStr, playerTurn);
-                            });
-                        });
+                    if (firstHint && firstHint.type === 'move') {
+                        attachHintsTableEyeButtons(hintsTable, showButtonSnapshot);
                     }
+                    if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
 
                     // Показываем кнопки скриншотов после появления таблицы
                     const screenshotControls = document.getElementById('screenshotControls');
@@ -5352,7 +5374,12 @@
                     }
                 })
                 .catch(error => {
-                    hintsTable.innerHTML = '<div class="error">' + error.message + '</div>';
+                    const hintsData = { error: error.message };
+                    if (moveHistory.length > 0) {
+                        moveHistory[moveHistory.length - 1].hintsData = hintsData;
+                    }
+                    const { html } = buildHintsTableFromData(hintsData);
+                    hintsTable.innerHTML = html;
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
 
