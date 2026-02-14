@@ -5127,6 +5127,9 @@
             };
 
             // Записываем текущую позицию в историю при генерации доски
+            if (historyIndex < moveHistory.length) {
+                clearMoveHistory();
+            }
             const snap = snapshotPositions();
             const currentTurn = document.getElementById('turn-select').value;
             recordMove({
