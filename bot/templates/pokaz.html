@@ -90,27 +90,6 @@
             display: none;
         }
 
-        .hints-table-right {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            min-width: 80px;
-        }
-
-        .hints-table-flex {
-            display: flex;
-            flex-direction: row;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        .hints-table-flex .hints-content {
-            flex: 1;
-        }
-
         .turn-checker-indicator {
             width: 2em;
             height: 2em;
@@ -1385,10 +1364,6 @@
             display: block;
         }
 
-        .hints-table.active .turn-label {
-            display: block;
-        }
-
         .hints-table-body {
             position: relative;
             max-height: 2000px;
@@ -1729,14 +1704,22 @@
 
         .board-open-controls {
             display: none;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
             gap: clamp(0.5rem, 2vw, 1rem);
             padding-top: clamp(1.5rem, 4vw, 3rem);
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
 
         .board-open-controls.active {
             display: flex;
+        }
+
+        .board-open-controls-buttons {
+            display: flex;
+            gap: clamp(0.5rem, 2vw, 1rem);
+            align-items: center;
         }
 
         .board-open-controls button {
@@ -2631,8 +2614,11 @@
     </div>
 
     <div class="board-open-controls" id="boardOpenControls">
-        <button type="button" id="board-open-eye-btn" title="Анализ позиции"><i class="fa fa-eye"></i></button>
-        <button type="button" id="board-open-random-dice-btn" title="Случайные кубики"><i class="fa fa-random"></i></button>
+        <div class="board-open-controls-buttons">
+            <button type="button" id="board-open-eye-btn" title="Анализ позиции"><i class="fa fa-eye"></i></button>
+            <button type="button" id="board-open-random-dice-btn" title="Случайные кубики"><i class="fa fa-random"></i></button>
+        </div>
+        <div id="turn-checker-indicator" class="turn-checker-indicator white" title="Чей ход"></div>
     </div>
 
     <div class="hints-table" id="hintsTableContainer">
@@ -2640,13 +2626,8 @@
             <button type="button" class="hints-table-toggle" id="hintsTableToggle" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
                 <i class="fa fa-chevron-down"></i>
             </button>
-            <div class="hints-table-flex">
-                <div id="hintsTable" class="hints-content"></div>
-                <div class="hints-table-right">
-                    <div id="turn-checker-indicator" class="turn-checker-indicator white" title="Чей ход"></div>
-                    <div id="turn-label" class="turn-label"></div>
-                </div>
-            </div>
+            <div id="hintsTable" class="hints-content"></div>
+            <div id="turn-label" class="turn-label"></div>
         </div>
     </div>
 
