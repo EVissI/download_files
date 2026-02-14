@@ -1780,6 +1780,7 @@
             cursor: pointer;
             color: transparent;
             opacity: 0.7;
+            box-shadow: none;
         }
 
         #history-back-btn {
@@ -1792,12 +1793,18 @@
 
         .history-nav-btn:hover:not(.disabled) {
             opacity: 1;
+            background-color: transparent;
+        }
+
+        .history-nav-btn:active {
+            background-color: transparent;
         }
 
         .history-nav-btn.disabled {
             opacity: 0.3;
             cursor: not-allowed;
             pointer-events: none;
+            background-color: transparent;
         }
 
         #screenshotBtn,
@@ -2829,7 +2836,7 @@
             const backBtn = document.getElementById('history-back-btn');
             const forwardBtn = document.getElementById('history-forward-btn');
             if (!backBtn || !forwardBtn) return;
-            const canGoBack = historyIndex > 0 && moveHistory.length > 0;
+            const canGoBack = historyIndex > 1 && moveHistory.length > 0;
             const canGoForward = historyIndex < moveHistory.length && moveHistory.length > 0;
             backBtn.classList.toggle('disabled', !canGoBack);
             forwardBtn.classList.toggle('disabled', !canGoForward);
@@ -2837,14 +2844,10 @@
 
         /** Переход назад по истории */
         function goBackInHistory() {
-            if (historyIndex <= 0 || moveHistory.length === 0) return;
+            if (historyIndex <= 1 || moveHistory.length === 0) return;
             if (document.getElementById('history-back-btn')?.classList.contains('disabled')) return;
             historyIndex--;
-            if (historyIndex === 0) {
-                applyInitialPosition();
-            } else {
-                applyHistoryEntry(moveHistory[historyIndex - 1]);
-            }
+            applyHistoryEntry(moveHistory[historyIndex - 1]);
             updateHistoryButtons();
         }
 
