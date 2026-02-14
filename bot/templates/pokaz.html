@@ -2872,19 +2872,22 @@
                         if (whiteBarSelect) whiteBarSelect.value = whiteBar.toString();
                         if (blackBarSelect) blackBarSelect.value = blackBar.toString();
                         if (showButtonSnapshot.turn) {
-                            const turnSelect = document.getElementById('turn-select');
-                            if (turnSelect) {
-                                turnSelect.value = showButtonSnapshot.turn;
-                                updateTurnSelect();
+                                const turnSelect = document.getElementById('turn-select');
+                                if (turnSelect) {
+                                    turnSelect.value = showButtonSnapshot.turn;
+                                    updateTurnSelect();
+                                }
                             }
-                        }
-                        const dice1Select = document.getElementById('dice1-select');
-                        const dice2Select = document.getElementById('dice2-select');
-                        if (dice1Select) dice1Select.value = '0';
-                        if (dice2Select) dice2Select.value = '0';
-                        if (typeof updateDiceSelectorDisplay === 'function') {
-                            updateDiceSelectorDisplay(1);
-                            updateDiceSelectorDisplay(2);
+                        if (moveHistory.length > 0 && moveHistory[moveHistory.length - 1].dice) {
+                            const d = moveHistory[moveHistory.length - 1].dice;
+                            const dice1Select = document.getElementById('dice1-select');
+                            const dice2Select = document.getElementById('dice2-select');
+                            if (dice1Select) dice1Select.value = d.dice1 || '0';
+                            if (dice2Select) dice2Select.value = d.dice2 || '0';
+                            if (typeof updateDiceSelectorDisplay === 'function') {
+                                updateDiceSelectorDisplay(1);
+                                updateDiceSelectorDisplay(2);
+                            }
                         }
                         updateSelectOptions(getSelectedCheckerColor());
                         updateBarSelects();
@@ -2931,6 +2934,19 @@
                 hintsTable.innerHTML = '';
                 hintsTable.classList.remove('active');
                 hintsTableContainer.classList.remove('active');
+            }
+        }
+
+        /** Восстанавливает кубики (dice) из записи истории */
+        function applyDiceFromEntry(entry) {
+            if (!entry.dice) return;
+            const dice1Select = document.getElementById('dice1-select');
+            const dice2Select = document.getElementById('dice2-select');
+            if (dice1Select) dice1Select.value = entry.dice.dice1 || '0';
+            if (dice2Select) dice2Select.value = entry.dice.dice2 || '0';
+            if (typeof updateDiceSelectorDisplay === 'function') {
+                updateDiceSelectorDisplay(1);
+                updateDiceSelectorDisplay(2);
             }
         }
 
@@ -2986,6 +3002,7 @@
                 updatePointSelectorDisplay(point);
             }
             applyCubeStateFromEntry(entry);
+            applyDiceFromEntry(entry);
             drawBoard();
             applyHintsTableFromEntry(entry);
         }
@@ -3058,6 +3075,7 @@
                     updatePointSelectorDisplay(point);
                 }
                 applyCubeStateFromEntry(last);
+                applyDiceFromEntry(last);
                 drawBoard();
                 applyHintsTableFromEntry(last);
             } else {
@@ -5339,6 +5357,10 @@
                 playerColor: null,
                 turnBefore: currentTurn,
                 turnAfter: currentTurn,
+                dice: {
+                    dice1: document.getElementById('dice1-select').value,
+                    dice2: document.getElementById('dice2-select').value
+                },
                 cubeState: {
                     cubeValue: document.getElementById('cube-value-select').value,
                     cubeShown: document.getElementById('cube-shown-select').value,
