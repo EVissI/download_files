@@ -1776,9 +1776,11 @@
             height: 42px;
             padding: 0;
             color: transparent;
-            background-color: transparent;
-            border: none;
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
             cursor: pointer;
+            border-radius: 0;
         }
 
         #history-back-btn {
@@ -1789,15 +1791,21 @@
             background-image: url('/static/right.png');
         }
 
-        .history-nav-btn:hover:not(.disabled) {
-            background-color: transparent;
+        .history-nav-btn:hover:not(.disabled),
+        .history-nav-btn:active,
+        .history-nav-btn:focus,
+        .history-nav-btn:focus-visible {
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none;
         }
 
         .history-nav-btn.disabled {
             opacity: 0.5;
             cursor: not-allowed;
             pointer-events: none;
-            background-color: transparent;
+            background-color: transparent !important;
         }
 
         @media (max-width: 768px) {
