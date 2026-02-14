@@ -1762,6 +1762,40 @@
             background-color: #e67e00;
         }
 
+        .history-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .history-nav-btn {
+            width: clamp(1.5rem, 4vw, 2rem);
+            height: clamp(1.5rem, 4vw, 2rem);
+            padding: 0;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+        }
+
+        .history-nav-btn:hover:not(:disabled) {
+            opacity: 1;
+        }
+
+        .history-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .history-nav-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
         #screenshotBtn,
         #screenSaveBtn,
         #screenUploadBtn {
@@ -2618,6 +2652,14 @@
     </div>
 
     <div class="board-open-controls" id="boardOpenControls">
+        <div class="history-nav">
+            <button type="button" id="history-back-btn" class="history-nav-btn" title="Назад по истории" disabled>
+                <img src="/static/left.png" alt="Назад">
+            </button>
+            <button type="button" id="history-forward-btn" class="history-nav-btn" title="Вперёд по истории" disabled>
+                <img src="/static/right.png" alt="Вперёд">
+            </button>
+        </div>
         <div class="board-open-controls-buttons">
             <button type="button" id="board-open-eye-btn" title="Анализ позиции"><i class="fa fa-eye"></i></button>
             <button type="button" id="board-open-random-dice-btn" title="Случайные кубики"><i class="fa fa-random"></i></button>
@@ -2709,7 +2751,128 @@
         /** Снимок позиций и хода в момент нажатия show-button (все позиции шашек + чей ход) */
         let showButtonSnapshot = null;
 
+        /** История сделанных ходов */
+        let moveHistory = [];
+
+        /** Текущий индекс в истории (0 = до первого хода, length = текущая позиция) */
+        let historyIndex = 0;
+
         let currentGameType = 'манигейм';
+
+        /** Создаёт копию текущих позиций */
+        function snapshotPositions() {
+            return {
+                first: { ...positions.first },
+                second: { ...positions.second }
+            };
+        }
+
+        /** Записывает ход в историю */
+        function recordMove(entry) {
+            moveHistory.push(entry);
+        }
+
+        /** Очищает историю ходов */
+        function clearMoveHistory() {
+            moveHistory = [];
+            historyIndex = 0;
+        }
+
+        /** Восстанавливает позиции и ход из записи истории */
+        function applyHistoryEntry(entry) {
+            positions.first = { ...entry.positionsAfter.first };
+            positions.second = { ...entry.positionsAfter.second };
+            const turn = entry.turnAfter;
+            document.getElementById('turn-select').value = turn;
+            const whiteBar = document.getElementById('white-bar-select');
+            const blackBar = document.getElementById('black-bar-select');
+            if (whiteBar) whiteBar.value = (positions.first.bar || 0).toString();
+            if (blackBar) blackBar.value = (positions.second.bar || 0).toString();
+            updateTurnSelect();
+            updateSelectOptions(getSelectedCheckerColor());
+            updateBarSelects();
+            for (let point = 1; point <= 24; point++) {
+                const select = document.getElementById(`point-${point}`);
+                const targetPositions = getSelectedCheckerColor() === 'white' ? positions.first : positions.second;
+                if (select) select.value = (targetPositions[point.toString()] || 0).toString();
+                updatePointSelectorDisplay(point);
+            }
+            drawBoard();
+        }
+
+        /** Восстанавливает начальную позицию (до первого хода) */
+        function applyInitialPosition() {
+            const entry = moveHistory[0];
+            if (!entry) return;
+            positions.first = { ...entry.positionsBefore.first };
+            positions.second = { ...entry.positionsBefore.second };
+            const turn = entry.turnBefore;
+            document.getElementById('turn-select').value = turn;
+            const whiteBar = document.getElementById('white-bar-select');
+            const blackBar = document.getElementById('black-bar-select');
+            if (whiteBar) whiteBar.value = (positions.first.bar || 0).toString();
+            if (blackBar) blackBar.value = (positions.second.bar || 0).toString();
+            updateTurnSelect();
+            updateSelectOptions(getSelectedCheckerColor());
+            updateBarSelects();
+            for (let point = 1; point <= 24; point++) {
+                const select = document.getElementById(`point-${point}`);
+                const targetPositions = getSelectedCheckerColor() === 'white' ? positions.first : positions.second;
+                if (select) select.value = (targetPositions[point.toString()] || 0).toString();
+                updatePointSelectorDisplay(point);
+            }
+            drawBoard();
+        }
+
+        /** Обновляет состояние кнопок навигации по истории */
+        function updateHistoryButtons() {
+            const backBtn = document.getElementById('history-back-btn');
+            const forwardBtn = document.getElementById('history-forward-btn');
+            if (!backBtn || !forwardBtn) return;
+            backBtn.disabled = historyIndex <= 0 || moveHistory.length === 0;
+            forwardBtn.disabled = historyIndex >= moveHistory.length || moveHistory.length === 0;
+        }
+
+        /** Переход назад по истории */
+        function goBackInHistory() {
+            if (historyIndex <= 0 || moveHistory.length === 0) return;
+            historyIndex--;
+            if (historyIndex === 0) {
+                applyInitialPosition();
+            } else {
+                applyHistoryEntry(moveHistory[historyIndex - 1]);
+            }
+            updateHistoryButtons();
+        }
+
+        /** Переход вперёд по истории */
+        function goForwardInHistory() {
+            if (historyIndex >= moveHistory.length || moveHistory.length === 0) return;
+            historyIndex++;
+            if (historyIndex === moveHistory.length) {
+                const last = moveHistory[moveHistory.length - 1];
+                positions.first = { ...last.positionsAfter.first };
+                positions.second = { ...last.positionsAfter.second };
+                document.getElementById('turn-select').value = last.turnAfter;
+                const whiteBar = document.getElementById('white-bar-select');
+                const blackBar = document.getElementById('black-bar-select');
+                if (whiteBar) whiteBar.value = (positions.first.bar || 0).toString();
+                if (blackBar) blackBar.value = (positions.second.bar || 0).toString();
+                updateTurnSelect();
+                updateSelectOptions(getSelectedCheckerColor());
+                updateBarSelects();
+                for (let point = 1; point <= 24; point++) {
+                    const select = document.getElementById(`point-${point}`);
+                    const targetPositions = getSelectedCheckerColor() === 'white' ? positions.first : positions.second;
+                    if (select) select.value = (targetPositions[point.toString()] || 0).toString();
+                    updatePointSelectorDisplay(point);
+                }
+                drawBoard();
+            } else {
+                applyHistoryEntry(moveHistory[historyIndex - 1]);
+            }
+            updateHistoryButtons();
+        }
 
         // Функция для обновления текста типа игры
         function updateGameTypeLabel() {
@@ -3915,6 +4078,8 @@
                 return;
             }
 
+            clearMoveHistory();
+
             // Parse board positions
             const boardPart = parts[0];
             if (boardPart.length < 26) {
@@ -4873,6 +5038,9 @@
                 return;
             }
 
+            const positionsBefore = snapshotPositions();
+            const turnBefore = document.getElementById('turn-select')?.value || 'white';
+
             // Определяем позиции игрока и противника
             const playerPositions = playerColor === 'white' ? positions.first : positions.second;
             const opponentPositions = playerColor === 'white' ? positions.second : positions.first;
@@ -4948,6 +5116,18 @@
                     playerPositions[toKey] = (playerPositions[toKey] || 0) + 1;
                 }
             }
+
+            // Записываем ход в историю
+            recordMove({
+                positionsBefore,
+                positionsAfter: snapshotPositions(),
+                move: gnuMoveStr.trim(),
+                playerColor,
+                turnBefore,
+                turnAfter: playerColor === 'white' ? 'black' : 'white'
+            });
+            historyIndex = moveHistory.length;
+            updateHistoryButtons();
 
             // Обновляем селекты и перерисовываем доску
             updateSelectOptions(playerColor);
@@ -5164,6 +5344,7 @@
         }
 
         function performClear() {
+            clearMoveHistory();
             positions = {
                 first: {},
                 second: {}
@@ -5280,6 +5461,7 @@
         }
 
         function performInit() {
+            clearMoveHistory();
             // Standard starting positions for backgammon
             const standardWhitePos = { 6: 5, 8: 3, 13: 5, 24: 2 };
             const standardBlackPos = { 1: 2, 12: 5, 17: 3, 19: 5 };
@@ -5489,12 +5671,17 @@
                 selectorsWrapper.style.display = 'none';
                 if (controlsRow) controlsRow.style.display = 'none';
                 boardOpenControls.classList.add('active');
+                updateHistoryButtons();
             } else {
                 selectorsWrapper.style.display = '';
                 if (controlsRow) controlsRow.style.display = '';
                 boardOpenControls.classList.remove('active');
             }
         }
+
+        // Кнопки навигации по истории
+        document.getElementById('history-back-btn').addEventListener('click', goBackInHistory);
+        document.getElementById('history-forward-btn').addEventListener('click', goForwardInHistory);
 
         // Кнопка зелёного глаза в board-open-controls — запуск анализа
         document.getElementById('board-open-eye-btn').addEventListener('click', () => {
