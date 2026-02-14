@@ -2355,7 +2355,7 @@
                 <div class="match-panel-headers">
                     <div class="match-header">Очки Н.</div>
                     <div class="match-header">Очки В.</div>
-                    <div class="match-header">Длина матча</div>
+                    <div class="match-header">Дл. матча</div>
                     <div class="match-header">Макс куб</div>
                 </div>
                 <div class="score-inputs">
@@ -5708,6 +5708,16 @@
                     lowerPlayerButton.classList.add('black');
                     lowerPlayerButton.setAttribute('data-color', 'black');
                 }
+                // Автоматически выбрать соответствующую шашку в checker-selector
+                const newLowerColor = lowerPlayerButton.dataset.color;
+                setSelectedCheckerColor(newLowerColor);
+                updateSelectOptions(newLowerColor);
+                for (let point = 1; point <= 24; point++) {
+                    const select = document.getElementById(`point-${point}`);
+                    const targetPositions = newLowerColor === 'white' ? positions.first : positions.second;
+                    if (select) select.value = targetPositions[point.toString()] || 0;
+                }
+                updateBarSelects();
                 drawBoard();
             });
         }
