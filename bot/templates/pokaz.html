@@ -2934,6 +2934,38 @@
             }
         }
 
+        /** Восстанавливает состояние кубика из записи истории */
+        function applyCubeStateFromEntry(entry) {
+            if (!entry.cubeState) return;
+            const cs = entry.cubeState;
+            const cubeValueSelect = document.getElementById('cube-value-select');
+            const cubeShownSelect = document.getElementById('cube-shown-select');
+            const cubeOwnerSelect = document.getElementById('cube-owner-select');
+            if (cubeValueSelect) {
+                cubeValueSelect.value = cs.cubeValue || '0';
+                updateCubeSelectorDisplay('value');
+            }
+            if (cubeShownSelect) {
+                cubeShownSelect.value = cs.cubeShown || '0';
+                updateCubeSelectorDisplay('shown');
+            }
+            if (cubeOwnerSelect) {
+                cubeOwnerSelect.value = cs.cubeOwner || 'white';
+                updateCubeOwnerSelect();
+            }
+            const isMatch = currentGameType === 'матч';
+            const maxCubeSelect = isMatch ? document.getElementById('max-cube-select') : document.getElementById('max-cube-select-m');
+            if (maxCubeSelect && cs.maxCube) {
+                maxCubeSelect.value = cs.maxCube;
+                const maxCubeButton = isMatch ? document.getElementById('max-cube-button') : document.getElementById('max-cube-button-m');
+                if (maxCubeButton && maxCubeSelect.options[maxCubeSelect.selectedIndex]) {
+                    maxCubeButton.textContent = maxCubeSelect.options[maxCubeSelect.selectedIndex].text;
+                }
+                if (typeof filterCubeOptions === 'function') filterCubeOptions();
+            }
+            if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
+        }
+
         /** Восстанавливает позиции и ход из записи истории */
         function applyHistoryEntry(entry) {
             positions.first = { ...entry.positionsAfter.first };
@@ -2953,6 +2985,7 @@
                 if (select) select.value = (targetPositions[point.toString()] || 0).toString();
                 updatePointSelectorDisplay(point);
             }
+            applyCubeStateFromEntry(entry);
             drawBoard();
             applyHintsTableFromEntry(entry);
         }
@@ -3024,6 +3057,7 @@
                     if (select) select.value = (targetPositions[point.toString()] || 0).toString();
                     updatePointSelectorDisplay(point);
                 }
+                applyCubeStateFromEntry(last);
                 drawBoard();
                 applyHintsTableFromEntry(last);
             } else {
@@ -5297,13 +5331,20 @@
             }
             const snap = snapshotPositions();
             const currentTurn = document.getElementById('turn-select').value;
+            const isMatch = currentGameType === 'матч';
             recordMove({
                 positionsBefore: { first: { ...snap.first }, second: { ...snap.second } },
                 positionsAfter: { first: { ...snap.first }, second: { ...snap.second } },
                 move: null,
                 playerColor: null,
                 turnBefore: currentTurn,
-                turnAfter: currentTurn
+                turnAfter: currentTurn,
+                cubeState: {
+                    cubeValue: document.getElementById('cube-value-select').value,
+                    cubeShown: document.getElementById('cube-shown-select').value,
+                    cubeOwner: document.getElementById('cube-owner-select').value,
+                    maxCube: (isMatch ? document.getElementById('max-cube-select') : document.getElementById('max-cube-select-m'))?.value || '3'
+                }
             });
             historyIndex = moveHistory.length;
             updateHistoryButtons();
