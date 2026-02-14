@@ -2807,6 +2807,30 @@
             historyIndex = 0;
         }
 
+        /** Хеш-таблица перевода подсказок по кубу удвоения на русский */
+        const CUBE_ACTION_TRANSLATIONS = {
+            'no double': 'не удваивать',
+            'double': 'удваивать',
+            'take': 'принять',
+            'pass': 'сдаться'
+        };
+
+        /**
+         * Переводит строку подсказки по кубу (например "No double, take (33.3%)") на русский.
+         * Части строки разделяются запятой, текст в скобках сохраняется без перевода.
+         */
+        function translateCubeAction(str) {
+            if (!str || typeof str !== 'string') return str;
+            return str.split(',').map(part => {
+                const match = part.match(/^([^(]*)(\(.*\))?$/);
+                const textPart = (match ? match[1] : part).trim();
+                const parenPart = match && match[2] ? match[2] : '';
+                const key = textPart.toLowerCase();
+                const translated = CUBE_ACTION_TRANSLATIONS[key] !== undefined ? CUBE_ACTION_TRANSLATIONS[key] : textPart;
+                return translated + parenPart;
+            }).join(', ');
+        }
+
         /**
          * Строит HTML таблицы подсказок из данных API.
          * @param {Object} hintsData - hints: [...] при успехе или error: string при ошибке
@@ -2839,12 +2863,13 @@
             } else if (firstHint.type === 'cube_hint') {
                 tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
                 if (firstHint.prefer_action) {
-                    tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${firstHint.prefer_action}</td></tr>`;
+                    tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${translateCubeAction(firstHint.prefer_action)}</td></tr>`;
                 }
                 (firstHint.cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1 || '';
                     if (hint.action_2) displayAction += `, ${hint.action_2}`;
+                    displayAction = translateCubeAction(displayAction);
                     const rowStyle = index === 0 ? ' style="background-color: green;"' : '';
                     tableHtml += `<tr${rowStyle}><td>${displayAction}</td><td>${eq}</td></tr>`;
                 });
