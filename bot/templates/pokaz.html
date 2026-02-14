@@ -1450,6 +1450,16 @@
             text-align: center;
         }
 
+        .hints-content table th {
+            min-height: 36px;
+            box-sizing: border-box;
+        }
+
+        .cube-hints-table td:first-child,
+        .cube-hints-table th:first-child {
+            text-align: center;
+        }
+
         tr:nth-child(even) {
             background-color: #2a2a2a;
         }
@@ -2867,7 +2877,7 @@
                 });
                 tableHtml += '</table>';
             } else if (firstHint.type === 'cube_hint') {
-                tableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
+                tableHtml = '<table class="cube-hints-table"><tr><th>Действие</th><th>Эквити</th></tr>';
                 (firstHint.cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1 || '';
