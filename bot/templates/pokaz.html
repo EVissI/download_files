@@ -5110,18 +5110,6 @@
                 }
             }
 
-            // Записываем ход в историю
-            recordMove({
-                positionsBefore,
-                positionsAfter: snapshotPositions(),
-                move: gnuMoveStr.trim(),
-                playerColor,
-                turnBefore,
-                turnAfter: playerColor === 'white' ? 'black' : 'white'
-            });
-            historyIndex = moveHistory.length;
-            updateHistoryButtons();
-
             // Обновляем селекты и перерисовываем доску
             updateSelectOptions(playerColor);
             updateBarSelects();
@@ -5137,6 +5125,20 @@
                 },
                 turn: document.getElementById('turn-select').value
             };
+
+            // Записываем текущую позицию в историю при генерации доски
+            const snap = snapshotPositions();
+            const currentTurn = document.getElementById('turn-select').value;
+            recordMove({
+                positionsBefore: { first: { ...snap.first }, second: { ...snap.second } },
+                positionsAfter: { first: { ...snap.first }, second: { ...snap.second } },
+                move: null,
+                playerColor: null,
+                turnBefore: currentTurn,
+                turnAfter: currentTurn
+            });
+            historyIndex = moveHistory.length;
+            updateHistoryButtons();
 
             const xgid = generateXGID();
             showXGID(xgid); // DEBUG - удалить потом
