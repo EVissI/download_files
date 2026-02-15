@@ -2828,11 +2828,11 @@
         /**
          * Переводит строку подсказки по кубу (например "No double, take (33.3%)") на русский.
          * Части строки разделяются запятой, текст в скобках сохраняется без перевода.
-         * Все слова с маленькой буквы: "удвоить, сдаться".
+         * Первая буква строки — заглавная, остальные с маленькой: "Удвоить, сдаться".
          */
         function translateCubeAction(str) {
             if (!str || typeof str !== 'string') return str;
-            return str.split(',').map(part => {
+            const result = str.split(',').map(part => {
                 const match = part.match(/^([^(]*)(\(.*\))?$/);
                 const textPart = (match ? match[1] : part).trim();
                 const parenPart = match && match[2] ? match[2] : '';
@@ -2840,6 +2840,7 @@
                 const translated = CUBE_ACTION_TRANSLATIONS[key] !== undefined ? CUBE_ACTION_TRANSLATIONS[key] : textPart.toLowerCase();
                 return translated + parenPart;
             }).join(', ');
+            return result.charAt(0).toUpperCase() + result.slice(1);
         }
 
         /**
