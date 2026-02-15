@@ -2883,7 +2883,9 @@
                     tableHtml += `<tr${rowStyle}><td>${displayAction}</td><td>${eq}</td></tr>`;
                 });
                 if (firstHint.prefer_action) {
-                    tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${translateCubeAction(firstHint.prefer_action)}</td></tr>`;
+                    let preferText = translateCubeAction(firstHint.prefer_action);
+                    preferText = preferText.replace(/\(([^)]*)\)/g, '( $1)');
+                    tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${preferText}</td></tr>`;
                 }
                 tableHtml += '</table>';
             } else {
