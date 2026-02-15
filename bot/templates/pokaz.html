@@ -2820,20 +2820,15 @@
         /** Хеш-таблица перевода подсказок по кубу удвоения на русский */
         const CUBE_ACTION_TRANSLATIONS = {
             'no double': 'не удваивать',
-            'double': 'удваивать',
+            'double': 'удвоить',
             'take': 'принять',
             'pass': 'сдаться'
         };
 
-        /** Делает первую букву каждого слова заглавной */
-        function capitalizeWords(str) {
-            return str.replace(/(^|\s)\S/g, c => c.toUpperCase());
-        }
-
         /**
          * Переводит строку подсказки по кубу (например "No double, take (33.3%)") на русский.
          * Части строки разделяются запятой, текст в скобках сохраняется без перевода.
-         * Первая буква каждого слова — заглавная.
+         * Все слова с маленькой буквы: "удвоить, сдаться".
          */
         function translateCubeAction(str) {
             if (!str || typeof str !== 'string') return str;
@@ -2842,8 +2837,8 @@
                 const textPart = (match ? match[1] : part).trim();
                 const parenPart = match && match[2] ? match[2] : '';
                 const key = textPart.toLowerCase();
-                const translated = CUBE_ACTION_TRANSLATIONS[key] !== undefined ? CUBE_ACTION_TRANSLATIONS[key] : textPart;
-                return capitalizeWords(translated) + parenPart;
+                const translated = CUBE_ACTION_TRANSLATIONS[key] !== undefined ? CUBE_ACTION_TRANSLATIONS[key] : textPart.toLowerCase();
+                return translated + parenPart;
             }).join(', ');
         }
 
