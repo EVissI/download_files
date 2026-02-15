@@ -3980,12 +3980,64 @@
             return null; // No point found
         }
 
+        // Определяет, попал ли клик по кубику на доске. Возвращает 1 или 2 (номер кубика) или null.
+        function getDiceFromCoordinates(canvasX, canvasY) {
+            const d1 = parseInt(document.getElementById('dice1-select').value);
+            const d2 = parseInt(document.getElementById('dice2-select').value);
+            if (d1 === 0 && d2 === 0) return null;
+
+            const scale = canvas.offsetWidth / 800;
+            const x = canvasX / scale;
+            const y = canvasY / scale;
+
+            const diceY = 350;
+            const diceSize = 60;
+            let diceX1, diceX2;
+
+            const turn = document.getElementById('turn-select').value;
+            let isUpperPlayer;
+            if (upperPlayerColor === 'black') {
+                isUpperPlayer = (turn === 'black');
+            } else {
+                isUpperPlayer = (turn === 'white');
+            }
+
+            if (isUpperPlayer) {
+                diceX1 = 130;
+                diceX2 = 220;
+            } else {
+                diceX1 = 530;
+                diceX2 = 620;
+            }
+
+            if (d1 > 0 && x >= diceX1 && x <= diceX1 + diceSize && y >= diceY && y <= diceY + diceSize) return 1;
+            if (d2 > 0 && x >= diceX2 && x <= diceX2 + diceSize && y >= diceY && y <= diceY + diceSize) return 2;
+            return null;
+        }
+
+        // Увеличивает значение кубика на 1 (после 6 → 1)
+        function incrementDiceOnClick(diceNum) {
+            const select = document.getElementById(`dice${diceNum}-select`);
+            if (!select) return;
+            let val = parseInt(select.value) || 0;
+            if (val === 0) return;
+            val = val >= 6 ? 1 : val + 1;
+            select.value = val.toString();
+            updateDiceSelectorDisplay(diceNum);
+            drawBoard();
+        }
+
         // Handle canvas click event
         function handleCanvasClick(event) {
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
 
+            const diceNum = getDiceFromCoordinates(x, y);
+            if (diceNum !== null) {
+                incrementDiceOnClick(diceNum);
+                return;
+            }
             addCheckerAtPosition(x, y);
         }
 
@@ -4012,7 +4064,12 @@
             const isTooLong = touchDuration > 500;
 
             if (!isSwipe && !isTooQuick && !isTooLong) {
-                addCheckerAtPosition(x, y);
+                const diceNum = getDiceFromCoordinates(x, y);
+                if (diceNum !== null) {
+                    incrementDiceOnClick(diceNum);
+                } else {
+                    addCheckerAtPosition(x, y);
+                }
             }
         }
 
