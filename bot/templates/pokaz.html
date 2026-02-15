@@ -95,9 +95,9 @@
             height: 2em;
             border-radius: 50%;
             border: 0.1em solid #333;
-            pointer-events: none;
             flex-shrink: 0;
             box-shadow: inset 0 0 0 0.05em rgba(0, 0, 0, 0.2);
+            cursor: pointer;
         }
 
         .turn-checker-indicator.white {
@@ -4642,6 +4642,19 @@
             drawBoard();
             updateTurnLabel();
         });
+
+        const turnCheckerIndicator = document.getElementById('turn-checker-indicator');
+        if (turnCheckerIndicator) {
+            turnCheckerIndicator.addEventListener('click', () => {
+                const turnInput = document.getElementById('turn-select');
+                if (!turnInput) return;
+                const newColor = turnInput.value === 'white' ? 'black' : 'white';
+                turnInput.value = newColor;
+                updateTurnSelect();
+                turnInput.dispatchEvent(new Event('change'));
+            });
+        }
+
         document.getElementById('cube-value-select').addEventListener('change', () => {
             updateCubeSelectorDisplay('value');
             drawBoard();
