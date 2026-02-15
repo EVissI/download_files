@@ -2884,7 +2884,7 @@
                 });
                 if (firstHint.prefer_action) {
                     let preferText = translateCubeAction(firstHint.prefer_action);
-                    preferText = preferText.replace(/\(([^)]*)\)/g, '( $1)');
+                    preferText = preferText.replace(/([^\s])\(/g, '$1 (');
                     tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${preferText}</td></tr>`;
                 }
                 tableHtml += '</table>';
