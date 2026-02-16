@@ -20,6 +20,8 @@ user-profile-text =
     ├ 💎 Pleer <b>{ $short_board_balance }</b>
     ├ 👁️ Error View <b>{ $hints_balance }</b>
     ├ 🎯 Pokaz <b>{ $pokaz_balance }</b>
+    ├ 💬 Comments <b>{ $comments_balance }</b>
+    ├ 📷 Screenshots <b>{ $screenshots_balance }</b>
     └ 🌐 Language: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = My Statistics
 user-profile-inline_button-change_language = Change Language

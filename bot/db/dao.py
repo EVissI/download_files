@@ -128,6 +128,8 @@ class UserDAO(BaseDAO[User]):
                 ServiceType.SHORT_BOARD,
                 ServiceType.HINTS,
                 ServiceType.POKAZ,
+                ServiceType.COMMENTS,
+                ServiceType.SCRINSHOT,
             ]
 
             for service_type in service_types:

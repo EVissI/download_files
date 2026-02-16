@@ -24,6 +24,8 @@ user-profile-text =
     ├ 💎 Плеер <b>{ $short_board_balance }</b>
     ├ 👁️ Ошибки <b>{ $hints_balance }</b>
     ├ 🎯 Позиции <b>{ $pokaz_balance }</b>
+    ├ 💬 Комментарии <b>{ $comments_balance }</b>
+    ├ 📷 Скриншоты <b>{ $screenshots_balance }</b>
     └ 🌐 Язык: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = Моя статистика
 user-profile-inline_button-change_language = Изменить язык

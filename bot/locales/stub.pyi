@@ -67,11 +67,15 @@ class UserProfile:
     @staticmethod
     def change_language_text() -> Literal["""Select a language for the bot:"""]: ...
     @staticmethod
-    def text(*, analiz_balance: PossibleValue, lang_code: PossibleValue, match_balance: PossibleValue, player_username: PossibleValue, short_board_balance: PossibleValue) -> Literal["""🧍‍♂️ &lt;b&gt;Profile&lt;/b&gt;
+    def text(*, analiz_balance: PossibleValue, comments_balance: PossibleValue, hints_balance: PossibleValue, lang_code: PossibleValue, match_balance: PossibleValue, player_username: PossibleValue, pokaz_balance: PossibleValue, screenshots_balance: PossibleValue, short_board_balance: PossibleValue) -> Literal["""🧍‍♂️ &lt;b&gt;Profile&lt;/b&gt;
 ├ 🎲 Nickname: &lt;code&gt;{ $player_username }&lt;/code&gt;
 ├ 🔮 Matches: &lt;b&gt;{ $match_balance }&lt;/b&gt;
 ├ 📊 Moneygames: &lt;b&gt;{ $analiz_balance }&lt;/b&gt;
 ├ 💎 Pleer &lt;b&gt;{ $short_board_balance }&lt;/b&gt;
+├ 👁️ Error View &lt;b&gt;{ $hints_balance }&lt;/b&gt;
+├ 🎯 Pokaz &lt;b&gt;{ $pokaz_balance }&lt;/b&gt;
+├ 💬 Comments &lt;b&gt;{ $comments_balance }&lt;/b&gt;
+├ 📷 Screenshots &lt;b&gt;{ $screenshots_balance }&lt;/b&gt;
 └ 🌐 Language: &lt;b&gt;{ $lang_code }&lt;/b&gt;"""]: ...
     @staticmethod
     def detailed_statistics(*, cube_error_rate: PossibleValue, detailed_count: PossibleValue, detailed_rank_chequer: PossibleValue, detailed_rank_cube: PossibleValue, detailed_rank_overall: PossibleValue, error_rate_chequer: PossibleValue, missed_doubles_above_cp: PossibleValue, missed_doubles_below_cp: PossibleValue, player_username: PossibleValue, rolls_marked_lucky: PossibleValue, rolls_marked_unlucky: PossibleValue, rolls_marked_very_lucky: PossibleValue, rolls_marked_very_unlucky: PossibleValue, snowie_error_rate: PossibleValue, wrong_doubles_above_tg: PossibleValue, wrong_doubles_below_sp: PossibleValue, wrong_passes: PossibleValue, wrong_takes: PossibleValue) -> Literal["""🎯 Gnu( { $detailed_count } games, Nickname: { $player_username })

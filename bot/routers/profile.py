@@ -36,14 +36,18 @@ async def profile_command(message: Message, user_info: User, i18n: TranslatorRun
     short_board_balance = balance_dict.get(ServiceType.SHORT_BOARD.name, '∞')
     hints_balance = balance_dict.get(ServiceType.HINTS.name, '∞')
     pokaz_balance = balance_dict.get(ServiceType.POKAZ.name, '∞')
+    comments_balance = balance_dict.get(ServiceType.COMMENTS.name, '∞')
+    screenshots_balance = balance_dict.get(ServiceType.SCRINSHOT.name, '∞')
     await message.answer(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=analiz_balance if analiz_balance is not None else '∞',
             match_balance=match_balance if match_balance is not None else '∞',
             short_board_balance=short_board_balance if short_board_balance is not None else '∞',
-            hints_balance = hints_balance if hints_balance is not None else '∞',
-            pokaz_balance = pokaz_balance if pokaz_balance is not None else '∞',
+            hints_balance=hints_balance if hints_balance is not None else '∞',
+            pokaz_balance=pokaz_balance if pokaz_balance is not None else '∞',
+            comments_balance=comments_balance if comments_balance is not None else '∞',
+            screenshots_balance=screenshots_balance if screenshots_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
@@ -75,14 +79,18 @@ async def change_language_back_callback(
     short_board_balance = balance_dict.get(ServiceType.SHORT_BOARD.name, '∞')
     hints_balance = balance_dict.get(ServiceType.HINTS.name, '∞')
     pokaz_balance = balance_dict.get(ServiceType.POKAZ.name, '∞')
+    comments_balance = balance_dict.get(ServiceType.COMMENTS.name, '∞')
+    screenshots_balance = balance_dict.get(ServiceType.SCRINSHOT.name, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=analiz_balance if analiz_balance is not None else '∞',
             match_balance=match_balance if match_balance is not None else '∞',
             short_board_balance=short_board_balance if short_board_balance is not None else '∞',
-            hints_balance = hints_balance if hints_balance is not None else '∞',
-            pokaz_balance = pokaz_balance if pokaz_balance is not None else '∞',
+            hints_balance=hints_balance if hints_balance is not None else '∞',
+            pokaz_balance=pokaz_balance if pokaz_balance is not None else '∞',
+            comments_balance=comments_balance if comments_balance is not None else '∞',
+            screenshots_balance=screenshots_balance if screenshots_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
@@ -124,14 +132,18 @@ async def back_to_profile(
     short_board_balance = balance_dict.get(ServiceType.SHORT_BOARD.name, '∞')
     hints_balance = balance_dict.get(ServiceType.HINTS.name, '∞')
     pokaz_balance = balance_dict.get(ServiceType.POKAZ.name, '∞')
+    comments_balance = balance_dict.get(ServiceType.COMMENTS.name, '∞')
+    screenshots_balance = balance_dict.get(ServiceType.SCRINSHOT.name, '∞')
     await callback.message.edit_text(
         i18n.user.profile.text(
             player_username=user_info.player_username if user_info.player_username is not None else 'N/A',
             analiz_balance=analiz_balance if analiz_balance is not None else '∞',
             match_balance=match_balance if match_balance is not None else '∞',
             short_board_balance=short_board_balance if short_board_balance is not None else '∞',
-            hints_balance = hints_balance if hints_balance is not None else '∞',
-            pokaz_balance = pokaz_balance if pokaz_balance is not None else '∞',
+            hints_balance=hints_balance if hints_balance is not None else '∞',
+            pokaz_balance=pokaz_balance if pokaz_balance is not None else '∞',
+            comments_balance=comments_balance if comments_balance is not None else '∞',
+            screenshots_balance=screenshots_balance if screenshots_balance is not None else '∞',
             lang_code=user_info.lang_code,
         ),
         reply_markup=get_profile_kb(i18n),
