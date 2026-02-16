@@ -6464,6 +6464,11 @@
                         const waitText = (data.detail && data.detail.wait_text) ? data.detail.wait_text : 'некоторое время';
                         alert(`Слишком много запросов. Пожалуйста, подождите ${waitText} перед следующей отправкой.`);
                         modal.style.display = originalModalDisplay;
+                    } else if (response.status === 402) {
+                        const data = await response.json();
+                        const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для отправки комментария. Активируйте промокод или приобретите услугу.';
+                        alert(msg);
+                        modal.style.display = originalModalDisplay;
                     } else {
                         alert('Ошибка при отправке сообщения');
                         modal.style.display = originalModalDisplay;

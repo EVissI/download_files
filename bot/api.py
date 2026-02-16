@@ -12,11 +12,12 @@ from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.config import settings
-from bot.config import bot, SUPPORT_TG_ID
+from bot.config import bot, SUPPORT_TG_ID, translator_hub
 from bot.db.redis import redis_client
+from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.func.pokaz_func import get_hints_for_xgid
 from bot.db.database import async_session_maker
-from bot.db.dao import UserDAO
+from bot.db.dao import UserDAO, MessagesTextsDAO
 from bot.db.models import ServiceType
 from loguru import logger
 import traceback
@@ -220,11 +221,9 @@ async def send_to_admin(request: Request):
         if not photo:
             logger.warning("Admin comment request received without photo")
             raise HTTPException(status_code=400, detail="No photo provided")
-
         # Рейлимит: 5 запросов за 10 минут (600 секунд)
         rate_limit_key = f"rate_limit:admin_comment:{chat_id}"
         current_requests = await redis_client.get(rate_limit_key)
-
         if current_requests and int(current_requests) >= 5:
             ttl = await redis_client.ttl(rate_limit_key)
             minutes = ttl // 60
@@ -241,6 +240,36 @@ async def send_to_admin(request: Request):
                     ),
                 },
             )
+        # Проверка баланса по ServiceType.COMMENTS
+        chat_id_int = int(chat_id)
+        async with async_session_maker() as session:
+            user_dao = UserDAO(session)
+            balance = await user_dao.get_total_analiz_balance(
+                chat_id_int, ServiceType.COMMENTS
+            )
+            if balance is not None and balance < 1:
+                logger.warning(
+                    f"Недостаточно баланса COMMENTS для пользователя {chat_id}. Баланс: {balance}"
+                )
+                # Получаем язык юзера и отправляем сообщение с клавиатурой активации промо
+                user = await user_dao.find_one_or_none_by_id(chat_id_int)
+                lang_code = (user.lang_code or "en") if user else "en"
+                message_dao = MessagesTextsDAO(session)
+                msg_text = await message_dao.get_text(
+                    "comments_not_enough_balance", lang_code
+                )
+                if msg_text:
+                    i18n = translator_hub.get_translator_by_locale(lang_code)
+                    await bot.send_message(
+                        chat_id=chat_id_int,
+                        text=msg_text,
+                        reply_markup=get_activate_promo_keyboard(i18n),
+                    )
+                raise HTTPException(
+                    status_code=402, detail="Недостаточно баланса для отправки комментария"
+                )
+
+
 
         # Читаем файл
         photo_bytes = await photo.read()
@@ -264,6 +293,15 @@ async def send_to_admin(request: Request):
             caption=f"❓ Вопрос от пользователя\nUser ID: {chat_id}\n\n{text}",
             reply_markup=keyboard,
         )
+
+        # Списываем баланс COMMENTS после успешной отправки
+        async with async_session_maker() as session:
+            user_dao = UserDAO(session)
+            await user_dao.decrease_analiz_balance(
+                user_id=chat_id_int,
+                service_type=ServiceType.COMMENTS.name,
+            )
+            await session.commit()
 
         # Обновляем счетчик в Redis
         if not current_requests:
