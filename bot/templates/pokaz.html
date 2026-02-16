@@ -5136,10 +5136,10 @@
         //     document.getElementById('xgid-text').textContent = xgid;
         //     document.getElementById('xgid-display').style.display = 'block';
         // }
-        function hideXGID() {
-            document.getElementById('xgid-display').style.display = 'none';
-        }
-        document.getElementById('xgid-close').addEventListener('click', hideXGID);
+        // function hideXGID() {
+        //     document.getElementById('xgid-display').style.display = 'none';
+        // }
+        // document.getElementById('xgid-close').addEventListener('click', hideXGID);
 
         /**
          * Парсит GNU move строку и возвращает удобный объект для получения информации о ходах.
@@ -5643,7 +5643,7 @@
                 screenshotControls.classList.remove('active');
             }
 
-            hideXGID(); // DEBUG - удалить потом
+            // hideXGID(); // DEBUG - удалить потом
             drawBoard();
             hideClearModal();
         }
@@ -5733,7 +5733,7 @@
             hintsTable.classList.remove('active');
             if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
 
-            hideXGID(); // DEBUG - удалить потом
+            // hideXGID(); // DEBUG - удалить потом
             drawBoard();
             hideInitModal();
         }
