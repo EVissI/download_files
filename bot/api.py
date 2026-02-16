@@ -242,6 +242,16 @@ async def send_to_admin(request: Request):
             )
         # Проверка баланса по ServiceType.COMMENTS
         chat_id_int = int(chat_id)
+        support_keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="Ответить",
+                            callback_data=f"admin_reply:{chat_id}",
+                        )
+                    ]
+                ]
+            )
         async with async_session_maker() as session:
             user_dao = UserDAO(session)
             balance = await user_dao.get_total_analiz_balance(
@@ -250,6 +260,12 @@ async def send_to_admin(request: Request):
             if balance is not None and balance < 1:
                 logger.warning(
                     f"Недостаточно баланса COMMENTS для пользователя {chat_id}. Баланс: {balance}"
+                )
+                # Уведомляем саппорт о попытке отправки без баланса
+                await bot.send_message(
+                    chat_id=SUPPORT_TG_ID,
+                    text=f"⚠️ Пользователь попытался отправить сообщение, но у него не хватило баланса.\nUser ID: {chat_id}",
+                    reply_markup=support_keyboard,
                 )
                 # Получаем язык юзера и отправляем сообщение с клавиатурой активации промо
                 user = await user_dao.find_one_or_none_by_id(chat_id_int)
@@ -276,22 +292,11 @@ async def send_to_admin(request: Request):
 
         photo_file = BufferedInputFile(photo_bytes, filename="admin_comment_screenshot.png")
 
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="Ответить",
-                        callback_data=f"admin_reply:{chat_id}",
-                    )
-                ]
-            ]
-        )
-
         await bot.send_photo(
             chat_id=SUPPORT_TG_ID,
             photo=photo_file,
             caption=f"❓ Вопрос от пользователя\nUser ID: {chat_id}\n\n{text}",
-            reply_markup=keyboard,
+            reply_markup=support_keyboard,
         )
 
         # Списываем баланс COMMENTS после успешной отправки
