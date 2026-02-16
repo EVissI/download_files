@@ -6086,6 +6086,28 @@
         }
     }
 
+    // Показывает исчезающее сообщение по центру экрана
+    function showFadingMessage(message) {
+        const msgDiv = document.createElement('div');
+        msgDiv.style.position = 'fixed';
+        msgDiv.style.top = '50%';
+        msgDiv.style.left = '50%';
+        msgDiv.style.transform = 'translate(-50%, -50%)';
+        msgDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        msgDiv.style.color = 'white';
+        msgDiv.style.padding = '10px 20px';
+        msgDiv.style.borderRadius = '5px';
+        msgDiv.style.fontSize = '16px';
+        msgDiv.style.zIndex = '10000';
+        msgDiv.innerHTML = message;
+        document.body.appendChild(msgDiv);
+        setTimeout(() => {
+            msgDiv.style.transition = 'opacity 1s';
+            msgDiv.style.opacity = '0';
+            setTimeout(() => msgDiv.remove(), 1000);
+        }, 1000);
+    }
+
     // Функции для работы со скриншотами (в глобальной области видимости)
     function takeScreenshot() {
         // Скрываем элементы управления перед созданием скриншота
@@ -6180,19 +6202,19 @@
                             body: formData
                         }).then(response => {
                             if (response.ok) {
-                                console.log('Скриншот отправлен успешно');
+                                showFadingMessage('Скриншот отправлен');
                             } else {
                                 response.text().then(text => {
                                     console.error('Ошибка сервера:', text);
-                                    alert('Ошибка при отправке скриншота');
+                                    showFadingMessage('Ошибка при отправке скриншота');
                                 });
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
-                            alert('Ошибка при отправке скриншота: ' + error);
+                            showFadingMessage('Ошибка при отправке скриншота');
                         });
                     } else {
-                        alert('Не удалось получить chat_id');
+                        showFadingMessage('Не удалось получить chat_id');
                     }
                 } else {
                     // Если не в Telegram, скачиваем файл
@@ -6200,11 +6222,12 @@
                     link.download = 'screenshot.png';
                     link.href = canvas.toDataURL();
                     link.click();
+                    showFadingMessage('Скриншот сохранён');
                 }
             });
         }).catch(error => {
             console.error('Error creating screenshot:', error);
-            alert('Ошибка при создании скриншота: ' + error.message);
+            showFadingMessage('Ошибка при создании скриншота');
             restoreControls();
         });
     }
@@ -6292,24 +6315,24 @@
                         body: formData
                     }).then(response => {
                         if (response.ok) {
-                            alert('Скриншот сохранен в буфер');
+                            showFadingMessage('Скриншот сохранён в буфер');
                         } else {
-                            alert('Ошибка при сохранении скриншота');
+                            showFadingMessage('Ошибка при сохранении скриншота');
                         }
                         restoreControls();
                     }).catch(error => {
                         console.error('Error saving screenshot:', error);
-                        alert('Ошибка при сохранении скриншота');
+                        showFadingMessage('Ошибка при сохранении скриншота');
                         restoreControls();
                     });
                 } else {
-                    alert('Не удалось получить chat_id');
+                    showFadingMessage('Не удалось получить chat_id');
                     restoreControls();
                 }
             });
         }).catch(error => {
             console.error('Error creating screenshot:', error);
-            alert('Ошибка при создании скриншота');
+            showFadingMessage('Ошибка при создании скриншота');
             restoreControls();
         });
     }
@@ -6321,16 +6344,16 @@
         if (chatId) {
             fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(response => {
                 if (response.ok) {
-                    alert('Скриншоты отправлены');
+                    showFadingMessage('Скриншоты отправлены');
                 } else {
-                    alert('Ошибка при отправке скриншотов');
+                    showFadingMessage('Ошибка при отправке скриншотов');
                 }
             }).catch(error => {
                 console.error('Error uploading screenshots:', error);
-                alert('Ошибка при отправке скриншотов');
+                showFadingMessage('Ошибка при отправке скриншотов');
             });
         } else {
-            alert('Не удалось получить chat_id');
+            showFadingMessage('Не удалось получить chat_id');
         }
     }
 
