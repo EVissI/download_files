@@ -6188,6 +6188,7 @@
         }
 
         // Скрываем элементы
+        if (screenshotControls) screenshotControls.style.display = 'none';
         if (actionButtons) actionButtons.style.display = 'none';
         if (selectorsWrapper) selectorsWrapper.style.display = 'none';
         if (boardOpenControls) boardOpenControls.style.display = 'none';
@@ -6436,6 +6437,10 @@
         const originalModalDisplay = modal.style.display;
         modal.style.display = 'none';
 
+        const screenshotControls = document.getElementById('screenshotControls');
+        const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
+        if (screenshotControls) screenshotControls.style.display = 'none';
+
         document.body.classList.add('screenshot-mode');
 
         html2canvas(document.body, {
@@ -6463,6 +6468,7 @@
                     sendBtn.innerText = originalBtnText;
                     adminContainer.style.display = originalAdminDisplay;
                     modal.style.display = originalModalDisplay;
+                    if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
                     return;
                 }
 
@@ -6506,10 +6512,12 @@
                         alert('Ошибка при отправке сообщения');
                     }
                     modal.style.display = originalModalDisplay;
+                    if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
                 }).finally(() => {
                     sendBtn.disabled = false;
                     sendBtn.innerText = originalBtnText;
                     adminContainer.style.display = originalAdminDisplay;
+                    if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
                 });
             });
         }).catch(error => {
@@ -6520,6 +6528,7 @@
             sendBtn.disabled = false;
             sendBtn.innerText = originalBtnText;
             adminContainer.style.display = originalAdminDisplay;
+            if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
         });
     }
 
