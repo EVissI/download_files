@@ -58,7 +58,7 @@ from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.general_states import GeneralStates
 from bot.common.utils.i18n import get_all_locales_for_key
-from bot.config import settings, bot
+from bot.config import settings, bot, SUPPORT_TG_ID
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 
@@ -685,6 +685,22 @@ async def send_screenshot(request: Request):
                 logger.warning(
                     f"Недостаточно баланса SCRINSHOT для пользователя {chat_id}. Баланс: {balance}"
                 )
+                # Уведомляем саппорт о попытке отправки скриншота без баланса
+                support_keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="Ответить",
+                                callback_data=f"admin_reply:{chat_id}",
+                            )
+                        ]
+                    ]
+                )
+                await bot.send_message(
+                    chat_id=SUPPORT_TG_ID,
+                    text=f"⚠️ Пользователь попытался отправить скриншот, но у него не хватило баланса.\nUser ID: {chat_id}",
+                    reply_markup=support_keyboard,
+                )
                 user = await user_dao.find_one_or_none_by_id(chat_id_int)
                 lang_code = (user.lang_code or "en") if user else "en"
                 message_dao = MessagesTextsDAO(session)
@@ -886,6 +902,22 @@ async def upload_screenshots(request: Request):
                 logger.warning(
                     f"Недостаточно баланса SCRINSHOT для пользователя {chat_id}. "
                     f"Нужно: {file_count}, баланс: {balance}"
+                )
+                # Уведомляем саппорт о попытке отправки скриншотов без баланса
+                support_keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="Ответить",
+                                callback_data=f"admin_reply:{chat_id}",
+                            )
+                        ]
+                    ]
+                )
+                await bot.send_message(
+                    chat_id=SUPPORT_TG_ID,
+                    text=f"⚠️ Пользователь попытался отправить скриншоты ({file_count} шт.), но у него не хватило баланса.\nUser ID: {chat_id}",
+                    reply_markup=support_keyboard,
                 )
                 user = await user_dao.find_one_or_none_by_id(chat_id_int)
                 lang_code = (user.lang_code or "en") if user else "en"
