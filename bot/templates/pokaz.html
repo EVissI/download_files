@@ -1726,12 +1726,18 @@
             padding-right: 1rem;
         }
 
+        .board-open-controls-spacer {
+            flex: 1;
+        }
+
         .board-open-controls.active {
             display: flex;
         }
 
         .board-open-controls-buttons {
+            flex: 1;
             display: flex;
+            justify-content: flex-end;
             gap: clamp(0.5rem, 2vw, 1rem);
             align-items: center;
         }
@@ -2695,6 +2701,7 @@
     </div>
 
     <div class="board-open-controls" id="boardOpenControls">
+        <div class="board-open-controls-spacer"></div>
         <div class="history-nav">
             <button type="button" id="history-back-btn" class="history-nav-btn" title="Назад по истории" aria-label="Назад по истории"></button>
             <div id="turn-checker-indicator" class="turn-checker-indicator white" title="Чей ход"></div>
