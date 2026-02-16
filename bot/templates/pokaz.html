@@ -1497,6 +1497,12 @@
             background-color: #ff8c00;
         }
 
+        /* Скрываем столбец с интерактивными элементами (кнопки) только на скриншотах */
+        body.screenshot-mode .hints-content table:not(.cube-hints-table) th:last-child,
+        body.screenshot-mode .hints-content table:not(.cube-hints-table) td:last-child {
+            display: none;
+        }
+
         #restore-position-btn i {
             color: white;
         }
@@ -6163,6 +6169,7 @@
 
         // Функция для восстановления элементов
         function restoreControls() {
+            document.body.classList.remove('screenshot-mode');
             if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
             if (actionButtons && originalActionButtonsDisplay !== null) actionButtons.style.display = originalActionButtonsDisplay;
             if (selectorsWrapper && originalSelectorsDisplay !== null) selectorsWrapper.style.display = originalSelectorsDisplay;
@@ -6200,6 +6207,9 @@
             updateTurnLabel();
             turnLabel.style.display = 'block';
         }
+
+        // Скрываем столбец с кнопками в таблице подсказок на скриншоте
+        document.body.classList.add('screenshot-mode');
 
         // Создаем скриншот
         html2canvas(document.body, {
@@ -6289,6 +6299,7 @@
 
         // Функция для восстановления элементов
         function restoreControls() {
+            document.body.classList.remove('screenshot-mode');
             if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
             if (actionButtons && originalActionButtonsDisplay !== null) actionButtons.style.display = originalActionButtonsDisplay;
             if (selectorsWrapper && originalSelectorsDisplay !== null) selectorsWrapper.style.display = originalSelectorsDisplay;
@@ -6327,7 +6338,10 @@
             turnLabel.style.display = 'block';
         }
 
+        document.body.classList.add('screenshot-mode');
+
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
+            document.body.classList.remove('screenshot-mode');
             canvas.toBlob(blob => {
                 const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
                 const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
@@ -6422,11 +6436,14 @@
         const originalModalDisplay = modal.style.display;
         modal.style.display = 'none';
 
+        document.body.classList.add('screenshot-mode');
+
         html2canvas(document.body, {
             useCORS: true,
             allowTaint: true,
             backgroundColor: '#1a1a1a'
         }).then(canvas => {
+            document.body.classList.remove('screenshot-mode');
             canvas.toBlob(blob => {
                 const initDataUnsafe = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.initDataUnsafe : null;
                 let chatId = null;
@@ -6498,6 +6515,7 @@
         }).catch(error => {
             console.error('Error creating screenshot:', error);
             alert('Ошибка при создании скриншота');
+            document.body.classList.remove('screenshot-mode');
             modal.style.display = originalModalDisplay;
             sendBtn.disabled = false;
             sendBtn.innerText = originalBtnText;
