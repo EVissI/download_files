@@ -365,6 +365,89 @@ class UserDAO(BaseDAO[User]):
             await self._session.rollback()
             return False
 
+    async def decrease_analiz_balance_batch(
+        self, user_id: int, service_type: str, amount: int
+    ) -> int:
+        """
+        Списывает amount единиц баланса за один проход.
+        Сначала потребляет из UserPromocodeService (по старейшим), затем из UserAnalizePaymentService.
+        Возвращает фактически списанное количество.
+        """
+        if amount <= 0:
+            return 0
+        try:
+            service_type_value = service_type if isinstance(service_type, str) else service_type.name
+
+            # Получаем все промо-сервисы по порядку
+            promo_query = (
+                select(UserPromocodeService)
+                .join(
+                    UserPromocode,
+                    UserPromocode.id == UserPromocodeService.user_promocode_id,
+                )
+                .where(
+                    UserPromocode.user_id == user_id,
+                    UserPromocode.is_active == True,
+                    UserPromocodeService.service_type == service_type_value,
+                    (UserPromocodeService.remaining_quantity > 0)
+                    | (UserPromocodeService.remaining_quantity.is_(None)),
+                )
+                .order_by(UserPromocode.created_at.asc())
+            )
+            promo_result = await self._session.execute(promo_query)
+            promo_services = list(promo_result.scalars().all())
+
+            # Получаем все платёжные сервисы по порядку
+            payment_query = (
+                select(UserAnalizePaymentService)
+                .join(
+                    UserAnalizePayment,
+                    UserAnalizePayment.id
+                    == UserAnalizePaymentService.user_analize_payment_id,
+                )
+                .where(
+                    UserAnalizePayment.user_id == user_id,
+                    UserAnalizePayment.is_active == True,
+                    UserAnalizePaymentService.service_type == service_type_value,
+                    (UserAnalizePaymentService.remaining_quantity > 0)
+                    | (UserAnalizePaymentService.remaining_quantity.is_(None)),
+                )
+                .order_by(UserAnalizePayment.created_at.asc())
+            )
+            payment_result = await self._session.execute(payment_query)
+            payment_services = list(payment_result.scalars().all())
+
+            # Объединяем: сначала промо, потом платежи
+            all_services = promo_services + payment_services
+            remaining_to_deduct = amount
+            deducted = 0
+
+            for service in all_services:
+                if remaining_to_deduct <= 0:
+                    break
+                if service.remaining_quantity is None:
+                    # Безлимит — списываем всё оставшееся
+                    deducted += remaining_to_deduct
+                    remaining_to_deduct = 0
+                    break
+                take = min(service.remaining_quantity, remaining_to_deduct)
+                service.remaining_quantity -= take
+                remaining_to_deduct -= take
+                deducted += take
+                if service.remaining_quantity == 0 and hasattr(service, "is_active"):
+                    service.is_active = False
+
+            logger.info(
+                f"Batch decreased balance for user {user_id}: deducted {deducted} of {amount}"
+            )
+            return deducted
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Error batch decreasing analiz_balance for user {user_id}: {e}"
+            )
+            await self._session.rollback()
+            return 0
+
     async def check_expired_records(self, user_id: int) -> list[dict]:
         """
         Checks if any UserPromocode or UserAnalizePayment records for the user have expired based on duration_days.

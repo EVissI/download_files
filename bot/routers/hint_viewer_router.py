@@ -58,12 +58,12 @@ from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.general_states import GeneralStates
 from bot.common.utils.i18n import get_all_locales_for_key
-from bot.config import settings
-
+from bot.config import settings, bot
 from bot.config import translator_hub
 from typing import TYPE_CHECKING
 
 from bot.db.dao import UserDAO, DetailedAnalysisDAO, MessagesTextsDAO
+from bot.db.database import async_session_maker
 from bot.db.models import ServiceType, User
 from bot.db.schemas import SDetailedAnalysis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -673,28 +673,54 @@ async def send_screenshot(request: Request):
             logger.warning("Screenshot request received without chat_id")
             raise HTTPException(status_code=400, detail="No chat_id provided")
 
+        chat_id_int = int(chat_id)
         logger.info(f"Sending screenshot to chat_id: {chat_id}")
 
-        # Читаем файл
-        photo_bytes = await photo.read()
-        logger.debug(f"Screenshot file size: {len(photo_bytes)} bytes")
+        async with async_session_maker() as session:
+            user_dao = UserDAO(session)
+            balance = await user_dao.get_total_analiz_balance(
+                chat_id_int, ServiceType.SCRINSHOT
+            )
+            if balance is not None and balance < 1:
+                logger.warning(
+                    f"Недостаточно баланса SCRINSHOT для пользователя {chat_id}. Баланс: {balance}"
+                )
+                user = await user_dao.find_one_or_none_by_id(chat_id_int)
+                lang_code = (user.lang_code or "en") if user else "en"
+                message_dao = MessagesTextsDAO(session)
+                msg_text = await message_dao.get_text(
+                    "screenshots_not_enough_balance", lang_code
+                )
+                if msg_text:
+                    i18n = translator_hub.get_translator_by_locale(lang_code)
+                    await bot.send_message(
+                        chat_id=chat_id_int,
+                        text=msg_text,
+                        reply_markup=get_activate_promo_keyboard(i18n),
+                    )
+                raise HTTPException(
+                    status_code=402,
+                    detail="Недостаточно баланса для сохранения скриншота",
+                )
 
-        # Создаем BufferedInputFile из байтов
-        from aiogram.types import BufferedInputFile
+            # Читаем файл и отправляем
+            photo_bytes = await photo.read()
+            logger.debug(f"Screenshot file size: {len(photo_bytes)} bytes")
+            photo_file = BufferedInputFile(photo_bytes, filename="screenshot.png")
+            await bot.send_photo(chat_id=chat_id_int, photo=photo_file)
 
-        photo_file = BufferedInputFile(photo_bytes, filename="screenshot.png")
-
-        # Отправляем фото в Telegram
-        from bot.config import bot
-
-        await bot.send_photo(
-            chat_id=int(chat_id),
-            photo=photo_file,
-        )
+            # Списываем баланс SCRINSHOT после успешной отправки
+            await user_dao.decrease_analiz_balance(
+                user_id=chat_id_int,
+                service_type=ServiceType.SCRINSHOT.name,
+            )
+            await session.commit()
 
         logger.info(f"Screenshot successfully sent to chat_id: {chat_id}")
         return {"status": "success"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
             f"Error sending screenshot to chat_id {chat_id if 'chat_id' in locals() else 'unknown'}: {e}"
@@ -848,35 +874,72 @@ async def upload_screenshots(request: Request):
         if not screenshots:
             raise HTTPException(status_code=404, detail="No screenshots in buffer")
 
-        # Создаем ZIP архив
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for screenshot in screenshots:
-                filepath = os.path.join(buffer_dir, screenshot)
-                zip_file.write(filepath, screenshot)
+        chat_id_int = int(chat_id)
+        file_count = len(screenshots)
 
-        zip_buffer.seek(0)
-        zip_data = zip_buffer.getvalue()
+        async with async_session_maker() as session:
+            user_dao = UserDAO(session)
+            balance = await user_dao.get_total_analiz_balance(
+                chat_id_int, ServiceType.SCRINSHOT
+            )
+            if balance is not None and balance < file_count:
+                logger.warning(
+                    f"Недостаточно баланса SCRINSHOT для пользователя {chat_id}. "
+                    f"Нужно: {file_count}, баланс: {balance}"
+                )
+                user = await user_dao.find_one_or_none_by_id(chat_id_int)
+                lang_code = (user.lang_code or "en") if user else "en"
+                message_dao = MessagesTextsDAO(session)
+                msg_text = await message_dao.get_text(
+                    "screenshots_not_enough_balance", lang_code
+                )
+                if msg_text:
+                    i18n = translator_hub.get_translator_by_locale(lang_code)
+                    await bot.send_message(
+                        chat_id=chat_id_int,
+                        text=msg_text,
+                        reply_markup=get_activate_promo_keyboard(i18n),
+                    )
+                raise HTTPException(
+                    status_code=402,
+                    detail=f"Недостаточно баланса. Нужно {file_count} скриншотов.",
+                )
 
-        # Отправляем ZIP в Telegram
-        from aiogram.types import BufferedInputFile
-        from bot.config import bot
+            # Создаем ZIP архив
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                for screenshot in screenshots:
+                    filepath = os.path.join(buffer_dir, screenshot)
+                    zip_file.write(filepath, screenshot)
 
-        zip_file = BufferedInputFile(zip_data, filename="screenshots.zip")
-        await bot.send_document(
-            chat_id=int(chat_id),
-            document=zip_file,
-            caption=f"Архив с {len(screenshots)} скриншотами",
-        )
+            zip_buffer.seek(0)
+            zip_data = zip_buffer.getvalue()
+
+            zip_file = BufferedInputFile(zip_data, filename="screenshots.zip")
+            await bot.send_document(
+                chat_id=chat_id_int,
+                document=zip_file,
+                caption=f"Архив с {file_count} скриншотами",
+            )
+
+            # Списываем баланс за каждый сохранённый файл (батчевое списание)
+            await user_dao.decrease_analiz_balance_batch(
+                user_id=chat_id_int,
+                service_type=ServiceType.SCRINSHOT.name,
+                amount=file_count,
+            )
+            await session.commit()
 
         # Очищаем буфер
         shutil.rmtree(buffer_dir)
 
         logger.info(
-            f"Screenshots ZIP sent to chat_id: {chat_id}, {len(screenshots)} files"
+            f"Screenshots ZIP sent to chat_id: {chat_id}, {file_count} files"
         )
         return {"status": "success"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
             f"Error uploading screenshots for chat_id {chat_id if 'chat_id' in locals() else 'unknown'}: {e}"

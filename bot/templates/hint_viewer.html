@@ -3146,9 +3146,13 @@
         }
 
         function uploadScreenshots() {
-            fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(response => {
+            fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(async response => {
                 if (response.ok) {
                     showFadingMessage('Скриншоты отправлены');
+                } else if (response.status === 402) {
+                    const data = await response.json();
+                    const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для отправки скриншотов. Активируйте промокод или приобретите услугу.';
+                    showFadingMessage(msg);
                 } else {
                     showFadingMessage('Ошибка при отправке скриншотов');
                 }
@@ -3296,22 +3300,26 @@
                         fetch(`/api/send_screenshot?chat_id=${chatId}`, {
                             method: 'POST',
                             body: formData
-                        }).then(response => {
+                        }).then(async response => {
                             if (response.ok) {
+                                showFadingMessage('Скриншот отправлен');
+                            } else if (response.status === 402) {
+                                const data = await response.json();
+                                const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для сохранения скриншота. Активируйте промокод или приобретите услугу.';
+                                showFadingMessage(msg);
                             } else {
-                                response.text().then(text => {
-                                    console.error('Server response:', text);
-                                    try {
-                                        const errorData = JSON.parse(text);
-                                        alert('Ошибка при отправке скриншота: ' + (errorData.detail || text));
-                                    } catch (e) {
-                                        alert('Ошибка при отправке скриншота: ' + text);
-                                    }
-                                });
+                                const text = await response.text();
+                                console.error('Server response:', text);
+                                try {
+                                    const errorData = JSON.parse(text);
+                                    showFadingMessage('Ошибка при отправке скриншота: ' + (errorData.detail || text));
+                                } catch (e) {
+                                    showFadingMessage('Ошибка при отправке скриншота');
+                                }
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
-                            alert('Ошибка при отправке скриншота: ' + error);
+                            showFadingMessage('Ошибка при отправке скриншота');
                         });
                     } else {
                         const link = document.createElement('a');

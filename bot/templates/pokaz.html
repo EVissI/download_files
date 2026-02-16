@@ -6222,14 +6222,17 @@
                         fetch(`/api/send_screenshot?chat_id=${chatId}`, {
                             method: 'POST',
                             body: formData
-                        }).then(response => {
+                        }).then(async response => {
                             if (response.ok) {
                                 showFadingMessage('Скриншот отправлен');
+                            } else if (response.status === 402) {
+                                const data = await response.json();
+                                const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для сохранения скриншота. Активируйте промокод или приобретите услугу.';
+                                showFadingMessage(msg);
                             } else {
-                                response.text().then(text => {
-                                    console.error('Ошибка сервера:', text);
-                                    showFadingMessage('Ошибка при отправке скриншота');
-                                });
+                                const text = await response.text();
+                                console.error('Ошибка сервера:', text);
+                                showFadingMessage('Ошибка при отправке скриншота');
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
@@ -6364,9 +6367,13 @@
         const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
 
         if (chatId) {
-            fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(response => {
+            fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(async response => {
                 if (response.ok) {
                     showFadingMessage('Скриншоты отправлены');
+                } else if (response.status === 402) {
+                    const data = await response.json();
+                    const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для отправки скриншотов. Активируйте промокод или приобретите услугу.';
+                    showFadingMessage(msg);
                 } else {
                     showFadingMessage('Ошибка при отправке скриншотов');
                 }

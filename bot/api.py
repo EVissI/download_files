@@ -243,15 +243,15 @@ async def send_to_admin(request: Request):
         # Проверка баланса по ServiceType.COMMENTS
         chat_id_int = int(chat_id)
         support_keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="Ответить",
-                            callback_data=f"admin_reply:{chat_id}",
-                        )
-                    ]
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Ответить",
+                        callback_data=f"admin_reply:{chat_id}",
+                    )
                 ]
-            )
+            ]
+        )
         async with async_session_maker() as session:
             user_dao = UserDAO(session)
             balance = await user_dao.get_total_analiz_balance(
@@ -285,23 +285,17 @@ async def send_to_admin(request: Request):
                     status_code=402, detail="Недостаточно баланса для отправки комментария"
                 )
 
+            # Читаем файл и отправляем в саппорт
+            photo_bytes = await photo.read()
+            photo_file = BufferedInputFile(photo_bytes, filename="admin_comment_screenshot.png")
+            await bot.send_photo(
+                chat_id=SUPPORT_TG_ID,
+                photo=photo_file,
+                caption=f"❓ Вопрос от пользователя\nUser ID: {chat_id}\n\n{text}",
+                reply_markup=support_keyboard,
+            )
 
-
-        # Читаем файл
-        photo_bytes = await photo.read()
-
-        photo_file = BufferedInputFile(photo_bytes, filename="admin_comment_screenshot.png")
-
-        await bot.send_photo(
-            chat_id=SUPPORT_TG_ID,
-            photo=photo_file,
-            caption=f"❓ Вопрос от пользователя\nUser ID: {chat_id}\n\n{text}",
-            reply_markup=support_keyboard,
-        )
-
-        # Списываем баланс COMMENTS после успешной отправки
-        async with async_session_maker() as session:
-            user_dao = UserDAO(session)
+            # Списываем баланс COMMENTS после успешной отправки
             await user_dao.decrease_analiz_balance(
                 user_id=chat_id_int,
                 service_type=ServiceType.COMMENTS.name,
