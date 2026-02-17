@@ -3034,27 +3034,23 @@
                 button.addEventListener('click', () => {
                     if (action === 'no-double') {
                         if (cubeValueChangedInCurrentTable && stateBeforeDoubleTake) {
-                            const cubeShownSelect = document.getElementById('cube-shown-select');
                             const cubeValueSelect = document.getElementById('cube-value-select');
+                            const cubeOwnerSelect = document.getElementById('cube-owner-select');
                             const dice1Select = document.getElementById('dice1-select');
                             const dice2Select = document.getElementById('dice2-select');
-                            if (cubeShownSelect) cubeShownSelect.value = stateBeforeDoubleTake.cubeShown;
                             if (cubeValueSelect) cubeValueSelect.value = stateBeforeDoubleTake.cubeValue;
+                            if (cubeOwnerSelect) cubeOwnerSelect.value = stateBeforeDoubleTake.cubeOwner;
                             if (dice1Select) dice1Select.value = stateBeforeDoubleTake.dice1;
                             if (dice2Select) dice2Select.value = stateBeforeDoubleTake.dice2;
                             cubeValueChangedInCurrentTable = false;
                             stateBeforeDoubleTake = null;
                             hintsTable.querySelectorAll('.cube-eye-btn[data-cube-action="double-take"]').forEach(b => b.disabled = false);
-                            if (typeof updateCubeSelectorDisplay === 'function') {
-                                updateCubeSelectorDisplay('shown');
-                                updateCubeSelectorDisplay('value');
-                            }
+                            if (typeof updateCubeSelectorDisplay === 'function') updateCubeSelectorDisplay('value');
+                            if (typeof updateCubeOwnerSelect === 'function') updateCubeOwnerSelect();
                             if (typeof updateDiceSelectorDisplay === 'function') {
                                 updateDiceSelectorDisplay(1);
                                 updateDiceSelectorDisplay(2);
                             }
-                            if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
-                            if (typeof syncCubeOwnerAndTurn === 'function') syncCubeOwnerAndTurn();
                         }
                         const dice1 = Math.floor(Math.random() * 6) + 1;
                         const dice2 = Math.floor(Math.random() * 6) + 1;
@@ -3070,36 +3066,35 @@
                     } else if (action === 'double-take') {
                         if (cubeValueChangedInCurrentTable) return;
                         const CUBE_VALUES = [2, 4, 8, 16, 32, 64];
-                        const cubeShownSelect = document.getElementById('cube-shown-select');
                         const cubeValueSelect = document.getElementById('cube-value-select');
+                        const cubeOwnerSelect = document.getElementById('cube-owner-select');
+                        const turnSelect = document.getElementById('turn-select');
                         const dice1Select = document.getElementById('dice1-select');
                         const dice2Select = document.getElementById('dice2-select');
-                        if (!cubeShownSelect) return;
+                        if (!cubeValueSelect) return;
                         stateBeforeDoubleTake = {
-                            cubeShown: cubeShownSelect.value,
-                            cubeValue: cubeValueSelect ? cubeValueSelect.value : '0',
+                            cubeValue: cubeValueSelect.value,
+                            cubeOwner: cubeOwnerSelect ? cubeOwnerSelect.value : 'white',
                             dice1: dice1Select ? dice1Select.value : '0',
                             dice2: dice2Select ? dice2Select.value : '0'
                         };
-                        const current = parseInt(cubeShownSelect.value, 10) || 0;
+                        const current = parseInt(cubeValueSelect.value, 10) || 0;
                         const idx = CUBE_VALUES.indexOf(current);
                         const nextVal = idx >= 0 && idx < CUBE_VALUES.length - 1 ? CUBE_VALUES[idx + 1] : (current === 0 ? 2 : current);
-                        cubeShownSelect.value = nextVal.toString();
-                        if (cubeValueSelect) cubeValueSelect.value = nextVal.toString();
+                        cubeValueSelect.value = nextVal.toString();
                         if (dice1Select) dice1Select.value = '0';
                         if (dice2Select) dice2Select.value = '0';
+                        const turn = turnSelect ? turnSelect.value : 'white';
+                        const oppositeOwner = turn === 'white' ? 'black' : 'white';
+                        if (cubeOwnerSelect) cubeOwnerSelect.value = oppositeOwner;
                         if (typeof updateDiceSelectorDisplay === 'function') {
                             updateDiceSelectorDisplay(1);
                             updateDiceSelectorDisplay(2);
                         }
                         cubeValueChangedInCurrentTable = true;
                         hintsTable.querySelectorAll('.cube-eye-btn[data-cube-action="double-take"]').forEach(b => b.disabled = true);
-                        if (typeof updateCubeSelectorDisplay === 'function') {
-                            updateCubeSelectorDisplay('shown');
-                            updateCubeSelectorDisplay('value');
-                        }
-                        if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
-                        if (typeof syncCubeOwnerAndTurn === 'function') syncCubeOwnerAndTurn();
+                        if (typeof updateCubeSelectorDisplay === 'function') updateCubeSelectorDisplay('value');
+                        if (typeof updateCubeOwnerSelect === 'function') updateCubeOwnerSelect();
                         if (typeof drawBoard === 'function') drawBoard();
                     }
                 });
