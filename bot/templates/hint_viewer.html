@@ -1006,7 +1006,7 @@
                 <button id="settingsBtn" onclick="openSettingsModal()" title="Настройки">⚙️</button>
                 <span>Настройки</span>
             </div>
-            <button onclick="openPokazEditor()" style="
+            <button id="openEditorBtn" onclick="openPokazEditor()" style="
                 padding: 10px 20px;
                 background-color: #007bff;
                 color: white;
@@ -3115,6 +3115,7 @@
             const animationControls = document.querySelector('.animation-controls');
             const supportContainer = document.querySelector('.support-container');
             const settingsContainer = document.querySelector('.settings-container');
+            const openEditorBtn = document.getElementById('openEditorBtn');
             let animationControlsParent = null;
             let animationControlsNextSibling = null;
             if (animationControls) {
@@ -3133,6 +3134,7 @@
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : null;
             const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
             const originalSettingsDisplay = settingsContainer ? settingsContainer.style.display : null;
+            const originalOpenEditorBtnDisplay = openEditorBtn ? openEditorBtn.style.display : null;
             const settingsBtn = document.getElementById('settingsBtn');
             const settingsSpan = settingsContainer ? settingsContainer.querySelector('span') : null;
             const originalSettingsBtnDisplay = settingsBtn ? settingsBtn.style.display : null;
@@ -3160,7 +3162,7 @@
                 if (settingsBtn && originalSettingsBtnDisplay !== null) settingsBtn.style.display = originalSettingsBtnDisplay;
                 if (settingsSpan && originalSettingsSpanDisplay !== null) settingsSpan.style.display = originalSettingsSpanDisplay;
                 if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
-                if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
+                if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
                 if (animationControls && animationControlsParent) {
                     if (animationControlsNextSibling) {
                         animationControlsParent.insertBefore(animationControls, animationControlsNextSibling);
@@ -3193,6 +3195,7 @@
             if (settingsContainer) settingsContainer.style.display = 'none';
             if (settingsBtn) settingsBtn.style.display = 'none';
             if (settingsSpan) settingsSpan.style.display = 'none';
+            if (openEditorBtn) openEditorBtn.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
@@ -3298,6 +3301,7 @@
             const animationControls = document.querySelector('.animation-controls');
             const supportContainer = document.querySelector('.support-container');
             const settingsContainer = document.querySelector('.settings-container');
+            const openEditorBtn = document.getElementById('openEditorBtn');
             let animationControlsParent = null;
             let animationControlsNextSibling = null;
             if (animationControls) {
@@ -3316,6 +3320,7 @@
             const originalScreenUploadBtnDisplay = screenUploadBtn ? screenUploadBtn.style.display : null;
             const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
             const originalSettingsDisplay = settingsContainer ? settingsContainer.style.display : null;
+            const originalOpenEditorBtnDisplay = openEditorBtn ? openEditorBtn.style.display : null;
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : null;
@@ -3348,6 +3353,7 @@
                 }
                 if (crawfordLabel && originalCrawfordDisplay !== null) crawfordLabel.style.display = originalCrawfordDisplay;
                 if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
+                if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
             }
 
             controls.style.display = 'none';
@@ -3360,6 +3366,7 @@
             if (screenUploadBtn) screenUploadBtn.style.display = 'none';
             if (supportContainer) supportContainer.style.display = 'none';
             if (settingsContainer) settingsContainer.style.display = 'none';
+            if (openEditorBtn) openEditorBtn.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
@@ -3491,8 +3498,11 @@
 
             // Hide screenshot-related UI elements for capture
             const supportContainer = document.querySelector('.support-container');
+            const openEditorBtn = document.getElementById('openEditorBtn');
             const originalSupportDisplay = supportContainer.style.display;
+            const originalOpenEditorBtnDisplay = openEditorBtn ? openEditorBtn.style.display : null;
             supportContainer.style.display = 'none';
+            if (openEditorBtn) openEditorBtn.style.display = 'none';
 
             // Still hide modal as requested previously
             const modal = document.getElementById('supportModal');
@@ -3544,6 +3554,7 @@
                         sendBtn.disabled = false;
                         sendBtn.innerText = originalBtnText;
                         supportContainer.style.display = originalSupportDisplay;
+                        if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
                     });
                 });
             }).catch(error => {
@@ -3553,6 +3564,7 @@
                 sendBtn.disabled = false;
                 sendBtn.innerText = originalBtnText;
                 supportContainer.style.display = originalSupportDisplay;
+                if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
             });
         }
 
