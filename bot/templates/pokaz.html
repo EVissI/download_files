@@ -1540,8 +1540,8 @@
         }
 
         /* Скрываем столбец с интерактивными элементами (кнопки) только на скриншотах */
-        body.screenshot-mode .hints-content table:not(.cube-hints-table) th:last-child,
-        body.screenshot-mode .hints-content table:not(.cube-hints-table) td:last-child {
+        body.screenshot-mode .hints-content table th:last-child,
+        body.screenshot-mode .hints-content table td:last-child {
             display: none;
         }
 
@@ -2981,19 +2981,29 @@
                 });
                 tableHtml += '</table>';
             } else if (firstHint.type === 'cube_hint') {
-                tableHtml = '<table class="cube-hints-table"><tr><th>Действие</th><th>Эквити</th></tr>';
+                tableHtml = '<table class="cube-hints-table"><tr><th>Действие</th><th>Эквити</th><th></th></tr>';
                 (firstHint.cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1 || '';
                     if (hint.action_2) displayAction += `, ${hint.action_2}`;
+                    const rawAction1 = (hint.action_1 || '').toLowerCase().trim();
+                    const rawAction2 = (hint.action_2 || '').toLowerCase().trim();
                     displayAction = translateCubeAction(displayAction);
                     const rowStyle = index === 0 ? ' style="background-color: green;"' : '';
-                    tableHtml += `<tr${rowStyle}><td>${displayAction}</td><td>${eq}</td></tr>`;
+                    let actionCell = '';
+                    if (rawAction1 === 'no double') {
+                        actionCell = `<button class="eye-button cube-eye-btn" type="button" data-cube-action="no-double" title="Случайные кубики"><i class="fa fa-eye"></i></button>`;
+                    } else if (rawAction1 === 'double' && rawAction2 === 'take') {
+                        actionCell = `<button class="eye-button cube-eye-btn" type="button" data-cube-action="double-take" title="Следующий куб"><i class="fa fa-eye"></i></button>`;
+                    } else {
+                        actionCell = '';
+                    }
+                    tableHtml += `<tr${rowStyle} data-action-1="${rawAction1}" data-action-2="${rawAction2}"><td>${displayAction}</td><td>${eq}</td><td>${actionCell}</td></tr>`;
                 });
                 if (firstHint.prefer_action) {
                     let preferText = translateCubeAction(firstHint.prefer_action);
                     preferText = preferText.replace(/([^\s])\(/g, '$1 (');
-                    tableHtml += `<tr><td colspan="2" style="text-align: center; font-weight: bold;">${preferText}</td></tr>`;
+                    tableHtml += `<tr><td colspan="3" style="text-align: center; font-weight: bold;">${preferText}</td></tr>`;
                 }
                 tableHtml += '</table>';
             } else {
@@ -3007,6 +3017,52 @@
             if (!hintsTable || !snapshot) return;
             const eyeButtons = hintsTable.querySelectorAll('.eye-button');
             eyeButtons.forEach((button) => {
+                const cubeEyeBtn = button.closest('.cube-hints-table') && button.classList.contains('cube-eye-btn');
+                if (cubeEyeBtn) {
+                    const action = button.getAttribute('data-cube-action');
+                    button.addEventListener('click', () => {
+                        if (action === 'no-double') {
+                            const dice1 = Math.floor(Math.random() * 6) + 1;
+                            const dice2 = Math.floor(Math.random() * 6) + 1;
+                            const dice1Select = document.getElementById('dice1-select');
+                            const dice2Select = document.getElementById('dice2-select');
+                            if (dice1Select) dice1Select.value = dice1.toString();
+                            if (dice2Select) dice2Select.value = dice2.toString();
+                            if (typeof updateDiceSelectorDisplay === 'function') {
+                                updateDiceSelectorDisplay(1);
+                                updateDiceSelectorDisplay(2);
+                            }
+                            if (typeof drawBoard === 'function') drawBoard();
+                        } else if (action === 'double-take') {
+                            const CUBE_VALUES = [2, 4, 8, 16, 32, 64];
+                            const cubeShownSelect = document.getElementById('cube-shown-select');
+                            const cubeValueSelect = document.getElementById('cube-value-select');
+                            const dice1Select = document.getElementById('dice1-select');
+                            const dice2Select = document.getElementById('dice2-select');
+                            if (!cubeShownSelect) return;
+                            const current = parseInt(cubeShownSelect.value, 10) || 0;
+                            const idx = CUBE_VALUES.indexOf(current);
+                            const nextVal = idx >= 0 && idx < CUBE_VALUES.length - 1 ? CUBE_VALUES[idx + 1] : (current === 0 ? 2 : current);
+                            cubeShownSelect.value = nextVal.toString();
+                            if (cubeValueSelect) cubeValueSelect.value = nextVal.toString();
+                            if (dice1Select) dice1Select.value = '0';
+                            if (dice2Select) dice2Select.value = '0';
+                            if (typeof updateCubeSelectorDisplay === 'function') {
+                                updateCubeSelectorDisplay('shown');
+                                updateCubeSelectorDisplay('value');
+                            }
+                            if (typeof updateDiceSelectorDisplay === 'function') {
+                                updateDiceSelectorDisplay(1);
+                                updateDiceSelectorDisplay(2);
+                            }
+                            if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
+                            if (typeof syncCubeOwnerAndTurn === 'function') syncCubeOwnerAndTurn();
+                            if (typeof drawBoard === 'function') drawBoard();
+                        }
+                    });
+                    return;
+                }
+                if (button.closest('.cube-hints-table')) return;
                 if (button.id === 'restore-position-btn') {
                     button.addEventListener('click', () => {
                         if (!showButtonSnapshot || !showButtonSnapshot.positions) return;
