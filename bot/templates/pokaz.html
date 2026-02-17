@@ -3025,14 +3025,29 @@
         /** После «Удвоить, принять» + OK: разблокирован random, глаз заблокирован до нажатия random */
         let doubleTakeConfirmedWaitingForRandom = false;
 
+        /** Куб на максимуме (из селектора макс куба) — блокируем Удвоить/Не удваивать, после OK разблокируем random до нажатия random глаз заблокирован */
+        function isCubeAtMax() {
+            const gameTypeTitle = document.getElementById('game-type-button')?.getAttribute('title') || '';
+            const maxCubeSelect = gameTypeTitle === 'Матч' ?
+                document.getElementById('max-cube-select') :
+                document.getElementById('max-cube-select-m');
+            if (!maxCubeSelect) return false;
+            const maxCubeValue = parseInt(maxCubeSelect.options[maxCubeSelect.selectedIndex]?.text || '64', 10);
+            const cubeShown = parseInt(document.getElementById('cube-shown-select')?.value || '0', 10);
+            const cubeValue = parseInt(document.getElementById('cube-value-select')?.value || '0', 10);
+            return (cubeShown > 0 && cubeShown >= maxCubeValue) || (cubeValue > 0 && cubeValue >= maxCubeValue);
+        }
+
         /** Привязывает обработчики к глазикам в таблице куба */
         function attachCubeTableEyeButtons(hintsTable) {
             if (!hintsTable) return;
             cubeValueChangedInCurrentTable = false;
             stateBeforeDoubleTake = null;
             doubleTakeConfirmedWaitingForRandom = false;
+            const cubeAtMax = isCubeAtMax();
             const cubeEyeBtns = hintsTable.querySelectorAll('.cube-hints-table .cube-eye-btn');
             cubeEyeBtns.forEach((button) => {
+                if (cubeAtMax) button.disabled = true;
                 const action = button.getAttribute('data-cube-action');
                 button.addEventListener('click', () => {
                     if (action === 'no-double') {
@@ -6195,7 +6210,7 @@
                 const eyeBtn = document.getElementById('board-open-eye-btn');
                 const isCubeTable = document.querySelector('#hintsTable .cube-hints-table') !== null;
                 if (isCubeTable) {
-                    if (cubeValueChangedInCurrentTable) {
+                    if (cubeValueChangedInCurrentTable || isCubeAtMax()) {
                         if (randomBtn) randomBtn.disabled = false;
                         doubleTakeConfirmedWaitingForRandom = true;
                     } else {
