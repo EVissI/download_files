@@ -3033,28 +3033,13 @@
                         if (typeof drawBoard === 'function') drawBoard();
                     } else if (action === 'double-take') {
                         const CUBE_VALUES = [2, 4, 8, 16, 32, 64];
-                        const cubeShownSelect = document.getElementById('cube-shown-select');
                         const cubeValueSelect = document.getElementById('cube-value-select');
-                        const dice1Select = document.getElementById('dice1-select');
-                        const dice2Select = document.getElementById('dice2-select');
-                        if (!cubeShownSelect) return;
-                        const current = parseInt(cubeShownSelect.value, 10) || 0;
+                        if (!cubeValueSelect) return;
+                        const current = parseInt(cubeValueSelect.value, 10) || 0;
                         const idx = CUBE_VALUES.indexOf(current);
                         const nextVal = idx >= 0 && idx < CUBE_VALUES.length - 1 ? CUBE_VALUES[idx + 1] : (current === 0 ? 2 : current);
-                        cubeShownSelect.value = nextVal.toString();
-                        if (cubeValueSelect) cubeValueSelect.value = nextVal.toString();
-                        if (dice1Select) dice1Select.value = '0';
-                        if (dice2Select) dice2Select.value = '0';
-                        if (typeof updateCubeSelectorDisplay === 'function') {
-                            updateCubeSelectorDisplay('shown');
-                            updateCubeSelectorDisplay('value');
-                        }
-                        if (typeof updateDiceSelectorDisplay === 'function') {
-                            updateDiceSelectorDisplay(1);
-                            updateDiceSelectorDisplay(2);
-                        }
-                        if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
-                        if (typeof syncCubeOwnerAndTurn === 'function') syncCubeOwnerAndTurn();
+                        cubeValueSelect.value = nextVal.toString();
+                        if (typeof updateCubeSelectorDisplay === 'function') updateCubeSelectorDisplay('value');
                         if (typeof drawBoard === 'function') drawBoard();
                     }
                 });
