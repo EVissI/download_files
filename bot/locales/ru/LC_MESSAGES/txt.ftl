@@ -25,7 +25,7 @@ user-profile-text =
     ├ 📊 Манигеймы: <b>{ $analiz_balance }</b>
     ├ 💎 Плеер <b>{ $short_board_balance }</b>
     ├ 👁️ Ошибки <b>{ $hints_balance }</b>
-    ├ 🎯 Позиции <b>{ $pokaz_balance }</b>
+    ├ 🎯 Позиция <b>{ $pokaz_balance }</b>
     ├ 💬 Комментарии <b>{ $comments_balance }</b>
     ├ 📷 Скриншоты <b>{ $screenshots_balance }</b>
     └ 🌐 Язык: <b>{ $lang_code }</b>
