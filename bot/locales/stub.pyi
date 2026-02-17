@@ -48,6 +48,10 @@ You can activate it in &lt;b&gt;Profile&lt;/b&gt; → &lt;b&gt;Activate promo co
     @staticmethod
     def select_autoanalyze_type() -> Literal["""Please select the type of auto analysis:"""]: ...
 
+class UserPokaz:
+    @staticmethod
+    def select_action() -> Literal["""Select an action:"""]: ...
+
 class UserProfileInlineButton:
     @staticmethod
     def my_stats() -> Literal["""My Statistics"""]: ...
@@ -140,16 +144,12 @@ class UserRank:
     @staticmethod
     def beginner() -> Literal["""🐣 Beginner"""]: ...
 
-class UserPokaz:
-    @staticmethod
-    def select_action() -> Literal["""Select an action:"""]: ...
-
 class User:
     static: UserStatic
+    pokaz: UserPokaz
     profile: UserProfile
     inline: UserInline
     rank: UserRank
-    pokaz: UserPokaz
 
 class KeyboardUserReply:
     @staticmethod
