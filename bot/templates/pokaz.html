@@ -1756,6 +1756,31 @@
             display: flex;
         }
 
+        /* Обёртка для анимации скрытия доски (снизу и справа) */
+        .board-area-wrapper {
+            display: grid;
+            grid-template-rows: 1fr;
+            transition: grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .board-area-wrapper.board-hidden {
+            grid-template-rows: 0fr;
+        }
+
+        .board-area-content {
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-out;
+        }
+
+        .board-area-wrapper.board-hidden .board-area-content {
+            transform: translate(100%, 100%);
+            opacity: 0;
+        }
+
         .board-open-controls {
             display: none;
             justify-content: space-between;
@@ -1772,6 +1797,12 @@
 
         .board-open-controls.active {
             display: flex;
+            animation: boardControlsFadeIn 0.35s ease-out;
+        }
+
+        @keyframes boardControlsFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .board-open-controls-buttons {
@@ -2335,6 +2366,8 @@
                 <i class="fa fa-mouse-pointer"></i>
             </button>
         </div>
+        <div class="board-area-wrapper" id="boardAreaWrapper">
+            <div class="board-area-content">
         <div class="board-wrapper">
             <div id="game-type-label" class="game-type-label">Манигейм</div>
             <canvas id="boardCanvas" width="800" height="800"></canvas>
@@ -2774,6 +2807,8 @@
             </div>
         </div>
     </div>
+            </div>
+        </div>
     </div>
 
     <div class="board-open-controls" id="boardOpenControls">
@@ -6018,26 +6053,23 @@
             });
         }
 
-        // При открытой доске: скрыть selectors-wrapper и controls-row, показать board-open-controls
-        // При свёрнутой таблице — восстанавливаем старые элементы
+        // При открытой доске: анимированное скрытие доски (снизу и справа), показать board-open-controls
+        // При свёрнутой таблице — восстанавливаем с анимацией
         function updateBoardOpenState() {
             const hintsTableContainer = document.getElementById('hintsTableContainer');
-            const selectorsWrapper = document.querySelector('.selectors-wrapper');
-            const controlsRow = document.querySelector('.controls-row');
+            const boardAreaWrapper = document.getElementById('boardAreaWrapper');
             const boardOpenControls = document.getElementById('boardOpenControls');
-            if (!hintsTableContainer || !selectorsWrapper || !boardOpenControls) return;
+            if (!hintsTableContainer || !boardAreaWrapper || !boardOpenControls) return;
             const isTableActive = hintsTableContainer.classList.contains('active');
             const isTableCollapsed = hintsTableContainer.classList.contains('collapsed');
             const isBoardOpen = isTableActive && !isTableCollapsed;
             if (isBoardOpen) {
-                selectorsWrapper.style.display = 'none';
-                if (controlsRow) controlsRow.style.display = 'none';
+                boardAreaWrapper.classList.add('board-hidden');
                 boardOpenControls.classList.add('active');
                 resetHintsTableCheckBtn();
                 updateHistoryButtons();
             } else {
-                selectorsWrapper.style.display = '';
-                if (controlsRow) controlsRow.style.display = '';
+                boardAreaWrapper.classList.remove('board-hidden');
                 boardOpenControls.classList.remove('active');
             }
         }
