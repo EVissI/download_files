@@ -1828,6 +1828,12 @@
             background-color: rgb(45, 200, 45);
         }
 
+        .board-open-controls-buttons button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         #board-open-random-dice-btn {
             background-color: #ff8c00;
         }
@@ -2779,8 +2785,8 @@
         </div>
         <div class="board-open-controls-buttons">
             <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode" title="Заглушка" aria-label="Заглушка">OK</button>
-            <button type="button" id="board-open-random-dice-btn" title="Случайные кубики"><i class="fa fa-random"></i></button>
-            <button type="button" id="board-open-eye-btn" title="Анализ позиции"><i class="fa fa-eye"></i></button>
+            <button type="button" id="board-open-random-dice-btn" title="Случайные кубики" disabled><i class="fa fa-random"></i></button>
+            <button type="button" id="board-open-eye-btn" title="Анализ позиции" disabled><i class="fa fa-eye"></i></button>
         </div>
     </div>
 
@@ -6027,6 +6033,7 @@
                 selectorsWrapper.style.display = 'none';
                 if (controlsRow) controlsRow.style.display = 'none';
                 boardOpenControls.classList.add('active');
+                resetHintsTableCheckBtn();
                 updateHistoryButtons();
             } else {
                 selectorsWrapper.style.display = '';
@@ -6039,21 +6046,46 @@
         document.getElementById('history-back-btn').addEventListener('click', goBackInHistory);
         document.getElementById('history-forward-btn').addEventListener('click', goForwardInHistory);
 
-        // Сброс кнопки hints-table-check-btn в состояние OK
+        // Сброс кнопки hints-table-check-btn в состояние OK и блокировка двух других кнопок
         function resetHintsTableCheckBtn() {
             const btn = document.getElementById('hints-table-check-btn');
             if (btn) {
                 btn.innerHTML = 'OK';
                 btn.classList.add('check-mode');
             }
+            const randomBtn = document.getElementById('board-open-random-dice-btn');
+            const eyeBtn = document.getElementById('board-open-eye-btn');
+            if (randomBtn) randomBtn.disabled = true;
+            if (eyeBtn) eyeBtn.disabled = true;
         }
 
-        // Кнопка hints-table-check-btn: OK -> иконка при клике
+        // Кнопка hints-table-check-btn: OK -> иконка при клике, разблокировка других кнопок, смена хода, кубики 0 0
         document.getElementById('hints-table-check-btn').addEventListener('click', () => {
             const btn = document.getElementById('hints-table-check-btn');
             if (btn && btn.textContent.trim() === 'OK') {
                 btn.innerHTML = '<i class="fa fa-check"></i>';
                 btn.classList.remove('check-mode');
+                // Разблокировать две другие кнопки
+                const randomBtn = document.getElementById('board-open-random-dice-btn');
+                const eyeBtn = document.getElementById('board-open-eye-btn');
+                if (randomBtn) randomBtn.disabled = false;
+                if (eyeBtn) eyeBtn.disabled = false;
+                // Сменить ход (white <-> black)
+                const turnSelect = document.getElementById('turn-select');
+                if (turnSelect) {
+                    turnSelect.value = turnSelect.value === 'white' ? 'black' : 'white';
+                    updateTurnSelect();
+                }
+                // Поставить кубики на 0 0
+                const dice1Select = document.getElementById('dice1-select');
+                const dice2Select = document.getElementById('dice2-select');
+                if (dice1Select) dice1Select.value = '0';
+                if (dice2Select) dice2Select.value = '0';
+                if (typeof updateDiceSelectorDisplay === 'function') {
+                    updateDiceSelectorDisplay(1);
+                    updateDiceSelectorDisplay(2);
+                }
+                if (typeof drawBoard === 'function') drawBoard();
             }
         });
 
@@ -6063,26 +6095,15 @@
             document.getElementById('show-button').click();
         });
 
-        // Кнопка случайных кубиков в board-open-controls
+        // Кнопка случайных кубиков в board-open-controls (без смены хода)
         document.getElementById('board-open-random-dice-btn').addEventListener('click', () => {
             resetHintsTableCheckBtn();
             const dice1 = Math.floor(Math.random() * 6) + 1;
             const dice2 = Math.floor(Math.random() * 6) + 1;
-            let newTurn;
-            if (showButtonSnapshot && showButtonSnapshot.turn) {
-                newTurn = showButtonSnapshot.turn === 'white' ? 'black' : 'white';
-            } else {
-                newTurn = Math.random() < 0.5 ? 'white' : 'black';
-            }
             const dice1Select = document.getElementById('dice1-select');
             const dice2Select = document.getElementById('dice2-select');
             if (dice1Select) dice1Select.value = dice1.toString();
             if (dice2Select) dice2Select.value = dice2.toString();
-            const turnSelect = document.getElementById('turn-select');
-            if (turnSelect) {
-                turnSelect.value = newTurn;
-                updateTurnSelect();
-            }
             if (typeof updateDiceSelectorDisplay === 'function') {
                 updateDiceSelectorDisplay(1);
                 updateDiceSelectorDisplay(2);
