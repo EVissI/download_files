@@ -3030,6 +3030,11 @@
                             updateDiceSelectorDisplay(1);
                             updateDiceSelectorDisplay(2);
                         }
+                        const turnSelect = document.getElementById('turn-select');
+                        if (turnSelect) {
+                            turnSelect.value = turnSelect.value === 'white' ? 'black' : 'white';
+                            if (typeof updateTurnSelect === 'function') updateTurnSelect();
+                        }
                         if (typeof drawBoard === 'function') drawBoard();
                     } else if (action === 'double-take') {
                         const CUBE_VALUES = [2, 4, 8, 16, 32, 64];
@@ -6124,31 +6129,35 @@
             if (eyeBtn) eyeBtn.disabled = true;
         }
 
-        // Кнопка hints-table-check-btn: OK -> иконка при клике, разблокировка других кнопок, смена хода, кубики 0 0
+        // Кнопка hints-table-check-btn: OK -> иконка при клике
+        // Таблица ходов: разблокировать обе кнопки, смена хода, кубики 0 0
+        // Таблица куба: разблокировать только большой глаз
         document.getElementById('hints-table-check-btn').addEventListener('click', () => {
             const btn = document.getElementById('hints-table-check-btn');
             if (btn && btn.textContent.trim() === 'OK') {
                 btn.innerHTML = '<i class="fa fa-check"></i>';
                 btn.classList.remove('check-mode');
-                // Разблокировать две другие кнопки
                 const randomBtn = document.getElementById('board-open-random-dice-btn');
                 const eyeBtn = document.getElementById('board-open-eye-btn');
-                if (randomBtn) randomBtn.disabled = false;
-                if (eyeBtn) eyeBtn.disabled = false;
-                // Сменить ход (white <-> black)
-                const turnSelect = document.getElementById('turn-select');
-                if (turnSelect) {
-                    turnSelect.value = turnSelect.value === 'white' ? 'black' : 'white';
-                    updateTurnSelect();
-                }
-                // Поставить кубики на 0 0
-                const dice1Select = document.getElementById('dice1-select');
-                const dice2Select = document.getElementById('dice2-select');
-                if (dice1Select) dice1Select.value = '0';
-                if (dice2Select) dice2Select.value = '0';
-                if (typeof updateDiceSelectorDisplay === 'function') {
-                    updateDiceSelectorDisplay(1);
-                    updateDiceSelectorDisplay(2);
+                const isCubeTable = document.querySelector('#hintsTable .cube-hints-table') !== null;
+                if (isCubeTable) {
+                    if (eyeBtn) eyeBtn.disabled = false;
+                } else {
+                    if (randomBtn) randomBtn.disabled = false;
+                    if (eyeBtn) eyeBtn.disabled = false;
+                    const turnSelect = document.getElementById('turn-select');
+                    if (turnSelect) {
+                        turnSelect.value = turnSelect.value === 'white' ? 'black' : 'white';
+                        updateTurnSelect();
+                    }
+                    const dice1Select = document.getElementById('dice1-select');
+                    const dice2Select = document.getElementById('dice2-select');
+                    if (dice1Select) dice1Select.value = '0';
+                    if (dice2Select) dice2Select.value = '0';
+                    if (typeof updateDiceSelectorDisplay === 'function') {
+                        updateDiceSelectorDisplay(1);
+                        updateDiceSelectorDisplay(2);
+                    }
                 }
                 if (typeof drawBoard === 'function') drawBoard();
             }
