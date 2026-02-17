@@ -3022,12 +3022,15 @@
         let cubeValueChangedInCurrentTable = false;
         /** Состояние до «Удвоить, принять» — для отмены при последующем «Не удваивать» */
         let stateBeforeDoubleTake = null;
+        /** После «Удвоить, принять» + OK: разблокирован random, глаз заблокирован до нажатия random */
+        let doubleTakeConfirmedWaitingForRandom = false;
 
         /** Привязывает обработчики к глазикам в таблице куба */
         function attachCubeTableEyeButtons(hintsTable) {
             if (!hintsTable) return;
             cubeValueChangedInCurrentTable = false;
             stateBeforeDoubleTake = null;
+            doubleTakeConfirmedWaitingForRandom = false;
             const cubeEyeBtns = hintsTable.querySelectorAll('.cube-hints-table .cube-eye-btn');
             cubeEyeBtns.forEach((button) => {
                 const action = button.getAttribute('data-cube-action');
@@ -6177,6 +6180,7 @@
             const eyeBtn = document.getElementById('board-open-eye-btn');
             if (randomBtn) randomBtn.disabled = true;
             if (eyeBtn) eyeBtn.disabled = true;
+            doubleTakeConfirmedWaitingForRandom = false;
         }
 
         // Кнопка hints-table-check-btn: OK -> иконка при клике
@@ -6191,7 +6195,12 @@
                 const eyeBtn = document.getElementById('board-open-eye-btn');
                 const isCubeTable = document.querySelector('#hintsTable .cube-hints-table') !== null;
                 if (isCubeTable) {
-                    if (eyeBtn) eyeBtn.disabled = false;
+                    if (cubeValueChangedInCurrentTable) {
+                        if (randomBtn) randomBtn.disabled = false;
+                        doubleTakeConfirmedWaitingForRandom = true;
+                    } else {
+                        if (eyeBtn) eyeBtn.disabled = false;
+                    }
                 } else {
                     if (randomBtn) randomBtn.disabled = false;
                     if (eyeBtn) eyeBtn.disabled = false;
@@ -6221,6 +6230,11 @@
 
         // Кнопка случайных кубиков в board-open-controls (без смены хода, без сброса hints-table-check-btn)
         document.getElementById('board-open-random-dice-btn').addEventListener('click', () => {
+            if (doubleTakeConfirmedWaitingForRandom) {
+                doubleTakeConfirmedWaitingForRandom = false;
+                const eyeBtn = document.getElementById('board-open-eye-btn');
+                if (eyeBtn) eyeBtn.disabled = false;
+            }
             const dice1 = Math.floor(Math.random() * 6) + 1;
             const dice2 = Math.floor(Math.random() * 6) + 1;
             const dice1Select = document.getElementById('dice1-select');
