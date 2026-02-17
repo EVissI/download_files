@@ -3055,12 +3055,22 @@
                     } else if (action === 'double-take') {
                         if (cubeValueChangedInCurrentTable) return;
                         const CUBE_VALUES = [2, 4, 8, 16, 32, 64];
+                        const cubeShownSelect = document.getElementById('cube-shown-select');
                         const cubeValueSelect = document.getElementById('cube-value-select');
-                        if (!cubeValueSelect) return;
-                        const current = parseInt(cubeValueSelect.value, 10) || 0;
+                        const dice1Select = document.getElementById('dice1-select');
+                        const dice2Select = document.getElementById('dice2-select');
+                        if (!cubeShownSelect) return;
+                        const current = parseInt(cubeShownSelect.value, 10) || 0;
                         const idx = CUBE_VALUES.indexOf(current);
                         const nextVal = idx >= 0 && idx < CUBE_VALUES.length - 1 ? CUBE_VALUES[idx + 1] : (current === 0 ? 2 : current);
-                        cubeValueSelect.value = nextVal.toString();
+                        cubeShownSelect.value = nextVal.toString();
+                        if (cubeValueSelect) cubeValueSelect.value = nextVal.toString();
+                        if (dice1Select) dice1Select.value = '0';
+                        if (dice2Select) dice2Select.value = '0';
+                        if (typeof updateDiceSelectorDisplay === 'function') {
+                            updateDiceSelectorDisplay(1);
+                            updateDiceSelectorDisplay(2);
+                        }
                         const turnSelect = document.getElementById('turn-select');
                         if (turnSelect) {
                             turnSelect.value = turnSelect.value === 'white' ? 'black' : 'white';
@@ -3068,7 +3078,12 @@
                         }
                         cubeValueChangedInCurrentTable = true;
                         hintsTable.querySelectorAll('.cube-eye-btn[data-cube-action="double-take"]').forEach(b => b.disabled = true);
-                        if (typeof updateCubeSelectorDisplay === 'function') updateCubeSelectorDisplay('value');
+                        if (typeof updateCubeSelectorDisplay === 'function') {
+                            updateCubeSelectorDisplay('shown');
+                            updateCubeSelectorDisplay('value');
+                        }
+                        if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
+                        if (typeof syncCubeOwnerAndTurn === 'function') syncCubeOwnerAndTurn();
                         if (typeof drawBoard === 'function') drawBoard();
                     }
                 });
