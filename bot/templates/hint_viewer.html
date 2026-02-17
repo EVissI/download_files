@@ -3607,10 +3607,16 @@
             
             // Cube exponent (part 1)
             let cubeValue = 0;
-            if (currentCube) {
-                // Find cube value from currentCube image
-                const cubeValues = { Double2: 2, Double4: 4, Double8: 8, Double16: 16, Double32: 32, Double64: 64 };
-                cubeValue = cubeValues[currentCube] || 0;
+            let lastDoubleIndex = -1;
+            for (let i = 0; i < doubleTurns.length; i++) {
+                if (doubleTurns[i] <= current) {
+                    lastDoubleIndex = doubleTurns[i];
+                } else {
+                    break;
+                }
+            }
+            if (lastDoubleIndex !== -1 && data[lastDoubleIndex]) {
+                cubeValue = data[lastDoubleIndex].cube || 0;
             }
             let exponent = 0;
             if (cubeValue > 0) {
@@ -3706,8 +3712,9 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const currentChatId = urlParams.get('chat_id') || chatId || '';
                 
-                // Build URL with XGID and chat_id (relative URL for same app navigation)
-                const pokazUrl = `/pokaz?xgid=${encodeURIComponent(xgidString)}${currentChatId ? '&chat_id=' + encodeURIComponent(currentChatId) : ''}`;
+                // Build URL with XGID, chat_id and invert (relative URL for same app navigation)
+                const invertParam = invertColors ? '&invert=1' : '';
+                const pokazUrl = `/pokaz?xgid=${encodeURIComponent(xgidString)}${currentChatId ? '&chat_id=' + encodeURIComponent(currentChatId) : ''}${invertParam}`;
                 
                 // Navigate in same window/app (works in Telegram WebApp and browser)
                 window.location.href = pokazUrl;

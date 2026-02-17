@@ -3987,6 +3987,18 @@
             const urlParams = new URLSearchParams(window.location.search);
             xgidString = urlParams.get('xgid');
 
+            // Apply invert_colors from URL (when coming from hint_viewer with inverted board)
+            const invertParam = urlParams.get('invert');
+            if (invertParam === '1') {
+                upperPlayerColor = 'white';
+                const lowerPlayerButton = document.getElementById('lowerPlayerButton');
+                if (lowerPlayerButton) {
+                    lowerPlayerButton.classList.remove('white');
+                    lowerPlayerButton.classList.add('black');
+                    lowerPlayerButton.setAttribute('data-color', 'black');
+                }
+            }
+
             // If not in URL, try to get from template variable (if passed from server)
             if (!xgidString && initialXgid) {
                 xgidString = initialXgid;
@@ -4496,13 +4508,13 @@
                     // Empty point
                     continue;
                 } else if (char >= 'A' && char <= 'O') {
-                    // Lower player (заглавные)
+                    // Lower player (заглавные) -> lowerPositions
                     const count = char.charCodeAt(0) - 64;
-                    upperPositions[point.toString()] = count;
-                } else if (char >= 'a' && char <= 'o') {
-                    // Upper player (строчные)
-                    const count = char.charCodeAt(0) - 96;
                     lowerPositions[point.toString()] = count;
+                } else if (char >= 'a' && char <= 'o') {
+                    // Upper player (строчные) -> upperPositions
+                    const count = char.charCodeAt(0) - 96;
+                    upperPositions[point.toString()] = count;
                 }
             }
 
