@@ -2873,9 +2873,6 @@
         /** Снимок позиций и хода в момент нажатия show-button (все позиции шашек + чей ход) */
         let showButtonSnapshot = null;
 
-        /** Снимок кубиков и хода до нажатия hints-table-check-btn (для xgid при анализе через eye) */
-        let hintsCheckSnapshot = null;
-
         /** История сделанных ходов */
         let moveHistory = [];
 
@@ -4351,8 +4348,7 @@
             }
             drawBoard();
         });
-        function generateXGID(override) {
-            /** override: { turn, dice1, dice2 } — использовать вместо DOM (например из hintsCheckSnapshot) */
+        function generateXGID() {
             let xgid = "";
             const invertPositions = (upperPlayerColor === 'white');
 
@@ -4424,7 +4420,7 @@
             }
             xgid += cubePosition.toString();
             xgid += ':'
-            const turn = override && override.turn != null ? override.turn : document.getElementById('turn-select').value;
+            const turn = document.getElementById('turn-select').value;
             let turnValue = 0;
             // Определяем чей ход в терминах upper/lower
             // В XGID: 1 = lower (нижний), -1 = upper (верхний)
@@ -4440,8 +4436,8 @@
             xgid += turnValue.toString();
             xgid += ':'
             let cubePart = '';
-            const dice1 = override && override.dice1 != null ? override.dice1 : parseInt(document.getElementById('dice1-select').value);
-            const dice2 = override && override.dice2 != null ? override.dice2 : parseInt(document.getElementById('dice2-select').value);
+            const dice1 = parseInt(document.getElementById('dice1-select').value);
+            const dice2 = parseInt(document.getElementById('dice2-select').value);
             if (dice1 === 0 && dice2 === 0) {
                 cubePart = '00';
             } else if (cubeShown !== 0) {
@@ -5553,17 +5549,13 @@
         }
 
         document.getElementById('show-button').addEventListener('click', () => {
-            const useHintsCheck = !!hintsCheckSnapshot;
-            const effectiveTurn = useHintsCheck ? hintsCheckSnapshot.turn : document.getElementById('turn-select').value;
-            const effectiveDice1 = useHintsCheck ? String(hintsCheckSnapshot.dice1) : document.getElementById('dice1-select').value;
-            const effectiveDice2 = useHintsCheck ? String(hintsCheckSnapshot.dice2) : document.getElementById('dice2-select').value;
-            // Сохраняем снимок: все позиции шашек (first, second) и чей ход (для подсказок — сохранённый до check)
+            // Сохраняем снимок: все позиции шашек (first, second) и чей ход был сделан
             showButtonSnapshot = {
                 positions: {
                     first: { ...positions.first },
                     second: { ...positions.second }
                 },
-                turn: effectiveTurn
+                turn: document.getElementById('turn-select').value
             };
 
             // Записываем текущую позицию в историю при генерации доски
@@ -5571,17 +5563,18 @@
                 clearMoveHistory();
             }
             const snap = snapshotPositions();
+            const currentTurn = document.getElementById('turn-select').value;
             const isMatch = currentGameType === 'матч';
             recordMove({
                 positionsBefore: { first: { ...snap.first }, second: { ...snap.second } },
                 positionsAfter: { first: { ...snap.first }, second: { ...snap.second } },
                 move: null,
                 playerColor: null,
-                turnBefore: effectiveTurn,
-                turnAfter: effectiveTurn,
+                turnBefore: currentTurn,
+                turnAfter: currentTurn,
                 dice: {
-                    dice1: effectiveDice1,
-                    dice2: effectiveDice2
+                    dice1: document.getElementById('dice1-select').value,
+                    dice2: document.getElementById('dice2-select').value
                 },
                 cubeState: {
                     cubeValue: document.getElementById('cube-value-select').value,
@@ -5593,20 +5586,7 @@
             historyIndex = moveHistory.length;
             updateHistoryButtons();
 
-            const xgidOverride = hintsCheckSnapshot ? { turn: hintsCheckSnapshot.turn, dice1: hintsCheckSnapshot.dice1, dice2: hintsCheckSnapshot.dice2 } : null;
-            const xgid = generateXGID(xgidOverride);
-            if (hintsCheckSnapshot) {
-                document.getElementById('turn-select').value = hintsCheckSnapshot.turn;
-                document.getElementById('dice1-select').value = String(hintsCheckSnapshot.dice1);
-                document.getElementById('dice2-select').value = String(hintsCheckSnapshot.dice2);
-                updateTurnSelect();
-                if (typeof updateDiceSelectorDisplay === 'function') {
-                    updateDiceSelectorDisplay(1);
-                    updateDiceSelectorDisplay(2);
-                }
-                if (typeof drawBoard === 'function') drawBoard();
-                hintsCheckSnapshot = null;
-            }
+            const xgid = generateXGID();
             // showXGID(xgid); // DEBUG - удалить потом
             const hintsTable = document.getElementById('hintsTable');
             const hintsTableContainer = document.querySelector('.hints-table');
@@ -6068,33 +6048,10 @@
             }
         }
 
-        // Кнопка hints-table-check-btn: запоминаем кубики/ход, меняем ход, убираем кубики
+        // Кнопка hints-table-check-btn: OK -> иконка при клике
         document.getElementById('hints-table-check-btn').addEventListener('click', () => {
             const btn = document.getElementById('hints-table-check-btn');
             if (btn && btn.textContent.trim() === 'OK') {
-                // Запоминаем кубики и чей ход до изменений
-                const dice1Select = document.getElementById('dice1-select');
-                const dice2Select = document.getElementById('dice2-select');
-                const turnSelect = document.getElementById('turn-select');
-                hintsCheckSnapshot = {
-                    dice1: parseInt(dice1Select?.value || '0') || 0,
-                    dice2: parseInt(dice2Select?.value || '0') || 0,
-                    turn: turnSelect?.value || 'white'
-                };
-                // Меняем чей ход
-                const newTurn = hintsCheckSnapshot.turn === 'white' ? 'black' : 'white';
-                if (turnSelect) {
-                    turnSelect.value = newTurn;
-                    updateTurnSelect();
-                }
-                // Убираем кубики с доски (кубы удвоения не трогаем)
-                if (dice1Select) dice1Select.value = '0';
-                if (dice2Select) dice2Select.value = '0';
-                if (typeof updateDiceSelectorDisplay === 'function') {
-                    updateDiceSelectorDisplay(1);
-                    updateDiceSelectorDisplay(2);
-                }
-                if (typeof drawBoard === 'function') drawBoard();
                 btn.innerHTML = '<i class="fa fa-check"></i>';
                 btn.classList.remove('check-mode');
             }
@@ -6108,7 +6065,6 @@
 
         // Кнопка случайных кубиков в board-open-controls
         document.getElementById('board-open-random-dice-btn').addEventListener('click', () => {
-            hintsCheckSnapshot = null;
             resetHintsTableCheckBtn();
             const dice1 = Math.floor(Math.random() * 6) + 1;
             const dice2 = Math.floor(Math.random() * 6) + 1;
