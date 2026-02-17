@@ -1370,14 +1370,26 @@
 
         .hints-table-body {
             position: relative;
-            max-height: 2000px;
+            display: grid;
+            grid-template-rows: 1fr;
+            transition: grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
-            transition: max-height 0.4s ease-out, opacity 0.3s ease;
+            min-height: 32px;
         }
 
         .hints-table.collapsed .hints-table-body {
-            max-height: 32px;
-            opacity: 1;
+            grid-template-rows: 0fr;
+        }
+
+        .hints-table-content {
+            min-height: 0;
+            overflow: hidden;
+            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-out;
+        }
+
+        .hints-table.collapsed .hints-table-content {
+            transform: translate(100%, 100%);
+            opacity: 0;
         }
 
         .hints-table-toggle {
@@ -1756,31 +1768,6 @@
             display: flex;
         }
 
-        /* Обёртка для анимации скрытия доски (снизу и справа) */
-        .board-area-wrapper {
-            display: grid;
-            grid-template-rows: 1fr;
-            transition: grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-        }
-
-        .board-area-wrapper.board-hidden {
-            grid-template-rows: 0fr;
-        }
-
-        .board-area-content {
-            min-height: 0;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-out;
-        }
-
-        .board-area-wrapper.board-hidden .board-area-content {
-            transform: translate(100%, 100%);
-            opacity: 0;
-        }
-
         .board-open-controls {
             display: none;
             justify-content: space-between;
@@ -1797,12 +1784,6 @@
 
         .board-open-controls.active {
             display: flex;
-            animation: boardControlsFadeIn 0.35s ease-out;
-        }
-
-        @keyframes boardControlsFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
         }
 
         .board-open-controls-buttons {
@@ -2366,8 +2347,6 @@
                 <i class="fa fa-mouse-pointer"></i>
             </button>
         </div>
-        <div class="board-area-wrapper" id="boardAreaWrapper">
-            <div class="board-area-content">
         <div class="board-wrapper">
             <div id="game-type-label" class="game-type-label">Манигейм</div>
             <canvas id="boardCanvas" width="800" height="800"></canvas>
@@ -2807,8 +2786,6 @@
             </div>
         </div>
     </div>
-            </div>
-        </div>
     </div>
 
     <div class="board-open-controls" id="boardOpenControls">
@@ -2830,8 +2807,10 @@
             <button type="button" class="hints-table-toggle" id="hintsTableToggle" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
                 <i class="fa fa-chevron-down"></i>
             </button>
-            <div id="hintsTable" class="hints-content"></div>
-            <div id="turn-label" class="turn-label"></div>
+            <div class="hints-table-content">
+                <div id="hintsTable" class="hints-content"></div>
+                <div id="turn-label" class="turn-label"></div>
+            </div>
         </div>
     </div>
 
@@ -6053,23 +6032,26 @@
             });
         }
 
-        // При открытой доске: анимированное скрытие доски (снизу и справа), показать board-open-controls
-        // При свёрнутой таблице — восстанавливаем с анимацией
+        // При открытой доске: скрыть selectors-wrapper и controls-row, показать board-open-controls
+        // При свёрнутой таблице — восстанавливаем старые элементы
         function updateBoardOpenState() {
             const hintsTableContainer = document.getElementById('hintsTableContainer');
-            const boardAreaWrapper = document.getElementById('boardAreaWrapper');
+            const selectorsWrapper = document.querySelector('.selectors-wrapper');
+            const controlsRow = document.querySelector('.controls-row');
             const boardOpenControls = document.getElementById('boardOpenControls');
-            if (!hintsTableContainer || !boardAreaWrapper || !boardOpenControls) return;
+            if (!hintsTableContainer || !selectorsWrapper || !boardOpenControls) return;
             const isTableActive = hintsTableContainer.classList.contains('active');
             const isTableCollapsed = hintsTableContainer.classList.contains('collapsed');
             const isBoardOpen = isTableActive && !isTableCollapsed;
             if (isBoardOpen) {
-                boardAreaWrapper.classList.add('board-hidden');
+                selectorsWrapper.style.display = 'none';
+                if (controlsRow) controlsRow.style.display = 'none';
                 boardOpenControls.classList.add('active');
                 resetHintsTableCheckBtn();
                 updateHistoryButtons();
             } else {
-                boardAreaWrapper.classList.remove('board-hidden');
+                selectorsWrapper.style.display = '';
+                if (controlsRow) controlsRow.style.display = '';
                 boardOpenControls.classList.remove('active');
             }
         }
