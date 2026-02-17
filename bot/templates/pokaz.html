@@ -2784,7 +2784,7 @@
             <button type="button" id="history-forward-btn" class="history-nav-btn" title="Вперёд по истории" aria-label="Вперёд по истории"></button>
         </div>
         <div class="board-open-controls-buttons">
-            <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode" title="Заглушка" aria-label="Заглушка">OK</button>
+            <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode" title="Подтвердить ход" aria-label="Подтвердить ход">OK</button>
             <button type="button" id="board-open-random-dice-btn" title="Случайные кубики" disabled><i class="fa fa-random"></i></button>
             <button type="button" id="board-open-eye-btn" title="Анализ позиции" disabled><i class="fa fa-eye"></i></button>
         </div>
@@ -6095,9 +6095,8 @@
             document.getElementById('show-button').click();
         });
 
-        // Кнопка случайных кубиков в board-open-controls (без смены хода)
+        // Кнопка случайных кубиков в board-open-controls (без смены хода, без сброса hints-table-check-btn)
         document.getElementById('board-open-random-dice-btn').addEventListener('click', () => {
-            resetHintsTableCheckBtn();
             const dice1 = Math.floor(Math.random() * 6) + 1;
             const dice2 = Math.floor(Math.random() * 6) + 1;
             const dice1Select = document.getElementById('dice1-select');
