@@ -3012,56 +3012,60 @@
             return { html: tableHtml, firstHint };
         }
 
+        /** Привязывает обработчики к глазикам в таблице куба */
+        function attachCubeTableEyeButtons(hintsTable) {
+            if (!hintsTable) return;
+            const cubeEyeBtns = hintsTable.querySelectorAll('.cube-hints-table .cube-eye-btn');
+            cubeEyeBtns.forEach((button) => {
+                const action = button.getAttribute('data-cube-action');
+                button.addEventListener('click', () => {
+                    if (action === 'no-double') {
+                        const dice1 = Math.floor(Math.random() * 6) + 1;
+                        const dice2 = Math.floor(Math.random() * 6) + 1;
+                        const dice1Select = document.getElementById('dice1-select');
+                        const dice2Select = document.getElementById('dice2-select');
+                        if (dice1Select) dice1Select.value = dice1.toString();
+                        if (dice2Select) dice2Select.value = dice2.toString();
+                        if (typeof updateDiceSelectorDisplay === 'function') {
+                            updateDiceSelectorDisplay(1);
+                            updateDiceSelectorDisplay(2);
+                        }
+                        if (typeof drawBoard === 'function') drawBoard();
+                    } else if (action === 'double-take') {
+                        const CUBE_VALUES = [2, 4, 8, 16, 32, 64];
+                        const cubeShownSelect = document.getElementById('cube-shown-select');
+                        const cubeValueSelect = document.getElementById('cube-value-select');
+                        const dice1Select = document.getElementById('dice1-select');
+                        const dice2Select = document.getElementById('dice2-select');
+                        if (!cubeShownSelect) return;
+                        const current = parseInt(cubeShownSelect.value, 10) || 0;
+                        const idx = CUBE_VALUES.indexOf(current);
+                        const nextVal = idx >= 0 && idx < CUBE_VALUES.length - 1 ? CUBE_VALUES[idx + 1] : (current === 0 ? 2 : current);
+                        cubeShownSelect.value = nextVal.toString();
+                        if (cubeValueSelect) cubeValueSelect.value = nextVal.toString();
+                        if (dice1Select) dice1Select.value = '0';
+                        if (dice2Select) dice2Select.value = '0';
+                        if (typeof updateCubeSelectorDisplay === 'function') {
+                            updateCubeSelectorDisplay('shown');
+                            updateCubeSelectorDisplay('value');
+                        }
+                        if (typeof updateDiceSelectorDisplay === 'function') {
+                            updateDiceSelectorDisplay(1);
+                            updateDiceSelectorDisplay(2);
+                        }
+                        if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
+                        if (typeof syncCubeOwnerAndTurn === 'function') syncCubeOwnerAndTurn();
+                        if (typeof drawBoard === 'function') drawBoard();
+                    }
+                });
+            });
+        }
+
         /** Привязывает обработчики к кнопкам eye-button в таблице подсказок */
         function attachHintsTableEyeButtons(hintsTable, snapshot, entry) {
             if (!hintsTable || !snapshot) return;
             const eyeButtons = hintsTable.querySelectorAll('.eye-button');
             eyeButtons.forEach((button) => {
-                const cubeEyeBtn = button.closest('.cube-hints-table') && button.classList.contains('cube-eye-btn');
-                if (cubeEyeBtn) {
-                    const action = button.getAttribute('data-cube-action');
-                    button.addEventListener('click', () => {
-                        if (action === 'no-double') {
-                            const dice1 = Math.floor(Math.random() * 6) + 1;
-                            const dice2 = Math.floor(Math.random() * 6) + 1;
-                            const dice1Select = document.getElementById('dice1-select');
-                            const dice2Select = document.getElementById('dice2-select');
-                            if (dice1Select) dice1Select.value = dice1.toString();
-                            if (dice2Select) dice2Select.value = dice2.toString();
-                            if (typeof updateDiceSelectorDisplay === 'function') {
-                                updateDiceSelectorDisplay(1);
-                                updateDiceSelectorDisplay(2);
-                            }
-                            if (typeof drawBoard === 'function') drawBoard();
-                        } else if (action === 'double-take') {
-                            const CUBE_VALUES = [2, 4, 8, 16, 32, 64];
-                            const cubeShownSelect = document.getElementById('cube-shown-select');
-                            const cubeValueSelect = document.getElementById('cube-value-select');
-                            const dice1Select = document.getElementById('dice1-select');
-                            const dice2Select = document.getElementById('dice2-select');
-                            if (!cubeShownSelect) return;
-                            const current = parseInt(cubeShownSelect.value, 10) || 0;
-                            const idx = CUBE_VALUES.indexOf(current);
-                            const nextVal = idx >= 0 && idx < CUBE_VALUES.length - 1 ? CUBE_VALUES[idx + 1] : (current === 0 ? 2 : current);
-                            cubeShownSelect.value = nextVal.toString();
-                            if (cubeValueSelect) cubeValueSelect.value = nextVal.toString();
-                            if (dice1Select) dice1Select.value = '0';
-                            if (dice2Select) dice2Select.value = '0';
-                            if (typeof updateCubeSelectorDisplay === 'function') {
-                                updateCubeSelectorDisplay('shown');
-                                updateCubeSelectorDisplay('value');
-                            }
-                            if (typeof updateDiceSelectorDisplay === 'function') {
-                                updateDiceSelectorDisplay(1);
-                                updateDiceSelectorDisplay(2);
-                            }
-                            if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
-                            if (typeof syncCubeOwnerAndTurn === 'function') syncCubeOwnerAndTurn();
-                            if (typeof drawBoard === 'function') drawBoard();
-                        }
-                    });
-                    return;
-                }
                 if (button.closest('.cube-hints-table')) return;
                 if (button.id === 'restore-position-btn') {
                     button.addEventListener('click', () => {
@@ -3137,6 +3141,9 @@
                 };
                 if (firstHint && firstHint.type === 'move') {
                     attachHintsTableEyeButtons(hintsTable, showButtonSnapshot, entry);
+                }
+                if (firstHint && firstHint.type === 'cube_hint') {
+                    attachCubeTableEyeButtons(hintsTable);
                 }
                 if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
             } else {
@@ -5725,6 +5732,9 @@
                     hintsTableContainer.classList.add('active');
                     if (firstHint && firstHint.type === 'move' && entry) {
                         attachHintsTableEyeButtons(hintsTable, showButtonSnapshot, entry);
+                    }
+                    if (firstHint && firstHint.type === 'cube_hint') {
+                        attachCubeTableEyeButtons(hintsTable);
                     }
                     if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
 
