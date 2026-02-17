@@ -3022,17 +3022,46 @@
         let cubeValueChangedInCurrentTable = false;
         /** Флаг: ход уже меняли при «Не удваивать» (можно только один раз) */
         let noDoubleTurnChangedInCurrentTable = false;
+        /** Состояние до «Удвоить, принять» — для отмены при последующем «Не удваивать» */
+        let stateBeforeDoubleTake = null;
 
         /** Привязывает обработчики к глазикам в таблице куба */
         function attachCubeTableEyeButtons(hintsTable) {
             if (!hintsTable) return;
             cubeValueChangedInCurrentTable = false;
             noDoubleTurnChangedInCurrentTable = false;
+            stateBeforeDoubleTake = null;
             const cubeEyeBtns = hintsTable.querySelectorAll('.cube-hints-table .cube-eye-btn');
             cubeEyeBtns.forEach((button) => {
                 const action = button.getAttribute('data-cube-action');
                 button.addEventListener('click', () => {
                     if (action === 'no-double') {
+                        if (cubeValueChangedInCurrentTable && stateBeforeDoubleTake) {
+                            const cubeShownSelect = document.getElementById('cube-shown-select');
+                            const cubeValueSelect = document.getElementById('cube-value-select');
+                            const dice1Select = document.getElementById('dice1-select');
+                            const dice2Select = document.getElementById('dice2-select');
+                            const turnSelect = document.getElementById('turn-select');
+                            if (cubeShownSelect) cubeShownSelect.value = stateBeforeDoubleTake.cubeShown;
+                            if (cubeValueSelect) cubeValueSelect.value = stateBeforeDoubleTake.cubeValue;
+                            if (dice1Select) dice1Select.value = stateBeforeDoubleTake.dice1;
+                            if (dice2Select) dice2Select.value = stateBeforeDoubleTake.dice2;
+                            if (turnSelect) turnSelect.value = stateBeforeDoubleTake.turn;
+                            cubeValueChangedInCurrentTable = false;
+                            stateBeforeDoubleTake = null;
+                            hintsTable.querySelectorAll('.cube-eye-btn[data-cube-action="double-take"]').forEach(b => b.disabled = false);
+                            if (typeof updateCubeSelectorDisplay === 'function') {
+                                updateCubeSelectorDisplay('shown');
+                                updateCubeSelectorDisplay('value');
+                            }
+                            if (typeof updateDiceSelectorDisplay === 'function') {
+                                updateDiceSelectorDisplay(1);
+                                updateDiceSelectorDisplay(2);
+                            }
+                            if (typeof updateTurnSelect === 'function') updateTurnSelect();
+                            if (typeof updateCubeSelectorsVisibility === 'function') updateCubeSelectorsVisibility();
+                            if (typeof syncCubeOwnerAndTurn === 'function') syncCubeOwnerAndTurn();
+                        }
                         const dice1 = Math.floor(Math.random() * 6) + 1;
                         const dice2 = Math.floor(Math.random() * 6) + 1;
                         const dice1Select = document.getElementById('dice1-select');
@@ -3059,7 +3088,15 @@
                         const cubeValueSelect = document.getElementById('cube-value-select');
                         const dice1Select = document.getElementById('dice1-select');
                         const dice2Select = document.getElementById('dice2-select');
+                        const turnSelect = document.getElementById('turn-select');
                         if (!cubeShownSelect) return;
+                        stateBeforeDoubleTake = {
+                            cubeShown: cubeShownSelect.value,
+                            cubeValue: cubeValueSelect ? cubeValueSelect.value : '0',
+                            dice1: dice1Select ? dice1Select.value : '0',
+                            dice2: dice2Select ? dice2Select.value : '0',
+                            turn: turnSelect ? turnSelect.value : 'white'
+                        };
                         const current = parseInt(cubeShownSelect.value, 10) || 0;
                         const idx = CUBE_VALUES.indexOf(current);
                         const nextVal = idx >= 0 && idx < CUBE_VALUES.length - 1 ? CUBE_VALUES[idx + 1] : (current === 0 ? 2 : current);
@@ -3071,7 +3108,6 @@
                             updateDiceSelectorDisplay(1);
                             updateDiceSelectorDisplay(2);
                         }
-                        const turnSelect = document.getElementById('turn-select');
                         if (turnSelect) {
                             turnSelect.value = turnSelect.value === 'white' ? 'black' : 'white';
                             if (typeof updateTurnSelect === 'function') updateTurnSelect();
