@@ -15,8 +15,9 @@ class MainKeyboard:
         return {
             'autoanalize': i18n.keyboard.user.reply.autoanalyze(),
             'short_board': i18n.keyboard.user.reply.short_board_view(),
-            'profile': i18n.keyboard.user.reply.profile(),
             'hint_viewer': i18n.keyboard.user.reply.hint_viewer(),
+            'pokaz': i18n.keyboard.user.reply.pokaz(),
+            'profile': i18n.keyboard.user.reply.profile(),
         }
     
     @staticmethod

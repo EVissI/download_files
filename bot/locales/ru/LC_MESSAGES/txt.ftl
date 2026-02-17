@@ -6,6 +6,8 @@ keyboard-user-reply-profile = 🧍‍♂️ Профиль
 keyboard-user-reply-short_board_view = 📊 Плеер
 keyboard-admin-reply-admin_panel = Админпанель
 keyboard-user-reply-hint_viewer = 👁️ Ошибки
+keyboard-user-reply-pokaz = 🎯 Позиции
+user-pokaz-select_action = Выберите действие:
 
 
 keyboard-reply-cancel = Отмена

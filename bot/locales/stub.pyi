@@ -140,11 +140,16 @@ class UserRank:
     @staticmethod
     def beginner() -> Literal["""🐣 Beginner"""]: ...
 
+class UserPokaz:
+    @staticmethod
+    def select_action() -> Literal["""Select an action:"""]: ...
+
 class User:
     static: UserStatic
     profile: UserProfile
     inline: UserInline
     rank: UserRank
+    pokaz: UserPokaz
 
 class KeyboardUserReply:
     @staticmethod
@@ -154,7 +159,9 @@ class KeyboardUserReply:
     @staticmethod
     def short_board_view() -> Literal["""📊 Pleer Bg"""]: ...
     @staticmethod
-    def hint_viewer() -> Literal["""👁️ Hint Viewer"""]: ...
+    def pokaz() -> Literal["""🎯 Position"""]: ...
+    @staticmethod
+    def hint_viewer() -> Literal["""👁️ Error Viewer"""]: ...
 
 class KeyboardUser:
     reply: KeyboardUserReply
@@ -210,6 +217,10 @@ class AutoAnalyze:
     @staticmethod
     def download_pdf() -> Literal["""📄 Download PDF"""]: ...
     @staticmethod
+    def send_to_hints() -> Literal["""👁️ Error Analysis"""]: ...
+    @staticmethod
+    def ask_hints() -> Literal["""Would you like to send this file for error analysis?"""]: ...
+    @staticmethod
     def no_thanks() -> Literal["""❌ No, thanks"""]: ...
     @staticmethod
     def ask_pdf() -> Literal["""Would you like to get the analysis as a PDF?"""]: ...
@@ -238,7 +249,7 @@ class AutoAnalyze:
     @staticmethod
     def batch_type() -> Literal["""Batch Analyze"""]: ...
     @staticmethod
-    def single_match() -> Literal["""Single Match Analysis"""]: ...
+    def single_match() -> Literal["""One game"""]: ...
 
 class AutoBatch:
     @staticmethod

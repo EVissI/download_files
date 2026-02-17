@@ -5,6 +5,8 @@ keyboard-user-reply-autoanalyze = 🔮 Autoanalyze
 keyboard-user-reply-profile = 🧍‍♂️ Profile
 keyboard-admin-reply-admin_panel = Admin Panel
 keyboard-user-reply-short_board_view = 📊 Pleer Bg
+keyboard-user-reply-pokaz = 🎯 Position
+user-pokaz-select_action = Select an action:
 keyboard-reply-cancel = Cancel
 keyboard-reply-back = Back
 
