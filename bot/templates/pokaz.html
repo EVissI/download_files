@@ -1432,6 +1432,12 @@
             font-size: 14px;
         }
 
+        .hints-table-check-btn.check-mode {
+            min-width: 36px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
         body.screenshot-mode .hints-table-check-btn {
             display: none;
         }
@@ -2772,9 +2778,7 @@
             <button type="button" id="history-forward-btn" class="history-nav-btn" title="Вперёд по истории" aria-label="Вперёд по истории"></button>
         </div>
         <div class="board-open-controls-buttons">
-            <button type="button" class="hints-table-check-btn" title="Заглушка" aria-label="Заглушка">
-                <i class="fa fa-check"></i>
-            </button>
+            <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode" title="Заглушка" aria-label="Заглушка">OK</button>
             <button type="button" id="board-open-random-dice-btn" title="Случайные кубики"><i class="fa fa-random"></i></button>
             <button type="button" id="board-open-eye-btn" title="Анализ позиции"><i class="fa fa-eye"></i></button>
         </div>
@@ -6035,13 +6039,33 @@
         document.getElementById('history-back-btn').addEventListener('click', goBackInHistory);
         document.getElementById('history-forward-btn').addEventListener('click', goForwardInHistory);
 
+        // Сброс кнопки hints-table-check-btn в состояние OK
+        function resetHintsTableCheckBtn() {
+            const btn = document.getElementById('hints-table-check-btn');
+            if (btn) {
+                btn.innerHTML = 'OK';
+                btn.classList.add('check-mode');
+            }
+        }
+
+        // Кнопка hints-table-check-btn: OK -> иконка при клике
+        document.getElementById('hints-table-check-btn').addEventListener('click', () => {
+            const btn = document.getElementById('hints-table-check-btn');
+            if (btn && btn.textContent.trim() === 'OK') {
+                btn.innerHTML = '<i class="fa fa-check"></i>';
+                btn.classList.remove('check-mode');
+            }
+        });
+
         // Кнопка зелёного глаза в board-open-controls — запуск анализа
         document.getElementById('board-open-eye-btn').addEventListener('click', () => {
+            resetHintsTableCheckBtn();
             document.getElementById('show-button').click();
         });
 
         // Кнопка случайных кубиков в board-open-controls
         document.getElementById('board-open-random-dice-btn').addEventListener('click', () => {
+            resetHintsTableCheckBtn();
             const dice1 = Math.floor(Math.random() * 6) + 1;
             const dice2 = Math.floor(Math.random() * 6) + 1;
             let newTurn;
