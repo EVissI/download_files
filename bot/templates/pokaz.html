@@ -2252,6 +2252,80 @@
         .custom-alert.fade-out {
             animation: fadeOut 0.3s ease-out;
         }
+
+        /* Модальное окно сообщений (вместо showFadingMessage) */
+        .msg-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding: 20px;
+        }
+        .msg-modal-overlay.show {
+            display: flex;
+        }
+        .msg-modal {
+            background-color: #2d2d2d;
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            min-width: 280px;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: msgModalFadeIn 0.25s ease-out;
+        }
+        @keyframes msgModalFadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .msg-modal-header {
+            display: flex;
+            align-items: flex-start;
+            padding: 16px 20px 12px;
+            gap: 12px;
+        }
+        .msg-modal-icon {
+            flex-shrink: 0;
+            font-size: 32px;
+            line-height: 1;
+        }
+        .msg-modal-icon.success { color: #4caf50; }
+        .msg-modal-icon.error { color: #f44336; }
+        .msg-modal-icon.warning { color: #ff9800; }
+        .msg-modal-icon.info { color: #2196f3; }
+        .msg-modal-content {
+            color: white;
+            font-size: 15px;
+            line-height: 1.5;
+            margin: 0;
+            flex: 1;
+        }
+        .msg-modal-footer {
+            padding: 12px 20px 16px;
+            text-align: right;
+        }
+        .msg-modal-ok-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .msg-modal-ok-btn:hover {
+            background-color: #0056b3;
+        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -2839,6 +2913,18 @@
             <i class="fa fa-check-circle"></i>
         </div>
         <p class="custom-alert-content">Ваше сообщение отправлено, ожидайте ответа.</p>
+    </div>
+
+    <div id="msgModalOverlay" class="msg-modal-overlay">
+        <div class="msg-modal">
+            <div class="msg-modal-header">
+                <div class="msg-modal-icon" id="msgModalIcon"></div>
+                <p class="msg-modal-content" id="msgModalContent"></p>
+            </div>
+            <div class="msg-modal-footer">
+                <button type="button" class="msg-modal-ok-btn" id="msgModalOkBtn">ОК</button>
+            </div>
+        </div>
     </div>
 </body>
 
@@ -6171,26 +6257,36 @@
         }
     }
 
-    // Показывает исчезающее сообщение по центру экрана
-    function showFadingMessage(message) {
-        const msgDiv = document.createElement('div');
-        msgDiv.style.position = 'fixed';
-        msgDiv.style.top = '50%';
-        msgDiv.style.left = '50%';
-        msgDiv.style.transform = 'translate(-50%, -50%)';
-        msgDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        msgDiv.style.color = 'white';
-        msgDiv.style.padding = '10px 20px';
-        msgDiv.style.borderRadius = '5px';
-        msgDiv.style.fontSize = '16px';
-        msgDiv.style.zIndex = '10000';
-        msgDiv.innerHTML = message;
-        document.body.appendChild(msgDiv);
-        setTimeout(() => {
-            msgDiv.style.transition = 'opacity 1s';
-            msgDiv.style.opacity = '0';
-            setTimeout(() => msgDiv.remove(), 1000);
-        }, 1000);
+    // Показывает модальное окно с иконкой и кнопкой ОК (в левом верхнем углу)
+    // type: 'success' | 'error' | 'warning' | 'info'
+    const MSG_MODAL_ICONS = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    function showMessageModal(message, type) {
+        type = type || 'info';
+        const overlay = document.getElementById('msgModalOverlay');
+        const iconEl = document.getElementById('msgModalIcon');
+        const contentEl = document.getElementById('msgModalContent');
+        const okBtn = document.getElementById('msgModalOkBtn');
+        if (!overlay || !iconEl || !contentEl || !okBtn) return;
+
+        iconEl.className = 'msg-modal-icon ' + type;
+        iconEl.innerHTML = '<i class="fa ' + (MSG_MODAL_ICONS[type] || MSG_MODAL_ICONS.info) + '"></i>';
+        contentEl.textContent = message;
+
+        const closeModal = () => {
+            overlay.classList.remove('show');
+            okBtn.onclick = null;
+            overlay.onclick = null;
+        };
+
+        okBtn.onclick = closeModal;
+        overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+
+        overlay.classList.add('show');
     }
 
     // Функции для работы со скриншотами (в глобальной области видимости)
@@ -6292,22 +6388,22 @@
                             body: formData
                         }).then(async response => {
                             if (response.ok) {
-                                showFadingMessage('Скриншот отправлен');
+                                showMessageModal('Скриншот отправлен', 'success');
                             } else if (response.status === 402) {
                                 const data = await response.json();
                                 const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для сохранения скриншота. Активируйте промокод или приобретите услугу.';
-                                showFadingMessage(msg);
+                                showMessageModal(msg, 'warning');
                             } else {
                                 const text = await response.text();
                                 console.error('Ошибка сервера:', text);
-                                showFadingMessage('Ошибка при отправке скриншота');
+                                showMessageModal('Ошибка при отправке скриншота', 'error');
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
-                            showFadingMessage('Ошибка при отправке скриншота');
+                            showMessageModal('Ошибка при отправке скриншота', 'error');
                         });
                     } else {
-                        showFadingMessage('Не удалось получить chat_id');
+                        showMessageModal('Не удалось получить chat_id', 'info');
                     }
                 } else {
                     // Если не в Telegram, скачиваем файл
@@ -6315,12 +6411,12 @@
                     link.download = 'screenshot.png';
                     link.href = canvas.toDataURL();
                     link.click();
-                    showFadingMessage('Скриншот сохранён');
+                    showMessageModal('Скриншот сохранён', 'success');
                 }
             });
         }).catch(error => {
             console.error('Error creating screenshot:', error);
-            showFadingMessage('Ошибка при создании скриншота');
+            showMessageModal('Ошибка при создании скриншота', 'error');
             restoreControls();
         });
     }
@@ -6412,24 +6508,24 @@
                         body: formData
                     }).then(response => {
                         if (response.ok) {
-                            showFadingMessage('Скриншот сохранён в буфер');
+                            showMessageModal('Скриншот сохранён в буфер', 'success');
                         } else {
-                            showFadingMessage('Ошибка при сохранении скриншота');
+                            showMessageModal('Ошибка при сохранении скриншота', 'error');
                         }
                         restoreControls();
                     }).catch(error => {
                         console.error('Error saving screenshot:', error);
-                        showFadingMessage('Ошибка при сохранении скриншота');
+                        showMessageModal('Ошибка при сохранении скриншота', 'error');
                         restoreControls();
                     });
                 } else {
-                    showFadingMessage('Не удалось получить chat_id');
+                    showMessageModal('Не удалось получить chat_id', 'info');
                     restoreControls();
                 }
             });
         }).catch(error => {
             console.error('Error creating screenshot:', error);
-            showFadingMessage('Ошибка при создании скриншота');
+            showMessageModal('Ошибка при создании скриншота', 'error');
             restoreControls();
         });
     }
@@ -6441,20 +6537,20 @@
         if (chatId) {
             fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(async response => {
                 if (response.ok) {
-                    showFadingMessage('Скриншоты отправлены');
+                    showMessageModal('Скриншоты отправлены', 'success');
                 } else if (response.status === 402) {
                     const data = await response.json();
                     const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для отправки скриншотов. Активируйте промокод или приобретите услугу.';
-                    showFadingMessage(msg);
+                    showMessageModal(msg, 'warning');
                 } else {
-                    showFadingMessage('Ошибка при отправке скриншотов');
+                    showMessageModal('Ошибка при отправке скриншотов', 'error');
                 }
             }).catch(error => {
                 console.error('Error uploading screenshots:', error);
-                showFadingMessage('Ошибка при отправке скриншотов');
+                showMessageModal('Ошибка при отправке скриншотов', 'error');
             });
         } else {
-            showFadingMessage('Не удалось получить chat_id');
+            showMessageModal('Не удалось получить chat_id', 'info');
         }
     }
 
@@ -6549,15 +6645,15 @@
                     } else if (response.status === 429) {
                         const data = await response.json();
                         const waitText = (data.detail && data.detail.wait_text) ? data.detail.wait_text : 'некоторое время';
-                        showFadingMessage(`Слишком много запросов. Пожалуйста, подождите ${waitText} перед следующей отправкой.`);
+                        showMessageModal(`Слишком много запросов. Пожалуйста, подождите ${waitText} перед следующей отправкой.`, 'warning');
                         closeAdminCommentModal();
                     } else if (response.status === 402) {
                         const data = await response.json();
                         const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для отправки комментария. Активируйте промокод или приобретите услугу.';
-                        showFadingMessage(msg);
+                        showMessageModal(msg, 'warning');
                         closeAdminCommentModal();
                     } else {
-                        showFadingMessage('Ошибка при отправке сообщения');
+                        showMessageModal('Ошибка при отправке сообщения', 'error');
                         closeAdminCommentModal();
                     }
                 }).catch(error => {
