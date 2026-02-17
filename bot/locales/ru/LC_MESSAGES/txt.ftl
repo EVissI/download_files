@@ -7,7 +7,7 @@ keyboard-user-reply-short_board_view = 📊 Плеер
 keyboard-admin-reply-admin_panel = Админпанель
 keyboard-user-reply-hint_viewer = 👁️ Ошибки
 keyboard-user-reply-pokaz = 🎯 Позиции
-user-pokaz-select_action = Выберите действие:
+user-pokaz-select_action = Для входа в редактор, перейдите по ссылки ниже⬇:
 
 
 keyboard-reply-cancel = Отмена
