@@ -1541,6 +1541,43 @@
             pointer-events: none;
         }
 
+        .cube-hints-header-spacer {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            min-height: 42px;
+            display: block;
+            visibility: hidden;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 768px) {
+            .cube-hints-header-spacer {
+                width: 62px;
+                height: 62px;
+                min-width: 62px;
+                min-height: 62px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .cube-hints-header-spacer {
+                width: 37px;
+                height: 37px;
+                min-width: 37px;
+                min-height: 37px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .cube-hints-header-spacer {
+                width: 104px;
+                height: 104px;
+                min-width: 104px;
+                min-height: 104px;
+            }
+        }
+
         #restore-position-btn {
             background-color: #ff8c00;
         }
@@ -2987,7 +3024,7 @@
                 });
                 tableHtml += '</table>';
             } else if (firstHint.type === 'cube_hint') {
-                tableHtml = '<table class="cube-hints-table"><tr><th>Действие</th><th>Эквити</th><th></th></tr>';
+                tableHtml = '<table class="cube-hints-table"><tr><th>Действие</th><th>Эквити</th><th><div class="cube-hints-header-spacer"></div></th></tr>';
                 (firstHint.cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1 || '';
