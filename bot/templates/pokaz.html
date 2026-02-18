@@ -4547,8 +4547,8 @@
             xgid += ':'
             const cubeValue = parseInt(document.getElementById('cube-value-select').value);
             let exponent = 0;
-            if (cubeValue > 0) {
-                exponent = Math.log2(cubeValue);
+            if (cubeValue >= 2) {
+                exponent = Math.log2(cubeValue) - 1;
             }
             xgid += exponent.toString();
             xgid += ':'
