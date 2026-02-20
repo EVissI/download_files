@@ -4840,13 +4840,12 @@
             }
 
             // Set turn based on turnValue
+            // XGID turnValue: 1 = lower (white), -1 = upper (black) — не зависит от invert
             let turn = 'white';
             if (turnValue === 1) {
-                // Lower player's turn
-                turn = invertPositions ? 'black' : 'white';
+                turn = 'white';
             } else if (turnValue === -1) {
-                // Upper player's turn
-                turn = invertPositions ? 'white' : 'black';
+                turn = 'black';
             }
             const turnSelect = document.getElementById('turn-select');
             if (turnSelect) {
