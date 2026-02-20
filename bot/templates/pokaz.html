@@ -4665,10 +4665,10 @@
             positions.first = {};
             positions.second = {};
 
-            // Determine which positions are upper/lower based on upperPlayerColor
-            const invertPositions = (upperPlayerColor === 'white');
-            const upperPositions = invertPositions ? positions.first : positions.second;
-            const lowerPositions = invertPositions ? positions.second : positions.first;
+            // XGID: lower (A-O) = white/Red, upper (a-o) = black. positions.first=white, positions.second=black
+            // При invert=1 маппинг тот же — hint_viewer уже передаёт инвертированные позиции
+            const upperPositions = positions.second;
+            const lowerPositions = positions.first;
 
             // Parse positions
             for (let i = 0; i < 24; i++) {
@@ -4824,14 +4824,12 @@
                 updateCubeSelectorDisplay('shown');
             }
 
-            // Set cube owner based on cubePosition
+            // Set cube owner: 1 = lower (white), -1 = upper (black) — не зависит от invert
             let cubeOwner = 'white';
             if (cubePosition === 1) {
-                // Lower player owns cube
-                cubeOwner = invertPositions ? 'black' : 'white';
+                cubeOwner = 'white';
             } else if (cubePosition === -1) {
-                // Upper player owns cube
-                cubeOwner = invertPositions ? 'white' : 'black';
+                cubeOwner = 'black';
             }
             const cubeOwnerSelect = document.getElementById('cube-owner-select');
             if (cubeOwnerSelect) {
