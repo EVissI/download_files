@@ -145,6 +145,16 @@ def _get_pokaz_translations(lang: str) -> dict:
         "match_to_tpl": t("pokaz-page-match-to", "Match to __LENGTH__. Score __MAX__-__MIN__"),
         "cancel": t("keyboard-reply-cancel", "Cancel"),
         "confirm": t("pokaz-page-confirm", "Confirmation"),
+        "table_header_move": t("pokaz-page-table-header-move", "Move"),
+        "table_header_equity": t("pokaz-page-table-header-equity", "Equity"),
+        "table_header_action": t("pokaz-page-table-header-action", "Action"),
+        "impossible_move": t("pokaz-page-impossible-move", "Impossible move"),
+        "unknown_hint_type": t("pokaz-page-unknown-hint-type", "Unknown hint type"),
+        "turn_white": t("pokaz-page-turn-white", "White to move"),
+        "turn_black": t("pokaz-page-turn-black", "Black to move"),
+        "loading_hints": t("pokaz-page-loading-hints", "Loading hints..."),
+        "error_insufficient_balance": t("pokaz-page-error-insufficient-balance", "Insufficient balance for hints"),
+        "error_no_chat_id": t("pokaz-page-error-no-chat-id", "Missing chat_id. Open via Telegram."),
     }
 
 

@@ -3008,17 +3008,18 @@
          */
         function buildHintsTableFromData(hintsData, selectedHintIndex) {
             if (!hintsData) return { html: '', firstHint: null };
+            const i18n = window.POKAZ_I18N || {};
             if (hintsData.error) {
                 return { html: '<div class="error">' + hintsData.error + '</div>', firstHint: null };
             }
             const hints = hintsData.hints || [];
             if (hints.length === 0) {
-                return { html: '<div class="error">невозможный ход</div>', firstHint: null };
+                return { html: '<div class="error">' + (i18n.impossible_move || 'невозможный ход') + '</div>', firstHint: null };
             }
             const firstHint = hints[0];
             let tableHtml = '';
             if (firstHint.type === 'move') {
-                tableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th><th><button class="eye-button" type="button" id="restore-position-btn" title="Восстановить сохранённую позицию"><i class="fa fa-reply"></i></button></th></tr>';
+                tableHtml = '<table><tr><th>' + (i18n.table_header_move || 'Ход') + '</th><th>%</th><th>%</th><th>' + (i18n.table_header_equity || 'Эквити') + '</th><th><button class="eye-button" type="button" id="restore-position-btn" title="' + (i18n.restore_position || 'Восстановить сохранённую позицию') + '"><i class="fa fa-reply"></i></button></th></tr>';
                 hints.forEach((hint, index) => {
                     if (hint.probs && hint.probs.length >= 2) {
                         const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
@@ -3036,7 +3037,7 @@
                 });
                 tableHtml += '</table>';
             } else if (firstHint.type === 'cube_hint') {
-                tableHtml = '<table class="cube-hints-table"><tr><th>Действие</th><th>Эквити</th><th><div class="cube-hints-header-spacer"></div></th></tr>';
+                tableHtml = '<table class="cube-hints-table"><tr><th>' + (i18n.table_header_action || 'Действие') + '</th><th>' + (i18n.table_header_equity || 'Эквити') + '</th><th><div class="cube-hints-header-spacer"></div></th></tr>';
                 (firstHint.cubeful_equities || []).forEach((hint, index) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     let displayAction = hint.action_1 || '';
@@ -3062,7 +3063,7 @@
                 }
                 tableHtml += '</table>';
             } else {
-                return { html: '<div class="error">Unknown hint type</div>', firstHint: null };
+                return { html: '<div class="error">' + (i18n.unknown_hint_type || 'Unknown hint type') + '</div>', firstHint: null };
             }
             return { html: tableHtml, firstHint };
         }
@@ -5799,17 +5800,18 @@
                 }
             }
 
-            hintsTable.innerHTML = '<div class="loading">Loading hints...</div>';
+            hintsTable.innerHTML = '<div class="loading">' + ((window.POKAZ_I18N || {}).loading_hints || 'Загрузка подсказок...') + '</div>';
             console.log('Requesting hints with chat_id:', chatId, 'xgid:', xgid);
             fetch(`/pokaz/hints?xgid=${encodeURIComponent(xgid)}&chat_id=${chatId}`, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
                 .then(response => {
                     console.log('Response status:', response.status);
                     if (!response.ok) {
+                        const i18n = window.POKAZ_I18N || {};
                         if (response.status === 402) {
-                            throw new Error('Недостаточно баланса для получения подсказок');
+                            throw new Error(i18n.error_insufficient_balance || 'Недостаточно баланса для получения подсказок');
                         }
                         if (response.status === 400) {
-                            throw new Error('Отсутствует chat_id. Запустите через Telegram.');
+                            throw new Error(i18n.error_no_chat_id || 'Отсутствует chat_id. Запустите через Telegram.');
                         }
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
@@ -6421,13 +6423,14 @@
         const turnInput = document.getElementById('turn-select');
         const turn = turnInput?.value || 'white';
         
+        const i18n = window.POKAZ_I18N || {};
         if (turn === 'white') {
-            turnLabel.textContent = 'Ход белых';
+            turnLabel.textContent = i18n.turn_white || 'Ход белых';
             if (turnCheckerIndicator) {
                 turnCheckerIndicator.className = 'turn-checker-indicator white';
             }
         } else {
-            turnLabel.textContent = 'Ход черных';
+            turnLabel.textContent = i18n.turn_black || 'Ход черных';
             if (turnCheckerIndicator) {
                 turnCheckerIndicator.className = 'turn-checker-indicator black';
             }
