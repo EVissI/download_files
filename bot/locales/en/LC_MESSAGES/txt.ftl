@@ -243,3 +243,7 @@ pokaz-page-turn-black = Black to move
 pokaz-page-loading-hints = Loading hints...
 pokaz-page-error-insufficient-balance = Insufficient balance for hints
 pokaz-page-error-no-chat-id = Missing chat_id. Open via Telegram.
+pokaz-page-cube-no-double = no double
+pokaz-page-cube-double = double
+pokaz-page-cube-take = take
+pokaz-page-cube-pass = pass

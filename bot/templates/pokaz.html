@@ -2975,27 +2975,25 @@
             historyIndex = 0;
         }
 
-        /** Хеш-таблица перевода подсказок по кубу удвоения на русский */
-        const CUBE_ACTION_TRANSLATIONS = {
-            'no double': 'не удваивать',
-            'double': 'удвоить',
-            'take': 'принять',
-            'pass': 'сдаться'
-        };
-
         /**
-         * Переводит строку подсказки по кубу (например "No double, take (33.3%)") на русский.
+         * Переводит строку подсказки по кубу (например "No double, take (33.3%)") на текущий язык.
          * Части строки разделяются запятой, текст в скобках сохраняется без перевода.
-         * Первая буква строки — заглавная, остальные с маленькой: "Удвоить, сдаться".
          */
         function translateCubeAction(str) {
             if (!str || typeof str !== 'string') return str;
+            const i18n = window.POKAZ_I18N || {};
+            const translations = {
+                'no double': i18n.cube_no_double || 'не удваивать',
+                'double': i18n.cube_double || 'удвоить',
+                'take': i18n.cube_take || 'принять',
+                'pass': i18n.cube_pass || 'сдаться'
+            };
             const result = str.split(',').map(part => {
                 const match = part.match(/^([^(]*)(\(.*\))?$/);
                 const textPart = (match ? match[1] : part).trim();
                 const parenPart = match && match[2] ? match[2] : '';
                 const key = textPart.toLowerCase();
-                const translated = CUBE_ACTION_TRANSLATIONS[key] !== undefined ? CUBE_ACTION_TRANSLATIONS[key] : textPart.toLowerCase();
+                const translated = translations[key] !== undefined ? translations[key] : textPart.toLowerCase();
                 return translated + parenPart;
             }).join(', ');
             return result.charAt(0).toUpperCase() + result.slice(1);
@@ -3048,9 +3046,9 @@
                     const rowStyle = index === 0 ? ' style="background-color: green;"' : '';
                     let actionCell = '';
                     if (rawAction1 === 'no double') {
-                        actionCell = `<button class="eye-button cube-eye-btn" type="button" data-cube-action="no-double" title="Случайные кубики"><i class="fa fa-eye"></i></button>`;
+                        actionCell = `<button class="eye-button cube-eye-btn" type="button" data-cube-action="no-double" title="${i18n.random_dice || 'Случайные кубики'}"><i class="fa fa-eye"></i></button>`;
                     } else if (rawAction1 === 'double' && rawAction2 === 'take') {
-                        actionCell = `<button class="eye-button cube-eye-btn" type="button" data-cube-action="double-take" title="Следующий куб"><i class="fa fa-eye"></i></button>`;
+                        actionCell = `<button class="eye-button cube-eye-btn" type="button" data-cube-action="double-take" title="${i18n.next_cube || 'Следующий куб'}"><i class="fa fa-eye"></i></button>`;
                     } else {
                         actionCell = '';
                     }

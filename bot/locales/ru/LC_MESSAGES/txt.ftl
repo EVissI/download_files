@@ -246,3 +246,7 @@ pokaz-page-turn-black = Ход черных
 pokaz-page-loading-hints = Загрузка подсказок...
 pokaz-page-error-insufficient-balance = Недостаточно баланса для получения подсказок
 pokaz-page-error-no-chat-id = Отсутствует chat_id. Запустите через Telegram.
+pokaz-page-cube-no-double = не удваивать
+pokaz-page-cube-double = удвоить
+pokaz-page-cube-take = принять
+pokaz-page-cube-pass = сдаться

@@ -155,6 +155,10 @@ def _get_pokaz_translations(lang: str) -> dict:
         "loading_hints": t("pokaz-page-loading-hints", "Loading hints..."),
         "error_insufficient_balance": t("pokaz-page-error-insufficient-balance", "Insufficient balance for hints"),
         "error_no_chat_id": t("pokaz-page-error-no-chat-id", "Missing chat_id. Open via Telegram."),
+        "cube_no_double": t("pokaz-page-cube-no-double", "no double"),
+        "cube_double": t("pokaz-page-cube-double", "double"),
+        "cube_take": t("pokaz-page-cube-take", "take"),
+        "cube_pass": t("pokaz-page-cube-pass", "pass"),
     }
 
 
