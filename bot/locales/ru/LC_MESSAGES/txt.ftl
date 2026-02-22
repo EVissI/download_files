@@ -235,4 +235,4 @@ pokaz-page-move = Ход
 pokaz-page-equity = Эквити
 pokaz-page-restore-position = Восстановить сохранённую позицию
 pokaz-page-next-cube = Следующий куб
-pokaz-page-match-to = Матч до { $length }. Счет { $maxScore }-{ $minScore }
+pokaz-page-match-to = Матч до {{length}}. Счет {{max}}-{{min}}

@@ -232,4 +232,4 @@ pokaz-page-move = Move
 pokaz-page-equity = Equity
 pokaz-page-restore-position = Restore saved position
 pokaz-page-next-cube = Next cube
-pokaz-page-match-to = Match to { $length }. Score { $maxScore }-{ $minScore }
+pokaz-page-match-to = Match to {{length}}. Score {{max}}-{{min}}
