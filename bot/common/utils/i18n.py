@@ -1,4 +1,4 @@
-﻿from loguru import logger
+from loguru import logger
 from fluent_compiler.bundle import FluentBundle
 
 from fluentogram import FluentTranslator, TranslatorHub
@@ -39,3 +39,19 @@ def get_all_locales_for_key(translator_hub: TranslatorHub, key: str) -> list:
             value = None
         translations.append(value)
     return translations
+
+
+def get_text_for_locale(translator_hub: TranslatorHub, locale: str, key: str, fallback: str = "") -> str:
+    """
+    Возвращает перевод по ключу для указанной локали.
+    Используется для HTML-страниц (pokaz и т.д.) с query-параметром lang.
+    """
+    for translator in translator_hub.storage.get_translators_list():
+        if translator.locale == locale:
+            try:
+                value = translator.get(key)
+                return value if value is not None else fallback
+            except Exception as e:
+                logger.error(f"Translation error for {translator.locale} key {key}: {e}")
+                return fallback
+    return fallback

@@ -12,10 +12,14 @@ from bot.common.utils.i18n import get_all_locales_for_key
 pokaz_entry_router = Router()
 
 
-def get_pokaz_entry_kb(chat_id: int) -> InlineKeyboardMarkup:
+def get_pokaz_entry_kb(chat_id: int, lang: str = None) -> InlineKeyboardMarkup:
     """Клавиатура при нажатии кнопки Позиции: админ-панель и редактор позиций."""
     kb = InlineKeyboardBuilder()
-    kb.button(text="Открыть редактор позиций", web_app=WebAppInfo(url=f"{settings.MINI_APP_URL}/pokaz?chat_id={chat_id}"))
+    lang_param = f"&lang={lang}" if lang in ("ru", "en") else ""
+    kb.button(
+        text="Открыть редактор позиций",
+        web_app=WebAppInfo(url=f"{settings.MINI_APP_URL}/pokaz?chat_id={chat_id}{lang_param}"),
+    )
     kb.adjust(1)
     return kb.as_markup()
 
@@ -24,10 +28,11 @@ def get_pokaz_entry_kb(chat_id: int) -> InlineKeyboardMarkup:
     F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-user-reply-pokaz")),
     UserInfo(),
 )
-async def handle_pokaz_button(message: Message, i18n):
+async def handle_pokaz_button(message: Message, i18n, user_info):
     """Отправляет текст с кнопками при нажатии кнопки Позиции."""
     chat_id = message.from_user.id if message.from_user else 0
+    lang = (user_info.lang_code or "ru") if user_info else "ru"
     await message.answer(
         i18n.user.pokaz.select_action(),
-        reply_markup=get_pokaz_entry_kb(chat_id),
+        reply_markup=get_pokaz_entry_kb(chat_id, lang),
     )

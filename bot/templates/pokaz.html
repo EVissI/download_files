@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backgammon Board Editor</title>
+    <title>{{ i18n.title }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
         body {
@@ -2308,6 +2308,43 @@
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Применяем переводы из Fluent (pokaz-i18n)
+            const i18nEl = document.getElementById('pokaz-i18n');
+            if (i18nEl && i18nEl.textContent) {
+                try {
+                    const i18n = JSON.parse(i18nEl.textContent);
+                    document.querySelectorAll('[data-i18n]').forEach(el => {
+                        const k = el.getAttribute('data-i18n');
+                        if (i18n[k]) el.textContent = i18n[k];
+                    });
+                    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                        const k = el.getAttribute('data-i18n-title');
+                        if (i18n[k]) el.setAttribute('title', i18n[k]);
+                    });
+                    document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+                        const k = el.getAttribute('data-i18n-aria-label');
+                        if (i18n[k]) el.setAttribute('aria-label', i18n[k]);
+                    });
+                    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                        const k = el.getAttribute('data-i18n-placeholder');
+                        if (i18n[k]) el.setAttribute('placeholder', i18n[k]);
+                    });
+                    window.POKAZ_I18N = i18n;
+                } catch (e) { console.warn('Pokaz i18n parse error:', e); }
+            }
+
+            // Lang switcher: reload with opposite lang, preserve other params
+            const langSwitcher = document.getElementById('lang-switcher');
+            if (langSwitcher) {
+                langSwitcher.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const params = new URLSearchParams(window.location.search);
+                    const currentLang = params.get('lang') || 'ru';
+                    params.set('lang', currentLang === 'ru' ? 'en' : 'ru');
+                    window.location.search = params.toString();
+                });
+            }
+
             const screenshotBtn = document.getElementById('screenshotBtn');
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
@@ -2329,7 +2366,8 @@
                 hintsTableToggle.addEventListener('click', function () {
                     hintsTableContainer.classList.toggle('collapsed');
                     const isCollapsed = hintsTableContainer.classList.contains('collapsed');
-                    hintsTableToggle.setAttribute('aria-label', isCollapsed ? 'Развернуть таблицу' : 'Свернуть таблицу');
+                    const i18n = window.POKAZ_I18N || {};
+                    hintsTableToggle.setAttribute('aria-label', isCollapsed ? (i18n.expand_table || 'Развернуть таблицу') : (i18n.collapse_table || 'Свернуть таблицу'));
                     if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
                 });
             }
@@ -2341,6 +2379,7 @@
     {% if xgid %}
     <script type="application/json" id="initial-xgid-data">{{ xgid|tojson }}</script>
     {% endif %}
+    <script type="application/json" id="pokaz-i18n">{{ i18n|tojson }}</script>
     <div class="container">
         <h1>Backgammon Board Editor</h1>
         <!-- DEBUG: XGID - удалить потом -->
@@ -2349,39 +2388,40 @@
             <button id="xgid-close" class="xgid-close">X</button>
         </div>
         <div class="mode-toggle-container">
+            <a href="#" id="lang-switcher" class="lang-switcher" style="margin-left: auto; color: #888; font-size: 14px; text-decoration: none;">{% if lang == 'en' %}RU{% else %}EN{% endif %}</a>
             <label class="hide-pips-label">
                 <input type="checkbox" id="hidePipsCheckbox">
-                <span>Скрыть пипсы</span>
+                <span data-i18n="hide_pips">Скрыть пипсы</span>
             </label>
             <div class="player-position-toggle">
-                <span>Нижний игрок:</span>
+                <span data-i18n="lower_player">Нижний игрок:</span>
                 <button id="lowerPlayerButton" class="checker-toggle-btn white" data-color="white"
-                    title="Переключить нижнего игрока"></button>
+                    data-i18n-title="toggle_lower_player" title="Переключить нижнего игрока"></button>
             </div>
-            <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" title="Установка шашек">
+            <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" data-i18n-title="place_checkers" title="Установка шашек">
                 <i class="fa fa-mouse-pointer"></i>
             </button>
         </div>
         <div class="board-wrapper">
-            <div id="game-type-label" class="game-type-label">Манигейм</div>
+            <div id="game-type-label" class="game-type-label" data-i18n="moneygame">Манигейм</div>
             <canvas id="boardCanvas" width="800" height="800"></canvas>
         </div>
         <div class="selectors-wrapper">
             <div class="selectors-container">
                 <div class="checker-selector">
-                    <div class="checker-label">Шашки</div>
+                    <div class="checker-label" data-i18n="checkers">Шашки</div>
                     <div class="checker-options">
-                        <div class="checker-btn white selected" data-color="white" role="button" aria-label="Белые шашки">
+                        <div class="checker-btn white selected" data-color="white" role="button" data-i18n-aria-label="white_checkers" aria-label="Белые шашки">
                             <div class="checker-dot"></div>
                         </div>
                         <div class="checker-btn black" data-color="black" role="button"
-                            aria-label="Черные шашки">
+                            data-i18n-aria-label="black_checkers" aria-label="Черные шашки">
                             <div class="checker-dot"></div>
                         </div>
                     </div>
                 </div>
                 <div class="bar-selector">
-                    <div class="bar-label">На баре</div>
+                    <div class="bar-label" data-i18n="on_bar">На баре</div>
                     <div class="bar-options">
                         <div class="bar-checker">
                             <div class="bar-selector-custom">
@@ -2439,7 +2479,7 @@
                 </div>
             </div>
             <div class="jb-wrap">
-                <div class="jb-title">Якоби Бивер Макс куб</div>
+                <div class="jb-title" data-i18n="jacobi_beaver_max">Якоби Бивер Макс куб</div>
                 <div class="jacobi-beaver-block">
                     <div class="jb-row">
                         <button type="button" class="toggle-btn on" data-target="jacobi-select">Да</button>
@@ -2472,10 +2512,10 @@
             </div>
             <div class="match-panel">
                 <div class="match-panel-headers">
-                    <div class="match-header">Очки Н.</div>
-                    <div class="match-header">Очки В.</div>
-                    <div class="match-header">Дл. матча</div>
-                    <div class="match-header">Макс куб</div>
+                    <div class="match-header" data-i18n="match_headers_lower">Очки Н.</div>
+                    <div class="match-header" data-i18n="match_headers_upper">Очки В.</div>
+                    <div class="match-header" data-i18n="match_headers_length">Дл. матча</div>
+                    <div class="match-header" data-i18n="match_headers_max_cube">Макс куб</div>
                 </div>
                 <div class="score-inputs">
                     <div class="match-selector-custom">
@@ -2643,8 +2683,8 @@
                 </div>
             </div>
             <div class="game-type-right">
-                <label>Тип игры</label>
-                <button id="game-type-button" title="Манигейм"><i class="fa fa-rub"></i></button>
+                <label data-i18n="game_type">Тип игры</label>
+                <button id="game-type-button" data-i18n-title="moneygame" title="Манигейм"><i class="fa fa-rub"></i></button>
             </div>
         </div>
     </div>
@@ -2652,10 +2692,10 @@
     <div class="controls-row">
         <div class="cube-controls-block-wrapper">
             <div class="cube-controls-labels">
-                <label for="cube-shown-select">Показан куб?</label>
-                <label for="cube-value-select">Куб</label>
-                <label for="cube-owner-select-btn">Чей куб?</label>
-                <label for="crawford-checkbox" id="crawford-label" style="display: none;">Кроуфорд</label>
+                <label for="cube-shown-select" data-i18n="cube_shown">Показан куб?</label>
+                <label for="cube-value-select" data-i18n="cube">Куб</label>
+                <label for="cube-owner-select-btn" data-i18n="whose_cube">Чей куб?</label>
+                <label for="crawford-checkbox" id="crawford-label" style="display: none;" data-i18n="crawford">Кроуфорд</label>
             </div>
             <div class="cube-controls-block">
                 <div class="cube-shown-selector">
@@ -2709,7 +2749,7 @@
                 <div class="cube-owner-selector">
                     <input type="hidden" id="cube-owner-select" value="white">
                     <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white"
-                        data-target="cube-owner-select" aria-label="Чей куб?" data-color="white"></button>
+                        data-target="cube-owner-select" data-i18n-aria-label="whose_cube" aria-label="Чей куб?" data-color="white"></button>
                 </div>
                 <div class="crawford-checkbox-wrapper" style="display: none;">
                     <input type="checkbox" id="crawford-checkbox">
@@ -2718,8 +2758,8 @@
         </div>
         <div class="turn-dice-wrapper">
             <div class="turn-dice-labels">
-                <label for="turn-select">Чей ход?</label>
-                <label for="dice-select">Кубики</label>
+                <label for="turn-select" data-i18n="whose_turn">Чей ход?</label>
+                <label for="dice-select" data-i18n="dice">Кубики</label>
             </div>
             <div class="turn-dice-block">
                 <div class="turn-dice-content">
@@ -2727,7 +2767,7 @@
                         <div class="turn-dice-controls">
                             <input type="hidden" id="turn-select" value="white">
                             <button type="button" id="turn-select-btn" class="checker-toggle-btn white"
-                                data-target="turn-select" aria-label="Чей ход?" data-color="white"></button>
+                                data-target="turn-select" data-i18n-aria-label="whose_turn" aria-label="Чей ход?" data-color="white"></button>
                         </div>
                     </div>
                     <div class="turn-dice-section">
@@ -2806,20 +2846,20 @@
     <div class="board-open-controls" id="boardOpenControls">
         <div class="board-open-controls-spacer"></div>
         <div class="history-nav">
-            <button type="button" id="history-back-btn" class="history-nav-btn" title="Назад по истории" aria-label="Назад по истории"></button>
-            <div id="turn-checker-indicator" class="turn-checker-indicator white" title="Чей ход"></div>
-            <button type="button" id="history-forward-btn" class="history-nav-btn" title="Вперёд по истории" aria-label="Вперёд по истории"></button>
+            <button type="button" id="history-back-btn" class="history-nav-btn" data-i18n-title="history_back" data-i18n-aria-label="history_back" title="Назад по истории" aria-label="Назад по истории"></button>
+            <div id="turn-checker-indicator" class="turn-checker-indicator white" data-i18n-title="whose_turn" title="Чей ход"></div>
+            <button type="button" id="history-forward-btn" class="history-nav-btn" data-i18n-title="history_forward" data-i18n-aria-label="history_forward" title="Вперёд по истории" aria-label="Вперёд по истории"></button>
         </div>
         <div class="board-open-controls-buttons">
-            <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode" title="Подтвердить ход" aria-label="Подтвердить ход">OK</button>
-            <button type="button" id="board-open-random-dice-btn" title="Случайные кубики" disabled><i class="fa fa-random"></i></button>
-            <button type="button" id="board-open-eye-btn" title="Анализ позиции" disabled><i class="fa fa-eye"></i></button>
+            <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode" data-i18n-title="confirm_move" data-i18n-aria-label="confirm_move" title="Подтвердить ход" aria-label="Подтвердить ход">OK</button>
+            <button type="button" id="board-open-random-dice-btn" data-i18n-title="random_dice" title="Случайные кубики" disabled><i class="fa fa-random"></i></button>
+            <button type="button" id="board-open-eye-btn" data-i18n-title="analyze_position" title="Анализ позиции" disabled><i class="fa fa-eye"></i></button>
         </div>
     </div>
 
     <div class="hints-table" id="hintsTableContainer">
         <div class="hints-table-body">
-            <button type="button" class="hints-table-toggle" id="hintsTableToggle" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
+            <button type="button" class="hints-table-toggle" id="hintsTableToggle" data-i18n-title="toggle_table" data-i18n-aria-label="collapse_table" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
                 <i class="fa fa-chevron-down"></i>
             </button>
             <div class="hints-table-content">
@@ -2830,23 +2870,23 @@
     </div>
 
     <div class="screenshot-controls" id="screenshotControls">
-        <button onclick="takeScreenshot()" id="screenshotBtn" title="Сделать скриншот"></button>
-        <button onclick="saveScreenshot()" id="screenSaveBtn" title="Сохранить скриншот в буфер"></button>
-        <button onclick="uploadScreenshots()" id="screenUploadBtn" title="Отправить скриншоты"></button>
+        <button onclick="takeScreenshot()" id="screenshotBtn" data-i18n-title="take_screenshot" title="Сделать скриншот"></button>
+        <button onclick="saveScreenshot()" id="screenSaveBtn" data-i18n-title="save_screenshot" title="Сохранить скриншот в буфер"></button>
+        <button onclick="uploadScreenshots()" id="screenUploadBtn" data-i18n-title="upload_screenshots" title="Отправить скриншоты"></button>
     </div>
 
     <!-- Modal window for clear confirmation -->
     <div id="clear-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Подтверждение</h3>
+                <h3 data-i18n="confirm">Подтверждение</h3>
             </div>
             <div class="modal-body">
-                <p>Вы уверены, что хотите очистить доску?</p>
+                <p data-i18n="clear_confirm_msg">Вы уверены, что хотите очистить доску?</p>
             </div>
             <div class="modal-footer">
-                <button id="modal-cancel" class="modal-btn modal-btn-cancel">Отмена</button>
-                <button id="modal-confirm" class="modal-btn modal-btn-confirm">Очистить</button>
+                <button id="modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
+                <button id="modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="clear">Очистить</button>
             </div>
         </div>
     </div>
@@ -2855,14 +2895,14 @@
     <div id="init-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Подтверждение</h3>
+                <h3 data-i18n="confirm">Подтверждение</h3>
             </div>
             <div class="modal-body">
-                <p>Вы уверены, что хотите расставить начальную позицию?</p>
+                <p data-i18n="init_confirm_msg">Вы уверены, что хотите расставить начальную позицию?</p>
             </div>
             <div class="modal-footer">
-                <button id="init-modal-cancel" class="modal-btn modal-btn-cancel">Отмена</button>
-                <button id="init-modal-confirm" class="modal-btn modal-btn-confirm">Расставить</button>
+                <button id="init-modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
+                <button id="init-modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="init">Расставить</button>
             </div>
         </div>
     </div>
@@ -2877,7 +2917,7 @@
     <div id="adminCommentModal" class="admin-modal">
         <div class="admin-modal-content">
             <p>Задайте вопрос по расставленной позиции</p>
-            <textarea id="adminCommentText" placeholder="Введите текст сообщения..."></textarea>
+            <textarea id="adminCommentText" data-i18n-placeholder="admin_comment_placeholder" placeholder="Введите текст сообщения..."></textarea>
             <div class="admin-modal-footer">
                 <button class="admin-cancel-btn" onclick="closeAdminCommentModal()">Отмена</button>
                 <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()">Отправить</button>
@@ -3036,8 +3076,7 @@
 
         /** Куб на максимуме (из селектора макс куба) — блокируем Удвоить/Не удваивать, после OK разблокируем random до нажатия random глаз заблокирован */
         function isCubeAtMax() {
-            const gameTypeTitle = document.getElementById('game-type-button')?.getAttribute('title') || '';
-            const maxCubeSelect = gameTypeTitle === 'Матч' ?
+            const maxCubeSelect = (typeof currentGameType !== 'undefined' && currentGameType === 'матч') ?
                 document.getElementById('max-cube-select') :
                 document.getElementById('max-cube-select-m');
             if (!maxCubeSelect) return false;
@@ -3371,19 +3410,17 @@
         function updateGameTypeLabel() {
             const gameTypeLabel = document.getElementById('game-type-label');
             if (!gameTypeLabel) return;
-            
+            const i18n = window.POKAZ_I18N || {};
             if (currentGameType === 'матч') {
                 const matchLength = document.getElementById('match_lenght')?.value || '5';
                 const lowerScore = parseInt(document.getElementById('lower-score')?.value || '0');
                 const upperScore = parseInt(document.getElementById('upper-score')?.value || '0');
-                
-                // Находим наибольшее и наименьшее значение
                 const maxScore = Math.max(lowerScore, upperScore);
                 const minScore = Math.min(lowerScore, upperScore);
-                
-                gameTypeLabel.textContent = `Матч до ${matchLength}. Счет ${maxScore}-${minScore}`;
+                const tpl = i18n.match_to_tpl || 'Матч до { $length }. Счет { $max }-{ $min }';
+                gameTypeLabel.textContent = tpl.replace(/\{\s*\$length\s*\}/g, matchLength).replace(/\{\s*\$max\s*\}/g, maxScore).replace(/\{\s*\$min\s*\}/g, minScore);
             } else {
-                gameTypeLabel.textContent = 'Манигейм';
+                gameTypeLabel.textContent = i18n.moneygame || 'Манигейм';
             }
         }
 
@@ -4736,7 +4773,7 @@
                     jbWrap.style.display = 'none';
                     matchPanel.style.display = 'flex';
                     gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
-                    gameTypeButton.title = 'Матч';
+                    gameTypeButton.title = (window.POKAZ_I18N || {}).match || 'Матч';
                     currentGameType = 'матч';
                     
                     // Update game type label
@@ -4751,7 +4788,7 @@
                     jbWrap.style.display = 'flex';
                     matchPanel.style.display = 'none';
                     gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
-                    gameTypeButton.title = 'Манигейм';
+                    gameTypeButton.title = (window.POKAZ_I18N || {}).moneygame || 'Манигейм';
                     currentGameType = 'манигейм';
                     
                     // Update game type label
@@ -5261,8 +5298,8 @@
 
         // Filter cube options based on max cube value
         function filterCubeOptions() {
-            const currentGameType = document.getElementById('game-type-button').getAttribute('title');
-            const maxCubeSelect = currentGameType === 'Матч' ?
+            const isMatch = (typeof currentGameType !== 'undefined' && currentGameType === 'матч');
+            const maxCubeSelect = isMatch ?
                 document.getElementById('max-cube-select') :
                 document.getElementById('max-cube-select-m');
 
@@ -5851,7 +5888,7 @@
             document.getElementById('black-bar-select').value = '0';
             currentGameType = 'манигейм';
             document.getElementById('game-type-button').innerHTML = '<i class="fa fa-rub"></i>';
-            document.getElementById('game-type-button').title = 'Манигейм';
+            document.getElementById('game-type-button').title = (window.POKAZ_I18N || {}).moneygame || 'Манигейм';
             
             // Update game type label
             updateGameTypeLabel();
@@ -6283,11 +6320,12 @@
             const isTableOpen = hintsTableContainer.classList.contains('active') && !hintsTableContainer.classList.contains('collapsed');
             if (isTableOpen) {
                 gameTypeButton.innerHTML = '<i class="fa fa-random"></i>';
-                gameTypeButton.title = 'Случайные кубики';
+                gameTypeButton.title = (window.POKAZ_I18N || {}).random_dice || 'Случайные кубики';
                 gameTypeButton.classList.add('dice-mode');
             } else {
                 gameTypeButton.innerHTML = currentGameType === 'матч' ? '<i class="fa fa-trophy"></i>' : '<i class="fa fa-rub"></i>';
-                gameTypeButton.title = currentGameType === 'матч' ? 'Матч' : 'Манигейм';
+                const i18n = window.POKAZ_I18N || {};
+                gameTypeButton.title = currentGameType === 'матч' ? (i18n.match || 'Матч') : (i18n.moneygame || 'Манигейм');
                 gameTypeButton.classList.remove('dice-mode');
             }
         }
@@ -6355,9 +6393,9 @@
                 // Switch to match
                 jbWrap.style.display = 'none';
                 matchPanel.style.display = 'flex';
-                gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
-                gameTypeButton.title = 'Матч';
-                currentGameType = 'матч';
+                    gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
+                    gameTypeButton.title = (window.POKAZ_I18N || {}).match || 'Матч';
+                    currentGameType = 'матч';
                 
                 // Update game type label
                 updateGameTypeLabel();

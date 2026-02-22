@@ -13,6 +13,7 @@ from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.config import settings
 from bot.config import bot, SUPPORT_TG_ID, translator_hub
+from bot.common.utils.i18n import get_text_for_locale
 from bot.db.redis import redis_client
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.func.pokaz_func import get_hints_for_xgid
@@ -92,14 +93,83 @@ app.include_router(hint_viewer_api_router, prefix="")
 app.include_router(short_board_api_router, prefix="")
 
 
+def _get_pokaz_translations(lang: str) -> dict:
+    """Собирает переводы для страницы pokaz из Fluent."""
+    t = lambda k, fbk="": get_text_for_locale(translator_hub, lang, k, fbk)
+    return {
+        "title": t("pokaz-page-title", "Position Editor"),
+        "hide_pips": t("pokaz-page-hide-pips", "Hide pips"),
+        "lower_player": t("pokaz-page-lower-player", "Lower player:"),
+        "toggle_lower_player": t("pokaz-page-toggle-lower-player", "Toggle lower player"),
+        "place_checkers": t("pokaz-page-place-checkers", "Place checkers"),
+        "moneygame": t("pokaz-page-moneygame", "Moneygame"),
+        "match": t("pokaz-page-match", "Match"),
+        "checkers": t("pokaz-page-checkers", "Checkers"),
+        "white_checkers": t("pokaz-page-white-checkers", "White checkers"),
+        "black_checkers": t("pokaz-page-black-checkers", "Black checkers"),
+        "on_bar": t("pokaz-page-on-bar", "On bar"),
+        "jacobi_beaver_max": t("pokaz-page-jacobi-beaver-max", "Jacoby Beaver Max cube"),
+        "yes": t("pokaz-page-yes", "Yes"),
+        "no": t("pokaz-page-no", "No"),
+        "game_type": t("pokaz-page-game-type", "Game type"),
+        "match_headers_lower": t("pokaz-page-match-headers-lower", "Lower pts"),
+        "match_headers_upper": t("pokaz-page-match-headers-upper", "Upper pts"),
+        "match_headers_length": t("pokaz-page-match-headers-length", "Match len"),
+        "match_headers_max_cube": t("pokaz-page-match-headers-max-cube", "Max cube"),
+        "cube_shown": t("pokaz-page-cube-shown", "Cube shown?"),
+        "cube": t("pokaz-page-cube", "Cube"),
+        "whose_cube": t("pokaz-page-whose-cube", "Whose cube?"),
+        "crawford": t("pokaz-page-crawford", "Crawford"),
+        "whose_turn": t("pokaz-page-whose-turn", "Whose turn?"),
+        "dice": t("pokaz-page-dice", "Dice"),
+        "history_back": t("pokaz-page-history-back", "History back"),
+        "history_forward": t("pokaz-page-history-forward", "History forward"),
+        "confirm_move": t("pokaz-page-confirm-move", "Confirm move"),
+        "random_dice": t("pokaz-page-random-dice", "Random dice"),
+        "analyze_position": t("pokaz-page-analyze-position", "Analyze position"),
+        "collapse_table": t("pokaz-page-collapse-table", "Collapse table"),
+        "expand_table": t("pokaz-page-expand-table", "Expand table"),
+        "toggle_table": t("pokaz-page-toggle-table", "Collapse/expand table"),
+        "take_screenshot": t("pokaz-page-take-screenshot", "Take screenshot"),
+        "save_screenshot": t("pokaz-page-save-screenshot", "Save screenshot to clipboard"),
+        "upload_screenshots": t("pokaz-page-upload-screenshots", "Upload screenshots"),
+        "clear": t("pokaz-page-clear", "Clear"),
+        "clear_confirm_msg": t("pokaz-page-clear-confirm-msg", "Clear board and start over?"),
+        "init": t("pokaz-page-init", "Set up"),
+        "init_confirm_msg": t("pokaz-page-init-confirm-msg", "Set up initial position?"),
+        "admin_comment_placeholder": t("pokaz-page-admin-comment-placeholder", "Enter message text..."),
+        "move": t("pokaz-page-move", "Move"),
+        "equity": t("pokaz-page-equity", "Equity"),
+        "restore_position": t("pokaz-page-restore-position", "Restore saved position"),
+        "next_cube": t("pokaz-page-next-cube", "Next cube"),
+        "match_to_tpl": t("pokaz-page-match-to", "Match to { $length }. Score { $max }-{ $min }"),
+        "cancel": t("keyboard-reply-cancel", "Cancel"),
+        "confirm": t("pokaz-page-confirm", "Confirmation"),
+    }
+
+
 @app.get("/pokaz")
-async def get_pokaz(request: Request, chat_id: str = None, xgid: str = None):
+async def get_pokaz(
+    request: Request,
+    chat_id: str = None,
+    xgid: str = None,
+    lang: str = None,
+):
     """
     Возвращает HTML-страницу редактора доски нардов.
-    Может принимать XGID строку для автоматической загрузки позиции.
+    Параметры: chat_id, xgid, lang (ru|en, по умолчанию ru).
     """
+    lang = lang if lang in ("ru", "en") else "ru"
+    translations = _get_pokaz_translations(lang)
     return templates.TemplateResponse(
-        "pokaz.html", {"request": request, "chat_id": chat_id, "xgid": xgid}
+        "pokaz.html",
+        {
+            "request": request,
+            "chat_id": chat_id,
+            "xgid": xgid,
+            "lang": lang,
+            "i18n": translations,
+        },
     )
 
 

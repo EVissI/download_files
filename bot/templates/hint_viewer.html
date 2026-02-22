@@ -3816,13 +3816,15 @@
                     return;
                 }
                 
-                // Get chat_id from URL or use current
+                // Get chat_id and lang from URL or use current
                 const urlParams = new URLSearchParams(window.location.search);
                 const currentChatId = urlParams.get('chat_id') || chatId || '';
+                const lang = urlParams.get('lang') || '';
                 
-                // Build URL with XGID, chat_id and invert (relative URL for same app navigation)
+                // Build URL with XGID, chat_id, lang and invert (relative URL for same app navigation)
                 const invertParam = invertColors ? '&invert=1' : '';
-                const pokazUrl = `/pokaz?xgid=${encodeURIComponent(xgidString)}${currentChatId ? '&chat_id=' + encodeURIComponent(currentChatId) : ''}${invertParam}`;
+                const langParam = (lang === 'ru' || lang === 'en') ? '&lang=' + lang : '';
+                const pokazUrl = `/pokaz?xgid=${encodeURIComponent(xgidString)}${currentChatId ? '&chat_id=' + encodeURIComponent(currentChatId) : ''}${langParam}${invertParam}`;
                 
                 // Navigate in same window/app (works in Telegram WebApp and browser)
                 window.location.href = pokazUrl;
