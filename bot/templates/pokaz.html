@@ -3417,8 +3417,8 @@
                 const upperScore = parseInt(document.getElementById('upper-score')?.value || '0');
                 const maxScore = Math.max(lowerScore, upperScore);
                 const minScore = Math.min(lowerScore, upperScore);
-                const tpl = i18n.match_to_tpl || 'Матч до {length}. Счет {max}-{min}';
-                gameTypeLabel.textContent = tpl.replace(/\{length\}/g, matchLength).replace(/\{max\}/g, maxScore).replace(/\{min\}/g, minScore);
+                const tpl = i18n.match_to_tpl || 'Матч до __LENGTH__. Счет __MAX__-__MIN__';
+                gameTypeLabel.textContent = tpl.replace(/__LENGTH__/g, matchLength).replace(/__MAX__/g, maxScore).replace(/__MIN__/g, minScore);
             } else {
                 gameTypeLabel.textContent = i18n.moneygame || 'Манигейм';
             }

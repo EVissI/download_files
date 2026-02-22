@@ -142,7 +142,7 @@ def _get_pokaz_translations(lang: str) -> dict:
         "equity": t("pokaz-page-equity", "Equity"),
         "restore_position": t("pokaz-page-restore-position", "Restore saved position"),
         "next_cube": t("pokaz-page-next-cube", "Next cube"),
-        "match_to_tpl": t("pokaz-page-match-to", "Match to {{length}}. Score {{max}}-{{min}}"),
+        "match_to_tpl": t("pokaz-page-match-to", "Match to __LENGTH__. Score __MAX__-__MIN__"),
         "cancel": t("keyboard-reply-cancel", "Cancel"),
         "confirm": t("pokaz-page-confirm", "Confirmation"),
     }
