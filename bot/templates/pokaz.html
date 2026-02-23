@@ -4615,6 +4615,7 @@
             let exponent = 0;
             if (cubeDisplayValue >= 2) {
                 exponent = Math.log2(cubeDisplayValue);
+                if (cubeShown !== 0) exponent -= 1;
             }
             xgid += exponent.toString();
             xgid += ':'
