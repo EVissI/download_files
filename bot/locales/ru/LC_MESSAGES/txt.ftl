@@ -8,6 +8,7 @@ keyboard-admin-reply-admin_panel = Админпанель
 keyboard-user-reply-hint_viewer = 👁️ Ошибки
 keyboard-user-reply-pokaz = 🎯 Позиция
 user-pokaz-select_action = Для входа в редактор, перейдите по ссылке ниже ⬇
+user-pokaz-open_editor = Открыть редактор позиций
 
 
 keyboard-reply-cancel = Отмена
@@ -250,3 +251,7 @@ pokaz-page-cube-no-double = не удваивать
 pokaz-page-cube-double = удвоить
 pokaz-page-cube-take = принять
 pokaz-page-cube-pass = сдаться
+pokaz-page-comment-btn = Комментарий
+pokaz-page-comment-modal-title = Задайте вопрос по расставленной позиции
+pokaz-page-comment-send = Отправить
+pokaz-page-comment-empty-alert = Пожалуйста, введите описание проблемы

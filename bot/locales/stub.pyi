@@ -51,6 +51,8 @@ You can activate it in &lt;b&gt;Profile&lt;/b&gt; → &lt;b&gt;Activate promo co
 class UserPokaz:
     @staticmethod
     def select_action() -> Literal["""Select an action:"""]: ...
+    @staticmethod
+    def open_editor() -> Literal["""Open position editor"""]: ...
 
 class UserProfileInlineButton:
     @staticmethod

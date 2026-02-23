@@ -7,6 +7,7 @@ keyboard-admin-reply-admin_panel = Admin Panel
 keyboard-user-reply-short_board_view = 📊 Pleer Bg
 keyboard-user-reply-pokaz = 🎯 Position
 user-pokaz-select_action = Select an action:
+user-pokaz-open_editor = Open position editor
 keyboard-reply-cancel = Cancel
 keyboard-reply-back = Back
 
@@ -247,3 +248,7 @@ pokaz-page-cube-no-double = no double
 pokaz-page-cube-double = double
 pokaz-page-cube-take = take
 pokaz-page-cube-pass = pass
+pokaz-page-comment-btn = Comment
+pokaz-page-comment-modal-title = Ask a question about the position
+pokaz-page-comment-send = Send
+pokaz-page-comment-empty-alert = Please enter a description of the issue

@@ -159,6 +159,10 @@ def _get_pokaz_translations(lang: str) -> dict:
         "cube_double": t("pokaz-page-cube-double", "double"),
         "cube_take": t("pokaz-page-cube-take", "take"),
         "cube_pass": t("pokaz-page-cube-pass", "pass"),
+        "comment_btn": t("pokaz-page-comment-btn", "Comment"),
+        "comment_modal_title": t("pokaz-page-comment-modal-title", "Ask a question about the position"),
+        "comment_send": t("pokaz-page-comment-send", "Send"),
+        "comment_empty_alert": t("pokaz-page-comment-empty-alert", "Please enter a description of the issue"),
     }
 
 

@@ -2909,18 +2909,18 @@
     <div class="admin-comment-container">
         <button id="adminCommentBtn" onclick="openAdminCommentModal()">
             <i class="fa fa-commenting-o"></i>
-            <span>Коментарий</span>
+            <span data-i18n="comment_btn">Комментарий</span>
         </button>
         <a href="#" id="lang-switcher" class="lang-switcher" style="margin-left: auto; color: #888; font-size: 14px; text-decoration: none;">{% if lang == 'en' %}EN{% else %}RU{% endif %}</a>
     </div>
 
     <div id="adminCommentModal" class="admin-modal">
         <div class="admin-modal-content">
-            <p>Задайте вопрос по расставленной позиции</p>
+            <p data-i18n="comment_modal_title">Задайте вопрос по расставленной позиции</p>
             <textarea id="adminCommentText" data-i18n-placeholder="admin_comment_placeholder" placeholder="Введите текст сообщения..."></textarea>
             <div class="admin-modal-footer">
-                <button class="admin-cancel-btn" onclick="closeAdminCommentModal()">Отмена</button>
-                <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()">Отправить</button>
+                <button class="admin-cancel-btn" onclick="closeAdminCommentModal()" data-i18n="cancel">Отмена</button>
+                <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()" data-i18n="comment_send">Отправить</button>
             </div>
         </div>
     </div>
@@ -6783,7 +6783,7 @@
     function sendToAdmin() {
         const text = document.getElementById('adminCommentText').value;
         if (!text.trim()) {
-            alert('Пожалуйста, введите описание проблемы');
+            alert((window.POKAZ_I18N || {}).comment_empty_alert || 'Пожалуйста, введите описание проблемы');
             return;
         }
 
