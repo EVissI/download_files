@@ -2911,6 +2911,7 @@
             <i class="fa fa-commenting-o"></i>
             <span data-i18n="comment_btn">Комментарий</span>
         </button>
+        <input type="checkbox" id="invertNumberingCheckbox">
         <a href="#" id="lang-switcher" class="lang-switcher" style="margin-left: auto; color: #888; font-size: 14px; text-decoration: none;">{% if lang == 'en' %}EN{% else %}RU{% endif %}</a>
     </div>
 
@@ -3759,9 +3760,7 @@
             ctx.textBaseline = 'middle';
 
             if (player === currentPlayer) {
-                // Инвертировать номера при ходе чёрных (не зависит от переключения нижнего игрока)
-                const turn = document.getElementById('turn-select').value;
-                const invertNumbers = (turn === 'black');
+                const invertNumbers = document.getElementById('invertNumberingCheckbox')?.checked || false;
 
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
@@ -6127,6 +6126,11 @@
             hidePipsCheckbox.addEventListener('change', () => {
                 drawBoard();
             });
+        }
+
+        const invertNumberingCheckbox = document.getElementById('invertNumberingCheckbox');
+        if (invertNumberingCheckbox) {
+            invertNumberingCheckbox.addEventListener('change', drawBoard);
         }
 
         // Lower player toggle button handler (показывает нижнего игрока)
