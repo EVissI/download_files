@@ -3073,22 +3073,6 @@
         /** После «Удвоить, принять» + OK: разблокирован random, глаз заблокирован до нажатия random */
         let doubleTakeConfirmedWaitingForRandom = false;
 
-        const CUBE_VALUES = [0, 2, 4, 8, 16, 32, 64];
-        /** cube-value должен быть на одно меньше cube-shown в последовательности */
-        function getCubeValueOneLess(val) {
-            const v = parseInt(val, 10);
-            const idx = CUBE_VALUES.indexOf(v);
-            if (idx <= 0) return 0;
-            return CUBE_VALUES[idx - 1];
-        }
-        function getCubeValueOneMore(val) {
-            const v = parseInt(val, 10);
-            if (v === 0) return 0;
-            const idx = CUBE_VALUES.indexOf(v);
-            if (idx < 0 || idx >= CUBE_VALUES.length - 1) return v;
-            return CUBE_VALUES[idx + 1];
-        }
-
         /** Куб на максимуме (из селектора макс куба) — блокируем Удвоить/Не удваивать, после OK разблокируем random до нажатия random глаз заблокирован */
         function isCubeAtMax() {
             const maxCubeSelect = (typeof currentGameType !== 'undefined' && currentGameType === 'матч') ?
@@ -3097,7 +3081,8 @@
             if (!maxCubeSelect) return false;
             const maxCubeValue = parseInt(maxCubeSelect.options[maxCubeSelect.selectedIndex]?.text || '64', 10);
             const cubeShown = parseInt(document.getElementById('cube-shown-select')?.value || '0', 10);
-            return cubeShown > 0 && cubeShown >= maxCubeValue;
+            const cubeValue = parseInt(document.getElementById('cube-value-select')?.value || '0', 10);
+            return (cubeShown > 0 && cubeShown >= maxCubeValue) || (cubeValue > 0 && cubeValue >= maxCubeValue);
         }
 
         /** Привязывает обработчики к глазикам в таблице куба */
@@ -3115,22 +3100,17 @@
                     if (action === 'no-double') {
                         if (cubeValueChangedInCurrentTable && stateBeforeDoubleTake) {
                             const cubeValueSelect = document.getElementById('cube-value-select');
-                            const cubeShownSelect = document.getElementById('cube-shown-select');
                             const cubeOwnerSelect = document.getElementById('cube-owner-select');
                             const dice1Select = document.getElementById('dice1-select');
                             const dice2Select = document.getElementById('dice2-select');
                             if (cubeValueSelect) cubeValueSelect.value = stateBeforeDoubleTake.cubeValue;
-                            if (cubeShownSelect) cubeShownSelect.value = stateBeforeDoubleTake.cubeShown;
                             if (cubeOwnerSelect) cubeOwnerSelect.value = stateBeforeDoubleTake.cubeOwner;
                             if (dice1Select) dice1Select.value = stateBeforeDoubleTake.dice1;
                             if (dice2Select) dice2Select.value = stateBeforeDoubleTake.dice2;
                             cubeValueChangedInCurrentTable = false;
                             stateBeforeDoubleTake = null;
                             hintsTable.querySelectorAll('.cube-eye-btn[data-cube-action="double-take"]').forEach(b => b.disabled = false);
-                            if (typeof updateCubeSelectorDisplay === 'function') {
-                                updateCubeSelectorDisplay('value');
-                                updateCubeSelectorDisplay('shown');
-                            }
+                            if (typeof updateCubeSelectorDisplay === 'function') updateCubeSelectorDisplay('value');
                             if (typeof updateCubeOwnerSelect === 'function') updateCubeOwnerSelect();
                             if (typeof updateDiceSelectorDisplay === 'function') {
                                 updateDiceSelectorDisplay(1);
@@ -3157,10 +3137,8 @@
                         const dice1Select = document.getElementById('dice1-select');
                         const dice2Select = document.getElementById('dice2-select');
                         if (!cubeValueSelect) return;
-                        const cubeShownSelect = document.getElementById('cube-shown-select');
                         stateBeforeDoubleTake = {
                             cubeValue: cubeValueSelect.value,
-                            cubeShown: cubeShownSelect ? cubeShownSelect.value : '0',
                             cubeOwner: cubeOwnerSelect ? cubeOwnerSelect.value : 'white',
                             dice1: dice1Select ? dice1Select.value : '0',
                             dice2: dice2Select ? dice2Select.value : '0'
@@ -3169,7 +3147,6 @@
                         const idx = CUBE_VALUES.indexOf(current);
                         const nextVal = idx >= 0 && idx < CUBE_VALUES.length - 1 ? CUBE_VALUES[idx + 1] : (current === 0 ? 2 : current);
                         cubeValueSelect.value = nextVal.toString();
-                        if (cubeShownSelect) cubeShownSelect.value = getCubeValueOneMore(nextVal).toString();
                         if (dice1Select) dice1Select.value = '0';
                         if (dice2Select) dice2Select.value = '0';
                         const turn = turnSelect ? turnSelect.value : 'white';
@@ -3181,10 +3158,7 @@
                         }
                         cubeValueChangedInCurrentTable = true;
                         hintsTable.querySelectorAll('.cube-eye-btn[data-cube-action="double-take"]').forEach(b => b.disabled = true);
-                        if (typeof updateCubeSelectorDisplay === 'function') {
-                            updateCubeSelectorDisplay('value');
-                            updateCubeSelectorDisplay('shown');
-                        }
+                        if (typeof updateCubeSelectorDisplay === 'function') updateCubeSelectorDisplay('value');
                         if (typeof updateCubeOwnerSelect === 'function') updateCubeOwnerSelect();
                         if (typeof drawBoard === 'function') drawBoard();
                     }
@@ -3304,13 +3278,13 @@
             const cubeValueSelect = document.getElementById('cube-value-select');
             const cubeShownSelect = document.getElementById('cube-shown-select');
             const cubeOwnerSelect = document.getElementById('cube-owner-select');
+            if (cubeValueSelect) {
+                cubeValueSelect.value = cs.cubeValue || '0';
+                updateCubeSelectorDisplay('value');
+            }
             if (cubeShownSelect) {
                 cubeShownSelect.value = cs.cubeShown || '0';
                 updateCubeSelectorDisplay('shown');
-            }
-            if (cubeValueSelect) {
-                cubeValueSelect.value = getCubeValueOneLess(cs.cubeShown || '0').toString();
-                updateCubeSelectorDisplay('value');
             }
             if (cubeOwnerSelect) {
                 cubeOwnerSelect.value = cs.cubeOwner || 'white';
@@ -3923,19 +3897,19 @@
                 if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
             }
 
-            // Draw cube (отображение использует cube-shown)
+            // Draw cube
             const cubeValue = parseInt(document.getElementById('cube-value-select').value);
             const cubeOwner = document.getElementById('cube-owner-select').value;
             const cubeShown = parseInt(document.getElementById('cube-shown-select').value);
             const dice1 = parseInt(document.getElementById('dice1-select').value);
             const dice2 = parseInt(document.getElementById('dice2-select').value);
 
-            if (cubeShown >= 0) {
+            if (cubeValue >= 0) {
                 let img;
-                if (cubeShown === 0) {
+                if (cubeValue === 0) {
                     img = cubeImages[64];
                 } else {
-                    img = cubeImages[cubeShown];
+                    img = cubeImages[cubeValue];
                 }
                 if (img) {
                     let cubeX = 375;
@@ -3951,7 +3925,7 @@
                         isUpperPlayer = (cubeOwner === 'white');
                     }
 
-                    if (cubeShown !== 0) {
+                    if (cubeShown !== 0 && cubeValue !== 0) {
                         // Cube shown (on bar): upper player left, lower player right
                         cubeX = isUpperPlayer ? 175 : 575;
                         cubeY = 350;
@@ -4543,8 +4517,8 @@
             updateCubeSelectorDisplay('shown');
             updateCubeSelectorsVisibility();
             const cubeShown = document.getElementById('cube-shown-select').value;
-            document.getElementById('cube-value-select').value = getCubeValueOneLess(cubeShown).toString();
             if (cubeShown !== '0') {
+                document.getElementById('cube-value-select').value = cubeShown;
                 document.getElementById('dice1-select').value = '0';
                 document.getElementById('dice2-select').value = '0';
                 updateAllDiceSelectors();
@@ -4610,7 +4584,7 @@
             const cubeValue = parseInt(document.getElementById('cube-value-select').value);
             let exponent = 0;
             if (cubeValue >= 2) {
-                exponent = Math.log2(cubeValue);
+                exponent = Math.log2(cubeValue) - 1;
             }
             xgid += exponent.toString();
             xgid += ':'
@@ -4868,7 +4842,14 @@
                 }
             }, 0);
 
-            // Set cube shown (cube-value на одно меньше cube-shown)
+            // Set cube value
+            const cubeValueSelect = document.getElementById('cube-value-select');
+            if (cubeValueSelect) {
+                cubeValueSelect.value = cubeValue.toString();
+                updateCubeSelectorDisplay('value');
+            }
+
+            // Set cube shown
             let cubeShown = 0;
             if (cubePart === 'D') {
                 cubeShown = cubeValue;
@@ -4877,12 +4858,6 @@
             if (cubeShownSelect) {
                 cubeShownSelect.value = cubeShown.toString();
                 updateCubeSelectorDisplay('shown');
-            }
-
-            const cubeValueSelect = document.getElementById('cube-value-select');
-            if (cubeValueSelect) {
-                cubeValueSelect.value = getCubeValueOneLess(cubeShown).toString();
-                updateCubeSelectorDisplay('value');
             }
 
             // Set cube owner: 1 = lower (white), -1 = upper (black) — не зависит от invert
@@ -5349,37 +5324,27 @@
                 const currentValue = parseInt(cubeShownSelect.value);
                 if (currentValue > maxCubeValue) {
                     cubeShownSelect.value = maxCubeValue.toString();
-                    const cubeValueSelect = document.getElementById('cube-value-select');
-                    if (cubeValueSelect) {
-                        cubeValueSelect.value = getCubeValueOneLess(maxCubeValue).toString();
-                        updateCubeSelectorDisplay('value');
-                    }
                     updateCubeSelectorDisplay('shown');
                 }
             }
 
-            // Filter cube-value dropdown options (cube-value max = на одно меньше max cube-shown)
+            // Filter cube-value dropdown options
             const cubeValueDropdown = document.getElementById('cube-value-dropdown');
             const cubeValueSelect = document.getElementById('cube-value-select');
-            if (cubeValueDropdown && cubeValueSelect && cubeShownSelect) {
+            if (cubeValueDropdown && cubeValueSelect) {
                 cubeValueDropdown.querySelectorAll('.cube-option').forEach(option => {
                     const value = parseInt(option.getAttribute('data-value'));
-                    if (value >= maxCubeValue) {
+                    if (value > maxCubeValue) {
                         option.style.display = 'none';
                     } else {
                         option.style.display = '';
                     }
                 });
 
-                // Check if current value exceeds max (cube-value max = one less than cube-shown max)
-                const maxCubeValueForValue = getCubeValueOneLess(maxCubeValue);
+                // Check if current value exceeds max cube
                 const currentValue = parseInt(cubeValueSelect.value);
-                if (currentValue > maxCubeValueForValue) {
-                    cubeValueSelect.value = maxCubeValueForValue.toString();
-                    if (cubeShownSelect) {
-                        cubeShownSelect.value = maxCubeValue.toString();
-                        updateCubeSelectorDisplay('shown');
-                    }
+                if (currentValue > maxCubeValue) {
+                    cubeValueSelect.value = maxCubeValue.toString();
                     updateCubeSelectorDisplay('value');
                 }
             }
