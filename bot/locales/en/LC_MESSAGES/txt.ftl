@@ -4,7 +4,7 @@ user-static-hello = Hello! I'm an analysis bot.I can help you analyze your backg
 keyboard-user-reply-autoanalyze = 🔮 Autoanalyze
 keyboard-user-reply-profile = 🧍‍♂️ Profile
 keyboard-admin-reply-admin_panel = Admin Panel
-keyboard-user-reply-short_board_view = 📊 Pleer Bg
+keyboard-user-reply-short_board_view = 📊 Pleer
 keyboard-user-reply-pokaz = 🎯 Position
 user-pokaz-select_action = Select an action:
 user-pokaz-open_editor = Open position editor
@@ -21,14 +21,14 @@ user-profile-text =
     ├ 🔮 Matches: <b>{ $match_balance }</b>
     ├ 📊 Moneygames: <b>{ $analiz_balance }</b>
     ├ 💎 Pleer <b>{ $short_board_balance }</b>
-    ├ 👁️ Error View <b>{ $hints_balance }</b>
-    ├ 🎯 Pokaz <b>{ $pokaz_balance }</b>
+    ├ 👁️ Mistakes <b>{ $hints_balance }</b>
+    ├ 🎯 Position <b>{ $pokaz_balance }</b>
     ├ 💬 Comments <b>{ $comments_balance }</b>
     ├ 📷 Screenshots <b>{ $screenshots_balance }</b>
     └ 🌐 Language: <b>{ $lang_code }</b>
 user-profile-inline_button-my_stats = My Statistics
 user-profile-inline_button-change_language = Change Language
-user-profile-inline_button-payment = Buy Analysis
+user-profile-inline_button-payment = Buy a subscription
 user-profile-change_language-confirm = Language changed successfully!
 
 user-profile-detailed_statistics = 🎯 Gnu( { $detailed_count ->
@@ -184,7 +184,7 @@ auto-batch-summary_pr_header = Games: { $count }
     Date: { $date }
 auto-batch-summary_pr = pr for <b>{ $player }</b> - average <b>{ $average_pr }</b>: 
     ({ $pr_list })
-keyboard-user-reply-hint_viewer = 👁️ Error Viewer
+keyboard-user-reply-hint_viewer = 👁️ Mistakes
 
 # Pokaz page (position editor) — en
 pokaz-page-title = Position Editor
