@@ -68,7 +68,6 @@
         }
 
         .game-type-label {
-            position: absolute;
             top: -30px;
             left: 50%;
             transform: translateX(-50%);
@@ -2413,6 +2412,7 @@
             XGID: <span id="xgid-text"></span>
             <button id="xgid-close" class="xgid-close">X</button>
         </div> -->
+        <div id="game-type-label" class="game-type-label" data-i18n="moneygame">Манигейм</div>
         <div class="mode-toggle-container">
             <label class="hide-pips-label">
                 <input type="checkbox" id="hidePipsCheckbox">
@@ -2429,7 +2429,6 @@
             </button>
         </div>
         <div class="board-wrapper">
-            <div id="game-type-label" class="game-type-label" data-i18n="moneygame">Манигейм</div>
             <canvas id="boardCanvas" width="800" height="800"></canvas>
         </div>
         <div class="selectors-wrapper">
@@ -6622,7 +6621,7 @@
 
         // Добавляем отступ сверху для текста типа игры на скриншотах
         if (body) body.style.paddingTop = '5px';
-        
+
         if (turnLabel) {
             updateTurnLabel();
             turnLabel.style.display = 'block';
@@ -6750,7 +6749,7 @@
 
         // Добавляем отступ сверху для текста типа игры на скриншотах
         if (body) body.style.paddingTop = '5px';
-        
+
         if (turnLabel) {
             updateTurnLabel();
             turnLabel.style.display = 'block';
