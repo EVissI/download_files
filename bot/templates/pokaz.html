@@ -44,13 +44,13 @@
         }
 
         /* DEBUG: XGID Display - удалить потом */
-        .xgid-display {
+        /* .xgid-display {
             padding: 5px;
             background: #333;
             color: white;
             font-size: 24px;
             font-family: monospace;
-        }
+        } */
 
         .xgid-close {
             margin-left: 10px;
@@ -2383,10 +2383,10 @@
     <div class="container">
         <h1>Backgammon Board Editor</h1>
         <!-- DEBUG: XGID - удалить потом -->
-        <div id="xgid-display" class="xgid-display" style="display: none;">
+        <!-- <div id="xgid-display" class="xgid-display" style="display: none;">
             XGID: <span id="xgid-text"></span>
             <button id="xgid-close" class="xgid-close">X</button>
-        </div>
+        </div> -->
         <div class="mode-toggle-container">
             <label class="hide-pips-label">
                 <input type="checkbox" id="hidePipsCheckbox">
@@ -5458,10 +5458,10 @@
             updateDiceSelectorDisplay(2);
         });
         // DEBUG: XGID - удалить потом
-        function showXGID(xgid) {
-            document.getElementById('xgid-text').textContent = xgid;
-            document.getElementById('xgid-display').style.display = 'block';
-        }
+        // function showXGID(xgid) {
+        //     document.getElementById('xgid-text').textContent = xgid;
+        //     document.getElementById('xgid-display').style.display = 'block';
+        // }
         function hideXGID() {
             document.getElementById('xgid-display').style.display = 'none';
         }
@@ -5807,7 +5807,7 @@
             updateHistoryButtons();
 
             const xgid = generateXGID();
-            showXGID(xgid); // DEBUG - удалить потом
+            // showXGID(xgid); // DEBUG - удалить потом
             const hintsTable = document.getElementById('hintsTable');
             const hintsTableContainer = document.querySelector('.hints-table');
 
@@ -5980,7 +5980,7 @@
                 screenshotControls.classList.remove('active');
             }
 
-            hideXGID(); // DEBUG - удалить потом
+            // hideXGID(); // DEBUG - удалить потом
             drawBoard();
             hideClearModal();
         }
@@ -6070,7 +6070,7 @@
             hintsTable.classList.remove('active');
             if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
 
-            hideXGID(); // DEBUG - удалить потом
+            // hideXGID(); // DEBUG - удалить потом
             drawBoard();
             hideInitModal();
         }
