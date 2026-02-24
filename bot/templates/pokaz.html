@@ -4223,6 +4223,10 @@
                     lowerPlayerButton.classList.add('black');
                     lowerPlayerButton.setAttribute('data-color', 'black');
                 }
+                const invertNumberingCheckbox = document.getElementById('invertNumberingCheckbox');
+                if (invertNumberingCheckbox) {
+                    invertNumberingCheckbox.checked = true;
+                }
             }
 
             // If not in URL, try to get from template variable (if passed from server)
