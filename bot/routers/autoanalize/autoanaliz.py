@@ -151,15 +151,15 @@ async def analyze_file_by_path(
     await redis_client.set(
         f"analysis_data:{user_info.id}", json.dumps(analysis_data), expire=3600
     )
-
+    message_dao = MessagesTextsDAO(session_without_commit)
     player_names = list(analysis_data["chequerplay"].keys())
     if len(player_names) != 2:
-        raise ValueError("Incorrect number of players in analysis")
+        raise ValueError(message_dao.get_text('analyze_inv_players_count', user_info.lang_code))
 
     if analysis_type == "moneygame" and (duration is not None and duration != 0):
-        raise ValueError("Wrong type: match instead of moneygame")
+        raise ValueError(message_dao.get_text('analyze_wrong_type_match', user_info.lang_code))
     if analysis_type == "match" and (duration is None or duration == 0):
-        raise ValueError("Wrong type: moneygame instead of match")
+        raise ValueError(message_dao.get_text('analyze_wrong_type_moneygame', user_info.lang_code))
 
     # Generate new filename
     moscow_tz = pytz.timezone("Europe/Moscow")
