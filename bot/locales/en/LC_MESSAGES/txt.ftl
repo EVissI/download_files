@@ -1,7 +1,7 @@
 
 user-static-hello = Hello! I'm an analysis bot.I can help you analyze your backgammon games and collect statistics.
 
-keyboard-user-reply-autoanalyze = 🔮 Autoanalyze
+keyboard-user-reply-autoanalyze = 🔮 Analysis
 keyboard-user-reply-profile = 🧍‍♂️ Profile
 keyboard-admin-reply-admin_panel = Admin Panel
 keyboard-user-reply-short_board_view = 📊 Pleer
@@ -177,7 +177,7 @@ auto-batch-no_matches = No match files found; no analyses performed.
 auto-batch-wrong_file = Skipped: Not a match file. 
 auto-batch-no_data_pdf = No batch analysis data available for PDF generation.
 auto-analyze-error-balance = Not enough balance for full analysis. Please activate promo code or buy balance in profile.
-auto-analyze-batch_type = Batch Analyze
+auto-analyze-batch_type = Batch analysis
 auto-analyze-single_match = One game
 user-static-select_autoanalyze_type = Please select the type of auto analysis:
 auto-batch-summary_pr_header = Games: { $count }

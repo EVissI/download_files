@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="{{ lang }}">
 
 <head>
@@ -77,7 +77,6 @@
             font-weight: bold;
             z-index: 10;
             white-space: nowrap;
-            display: none;
         }
 
         .turn-label {
@@ -2243,9 +2242,11 @@
             align-items: center;
             padding: 20px;
         }
+
         .msg-modal-overlay.show {
             display: flex;
         }
+
         .msg-modal {
             background-color: #2d2d2d;
             border-radius: 12px;
@@ -2259,25 +2260,48 @@
             flex-direction: column;
             animation: msgModalFadeIn 0.25s ease-out;
         }
+
         @keyframes msgModalFadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         .msg-modal-header {
             display: flex;
             align-items: flex-start;
             padding: 16px 20px 2px;
             gap: 12px;
         }
+
         .msg-modal-icon {
             flex-shrink: 0;
             font-size: 32px;
             line-height: 1;
         }
-        .msg-modal-icon.success { color: #4caf50; }
-        .msg-modal-icon.error { color: #f44336; }
-        .msg-modal-icon.warning { color: #ff9800; }
-        .msg-modal-icon.info { color: #2196f3; }
+
+        .msg-modal-icon.success {
+            color: #4caf50;
+        }
+
+        .msg-modal-icon.error {
+            color: #f44336;
+        }
+
+        .msg-modal-icon.warning {
+            color: #ff9800;
+        }
+
+        .msg-modal-icon.info {
+            color: #2196f3;
+        }
+
         .msg-modal-content {
             color: white;
             font-size: 15px;
@@ -2285,11 +2309,12 @@
             margin: 0;
             flex: 1;
         }
-        
+
         .msg-modal-footer {
             padding: 6px 20px 16px;
             text-align: right;
         }
+
         .msg-modal-ok-btn {
             background-color: #007bff;
             color: white;
@@ -2300,6 +2325,7 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
+
         .msg-modal-ok-btn:hover {
             background-color: #0056b3;
         }
@@ -2397,7 +2423,8 @@
                 <button id="lowerPlayerButton" class="checker-toggle-btn white" data-color="white"
                     data-i18n-title="toggle_lower_player" title="Переключить нижнего игрока"></button>
             </div>
-            <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" data-i18n-title="place_checkers" title="Установка шашек">
+            <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" data-i18n-title="place_checkers"
+                title="Установка шашек">
                 <i class="fa fa-mouse-pointer"></i>
             </button>
         </div>
@@ -2410,7 +2437,8 @@
                 <div class="checker-selector">
                     <div class="checker-label" data-i18n="checkers">Шашки</div>
                     <div class="checker-options">
-                        <div class="checker-btn white selected" data-color="white" role="button" data-i18n-aria-label="white_checkers" aria-label="Белые шашки">
+                        <div class="checker-btn white selected" data-color="white" role="button"
+                            data-i18n-aria-label="white_checkers" aria-label="Белые шашки">
                             <div class="checker-dot"></div>
                         </div>
                         <div class="checker-btn black" data-color="black" role="button"
@@ -2683,7 +2711,8 @@
             </div>
             <div class="game-type-right">
                 <label data-i18n="game_type">Тип игры</label>
-                <button id="game-type-button" data-i18n-title="moneygame" title="Манигейм"><i class="fa fa-rub"></i></button>
+                <button id="game-type-button" data-i18n-title="moneygame" title="Манигейм"><i
+                        class="fa fa-rub"></i></button>
             </div>
         </div>
     </div>
@@ -2694,7 +2723,8 @@
                 <label for="cube-shown-select" data-i18n="cube_shown">Показан куб?</label>
                 <label for="cube-value-select" data-i18n="cube">Куб</label>
                 <label for="cube-owner-select-btn" data-i18n="whose_cube">Чей куб?</label>
-                <label for="crawford-checkbox" id="crawford-label" style="display: none;" data-i18n="crawford">Кроуфорд</label>
+                <label for="crawford-checkbox" id="crawford-label" style="display: none;"
+                    data-i18n="crawford">Кроуфорд</label>
             </div>
             <div class="cube-controls-block">
                 <div class="cube-shown-selector">
@@ -2748,7 +2778,8 @@
                 <div class="cube-owner-selector">
                     <input type="hidden" id="cube-owner-select" value="white">
                     <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white"
-                        data-target="cube-owner-select" data-i18n-aria-label="whose_cube" aria-label="Чей куб?" data-color="white"></button>
+                        data-target="cube-owner-select" data-i18n-aria-label="whose_cube" aria-label="Чей куб?"
+                        data-color="white"></button>
                 </div>
                 <div class="crawford-checkbox-wrapper" style="display: none;">
                     <input type="checkbox" id="crawford-checkbox">
@@ -2766,7 +2797,8 @@
                         <div class="turn-dice-controls">
                             <input type="hidden" id="turn-select" value="white">
                             <button type="button" id="turn-select-btn" class="checker-toggle-btn white"
-                                data-target="turn-select" data-i18n-aria-label="whose_turn" aria-label="Чей ход?" data-color="white"></button>
+                                data-target="turn-select" data-i18n-aria-label="whose_turn" aria-label="Чей ход?"
+                                data-color="white"></button>
                         </div>
                     </div>
                     <div class="turn-dice-section">
@@ -2845,20 +2877,29 @@
     <div class="board-open-controls" id="boardOpenControls">
         <div class="board-open-controls-spacer"></div>
         <div class="history-nav">
-            <button type="button" id="history-back-btn" class="history-nav-btn" data-i18n-title="history_back" data-i18n-aria-label="history_back" title="Назад по истории" aria-label="Назад по истории"></button>
-            <div id="turn-checker-indicator" class="turn-checker-indicator white" data-i18n-title="whose_turn" title="Чей ход"></div>
-            <button type="button" id="history-forward-btn" class="history-nav-btn" data-i18n-title="history_forward" data-i18n-aria-label="history_forward" title="Вперёд по истории" aria-label="Вперёд по истории"></button>
+            <button type="button" id="history-back-btn" class="history-nav-btn" data-i18n-title="history_back"
+                data-i18n-aria-label="history_back" title="Назад по истории" aria-label="Назад по истории"></button>
+            <div id="turn-checker-indicator" class="turn-checker-indicator white" data-i18n-title="whose_turn"
+                title="Чей ход"></div>
+            <button type="button" id="history-forward-btn" class="history-nav-btn" data-i18n-title="history_forward"
+                data-i18n-aria-label="history_forward" title="Вперёд по истории"
+                aria-label="Вперёд по истории"></button>
         </div>
         <div class="board-open-controls-buttons">
-            <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode" data-i18n-title="confirm_move" data-i18n-aria-label="confirm_move" title="Подтвердить ход" aria-label="Подтвердить ход">OK</button>
-            <button type="button" id="board-open-random-dice-btn" data-i18n-title="random_dice" title="Случайные кубики" disabled><i class="fa fa-random"></i></button>
-            <button type="button" id="board-open-eye-btn" data-i18n-title="analyze_position" title="Анализ позиции" disabled><i class="fa fa-eye"></i></button>
+            <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode"
+                data-i18n-title="confirm_move" data-i18n-aria-label="confirm_move" title="Подтвердить ход"
+                aria-label="Подтвердить ход">OK</button>
+            <button type="button" id="board-open-random-dice-btn" data-i18n-title="random_dice" title="Случайные кубики"
+                disabled><i class="fa fa-random"></i></button>
+            <button type="button" id="board-open-eye-btn" data-i18n-title="analyze_position" title="Анализ позиции"
+                disabled><i class="fa fa-eye"></i></button>
         </div>
     </div>
 
     <div class="hints-table" id="hintsTableContainer">
         <div class="hints-table-body">
-            <button type="button" class="hints-table-toggle" id="hintsTableToggle" data-i18n-title="toggle_table" data-i18n-aria-label="collapse_table" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
+            <button type="button" class="hints-table-toggle" id="hintsTableToggle" data-i18n-title="toggle_table"
+                data-i18n-aria-label="collapse_table" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
                 <i class="fa fa-chevron-down"></i>
             </button>
             <div class="hints-table-content">
@@ -2869,9 +2910,12 @@
     </div>
 
     <div class="screenshot-controls" id="screenshotControls">
-        <button onclick="takeScreenshot()" id="screenshotBtn" data-i18n-title="take_screenshot" title="Сделать скриншот"></button>
-        <button onclick="saveScreenshot()" id="screenSaveBtn" data-i18n-title="save_screenshot" title="Сохранить скриншот в буфер"></button>
-        <button onclick="uploadScreenshots()" id="screenUploadBtn" data-i18n-title="upload_screenshots" title="Отправить скриншоты"></button>
+        <button onclick="takeScreenshot()" id="screenshotBtn" data-i18n-title="take_screenshot"
+            title="Сделать скриншот"></button>
+        <button onclick="saveScreenshot()" id="screenSaveBtn" data-i18n-title="save_screenshot"
+            title="Сохранить скриншот в буфер"></button>
+        <button onclick="uploadScreenshots()" id="screenUploadBtn" data-i18n-title="upload_screenshots"
+            title="Отправить скриншоты"></button>
     </div>
 
     <!-- Modal window for clear confirmation -->
@@ -2912,16 +2956,20 @@
             <span data-i18n="comment_btn">Комментарий</span>
         </button>
         <input type="checkbox" id="invertNumberingCheckbox">
-        <a href="#" id="lang-switcher" class="lang-switcher" style="margin-left: auto; color: #888; font-size: 14px; text-decoration: none;">{% if lang == 'en' %}EN{% else %}RU{% endif %}</a>
+        <a href="#" id="lang-switcher" class="lang-switcher"
+            style="margin-left: auto; color: #888; font-size: 14px; text-decoration: none;">{% if lang == 'en' %}EN{%
+            else %}RU{% endif %}</a>
     </div>
 
     <div id="adminCommentModal" class="admin-modal">
         <div class="admin-modal-content">
             <p data-i18n="comment_modal_title">Задайте вопрос по расставленной позиции</p>
-            <textarea id="adminCommentText" data-i18n-placeholder="admin_comment_placeholder" placeholder="Введите текст сообщения..."></textarea>
+            <textarea id="adminCommentText" data-i18n-placeholder="admin_comment_placeholder"
+                placeholder="Введите текст сообщения..."></textarea>
             <div class="admin-modal-footer">
                 <button class="admin-cancel-btn" onclick="closeAdminCommentModal()" data-i18n="cancel">Отмена</button>
-                <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()" data-i18n="comment_send">Отправить</button>
+                <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()"
+                    data-i18n="comment_send">Отправить</button>
             </div>
         </div>
     </div>
@@ -3203,12 +3251,12 @@
                         if (whiteBarSelect) whiteBarSelect.value = whiteBar.toString();
                         if (blackBarSelect) blackBarSelect.value = blackBar.toString();
                         if (showButtonSnapshot.turn) {
-                                const turnSelect = document.getElementById('turn-select');
-                                if (turnSelect) {
-                                    turnSelect.value = showButtonSnapshot.turn;
-                                    updateTurnSelect();
-                                }
+                            const turnSelect = document.getElementById('turn-select');
+                            if (turnSelect) {
+                                turnSelect.value = showButtonSnapshot.turn;
+                                updateTurnSelect();
                             }
+                        }
                         if (moveHistory.length > 0 && moveHistory[moveHistory.length - 1].dice) {
                             const d = moveHistory[moveHistory.length - 1].dice;
                             const dice1Select = document.getElementById('dice1-select');
@@ -4809,7 +4857,7 @@
                     gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
                     gameTypeButton.title = (window.POKAZ_I18N || {}).match || 'Матч';
                     currentGameType = 'матч';
-                    
+
                     // Update game type label
                     updateGameTypeLabel();
                 }
@@ -4824,7 +4872,7 @@
                     gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
                     gameTypeButton.title = (window.POKAZ_I18N || {}).moneygame || 'Манигейм';
                     currentGameType = 'манигейм';
-                    
+
                     // Update game type label
                     updateGameTypeLabel();
                 }
@@ -4868,10 +4916,10 @@
                     } else {
                         console.warn('upper-score select not found');
                     }
-                    
+
                     // Filter score options to ensure they don't exceed match length
                     filterScoreOptions();
-                    
+
                     // Update game type label after setting scores
                     updateGameTypeLabel();
                 }
@@ -4973,7 +5021,7 @@
                     } else {
                         console.warn('match-lenght-button not found');
                     }
-                    
+
                     // Update game type label
                     updateGameTypeLabel();
                 } else {
@@ -5288,7 +5336,7 @@
                     option.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const value = option.getAttribute('data-value');
-                        
+
                         // Check if selecting score option that exceeds match length
                         if (selector.id === 'lower-score' || selector.id === 'upper-score') {
                             const matchLengthSelect = document.getElementById('match_lenght');
@@ -5301,7 +5349,7 @@
                                 }
                             }
                         }
-                        
+
                         select.value = value;
 
                         // Update button text
@@ -5313,17 +5361,17 @@
                         }
 
                         select.dispatchEvent(new Event('change'));
-                        
+
                         // Filter score options if match length changed
                         if (selector.id === 'match_lenght') {
                             filterScoreOptions();
                         }
-                        
+
                         // Update game type label if match length or scores changed
                         if (selector.id === 'match_lenght' || selector.id === 'lower-score' || selector.id === 'upper-score') {
                             updateGameTypeLabel();
                         }
-                        
+
                         dropdown.classList.remove('active');
                     });
                 });
@@ -5926,7 +5974,7 @@
             currentGameType = 'манигейм';
             document.getElementById('game-type-button').innerHTML = '<i class="fa fa-rub"></i>';
             document.getElementById('game-type-button').title = (window.POKAZ_I18N || {}).moneygame || 'Манигейм';
-            
+
             // Update game type label
             updateGameTypeLabel();
             document.getElementById('lower-score').value = '0';
@@ -6417,7 +6465,7 @@
                 gameTypeButton.innerHTML = '<i class="fa fa-rub"></i>';
                 gameTypeButton.title = 'Манигейм';
                 currentGameType = 'манигейм';
-                
+
                 // Update game type label
                 updateGameTypeLabel();
 
@@ -6435,10 +6483,10 @@
                 // Switch to match
                 jbWrap.style.display = 'none';
                 matchPanel.style.display = 'flex';
-                    gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
-                    gameTypeButton.title = (window.POKAZ_I18N || {}).match || 'Матч';
-                    currentGameType = 'матч';
-                
+                gameTypeButton.innerHTML = '<i class="fa fa-trophy"></i>';
+                gameTypeButton.title = (window.POKAZ_I18N || {}).match || 'Матч';
+                currentGameType = 'матч';
+
                 // Update game type label
                 updateGameTypeLabel();
 
@@ -6459,10 +6507,10 @@
         const turnLabel = document.getElementById('turn-label');
         const turnCheckerIndicator = document.getElementById('turn-checker-indicator');
         if (!turnLabel) return;
-        
+
         const turnInput = document.getElementById('turn-select');
         const turn = turnInput?.value || 'white';
-        
+
         const i18n = window.POKAZ_I18N || {};
         if (turn === 'white') {
             turnLabel.textContent = i18n.turn_white || 'Ход белых';
@@ -6571,12 +6619,10 @@
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
-        
+
         // Добавляем отступ сверху для текста типа игры на скриншотах
         if (body) body.style.paddingTop = '5px';
         
-        // Показываем текст типа игры и текущего хода для скриншота
-        if (gameTypeLabel) gameTypeLabel.style.display = 'block';
         if (turnLabel) {
             updateTurnLabel();
             turnLabel.style.display = 'block';
@@ -6701,12 +6747,10 @@
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
-        
+
         // Добавляем отступ сверху для текста типа игры на скриншотах
         if (body) body.style.paddingTop = '5px';
         
-        // Показываем текст типа игры и текущего хода для скриншота
-        if (gameTypeLabel) gameTypeLabel.style.display = 'block';
         if (turnLabel) {
             updateTurnLabel();
             turnLabel.style.display = 'block';
