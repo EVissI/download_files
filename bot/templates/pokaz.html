@@ -3018,12 +3018,14 @@
             const firstHint = hints[0];
             let tableHtml = '';
             if (firstHint.type === 'move') {
+                const firstEq = hints.length > 0 ? hints[0].eq : null;
                 tableHtml = '<table><tr><th>' + (i18n.table_header_move || 'Ход') + '</th><th>%</th><th>%</th><th>' + (i18n.table_header_equity || 'Эквити') + '</th><th><button class="eye-button" type="button" id="restore-position-btn" title="' + (i18n.restore_position || 'Восстановить сохранённую позицию') + '"><i class="fa fa-reply"></i></button></th></tr>';
                 hints.forEach((hint, index) => {
                     if (hint.probs && hint.probs.length >= 2) {
                         const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
                         const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
                         const eq = hint.eq ? hint.eq.toFixed(3) : '-';
+                        const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
                         const move = hint.move || '-';
                         let rowStyle = '';
                         if (selectedHintIndex === index) {
@@ -3031,7 +3033,7 @@
                         } else if (index === 0 && selectedHintIndex === undefined) {
                             rowStyle = ' style="background-color: green;"';
                         }
-                        tableHtml += `<tr data-hint-index="${index}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${eq}</td><td><button class="eye-button" type="button"><i class="fa fa-eye"></i></button></td></tr>`;
+                        tableHtml += `<tr data-hint-index="${index}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td><td><button class="eye-button" type="button"><i class="fa fa-eye"></i></button></td></tr>`;
                     }
                 });
                 tableHtml += '</table>';
