@@ -113,6 +113,7 @@ class UserAnalizePaymentInline(ModelView):
 
     datamodel = SQLAInterface(UserAnalizePayment)
     base_permissions = ['can_list', 'can_show']
+    list_title = "Покупки"
 
     list_columns = ["analize_payment.name", "is_active", "tranzaction_id"]
     label_columns = {
