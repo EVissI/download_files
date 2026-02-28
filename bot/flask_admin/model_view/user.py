@@ -31,10 +31,19 @@ class CustomUserSQLAInterface(SQLAInterface):
         return super().apply_order_by(query, order_column, order_direction, **kwargs)
 
 
+class CustomUserPromocodeSQLAInterface(SQLAInterface):
+    """Кастомный SQLAInterface: сортировка по is_active_display → по колонке is_active"""
+
+    def apply_order_by(self, query, order_column, order_direction, **kwargs):
+        if order_column == "is_active_display":
+            order_column = "is_active"
+        return super().apply_order_by(query, order_column, order_direction, **kwargs)
+
+
 class UserPromocodeInline(ModelView):
     """Инлайн-вьюха для активированных промокодов пользователя"""
 
-    datamodel = SQLAInterface(UserPromocode)
+    datamodel = CustomUserPromocodeSQLAInterface(UserPromocode)
     base_permissions = ['can_list', 'can_show']
     list_title = "Промокоды"
 
@@ -44,7 +53,7 @@ class UserPromocodeInline(ModelView):
         "promo_date_range",
         "is_active_display",
     ]
-    order_columns = ["promocode.code", "is_active"]
+    order_columns = ["promocode.code", "is_active_display"]
     show_columns = [
         "promocode.code",
         "promocode.services_summary",
