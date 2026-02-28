@@ -19,121 +19,42 @@ class SyncthingSync:
         self.headers = {"X-API-Key": self.api_key, "Content-Type": "application/json"}
         self.base_url = f"http://{self.host}/rest"
 
-    def _file_matches_item(self, file_path: str, item: str) -> bool:
-        """Проверяет, соответствует ли item из Syncthing нашему file_path."""
-        basename = os.path.basename(file_path)
-        # item в Syncthing — путь относительно корня папки (например "xxx.mat" или "files/xxx.mat")
-        return item == basename or item.endswith("/" + basename) or item == file_path
-
-    async def _get_last_event_id(self, session: aiohttp.ClientSession) -> int:
-        """Получить ID последнего события."""
-        async with session.get(
-            f"{self.base_url}/events",
-            params={"limit": 1},
-            headers=self.headers,
-            timeout=aiohttp.ClientTimeout(total=5),
-        ) as resp:
-            if resp.status != 200:
-                return 0
-            events = await resp.json()
-            return events[-1]["id"] if events else 0
-
-    async def wait_for_file_sync(self, file_path: str, max_wait: int = 60) -> bool:
+    async def trigger_scan(self) -> bool:
         """
-        Надёжное ожидание синхронизации файла.
-        Использует Events API (ItemFinished) + проверку файла на диске.
-        Без произвольных sleep — только event-driven ожидание и polling файла.
+        Запустить db/scan на отправителе (бот) — Syncthing сразу заметит новый файл.
+        Вызывать после сохранения файла, до постановки задачи в очередь.
         """
         if not self.api_key:
-            logger.warning("⚠️ Syncthing API ключ не установлен")
-            return await self.wait_for_file(file_path, max_wait)
-
-        basename = os.path.basename(file_path)
-        start_time = asyncio.get_event_loop().time()
-
+            return False
         try:
             async with aiohttp.ClientSession() as session:
-                # 1. Запустить пересканирование (отправитель обнаружит новый файл)
                 async with session.post(
                     f"{self.base_url}/db/scan",
                     params={"folder": self.folder_id},
                     headers=self.headers,
                     timeout=aiohttp.ClientTimeout(total=5),
-                ) as response:
-                    if response.status != 200:
-                        logger.warning(
-                            f"⚠️ Ошибка scan: {response.status}, fallback на wait_for_file"
-                        )
-                        return await self.wait_for_file(file_path, max_wait)
-
-                # 2. Получить текущий event ID
-                last_id = await self._get_last_event_id(session)
-
-                # 3. Ждём: либо ItemFinished для нашего файла, либо файл появился на диске
-                while asyncio.get_event_loop().time() - start_time < max_wait:
-                    elapsed = asyncio.get_event_loop().time() - start_time
-                    timeout_sec = min(30, int(max_wait - elapsed), 30)
-                    if timeout_sec <= 0:
-                        break
-
-                    # Long-poll Events API (блокируется до события или timeout)
-                    try:
-                        async with session.get(
-                            f"{self.base_url}/events",
-                            params={
-                                "events": "ItemFinished",
-                                "since": last_id,
-                                "timeout": timeout_sec,
-                            },
-                            headers=self.headers,
-                            timeout=aiohttp.ClientTimeout(total=timeout_sec + 5),
-                        ) as events_resp:
-                            if events_resp.status != 200:
-                                break
-
-                            events = await events_resp.json()
-                            for ev in events:
-                                last_id = ev["id"]
-                                if ev.get("type") != "ItemFinished":
-                                    continue
-                                data = ev.get("data") or {}
-                                item = data.get("item", "")
-                                err = data.get("error")
-
-                                if err:
-                                    logger.warning(
-                                        f"ItemFinished с ошибкой: {item} — {err}"
-                                    )
-                                    continue
-                                if self._file_matches_item(file_path, item):
-                                    if await self._verify_file(file_path):
-                                        logger.info(
-                                            f"✅ Синхронизация подтверждена (ItemFinished): {item}"
-                                        )
-                                        return True
-                    except asyncio.TimeoutError:
-                        pass
-                    except Exception as e:
-                        logger.debug(f"Events API: {e}")
-
-                    # Проверяем файл на диске (основная гарантия)
-                    if await self._verify_file(file_path):
-                        logger.info(f"✅ Файл синхронизирован: {file_path}")
+                ) as resp:
+                    if resp.status == 200:
+                        logger.debug("Syncthing scan triggered")
                         return True
-
-                # 4. Fallback: финальная проверка файла
-                remaining = max(
-                    5, int(max_wait - (asyncio.get_event_loop().time() - start_time))
-                )
-                return await self._verify_file(file_path) or await self.wait_for_file(
-                    file_path, remaining
-                )
-
+                    logger.warning(f"Syncthing scan failed: {resp.status}")
+                    return False
         except Exception as e:
-            logger.error(f"❌ wait_for_file_sync: {e}")
-            return await self.wait_for_file(file_path, max_wait)
+            logger.warning(f"Syncthing trigger_scan: {e}")
+            return False
 
-        return False
+    async def wait_for_file_sync(self, file_path: str, max_wait: int = 120) -> bool:
+        """
+        Ожидание появления файла на диске после синхронизации Syncthing.
+
+        Использует polling — надёжно работает когда воркер в Docker и не может
+        достучаться до Syncthing API (localhost:8384). Events API (ItemFinished)
+        не подходит для приёмника в отдельном контейнере.
+
+        Документация: https://docs.syncthing.net/events/itemfinished.html
+        """
+        return await self.wait_for_file(file_path, max_wait)
+
 
     async def _verify_file(self, file_path: str) -> bool:
         """Проверить, что файл существует, не пустой и читаемый."""
@@ -173,10 +94,10 @@ class SyncthingSync:
                         logger.warning(f"⚠️ Ошибка пересканирования: {response.status}")
                         return False
 
-                start_time = asyncio.get_event_loop().time()
+                start_time = asyncio.get_running_loop().time()
                 stable_count = 0  # нужны 2 подряд idle+needBytes=0 для устойчивости
 
-                while asyncio.get_event_loop().time() - start_time < max_wait:
+                while asyncio.get_running_loop().time() - start_time < max_wait:
                     async with session.get(
                         f"{self.base_url}/db/status",
                         params={"folder": self.folder_id},
@@ -204,14 +125,21 @@ class SyncthingSync:
             logger.error(f"❌ Ошибка Syncthing: {e}")
             return False
 
-    async def wait_for_file(self, file_path: str, max_wait: int = 30) -> bool:
+    async def wait_for_file(self, file_path: str, max_wait: int = 120) -> bool:
         """Ждать появления файла на диске. Проверяет существование и читаемость."""
-        start_time = asyncio.get_event_loop().time()
+        loop = asyncio.get_running_loop()
+        start_time = loop.time()
+        check_interval = 0.5
 
-        while asyncio.get_event_loop().time() - start_time < max_wait:
+        while loop.time() - start_time < max_wait:
             if await self._verify_file(file_path):
+                logger.info(f"✅ Файл найден: {file_path}")
                 return True
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(check_interval)
 
-        logger.error(f"❌ Файл не найден после ожидания: {file_path}")
+        abs_path = os.path.abspath(file_path)
+        logger.error(
+            f"❌ Файл не найден после ожидания {max_wait}s: {file_path} | "
+            f"абс. путь: {abs_path} | CWD: {os.getcwd()}"
+        )
         return False

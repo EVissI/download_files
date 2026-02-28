@@ -89,7 +89,7 @@ def analyze_backgammon_job(
         logger.info(f"[Job Start] mat_path={mat_path}, user_id={user_id}")
 
         # Воркер может быть на другой машине — надёжное ожидание синхронизации (Events API + проверка файла)
-        if not asyncio.run(syncthing_sync.wait_for_file_sync(mat_path, max_wait=60)):
+        if not asyncio.run(syncthing_sync.wait_for_file_sync(mat_path, max_wait=120)):
             raise FileNotFoundError(
                 f"Файл не найден на воркере после синхронизации: {mat_path}"
             )
@@ -172,7 +172,7 @@ def analyze_backgammon_batch_job(
         try:
             # Воркер может быть на другой машине — надёжное ожидание синхронизации
             if not asyncio.run(
-                syncthing_sync.wait_for_file_sync(mat_path, max_wait=60)
+                syncthing_sync.wait_for_file_sync(mat_path, max_wait=120)
             ):
                 raise FileNotFoundError(f"Файл не найден на воркере: {mat_path}")
 

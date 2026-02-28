@@ -53,6 +53,7 @@ from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.kbds.inline.autoanalize import get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.routers.autoanalize.autoanaliz import analyze_file_by_path
+from bot.common.service.sync_folder_service import SyncthingSync
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.general_states import GeneralStates
@@ -96,6 +97,8 @@ class HintViewerStates(StatesGroup):
 
 
 
+
+syncthing_sync = SyncthingSync()
 
 WORKER_COUNT_CACHE_KEY = "cache:worker_count"
 WORKER_CACHE_TTL = 10
@@ -344,7 +347,8 @@ async def hint_viewer_menu(
 
         logger.info(f"Файл скачан локально: {mat_path}")
 
-        # Не ждём sync здесь — воркер (на другой машине) сам ждёт появления файла через Syncthing
+        # Триггер scan — Syncthing сразу заметит файл и начнёт отправку на воркеры
+        await syncthing_sync.trigger_scan()
 
         with open(mat_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -996,7 +1000,8 @@ async def process_batch_hint_files(
         total_files = len(file_paths)
         await message.answer(await message_dao.get_text("hint_viewer_files_accepted", user_info.lang_code, total_files=total_files))
 
-        # Не ждём sync здесь — воркер (на другой машине) сам ждёт появления каждого файла
+        # Триггер scan — Syncthing заметит все файлы и начнёт отправку на воркеры
+        await syncthing_sync.trigger_scan()
 
         job = batch_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_batch_job",
