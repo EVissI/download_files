@@ -34,30 +34,27 @@ REDIS_USER_PASSWORD = os.getenv("REDIS_USER_PASSWORD")
 
 # 2. Если используешь default пароль
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-text ={
+text = {
     "hint_viewer_finished": {
         "en": "✅ Analysis completed!\n{red_player} vs {black_player}\n",
-        "ru": "✅ Анализ завершен!\n{red_player} vs {black_player}\n"
+        "ru": "✅ Анализ завершен!\n{red_player} vs {black_player}\n",
     },
-    "hint_viewer_butn_1":{
-        "en": "View all moves",
-        "ru": "Просмотр всех ходов"
-    },
-    "hint_viewer_butn_2":{
+    "hint_viewer_butn_1": {"en": "View all moves", "ru": "Просмотр всех ходов"},
+    "hint_viewer_butn_2": {
         "en": "Only mistakes (both players)",
-        "ru": "Только ошибки (оба игрока)"
+        "ru": "Только ошибки (оба игрока)",
     },
-    "hint_viewer_butn_3":{
+    "hint_viewer_butn_3": {
         "en": "Only mistakes ({red_player})",
-        "ru": "Только ошибки ({red_player})"
+        "ru": "Только ошибки ({red_player})",
     },
-    "hint_viewer_butn_4":{
+    "hint_viewer_butn_4": {
         "en": "Only mistakes ({black_player})",
-        "ru": "Только ошибки ({black_player})"
+        "ru": "Только ошибки ({black_player})",
     },
-    "hint_viewer_butn_5":{
+    "hint_viewer_butn_5": {
         "en": "Show game statistics",
-        "ru": "Показать статистику игры"
+        "ru": "Показать статистику игры",
     },
 }
 if REDIS_USER and REDIS_USER_PASSWORD:
@@ -74,8 +71,9 @@ logger.info(f"Redis URL: redis://<user>:<pass>@{REDIS_HOST}:{REDIS_PORT}/{REDIS_
 redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 
-def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str, game_id: str = None):
-
+def analyze_backgammon_job(
+    mat_path: str, json_path: str, user_id: str, game_id: str = None
+):
     """
     Анализирует один .mat файл (запускается в worker-е).
 
@@ -92,14 +90,16 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str, game_id:
 
         # Воркер может быть на другой машине — надёжное ожидание синхронизации (Events API + проверка файла)
         if not asyncio.run(syncthing_sync.wait_for_file_sync(mat_path, max_wait=60)):
-            raise FileNotFoundError(f"Файл не найден на воркере после синхронизации: {mat_path}")
+            raise FileNotFoundError(
+                f"Файл не найден на воркере после синхронизации: {mat_path}"
+            )
 
         process_mat_file(mat_path, json_path, user_id)
 
         if game_id:
             from bot.db.redis import sync_redis_client
-            sync_redis_client.set(f"mat_path:{game_id}", mat_path, ex=86400)
 
+            sync_redis_client.set(f"mat_path:{game_id}", mat_path, ex=86400)
 
         # Проверяем что результат создан
         games_dir = json_path.rsplit(".", 1)[0] + "_games"
@@ -127,7 +127,11 @@ def analyze_backgammon_job(mat_path: str, json_path: str, user_id: str, game_id:
 
 
 def analyze_backgammon_batch_job(
-    file_paths: list, user_id: str, batch_id: str, job_id: str = None, lang_code: str = "en"
+    file_paths: list,
+    user_id: str,
+    batch_id: str,
+    job_id: str = None,
+    lang_code: str = "en",
 ):
     """
     Анализирует пакет .mat файлов последовательно (запускается в worker-е).
@@ -149,6 +153,7 @@ def analyze_backgammon_batch_job(
     logger.info(
         f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
     )
+
     def send_telegram_message(text, parse_mode="Markdown"):
         """Отправляет сообщение в Telegram через API"""
         try:
@@ -166,7 +171,9 @@ def analyze_backgammon_batch_job(
 
         try:
             # Воркер может быть на другой машине — надёжное ожидание синхронизации
-            if not asyncio.run(syncthing_sync.wait_for_file_sync(mat_path, max_wait=60)):
+            if not asyncio.run(
+                syncthing_sync.wait_for_file_sync(mat_path, max_wait=60)
+            ):
                 raise FileNotFoundError(f"Файл не найден на воркере: {mat_path}")
 
             # Генерируем уникальный ID для файла
@@ -218,7 +225,9 @@ def analyze_backgammon_batch_job(
                         ],
                         [
                             {
-                                "text": text["hint_viewer_butn_3"][lang_code].format(red_player=red_player),
+                                "text": text["hint_viewer_butn_3"][lang_code].format(
+                                    red_player=red_player
+                                ),
                                 "web_app": {
                                     "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
                                 },
@@ -226,7 +235,9 @@ def analyze_backgammon_batch_job(
                         ],
                         [
                             {
-                                "text": text["hint_viewer_butn_4"][lang_code].format(black_player=black_player),
+                                "text": text["hint_viewer_butn_4"][lang_code].format(
+                                    black_player=black_player
+                                ),
                                 "web_app": {
                                     "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
                                 },
@@ -255,7 +266,8 @@ def analyze_backgammon_batch_job(
                     data = {
                         "chat_id": int(user_id),
                         "text": text["hint_viewer_finished"][lang_code].format(
-                            red_player=red_player, black_player=black_player),
+                            red_player=red_player, black_player=black_player
+                        ),
                         "reply_markup": json.dumps(keyboard),
                     }
                     requests.post(url, data=data, timeout=10)

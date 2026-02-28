@@ -1,4 +1,4 @@
-﻿import os
+import os
 from loguru import logger
 from bot.common.utils.i18n import create_translator_hub
 from fluentogram import TranslatorHub
@@ -48,10 +48,12 @@ class Settings(BaseSettings):
     @property
     def DB_URL(self):
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:5432/{self.POSTGRES_DB}"
+
     @property
     def DB_URL_SYNC(self):
         """Синхронный URL для APScheduler (psycopg2 вместо asyncpg)"""
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:5432/{self.POSTGRES_DB}"
+
     @property
     def REDIS_URL(self):
         return f"redis://{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
@@ -68,14 +70,9 @@ bot = Bot(
 admins = settings.ROOT_ADMIN_IDS
 SUPPORT_TG_ID = 826161194
 
-jobstores = {
-    'default': SQLAlchemyJobStore(url=settings.DB_URL_SYNC)
-}
+jobstores = {"default": SQLAlchemyJobStore(url=settings.DB_URL_SYNC)}
 
-scheduler = AsyncIOScheduler(
-    jobstores=jobstores,
-    timezone=timezone("Europe/Moscow")
-)
+scheduler = AsyncIOScheduler(jobstores=jobstores, timezone=timezone("Europe/Moscow"))
 
 
 def setup_logger(app_name: str):

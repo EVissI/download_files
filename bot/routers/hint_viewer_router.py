@@ -33,7 +33,6 @@ from rq import Queue, Worker
 from rq.registry import StartedJobRegistry
 from rq.job import Job
 from redis import Redis
-from bot.common.service.sync_folder_service import SyncthingSync
 from bot.db.redis import sync_redis_client, redis_client
 from bot.db.schemas import SUser
 from bot.common.filters.user_info import UserInfo
@@ -96,9 +95,6 @@ class HintViewerStates(StatesGroup):
     stats_player_selection = State()
 
 
-
-
-syncthing_sync = SyncthingSync()
 
 
 WORKER_COUNT_CACHE_KEY = "cache:worker_count"
@@ -348,11 +344,7 @@ async def hint_viewer_menu(
 
         logger.info(f"Файл скачан локально: {mat_path}")
 
-        if not await syncthing_sync.wait_for_file_sync(mat_path, max_wait=60):
-            await message.reply("❌ Файл не найден после синхронизации")
-            return
-
-        logger.info(f"✅ Файл готов к обработке: {mat_path}")
+        # Не ждём sync здесь — воркер (на другой машине) сам ждёт появления файла через Syncthing
 
         with open(mat_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -1004,12 +996,7 @@ async def process_batch_hint_files(
         total_files = len(file_paths)
         await message.answer(await message_dao.get_text("hint_viewer_files_accepted", user_info.lang_code, total_files=total_files))
 
-        for mat_path in file_paths:
-            if not await syncthing_sync.wait_for_file_sync(mat_path, max_wait=60):
-                await message.reply(
-                    f"❌ Файл {os.path.basename(mat_path)} не найден после синхронизации"
-                )
-                return
+        # Не ждём sync здесь — воркер (на другой машине) сам ждёт появления каждого файла
 
         job = batch_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_batch_job",

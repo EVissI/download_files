@@ -16,10 +16,7 @@ class SyncthingSync:
         if not self.api_key:
             logger.warning("⚠️ SYNCTHING_API_KEY не установлен!")
 
-        self.headers = {
-            "X-API-Key": self.api_key,
-            "Content-Type": "application/json"
-        }
+        self.headers = {"X-API-Key": self.api_key, "Content-Type": "application/json"}
         self.base_url = f"http://{self.host}/rest"
 
     def _file_matches_item(self, file_path: str, item: str) -> bool:
@@ -34,7 +31,7 @@ class SyncthingSync:
             f"{self.base_url}/events",
             params={"limit": 1},
             headers=self.headers,
-            timeout=aiohttp.ClientTimeout(total=5)
+            timeout=aiohttp.ClientTimeout(total=5),
         ) as resp:
             if resp.status != 200:
                 return 0
@@ -61,10 +58,12 @@ class SyncthingSync:
                     f"{self.base_url}/db/scan",
                     params={"folder": self.folder_id},
                     headers=self.headers,
-                    timeout=aiohttp.ClientTimeout(total=5)
+                    timeout=aiohttp.ClientTimeout(total=5),
                 ) as response:
                     if response.status != 200:
-                        logger.warning(f"⚠️ Ошибка scan: {response.status}, fallback на wait_for_file")
+                        logger.warning(
+                            f"⚠️ Ошибка scan: {response.status}, fallback на wait_for_file"
+                        )
                         return await self.wait_for_file(file_path, max_wait)
 
                 # 2. Получить текущий event ID
@@ -84,10 +83,10 @@ class SyncthingSync:
                             params={
                                 "events": "ItemFinished",
                                 "since": last_id,
-                                "timeout": timeout_sec
+                                "timeout": timeout_sec,
                             },
                             headers=self.headers,
-                            timeout=aiohttp.ClientTimeout(total=timeout_sec + 5)
+                            timeout=aiohttp.ClientTimeout(total=timeout_sec + 5),
                         ) as events_resp:
                             if events_resp.status != 200:
                                 break
@@ -102,11 +101,15 @@ class SyncthingSync:
                                 err = data.get("error")
 
                                 if err:
-                                    logger.warning(f"ItemFinished с ошибкой: {item} — {err}")
+                                    logger.warning(
+                                        f"ItemFinished с ошибкой: {item} — {err}"
+                                    )
                                     continue
                                 if self._file_matches_item(file_path, item):
                                     if await self._verify_file(file_path):
-                                        logger.info(f"✅ Синхронизация подтверждена (ItemFinished): {item}")
+                                        logger.info(
+                                            f"✅ Синхронизация подтверждена (ItemFinished): {item}"
+                                        )
                                         return True
                     except asyncio.TimeoutError:
                         pass
@@ -119,7 +122,9 @@ class SyncthingSync:
                         return True
 
                 # 4. Fallback: финальная проверка файла
-                remaining = max(5, int(max_wait - (asyncio.get_event_loop().time() - start_time)))
+                remaining = max(
+                    5, int(max_wait - (asyncio.get_event_loop().time() - start_time))
+                )
                 return await self._verify_file(file_path) or await self.wait_for_file(
                     file_path, remaining
                 )
@@ -162,7 +167,7 @@ class SyncthingSync:
                     f"{self.base_url}/db/scan",
                     params={"folder": self.folder_id},
                     headers=self.headers,
-                    timeout=aiohttp.ClientTimeout(total=5)
+                    timeout=aiohttp.ClientTimeout(total=5),
                 ) as response:
                     if response.status != 200:
                         logger.warning(f"⚠️ Ошибка пересканирования: {response.status}")
@@ -176,7 +181,7 @@ class SyncthingSync:
                         f"{self.base_url}/db/status",
                         params={"folder": self.folder_id},
                         headers=self.headers,
-                        timeout=aiohttp.ClientTimeout(total=5)
+                        timeout=aiohttp.ClientTimeout(total=5),
                     ) as status_response:
                         status = await status_response.json()
                         state = status.get("state")
