@@ -348,10 +348,7 @@ async def hint_viewer_menu(
 
         logger.info(f"Файл скачан локально: {mat_path}")
 
-        if not await syncthing_sync.sync_and_wait(max_wait=30):
-            logger.warning("Ошибка синхронизации Syncthing")
-
-        if not await syncthing_sync.wait_for_file(mat_path, max_wait=30):
+        if not await syncthing_sync.wait_for_file_sync(mat_path, max_wait=60):
             await message.reply("❌ Файл не найден после синхронизации")
             return
 
@@ -1008,9 +1005,7 @@ async def process_batch_hint_files(
         await message.answer(await message_dao.get_text("hint_viewer_files_accepted", user_info.lang_code, total_files=total_files))
 
         for mat_path in file_paths:
-            if not await syncthing_sync.sync_and_wait(max_wait=30):
-                logger.warning("Ошибка синхронизации Syncthing")
-            if not await syncthing_sync.wait_for_file(mat_path, max_wait=30):
+            if not await syncthing_sync.wait_for_file_sync(mat_path, max_wait=60):
                 await message.reply(
                     f"❌ Файл {os.path.basename(mat_path)} не найден после синхронизации"
                 )
