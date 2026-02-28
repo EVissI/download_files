@@ -1,7 +1,8 @@
 from flask_appbuilder import ModelView
 from flask_appbuilder.models.sqla.interface import SQLAInterface
-from bot.db.models import User, UserPromocode, UserAnalizePayment
+from bot.db.models import User, UserPromocode, UserAnalizePayment, Promocode
 from sqlalchemy import func, select
+from sqlalchemy.orm import joinedload
 
 
 class CustomUserSQLAInterface(SQLAInterface):
@@ -36,11 +37,24 @@ class UserPromocodeInline(ModelView):
     datamodel = SQLAInterface(UserPromocode)
     base_permissions = ['can_list', 'can_show']
 
-    list_columns = ["promocode.code", "is_active"]
+    list_columns = [
+        "promocode.code",
+        "promocode.services_summary",
+        "promo_date_range",
+        "is_active",
+    ]
+    show_columns = list_columns
     label_columns = {
         "promocode.code": "Промокод",
+        "promocode.services_summary": "На что (услуги)",
+        "promo_date_range": "Период действия",
         "is_active": "Активен",
     }
+
+    def get_query(self):
+        return super().get_query().options(
+            joinedload(UserPromocode.promocode).joinedload(Promocode.services)
+        )
 
 
 class UserAnalizePaymentInline(ModelView):
@@ -87,4 +101,4 @@ class UserModelView(ModelView):
         "total_balance": "Общий баланс",
     }
 
-    search_columns = ["id", "username"]
+    search_columns = ["id", "username", "player_username", "admin_insert_name"]

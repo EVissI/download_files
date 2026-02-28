@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 import enum
 from typing import Optional
@@ -266,6 +266,22 @@ class UserPromocode(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="used_promocodes")
     promocode: Mapped["Promocode"] = relationship("Promocode", back_populates="users")
+
+    @property
+    @renders("promo_date_range")
+    def promo_date_range(self) -> str:
+        """Период действия промо: с даты активации по дату окончания (или ∞)"""
+        if not self.created_at:
+            return "—"
+        start = self.created_at
+        if isinstance(start, datetime) and start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        start_str = start.strftime("%d.%m.%Y") if isinstance(start, datetime) else str(start)
+        if self.promocode and self.promocode.duration_days is not None:
+            end = start + timedelta(days=self.promocode.duration_days)
+            end_str = end.strftime("%d.%m.%Y") if isinstance(end, datetime) else str(end)
+            return f"{start_str} — {end_str}"
+        return f"{start_str} — ∞"
 
 
 class UserPromocodeService(Base):
