@@ -36,21 +36,22 @@ class UserPromocodeInline(ModelView):
 
     datamodel = SQLAInterface(UserPromocode)
     base_permissions = ['can_list', 'can_show']
-    list_title = "Активные промокоды"
+    list_title = "Промокоды"
 
     list_columns = [
         "promocode.code",
         "promocode.services_summary",
         "promo_date_range",
-        "is_active",
+        "is_active_display",
     ]
+    order_columns = ["promocode.code", "is_active"]
     show_columns = [
         "promocode.code",
         "promocode.services_summary",
         "created_at_display",
         "promo_date_range",
         "remaining_balance_display",
-        "is_active",
+        "is_active_display",
     ]
     show_fieldsets = [
         (
@@ -77,7 +78,7 @@ class UserPromocodeInline(ModelView):
         (
             "Статус",
             {
-                "fields": ["is_active"],
+                "fields": ["is_active_display"],
                 "expanded": True,
             },
         ),
@@ -88,7 +89,7 @@ class UserPromocodeInline(ModelView):
         "created_at_display": "Дата активации",
         "promo_date_range": "Период действия (с — по)",
         "remaining_balance_display": "Остаток",
-        "is_active": "Активен",
+        "is_active_display": "Статус",
     }
 
     def get_query(self):

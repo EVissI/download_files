@@ -304,6 +304,12 @@ class UserPromocode(Base):
         d = self.created_at
         return d.strftime("%d.%m.%Y %H:%M") if isinstance(d, datetime) else str(d)
 
+    @property
+    @renders("is_active_display")
+    def is_active_display(self) -> str:
+        """Отображение статуса: Активен / Нет"""
+        return "Активен" if self.is_active else "Нет"
+
 
 class UserPromocodeService(Base):
     __tablename__ = "user_promocode_services"
