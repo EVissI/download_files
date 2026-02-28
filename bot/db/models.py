@@ -283,6 +283,27 @@ class UserPromocode(Base):
             return f"{start_str} — {end_str}"
         return f"{start_str} — ∞"
 
+    @property
+    @renders("remaining_balance_display")
+    def remaining_balance_display(self) -> str:
+        """Остаток по услугам: Матч: 3, Ошибки: 5 и т.д."""
+        if not self.remaining_services:
+            return "—"
+        parts = []
+        for s in self.remaining_services:
+            qty = "∞" if s.remaining_quantity is None else str(s.remaining_quantity)
+            parts.append(f"{s.service_type.value}: {qty}")
+        return ", ".join(parts)
+
+    @property
+    @renders("created_at_display")
+    def created_at_display(self) -> str:
+        """Дата активации в читаемом формате"""
+        if not self.created_at:
+            return "—"
+        d = self.created_at
+        return d.strftime("%d.%m.%Y %H:%M") if isinstance(d, datetime) else str(d)
+
 
 class UserPromocodeService(Base):
     __tablename__ = "user_promocode_services"

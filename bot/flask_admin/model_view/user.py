@@ -36,6 +36,7 @@ class UserPromocodeInline(ModelView):
 
     datamodel = SQLAInterface(UserPromocode)
     base_permissions = ['can_list', 'can_show']
+    list_title = "Активные промокоды"
 
     list_columns = [
         "promocode.code",
@@ -43,17 +44,57 @@ class UserPromocodeInline(ModelView):
         "promo_date_range",
         "is_active",
     ]
-    show_columns = list_columns
+    show_columns = [
+        "promocode.code",
+        "promocode.services_summary",
+        "created_at_display",
+        "promo_date_range",
+        "remaining_balance_display",
+        "is_active",
+    ]
+    show_fieldsets = [
+        (
+            "Промокод",
+            {
+                "fields": ["promocode.code", "promocode.services_summary"],
+                "expanded": True,
+            },
+        ),
+        (
+            "Период действия",
+            {
+                "fields": ["created_at_display", "promo_date_range"],
+                "expanded": True,
+            },
+        ),
+        (
+            "Остаток по услугам",
+            {
+                "fields": ["remaining_balance_display"],
+                "expanded": True,
+            },
+        ),
+        (
+            "Статус",
+            {
+                "fields": ["is_active"],
+                "expanded": True,
+            },
+        ),
+    ]
     label_columns = {
         "promocode.code": "Промокод",
         "promocode.services_summary": "На что (услуги)",
-        "promo_date_range": "Период действия",
+        "created_at_display": "Дата активации",
+        "promo_date_range": "Период действия (с — по)",
+        "remaining_balance_display": "Остаток",
         "is_active": "Активен",
     }
 
     def get_query(self):
         return super().get_query().options(
-            joinedload(UserPromocode.promocode).joinedload(Promocode.services)
+            joinedload(UserPromocode.promocode).joinedload(Promocode.services),
+            joinedload(UserPromocode.remaining_services),
         )
 
 
@@ -74,7 +115,8 @@ class UserAnalizePaymentInline(ModelView):
 class UserModelView(ModelView):
     datamodel = CustomUserSQLAInterface(User)
     base_permissions = ['can_list', 'can_show']
-    
+    related_views = [UserPromocodeInline, UserAnalizePaymentInline]
+
     list_columns = [
         "id",
         "username",
