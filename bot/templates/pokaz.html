@@ -139,6 +139,40 @@
             display: block;
         }
 
+        .board-footer {
+            position: relative;
+            height: 0;
+        }
+
+        .pips-above-board,
+        .pips-below-board {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: none;
+            width: fit-content;
+            position: absolute;
+            right: 0;
+            z-index: 100;
+        }
+
+        .pips-above-board {
+            bottom: 50px;
+        }
+
+        .pips-below-board {
+            top: -50px;
+        }
+
+        body.hide-point-dropdowns .pips-above-board,
+        body.hide-point-dropdowns .pips-below-board {
+            display: block;
+        }
+
         .dropdown {
             position: absolute;
             font-size: 0.8rem;
@@ -2440,6 +2474,10 @@
         </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
+            <div class="board-footer">
+                <div id="pipsAboveBoard" class="pips-above-board"></div>
+                <div id="pipsBelowBoard" class="pips-below-board"></div>
+            </div>
         </div>
         <div class="selectors-wrapper">
             <div class="selectors-container">
@@ -4079,6 +4117,9 @@
                 ctx.fillStyle = '#ffffff';
                 ctx.fillText(`${blackCheckersOff}`, offX, lowerOffY);
             }
+            
+            // Update HTML pips display if checkbox is active
+            updatePipsDisplay();
         }
 
         function getTotalCheckers(pos) {
@@ -4176,6 +4217,27 @@
         const initialXgidElement = document.getElementById('initial-xgid-data');
         const initialXgid = initialXgidElement ? JSON.parse(initialXgidElement.textContent) : null;
 
+        // Функция для обновления пипсов в HTML элементах
+        function updatePipsDisplay() {
+            if (document.body.classList.contains('hide-point-dropdowns')) {
+                const whitePips = calculatePips(positions.first || {}, 'first');
+                const blackPips = calculatePips(positions.second || {}, 'second');
+                
+                const pipsAboveBoard = document.getElementById('pipsAboveBoard');
+                const pipsBelowBoard = document.getElementById('pipsBelowBoard');
+                
+                if (upperPlayerColor === 'black') {
+                    // Black up, white down
+                    if (pipsAboveBoard) pipsAboveBoard.textContent = blackPips;
+                    if (pipsBelowBoard) pipsBelowBoard.textContent = whitePips;
+                } else {
+                    // White up, black down
+                    if (pipsAboveBoard) pipsAboveBoard.textContent = whitePips;
+                    if (pipsBelowBoard) pipsBelowBoard.textContent = blackPips;
+                }
+            }
+        }
+
         function imageLoaded() {
             imagesLoaded++;
             if (imagesLoaded === totalImages) {
@@ -4190,10 +4252,14 @@
                             dropdowns.forEach(d => {
                                 d.style.display = 'none';
                             });
+                            document.body.classList.add('hide-point-dropdowns');
+                            updatePipsDisplay();
                         } else {
                             dropdowns.forEach(d => {
                                 d.style.display = '';
                             });
+                            document.body.classList.remove('hide-point-dropdowns');
+                            updatePipsDisplay();
                         }
                     });
                 }
