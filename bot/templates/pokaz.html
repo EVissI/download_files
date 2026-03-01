@@ -2429,6 +2429,8 @@
                 title="Установка шашек">
                 <i class="fa fa-mouse-pointer"></i>
             </button>
+            <input type="checkbox" id="hidePointSelectorsCheckbox"
+                style="margin-left: 8px; width: 18px; height: 18px; cursor: pointer;">
         </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
@@ -3785,6 +3787,11 @@
 
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    // Don't open dropdown if hide checkbox is checked
+                    const hidePointSelectorsCheckbox = document.getElementById('hidePointSelectorsCheckbox');
+                    if (hidePointSelectorsCheckbox && hidePointSelectorsCheckbox.checked) {
+                        return;
+                    }
                     document.querySelectorAll('.point-selector-dropdown, .dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown, .match-selector-dropdown').forEach(d => {
                         if (d !== dropdown) d.classList.remove('active');
                     });
@@ -5281,6 +5288,11 @@
 
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    // Don't open dropdown if hide checkbox is checked
+                    const hidePointSelectorsCheckbox = document.getElementById('hidePointSelectorsCheckbox');
+                    if (hidePointSelectorsCheckbox && hidePointSelectorsCheckbox.checked) {
+                        return;
+                    }
                     // Close other dropdowns (dice, cube, and other bar)
                     document.querySelectorAll('.dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown').forEach(d => {
                         if (d !== dropdown) d.classList.remove('active');
@@ -6180,6 +6192,19 @@
         if (hidePipsCheckbox) {
             hidePipsCheckbox.addEventListener('change', () => {
                 drawBoard();
+            });
+        }
+
+        // Hide point selectors checkbox handler
+        const hidePointSelectorsCheckbox = document.getElementById('hidePointSelectorsCheckbox');
+        if (hidePointSelectorsCheckbox) {
+            hidePointSelectorsCheckbox.addEventListener('change', () => {
+                const isHidden = hidePointSelectorsCheckbox.checked;
+                document.querySelectorAll('.point-selector-dropdown').forEach(dropdown => {
+                    if (isHidden) {
+                        dropdown.classList.remove('active');
+                    }
+                });
             });
         }
 
