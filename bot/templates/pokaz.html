@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="{{ lang }}">
 
 <head>
@@ -1973,6 +1973,61 @@
             margin-bottom: 10px;
         }
 
+        .board-pips-header,
+        .board-pips-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin: 4px 0;
+        }
+
+        .pips-above-board {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-above-board-inverted {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-below-board-inverted {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-below-board {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
         .hide-pips-label {
             display: flex;
             align-items: center;
@@ -2415,6 +2470,9 @@
             <button id="xgid-close" class="xgid-close">X</button>
         </div> -->
         <div id="game-type-label" class="game-type-label" data-i18n="moneygame">Манигейм</div>
+        <div class="board-pips-header">
+            <div id="black-pips" class="pips-above-board" style="display: none;">0</div>
+        </div>
         <div class="mode-toggle-container">
             <label class="hide-pips-label">
                 <input type="checkbox" id="hidePipsCheckbox">
@@ -2425,6 +2483,7 @@
                 <button id="lowerPlayerButton" class="checker-toggle-btn white" data-color="white"
                     data-i18n-title="toggle_lower_player" title="Переключить нижнего игрока"></button>
             </div>
+            <input type="checkbox" id="hideSelectorsCheckbox" title="Скрыть меню установки шашек">
             <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" data-i18n-title="place_checkers"
                 title="Установка шашек">
                 <i class="fa fa-mouse-pointer"></i>
@@ -2432,6 +2491,9 @@
         </div>
         <div class="board-wrapper">
             <canvas id="boardCanvas" width="800" height="800"></canvas>
+        </div>
+        <div class="board-pips-footer">
+            <div id="red-pips" class="pips-below-board" style="display: none;">0</div>
         </div>
         <div class="selectors-wrapper">
             <div class="selectors-container">
@@ -3773,6 +3835,8 @@
             button.textContent = value.toString();
         }
 
+        let pointDropdownsDisabled = false;
+
         function initPointSelectors() {
             for (let point = 1; point <= 24; point++) {
                 const button = document.getElementById(`point-${point}-button`);
@@ -3785,6 +3849,7 @@
 
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    if (pointDropdownsDisabled) return;
                     document.querySelectorAll('.point-selector-dropdown, .dice-selector-dropdown, .cube-selector-dropdown, .bar-selector-dropdown, .match-selector-dropdown').forEach(d => {
                         if (d !== dropdown) d.classList.remove('active');
                     });
@@ -4010,6 +4075,10 @@
             // Draw pips (pip count) if not hidden
             const hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
             const hidePips = hidePipsCheckbox && hidePipsCheckbox.checked;
+            const hideSelectorsCheckbox = document.getElementById('hideSelectorsCheckbox');
+            const useHintViewerPips = hideSelectorsCheckbox && hideSelectorsCheckbox.checked;
+            const blackPipsEl = document.getElementById('black-pips');
+            const redPipsEl = document.getElementById('red-pips');
 
             if (!hidePips) {
                 // Расчет пипсов с учетом инвертирования
@@ -4026,21 +4095,45 @@
                     blackPips = calculatePips(positions.second, 'second');
                 }
 
-                // Coordinates for pip boxes (center x, center y)
-                const pipCenterX = 760;
-                const upperPipsY = 360;  // Above center
-                const lowerPipsY = 400;  // Below center
-
-                // Determine which player is upper/lower based on upperPlayerColor
-                if (upperPlayerColor === 'black') {
-                    // Standard: black upper, white lower
-                    drawPipBox(pipCenterX, upperPipsY, blackPips, false);  // Black background upper
-                    drawPipBox(pipCenterX, lowerPipsY, whitePips, true);   // White background lower
+                if (useHintViewerPips && blackPipsEl && redPipsEl) {
+                    // Отображаем пипсы в DOM, как в hint_viewer.html
+                    if (upperPlayerColor === 'black') {
+                        // Стандартно: черные сверху, белые снизу
+                        blackPipsEl.textContent = `${blackPips}`;
+                        redPipsEl.textContent = `${whitePips}`;
+                        blackPipsEl.className = 'pips-above-board';
+                        redPipsEl.className = 'pips-below-board';
+                    } else {
+                        // Инвертировано: белые сверху, черные снизу
+                        blackPipsEl.textContent = `${whitePips}`;
+                        redPipsEl.textContent = `${blackPips}`;
+                        blackPipsEl.className = 'pips-above-board-inverted';
+                        redPipsEl.className = 'pips-below-board-inverted';
+                    }
+                    blackPipsEl.style.display = 'block';
+                    redPipsEl.style.display = 'block';
                 } else {
-                    // Inverted: white upper, black lower
-                    drawPipBox(pipCenterX, upperPipsY, whitePips, true);   // White background upper
-                    drawPipBox(pipCenterX, lowerPipsY, blackPips, false);  // Black background lower
+                    // Отрисовка пипсов прямо на доске (старое поведение)
+                    const pipCenterX = 760;
+                    const upperPipsY = 360;  // Above center
+                    const lowerPipsY = 400;  // Below center
+
+                    if (upperPlayerColor === 'black') {
+                        // Standard: black upper, white lower
+                        drawPipBox(pipCenterX, upperPipsY, blackPips, false);  // Black background upper
+                        drawPipBox(pipCenterX, lowerPipsY, whitePips, true);   // White background lower
+                    } else {
+                        // Inverted: white upper, black lower
+                        drawPipBox(pipCenterX, upperPipsY, whitePips, true);   // White background upper
+                        drawPipBox(pipCenterX, lowerPipsY, blackPips, false);  // Black background lower
+                    }
+
+                    if (blackPipsEl) blackPipsEl.style.display = 'none';
+                    if (redPipsEl) redPipsEl.style.display = 'none';
                 }
+            } else {
+                if (blackPipsEl) blackPipsEl.style.display = 'none';
+                if (redPipsEl) redPipsEl.style.display = 'none';
             }
 
             // Draw checkers off (выброшенные шашки)
@@ -6421,6 +6514,24 @@
             }
         }
         window.updateGameTypeButtonMode = updateGameTypeButtonMode;
+
+        const hideSelectorsCheckbox = document.getElementById('hideSelectorsCheckbox');
+        if (hideSelectorsCheckbox) {
+            hideSelectorsCheckbox.addEventListener('change', () => {
+                pointDropdownsDisabled = hideSelectorsCheckbox.checked;
+                const pointDropdowns = document.querySelectorAll('.point-selector-dropdown');
+                if (pointDropdownsDisabled) {
+                    pointDropdowns.forEach(d => {
+                        d.classList.remove('active');
+                        d.style.display = 'none';
+                    });
+                } else {
+                    pointDropdowns.forEach(d => {
+                        d.style.display = '';
+                    });
+                }
+            });
+        }
 
         // Game type button toggle between money game and match (или случайные кубики, если таблица подсказок открыта)
         document.getElementById('game-type-button').addEventListener('click', () => {
