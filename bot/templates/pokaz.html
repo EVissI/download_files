@@ -2049,10 +2049,6 @@
             margin: 0 8px;
         }
 
-        body.hide-point-dropdowns .point-selector-dropdown {
-            display: none !important;
-        }
-
         /* Match panel custom selectors */
         .match-selector-custom {
             position: relative;
@@ -6199,10 +6195,16 @@
         const hidePointDropdownsCheckbox = document.getElementById('hidePointDropdownsCheckbox');
         if (hidePointDropdownsCheckbox) {
             hidePointDropdownsCheckbox.addEventListener('change', (e) => {
+                const dropdowns = document.querySelectorAll('.point-selector-dropdown');
                 if (e.target.checked) {
-                    document.body.classList.add('hide-point-dropdowns');
+                    dropdowns.forEach(d => {
+                        d.style.display = 'none';
+                        d.classList.remove('active');
+                    });
                 } else {
-                    document.body.classList.remove('hide-point-dropdowns');
+                    dropdowns.forEach(d => {
+                        d.style.display = '';
+                    });
                 }
             });
         }
