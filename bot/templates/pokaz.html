@@ -4180,16 +4180,15 @@
             imagesLoaded++;
             if (imagesLoaded === totalImages) {
                 createDropdowns();
-                
+
                 // Initialize hide point dropdowns checkbox handler
                 const hidePointDropdownsCheckbox = document.getElementById('hidePointDropdownsCheckbox');
                 if (hidePointDropdownsCheckbox) {
                     hidePointDropdownsCheckbox.addEventListener('change', (e) => {
-                        const dropdowns = document.querySelectorAll('.point-selector-dropdown');
+                        const dropdowns = document.querySelectorAll('.point-selector-custom');
                         if (e.target.checked) {
                             dropdowns.forEach(d => {
                                 d.style.display = 'none';
-                                d.classList.remove('active');
                             });
                         } else {
                             dropdowns.forEach(d => {
@@ -4198,7 +4197,7 @@
                         }
                     });
                 }
-                
+
                 drawBoard();
                 updateTurnSelect();
                 updateCubeOwnerSelect();
