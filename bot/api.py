@@ -99,9 +99,11 @@ def _get_pokaz_translations(lang: str) -> dict:
     return {
         "title": t("pokaz-page-title", "Position Editor"),
         "hide_pips": t("pokaz-page-hide-pips", "Hide pips"),
+        "hide_point_dropdowns": t("pokaz-page-hide-point-dropdowns", "Hide point dropdowns"),
         "lower_player": t("pokaz-page-lower-player", "Lower player:"),
         "toggle_lower_player": t("pokaz-page-toggle-lower-player", "Toggle lower player"),
         "place_checkers": t("pokaz-page-place-checkers", "Place checkers"),
+        "delete_checkers": t("pokaz-page-delete-checkers", "Remove checkers"),
         "moneygame": t("pokaz-page-moneygame", "Moneygame"),
         "match": t("pokaz-page-match", "Match"),
         "checkers": t("pokaz-page-checkers", "Checkers"),

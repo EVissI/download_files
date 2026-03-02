@@ -189,9 +189,11 @@ keyboard-user-reply-hint_viewer = 👁️ Mistakes
 # Pokaz page (position editor) — en
 pokaz-page-title = Position Editor
 pokaz-page-hide-pips = Hide pips
+pokaz-page-hide-point-dropdowns = Hide point dropdowns
 pokaz-page-lower-player = Lower player:
 pokaz-page-toggle-lower-player = Toggle lower player
 pokaz-page-place-checkers = Place checkers
+pokaz-page-delete-checkers = Remove checkers
 pokaz-page-moneygame = Moneygame
 pokaz-page-match = Match
 pokaz-page-checkers = Checkers

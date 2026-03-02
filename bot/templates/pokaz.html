@@ -2364,7 +2364,19 @@
                         const k = el.getAttribute('data-i18n-placeholder');
                         if (i18n[k]) el.setAttribute('placeholder', i18n[k]);
                     });
+
+                    // expose translations and cache common strings
                     window.POKAZ_I18N = i18n;
+                    const yesText = i18n.yes || 'Да';
+                    const noText = i18n.no || 'Нет';
+                    // update toggle buttons to use localized yes/no
+                    document.querySelectorAll('.toggle-btn').forEach(btn => {
+                        const el = document.getElementById(btn.dataset.target);
+                        if (el) btn.textContent = el.value === '1' ? yesText : noText;
+                    });
+                    // store for later use globally
+                    window.POKAZ_YES = yesText;
+                    window.POKAZ_NO = noText;
                 } catch (e) { console.warn('Pokaz i18n parse error:', e); }
             }
 
@@ -2433,7 +2445,7 @@
                 <button id="lowerPlayerButton" class="checker-toggle-btn white" data-color="white"
                     data-i18n-title="toggle_lower_player" title="Переключить нижнего игрока"></button>
             </div>
-            <input type="checkbox" id="hidePointDropdownsCheckbox" title="Скрыть дропдауны точек">
+            <input type="checkbox" id="hidePointDropdownsCheckbox" data-i18n-title="hide_point_dropdowns" title="Скрыть дропдауны точек">
             <button id="modeToggleBtn" class="mode-toggle-btn" data-mode="place" data-i18n-title="place_checkers"
                 title="Установка шашек">
                 <i class="fa fa-mouse-pointer"></i>
@@ -2519,8 +2531,8 @@
                 <div class="jb-title" data-i18n="jacobi_beaver_max">Якоби Бивер Макс куб</div>
                 <div class="jacobi-beaver-block">
                     <div class="jb-row">
-                        <button type="button" class="toggle-btn on" data-target="jacobi-select">Да</button>
-                        <button type="button" class="toggle-btn" data-target="beaver-select">Нет</button>
+                        <button type="button" class="toggle-btn on" data-target="jacobi-select" data-i18n="yes">Да</button>
+                        <button type="button" class="toggle-btn" data-target="beaver-select" data-i18n="no">Нет</button>
                         <div class="max-cube-options_money" id="max-cube-options-money">
                             <div class="match-selector-custom">
                                 <div class="match-selector-button" id="max-cube-button-m">8</div>
@@ -2739,9 +2751,9 @@
             <div class="cube-controls-block">
                 <div class="cube-shown-selector">
                     <div class="cube-selector-custom">
-                        <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown">нет</div>
+                        <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown" data-i18n="no">нет</div>
                         <div class="cube-selector-dropdown" id="cube-shown-dropdown">
-                            <div class="cube-option empty" data-value="0">нет</div>
+                            <div class="cube-option empty" data-value="0" data-i18n="no">нет</div>
                             <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
                             <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
                             <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
@@ -2763,9 +2775,9 @@
                 <div class="cube-value-options">
                     <div>
                         <div class="cube-selector-custom">
-                            <div class="cube-selector-button empty" id="cube-value-button" data-cube="value">нет</div>
+                            <div class="cube-selector-button empty" id="cube-value-button" data-cube="value" data-i18n="no">нет</div>
                             <div class="cube-selector-dropdown" id="cube-value-dropdown">
-                                <div class="cube-option empty" data-value="0">нет</div>
+                                <div class="cube-option empty" data-value="0" data-i18n="no">нет</div>
                                 <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
                                 <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
                                 <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
@@ -5239,8 +5251,9 @@
 
             if (value === 0) {
                 button.className = 'cube-selector-button empty';
-                button.textContent = 'нет';
-                button.innerHTML = 'нет';
+                const noText = (window.POKAZ_NO !== undefined ? window.POKAZ_NO : ((window.POKAZ_I18N||{}).no || 'Нет'));
+                button.textContent = noText;
+                button.innerHTML = noText;
             } else {
                 button.className = 'cube-selector-button';
                 const imgSrc = `/static/Double${value}.png`;
@@ -6015,7 +6028,9 @@
                 const el = document.getElementById(btn.dataset.target);
                 if (el) {
                     const val = el.value;
-                    btn.textContent = val === '1' ? 'Да' : 'Нет';
+                    const yesText = window.POKAZ_YES || ((window.POKAZ_I18N||{}).yes || 'Да');
+                    const noText = window.POKAZ_NO || ((window.POKAZ_I18N||{}).no || 'Нет');
+                    btn.textContent = val === '1' ? yesText : noText;
                     btn.classList.toggle('on', val === '1');
                 }
             });
@@ -6179,7 +6194,9 @@
                 if (!el) return;
                 const next = el.value === '1' ? '0' : '1';
                 el.value = next;
-                this.textContent = next === '1' ? 'Да' : 'Нет';
+                const yesText = window.POKAZ_YES || ((window.POKAZ_I18N||{}).yes || 'Да');
+                const noText = window.POKAZ_NO || ((window.POKAZ_I18N||{}).no || 'Нет');
+                this.textContent = next === '1' ? yesText : noText;
                 this.classList.toggle('on', next === '1');
             });
         });
@@ -6189,16 +6206,18 @@
         const modeToggleBtn = document.getElementById('modeToggleBtn');
 
         modeToggleBtn.addEventListener('click', () => {
+            const deleteTitle = (window.POKAZ_I18N || {}).delete_checkers || 'Удаление шашек';
+            const placeTitle = (window.POKAZ_I18N || {}).place_checkers || 'Установка шашек';
             if (currentMode === 'place') {
                 currentMode = 'delete';
                 modeToggleBtn.classList.add('delete-mode');
                 modeToggleBtn.innerHTML = '<i class="fa fa-times"></i>';
-                modeToggleBtn.title = 'Удаление шашек';
+                modeToggleBtn.title = deleteTitle;
             } else {
                 currentMode = 'place';
                 modeToggleBtn.classList.remove('delete-mode');
                 modeToggleBtn.innerHTML = '<i class="fa fa-mouse-pointer"></i>';
-                modeToggleBtn.title = 'Установка шашек';
+                modeToggleBtn.title = placeTitle;
             }
         });
 
@@ -6293,10 +6312,16 @@
                     document.getElementById('cube-owner-select').value = 'white';
 
                     // Update displays
-                    cubeShownButton.textContent = 'нет';
-                    cubeShownButton.classList.add('empty');
-                    cubeValueButton.textContent = 'нет';
-                    cubeValueButton.classList.add('empty');
+                    {
+                        const noText = window.POKAZ_NO || ((window.POKAZ_I18N||{}).no || 'Нет');
+                        cubeShownButton.textContent = noText;
+                        cubeShownButton.classList.add('empty');
+                    }
+                    {
+                        const noText = window.POKAZ_NO || ((window.POKAZ_I18N||{}).no || 'Нет');
+                        cubeValueButton.textContent = noText;
+                        cubeValueButton.classList.add('empty');
+                    }
                     cubeOwnerBtn.classList.remove('black');
                     cubeOwnerBtn.classList.add('white');
                     cubeOwnerBtn.setAttribute('data-color', 'white');

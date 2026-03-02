@@ -192,9 +192,11 @@ auto-batch-summary_pr = <b>{ $player }</b>: <b>{ $average_pr }</b>:
 # Pokaz page (редактор позиций) — ru
 pokaz-page-title = Редактор позиции
 pokaz-page-hide-pips = Скрыть пипсы
+pokaz-page-hide-point-dropdowns = Скрыть дропдауны точек
 pokaz-page-lower-player = Нижний игрок:
 pokaz-page-toggle-lower-player = Переключить нижнего игрока
 pokaz-page-place-checkers = Установка шашек
+pokaz-page-delete-checkers = Удаление шашек
 pokaz-page-moneygame = Манигейм
 pokaz-page-match = Матч
 pokaz-page-checkers = Шашки
