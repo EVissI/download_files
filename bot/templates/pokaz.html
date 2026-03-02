@@ -4034,7 +4034,9 @@
 
             // Draw pips (pip count) if not hidden
             const hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
-            const hidePips = hidePipsCheckbox && hidePipsCheckbox.checked;
+            const hidePointDropdownsCheckbox = document.getElementById('hidePointDropdownsCheckbox');
+            const hidePips = (hidePipsCheckbox && hidePipsCheckbox.checked) ||
+                             (hidePointDropdownsCheckbox && hidePointDropdownsCheckbox.checked);
 
             if (!hidePips) {
                 // Расчет пипсов с учетом инвертирования
@@ -4201,17 +4203,21 @@
                 // Initialize hide point dropdowns checkbox handler
                 const hidePointDropdownsCheckbox = document.getElementById('hidePointDropdownsCheckbox');
                 if (hidePointDropdownsCheckbox) {
-                    hidePointDropdownsCheckbox.addEventListener('change', (e) => {
+                    // restore state from localStorage
+                    const savedDpState = localStorage.getItem('hidePointDropdownsCheckbox');
+                    if (savedDpState === 'true') hidePointDropdownsCheckbox.checked = true;
+                    const applyDropdowns = (checked) => {
                         const dropdowns = document.querySelectorAll('.point-selector-custom');
-                        if (e.target.checked) {
-                            dropdowns.forEach(d => {
-                                d.style.display = 'none';
-                            });
-                        } else {
-                            dropdowns.forEach(d => {
-                                d.style.display = '';
-                            });
-                        }
+                        dropdowns.forEach(d => { d.style.display = checked ? 'none' : ''; });
+                    };
+                    // initial hide if needed
+                    applyDropdowns(hidePointDropdownsCheckbox.checked);
+                    hidePointDropdownsCheckbox.addEventListener('change', (e) => {
+                        const checked = e.target.checked;
+                        localStorage.setItem('hidePointDropdownsCheckbox', checked);
+                        applyDropdowns(checked);
+                        // hide pips when dropdowns hidden, show when unhidden
+                        drawBoard();
                     });
                 }
 
@@ -6228,9 +6234,17 @@
         // Hide pips checkbox handler
         const hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
         if (hidePipsCheckbox) {
+            // restore state from localStorage
+            const savedPips = localStorage.getItem('hidePipsCheckbox');
+            if (savedPips === 'true') hidePipsCheckbox.checked = true;
             hidePipsCheckbox.addEventListener('change', () => {
+                localStorage.setItem('hidePipsCheckbox', hidePipsCheckbox.checked);
                 drawBoard();
             });
+        }
+        // when either checkbox toggles, redraw pips
+        if (hidePointDropdownsCheckbox) {
+            hidePointDropdownsCheckbox.addEventListener('change', drawBoard);
         }
 
         const invertNumberingCheckbox = document.getElementById('invertNumberingCheckbox');
