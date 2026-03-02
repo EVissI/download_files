@@ -1989,6 +1989,59 @@
             cursor: pointer;
         }
 
+        /* pip display styles (mimic hint_viewer/board_viewer) */
+        .pips-above-board {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-above-board-inverted {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-below-board-inverted {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+            position: absolute;
+            right: 0;
+            top: 0;
+            margin: 0;
+        }
+
+        .pips-below-board {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
         .player-position-toggle {
             display: flex;
             align-items: center;
@@ -2435,6 +2488,9 @@
             <button id="xgid-close" class="xgid-close">X</button>
         </div> -->
         <div id="game-type-label" class="game-type-label" data-i18n="moneygame">Манигейм</div>
+        <!-- pip counters will be shown when repositioning is enabled -->
+        <div id="black-pips" class="pips-above-board" style="display:none">0</div>
+        <div id="red-pips" class="pips-below-board" style="display:none">0</div>
         <div class="mode-toggle-container">
             <label class="hide-pips-label">
                 <input type="checkbox" id="hidePipsCheckbox">
@@ -4032,42 +4088,95 @@
                 }
             }
 
-            // Draw pips (pip count) if not hidden
+            // Draw pips (pip count), possibly repositioning instead of hiding
             const hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
             const hidePointDropdownsCheckbox = document.getElementById('hidePointDropdownsCheckbox');
-            const hidePips = (hidePipsCheckbox && hidePipsCheckbox.checked) ||
-                (hidePointDropdownsCheckbox && hidePointDropdownsCheckbox.checked);
+            const hidePips = hidePipsCheckbox && hidePipsCheckbox.checked;
+            const repositionPips = hidePointDropdownsCheckbox && hidePointDropdownsCheckbox.checked;
+
+            // Расчет пипсов с учетом инвертирования
+            let whitePips, blackPips;
+            if (upperPlayerColor === 'white') {
+                // Инвертировано: белые теперь идут от 24 к 1, черные от 1 к 24
+                whitePips = calculatePips(positions.first, 'second');
+                blackPips = calculatePips(positions.second, 'first');
+            } else {
+                // Стандартно: белые от 1 к 24, черные от 24 к 1
+                whitePips = calculatePips(positions.first, 'first');
+                blackPips = calculatePips(positions.second, 'second');
+            }
 
             if (!hidePips) {
-                // Расчет пипсов с учетом инвертирования
-                // Когда upperPlayerColor === 'white', белые идут "сверху вниз" (как 'second')
-                // и черные идут "снизу вверх" (как 'first')
-                let whitePips, blackPips;
-                if (upperPlayerColor === 'white') {
-                    // Инвертировано: белые теперь идут от 24 к 1, черные от 1 к 24
-                    whitePips = calculatePips(positions.first, 'second');
-                    blackPips = calculatePips(positions.second, 'first');
-                } else {
-                    // Стандартно: белые от 1 к 24, черные от 24 к 1
-                    whitePips = calculatePips(positions.first, 'first');
-                    blackPips = calculatePips(positions.second, 'second');
-                }
+                if (repositionPips) {
+                    // update DOM pip counters and draw overlay for screenshots
+                    const blackDiv = document.getElementById('black-pips');
+                    const redDiv = document.getElementById('red-pips');
+                    if (blackDiv && redDiv) {
+                        if (upperPlayerColor === 'black') {
+                            blackDiv.innerText = `${blackPips}`;
+                            redDiv.innerText = `${whitePips}`;
+                        } else {
+                            blackDiv.innerText = `${whitePips}`;
+                            redDiv.innerText = `${blackPips}`;
+                        }
+                        // choose classes (background colors follow value assignment)
+                        blackDiv.className = 'pips-above-board';
+                        redDiv.className = 'pips-below-board';
+                        blackDiv.style.display = 'block';
+                        redDiv.style.display = 'block';
+                    }
 
-                // Coordinates for pip boxes (center x, center y)
-                const pipCenterX = 760;
-                const upperPipsY = 360;  // Above center
-                const lowerPipsY = 400;  // Below center
+                    // draw on canvas for screenshots (same as board_viewer/hint_viewer)
+                    if (upperPlayerColor === 'black') {
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(650, -50, 150, 50);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 20px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${blackPips}`, 725, -20);
 
-                // Determine which player is upper/lower based on upperPlayerColor
-                if (upperPlayerColor === 'black') {
-                    // Standard: black upper, white lower
-                    drawPipBox(pipCenterX, upperPipsY, blackPips, false);  // Black background upper
-                    drawPipBox(pipCenterX, lowerPipsY, whitePips, true);   // White background lower
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(650, 800, 150, 50);
+                        ctx.fillStyle = '#000000';
+                        ctx.fillText(`${whitePips}`, 725, 830);
+                    } else {
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(650, -50, 150, 50);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 20px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${whitePips}`, 725, -20);
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(650, 800, 150, 50);
+                        ctx.fillStyle = '#000000';
+                        ctx.fillText(`${blackPips}`, 725, 830);
+                    }
                 } else {
-                    // Inverted: white upper, black lower
-                    drawPipBox(pipCenterX, upperPipsY, whitePips, true);   // White background upper
-                    drawPipBox(pipCenterX, lowerPipsY, blackPips, false);  // Black background lower
+                    // original inline pips boxes on canvas
+                    const pipCenterX = 760;
+                    const upperPipsY = 360;  // Above center
+                    const lowerPipsY = 400;  // Below center
+
+                    if (upperPlayerColor === 'black') {
+                        drawPipBox(pipCenterX, upperPipsY, blackPips, false);
+                        drawPipBox(pipCenterX, lowerPipsY, whitePips, true);
+                    } else {
+                        drawPipBox(pipCenterX, upperPipsY, whitePips, true);
+                        drawPipBox(pipCenterX, lowerPipsY, blackPips, false);
+                    }
+                    // hide DOM pips if present
+                    const blackDiv = document.getElementById('black-pips');
+                    const redDiv = document.getElementById('red-pips');
+                    if (blackDiv) blackDiv.style.display = 'none';
+                    if (redDiv) redDiv.style.display = 'none';
                 }
+            } else {
+                // hide DOM pips when pips are explicitly hidden
+                const blackDiv = document.getElementById('black-pips');
+                const redDiv = document.getElementById('red-pips');
+                if (blackDiv) blackDiv.style.display = 'none';
+                if (redDiv) redDiv.style.display = 'none';
             }
 
             // Draw checkers off (выброшенные шашки)
@@ -4216,7 +4325,7 @@
                         const checked = e.target.checked;
                         localStorage.setItem('hidePointDropdownsCheckbox', checked);
                         applyDropdowns(checked);
-                        // hide pips when dropdowns hidden, show when unhidden
+                        // reposition pips above/below board whenever dropdown visibility toggles
                         drawBoard();
                     });
                 }
