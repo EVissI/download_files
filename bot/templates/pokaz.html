@@ -67,10 +67,6 @@
             flex: 1;
         }
 
-        .board-wrapper.no-margin {
-            margin-top: 0 !important;
-        }
-
         .game-type-label {
             color: white;
             font-size: 24px;
@@ -2477,6 +2473,21 @@
                     if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
                 });
             }
+
+                // Убираем margin-top у .board-wrapper при включении чекбокса hidePointDropdownsCheckbox
+                const hidePointDropdownsCheckbox = document.getElementById('hidePointDropdownsCheckbox');
+                const boardWrapper = document.querySelector('.board-wrapper');
+                if (hidePointDropdownsCheckbox && boardWrapper) {
+                    function updateBoardWrapperMargin() {
+                        if (hidePointDropdownsCheckbox.checked) {
+                            boardWrapper.style.marginTop = '0';
+                        } else {
+                            boardWrapper.style.marginTop = '';
+                        }
+                    }
+                    hidePointDropdownsCheckbox.addEventListener('change', updateBoardWrapperMargin);
+                    updateBoardWrapperMargin();
+                }
         });
     </script>
 </head>
