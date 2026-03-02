@@ -99,9 +99,13 @@ def _get_pokaz_translations(lang: str) -> dict:
     return {
         "title": t("pokaz-page-title", "Position Editor"),
         "hide_pips": t("pokaz-page-hide-pips", "Hide pips"),
-        "hide_point_dropdowns": t("pokaz-page-hide-point-dropdowns", "Hide point dropdowns"),
+        "hide_point_dropdowns": t(
+            "pokaz-page-hide-point-dropdowns", "Hide point dropdowns"
+        ),
         "lower_player": t("pokaz-page-lower-player", "Lower player:"),
-        "toggle_lower_player": t("pokaz-page-toggle-lower-player", "Toggle lower player"),
+        "toggle_lower_player": t(
+            "pokaz-page-toggle-lower-player", "Toggle lower player"
+        ),
         "place_checkers": t("pokaz-page-place-checkers", "Place checkers"),
         "delete_checkers": t("pokaz-page-delete-checkers", "Remove checkers"),
         "moneygame": t("pokaz-page-moneygame", "Moneygame"),
@@ -110,7 +114,9 @@ def _get_pokaz_translations(lang: str) -> dict:
         "white_checkers": t("pokaz-page-white-checkers", "White checkers"),
         "black_checkers": t("pokaz-page-black-checkers", "Black checkers"),
         "on_bar": t("pokaz-page-on-bar", "On bar"),
-        "jacobi_beaver_max": t("pokaz-page-jacobi-beaver-max", "Jacoby Beaver Max cube"),
+        "jacobi_beaver_max": t(
+            "pokaz-page-jacobi-beaver-max", "Jacoby Beaver Max cube"
+        ),
         "yes": t("pokaz-page-yes", "Yes"),
         "no": t("pokaz-page-no", "No"),
         "game_type": t("pokaz-page-game-type", "Game type"),
@@ -133,18 +139,28 @@ def _get_pokaz_translations(lang: str) -> dict:
         "expand_table": t("pokaz-page-expand-table", "Expand table"),
         "toggle_table": t("pokaz-page-toggle-table", "Collapse/expand table"),
         "take_screenshot": t("pokaz-page-take-screenshot", "Take screenshot"),
-        "save_screenshot": t("pokaz-page-save-screenshot", "Save screenshot to clipboard"),
+        "save_screenshot": t(
+            "pokaz-page-save-screenshot", "Save screenshot to clipboard"
+        ),
         "upload_screenshots": t("pokaz-page-upload-screenshots", "Upload screenshots"),
         "clear": t("pokaz-page-clear", "Clear"),
-        "clear_confirm_msg": t("pokaz-page-clear-confirm-msg", "Clear board and start over?"),
+        "clear_confirm_msg": t(
+            "pokaz-page-clear-confirm-msg", "Clear board and start over?"
+        ),
         "init": t("pokaz-page-init", "Set up"),
-        "init_confirm_msg": t("pokaz-page-init-confirm-msg", "Set up initial position?"),
-        "admin_comment_placeholder": t("pokaz-page-admin-comment-placeholder", "Enter message text..."),
+        "init_confirm_msg": t(
+            "pokaz-page-init-confirm-msg", "Set up initial position?"
+        ),
+        "admin_comment_placeholder": t(
+            "pokaz-page-admin-comment-placeholder", "Enter message text..."
+        ),
         "move": t("pokaz-page-move", "Move"),
         "equity": t("pokaz-page-equity", "Equity"),
         "restore_position": t("pokaz-page-restore-position", "Restore saved position"),
         "next_cube": t("pokaz-page-next-cube", "Next cube"),
-        "match_to_tpl": t("pokaz-page-match-to", "Match to __LENGTH__. Score __MAX__-__MIN__"),
+        "match_to_tpl": t(
+            "pokaz-page-match-to", "Match to __LENGTH__. Score __MAX__-__MIN__"
+        ),
         "cancel": t("keyboard-reply-cancel", "Cancel"),
         "confirm": t("pokaz-page-confirm", "Confirmation"),
         "table_header_move": t("pokaz-page-table-header-move", "Move"),
@@ -155,16 +171,24 @@ def _get_pokaz_translations(lang: str) -> dict:
         "turn_white": t("pokaz-page-turn-white", "White to move"),
         "turn_black": t("pokaz-page-turn-black", "Black to move"),
         "loading_hints": t("pokaz-page-loading-hints", "Loading hints..."),
-        "error_insufficient_balance": t("pokaz-page-error-insufficient-balance", "Insufficient balance for hints"),
-        "error_no_chat_id": t("pokaz-page-error-no-chat-id", "Missing chat_id. Open via Telegram."),
+        "error_insufficient_balance": t(
+            "pokaz-page-error-insufficient-balance", "Insufficient balance for hints"
+        ),
+        "error_no_chat_id": t(
+            "pokaz-page-error-no-chat-id", "Missing chat_id. Open via Telegram."
+        ),
         "cube_no_double": t("pokaz-page-cube-no-double", "no double"),
         "cube_double": t("pokaz-page-cube-double", "double"),
         "cube_take": t("pokaz-page-cube-take", "take"),
         "cube_pass": t("pokaz-page-cube-pass", "pass"),
         "comment_btn": t("pokaz-page-comment-btn", "Comment"),
-        "comment_modal_title": t("pokaz-page-comment-modal-title", "Ask a question about the position"),
+        "comment_modal_title": t(
+            "pokaz-page-comment-modal-title", "Ask a question about the position"
+        ),
         "comment_send": t("pokaz-page-comment-send", "Send"),
-        "comment_empty_alert": t("pokaz-page-comment-empty-alert", "Please enter a description of the issue"),
+        "comment_empty_alert": t(
+            "pokaz-page-comment-empty-alert", "Please enter a description of the issue"
+        ),
     }
 
 
@@ -200,45 +224,54 @@ async def get_pokaz_hints(xgid: str, chat_id: Optional[int] = None):
     Проверяет баланс пользователя и списывает при успешной обработке.
     """
     try:
-        logger.info(f"Получен запрос /pokaz/hints с параметрами: xgid={xgid}, chat_id={chat_id}")
-        
+        logger.info(
+            f"Получен запрос /pokaz/hints с параметрами: xgid={xgid}, chat_id={chat_id}"
+        )
+
         # Проверяем наличие chat_id
         if chat_id is None:
             logger.warning("Запрос без chat_id")
             raise HTTPException(status_code=400, detail="Параметр chat_id обязателен")
-        
+
         # Создаем сессию БД
         async with async_session_maker() as session:
             user_dao = UserDAO(session)
-            
+
             # Получаем баланс пользователя для сервиса POKAZ
-            balance = await user_dao.get_total_analiz_balance(chat_id, ServiceType.POKAZ)
-            
+            balance = await user_dao.get_total_analiz_balance(
+                chat_id, ServiceType.POKAZ
+            )
+
             # Проверяем баланс (None означает безлимитный)
             if balance is not None and balance < 1:
-                logger.warning(f"Недостаточно баланса для пользователя {chat_id}. Баланс: {balance}")
+                logger.warning(
+                    f"Недостаточно баланса для пользователя {chat_id}. Баланс: {balance}"
+                )
                 raise HTTPException(status_code=402, detail="Недостаточно баланса")
-            
+
             # Получаем подсказки
             hints = get_hints_for_xgid(xgid)
             logger.info(f"Hints для пользователя {chat_id}: {hints}")
-            
+
             # Списываем баланс только если массив hints не пустой
             if hints and len(hints) > 0:
                 success = await user_dao.decrease_analiz_balance(
-                    user_id=chat_id, 
-                    service_type=ServiceType.POKAZ.name
+                    user_id=chat_id, service_type=ServiceType.POKAZ.name
                 )
                 if success:
                     await session.commit()
                     logger.info(f"Баланс успешно списан для пользователя {chat_id}")
                 else:
-                    logger.warning(f"Не удалось списать баланс для пользователя {chat_id}")
+                    logger.warning(
+                        f"Не удалось списать баланс для пользователя {chat_id}"
+                    )
             else:
-                logger.info(f"Hints пустой, баланс не списан для пользователя {chat_id}")
-            
+                logger.info(
+                    f"Hints пустой, баланс не списан для пользователя {chat_id}"
+                )
+
             return {"hints": hints}
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -372,12 +405,15 @@ async def send_to_admin(request: Request):
                         reply_markup=get_activate_promo_keyboard(i18n),
                     )
                 raise HTTPException(
-                    status_code=402, detail="Недостаточно баланса для отправки комментария"
+                    status_code=402,
+                    detail="Недостаточно баланса для отправки комментария",
                 )
 
             # Читаем файл и отправляем в саппорт
             photo_bytes = await photo.read()
-            photo_file = BufferedInputFile(photo_bytes, filename="admin_comment_screenshot.png")
+            photo_file = BufferedInputFile(
+                photo_bytes, filename="admin_comment_screenshot.png"
+            )
             await bot.send_photo(
                 chat_id=SUPPORT_TG_ID,
                 photo=photo_file,
