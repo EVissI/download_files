@@ -2502,20 +2502,20 @@
                 });
             }
 
-                // Убираем margin-top у .board-wrapper при включении чекбокса hidePointDropdownsCheckbox
-                const hidePointDropdownsCheckbox = document.getElementById('hidePointDropdownsCheckbox');
-                const boardWrapper = document.querySelector('.board-wrapper');
-                if (hidePointDropdownsCheckbox && boardWrapper) {
-                    function updateBoardWrapperMargin() {
-                        if (hidePointDropdownsCheckbox.checked) {
-                            boardWrapper.style.marginTop = '0';
-                        } else {
-                            boardWrapper.style.marginTop = '';
-                        }
+            // Убираем margin-top у .board-wrapper при включении чекбокса hidePointDropdownsCheckbox
+            const hidePointDropdownsCheckbox = document.getElementById('hidePointDropdownsCheckbox');
+            const boardWrapper = document.querySelector('.board-wrapper');
+            if (hidePointDropdownsCheckbox && boardWrapper) {
+                function updateBoardWrapperMargin() {
+                    if (hidePointDropdownsCheckbox.checked) {
+                        boardWrapper.style.marginTop = '0';
+                    } else {
+                        boardWrapper.style.marginTop = '';
                     }
-                    hidePointDropdownsCheckbox.addEventListener('change', updateBoardWrapperMargin);
-                    updateBoardWrapperMargin();
                 }
+                hidePointDropdownsCheckbox.addEventListener('change', updateBoardWrapperMargin);
+                updateBoardWrapperMargin();
+            }
         });
     </script>
 </head>
@@ -3936,9 +3936,13 @@
             ctx.textBaseline = 'middle';
 
             if (player === currentPlayer) {
+                const invertCheckbox = document.getElementById('invertNumberingCheckbox');
+                const userInvert = invertCheckbox ? invertCheckbox.checked : false;
                 const turnColor = document.getElementById('turn-select')?.value || 'white';
-                // Инверсия нумерации теперь зависит только от цвета текущего хода
-                const invertNumbers = (turnColor === 'black');
+                const autoInvert = (turnColor === 'black');
+                // Итоговая инверсия: автоматически меняется при смене хода,
+                // а чекбокс даёт пользователю возможность "перевернуть" базовую ориентацию
+                const invertNumbers = (autoInvert !== userInvert);
 
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
