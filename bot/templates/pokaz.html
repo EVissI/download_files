@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="{{ lang }}">
 
 <head>
@@ -5300,10 +5300,6 @@
         }
 
         document.getElementById('turn-select').addEventListener('change', () => {
-            const invertNumberingCheckbox = document.getElementById('invertNumberingCheckbox');
-            if (invertNumberingCheckbox) {
-                invertNumberingCheckbox.checked = !invertNumberingCheckbox.checked;
-            }
             drawBoard();
             updateTurnLabel();
         });
