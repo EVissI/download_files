@@ -4131,14 +4131,13 @@
                         if (upperPlayerColor === 'black') {
                             blackDiv.innerText = `${blackPips}`;
                             redDiv.innerText = `${whitePips}`;
-                            blackDiv.className = 'pips-above-board';
-                            redDiv.className = 'pips-below-board';
                         } else {
                             blackDiv.innerText = `${whitePips}`;
                             redDiv.innerText = `${blackPips}`;
-                            blackDiv.className = 'pips-above-board-inverted';
-                            redDiv.className = 'pips-below-board-inverted';
                         }
+                        // choose classes (background colors follow value assignment)
+                        blackDiv.className = 'pips-above-board';
+                        redDiv.className = 'pips-below-board';
                         blackDiv.style.display = 'block';
                         redDiv.style.display = 'block';
                     }
