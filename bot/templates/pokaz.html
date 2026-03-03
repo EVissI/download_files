@@ -3936,7 +3936,13 @@
             ctx.textBaseline = 'middle';
 
             if (player === currentPlayer) {
-                const invertNumbers = document.getElementById('invertNumberingCheckbox')?.checked || false;
+                const invertCheckbox = document.getElementById('invertNumberingCheckbox');
+                const userInvert = invertCheckbox ? invertCheckbox.checked : false;
+                const turnColor = document.getElementById('turn-select')?.value || 'white';
+                const autoInvert = (turnColor === 'black');
+                // Итоговая инверсия: автоматически меняется при смене хода,
+                // а чекбокс даёт пользователю возможность "перевернуть" базовую ориентацию
+                const invertNumbers = (autoInvert !== userInvert);
 
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
@@ -5294,6 +5300,10 @@
         }
 
         document.getElementById('turn-select').addEventListener('change', () => {
+            const invertNumberingCheckbox = document.getElementById('invertNumberingCheckbox');
+            if (invertNumberingCheckbox) {
+                invertNumberingCheckbox.checked = !invertNumberingCheckbox.checked;
+            }
             drawBoard();
             updateTurnLabel();
         });
