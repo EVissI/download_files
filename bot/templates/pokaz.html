@@ -2502,15 +2502,18 @@
                 });
             }
 
-            // Убираем margin-top у .board-wrapper при включении чекбокса hidePointDropdownsCheckbox
+            // Убираем margin-top у .board-wrapper и .selectors-wrapper при включении чекбокса hidePointDropdownsCheckbox
             const hidePointDropdownsCheckbox = document.getElementById('hidePointDropdownsCheckbox');
             const boardWrapper = document.querySelector('.board-wrapper');
-            if (hidePointDropdownsCheckbox && boardWrapper) {
+            const selectorsWrapper = document.querySelector('.selectors-wrapper');
+            if (hidePointDropdownsCheckbox && boardWrapper && selectorsWrapper) {
                 function updateBoardWrapperMargin() {
                     if (hidePointDropdownsCheckbox.checked) {
                         boardWrapper.style.marginTop = '0';
+                        selectorsWrapper.style.marginTop = '0';
                     } else {
                         boardWrapper.style.marginTop = '';
+                        selectorsWrapper.style.marginTop = '';
                     }
                 }
                 hidePointDropdownsCheckbox.addEventListener('change', updateBoardWrapperMargin);
