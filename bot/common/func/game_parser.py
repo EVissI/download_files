@@ -354,9 +354,8 @@ def parse_game(
 
 def get_names(data: str) -> List[str]:
     # Поддержка разных форматов файлов:
-    # - "Game 1" без отступа (старый формат)
-    # - " Game 1" или с другими пробелами перед/между словами (новый формат)
-    split_file = re.split(r"\n\n\s*Game\s+\d+\n", data)
+    # Разбиваем по строкам вида "Game 1", " Game 1" и т.п.
+    split_file = re.split(r"(?m)^\s*Game\s+\d+\s*$", data)
     games_raw = split_file[1:]
     lines = games_raw[0].strip().split("\n")
     header_data = extract_names_and_scores(lines)
@@ -364,8 +363,9 @@ def get_names(data: str) -> List[str]:
 
 
 async def parse_file(data: str, dir_name: str, is_inverse: bool = False) -> int:
-    # Разбиваем файл на отдельные игры, допускаем пробелы перед "Game" и перед номером
-    split_file = re.split(r"\n\n\s*Game\s+\d+\n", data)
+    # Разбиваем файл на отдельные игры по строкам заголовков
+    # Поддерживаем варианты "Game 1", " Game 1" и т.п.
+    split_file = re.split(r"(?m)^\s*Game\s+\d+\s*$", data)
     points_match = extract_point_match(split_file[0])
     game_type = extract_game_type(split_file[0])
     games_raw = split_file[1:]
