@@ -4370,10 +4370,28 @@
                     };
                     // initial hide if needed
                     applyDropdowns(hidePointDropdownsCheckbox.checked);
+                    // and initial board-wrapper margin (no top margin when dropdowns are hidden)
+                    const boardWrapper = document.querySelector('.board-wrapper');
+                    if (boardWrapper) {
+                        if (hidePointDropdownsCheckbox.checked) {
+                            boardWrapper.style.marginTop = '0';
+                        } else {
+                            boardWrapper.style.marginTop = '';
+                        }
+                    }
                     hidePointDropdownsCheckbox.addEventListener('change', (e) => {
                         const checked = e.target.checked;
                         localStorage.setItem('hidePointDropdownsCheckbox', checked);
                         applyDropdowns(checked);
+                        // keep board-wrapper margin in sync on user toggle as well
+                        const bw = document.querySelector('.board-wrapper');
+                        if (bw) {
+                            if (checked) {
+                                bw.style.marginTop = '0';
+                            } else {
+                                bw.style.marginTop = '';
+                            }
+                        }
                         // reposition pips above/below board whenever dropdown visibility toggles
                         drawBoard();
                     });
