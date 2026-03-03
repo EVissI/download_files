@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="{{ lang }}">
 
 <head>
@@ -3936,13 +3936,9 @@
             ctx.textBaseline = 'middle';
 
             if (player === currentPlayer) {
-                const invertCheckbox = document.getElementById('invertNumberingCheckbox');
-                const userInvert = invertCheckbox ? invertCheckbox.checked : false;
                 const turnColor = document.getElementById('turn-select')?.value || 'white';
-                const autoInvert = (turnColor === 'black');
-                // Итоговая инверсия: автоматически меняется при смене хода,
-                // а чекбокс даёт пользователю возможность "перевернуть" базовую ориентацию
-                const invertNumbers = (autoInvert !== userInvert);
+                // Инверсия нумерации теперь зависит только от цвета текущего хода
+                const invertNumbers = (turnColor === 'black');
 
                 for (let point = 1; point <= 24; point++) {
                     const x = getX(point);
