@@ -2421,6 +2421,69 @@
         .msg-modal-ok-btn:hover {
             background-color: #0056b3;
         }
+
+        /* ---------- Адаптивная верстка ---------- */
+        @media (min-width: 768px) {
+            body {
+                align-items: center;
+            }
+
+            .container {
+                max-width: 960px;
+                margin: 0 auto;
+                padding: 0 1rem 1.5rem;
+                box-sizing: border-box;
+            }
+
+            .mode-toggle-container,
+            .selectors-wrapper,
+            .controls-row,
+            .board-open-controls,
+            .hints-table,
+            .screenshot-controls,
+            .admin-comment-container {
+                max-width: 960px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .selectors-wrapper {
+                justify-content: space-between;
+            }
+
+            .board-wrapper {
+                margin-top: 2rem;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 1140px;
+            }
+
+            .selectors-wrapper,
+            .controls-row {
+                display: flex;
+                justify-content: space-between;
+                gap: 1.5rem;
+            }
+
+            .selectors-container {
+                flex: 1.5;
+            }
+
+            .jb-wrap,
+            .match-panel,
+            .game-type-right {
+                flex: 1;
+            }
+
+            .hints-table,
+            .screenshot-controls,
+            .admin-comment-container {
+                max-width: 1140px;
+            }
+        }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
