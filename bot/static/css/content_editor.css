@@ -538,6 +538,109 @@
     transform: translateX(-50%) scale(0.9);
 }
 
+/* Таблицы подсказок */
+.table-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.table-toggle {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.toggle-btn:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.toggle-btn.active {
+    background: white;
+    color: #007bff;
+    border-bottom-color: #007bff;
+    font-weight: 600;
+}
+
+.table-content {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+}
+
+.table-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.table-panel.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.hints-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    background: white;
+}
+
+.hints-table th {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+}
+
+.hints-table td {
+    border: 1px solid #dee2e6;
+    padding: 6px 8px;
+    text-align: left;
+    color: #212529;
+}
+
+.hints-table .hint-best {
+    background: #d4edda;
+    color: #155724;
+}
+
+.hints-table .hint-good {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.hints-table .hint-poor {
+    background: #f8d7da;
+    color: #721c24;
+}
+
 /* Скроллбары */
 ::-webkit-scrollbar {
     width: 8px;
