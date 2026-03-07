@@ -89,70 +89,56 @@ class ContentEditor {
     }
 
     loadTools() {
-        // Определяем доступные инструменты (элементы контента со страницы)
+        // Определяем доступные инструменты согласно требованиям
         const tools = [
             {
-                id: 'match-info',
-                name: 'Информация о матче',
-                type: 'info',
-                description: 'Данные о текущем матче/игре',
-                available: true
-            },
-            {
-                id: 'players-info',
-                name: 'Информация об игроках',
-                type: 'info',
-                description: 'Имена и статистика игроков',
-                available: true
-            },
-            {
                 id: 'boardCanvas',
-                name: 'Игровая доска',
+                name: 'Доска с параметрами',
                 type: 'canvas',
-                description: 'Визуализация игрового поля',
+                description: 'Игровая доска с параметрами (манигейм/матч)',
                 available: true
             },
             {
-                id: 'move-info',
-                name: 'Информация о ходе',
-                type: 'info',
-                description: 'Детали текущего хода',
-                available: true
-            },
-            {
-                id: 'red-pips',
-                name: 'Пипсы красных',
-                type: 'counter',
-                description: 'Количество пипсов красного игрока',
-                available: true
-            },
-            {
-                id: 'black-pips',
-                name: 'Пипсы черных',
-                type: 'counter',
-                description: 'Количество пипсов черного игрока',
-                available: true
-            },
-            {
-                id: 'controls',
-                name: 'Панель управления',
-                type: 'controls',
-                description: 'Кнопки управления игрой',
-                available: true
+                id: 'question-text',
+                name: 'Текст вопроса',
+                type: 'text',
+                description: 'Текст вопроса для анализа',
+                available: false // Будем создавать программно
             },
             {
                 id: 'moveHintsTable',
-                name: 'Таблица подсказок ходов',
+                name: 'Таблица',
                 type: 'table',
-                description: 'Подсказки по возможным ходам',
+                description: 'Таблица подсказок или данных',
                 available: true
             },
             {
-                id: 'cubeHintsTable',
-                name: 'Таблица подсказок куба',
-                type: 'table',
-                description: 'Подсказки по удвоению',
+                id: 'answer-text',
+                name: 'Текст ответа',
+                type: 'text',
+                description: 'Текст ответа или решения',
+                available: false // Будем создавать программно
+            },
+            {
+                id: 'board-illustration',
+                name: 'Иллюстрация',
+                type: 'image',
+                description: 'Изображение доски как иллюстрация',
                 available: true
+            },
+            {
+                id: 'audio-file',
+                name: 'Аудио-файл',
+                type: 'audio',
+                description: 'Аудиофайл для воспроизведения',
+                available: false // Будем создавать программно
+            },
+            {
+                id: 'support-link',
+                name: 'Ссылка',
+                type: 'link',
+                description: 'Ссылка на дополнительные материалы',
+                available: false // Будем создавать программно
             }
         ];
 
@@ -233,21 +219,132 @@ class ContentEditor {
     }
 
     populateElementContent(element, toolId) {
-        // Получаем оригинальный элемент со страницы (если есть)
-        const originalElement = document.getElementById(toolId);
+        // Очищаем элемент
+        element.innerHTML = '';
         
-        if (originalElement) {
-            // Клонируем контент
-            const clonedContent = originalElement.cloneNode(true);
-            element.appendChild(clonedContent);
-        } else {
-            // Если оригинала нет, создаем заглушку
-            element.innerHTML = `
-                <div style="padding: 10px; text-align: center; color: #666;">
-                    <strong>${toolId}</strong><br>
-                    <small>Элемент не найден на странице</small>
-                </div>
-            `;
+        switch(toolId) {
+            case 'boardCanvas':
+                // Доска с параметрами
+                const originalCanvas = document.getElementById('boardCanvas');
+                if (originalCanvas) {
+                    const clonedCanvas = originalCanvas.cloneNode(true);
+                    clonedCanvas.style.width = '100%';
+                    clonedCanvas.style.height = '100%';
+                    element.appendChild(clonedCanvas);
+                } else {
+                    element.innerHTML = `
+                        <div style="padding: 20px; text-align: center; color: #666;">
+                            <strong>Доска не найдена</strong><br>
+                            <small>Игровая доска не доступна на странице</small>
+                        </div>
+                    `;
+                }
+                break;
+                
+            case 'question-text':
+                // Текст вопроса
+                element.innerHTML = `
+                    <div style="padding: 15px; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                        <textarea placeholder="Введите текст вопроса..." 
+                                  style="width: 100%; height: 80%; border: 1px solid #ddd; border-radius: 4px; padding: 10px; resize: none; font-family: inherit;"
+                                  onchange="this.parentElement.querySelector('.text-preview').innerHTML = this.value.replace(/\\n/g, '<br>')"></textarea>
+                        <div class="text-preview" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px; min-height: 40px;"></div>
+                    </div>
+                `;
+                break;
+                
+            case 'moveHintsTable':
+                // Таблица
+                const originalTable = document.getElementById('moveHintsTable');
+                if (originalTable) {
+                    const clonedTable = originalTable.cloneNode(true);
+                    element.appendChild(clonedTable);
+                } else {
+                    // Создаем пример таблицы
+                    element.innerHTML = `
+                        <div style="padding: 10px; height: 100%; overflow: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <thead>
+                                    <tr style="background: #f0f0f0;">
+                                        <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
+                                        <th style="border: 1px solid #ddd; padding: 4px;">Вероятность</th>
+                                        <th style="border: 1px solid #ddd; padding: 4px;">Результат</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">8/6</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">0.654</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">+0.123</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">13/9</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">0.598</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">-0.045</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+                break;
+                
+            case 'board-illustration':
+                // Иллюстрация (изображение доски)
+                const canvasForImage = document.getElementById('boardCanvas');
+                if (canvasForImage) {
+                    // Создаем изображение из canvas
+                    const img = document.createElement('img');
+                    img.src = canvasForImage.toDataURL();
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'contain';
+                    element.appendChild(img);
+                } else {
+                    element.innerHTML = `
+                        <div style="padding: 20px; text-align: center; color: #666;">
+                            <strong>Изображение недоступно</strong><br>
+                            <small>Доска не найдена для создания иллюстрации</small>
+                        </div>
+                    `;
+                }
+                break;
+                
+            case 'audio-file':
+                // Аудио-файл
+                element.innerHTML = `
+                    <div style="padding: 20px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🎵</div>
+                        <input type="file" accept="audio/*" style="margin-bottom: 10px;">
+                        <audio controls style="width: 100%;">
+                            <source src="" type="audio/mpeg">
+                            Ваш браузер не поддерживает аудио.
+                        </audio>
+                    </div>
+                `;
+                break;
+                
+            case 'support-link':
+                // Ссылка
+                element.innerHTML = `
+                    <div style="padding: 20px; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">URL ссылки:</label>
+                        <input type="url" placeholder="https://example.com" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;"
+                               oninput="this.parentElement.querySelector('.link-preview').href = this.value; this.parentElement.querySelector('.link-preview').textContent = this.value || 'Ссылка'">
+                        <a href="#" class="link-preview" target="_blank" 
+                           style="display: inline-block; padding: 8px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 4px;">Ссылка</a>
+                    </div>
+                `;
+                break;
+                
+            default:
+                element.innerHTML = `
+                    <div style="padding: 10px; text-align: center; color: #666;">
+                        <strong>${toolId}</strong><br>
+                        <small>Неизвестный тип элемента</small>
+                    </div>
+                `;
         }
     }
 
