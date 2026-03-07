@@ -138,21 +138,18 @@ class ContentEditor {
         // Устанавливаем стандартный тип таблицы - "ход"
         element.dataset.tableType = 'hints';
         
-        // Create container for table with proper styling
-        const tableContainer = document.createElement('div');
-        tableContainer.style.cssText = `
-            padding: 10px;
-            height: 100%;
-            overflow: auto;
-            box-sizing: border-box;
-        `;
+        // Remove fixed sizing - make it dynamic
+        element.style.width = 'auto';
+        element.style.height = 'auto';
+        element.style.minWidth = 'auto';
+        element.style.minHeight = 'auto';
         
         if (this.cardData) {
             // Создаем таблицу на основе данных карточки
-            this.updateTableContent(tableContainer, 'hints');
+            this.updateTableContent(element, 'hints');
         } else {
             // Создаем пример таблицы если нет данных
-            tableContainer.innerHTML = `
+            element.innerHTML = `
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed;">
                     <thead>
                         <tr style="background: #f0f0f0;">
@@ -177,21 +174,16 @@ class ContentEditor {
             `;
         }
         
-        // Clear element and add container
-        element.innerHTML = '';
-        element.appendChild(tableContainer);
         element.classList.add('table-element');
     }
 
-    updateTableContent(container, tableType) {
-        // Get the parent element to set the table type
-        const element = container.parentElement || container;
+    updateTableContent(element, tableType) {
         element.dataset.tableType = tableType;
-        container.innerHTML = '';
+        element.innerHTML = '';
         
         if (!this.cardData) {
             // Если нет данных, показываем заглушку
-            container.innerHTML = `
+            element.innerHTML = `
                 <div style="padding: 20px; text-align: center; color: #666;">
                     <strong>Нет данных для таблицы</strong>
                 </div>
@@ -201,13 +193,13 @@ class ContentEditor {
         
         if (tableType === 'hints' && this.cardData.hints) {
             const table = this.createHintsTable(this.cardData.hints);
-            container.appendChild(table);
+            element.appendChild(table);
         } else if (tableType === 'cube' && this.cardData.cube_hints) {
             const table = this.createCubeTable(this.cardData.cube_hints);
-            container.appendChild(table);
+            element.appendChild(table);
         } else {
             // Если для выбранного типа нет данных
-            container.innerHTML = `
+            element.innerHTML = `
                 <div style="padding: 20px; text-align: center; color: #666;">
                     <strong>Нет данных для типа таблицы: ${tableType === 'hints' ? 'Ход' : 'Куб'}</strong>
                 </div>
@@ -582,9 +574,12 @@ class ContentEditor {
             .filter(el => !el.id.includes('boardLabel')) // Исключаем boardLabel
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
         
-        // Calculate center X position for full-width tables
+        // Calculate center X position for auto-sized tables
         let centerX;
-        if (elementWidth >= maxCanvasWidth - 100) {
+        if (elementWidth === 'auto') {
+            // For auto-sized tables, center them in the canvas
+            centerX = 10; // Align to left with small margin
+        } else if (elementWidth >= maxCanvasWidth - 100) {
             // For full-width tables, align to left edge with small margin
             centerX = 10;
         } else {
@@ -600,10 +595,10 @@ class ContentEditor {
         // Find the next available vertical position
         for (const existingEl of existingElements) {
             const existingTop = parseInt(existingEl.style.top);
-            const existingHeight = parseInt(existingEl.style.height);
+            const existingHeight = parseInt(existingEl.style.height) || 150; // Default height for auto elements
             
             // Check if the current element fits before this existing element
-            if (nextY + elementHeight <= existingTop) {
+            if (nextY + (elementHeight === 'auto' ? 200 : elementHeight) <= existingTop) {
                 break; // Found a gap
             }
             
@@ -612,10 +607,10 @@ class ContentEditor {
         }
         
         // Ensure the element doesn't go beyond canvas bounds
-        const maxY = Math.min(canvasRect.height, maxCanvasHeight) - elementHeight - 20;
+        const maxY = Math.min(canvasRect.height, maxCanvasHeight) - (elementHeight === 'auto' ? 200 : elementHeight) - 20;
         if (nextY > maxY) {
             // If we run out of space, start from the top
-            nextY = startY + (this.elements.length % 5) * elementHeight;
+            nextY = startY + (this.elements.length % 5) * (elementHeight === 'auto' ? 200 : elementHeight);
         }
         
         return {
@@ -639,9 +634,9 @@ class ContentEditor {
         // Adjust element size for mobile cards
         let defaultWidth, defaultHeight;
         if (toolId === 'moveHintsTable') {
-            // Table elements occupy full canvas width
-            defaultWidth = this.isMobile() ? maxCanvasWidth - 20 : maxCanvasWidth - 50;
-            defaultHeight = this.isMobile() ? Math.min(200, maxCanvasHeight - 40) : 250;
+            // Table elements have dynamic sizing
+            defaultWidth = 'auto';
+            defaultHeight = 'auto';
         } else {
             defaultWidth = this.isMobile() ? Math.min(120, maxCanvasWidth - 40) : 200;
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
@@ -652,8 +647,19 @@ class ContentEditor {
         
         element.style.left = position.x + 'px';
         element.style.top = position.y + 'px';
-        element.style.width = defaultWidth + 'px';
-        element.style.height = defaultHeight + 'px';
+        
+        // Set width and height - handle auto for tables
+        if (defaultWidth === 'auto') {
+            element.style.width = 'auto';
+        } else {
+            element.style.width = defaultWidth + 'px';
+        }
+        
+        if (defaultHeight === 'auto') {
+            element.style.height = 'auto';
+        } else {
+            element.style.height = defaultHeight + 'px';
+        }
         
         // Добавляем контент в элемент
         this.populateElementContent(element, toolId);
@@ -706,9 +712,6 @@ class ContentEditor {
                 
             case 'moveHintsTable':
                 // Таблица - создаем на основе сохраненных данных
-                element.style.width = '100%';
-                element.style.minWidth = '100%';
-                element.style.maxWidth = '100%';
                 this.createTableElement(element);
                 break;
                 
@@ -1028,11 +1031,7 @@ class ContentEditor {
                 this.selectedElement.style[property] = value;
                 break;
             case 'tableType':
-                // Find the table container within the selected element
-                const tableContainer = this.selectedElement.querySelector('div[style*="padding: 10px"]');
-                if (tableContainer) {
-                    this.updateTableContent(tableContainer, value);
-                }
+                this.updateTableContent(this.selectedElement, value);
                 break;
             case 'fontSize':
                 if (this.selectedElement.classList.contains('text-element')) {
