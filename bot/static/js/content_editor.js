@@ -406,74 +406,41 @@ class ContentEditor {
                 break;
                 
             case 'moveHintsTable':
-                // Таблица подсказок с переключателем
-                element.innerHTML = `
-                    <div class="table-container">
-                        <div class="table-toggle">
-                            <button class="toggle-btn active" data-type="move">Ходы</button>
-                            <button class="toggle-btn" data-type="cube">Кубы</button>
+                // Таблица
+                const originalTable = document.getElementById('moveHintsTable');
+                if (originalTable) {
+                    const clonedTable = originalTable.cloneNode(true);
+                    // Add cache-busting to table
+                    clonedTable.setAttribute('data-table-timestamp', timestamp);
+                    element.appendChild(clonedTable);
+                } else {
+                    // Создаем пример таблицы
+                    element.innerHTML = `
+                        <div style="padding: 10px; height: 100%; overflow: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <thead>
+                                    <tr style="background: #f0f0f0;">
+                                        <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
+                                        <th style="border: 1px solid #ddd; padding: 4px;">Вероятность</th>
+                                        <th style="border: 1px solid #ddd; padding: 4px;">Результат</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">8/6</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">0.654</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">+0.123</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">13/9</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">0.598</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">-0.045</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="table-content">
-                            <div id="move-table-${element.id}" class="table-panel active">
-                                <table class="hints-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Ход</th>
-                                            <th>%</th>
-                                            <th>%</th>
-                                            <th>Эквити</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr class="hint-best">
-                                            <td>8/6</td>
-                                            <td>0.654</td>
-                                            <td>0.321</td>
-                                            <td>+0.123</td>
-                                        </tr>
-                                        <tr class="hint-good">
-                                            <td>13/9</td>
-                                            <td>0.598</td>
-                                            <td>0.287</td>
-                                            <td>-0.045</td>
-                                        </tr>
-                                        <tr class="hint-poor">
-                                            <td>24/18</td>
-                                            <td>0.432</td>
-                                            <td>0.198</td>
-                                            <td>-0.156</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div id="cube-table-${element.id}" class="table-panel">
-                                <table class="hints-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Действие</th>
-                                            <th>Эквити</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr class="hint-best">
-                                            <td>Double</td>
-                                            <td>+0.234</td>
-                                        </tr>
-                                        <tr class="hint-good">
-                                            <td>No Double</td>
-                                            <td>-0.012</td>
-                                        </tr>
-                                        <tr class="hint-poor">
-                                            <td>Take</td>
-                                            <td>-0.456</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                this.setupTableToggle(element);
+                    `;
+                }
                 break;
                 
             case 'board-illustration':
@@ -547,31 +514,6 @@ class ContentEditor {
                     </div>
                 `;
         }
-    }
-
-    setupTableToggle(element) {
-        const toggleBtns = element.querySelectorAll('.toggle-btn');
-        const movePanel = element.getElementById(`move-table-${element.id}`);
-        const cubePanel = element.getElementById(`cube-table-${element.id}`);
-        
-        toggleBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const type = btn.dataset.type;
-                
-                // Убираем активный класс со всех кнопок и панелей
-                toggleBtns.forEach(b => b.classList.remove('active'));
-                movePanel.classList.remove('active');
-                cubePanel.classList.remove('active');
-                
-                // Добавляем активный класс на нажатую кнопку и соответствующую панель
-                btn.classList.add('active');
-                if (type === 'move') {
-                    movePanel.classList.add('active');
-                } else {
-                    cubePanel.classList.add('active');
-                }
-            });
-        });
     }
 
     setupTextEditing(element) {
