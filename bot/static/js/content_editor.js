@@ -399,9 +399,7 @@ class ContentEditor {
             case 'question-text':
                 // Текст вопроса в стиле Photoshop
                 element.innerHTML = `
-                    <div class="text-content" contenteditable="true" placeholder="Введите текст вопроса...">
-                        Текст вопроса
-                    </div>
+                    <div class="text-content" contenteditable="true" placeholder="Введите текст вопроса...">Текст вопроса</div>
                 `;
                 element.classList.add('text-element');
                 this.setupTextEditing(element);
@@ -488,9 +486,7 @@ class ContentEditor {
             case 'answer-text':
                 // Текст ответа в стиле Photoshop
                 element.innerHTML = `
-                    <div class="text-content" contenteditable="true" placeholder="Введите текст ответа...">
-                        Текст ответа
-                    </div>
+                    <div class="text-content" contenteditable="true" placeholder="Введите текст ответа...">Текст ответа</div>
                 `;
                 element.classList.add('text-element');
                 this.setupTextEditing(element);
