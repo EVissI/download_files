@@ -370,17 +370,12 @@
     outline: none;
     border: none;
     background: transparent;
-    overflow: visible;
-    white-space: nowrap;
-    min-height: 20px;
-    transition: all 0.2s ease;
-}
-
-.text-content.wrap-enabled {
+    overflow: auto;
     white-space: pre-wrap;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    overflow: auto;
+    min-height: 20px;
+    transition: all 0.2s ease;
 }
 
 .text-content:empty:before {

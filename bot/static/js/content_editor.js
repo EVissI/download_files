@@ -562,13 +562,25 @@ class ContentEditor {
             this.applySmartTextWrapping(element);
         });
 
-        // Обработка клавиш для выхода из режима редактирования
+        // Обработка клавиш для переноса строк
         textContent.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 textContent.blur();
-            } else if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                textContent.blur();
+            } else if (e.key === 'Enter') {
+                // Разрешаем перенос по Shift+Enter или всегда для текстовых элементов
+                if (e.shiftKey) {
+                    // Shift+Enter - разрешаем перенос
+                    return;
+                } else {
+                    // Обычный Enter - разрешаем перенос в текстовых элементах
+                    e.preventDefault();
+                    // Вставляем перенос строки
+                    document.execCommand('insertLineBreak');
+                    // Применяем перенос после вставки
+                    setTimeout(() => {
+                        this.applySmartTextWrapping(element);
+                    }, 0);
+                }
             }
         });
 
@@ -760,55 +772,29 @@ class ContentEditor {
 
         // Проверяем, является ли элемент текстовым
         if (!element.classList.contains('text-element')) return;
-
+        
         // Получаем текущие размеры элемента
-        const elementWidth = element.offsetWidth;
         const elementHeight = element.offsetHeight;
         
-        // Временно делаем текст видимым для измерений
-        const originalDisplay = textContent.style.display;
-        textContent.style.display = 'block';
-        textContent.style.whiteSpace = 'nowrap';
-        textContent.style.overflow = 'visible';
-        
-        // Измеряем ширину текста
-        const textWidth = textContent.scrollWidth;
-        const textHeight = textContent.scrollHeight;
-        
-        // Восстанавливаем исходные стили
-        textContent.style.display = originalDisplay;
-        
-        // Определяем, нужен ли перенос
-        const needsWrapping = textWidth > elementWidth - 16; // 16px для padding
-        
-        if (needsWrapping) {
-            // Включаем перенос текста через CSS класс
-            textContent.classList.add('wrap-enabled');
-            
-            // Проверяем, помещается ли текст по высоте
-            setTimeout(() => {
-                const newHeight = textContent.scrollHeight;
-                if (newHeight > elementHeight - 16) {
-                    // Автоматически увеличиваем высоту элемента
-                    const newElementHeight = Math.min(newHeight + 16, 400); // Максимальная высота 400px
-                    element.style.height = newElementHeight + 'px';
-                    
-                    // Обновляем значение в свойствах
-                    const heightInput = document.getElementById('propHeight');
-                    if (heightInput) {
-                        heightInput.value = newElementHeight;
-                        const heightDisplay = heightInput.parentElement.querySelector('.property-value');
-                        if (heightDisplay) {
-                            heightDisplay.textContent = newElementHeight + 'px';
-                        }
+        // Проверяем, помещается ли текст по высоте
+        setTimeout(() => {
+            const newHeight = textContent.scrollHeight;
+            if (newHeight > elementHeight - 16) {
+                // Автоматически увеличиваем высоту элемента
+                const newElementHeight = Math.min(newHeight + 16, 400); // Максимальная высота 400px
+                element.style.height = newElementHeight + 'px';
+                
+                // Обновляем значение в свойствах
+                const heightInput = document.getElementById('propHeight');
+                if (heightInput) {
+                    heightInput.value = newElementHeight;
+                    const heightDisplay = heightInput.parentElement.querySelector('.property-value');
+                    if (heightDisplay) {
+                        heightDisplay.textContent = newElementHeight + 'px';
                     }
                 }
-            }, 0);
-        } else {
-            // Текст помещается, отключаем перенос
-            textContent.classList.remove('wrap-enabled');
-            textContent.style.overflow = 'visible';
-        }
+            }
+        }, 0);
     }
 
     duplicateElement(elementId) {
