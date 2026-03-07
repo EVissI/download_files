@@ -142,17 +142,6 @@
     border-color: #667eea;
 }
 
-.tool-item.unavailable {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.tool-item.unavailable:hover {
-    background: #3a3a3a;
-    border-color: #505050;
-    transform: none;
-}
-
 /* Стили для чекбокс-поведения с эффектом "горит" */
 .tool-item.toggle-active {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

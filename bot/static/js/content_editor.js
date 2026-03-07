@@ -154,50 +154,43 @@ class ContentEditor {
                 id: 'boardCanvas',
                 name: 'Доска с параметрами',
                 type: 'canvas',
-                description: 'Игровая доска с параметрами (манигейм/матч)',
-                available: false
+                description: 'Игровая доска с параметрами (манигейм/матч)'
             },
             {
                 id: 'question-text',
                 name: 'Текст вопроса',
                 type: 'text',
-                description: 'Текст вопроса для анализа',
-                available: false // Будем создавать программно
+                description: 'Текст вопроса для анализа'
             },
             {
                 id: 'moveHintsTable',
                 name: 'Таблица',
                 type: 'table',
-                description: 'Таблица подсказок или данных',
-                available: true
+                description: 'Таблица подсказок или данных'
             },
             {
                 id: 'answer-text',
                 name: 'Текст ответа',
                 type: 'text',
-                description: 'Текст ответа или решения',
-                available: false // Будем создавать программно
+                description: 'Текст ответа или решения'
             },
             {
                 id: 'board-illustration',
                 name: 'Иллюстрация',
                 type: 'image',
-                description: 'Изображение доски как иллюстрация',
-                available: true
+                description: 'Изображение доски как иллюстрация'
             },
             {
                 id: 'audio-file',
                 name: 'Аудио-файл',
                 type: 'audio',
-                description: 'Аудиофайл для воспроизведения',
-                available: false // Будем создавать программно
+                description: 'Аудиофайл для воспроизведения'
             },
             {
                 id: 'support-link',
                 name: 'Ссылка',
                 type: 'link',
-                description: 'Ссылка на дополнительные материалы',
-                available: false // Будем создавать программно
+                description: 'Ссылка на дополнительные материалы'
             }
         ];
 
@@ -206,7 +199,7 @@ class ContentEditor {
 
     renderTools(tools) {
         this.toolsList.innerHTML = tools.map(tool => `
-            <div class="tool-item ${tool.available ? 'available' : 'unavailable'} ${tool.id === 'boardCanvas' ? 'toggle-button' : ''}" 
+            <div class="tool-item ${tool.id === 'boardCanvas' ? 'toggle-button' : ''}" 
                  data-tool-id="${tool.id}"
                  onclick="contentEditor.selectTool('${tool.id}')">
                 <div class="tool-item-header">
