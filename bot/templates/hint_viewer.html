@@ -914,10 +914,10 @@
             background-color: #0056b3;
         }
     </style>
-    <link rel="stylesheet" href="/static/css/content_editor.css">
+    <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <script src="/static/js/content_editor.js"></script>
+    <script src="/static/js/content_editor.js?t={{ cache_timestamp }}"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
@@ -3882,6 +3882,8 @@
         // Функция открытия редактора контента
         function openCardEditor() {
             if (typeof contentEditor !== 'undefined') {
+                // Force reload to get fresh content
+                contentEditor.forceReload();
                 contentEditor.openModal();
             } else {
                 console.error('ContentEditor не инициализирован');

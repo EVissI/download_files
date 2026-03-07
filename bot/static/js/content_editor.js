@@ -78,14 +78,51 @@ class ContentEditor {
     }
 
     openModal() {
+        // Force cache-busting by adding timestamp to modal
+        const timestamp = Date.now();
+        if (this.modal) {
+            this.modal.setAttribute('data-cache-timestamp', timestamp);
+        }
+        
         this.modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         this.loadTools(); // Обновляем инструменты при открытии
+        
+        // Force refresh of all dynamic content
+        this.forceRefreshContent();
     }
 
     closeModal() {
         this.modal.style.display = 'none';
         document.body.style.overflow = 'auto';
+    }
+
+    forceRefreshContent() {
+        // Force refresh all cached content
+        if (this.canvas) {
+            // Clear canvas and force reflow
+            const elements = this.canvas.querySelectorAll('.canvas-element');
+            elements.forEach(el => {
+                el.style.display = 'none';
+                el.offsetHeight; // Force reflow
+                el.style.display = '';
+            });
+        }
+        
+        // Refresh tools list
+        if (this.toolsList) {
+            this.toolsList.style.display = 'none';
+            this.toolsList.offsetHeight; // Force reflow
+            this.toolsList.style.display = '';
+        }
+        
+        // Refresh properties panel
+        if (this.propertiesContent) {
+            const currentContent = this.propertiesContent.innerHTML;
+            this.propertiesContent.innerHTML = '';
+            this.propertiesContent.offsetHeight; // Force reflow
+            this.propertiesContent.innerHTML = currentContent;
+        }
     }
 
     loadTools() {
@@ -219,17 +256,32 @@ class ContentEditor {
     }
 
     populateElementContent(element, toolId) {
-        // Очищаем элемент
+        // Очищаем элемент и убираем все кешированные данные
         element.innerHTML = '';
+        element.removeAttribute('data-cached');
+        
+        // Add cache-busting timestamp
+        const timestamp = Date.now();
+        element.setAttribute('data-content-timestamp', timestamp);
         
         switch(toolId) {
             case 'boardCanvas':
                 // Доска с параметрами
                 const originalCanvas = document.getElementById('boardCanvas');
                 if (originalCanvas) {
+                    // Force fresh copy by redrawing the canvas
                     const clonedCanvas = originalCanvas.cloneNode(true);
                     clonedCanvas.style.width = '100%';
                     clonedCanvas.style.height = '100%';
+                    
+                    // Copy the actual canvas content
+                    const ctx = clonedCanvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(originalCanvas, 0, 0);
+                    }
+                    
+                    // Add cache-busting
+                    clonedCanvas.setAttribute('data-canvas-timestamp', timestamp);
                     element.appendChild(clonedCanvas);
                 } else {
                     element.innerHTML = `
@@ -258,6 +310,8 @@ class ContentEditor {
                 const originalTable = document.getElementById('moveHintsTable');
                 if (originalTable) {
                     const clonedTable = originalTable.cloneNode(true);
+                    // Add cache-busting to table
+                    clonedTable.setAttribute('data-table-timestamp', timestamp);
                     element.appendChild(clonedTable);
                 } else {
                     // Создаем пример таблицы
@@ -293,12 +347,13 @@ class ContentEditor {
                 // Иллюстрация (изображение доски)
                 const canvasForImage = document.getElementById('boardCanvas');
                 if (canvasForImage) {
-                    // Создаем изображение из canvas
+                    // Создаем изображение из canvas с cache-busting
                     const img = document.createElement('img');
-                    img.src = canvasForImage.toDataURL();
+                    img.src = canvasForImage.toDataURL() + '?t=' + timestamp;
                     img.style.width = '100%';
                     img.style.height = '100%';
                     img.style.objectFit = 'contain';
+                    img.setAttribute('data-image-timestamp', timestamp);
                     element.appendChild(img);
                 } else {
                     element.innerHTML = `
@@ -735,6 +790,27 @@ class ContentEditor {
         });
         this.selectedElement = null;
         this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
+    }
+
+    // Method to force complete reload of the editor
+    forceReload() {
+        // Clear all elements
+        this.elements = [];
+        if (this.canvas) {
+            this.canvas.innerHTML = '';
+        }
+        
+        // Reset properties
+        this.selectedElement = null;
+        if (this.propertiesContent) {
+            this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
+        }
+        
+        // Reload tools
+        this.loadTools();
+        
+        // Force refresh
+        this.forceRefreshContent();
     }
 }
 
