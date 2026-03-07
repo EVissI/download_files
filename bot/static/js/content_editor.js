@@ -211,13 +211,9 @@ class ContentEditor {
                  onclick="contentEditor.selectTool('${tool.id}')">
                 <div class="tool-item-header">
                     <span class="tool-name">${tool.name}</span>
-                    <span class="tool-type">${tool.type}</span>
                     ${tool.id === 'boardCanvas' ? '<span class="toggle-indicator">⚡</span>' : ''}
                 </div>
                 <div class="tool-description">${tool.description}</div>
-                <div class="tool-status ${tool.available ? 'available' : 'unavailable'}">
-                    ${tool.available ? '✓ Доступно' : '✗ Недоступно'}
-                </div>
             </div>
         `).join('');
     }

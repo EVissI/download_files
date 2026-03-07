@@ -142,6 +142,17 @@
     border-color: #667eea;
 }
 
+.tool-item.unavailable {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tool-item.unavailable:hover {
+    background: #3a3a3a;
+    border-color: #505050;
+    transform: none;
+}
+
 /* Стили для чекбокс-поведения с эффектом "горит" */
 .tool-item.toggle-active {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -155,11 +166,6 @@
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
-.tool-item.toggle-active .tool-type {
-    background: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-}
-
 @keyframes glow {
     from {
         box-shadow: 0 0 20px rgba(102, 126, 234, 0.6), 0 0 40px rgba(102, 126, 234, 0.3);
@@ -171,9 +177,10 @@
 
 .tool-item-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    gap: 8px;
 }
 
 .toggle-indicator {
@@ -200,36 +207,16 @@
 
 .tool-name {
     font-weight: 600;
-    font-size: 13px;
+    font-size: 14px;
     color: #ffffff;
-}
-
-.tool-type {
-    font-size: 11px;
-    color: #a0a0a0;
-    background: #2a2a2a;
-    padding: 2px 6px;
-    border-radius: 10px;
+    text-align: center;
 }
 
 .tool-description {
     font-size: 12px;
     color: #b0b0b0;
-    line-height: 1.3;
-}
-
-.tool-status {
-    font-size: 10px;
-    font-weight: 500;
-    margin-top: 4px;
-}
-
-.tool-status.available {
-    color: #4ade80;
-}
-
-.tool-status.unavailable {
-    color: #f87171;
+    line-height: 1.4;
+    text-align: center;
 }
 
 /* Рабочая область */
