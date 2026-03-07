@@ -914,8 +914,10 @@
             background-color: #0056b3;
         }
     </style>
+    <link rel="stylesheet" href="/static/css/card_editor.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="/static/js/card_editor.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
@@ -3868,12 +3870,8 @@
                 }
             } catch (error) {
                 console.error('Error checking admin status:', error);
+                showMessageModal('Ошибка при проверке статуса администратора: ' + error.message, 'error');
             }
-        }
-
-        function openCardEditor() {
-            // Placeholder function for now
-            showMessageModal('Редактор карточек в разработке', 'info');
         }
 
         // Check admin status when page loads

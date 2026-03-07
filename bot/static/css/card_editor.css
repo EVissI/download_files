@@ -1,0 +1,405 @@
+/**
+ * Card Editor Styles
+ * Стили для редактора карточек
+ */
+
+/* Модальное окно редактора */
+.card-editor-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-editor-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+.card-editor-container {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    max-width: 900px;
+    width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.card-editor-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.card-editor-body {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.card-editor-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Селектор типов контента */
+.content-type-selector h3 {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.content-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.content-type-item {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.content-type-item:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.1);
+}
+
+.content-type-item.selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+}
+
+.content-type-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    line-height: 1;
+}
+
+.content-type-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+.content-type-desc {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+/* Редактор контента */
+.content-editor {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 24px;
+}
+
+.editor-form h3 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 14px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: white;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-control::placeholder {
+    color: #9ca3af;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+select.form-control {
+    cursor: pointer;
+}
+
+input[type="file"].form-control {
+    padding: 8px;
+}
+
+/* Кнопки */
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
+}
+
+/* Таблица */
+.table-editor {
+    margin-top: 16px;
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table th,
+.table td {
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+.table th {
+    background: #f3f4f6;
+    font-weight: 600;
+    color: #374151;
+}
+
+.table th .form-control,
+.table td .form-control {
+    border: none;
+    background: transparent;
+    padding: 4px 8px;
+    font-size: 13px;
+}
+
+.table th .form-control:focus,
+.table td .form-control:focus {
+    background: white;
+    border: 1px solid #667eea;
+    border-radius: 4px;
+}
+
+/* Предпросмотр изображений и аудио */
+#imagePreview,
+#audioPreview {
+    margin-top: 16px;
+    padding: 16px;
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    text-align: center;
+    background: #f9fafb;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#imagePreview img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#audioPreview audio {
+    width: 100%;
+    max-width: 300px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .card-editor-container {
+        width: 95%;
+        max-height: 95vh;
+    }
+    
+    .card-editor-header {
+        padding: 16px 20px;
+    }
+    
+    .card-editor-body {
+        padding: 20px;
+    }
+    
+    .card-editor-footer {
+        padding: 12px 20px;
+    }
+    
+    .content-type-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    
+    .content-type-item {
+        padding: 16px;
+    }
+    
+    .content-type-icon {
+        font-size: 36px;
+        margin-bottom: 8px;
+    }
+    
+    .content-type-title {
+        font-size: 14px;
+    }
+    
+    .content-type-desc {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-type-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-editor-header h2 {
+        font-size: 20px;
+    }
+    
+    .close-btn {
+        font-size: 24px;
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.card-editor-container {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Скроллбар */
+.card-editor-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.card-editor-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.card-editor-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.card-editor-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
