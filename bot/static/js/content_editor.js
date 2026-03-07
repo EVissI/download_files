@@ -557,9 +557,22 @@ class ContentEditor {
             this.applySmartTextWrapping(element);
         });
 
-        // Обработка ввода текста в реальном времени
+        // Обработка ввода текста в реальном времени с дебаунсингом
+        let inputTimeout;
         textContent.addEventListener('input', () => {
-            this.applySmartTextWrapping(element);
+            clearTimeout(inputTimeout);
+            inputTimeout = setTimeout(() => {
+                this.applySmartTextWrapping(element);
+            }, 100); // Дебаунсинг 100мс для оптимизации
+        });
+
+        // Обработка удаления текста для уменьшения высоты
+        textContent.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                setTimeout(() => {
+                    this.applySmartTextWrapping(element);
+                }, 50);
+            }
         });
 
         // Обработка клавиш для переноса строк
@@ -765,7 +778,7 @@ class ContentEditor {
         }
     }
 
-    // Умный перенос текста
+    // Умный перенос текста с интеллектуальным изменением высоты
     applySmartTextWrapping(element) {
         const textContent = element.querySelector('.text-content');
         if (!textContent) return;
@@ -775,24 +788,49 @@ class ContentEditor {
         
         // Получаем текущие размеры элемента
         const elementHeight = element.offsetHeight;
+        const elementWidth = element.offsetWidth;
         
-        // Проверяем, помещается ли текст по высоте
+        // Вычисляем оптимальную высоту на основе содержимого
         setTimeout(() => {
-            const newHeight = textContent.scrollHeight;
-            if (newHeight > elementHeight - 16) {
-                // Автоматически увеличиваем высоту элемента
-                const newElementHeight = Math.min(newHeight + 16, 400); // Максимальная высота 400px
-                element.style.height = newElementHeight + 'px';
+            const textHeight = textContent.scrollHeight;
+            const textLines = Math.ceil(textHeight / 24); // Примерная высота строки 24px
+            
+            // Определяем минимальную и максимальную высоту на основе содержимого
+            const minHeight = Math.max(30, textLines * 24 + 16); // Минимум 30px или по линиям
+            const maxHeight = Math.min(600, Math.max(150, textLines * 24 + 50)); // Максимум 600px или адаптивно
+            
+            // Вычисляем целевую высоту
+            let targetHeight;
+            
+            if (textHeight <= elementHeight - 16) {
+                // Текст помещается, можно уменьшить высоту
+                targetHeight = Math.max(minHeight, textHeight + 16);
+            } else {
+                // Текст не помещается, увеличиваем высоту
+                targetHeight = Math.min(maxHeight, textHeight + 16);
+            }
+            
+            // Применяем изменение высоты только если разница существенная
+            const heightDiff = Math.abs(targetHeight - elementHeight);
+            if (heightDiff > 5) { // Изменяем только если разница больше 5px
+                // Плавное изменение высоты
+                element.style.transition = 'height 0.2s ease';
+                element.style.height = targetHeight + 'px';
                 
                 // Обновляем значение в свойствах
                 const heightInput = document.getElementById('propHeight');
                 if (heightInput) {
-                    heightInput.value = newElementHeight;
+                    heightInput.value = Math.round(targetHeight);
                     const heightDisplay = heightInput.parentElement.querySelector('.property-value');
                     if (heightDisplay) {
-                        heightDisplay.textContent = newElementHeight + 'px';
+                        heightDisplay.textContent = Math.round(targetHeight) + 'px';
                     }
                 }
+                
+                // Убираем transition после завершения анимации
+                setTimeout(() => {
+                    element.style.transition = '';
+                }, 200);
             }
         }, 0);
     }
