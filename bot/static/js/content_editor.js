@@ -12,12 +12,6 @@ class ContentEditor {
         this.selectedElement = null;
         this.elements = [];
         this.elementIdCounter = 0;
-        this.isDragging = false;
-        this.isResizing = false;
-        this.dragStartX = 0;
-        this.dragStartY = 0;
-        this.elementStartX = 0;
-        this.elementStartY = 0;
         this.currentResizeHandle = null;
         this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
         
@@ -727,29 +721,6 @@ class ContentEditor {
         
         this.propertiesContent.innerHTML = `
             <div class="property-group">
-                <h4>Позиция</h4>
-                <div class="property-item">
-                    <label>X:</label>
-                    <input type="range" id="propX" min="0" max="${Math.min(this.canvas.offsetWidth, maxCanvasWidth) - 100}" 
-                           value="${parseInt(element.style.left)}" 
-                           oninput="contentEditor.updateElementProperty('left', this.value + 'px')">
-                    <div class="property-value">${parseInt(element.style.left)}px</div>
-                </div>
-                <div class="property-item">
-                    <label>Y:</label>
-                    <input type="range" id="propY" min="0" max="${Math.min(this.canvas.offsetHeight, maxCanvasHeight) - 100}" 
-                           value="${parseInt(element.style.top)}" 
-                           oninput="contentEditor.updateElementProperty('top', this.value + 'px')">
-                    <div class="property-value">${parseInt(element.style.top)}px</div>
-                </div>
-                <div class="property-item">
-                    <label>Z-Index:</label>
-                    <input type="number" id="propZ" min="1" max="9999" value="${element.style.zIndex || 1}" 
-                           oninput="contentEditor.updateElementProperty('zIndex', this.value)">
-                </div>
-            </div>
-            
-            <div class="property-group">
                 <h4>Размер</h4>
                 <div class="property-item">
                     <label>Ширина:</label>
@@ -1025,76 +996,22 @@ class ContentEditor {
     }
 
     setupCanvasEvents() {
-        // Перетаскивание элементов
+        // Изменение размера элементов
         this.canvas.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('canvas-element') && 
-                !e.target.classList.contains('resize-handle') &&
-                !e.target.classList.contains('control-btn') &&
-                !e.target.classList.contains('text-content') &&
-                !e.target.classList.contains('link-text')) {
-                this.startDragging(e, e.target);
-            } else if (e.target.classList.contains('resize-handle')) {
+            if (e.target.classList.contains('resize-handle')) {
                 this.startResizing(e, e.target);
             }
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (this.isDragging) {
-                this.drag(e);
-            } else if (this.isResizing) {
+            if (this.isResizing) {
                 this.resize(e);
             }
         });
 
         document.addEventListener('mouseup', () => {
-            this.stopDragging();
             this.stopResizing();
         });
-    }
-
-    startDragging(e, element) {
-        this.isDragging = true;
-        this.dragElement = element;
-        this.dragStartX = e.clientX;
-        this.dragStartY = e.clientY;
-        this.elementStartX = parseInt(element.style.left);
-        this.elementStartY = parseInt(element.style.top);
-        
-        element.classList.add('dragging');
-        this.selectElement(element);
-    }
-
-    drag(e) {
-        if (!this.isDragging || !this.dragElement) return;
-        
-        const deltaX = e.clientX - this.dragStartX;
-        const deltaY = e.clientY - this.dragStartY;
-        
-        // Get canvas bounds with mobile constraints
-        const maxCanvasWidth = this.getMaxCanvasWidth();
-        const maxCanvasHeight = this.getMaxCanvasHeight();
-        const canvasWidth = Math.min(this.canvas.offsetWidth, maxCanvasWidth);
-        const canvasHeight = Math.min(this.canvas.offsetHeight, maxCanvasHeight);
-        
-        const newX = Math.max(0, Math.min(canvasWidth - this.dragElement.offsetWidth, 
-                                         this.elementStartX + deltaX));
-        const newY = Math.max(0, Math.min(canvasHeight - this.dragElement.offsetHeight, 
-                                         this.elementStartY + deltaY));
-        
-        this.dragElement.style.left = newX + 'px';
-        this.dragElement.style.top = newY + 'px';
-        
-        // Обновляем свойства
-        this.updatePropertyDisplay('propX', newX);
-        this.updatePropertyDisplay('propY', newY);
-    }
-
-    stopDragging() {
-        if (this.dragElement) {
-            this.dragElement.classList.remove('dragging');
-        }
-        this.isDragging = false;
-        this.dragElement = null;
     }
 
     startResizing(e, handle) {
@@ -1158,14 +1075,10 @@ class ContentEditor {
         
         this.resizeElement.style.width = newWidth + 'px';
         this.resizeElement.style.height = newHeight + 'px';
-        this.resizeElement.style.left = newLeft + 'px';
-        this.resizeElement.style.top = newTop + 'px';
         
         // Обновляем свойства
         this.updatePropertyDisplay('propWidth', newWidth);
         this.updatePropertyDisplay('propHeight', newHeight);
-        this.updatePropertyDisplay('propX', newLeft);
-        this.updatePropertyDisplay('propY', newTop);
     }
 
     stopResizing() {

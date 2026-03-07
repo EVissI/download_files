@@ -344,6 +344,8 @@
     user-select: none;
     /* Добавляем плавное появление для вертикального выравнивания */
     animation: slideInFromTop 0.3s ease-out;
+    /* Убираем курсор перемещения */
+    cursor: default;
 }
 
 /* Анимация появления сверху для вертикального выравнивания */
@@ -462,18 +464,9 @@
     cursor: text;
 }
 
-.canvas-element:hover {
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
-}
-
 .canvas-element.selected {
     border-color: #667eea;
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
-}
-
-.canvas-element.dragging {
-    opacity: 0.8;
-    cursor: grabbing;
 }
 
 /* Контролы элементов */
