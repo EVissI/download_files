@@ -669,6 +669,19 @@ class ContentEditor {
             
             <div class="property-group">
                 <h4>Стиль</h4>
+                ${element.classList.contains('text-element') ? `
+                <div class="property-item">
+                    <label>Размер шрифта:</label>
+                    <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}" 
+                           oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
+                    <div class="property-value">${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}px</div>
+                </div>
+                <div class="property-item">
+                    <label>Цвет текста:</label>
+                    <input type="color" id="propTextColor" value="${window.getComputedStyle(element.querySelector('.text-content')).color || '#333333'}" 
+                           oninput="contentEditor.updateElementProperty('textColor', this.value)">
+                </div>
+                ` : ''}
                 <div class="property-item">
                     <label>Цвет обводки:</label>
                     <input type="color" id="propBorderColor" value="#667eea" 
@@ -714,6 +727,18 @@ class ContentEditor {
             case 'zIndex':
                 this.selectedElement.style[property] = value;
                 break;
+            case 'fontSize':
+                const textContent = this.selectedElement.querySelector('.text-content');
+                if (textContent) {
+                    textContent.style.fontSize = value;
+                }
+                break;
+            case 'textColor':
+                const textContentForColor = this.selectedElement.querySelector('.text-content');
+                if (textContentForColor) {
+                    textContentForColor.style.color = value;
+                }
+                break;
             case 'borderColor':
                 this.selectedElement.style.borderColor = value;
                 break;
@@ -733,6 +758,14 @@ class ContentEditor {
             const valueDisplay = this.selectedElement.querySelector(`.property-value`);
             if (valueDisplay) {
                 valueDisplay.textContent = value;
+            }
+        } else if (property === 'fontSize') {
+            const fontSizeInput = document.getElementById('propFontSize');
+            if (fontSizeInput) {
+                const fontSizeDisplay = fontSizeInput.parentElement.querySelector('.property-value');
+                if (fontSizeDisplay) {
+                    fontSizeDisplay.textContent = value;
+                }
             }
         }
         
