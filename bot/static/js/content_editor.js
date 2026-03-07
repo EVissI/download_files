@@ -631,18 +631,6 @@ class ContentEditor {
         
         this.propertiesContent.innerHTML = `
             <div class="property-group">
-                <h4>Основные</h4>
-                <div class="property-item">
-                    <label>ID:</label>
-                    <input type="text" value="${element.id}" readonly style="background: #2a2a2a;">
-                </div>
-                <div class="property-item">
-                    <label>Тип:</label>
-                    <input type="text" value="${element.dataset.toolId}" readonly style="background: #2a2a2a;">
-                </div>
-            </div>
-            
-            <div class="property-group">
                 <h4>Позиция</h4>
                 <div class="property-item">
                     <label>X:</label>
