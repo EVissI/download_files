@@ -21,7 +21,6 @@ class ContentEditor {
     isMobile() {
         return window.innerWidth <= 768;
     }
-
     getMaxCanvasWidth() {
         if (this.isMobile()) {
             // For mobile, return standard mobile card width
@@ -159,19 +158,6 @@ class ContentEditor {
             min-width: 400px;
         `;
 
-        // Заголовок таблицы
-        const tableTitle = document.createElement('h3');
-        tableTitle.textContent = `Ход ${cardData.turn || 'N/A'} - ${cardData.player || 'Unknown'}`;
-        tableTitle.style.cssText = `
-            margin: 0 0 10px 0;
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 4px;
-            text-align: center;
-            font-size: 16px;
-            font-weight: bold;
-        `;
-        tableElement.appendChild(tableTitle);
 
         // Создаем таблицу для hints
         if (cardData.hints && cardData.hints.length > 0) {
@@ -181,35 +167,9 @@ class ContentEditor {
 
         // Создаем таблицу для cube_hints
         if (cardData.cube_hints && cardData.cube_hints.length > 0) {
-            const cubeTitle = document.createElement('h4');
-            cubeTitle.textContent = 'Решения с кубом';
-            cubeTitle.style.cssText = `
-                margin: 20px 0 10px 0;
-                font-size: 14px;
-                font-weight: bold;
-                color: #333;
-            `;
-            tableElement.appendChild(cubeTitle);
 
             const cubeTable = this.createCubeTable(cardData.cube_hints);
             tableElement.appendChild(cubeTable);
-        }
-
-        // Добавляем информацию о текущем ходе
-        if (cardData.gnu_move || cardData.action) {
-            const currentMoveInfo = document.createElement('div');
-            currentMoveInfo.style.cssText = `
-                margin-top: 15px;
-                padding: 10px;
-                background: #e8f4ff;
-                border-radius: 4px;
-                border-left: 4px solid #2196F3;
-            `;
-            currentMoveInfo.innerHTML = `
-                <strong>Текущий ход:</strong> ${cardData.gnu_move || cardData.action || 'N/A'}<br>
-                <strong>Эквити:</strong> ${cardData.equity ? cardData.equity.toFixed(3) : 'N/A'}
-            `;
-            tableElement.appendChild(currentMoveInfo);
         }
 
         // Добавляем таблицу на canvas
@@ -239,7 +199,7 @@ class ContentEditor {
         // Заголовок таблицы
         const header = table.createTHead();
         const headerRow = header.insertRow();
-        const headers = ['Ход', 'Win%', 'Wg%', 'Эквити'];
+        const headers = ['Ход', '%', '%', 'Эквити'];
         
         headers.forEach(text => {
             const th = document.createElement('th');
