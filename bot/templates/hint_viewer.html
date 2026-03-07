@@ -854,11 +854,9 @@
             align-items: center;
             padding: 20px;
         }
-
         .msg-modal-overlay.show {
             display: flex;
         }
-
         .msg-modal {
             background-color: #2d2d2d;
             border-radius: 12px;
@@ -872,48 +870,25 @@
             flex-direction: column;
             animation: msgModalFadeIn 0.25s ease-out;
         }
-
         @keyframes msgModalFadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
         .msg-modal-header {
             display: flex;
             align-items: flex-start;
             padding: 16px 20px 12px;
             gap: 12px;
         }
-
         .msg-modal-icon {
             flex-shrink: 0;
             font-size: 32px;
             line-height: 1;
         }
-
-        .msg-modal-icon.success {
-            color: #4caf50;
-        }
-
-        .msg-modal-icon.error {
-            color: #f44336;
-        }
-
-        .msg-modal-icon.warning {
-            color: #ff9800;
-        }
-
-        .msg-modal-icon.info {
-            color: #2196f3;
-        }
-
+        .msg-modal-icon.success { color: #4caf50; }
+        .msg-modal-icon.error { color: #f44336; }
+        .msg-modal-icon.warning { color: #ff9800; }
+        .msg-modal-icon.info { color: #2196f3; }
         .msg-modal-content {
             color: white;
             font-size: 15px;
@@ -921,12 +896,10 @@
             margin: 0;
             flex: 1;
         }
-
         .msg-modal-footer {
             padding: 12px 20px 16px;
             text-align: right;
         }
-
         .msg-modal-ok-btn {
             background-color: #007bff;
             color: white;
@@ -937,7 +910,6 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
-
         .msg-modal-ok-btn:hover {
             background-color: #0056b3;
         }
@@ -1034,7 +1006,6 @@
                 <button id="settingsBtn" onclick="openSettingsModal()" title="Настройки">⚙️</button>
                 <span>Настройки</span>
             </div>
-            {% if is_admin %}
             <button id="openEditorBtn" onclick="openPokazEditor()" style="
                 padding: 10px 20px;
                 background-color: #007bff;
@@ -1047,9 +1018,8 @@
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
                 transition: background-color 0.3s;
             " onmouseover="this.style.backgroundColor='#0056b3'" onmouseout="this.style.backgroundColor='#007bff'">
-                Открыть редактор карточек
+                Открыть редактор
             </button>
-            {% endif %}
         </div>
         <div class="support-container">
             <button id="supportBtn" onclick="openSupportModal()" title="Техподержка"></button>
@@ -1312,12 +1282,12 @@
                                 item.is_error = false;
                             }
                             // Определяем, есть ли ошибка по кубу
-                            const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') &&
-                                item.is_best_move_cube === false;
+                            const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') && 
+                                                item.is_best_move_cube === false;
                             // Определяем, есть ли ошибка по ходу
-                            const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) &&
-                                item.is_best_move === false && item.is_error;
-
+                            const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) && 
+                                               item.is_best_move === false && item.is_error;
+                            
                             item.is_visible = (error === '0') ||
                                 (error === '1' && (hasMoveError || hasCubeError || (item.action === 'win' && item.is_error))) ||
                                 (error === '2' && ((item.player_name === redPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error))) ||
@@ -1545,12 +1515,12 @@
                     item.is_error = false;
                 }
                 // Определяем, есть ли ошибка по кубу
-                const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') &&
-                    item.is_best_move_cube === false;
+                const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') && 
+                                    item.is_best_move_cube === false;
                 // Определяем, есть ли ошибка по ходу
-                const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) &&
-                    item.is_best_move === false && item.is_error;
-
+                const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) && 
+                                   item.is_best_move === false && item.is_error;
+                
                 item.is_visible = (error === '0') ||
                     (error === '1' && (hasMoveError || hasCubeError || (item.action === 'win' && item.is_error))) ||
                     (error === '2' && ((item.player_name === redPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error))) ||
@@ -2507,20 +2477,20 @@
             } else {
                 document.getElementById('moveHintsTable').innerHTML = moveTableHtml;
             }
-
+            
             // Автоматическое открытие таблицы при error != 0
             if (error !== '0' && item.is_visible) {
                 const moveHintsBtn = document.getElementById('moveHintsBtn');
                 const cubeHintsBtn = document.getElementById('cubeHintsBtn');
                 const moveHintsTable = document.getElementById('moveHintsTable');
                 const cubeHintsTable = document.getElementById('cubeHintsTable');
-
+                
                 // Определяем, есть ли ошибки (проверяем явно false, чтобы не учитывать undefined)
-                const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) &&
-                    item.is_best_move === false;
-                const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') &&
-                    item.is_best_move_cube === false;
-
+                const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) && 
+                                   item.is_best_move === false;
+                const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') && 
+                                    item.is_best_move_cube === false;
+                
                 // Если оба параметра False - открываем таблицу по ходу
                 if (hasMoveError && hasCubeError) {
                     moveHintsTable.classList.add('active');
@@ -3671,7 +3641,7 @@
             }
 
             let xgid = "";
-
+            
             // Get current positions - используем нужные positions в зависимости от инверсии
             let redPositions, blackPositions;
             if (current === 0) {
@@ -3701,7 +3671,7 @@
             // Потому что мы уже взяли правильные позиции выше с учетом инверсии
             const upperPositions = blackPositions;
             const lowerPositions = redPositions;
-
+            
             // Bar для верхнего игрока (первый символ в XGID)
             const upperBar = upperPositions.bar || 0;
             if (upperBar === 0) {
@@ -3710,7 +3680,7 @@
                 // Верхний игрок = строчные буквы (a-o)
                 xgid += String.fromCharCode(96 + upperBar);
             }
-
+            
             // Positions 1-24
             for (let point = 1; point <= 24; point++) {
                 const lowerCount = lowerPositions[point.toString()] || 0;
@@ -3730,7 +3700,7 @@
                     xgid += "-";
                 }
             }
-
+            
             // Bar для нижнего игрока (последний символ перед ':' в XGID)
             const lowerBar = lowerPositions.bar || 0;
             if (lowerBar === 0) {
@@ -3739,9 +3709,9 @@
                 // Нижний игрок = заглавные буквы (A-O)
                 xgid += String.fromCharCode(64 + lowerBar);
             }
-
+            
             xgid += ':';
-
+            
             // Cube exponent (part 1)
             let cubeValue = 0;
             let lastDoubleIndex = -1;
@@ -3760,9 +3730,9 @@
                 exponent = Math.log2(cubeValue);
             }
             xgid += exponent.toString();
-
+            
             xgid += ':';
-
+            
             // Cube position (part 2): 1 = lower, -1 = upper, 0 = no cube
             let cubePosition = 0;
             if (cubeValue !== 0 && currentCubePlayer) {
@@ -3771,9 +3741,9 @@
                 cubePosition = isLowerPlayer ? 1 : -1;
             }
             xgid += cubePosition.toString();
-
+            
             xgid += ':';
-
+            
             // Turn (part 3): 1 = lower, -1 = upper
             const currentItem = data[current];
             const currentPlayer = currentItem.player || '';
@@ -3784,9 +3754,9 @@
                 turnValue = isLowerPlayerTurn ? 1 : -1;
             }
             xgid += turnValue.toString();
-
+            
             xgid += ':';
-
+            
             // Cube part (part 4): dice or 'D' or '00'
             let cubePart = '00';
             if (currentItem.dice && currentItem.dice.length >= 2 && !['double', 'take', 'win'].includes(currentItem.action)) {
@@ -3797,9 +3767,9 @@
                 cubePart = 'D';
             }
             xgid += cubePart;
-
+            
             xgid += ':';
-
+            
             // Scores (parts 5-6)
             // Red всегда lower score, Black всегда upper score в XGID
             const lowerScore = matchLength > 0 ? gameRedScore : '0';
@@ -3807,9 +3777,9 @@
             xgid += lowerScore.toString();
             xgid += ':';
             xgid += upperScore.toString();
-
+            
             xgid += ':';
-
+            
             // Convention (part 7)
             let conventionPart = '0';
             if (matchLength > 0) {
@@ -3821,22 +3791,22 @@
                 conventionPart = '0';
             }
             xgid += conventionPart;
-
+            
             xgid += ':';
-
+            
             // Match length (part 8)
             const matchLengthPart = matchLength > 0 ? matchLength.toString() : '0';
             xgid += matchLengthPart;
-
+            
             xgid += ':';
-
+            
             // Max cube (part 9) - default to 3 (8) if not available
             const maxCubePart = '3'; // Default value, can be extracted from gameInfo if available
             xgid += maxCubePart;
-
+            
             return xgid;
         }
-
+        
         function openPokazEditor() {
             try {
                 const xgidString = generateXGID();
@@ -3844,17 +3814,17 @@
                     showMessageModal('Не удалось сгенерировать XGID строку', 'error');
                     return;
                 }
-
+                
                 // Get chat_id and lang from URL or use current
                 const urlParams = new URLSearchParams(window.location.search);
                 const currentChatId = urlParams.get('chat_id') || chatId || '';
                 const lang = urlParams.get('lang') || '';
-
+                
                 // Build URL with XGID, chat_id, lang and invert (relative URL for same app navigation)
                 const invertParam = invertColors ? '&invert=1' : '';
                 const langParam = (lang === 'ru' || lang === 'en') ? '&lang=' + lang : '';
                 const pokazUrl = `/pokaz?xgid=${encodeURIComponent(xgidString)}${currentChatId ? '&chat_id=' + encodeURIComponent(currentChatId) : ''}${langParam}${invertParam}`;
-
+                
                 // Navigate in same window/app (works in Telegram WebApp and browser)
                 window.location.href = pokazUrl;
             } catch (error) {

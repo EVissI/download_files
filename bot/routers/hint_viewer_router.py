@@ -96,6 +96,8 @@ class HintViewerStates(StatesGroup):
     stats_player_selection = State()
 
 
+
+
 syncthing_sync = SyncthingSync()
 
 WORKER_COUNT_CACHE_KEY = "cache:worker_count"
@@ -194,57 +196,30 @@ def remove_active_job(user_id: int, job_id: str):
     ),
     UserInfo(),
 )
-async def hint_viewer_start(
-    message: Message,
-    state: FSMContext,
-    user_info: User,
-    session_without_commit: AsyncSession,
-):
+async def hint_viewer_start(message: Message, state: FSMContext, user_info: User, session_without_commit: AsyncSession):
     message_dao = MessagesTextsDAO(session_without_commit)
     await state.set_state(HintViewerStates.choose_type)
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(
-        text=await message_dao.get_text("button_error_single", user_info.lang_code),
-        callback_data="hint_type:single",
-    )
-    keyboard.button(
-        text=await message_dao.get_text("button_error_batch", user_info.lang_code),
-        callback_data="hint_type:batch",
-    )
+    keyboard.button(text=await message_dao.get_text("button_error_single", user_info.lang_code), callback_data="hint_type:single")
+    keyboard.button(text=await message_dao.get_text("button_error_batch", user_info.lang_code), callback_data="hint_type:batch")
     keyboard.adjust(1)
-    await message.answer(
-        await message_dao.get_text("hint_viewer_start", user_info.lang_code),
-        reply_markup=keyboard.as_markup(),
-    )
+    await message.answer(await message_dao.get_text("hint_viewer_start", user_info.lang_code), reply_markup=keyboard.as_markup())
 
 
 @hint_viewer_router.callback_query(
-    F.data.startswith("hint_type:"),
-    StateFilter(HintViewerStates.choose_type),
-    UserInfo(),
+    F.data.startswith("hint_type:"), StateFilter(HintViewerStates.choose_type), UserInfo()
 )
-async def handle_hint_type_selection(
-    callback: CallbackQuery,
-    state: FSMContext,
-    user_info: User,
-    session_without_commit: AsyncSession,
-):
+async def handle_hint_type_selection(callback: CallbackQuery, state: FSMContext, user_info: User, session_without_commit: AsyncSession):
     message_dao = MessagesTextsDAO(session_without_commit)
     hint_type = callback.data.split(":")[1]
     if hint_type == "single":
         await state.set_state(HintViewerStates.waiting_file)
-        await callback.message.answer(
-            await message_dao.get_text("hint_viewer_single_upload", user_info.lang_code)
-        )
+        await callback.message.answer(await message_dao.get_text("hint_viewer_single_upload", user_info.lang_code))
     else:
         await state.set_state(HintViewerStates.uploading_sequential)
         await state.update_data(file_paths=[])
         keyboard = ReplyKeyboardBuilder()
-        keyboard.button(
-            text=await message_dao.get_text(
-                "hint_viewer_batch_upload_stop", user_info.lang_code
-            )
-        )
+        keyboard.button(text=await message_dao.get_text("hint_viewer_batch_upload_stop", user_info.lang_code))
         await callback.message.answer(
             await message_dao.get_text("hint_viewer_batch_upload", user_info.lang_code),
             reply_markup=keyboard.as_markup(resize_keyboard=True),
@@ -266,9 +241,7 @@ async def handle_batch_stop(
     file_paths = data.get("file_paths", [])
     if not file_paths:
         await message.answer(
-            await message_dao.get_text(
-                "hint_viewer_batch_no_file", user_info.lang_code
-            ),
+            await message_dao.get_text("hint_viewer_batch_no_file", user_info.lang_code),
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
         await state.clear()
@@ -291,22 +264,13 @@ async def handle_batch_stop(
 @hint_viewer_router.message(
     F.document, StateFilter(HintViewerStates.uploading_sequential), UserInfo()
 )
-async def handle_sequential_hint_file(
-    message: Message,
-    state: FSMContext,
-    user_info: User,
-    session_without_commit: AsyncSession,
-):
+async def handle_sequential_hint_file(message: Message, state: FSMContext, user_info: User, session_without_commit: AsyncSession):
     message_dao = MessagesTextsDAO(session_without_commit)
     async with message_lock:
         doc = message.document
         fname = doc.file_name
         if not (fname.lower().endswith(".mat") or fname.lower().endswith(".zip")):
-            await message.reply(
-                await message_dao.get_text(
-                    "hint_viewer_batch_file_extension_error", user_info.lang_code
-                ),
-            )
+            await message.reply(await message_dao.get_text("hint_viewer_batch_file_extension_error", user_info.lang_code),)
             return
 
         # Скачиваем файл
@@ -333,40 +297,22 @@ async def handle_sequential_hint_file(
                 # Удаляем временный ZIP файл
                 os.remove(temp_path)
                 await message.answer(
-                    await message_dao.get_text(
-                        "hint_viewer_batch_file_extracted",
-                        user_info.lang_code,
-                        zip_size=len([p for p in file_paths if p.endswith(".mat")]),
-                    ),
+                    await message_dao.get_text("hint_viewer_batch_file_extracted", user_info.lang_code, zip_size=len([p for p in file_paths if p.endswith('.mat')])),
                 )
             except Exception as e:
                 logger.error(f"Error extracting ZIP: {e}")
-                await message.reply(
-                    await message_dao.get_text(
-                        "hint_viewer_batch_file_extracted_error", user_info.lang_code
-                    )
-                )
+                await message.reply(await message_dao.get_text("hint_viewer_batch_file_extracted_error", user_info.lang_code))
                 os.remove(temp_path)
                 return
         else:
             # Обычный .mat файл
             file_paths.append(temp_path)
-            await message.answer(
-                await message_dao.get_text(
-                    "hint_viewer_batch_file_added",
-                    user_info.lang_code,
-                    file_count=len(file_paths),
-                )
-            )
+            await message.answer(await message_dao.get_text("hint_viewer_batch_file_added", user_info.lang_code, file_count=len(file_paths)))
 
         await state.update_data(file_paths=file_paths)
 
 
-@hint_viewer_router.message(
-    F.document,
-    StateFilter(HintViewerStates.waiting_file),
-    UserInfo(),
-)
+@hint_viewer_router.message(F.document, StateFilter(HintViewerStates.waiting_file), UserInfo(),)
 async def hint_viewer_menu(
     message: Message, state: FSMContext, user_info: User, i18n, session_without_commit
 ):
@@ -376,11 +322,7 @@ async def hint_viewer_menu(
     fname = doc.file_name
 
     if not fname.lower().endswith(".mat"):
-        await message.reply(
-            await message_dao.get_text(
-                "hint_viewer_sin_file_ext_error", user_info.lang_code
-            )
-        )
+        await message.reply(await message_dao.get_text("hint_viewer_sin_file_ext_error", user_info.lang_code))
         return
 
     # === Генерируем уникальный ID для этой задачи ===
@@ -392,9 +334,7 @@ async def hint_viewer_menu(
     try:
         if not can_enqueue_job(message.from_user.id):
             await message.answer(
-                await message_dao.get_text(
-                    "hint_viewer_sin_active_job_err", user_info.lang_code
-                )
+                await message_dao.get_text("hint_viewer_sin_active_job_err", user_info.lang_code)
             )
             await state.clear()
             return
@@ -447,10 +387,7 @@ async def hint_viewer_menu(
             expire=3600,
         )
         queue_warning = await get_queue_position_message(
-            redis_rq,
-            ["backgammon_analysis", "backgammon_batch_analysis"],
-            session_without_commit,
-            user_info,
+            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"], session_without_commit, user_info
         )
         if queue_warning:
             user_dao = UserDAO(session_without_commit)
@@ -467,11 +404,7 @@ async def hint_viewer_menu(
                     )
             await message.answer(queue_warning)
 
-        status_text = await message_dao.get_text(
-            "hint_viewer_sin_file_accepted",
-            user_info.lang_code,
-            estimated_time=estimated_time,
-        )
+        status_text = await message_dao.get_text("hint_viewer_sin_file_accepted", user_info.lang_code, estimated_time=estimated_time)
         await message.answer(status_text, parse_mode="Markdown")
 
         # === Сохраняем данные в состояние для проверки статуса ===
@@ -486,9 +419,7 @@ async def hint_viewer_menu(
 
         # === Запускаем фоновую проверку статуса ===
         asyncio.create_task(
-            check_job_status(
-                message, job_id, state, i18n, session_without_commit, user_info
-            )
+            check_job_status(message, job_id, state, i18n, session_without_commit, user_info)
         )
 
     except Exception as e:
@@ -550,7 +481,7 @@ async def handle_show_stats(
 
         if isinstance(result, tuple) and len(result) == 4:
             # Multiple players
-            analysis_data, new_file_path, player_names, duration = result
+            analysis_data, new_file_path, player_names,duration = result
             await state.update_data(
                 analysis_data=analysis_data,
                 file_name=os.path.basename(new_file_path),
@@ -684,32 +615,15 @@ def take_json_info(game_id: str, game_num: str = None):
 
 
 @hint_viewer_api_router.get("/hint-viewer")
-async def get_hint_viewer_web(
-    request: Request, game_id: str = None, user_id: str = None
-):
+async def get_hint_viewer_web(request: Request, game_id: str = None):
     """
     Возвращает HTML-страницу интерактивного просмотра подсказок.
     """
     if not game_id:
         raise HTTPException(status_code=400, detail="game_id parameter is required")
 
-    # Проверяем, является ли пользователь админом
-    is_admin = False
-    if user_id:
-        try:
-            user_id_int = int(user_id)
-            is_admin = user_id_int in settings.ROOT_ADMIN_IDS
-        except ValueError:
-            pass
-
     return templates.TemplateResponse(
-        "hint_viewer.html",
-        {
-            "request": request,
-            "game_id": game_id,
-            "is_admin": is_admin,
-            "user_id": user_id,
-        },
+        "hint_viewer.html", {"request": request, "game_id": game_id}
     )
 
 
@@ -905,6 +819,8 @@ async def send_to_support(request: Request):
         raise HTTPException(status_code=500, detail="Error sending support request")
 
 
+
+
 @hint_viewer_api_router.post("/api/save_screenshot")
 async def save_screenshot(request: Request):
     """
@@ -1042,7 +958,9 @@ async def upload_screenshots(request: Request):
         # Очищаем буфер
         shutil.rmtree(buffer_dir)
 
-        logger.info(f"Screenshots ZIP sent to chat_id: {chat_id}, {file_count} files")
+        logger.info(
+            f"Screenshots ZIP sent to chat_id: {chat_id}, {file_count} files"
+        )
         return {"status": "success"}
 
     except HTTPException:
@@ -1074,21 +992,13 @@ async def process_batch_hint_files(
         # Проверяем, может ли пользователь добавить задачу
         if not can_enqueue_job(message.from_user.id):
             await message.answer(
-                await message_dao.get_text(
-                    "hint_viewer_batch_active_job_err", user_info.lang_code
-                )
+                await message_dao.get_text("hint_viewer_batch_active_job_err", user_info.lang_code)
             )
             await state.clear()
             return
 
         total_files = len(file_paths)
-        await message.answer(
-            await message_dao.get_text(
-                "hint_viewer_files_accepted",
-                user_info.lang_code,
-                total_files=total_files,
-            )
-        )
+        await message.answer(await message_dao.get_text("hint_viewer_files_accepted", user_info.lang_code, total_files=total_files))
 
         # Триггер scan — Syncthing заметит все файлы и начнёт отправку на воркеры
         await syncthing_sync.trigger_scan()
@@ -1120,10 +1030,7 @@ async def process_batch_hint_files(
             expire=3600,  # 1 час
         )
         queue_warning = await get_queue_position_message(
-            redis_rq,
-            ["backgammon_analysis", "backgammon_batch_analysis"],
-            session_without_commit,
-            user_info,
+            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"], session_without_commit, user_info
         )
         if queue_warning:
             user_dao = UserDAO(session_without_commit)
@@ -1143,12 +1050,7 @@ async def process_batch_hint_files(
             f"Batch {batch_id} queued with {total_files} files (job_id={job_id})"
         )
 
-        summary = await message_dao.get_text(
-            "hint_viewer_batch_summary",
-            user_info.lang_code,
-            batch_id=batch_id,
-            total_files=total_files,
-        )
+        summary = await message_dao.get_text("hint_viewer_batch_summary", user_info.lang_code, batch_id=batch_id, total_files=total_files)
         await message.answer(summary, parse_mode="HTML")
 
         await state.clear()
@@ -1160,12 +1062,7 @@ async def process_batch_hint_files(
 
 
 async def check_job_status(
-    message: Message,
-    job_id: str,
-    state: FSMContext,
-    i18n,
-    session_without_commit,
-    user_info,
+    message: Message, job_id: str, state: FSMContext, i18n, session_without_commit, user_info
 ):
     """
     Фоновая задача для проверки статуса анализа.
@@ -1196,7 +1093,7 @@ async def check_job_status(
                         await UserDAO(session_without_commit).decrease_analiz_balance(
                             user_id=message.from_user.id, service_type="HINTS"
                         )
-
+                        
                         # Сохраняем mat_path для статистики
                         game_id = job_info["game_id"]
                         await redis_client.set(
@@ -1221,28 +1118,22 @@ async def check_job_status(
                             red_player = job_info["red_player"]
                             black_player = job_info["black_player"]
 
-                            mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0&user_id={message.from_user.id}"
-                            mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1&user_id={message.from_user.id}"
-                            mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2&user_id={message.from_user.id}"
-                            mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3&user_id={message.from_user.id}"
+                            mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
+                            mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+                            mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+                            mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
 
                             keyboard = InlineKeyboardMarkup(
                                 inline_keyboard=[
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_all_moves_b",
-                                                user_info.lang_code,
-                                            ),
+                                            text=await message_dao.get_text("hint_viewer_all_moves_b", user_info.lang_code),
                                             web_app=WebAppInfo(url=mini_app_url_all),
                                         ),
                                     ],
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_both_errors_b",
-                                                user_info.lang_code,
-                                            ),
+                                            text=await message_dao.get_text("hint_viewer_both_errors_b", user_info.lang_code),
                                             web_app=WebAppInfo(
                                                 url=mini_app_url_both_errors
                                             ),
@@ -1250,11 +1141,7 @@ async def check_job_status(
                                     ],
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_player_error_b",
-                                                user_info.lang_code,
-                                                player=red_player,
-                                            ),
+                                            text=await message_dao.get_text("hint_viewer_player_error_b", user_info.lang_code, player=red_player),
                                             web_app=WebAppInfo(
                                                 url=mini_app_url_red_errors
                                             ),
@@ -1262,11 +1149,7 @@ async def check_job_status(
                                     ],
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_player_error_b",
-                                                user_info.lang_code,
-                                                player=black_player,
-                                            ),
+                                            text=await message_dao.get_text("hint_viewer_player_error_b", user_info.lang_code, player=black_player),
                                             web_app=WebAppInfo(
                                                 url=mini_app_url_black_errors
                                             ),
@@ -1274,10 +1157,7 @@ async def check_job_status(
                                     ],
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_show_stat",
-                                                user_info.lang_code,
-                                            ),
+                                            text=await message_dao.get_text("hint_viewer_show_stat", user_info.lang_code),
                                             callback_data=f"show_stats:{game_id}",
                                         ),
                                     ],
@@ -1285,12 +1165,7 @@ async def check_job_status(
                             )
 
                             await message.answer(
-                                text=await message_dao.get_text(
-                                    "hint_viewer_finished",
-                                    user_info.lang_code,
-                                    red_player=red_player,
-                                    black_player=black_player,
-                                ),
+                                text = await message_dao.get_text("hint_viewer_finished", user_info.lang_code, red_player=red_player, black_player=black_player),
                                 reply_markup=keyboard,
                             )
                             await session_without_commit.commit()
