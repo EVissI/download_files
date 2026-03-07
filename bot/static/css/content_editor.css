@@ -352,11 +352,6 @@
     min-width: 100px;
     min-height: 30px;
     cursor: text;
-    width: auto; /* Автоматическая ширина по содержимому */
-    height: auto; /* Автоматическая высота по содержимому */
-    max-width: 400px; /* Максимальная ширина для переноса текста */
-    resize: both; /* Разрешить изменение размера пользователем */
-    overflow: auto; /* Скролл если текст слишком большой */
 }
 
 .canvas-element.text-element.selected {
@@ -376,10 +371,16 @@
     border: none;
     background: transparent;
     overflow: visible;
-    white-space: normal; /* Изменено с nowrap на normal для переноса текста */
+    white-space: nowrap;
     min-height: 20px;
-    word-wrap: break-word; /* Перенос длинных слов */
-    overflow-wrap: break-word; /* Современный аналог word-wrap */
+    transition: all 0.2s ease;
+}
+
+.text-content.wrap-enabled {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    overflow: auto;
 }
 
 .text-content:empty:before {

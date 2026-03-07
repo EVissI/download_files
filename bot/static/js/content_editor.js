@@ -524,27 +524,6 @@ class ContentEditor {
         const textContent = element.querySelector('.text-content');
         if (!textContent) return;
 
-        // Функция для автоматического изменения размера элемента под текст
-        const autoResize = () => {
-            // Сбрасываем размеры для корректного измерения
-            element.style.width = 'auto';
-            element.style.height = 'auto';
-            
-            // Устанавливаем максимальную ширину
-            const maxWidth = 400;
-            element.style.maxWidth = maxWidth + 'px';
-            
-            // Небольшая задержка для корректного пересчета
-            setTimeout(() => {
-                const rect = textContent.getBoundingClientRect();
-                const newWidth = Math.min(rect.width + 16, maxWidth); // +16 для padding
-                const newHeight = Math.max(rect.height + 16, 30); // +16 для padding, мин 30px
-                
-                element.style.width = newWidth + 'px';
-                element.style.height = newHeight + 'px';
-            }, 0);
-        };
-
         // Делаем текст нефокусируемым при перетаскивании
         textContent.addEventListener('mousedown', (e) => {
             e.stopPropagation();
@@ -574,24 +553,23 @@ class ContentEditor {
                     textContent.textContent = 'Текст ответа';
                 }
             }
-            autoResize(); // Пересчитываем размеры
+            // Применяем умный перенос после редактирования
+            this.applySmartTextWrapping(element);
         });
 
-        // Обработка ввода текста для авто-ресайза
-        textContent.addEventListener('input', autoResize);
-        
+        // Обработка ввода текста в реальном времени
+        textContent.addEventListener('input', () => {
+            this.applySmartTextWrapping(element);
+        });
+
         // Обработка клавиш для выхода из режима редактирования
         textContent.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 textContent.blur();
-            } else if (e.key === 'Enter' && e.shiftKey) {
-                // Shift+Enter для новой строки (разрешаем)
-                // Ничего не делаем, позволяем стандартное поведение
             } else if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 textContent.blur();
             }
-            autoResize(); // Пересчитываем размеры при вводе
         });
 
         // Предотвращаем перетаскивание при редактировании текста
@@ -599,8 +577,8 @@ class ContentEditor {
             e.preventDefault();
         });
 
-        // Начальный авто-ресайз
-        autoResize();
+        // Применяем умный перенос при инициализации
+        this.applySmartTextWrapping(element);
     }
 
     addElementControls(element) {
@@ -767,6 +745,69 @@ class ContentEditor {
             if (valueDisplay) {
                 valueDisplay.textContent = value;
             }
+        }
+        
+        // Применяем умный перенос при изменении размера
+        if (property === 'width' || property === 'height') {
+            this.applySmartTextWrapping(this.selectedElement);
+        }
+    }
+
+    // Умный перенос текста
+    applySmartTextWrapping(element) {
+        const textContent = element.querySelector('.text-content');
+        if (!textContent) return;
+
+        // Проверяем, является ли элемент текстовым
+        if (!element.classList.contains('text-element')) return;
+
+        // Получаем текущие размеры элемента
+        const elementWidth = element.offsetWidth;
+        const elementHeight = element.offsetHeight;
+        
+        // Временно делаем текст видимым для измерений
+        const originalDisplay = textContent.style.display;
+        textContent.style.display = 'block';
+        textContent.style.whiteSpace = 'nowrap';
+        textContent.style.overflow = 'visible';
+        
+        // Измеряем ширину текста
+        const textWidth = textContent.scrollWidth;
+        const textHeight = textContent.scrollHeight;
+        
+        // Восстанавливаем исходные стили
+        textContent.style.display = originalDisplay;
+        
+        // Определяем, нужен ли перенос
+        const needsWrapping = textWidth > elementWidth - 16; // 16px для padding
+        
+        if (needsWrapping) {
+            // Включаем перенос текста через CSS класс
+            textContent.classList.add('wrap-enabled');
+            
+            // Проверяем, помещается ли текст по высоте
+            setTimeout(() => {
+                const newHeight = textContent.scrollHeight;
+                if (newHeight > elementHeight - 16) {
+                    // Автоматически увеличиваем высоту элемента
+                    const newElementHeight = Math.min(newHeight + 16, 400); // Максимальная высота 400px
+                    element.style.height = newElementHeight + 'px';
+                    
+                    // Обновляем значение в свойствах
+                    const heightInput = document.getElementById('propHeight');
+                    if (heightInput) {
+                        heightInput.value = newElementHeight;
+                        const heightDisplay = heightInput.parentElement.querySelector('.property-value');
+                        if (heightDisplay) {
+                            heightDisplay.textContent = newElementHeight + 'px';
+                        }
+                    }
+                }
+            }, 0);
+        } else {
+            // Текст помещается, отключаем перенос
+            textContent.classList.remove('wrap-enabled');
+            textContent.style.overflow = 'visible';
         }
     }
 
