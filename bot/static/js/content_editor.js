@@ -553,26 +553,12 @@ class ContentEditor {
                     textContent.textContent = 'Текст ответа';
                 }
             }
-            // Применяем умный перенос после редактирования
-            this.applySmartTextWrapping(element);
+            // Автоматическое изменение высоты отключено
         });
 
-        // Обработка ввода текста в реальном времени с отслеживанием изменений
-        let inputTimeout;
-        let previousTextLength = textContent.textContent.length;
-        
+        // Обработка ввода текста - только перенос строк
         textContent.addEventListener('input', () => {
-            clearTimeout(inputTimeout);
-            const currentTextLength = textContent.textContent.length;
-            const isDeleting = currentTextLength < previousTextLength;
-            
-            // При удалении ждем дольше для точности
-            const delay = isDeleting ? 150 : 100;
-            
-            inputTimeout = setTimeout(() => {
-                this.applySmartTextWrapping(element);
-                previousTextLength = textContent.textContent.length;
-            }, delay);
+            // Перенос строк работает через CSS, без автоматического изменения высоты
         });
 
         // Обработка клавиш для переноса строк
@@ -589,10 +575,7 @@ class ContentEditor {
                     e.preventDefault();
                     // Вставляем перенос строки
                     document.execCommand('insertLineBreak');
-                    // Применяем перенос после вставки
-                    setTimeout(() => {
-                        this.applySmartTextWrapping(element);
-                    }, 0);
+                    // Автоматическое изменение высоты отключено
                 }
             }
         });
@@ -601,9 +584,6 @@ class ContentEditor {
         textContent.addEventListener('dragstart', (e) => {
             e.preventDefault();
         });
-
-        // Применяем умный перенос при инициализации
-        this.applySmartTextWrapping(element);
     }
 
     addElementControls(element) {
@@ -772,13 +752,10 @@ class ContentEditor {
             }
         }
         
-        // Применяем умный перенос при изменении размера
-        if (property === 'width' || property === 'height') {
-            this.applySmartTextWrapping(this.selectedElement);
-        }
+        // Автоматическое изменение высоты отключено
     }
 
-    // Умный перенос текста с интеллектуальным изменением высоты
+    // Умный перенос текста (без автоматического изменения высоты)
     applySmartTextWrapping(element) {
         const textContent = element.querySelector('.text-content');
         if (!textContent) return;
@@ -786,63 +763,11 @@ class ContentEditor {
         // Проверяем, является ли элемент текстовым
         if (!element.classList.contains('text-element')) return;
         
-        // Получаем текущие размеры элемента
-        const elementHeight = element.offsetHeight;
-        const elementWidth = element.offsetWidth;
+        // Только обеспечиваем правильный перенос текста
+        // Высота элемента управляется вручную через панель свойств
         
-        // Вычисляем оптимальную высоту на основе содержимого
-        setTimeout(() => {
-            const textHeight = textContent.scrollHeight;
-            const textLines = Math.ceil(textHeight / 24); // Примерная высота строки 24px
-            
-            // Определяем минимальную и максимальную высоту на основе содержимого
-            const minHeight = Math.max(30, textLines * 24 + 16); // Минимум 30px или по линиям
-            const maxHeight = Math.min(600, Math.max(150, textLines * 24 + 50)); // Максимум 600px или адаптивно
-            
-            // Вычисляем целевую высоту
-            let targetHeight;
-            
-            // Базовый расчет: текст + padding
-            const baseHeight = textHeight + 16;
-            
-            if (textHeight <= elementHeight - 16) {
-                // Текст помещается, можно уменьшить высоту
-                targetHeight = Math.max(minHeight, baseHeight);
-            } else {
-                // Текст не помещается, увеличиваем высоту
-                targetHeight = Math.min(maxHeight, baseHeight);
-            }
-            
-            // Дополнительная проверка: не увеличиваем высоту при удалении
-            const isDeleting = textHeight < elementHeight - 20; // Если текст стал значительно меньше
-            if (isDeleting && targetHeight > elementHeight) {
-                // При удалении не увеличиваем высоту, только уменьшаем
-                targetHeight = Math.max(minHeight, textHeight + 16);
-            }
-            
-            // Применяем изменение высоты только если разница существенная
-            const heightDiff = Math.abs(targetHeight - elementHeight);
-            if (heightDiff > 5) { // Изменяем только если разница больше 5px
-                // Плавное изменение высоты
-                element.style.transition = 'height 0.2s ease';
-                element.style.height = targetHeight + 'px';
-                
-                // Обновляем значение в свойствах
-                const heightInput = document.getElementById('propHeight');
-                if (heightInput) {
-                    heightInput.value = Math.round(targetHeight);
-                    const heightDisplay = heightInput.parentElement.querySelector('.property-value');
-                    if (heightDisplay) {
-                        heightDisplay.textContent = Math.round(targetHeight) + 'px';
-                    }
-                }
-                
-                // Убираем transition после завершения анимации
-                setTimeout(() => {
-                    element.style.transition = '';
-                }, 200);
-            }
-        }, 50); // Увеличим задержку для более точных измерений
+        // Ничего не делаем - перенос уже работает через CSS
+        // Автоматическое изменение высоты отключено
     }
 
     duplicateElement(elementId) {
