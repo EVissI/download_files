@@ -293,12 +293,56 @@ class ContentEditor {
             case 'boardCanvas':
                 if (isActive) {
                     console.log('BoardCanvas активирован');
-                    // Добавляем логику для активации доски
+                    this.showBoardLabel();
                 } else {
                     console.log('BoardCanvas деактивирован');
-                    // Добавляем логику для деактивации доски
+                    this.hideBoardLabel();
                 }
                 break;
+        }
+    }
+
+    showBoardLabel() {
+        // Проверяем, есть ли уже надпись
+        if (document.getElementById('boardLabel')) {
+            return; // Уже существует
+        }
+
+        // Создаем элемент надписи
+        const boardLabel = document.createElement('div');
+        boardLabel.id = 'boardLabel';
+        boardLabel.className = 'board-label';
+        boardLabel.textContent = 'доска';
+        
+        // Добавляем стили для позиционирования
+        boardLabel.style.cssText = `
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            animation: fadeIn 0.3s ease-out;
+        `;
+        
+        // Добавляем на холст
+        this.canvas.appendChild(boardLabel);
+    }
+
+    hideBoardLabel() {
+        // Находим и удаляем надпись
+        const boardLabel = document.getElementById('boardLabel');
+        if (boardLabel) {
+            boardLabel.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+                boardLabel.remove();
+            }, 300);
         }
     }
 
@@ -916,6 +960,9 @@ class ContentEditor {
 
     // Method to force complete reload of the editor
     forceReload() {
+        // Clear board label if exists
+        this.hideBoardLabel();
+        
         // Clear all elements
         this.elements = [];
         if (this.canvas) {
@@ -927,6 +974,9 @@ class ContentEditor {
         if (this.propertiesContent) {
             this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
         }
+        
+        // Reset toggle states
+        this.toggleStates = {};
         
         // Reload tools
         this.loadTools();
