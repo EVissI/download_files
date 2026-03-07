@@ -340,7 +340,6 @@
     border-radius: 4px;
     min-width: 50px;
     min-height: 50px;
-    cursor: move;
     transition: box-shadow 0.2s ease;
     user-select: none;
 }
@@ -522,10 +521,12 @@
     opacity: 1;
 }
 
-.resize-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
-.resize-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
-.resize-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
-.resize-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+.resize-handle.bottom { 
+    bottom: -6px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    cursor: s-resize; 
+}
 
 /* Кнопки действий */
 .action-buttons {
