@@ -448,10 +448,10 @@
 /* Resize handles */
 .resize-handle {
     position: absolute;
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
     background: #667eea;
-    border: 1px solid white;
+    border: 2px solid white;
     border-radius: 50%;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -461,10 +461,10 @@
     opacity: 1;
 }
 
-.resize-handle.nw { top: -4px; left: -4px; cursor: nw-resize; }
-.resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
-.resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
-.resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
+.resize-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+.resize-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+.resize-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+.resize-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
 
 /* Кнопки действий */
 .action-buttons {
