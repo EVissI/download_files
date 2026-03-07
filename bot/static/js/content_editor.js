@@ -605,10 +605,19 @@ class ContentEditor {
         // Find the next available vertical position
         for (const existingEl of existingElements) {
             const existingTop = parseInt(existingEl.style.top);
-            const existingHeight = parseInt(existingEl.style.height) || 150; // Default height for auto elements
+            let existingHeight;
+            
+            // Get actual height of existing element
+            if (existingEl.classList.contains('table-element')) {
+                // For table elements, get the actual rendered height
+                existingHeight = existingEl.offsetHeight || 200;
+            } else {
+                // For other elements, use the styled height or default
+                existingHeight = parseInt(existingEl.style.height) || 150;
+            }
             
             // Check if the current element fits before this existing element
-            const currentElementHeight = elementHeight === 'auto' ? 200 : elementHeight;
+            const currentElementHeight = elementHeight === 'auto' ? 150 : elementHeight;
             if (nextY + currentElementHeight <= existingTop) {
                 break; // Found a gap
             }
@@ -618,7 +627,7 @@ class ContentEditor {
         }
         
         // Ensure the element doesn't go beyond canvas bounds
-        const currentElementHeight = elementHeight === 'auto' ? 200 : elementHeight;
+        const currentElementHeight = elementHeight === 'auto' ? 150 : elementHeight;
         const maxY = Math.min(canvasRect.height, maxCanvasHeight) - currentElementHeight - 20;
         if (nextY > maxY) {
             // If we run out of space, start from the top
@@ -1133,9 +1142,19 @@ class ContentEditor {
         const newId = `element_${this.elementIdCounter++}`;
         newElement.id = newId;
         
-        // Используем новую логику позиционирования для дубликата
-        const elementWidth = parseInt(element.style.width) || 200;
-        const elementHeight = parseInt(element.style.height) || 150;
+        // Get appropriate dimensions for positioning
+        let elementWidth, elementHeight;
+        if (element.classList.contains('table-element')) {
+            // For table elements, use actual dimensions
+            elementWidth = element.offsetWidth;
+            elementHeight = element.offsetHeight;
+        } else {
+            // For other elements, use styled dimensions
+            elementWidth = parseInt(element.style.width) || 200;
+            elementHeight = parseInt(element.style.height) || 150;
+        }
+        
+        // Use new logic for positioning
         const position = this.calculateVerticalPosition(elementWidth, elementHeight);
         
         newElement.style.left = position.x + 'px';
