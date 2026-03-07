@@ -217,11 +217,6 @@ class ContentEditor {
         hints.forEach((hint, index) => {
             const row = tbody.insertRow();
             
-            // Определяем стиль строки (лучшая подсказка выделяется)
-            if (index === 0) {
-                row.style.background = '#d4edda';
-            }
-            
             // Ход
             const moveCell = row.insertCell();
             moveCell.textContent = hint.move || 'N/A';
