@@ -1,17 +1,18 @@
 /**
  * Card Editor Module
- * Модуль для редактирования карточек с различными типами контента
+ * Редактор для выбора и настройки контента со страницы
  */
 
 class CardEditor {
     constructor() {
         this.modal = null;
-        this.currentContentType = null;
+        this.selectedElements = [];
         this.init();
     }
 
     init() {
         this.createModal();
+        this.detectAvailableContent();
     }
 
     createModal() {
@@ -21,57 +22,87 @@ class CardEditor {
                 <div class="card-editor-overlay" onclick="cardEditor.closeModal()"></div>
                 <div class="card-editor-container">
                     <div class="card-editor-header">
-                        <h2>Редактор карточек</h2>
+                        <h2>Редактор контента страницы</h2>
                         <button class="close-btn" onclick="cardEditor.closeModal()">&times;</button>
                     </div>
                     <div class="card-editor-body">
-                        <div class="content-type-selector">
-                            <h3>Выберите тип контента:</h3>
-                            <div class="content-type-grid">
-                                <div class="content-type-item" data-type="board" onclick="cardEditor.selectContentType('board')">
-                                    <div class="content-type-icon">📋</div>
-                                    <div class="content-type-title">Доска с параметрами</div>
-                                    <div class="content-type-desc">Манигейм / матч</div>
+                        <div class="content-selector">
+                            <h3>Доступный контент на странице:</h3>
+                            <div class="content-list" id="contentList">
+                                <!-- Динамический список доступного контента -->
+                            </div>
+                        </div>
+                        <div class="selected-content" id="selectedContent" style="display: none;">
+                            <h3>Выбранный контент:</h3>
+                            <div class="content-preview" id="contentPreview">
+                                <!-- Предпросмотр выбранного контента -->
+                            </div>
+                            <div class="content-controls">
+                                <div class="control-group">
+                                    <h4>Размеры:</h4>
+                                    <div class="size-controls">
+                                        <div class="control-item">
+                                            <label>Ширина:</label>
+                                            <input type="range" id="widthSlider" min="100" max="1200" value="400">
+                                            <span id="widthValue">400px</span>
+                                        </div>
+                                        <div class="control-item">
+                                            <label>Высота:</label>
+                                            <input type="range" id="heightSlider" min="100" max="800" value="300">
+                                            <span id="heightValue">300px</span>
+                                        </div>
+                                        <div class="control-item">
+                                            <label>
+                                                <input type="checkbox" id="autoSize"> Автоматический размер
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="content-type-item" data-type="question" onclick="cardEditor.selectContentType('question')">
-                                    <div class="content-type-icon">❓</div>
-                                    <div class="content-type-title">Текст вопроса</div>
-                                    <div class="content-type-desc">Вопрос для карточки</div>
+                                <div class="control-group">
+                                    <h4>Позиционирование:</h4>
+                                    <div class="position-controls">
+                                        <div class="control-item">
+                                            <label>Позиция X:</label>
+                                            <input type="range" id="positionX" min="0" max="100" value="50">
+                                            <span id="positionXValue">50%</span>
+                                        </div>
+                                        <div class="control-item">
+                                            <label>Позиция Y:</label>
+                                            <input type="range" id="positionY" min="0" max="100" value="50">
+                                            <span id="positionYValue">50%</span>
+                                        </div>
+                                        <div class="control-item">
+                                            <label>Z-индекс:</label>
+                                            <input type="number" id="zIndex" min="1" max="9999" value="100">
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="content-type-item" data-type="table" onclick="cardEditor.selectContentType('table')">
-                                    <div class="content-type-icon">📊</div>
-                                    <div class="content-type-title">Таблица</div>
-                                    <div class="content-type-desc">Табличные данные</div>
-                                </div>
-                                <div class="content-type-item" data-type="answer" onclick="cardEditor.selectContentType('answer')">
-                                    <div class="content-type-icon">💬</div>
-                                    <div class="content-type-title">Текст ответа</div>
-                                    <div class="content-type-desc">Ответ на вопрос</div>
-                                </div>
-                                <div class="content-type-item" data-type="image" onclick="cardEditor.selectContentType('image')">
-                                    <div class="content-type-icon">🖼️</div>
-                                    <div class="content-type-title">Иллюстрация</div>
-                                    <div class="content-type-desc">Изображение</div>
-                                </div>
-                                <div class="content-type-item" data-type="audio" onclick="cardEditor.selectContentType('audio')">
-                                    <div class="content-type-icon">🎵</div>
-                                    <div class="content-type-title">Аудио-файл</div>
-                                    <div class="content-type-desc">Звуковой файл</div>
-                                </div>
-                                <div class="content-type-item" data-type="link" onclick="cardEditor.selectContentType('link')">
-                                    <div class="content-type-icon">🔗</div>
-                                    <div class="content-type-title">Ссылка</div>
-                                    <div class="content-type-desc">Веб-ссылка</div>
+                                <div class="control-group">
+                                    <h4>Стиль:</h4>
+                                    <div class="style-controls">
+                                        <div class="control-item">
+                                            <label>Обводка:</label>
+                                            <input type="color" id="borderColor" value="#007bff">
+                                            <input type="range" id="borderWidth" min="0" max="10" value="2">
+                                            <span id="borderWidthValue">2px</span>
+                                        </div>
+                                        <div class="control-item">
+                                            <label>Прозрачность:</label>
+                                            <input type="range" id="opacity" min="0" max="100" value="100">
+                                            <span id="opacityValue">100%</span>
+                                        </div>
+                                        <div class="control-item">
+                                            <label>
+                                                <input type="checkbox" id="shadow"> Тень
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="content-editor" id="contentEditor" style="display: none;">
-                            <!-- Динамический контент редактора -->
-                        </div>
                     </div>
                     <div class="card-editor-footer">
-                        <button class="btn btn-secondary" onclick="cardEditor.closeModal()">Отмена</button>
-                        <button class="btn btn-primary" id="saveContentBtn" onclick="cardEditor.saveContent()" style="display: none;">Сохранить</button>
+                        <button class="btn btn-secondary" onclick="cardEditor.closeModal()">Закрыть</button>
                     </div>
                 </div>
             </div>
@@ -80,11 +111,260 @@ class CardEditor {
         // Добавляем модальное окно в body
         document.body.insertAdjacentHTML('beforeend', modalHTML);
         this.modal = document.getElementById('cardEditorModal');
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        // Слушатели для слайдеров
+        const widthSlider = document.getElementById('widthSlider');
+        const heightSlider = document.getElementById('heightSlider');
+        const positionX = document.getElementById('positionX');
+        const positionY = document.getElementById('positionY');
+        const borderWidth = document.getElementById('borderWidth');
+        const opacity = document.getElementById('opacity');
+
+        if (widthSlider) {
+            widthSlider.addEventListener('input', (e) => {
+                document.getElementById('widthValue').textContent = e.target.value + 'px';
+                this.updatePreview();
+            });
+        }
+
+        if (heightSlider) {
+            heightSlider.addEventListener('input', (e) => {
+                document.getElementById('heightValue').textContent = e.target.value + 'px';
+                this.updatePreview();
+            });
+        }
+
+        if (positionX) {
+            positionX.addEventListener('input', (e) => {
+                document.getElementById('positionXValue').textContent = e.target.value + '%';
+                this.updatePreview();
+            });
+        }
+
+        if (positionY) {
+            positionY.addEventListener('input', (e) => {
+                document.getElementById('positionYValue').textContent = e.target.value + '%';
+                this.updatePreview();
+            });
+        }
+
+        if (borderWidth) {
+            borderWidth.addEventListener('input', (e) => {
+                document.getElementById('borderWidthValue').textContent = e.target.value + 'px';
+                this.updatePreview();
+            });
+        }
+
+        if (opacity) {
+            opacity.addEventListener('input', (e) => {
+                document.getElementById('opacityValue').textContent = e.target.value + '%';
+                this.updatePreview();
+            });
+        }
+
+        // Слушатели для чекбоксов
+        ['autoSize', 'shadow'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', () => this.updatePreview());
+            }
+        });
+
+        // Слушатели для цвета и других полей
+        ['borderColor', 'zIndex'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', () => this.updatePreview());
+            }
+        });
+    }
+
+    detectAvailableContent() {
+        const availableContent = [
+            {
+                id: 'match-info',
+                name: 'Информация о матче',
+                type: 'text',
+                description: 'Информация о текущем матче/игре'
+            },
+            {
+                id: 'players-info',
+                name: 'Информация об игроках',
+                type: 'text',
+                description: 'Имена и статистика игроков'
+            },
+            {
+                id: 'boardCanvas',
+                name: 'Игровая доска',
+                type: 'canvas',
+                description: 'Визуализация игрового поля'
+            },
+            {
+                id: 'move-info',
+                name: 'Информация о ходе',
+                type: 'text',
+                description: 'Детали текущего хода'
+            },
+            {
+                id: 'red-pips',
+                name: 'Пипсы красных',
+                type: 'text',
+                description: 'Количество пипсов красного игрока'
+            },
+            {
+                id: 'black-pips',
+                name: 'Пипсы черных',
+                type: 'text',
+                description: 'Количество пипсов черного игрока'
+            },
+            {
+                id: 'controls',
+                name: 'Панель управления',
+                type: 'controls',
+                description: 'Кнопки управления игрой'
+            },
+            {
+                id: 'hints-table',
+                name: 'Таблица подсказок',
+                type: 'table',
+                description: 'Подсказки по ходам и кубу'
+            },
+            {
+                id: 'moveHintsTable',
+                name: 'Подсказки по ходам',
+                type: 'table',
+                description: 'Детальные подсказки по возможным ходам'
+            },
+            {
+                id: 'cubeHintsTable',
+                name: 'Подсказки по кубу',
+                type: 'table',
+                description: 'Рекомендации по удвоению'
+            }
+        ];
+
+        this.renderContentList(availableContent);
+    }
+
+    renderContentList(contentList) {
+        const container = document.getElementById('contentList');
+        if (!container) return;
+
+        let html = '';
+        contentList.forEach(item => {
+            const element = document.getElementById(item.id);
+            const exists = element ? 'available' : 'unavailable';
+            
+            html += `
+                <div class="content-item ${exists}" data-id="${item.id}" data-type="${item.type}" onclick="cardEditor.selectContent('${item.id}')">
+                    <div class="content-item-header">
+                        <div class="content-item-name">${item.name}</div>
+                        <div class="content-item-type">${this.getTypeIcon(item.type)} ${item.type}</div>
+                    </div>
+                    <div class="content-item-description">${item.description}</div>
+                    <div class="content-item-status">${exists === 'available' ? '✓ Доступно' : '✗ Не найдено'}</div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    getTypeIcon(type) {
+        const icons = {
+            'text': '📝',
+            'canvas': '🎨',
+            'controls': '🎮',
+            'table': '📊'
+        };
+        return icons[type] || '📄';
+    }
+
+    selectContent(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            if (typeof showMessageModal === 'function') {
+                showMessageModal('Элемент не найден на странице', 'error');
+            }
+            return;
+        }
+
+        this.selectedElements = [elementId];
+        this.showContentEditor(elementId, element);
+        
+        // Подсвечиваем выбранный элемент
+        document.querySelectorAll('.content-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        document.querySelector(`[data-id="${elementId}"]`).classList.add('selected');
+    }
+
+    showContentEditor(elementId, element) {
+        const selectedContent = document.getElementById('selectedContent');
+        
+        selectedContent.style.display = 'block';
+
+        // Показываем предпросмотр
+        this.updatePreview(element);
+    }
+
+    updatePreview(element) {
+        const preview = document.getElementById('contentPreview');
+        if (!preview) return;
+
+        if (!element && this.selectedElements.length > 0) {
+            element = document.getElementById(this.selectedElements[0]);
+        }
+
+        if (!element) return;
+
+        // Получаем настройки
+        const width = document.getElementById('autoSize').checked ? 'auto' : document.getElementById('widthSlider').value + 'px';
+        const height = document.getElementById('autoSize').checked ? 'auto' : document.getElementById('heightSlider').value + 'px';
+        const posX = document.getElementById('positionX').value + '%';
+        const posY = document.getElementById('positionY').value + '%';
+        const zIndex = document.getElementById('zIndex').value;
+        const borderColor = document.getElementById('borderColor').value;
+        const borderWidth = document.getElementById('borderWidth').value + 'px';
+        const opacity = document.getElementById('opacity').value / 100;
+        const shadow = document.getElementById('shadow').checked;
+
+        // Создаем клон элемента для предпросмотра
+        const clone = element.cloneNode(true);
+        clone.id = 'preview-clone';
+
+        // Применяем стили
+        const previewStyles = {
+            width: width,
+            height: height,
+            position: 'relative',
+            left: posX,
+            top: posY,
+            zIndex: zIndex,
+            border: `${borderWidth} solid ${borderColor}`,
+            opacity: opacity,
+            boxShadow: shadow ? '0 4px 8px rgba(0,0,0,0.2)' : 'none',
+            transform: 'translate(-50%, -50%)',
+            maxWidth: '90%',
+            maxHeight: '300px',
+            overflow: 'auto'
+        };
+
+        // Применяем стили к клону
+        Object.assign(clone.style, previewStyles);
+
+        // Очищаем и добавляем предпросмотр
+        preview.innerHTML = '';
+        preview.appendChild(clone);
     }
 
     openModal() {
         this.modal.style.display = 'block';
         document.body.style.overflow = 'hidden';
+        this.detectAvailableContent(); // Обновляем список при открытии
     }
 
     closeModal() {
@@ -93,335 +373,12 @@ class CardEditor {
         this.resetEditor();
     }
 
-    selectContentType(type) {
-        this.currentContentType = type;
-        
-        // Подсвечиваем выбранный тип
-        document.querySelectorAll('.content-type-item').forEach(item => {
-            item.classList.remove('selected');
-        });
-        document.querySelector(`[data-type="${type}"]`).classList.add('selected');
-
-        // Показываем редактор для выбранного типа
-        this.showContentEditor(type);
-    }
-
-    showContentEditor(type) {
-        const editorContainer = document.getElementById('contentEditor');
-        const saveBtn = document.getElementById('saveContentBtn');
-        
-        let editorHTML = '';
-
-        switch (type) {
-            case 'board':
-                editorHTML = this.getBoardEditorHTML();
-                break;
-            case 'question':
-                editorHTML = this.getQuestionEditorHTML();
-                break;
-            case 'table':
-                editorHTML = this.getTableEditorHTML();
-                break;
-            case 'answer':
-                editorHTML = this.getAnswerEditorHTML();
-                break;
-            case 'image':
-                editorHTML = this.getImageEditorHTML();
-                break;
-            case 'audio':
-                editorHTML = this.getAudioEditorHTML();
-                break;
-            case 'link':
-                editorHTML = this.getLinkEditorHTML();
-                break;
-        }
-
-        editorContainer.innerHTML = editorHTML;
-        editorContainer.style.display = 'block';
-        saveBtn.style.display = 'inline-block';
-    }
-
-    getBoardEditorHTML() {
-        return `
-            <div class="editor-form">
-                <h3>Параметры доски</h3>
-                <div class="form-group">
-                    <label for="boardType">Тип доски:</label>
-                    <select id="boardType" class="form-control">
-                        <option value="manigame">Манигейм</option>
-                        <option value="match">Матч</option>
-                        <option value="tournament">Турнир</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="boardTitle">Название:</label>
-                    <input type="text" id="boardTitle" class="form-control" placeholder="Введите название доски">
-                </div>
-                <div class="form-group">
-                    <label for="boardDescription">Описание:</label>
-                    <textarea id="boardDescription" class="form-control" placeholder="Введите описание доски"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="boardPlayers">Количество игроков:</label>
-                    <input type="number" id="boardPlayers" class="form-control" min="2" max="10" value="2">
-                </div>
-            </div>
-        `;
-    }
-
-    getQuestionEditorHTML() {
-        return `
-            <div class="editor-form">
-                <h3>Текст вопроса</h3>
-                <div class="form-group">
-                    <label for="questionText">Вопрос:</label>
-                    <textarea id="questionText" class="form-control" rows="4" placeholder="Введите текст вопроса"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="questionCategory">Категория:</label>
-                    <input type="text" id="questionCategory" class="form-control" placeholder="Введите категорию вопроса">
-                </div>
-                <div class="form-group">
-                    <label for="questionDifficulty">Сложность:</label>
-                    <select id="questionDifficulty" class="form-control">
-                        <option value="easy">Легкий</option>
-                        <option value="medium">Средний</option>
-                        <option value="hard">Сложный</option>
-                    </select>
-                </div>
-            </div>
-        `;
-    }
-
-    getTableEditorHTML() {
-        return `
-            <div class="editor-form">
-                <h3>Таблица</h3>
-                <div class="form-group">
-                    <label for="tableTitle">Заголовок таблицы:</label>
-                    <input type="text" id="tableTitle" class="form-control" placeholder="Введите заголовок">
-                </div>
-                <div class="form-group">
-                    <label for="tableRows">Количество строк:</label>
-                    <input type="number" id="tableRows" class="form-control" min="1" max="20" value="3">
-                </div>
-                <div class="form-group">
-                    <label for="tableColumns">Количество колонок:</label>
-                    <input type="number" id="tableColumns" class="form-control" min="1" max="10" value="3">
-                </div>
-                <div class="form-group">
-                    <button type="button" class="btn btn-secondary" onclick="cardEditor.generateTable()">Сгенерировать таблицу</button>
-                </div>
-                <div id="tableContainer"></div>
-            </div>
-        `;
-    }
-
-    getAnswerEditorHTML() {
-        return `
-            <div class="editor-form">
-                <h3>Текст ответа</h3>
-                <div class="form-group">
-                    <label for="answerText">Ответ:</label>
-                    <textarea id="answerText" class="form-control" rows="4" placeholder="Введите текст ответа"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="answerType">Тип ответа:</label>
-                    <select id="answerType" class="form-control">
-                        <option value="text">Текст</option>
-                        <option value="number">Число</option>
-                        <option value="boolean">Да/Нет</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="answerExplanation">Пояснение:</label>
-                    <textarea id="answerExplanation" class="form-control" rows="2" placeholder="Введите пояснение к ответу"></textarea>
-                </div>
-            </div>
-        `;
-    }
-
-    getImageEditorHTML() {
-        return `
-            <div class="editor-form">
-                <h3>Иллюстрация</h3>
-                <div class="form-group">
-                    <label for="imageFile">Выберите файл:</label>
-                    <input type="file" id="imageFile" class="form-control" accept="image/*">
-                </div>
-                <div class="form-group">
-                    <label for="imageUrl">Или URL изображения:</label>
-                    <input type="url" id="imageUrl" class="form-control" placeholder="https://example.com/image.jpg">
-                </div>
-                <div class="form-group">
-                    <label for="imageAlt">Альтернативный текст:</label>
-                    <input type="text" id="imageAlt" class="form-control" placeholder="Описание изображения">
-                </div>
-                <div class="form-group">
-                    <label for="imageCaption">Подпись:</label>
-                    <input type="text" id="imageCaption" class="form-control" placeholder="Подпись к изображению">
-                </div>
-                <div id="imagePreview"></div>
-            </div>
-        `;
-    }
-
-    getAudioEditorHTML() {
-        return `
-            <div class="editor-form">
-                <h3>Аудио-файл</h3>
-                <div class="form-group">
-                    <label for="audioFile">Выберите файл:</label>
-                    <input type="file" id="audioFile" class="form-control" accept="audio/*">
-                </div>
-                <div class="form-group">
-                    <label for="audioUrl">Или URL аудио:</label>
-                    <input type="url" id="audioUrl" class="form-control" placeholder="https://example.com/audio.mp3">
-                </div>
-                <div class="form-group">
-                    <label for="audioTitle">Название:</label>
-                    <input type="text" id="audioTitle" class="form-control" placeholder="Название аудио">
-                </div>
-                <div class="form-group">
-                    <label for="audioDescription">Описание:</label>
-                    <textarea id="audioDescription" class="form-control" rows="2" placeholder="Описание аудио"></textarea>
-                </div>
-                <div id="audioPreview"></div>
-            </div>
-        `;
-    }
-
-    getLinkEditorHTML() {
-        return `
-            <div class="editor-form">
-                <h3>Ссылка</h3>
-                <div class="form-group">
-                    <label for="linkUrl">URL:</label>
-                    <input type="url" id="linkUrl" class="form-control" placeholder="https://example.com">
-                </div>
-                <div class="form-group">
-                    <label for="linkTitle">Заголовок:</label>
-                    <input type="text" id="linkTitle" class="form-control" placeholder="Заголовок ссылки">
-                </div>
-                <div class="form-group">
-                    <label for="linkDescription">Описание:</label>
-                    <textarea id="linkDescription" class="form-control" rows="2" placeholder="Описание ссылки"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="linkTarget">Открытие:</label>
-                    <select id="linkTarget" class="form-control">
-                        <option value="_blank">В новой вкладке</option>
-                        <option value="_self">В той же вкладке</option>
-                    </select>
-                </div>
-            </div>
-        `;
-    }
-
-    generateTable() {
-        const rows = parseInt(document.getElementById('tableRows').value);
-        const columns = parseInt(document.getElementById('tableColumns').value);
-        const container = document.getElementById('tableContainer');
-        
-        let tableHTML = `
-            <div class="table-editor">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-        `;
-        
-        for (let i = 0; i < columns; i++) {
-            tableHTML += `<th><input type="text" class="form-control" placeholder="Колонка ${i + 1}"></th>`;
-        }
-        
-        tableHTML += `
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        for (let i = 0; i < rows; i++) {
-            tableHTML += '<tr>';
-            for (let j = 0; j < columns; j++) {
-                tableHTML += `<td><input type="text" class="form-control" placeholder="Ячейка ${i + 1}-${j + 1}"></td>`;
-            }
-            tableHTML += '</tr>';
-        }
-        
-        tableHTML += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-        
-        container.innerHTML = tableHTML;
-    }
-
-    saveContent() {
-        const content = this.collectContent();
-        
-        // Здесь можно добавить логику сохранения контента
-        console.log('Сохранение контента:', content);
-        
-        // Показываем сообщение об успешном сохранении
-        if (typeof showMessageModal === 'function') {
-            showMessageModal('Контент успешно сохранен!', 'success');
-        } else {
-            alert('Контент успешно сохранен!');
-        }
-        
-        this.closeModal();
-    }
-
-    collectContent() {
-        const content = {
-            type: this.currentContentType,
-            data: {}
-        };
-
-        switch (this.currentContentType) {
-            case 'board':
-                content.data = {
-                    type: document.getElementById('boardType').value,
-                    title: document.getElementById('boardTitle').value,
-                    description: document.getElementById('boardDescription').value,
-                    players: document.getElementById('boardPlayers').value
-                };
-                break;
-            case 'question':
-                content.data = {
-                    text: document.getElementById('questionText').value,
-                    category: document.getElementById('questionCategory').value,
-                    difficulty: document.getElementById('questionDifficulty').value
-                };
-                break;
-            case 'answer':
-                content.data = {
-                    text: document.getElementById('answerText').value,
-                    type: document.getElementById('answerType').value,
-                    explanation: document.getElementById('answerExplanation').value
-                };
-                break;
-            case 'link':
-                content.data = {
-                    url: document.getElementById('linkUrl').value,
-                    title: document.getElementById('linkTitle').value,
-                    description: document.getElementById('linkDescription').value,
-                    target: document.getElementById('linkTarget').value
-                };
-                break;
-        }
-
-        return content;
-    }
-
     resetEditor() {
-        this.currentContentType = null;
-        document.querySelectorAll('.content-type-item').forEach(item => {
+        this.selectedElements = [];
+        document.querySelectorAll('.content-item').forEach(item => {
             item.classList.remove('selected');
         });
-        document.getElementById('contentEditor').style.display = 'none';
-        document.getElementById('saveContentBtn').style.display = 'none';
+        document.getElementById('selectedContent').style.display = 'none';
     }
 }
 
