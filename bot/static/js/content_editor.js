@@ -493,17 +493,15 @@ class ContentEditor {
                 break;
                 
             case 'support-link':
-                // Ссылка
+                // Ссылка с текстовым контентом
                 element.innerHTML = `
-                    <div style="padding: 20px; height: 100%; display: flex; flex-direction: column; justify-content: center;">
-                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">URL ссылки:</label>
-                        <input type="url" placeholder="https://example.com" 
-                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;"
-                               oninput="this.parentElement.querySelector('.link-preview').href = this.value; this.parentElement.querySelector('.link-preview').textContent = this.value || 'Ссылка'">
-                        <a href="#" class="link-preview" target="_blank" 
-                           style="display: inline-block; padding: 8px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 4px;">Ссылка</a>
+                    <div class="link-content">
+                        <div class="link-text" contenteditable="true" placeholder="Введите текст ссылки...">Ссылка</div>
+                        <input type="hidden" class="link-url" value="">
                     </div>
                 `;
+                element.classList.add('link-element');
+                this.setupLinkEditing(element);
                 break;
                 
             default:
@@ -514,6 +512,67 @@ class ContentEditor {
                     </div>
                 `;
         }
+    }
+
+    setupLinkEditing(element) {
+        const linkText = element.querySelector('.link-text');
+        const linkUrl = element.querySelector('.link-url');
+        if (!linkText || !linkUrl) return;
+
+        // Делаем текст нефокусируемым при перетаскивании
+        linkText.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            if (e.target === linkText) {
+                // Начинаем редактирование при клике на текст
+                linkText.focus();
+                
+                // Выделяем весь текст при первом клике
+                if (linkText.textContent === 'Ссылка') {
+                    // Выделяем весь текст
+                    const selection = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(linkText);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            }
+        });
+
+        // Обработка окончания редактирования
+        linkText.addEventListener('blur', () => {
+            // Если текст пустой, возвращаем placeholder
+            if (linkText.textContent.trim() === '') {
+                linkText.textContent = 'Ссылка';
+            }
+        });
+
+        // Обработка клика по ссылке для перехода
+        element.addEventListener('click', (e) => {
+            // Если не в режиме редактирования текста
+            if (!linkText.contains(e.target) || document.activeElement !== linkText) {
+                const url = linkUrl.value;
+                if (url && url.trim() !== '') {
+                    // Открываем ссылку в новой вкладке
+                    window.open(url, '_blank');
+                }
+            }
+        });
+
+        // Обработка клавиш
+        linkText.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                linkText.blur();
+            } else if (e.key === 'Enter') {
+                if (e.shiftKey) {
+                    // Shift+Enter - разрешаем перенос
+                    return;
+                } else {
+                    // Обычный Enter - завершаем редактирование
+                    e.preventDefault();
+                    linkText.blur();
+                }
+            }
+        });
     }
 
     setupTextEditing(element) {
@@ -678,6 +737,25 @@ class ContentEditor {
                            oninput="contentEditor.updateElementProperty('textColor', this.value)">
                 </div>
                 ` : ''}
+                ${element.classList.contains('link-element') ? `
+                <div class="property-item">
+                    <label>Размер шрифта:</label>
+                    <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}" 
+                           oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
+                    <div class="property-value">${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}px</div>
+                </div>
+                <div class="property-item">
+                    <label>Цвет текста:</label>
+                    <input type="color" id="propTextColor" value="${window.getComputedStyle(element.querySelector('.link-text')).color || '#007bff'}" 
+                           oninput="contentEditor.updateElementProperty('textColor', this.value)">
+                </div>
+                <div class="property-item">
+                    <label>URL ссылки:</label>
+                    <input type="url" id="propLinkUrl" value="${element.querySelector('.link-url').value}" 
+                           placeholder="https://example.com"
+                           oninput="contentEditor.updateElementProperty('linkUrl', this.value)">
+                </div>
+                ` : ''}
                 <div class="property-item">
                     <label>Цвет обводки:</label>
                     <input type="color" id="propBorderColor" value="#667eea" 
@@ -724,15 +802,35 @@ class ContentEditor {
                 this.selectedElement.style[property] = value;
                 break;
             case 'fontSize':
-                const textContent = this.selectedElement.querySelector('.text-content');
-                if (textContent) {
-                    textContent.style.fontSize = value;
+                if (element.classList.contains('text-element')) {
+                    const textContent = this.selectedElement.querySelector('.text-content');
+                    if (textContent) {
+                        textContent.style.fontSize = value;
+                    }
+                } else if (element.classList.contains('link-element')) {
+                    const linkText = this.selectedElement.querySelector('.link-text');
+                    if (linkText) {
+                        linkText.style.fontSize = value;
+                    }
                 }
                 break;
             case 'textColor':
-                const textContentForColor = this.selectedElement.querySelector('.text-content');
-                if (textContentForColor) {
-                    textContentForColor.style.color = value;
+                if (element.classList.contains('text-element')) {
+                    const textContent = this.selectedElement.querySelector('.text-content');
+                    if (textContent) {
+                        textContent.style.color = value;
+                    }
+                } else if (element.classList.contains('link-element')) {
+                    const linkText = this.selectedElement.querySelector('.link-text');
+                    if (linkText) {
+                        linkText.style.color = value;
+                    }
+                }
+                break;
+            case 'linkUrl':
+                const linkUrl = this.selectedElement.querySelector('.link-url');
+                if (linkUrl) {
+                    linkUrl.value = value;
                 }
                 break;
             case 'borderColor':
@@ -885,7 +983,8 @@ class ContentEditor {
             if (e.target.classList.contains('canvas-element') && 
                 !e.target.classList.contains('resize-handle') &&
                 !e.target.classList.contains('control-btn') &&
-                !e.target.classList.contains('text-content')) {
+                !e.target.classList.contains('text-content') &&
+                !e.target.classList.contains('link-text')) {
                 this.startDragging(e, e.target);
             } else if (e.target.classList.contains('resize-handle')) {
                 this.startResizing(e, e.target);

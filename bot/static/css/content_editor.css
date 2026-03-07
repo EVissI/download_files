@@ -359,6 +359,67 @@
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
 }
 
+/* Элементы ссылок */
+.canvas-element.link-element {
+    background: transparent;
+    border: 1px dashed #007bff;
+    min-width: 100px;
+    min-height: 30px;
+    cursor: pointer;
+}
+
+.canvas-element.link-element.selected {
+    border: 1px solid #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+}
+
+.link-content {
+    width: 100%;
+    height: 100%;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.link-text {
+    width: 100%;
+    height: 100%;
+    font-family: 'Arial', sans-serif;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #007bff;
+    outline: none;
+    border: none;
+    background: transparent;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    min-height: 20px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    text-decoration: underline;
+    text-align: center;
+}
+
+.link-text:empty:before {
+    content: attr(placeholder);
+    color: #999;
+    font-style: italic;
+    text-decoration: none;
+}
+
+.link-text:focus {
+    cursor: text;
+    text-decoration: none;
+}
+
+.link-text:hover:not(:focus) {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
 .text-content {
     width: 100%;
     height: 100%;
