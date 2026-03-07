@@ -576,10 +576,6 @@ class ContentEditor {
             }
         });
 
-        // Предотвращаем перетаскивание при редактировании текста
-        textContent.addEventListener('dragstart', (e) => {
-            e.preventDefault();
-        });
     }
 
     addElementControls(element) {
