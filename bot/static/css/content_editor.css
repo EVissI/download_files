@@ -340,12 +340,18 @@
     border-radius: 4px;
     min-width: 50px;
     min-height: 50px;
-    transition: box-shadow 0.2s ease;
+    transition: all 0.2s ease;
     user-select: none;
     /* Добавляем плавное появление для вертикального выравнивания */
     animation: slideInFromTop 0.3s ease-out;
-    /* Убираем курсор перемещения */
-    cursor: default;
+    /* Убираем курсор перемещения, добавляем указатель клика */
+    cursor: pointer;
+}
+
+/* Эффект при наведении - показываем возможность клика */
+.canvas-element:hover {
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+    transform: scale(1.01);
 }
 
 /* Анимация появления сверху для вертикального выравнивания */

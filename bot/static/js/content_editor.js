@@ -335,8 +335,7 @@ class ContentEditor {
         // Calculate center X position
         const centerX = (Math.min(canvasRect.width, maxCanvasWidth) - elementWidth) / 2;
         
-        // Calculate vertical spacing and position
-        const verticalSpacing = 20; // Расстояние между элементами
+        // Calculate vertical position without spacing
         const startY = 20; // Начальный отступ сверху
         
         let nextY = startY;
@@ -347,19 +346,19 @@ class ContentEditor {
             const existingHeight = parseInt(existingEl.style.height);
             
             // Check if the current element fits before this existing element
-            if (nextY + elementHeight + verticalSpacing <= existingTop) {
+            if (nextY + elementHeight <= existingTop) {
                 break; // Found a gap
             }
             
-            // Move to the next position after this element
-            nextY = existingTop + existingHeight + verticalSpacing;
+            // Move to the next position after this element (no spacing)
+            nextY = existingTop + existingHeight;
         }
         
         // Ensure the element doesn't go beyond canvas bounds
         const maxY = Math.min(canvasRect.height, maxCanvasHeight) - elementHeight - 20;
         if (nextY > maxY) {
-            // If we run out of space, start from the top with a smaller spacing
-            nextY = startY + (this.elements.length % 5) * (elementHeight + 10);
+            // If we run out of space, start from the top
+            nextY = startY + (this.elements.length % 5) * elementHeight;
         }
         
         return {
@@ -558,7 +557,7 @@ class ContentEditor {
         const linkUrl = element.querySelector('.link-url');
         if (!linkText || !linkUrl) return;
 
-        // Делаем текст нефокусируемым при перетаскивании
+        // Предотвращаем всплытие события клика, чтобы не выделять элемент при редактировании ссылки
         linkText.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             if (e.target === linkText) {
@@ -585,9 +584,9 @@ class ContentEditor {
             }
         });
 
-        // Обработка клика по ссылке для перехода
+        // Обработка клика по ссылке для перехода (только если не в режиме редактирования)
         element.addEventListener('click', (e) => {
-            // Если не в режиме редактирования текста
+            // Если не в режиме редактирования текста и клик не по текстовому полю
             if (!linkText.contains(e.target) || document.activeElement !== linkText) {
                 const url = linkUrl.value;
                 if (url && url.trim() !== '') {
@@ -618,7 +617,7 @@ class ContentEditor {
         const textContent = element.querySelector('.text-content');
         if (!textContent) return;
 
-        // Делаем текст нефокусируемым при перетаскивании
+        // Предотвращаем всплытие события клика, чтобы не выделять элемент при редактировании текста
         textContent.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             if (e.target === textContent) {
@@ -996,9 +995,16 @@ class ContentEditor {
     }
 
     setupCanvasEvents() {
-        // Изменение размера элементов
+        // Клик по элементу для выделения и открытия свойств
         this.canvas.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('resize-handle')) {
+            // Ищем ближайший родительский элемент canvas-element
+            const canvasElement = e.target.closest('.canvas-element');
+            
+            if (canvasElement && 
+                !e.target.classList.contains('resize-handle') &&
+                !e.target.classList.contains('control-btn')) {
+                this.selectElement(canvasElement);
+            } else if (e.target.classList.contains('resize-handle')) {
                 this.startResizing(e, e.target);
             }
         });
