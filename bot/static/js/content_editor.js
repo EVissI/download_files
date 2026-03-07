@@ -112,6 +112,276 @@ class ContentEditor {
         document.body.style.overflow = 'auto';
     }
 
+    openModalWithData(cardData) {
+        // Force cache-busting by adding timestamp to modal
+        const timestamp = Date.now();
+        if (this.modal) {
+            this.modal.setAttribute('data-cache-timestamp', timestamp);
+        }
+        
+        this.modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        this.loadTools(); // Обновляем инструменты при открытии
+        
+        // Создаем таблицу на основе данных карточки
+        this.createTableFromData(cardData);
+        
+        // Force refresh of all dynamic content
+        this.forceRefreshContent();
+    }
+
+    createTableFromData(cardData) {
+        if (!cardData) {
+            console.warn('Нет данных для создания таблицы');
+            return;
+        }
+
+        console.log('Получены данные для таблицы:', cardData); // Для отладки
+
+        // Очищаем canvas перед созданием таблицы
+        if (this.canvas) {
+            this.canvas.innerHTML = '';
+        }
+
+        // Создаем элемент таблицы
+        const tableElement = document.createElement('div');
+        tableElement.className = 'canvas-element table-element';
+        tableElement.style.cssText = `
+            position: absolute;
+            left: 50px;
+            top: 50px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            min-width: 400px;
+        `;
+
+        // Заголовок таблицы
+        const tableTitle = document.createElement('h3');
+        tableTitle.textContent = `Ход ${cardData.turn || 'N/A'} - ${cardData.player || 'Unknown'}`;
+        tableTitle.style.cssText = `
+            margin: 0 0 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+        `;
+        tableElement.appendChild(tableTitle);
+
+        // Создаем таблицу для hints
+        if (cardData.hints && cardData.hints.length > 0) {
+            const hintsTable = this.createHintsTable(cardData.hints);
+            tableElement.appendChild(hintsTable);
+        }
+
+        // Создаем таблицу для cube_hints
+        if (cardData.cube_hints && cardData.cube_hints.length > 0) {
+            const cubeTitle = document.createElement('h4');
+            cubeTitle.textContent = 'Решения с кубом';
+            cubeTitle.style.cssText = `
+                margin: 20px 0 10px 0;
+                font-size: 14px;
+                font-weight: bold;
+                color: #333;
+            `;
+            tableElement.appendChild(cubeTitle);
+
+            const cubeTable = this.createCubeTable(cardData.cube_hints);
+            tableElement.appendChild(cubeTable);
+        }
+
+        // Добавляем информацию о текущем ходе
+        if (cardData.gnu_move || cardData.action) {
+            const currentMoveInfo = document.createElement('div');
+            currentMoveInfo.style.cssText = `
+                margin-top: 15px;
+                padding: 10px;
+                background: #e8f4ff;
+                border-radius: 4px;
+                border-left: 4px solid #2196F3;
+            `;
+            currentMoveInfo.innerHTML = `
+                <strong>Текущий ход:</strong> ${cardData.gnu_move || cardData.action || 'N/A'}<br>
+                <strong>Эквити:</strong> ${cardData.equity ? cardData.equity.toFixed(3) : 'N/A'}
+            `;
+            tableElement.appendChild(currentMoveInfo);
+        }
+
+        // Добавляем таблицу на canvas
+        this.canvas.appendChild(tableElement);
+
+        // Добавляем в массив элементов
+        this.elements.push({
+            id: this.elementIdCounter++,
+            element: tableElement,
+            type: 'table',
+            data: cardData
+        });
+
+        // Делаем таблицу выбираемой
+        this.setupElementInteractions(tableElement);
+    }
+
+    createHintsTable(hints) {
+        const table = document.createElement('table');
+        table.style.cssText = `
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 12px;
+        `;
+
+        // Заголовок таблицы
+        const header = table.createTHead();
+        const headerRow = header.insertRow();
+        const headers = ['Ход', 'Win%', 'Wg%', 'Эквити'];
+        
+        headers.forEach(text => {
+            const th = document.createElement('th');
+            th.textContent = text;
+            th.style.cssText = `
+                background: #4CAF50;
+                color: white;
+                padding: 8px;
+                text-align: left;
+                border: 1px solid #ddd;
+                font-weight: bold;
+            `;
+            headerRow.appendChild(th);
+        });
+
+        // Тело таблицы
+        const tbody = table.createTBody();
+        hints.forEach((hint, index) => {
+            const row = tbody.insertRow();
+            
+            // Определяем стиль строки (лучшая подсказка выделяется)
+            if (index === 0) {
+                row.style.background = '#d4edda';
+            }
+            
+            // Ход
+            const moveCell = row.insertCell();
+            moveCell.textContent = hint.move || 'N/A';
+            moveCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
+            
+            // Win%
+            const winCell = row.insertCell();
+            winCell.textContent = hint.probs && hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : 'N/A';
+            winCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
+            
+            // Wg%
+            const wgCell = row.insertCell();
+            wgCell.textContent = hint.probs && hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : 'N/A';
+            wgCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
+            
+            // Эквити
+            const eqCell = row.insertCell();
+            eqCell.textContent = hint.eq ? hint.eq.toFixed(3) : 'N/A';
+            eqCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center; font-weight: bold;';
+        });
+
+        return table;
+    }
+
+    createCubeTable(cubeHints) {
+        const table = document.createElement('table');
+        table.style.cssText = `
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 12px;
+        `;
+
+        // Заголовок таблицы
+        const header = table.createTHead();
+        const headerRow = header.insertRow();
+        const headers = ['Действие', 'Эквити'];
+        
+        headers.forEach(text => {
+            const th = document.createElement('th');
+            th.textContent = text;
+            th.style.cssText = `
+                background: #FF9800;
+                color: white;
+                padding: 8px;
+                text-align: left;
+                border: 1px solid #ddd;
+                font-weight: bold;
+            `;
+            headerRow.appendChild(th);
+        });
+
+        // Тело таблицы
+        const tbody = table.createTBody();
+        if (cubeHints[0] && cubeHints[0].cubeful_equities) {
+            cubeHints[0].cubeful_equities.forEach(eq => {
+                const row = tbody.insertRow();
+                
+                // Действие
+                const actionCell = row.insertCell();
+                const action = eq.action_1 || '';
+                if (eq.action_2) {
+                    actionCell.textContent = `${action} / ${eq.action_2}`;
+                } else {
+                    actionCell.textContent = action;
+                }
+                actionCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
+                
+                // Эквити
+                const eqCell = row.insertCell();
+                eqCell.textContent = eq.eq ? eq.eq.toFixed(3) : 'N/A';
+                eqCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center; font-weight: bold;';
+            });
+        }
+
+        return table;
+    }
+
+    setupElementInteractions(element) {
+        // Добавляем обработчики для выделения элемента
+        element.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectElement(element);
+        });
+
+        // Добавляем обработчики для перемещения (drag and drop)
+        element.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('control-btn')) return;
+            
+            const startX = e.clientX - element.offsetLeft;
+            const startY = e.clientY - element.offsetTop;
+
+            const handleMouseMove = (e) => {
+                const newX = e.clientX - startX;
+                const newY = e.clientY - startY;
+                
+                // Ограничиваем перемещение в пределах canvas
+                const canvasRect = this.canvas.getBoundingClientRect();
+                const elementRect = element.getBoundingClientRect();
+                
+                const maxX = canvasRect.width - elementRect.width;
+                const maxY = canvasRect.height - elementRect.height;
+                
+                element.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
+                element.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
+            };
+
+            const handleMouseUp = () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+    }
+
     forceRefreshContent() {
         // Force refresh all cached content
         if (this.canvas) {
