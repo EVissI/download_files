@@ -20,11 +20,6 @@ class ContentEditor {
         this.elementStartY = 0;
         this.currentResizeHandle = null;
         
-        // Board state
-        this.boardVisible = false;
-        this.boardIndicator = null;
-        this.boardOverlay = null;
-        
         this.init();
     }
 
@@ -155,10 +150,10 @@ class ContentEditor {
         // Определяем доступные инструменты согласно требованиям
         const tools = [
             {
-                id: 'board-checkbox',
-                name: 'Доска',
-                type: 'checkbox',
-                description: 'Показать/скрыть игровую доску',
+                id: 'boardCanvas',
+                name: 'Доска с параметрами',
+                type: 'canvas',
+                description: 'Игровая доска с параметрами (манигейм/матч)',
                 available: true
             },
             {
@@ -209,48 +204,20 @@ class ContentEditor {
     }
 
     renderTools(tools) {
-        this.toolsList.innerHTML = tools.map(tool => {
-            if (tool.type === 'checkbox') {
-                return `
-                    <div class="tool-item ${tool.available ? 'available' : 'unavailable'}" 
-                         data-tool-id="${tool.id}">
-                        <div class="tool-item-header">
-                            <span class="tool-name">${tool.name}</span>
-                            <span class="tool-type">${tool.type}</span>
-                        </div>
-                        <div class="tool-description">${tool.description}</div>
-                        <div class="tool-checkbox-container">
-                            <label class="tool-checkbox">
-                                <input type="checkbox" 
-                                       id="checkbox-${tool.id}" 
-                                       ${tool.available ? '' : 'disabled'}
-                                       onchange="contentEditor.toggleBoard(this.checked)">
-                                <span class="checkmark"></span>
-                                <span class="checkbox-label">Показать доску</span>
-                            </label>
-                        </div>
-                        <div class="tool-status ${tool.available ? 'available' : 'unavailable'}">
-                            ${tool.available ? '✓ Доступно' : '✗ Недоступно'}
-                        </div>
-                    </div>
-                `;
-            } else {
-                return `
-                    <div class="tool-item ${tool.available ? 'available' : 'unavailable'}" 
-                         data-tool-id="${tool.id}"
-                         onclick="contentEditor.selectTool('${tool.id}')">
-                        <div class="tool-item-header">
-                            <span class="tool-name">${tool.name}</span>
-                            <span class="tool-type">${tool.type}</span>
-                        </div>
-                        <div class="tool-description">${tool.description}</div>
-                        <div class="tool-status ${tool.available ? 'available' : 'unavailable'}">
-                            ${tool.available ? '✓ Доступно' : '✗ Недоступно'}
-                        </div>
-                    </div>
-                `;
-            }
-        }).join('');
+        this.toolsList.innerHTML = tools.map(tool => `
+            <div class="tool-item ${tool.available ? 'available' : 'unavailable'}" 
+                 data-tool-id="${tool.id}"
+                 onclick="contentEditor.selectTool('${tool.id}')">
+                <div class="tool-item-header">
+                    <span class="tool-name">${tool.name}</span>
+                    <span class="tool-type">${tool.type}</span>
+                </div>
+                <div class="tool-description">${tool.description}</div>
+                <div class="tool-status ${tool.available ? 'available' : 'unavailable'}">
+                    ${tool.available ? '✓ Доступно' : '✗ Недоступно'}
+                </div>
+            </div>
+        `).join('');
     }
 
     selectTool(toolId) {
@@ -267,119 +234,6 @@ class ContentEditor {
 
         // Добавляем элемент на холст
         this.addElementToCanvas(toolId);
-    }
-
-    // Toggle board visibility
-    toggleBoard(show) {
-        this.boardVisible = show;
-        
-        if (show) {
-            this.showBoardIndicator();
-        } else {
-            this.hideBoardIndicator();
-        }
-    }
-
-    // Show board indicator in canvas header
-    showBoardIndicator() {
-        if (this.boardIndicator) return;
-        
-        // Create board indicator
-        this.boardIndicator = document.createElement('div');
-        this.boardIndicator.id = 'board-indicator';
-        this.boardIndicator.className = 'board-indicator';
-        this.boardIndicator.innerHTML = `
-            <div class="board-indicator-content">
-                <span class="board-indicator-text">Доска</span>
-            </div>
-        `;
-        
-        // Add click handler to show board overlay
-        this.boardIndicator.addEventListener('click', () => {
-            this.showBoardOverlay();
-        });
-        
-        // Add to canvas container (at the top)
-        const canvasContainer = this.canvas.parentElement;
-        canvasContainer.insertBefore(this.boardIndicator, this.canvas);
-    }
-
-    // Hide board indicator
-    hideBoardIndicator() {
-        if (this.boardIndicator) {
-            this.boardIndicator.remove();
-            this.boardIndicator = null;
-        }
-        // Also hide overlay if it's open
-        this.hideBoardOverlay();
-    }
-
-    // Show board overlay with the actual board
-    showBoardOverlay() {
-        if (this.boardOverlay) return;
-        
-        // Create overlay
-        this.boardOverlay = document.createElement('div');
-        this.boardOverlay.id = 'board-overlay';
-        this.boardOverlay.className = 'board-overlay';
-        this.boardOverlay.innerHTML = `
-            <div class="board-overlay-content">
-                <div class="board-overlay-header">
-                    <h3>Игровая доска</h3>
-                    <button class="board-close-btn" onclick="contentEditor.hideBoardOverlay()">&times;</button>
-                </div>
-                <div class="board-overlay-body">
-                    ${this.getBoardContent()}
-                </div>
-            </div>
-        `;
-        
-        // Add click outside to close
-        this.boardOverlay.addEventListener('click', (e) => {
-            if (e.target === this.boardOverlay) {
-                this.hideBoardOverlay();
-            }
-        });
-        
-        // Add to modal
-        this.modal.appendChild(this.boardOverlay);
-        
-        // Show with animation
-        setTimeout(() => {
-            this.boardOverlay.classList.add('show');
-        }, 10);
-    }
-
-    // Hide board overlay
-    hideBoardOverlay() {
-        if (this.boardOverlay) {
-            this.boardOverlay.classList.remove('show');
-            setTimeout(() => {
-                this.boardOverlay.remove();
-                this.boardOverlay = null;
-            }, 300);
-        }
-    }
-
-    // Get board content from the original board
-    getBoardContent() {
-        const originalBoard = document.getElementById('boardCanvas');
-        if (originalBoard) {
-            // Clone the board with mobile constraints
-            const clonedBoard = originalBoard.cloneNode(true);
-            const maxWidth = this.getMaxCanvasWidth();
-            clonedBoard.style.maxWidth = maxWidth + 'px';
-            clonedBoard.style.width = '100%';
-            clonedBoard.style.height = 'auto';
-            return clonedBoard.outerHTML;
-        } else {
-            return `
-                <div style="padding: 20px; text-align: center; color: #666;">
-                    <strong>Доска не найдена</strong><br>
-                    <small>Игровая доска не доступна на странице</small>
-                </div>
-            `;
-        }
     }
 
     addElementToCanvas(toolId) {
@@ -440,6 +294,48 @@ class ContentEditor {
         element.setAttribute('data-content-timestamp', timestamp);
         
         switch(toolId) {
+            case 'boardCanvas':
+                // Доска с параметрами
+                const originalCanvas = document.getElementById('boardCanvas');
+                if (originalCanvas) {
+                    // Force fresh copy by redrawing the canvas
+                    const clonedCanvas = originalCanvas.cloneNode(true);
+                    
+                    // Apply mobile width constraints
+                    const maxWidth = this.getMaxCanvasWidth();
+                    clonedCanvas.style.maxWidth = maxWidth + 'px';
+                    clonedCanvas.style.width = '100%';
+                    clonedCanvas.style.height = 'auto';
+                    
+                    // Copy the actual canvas content
+                    const ctx = clonedCanvas.getContext('2d');
+                    if (ctx) {
+                        // Scale canvas content to fit the new dimensions
+                        const scale = maxWidth / originalCanvas.width;
+                        if (this.isMobile() && scale < 1) {
+                            clonedCanvas.width = maxWidth;
+                            clonedCanvas.height = originalCanvas.height * scale;
+                            ctx.drawImage(originalCanvas, 0, 0, maxWidth, originalCanvas.height * scale);
+                        } else {
+                            clonedCanvas.width = originalCanvas.width;
+                            clonedCanvas.height = originalCanvas.height;
+                            ctx.drawImage(originalCanvas, 0, 0);
+                        }
+                    }
+                    
+                    // Add cache-busting
+                    clonedCanvas.setAttribute('data-canvas-timestamp', timestamp);
+                    element.appendChild(clonedCanvas);
+                } else {
+                    element.innerHTML = `
+                        <div style="padding: 20px; text-align: center; color: #666;">
+                            <strong>Доска не найдена</strong><br>
+                            <small>Игровая доска не доступна на странице</small>
+                        </div>
+                    `;
+                }
+                break;
+                
             case 'question-text':
                 // Текст вопроса
                 element.innerHTML = `
@@ -996,16 +892,6 @@ class ContentEditor {
         this.selectedElement = null;
         if (this.propertiesContent) {
             this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
-        }
-        
-        // Reset board state
-        this.boardVisible = false;
-        this.hideBoardIndicator();
-        
-        // Reset checkbox
-        const boardCheckbox = document.getElementById('checkbox-board-checkbox');
-        if (boardCheckbox) {
-            boardCheckbox.checked = false;
         }
         
         // Reload tools
