@@ -524,6 +524,27 @@ class ContentEditor {
         const textContent = element.querySelector('.text-content');
         if (!textContent) return;
 
+        // Функция для автоматического изменения размера элемента под текст
+        const autoResize = () => {
+            // Сбрасываем размеры для корректного измерения
+            element.style.width = 'auto';
+            element.style.height = 'auto';
+            
+            // Устанавливаем максимальную ширину
+            const maxWidth = 400;
+            element.style.maxWidth = maxWidth + 'px';
+            
+            // Небольшая задержка для корректного пересчета
+            setTimeout(() => {
+                const rect = textContent.getBoundingClientRect();
+                const newWidth = Math.min(rect.width + 16, maxWidth); // +16 для padding
+                const newHeight = Math.max(rect.height + 16, 30); // +16 для padding, мин 30px
+                
+                element.style.width = newWidth + 'px';
+                element.style.height = newHeight + 'px';
+            }, 0);
+        };
+
         // Делаем текст нефокусируемым при перетаскивании
         textContent.addEventListener('mousedown', (e) => {
             e.stopPropagation();
@@ -553,22 +574,33 @@ class ContentEditor {
                     textContent.textContent = 'Текст ответа';
                 }
             }
+            autoResize(); // Пересчитываем размеры
         });
 
+        // Обработка ввода текста для авто-ресайза
+        textContent.addEventListener('input', autoResize);
+        
         // Обработка клавиш для выхода из режима редактирования
         textContent.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 textContent.blur();
+            } else if (e.key === 'Enter' && e.shiftKey) {
+                // Shift+Enter для новой строки (разрешаем)
+                // Ничего не делаем, позволяем стандартное поведение
             } else if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 textContent.blur();
             }
+            autoResize(); // Пересчитываем размеры при вводе
         });
 
         // Предотвращаем перетаскивание при редактировании текста
         textContent.addEventListener('dragstart', (e) => {
             e.preventDefault();
         });
+
+        // Начальный авто-ресайз
+        autoResize();
     }
 
     addElementControls(element) {
