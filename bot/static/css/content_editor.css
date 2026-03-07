@@ -342,6 +342,20 @@
     min-height: 50px;
     transition: box-shadow 0.2s ease;
     user-select: none;
+    /* Добавляем плавное появление для вертикального выравнивания */
+    animation: slideInFromTop 0.3s ease-out;
+}
+
+/* Анимация появления сверху для вертикального выравнивания */
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Текстовые элементы в стиле Photoshop */
@@ -663,17 +677,6 @@
 }
 
 /* Анимации */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
 @keyframes fadeOut {
     from {
         opacity: 1;
@@ -683,8 +686,4 @@
         opacity: 0;
         transform: scale(0.9);
     }
-}
-
-.canvas-element {
-    animation: fadeIn 0.2s ease-out;
 }

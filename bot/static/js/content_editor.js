@@ -328,6 +328,52 @@ class ContentEditor {
         }
     }
 
+    calculateVerticalPosition(elementWidth, elementHeight) {
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        
+        // Get existing elements sorted by their top position
+        const existingElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
+            .filter(el => !el.id.includes('boardLabel')) // Исключаем boardLabel
+            .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
+        
+        // Calculate center X position
+        const centerX = (Math.min(canvasRect.width, maxCanvasWidth) - elementWidth) / 2;
+        
+        // Calculate vertical spacing and position
+        const verticalSpacing = 20; // Расстояние между элементами
+        const startY = 20; // Начальный отступ сверху
+        
+        let nextY = startY;
+        
+        // Find the next available vertical position
+        for (const existingEl of existingElements) {
+            const existingTop = parseInt(existingEl.style.top);
+            const existingHeight = parseInt(existingEl.style.height);
+            
+            // Check if the current element fits before this existing element
+            if (nextY + elementHeight + verticalSpacing <= existingTop) {
+                break; // Found a gap
+            }
+            
+            // Move to the next position after this element
+            nextY = existingTop + existingHeight + verticalSpacing;
+        }
+        
+        // Ensure the element doesn't go beyond canvas bounds
+        const maxY = Math.min(canvasRect.height, maxCanvasHeight) - elementHeight - 20;
+        if (nextY > maxY) {
+            // If we run out of space, start from the top with a smaller spacing
+            nextY = startY + (this.elements.length % 5) * (elementHeight + 10);
+        }
+        
+        return {
+            x: Math.max(10, centerX),
+            y: Math.max(startY, nextY)
+        };
+    }
+
     addElementToCanvas(toolId) {
         const elementId = `element_${this.elementIdCounter++}`;
         const element = document.createElement('div');
@@ -344,12 +390,11 @@ class ContentEditor {
         const defaultWidth = this.isMobile() ? Math.min(120, maxCanvasWidth - 40) : 200;
         const defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
         
-        // Position within canvas bounds
-        const x = Math.random() * Math.min(canvasRect.width - defaultWidth, maxCanvasWidth - defaultWidth) + 10;
-        const y = Math.random() * Math.min(canvasRect.height - defaultHeight, maxCanvasHeight - defaultHeight) + 10;
+        // Position elements in vertical blocks with center alignment
+        const position = this.calculateVerticalPosition(defaultWidth, defaultHeight);
         
-        element.style.left = x + 'px';
-        element.style.top = y + 'px';
+        element.style.left = position.x + 'px';
+        element.style.top = position.y + 'px';
         element.style.width = defaultWidth + 'px';
         element.style.height = defaultHeight + 'px';
         
@@ -889,11 +934,13 @@ class ContentEditor {
         const newId = `element_${this.elementIdCounter++}`;
         newElement.id = newId;
         
-        // Смещаем дубликат
-        const currentLeft = parseInt(element.style.left);
-        const currentTop = parseInt(element.style.top);
-        newElement.style.left = (currentLeft + 20) + 'px';
-        newElement.style.top = (currentTop + 20) + 'px';
+        // Используем новую логику позиционирования для дубликата
+        const elementWidth = parseInt(element.style.width) || 200;
+        const elementHeight = parseInt(element.style.height) || 150;
+        const position = this.calculateVerticalPosition(elementWidth, elementHeight);
+        
+        newElement.style.left = position.x + 'px';
+        newElement.style.top = position.y + 'px';
         
         // Обновляем контролы
         const controls = newElement.querySelector('.element-controls');
