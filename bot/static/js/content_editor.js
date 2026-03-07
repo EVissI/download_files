@@ -12,7 +12,6 @@ class ContentEditor {
         this.selectedElement = null;
         this.elements = [];
         this.elementIdCounter = 0;
-        this.currentResizeHandle = null;
         this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
         
         this.init();
@@ -397,9 +396,6 @@ class ContentEditor {
         // Добавляем контролы
         this.addElementControls(element);
         
-        // Добавляем resize handles
-        this.addResizeHandles(element);
-        
         // Добавляем на холст
         this.canvas.appendChild(element);
         
@@ -685,15 +681,6 @@ class ContentEditor {
         element.appendChild(controls);
     }
 
-    addResizeHandles(element) {
-        const handles = ['nw', 'ne', 'sw', 'se'];
-        handles.forEach(position => {
-            const handle = document.createElement('div');
-            handle.className = `resize-handle ${position}`;
-            handle.dataset.position = position;
-            element.appendChild(handle);
-        });
-    }
 
     selectElement(element) {
         // Убираем выделение с предыдущего элемента
@@ -719,24 +706,6 @@ class ContentEditor {
         const maxElementHeight = this.isMobile() ? maxCanvasHeight - 40 : 600;
         
         this.propertiesContent.innerHTML = `
-            <div class="property-group">
-                <h4>Размер</h4>
-                <div class="property-item">
-                    <label>Ширина:</label>
-                    <input type="range" id="propWidth" min="50" max="${maxElementWidth}" 
-                           value="${parseInt(element.style.width)}" 
-                           oninput="contentEditor.updateElementProperty('width', this.value + 'px')">
-                    <div class="property-value">${parseInt(element.style.width)}px</div>
-                </div>
-                <div class="property-item">
-                    <label>Высота:</label>
-                    <input type="range" id="propHeight" min="50" max="${maxElementHeight}" 
-                           value="${parseInt(element.style.height)}" 
-                           oninput="contentEditor.updateElementProperty('height', this.value + 'px')">
-                    <div class="property-value">${parseInt(element.style.height)}px</div>
-                </div>
-            </div>
-            
             <div class="property-group">
                 <h4>Стиль</h4>
                 ${element.classList.contains('text-element') ? `
@@ -798,8 +767,6 @@ class ContentEditor {
             </div>
             
             <div class="action-buttons">
-                <button class="action-btn" onclick="contentEditor.bringToFront()">На передний план</button>
-                <button class="action-btn" onclick="contentEditor.sendToBack()">На задний план</button>
                 <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')">Удалить</button>
             </div>
         `;
@@ -811,9 +778,6 @@ class ContentEditor {
         switch(property) {
             case 'left':
             case 'top':
-            case 'width':
-            case 'height':
-            case 'zIndex':
                 this.selectedElement.style[property] = value;
                 break;
             case 'fontSize':
@@ -863,7 +827,7 @@ class ContentEditor {
         }
         
         // Обновляем отображение значений
-        if (property === 'left' || property === 'top' || property === 'width' || property === 'height') {
+        if (property === 'left' || property === 'top') {
             const valueDisplay = this.selectedElement.querySelector(`.property-value`);
             if (valueDisplay) {
                 valueDisplay.textContent = value;
@@ -944,23 +908,6 @@ class ContentEditor {
         }
     }
 
-    bringToFront() {
-        if (!this.selectedElement) return;
-        
-        const maxZ = Math.max(...this.elements.map(el => 
-            parseInt(el.element.style.zIndex || 1)
-        ));
-        this.selectedElement.style.zIndex = maxZ + 1;
-    }
-
-    sendToBack() {
-        if (!this.selectedElement) return;
-        
-        const minZ = Math.min(...this.elements.map(el => 
-            parseInt(el.element.style.zIndex || 1)
-        ));
-        this.selectedElement.style.zIndex = Math.max(1, minZ - 1);
-    }
 
     setupEventListeners() {
         // Клик по холсту для снятия выделения
@@ -1001,108 +948,13 @@ class ContentEditor {
             const canvasElement = e.target.closest('.canvas-element');
             
             if (canvasElement && 
-                !e.target.classList.contains('resize-handle') &&
                 !e.target.classList.contains('control-btn')) {
                 this.selectElement(canvasElement);
-            } else if (e.target.classList.contains('resize-handle')) {
-                this.startResizing(e, e.target);
             }
         });
 
-        document.addEventListener('mousemove', (e) => {
-            if (this.isResizing) {
-                this.resize(e);
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            this.stopResizing();
-        });
     }
 
-    startResizing(e, handle) {
-        this.isResizing = true;
-        this.resizeHandle = handle;
-        this.resizeElement = handle.parentElement;
-        this.resizeStartX = e.clientX;
-        this.resizeStartY = e.clientY;
-        this.resizeStartWidth = parseInt(this.resizeElement.style.width);
-        this.resizeStartHeight = parseInt(this.resizeElement.style.height);
-        this.resizeStartLeft = parseInt(this.resizeElement.style.left);
-        this.resizeStartTop = parseInt(this.resizeElement.style.top);
-        this.resizePosition = handle.dataset.position;
-        
-        e.stopPropagation();
-    }
-
-    resize(e) {
-        if (!this.isResizing || !this.resizeElement) return;
-        
-        const deltaX = e.clientX - this.resizeStartX;
-        const deltaY = e.clientY - this.resizeStartY;
-        
-        // Get mobile constraints
-        const maxCanvasWidth = this.getMaxCanvasWidth();
-        const maxCanvasHeight = this.getMaxCanvasHeight();
-        const maxElementWidth = maxCanvasWidth - 40;
-        const maxElementHeight = maxCanvasHeight - 40;
-        
-        let newWidth = this.resizeStartWidth;
-        let newHeight = this.resizeStartHeight;
-        let newLeft = this.resizeStartLeft;
-        let newTop = this.resizeStartTop;
-        
-        switch(this.resizePosition) {
-            case 'se':
-                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth + deltaX));
-                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight + deltaY));
-                break;
-            case 'sw':
-                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth - deltaX));
-                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight + deltaY));
-                newLeft = this.resizeStartLeft + deltaX;
-                if (newWidth === 50) newLeft = this.resizeStartLeft + this.resizeStartWidth - 50;
-                break;
-            case 'ne':
-                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth + deltaX));
-                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight - deltaY));
-                newTop = this.resizeStartTop + deltaY;
-                if (newHeight === 50) newTop = this.resizeStartTop + this.resizeStartHeight - 50;
-                break;
-            case 'nw':
-                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth - deltaX));
-                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight - deltaY));
-                newLeft = this.resizeStartLeft + deltaX;
-                newTop = this.resizeStartTop + deltaY;
-                if (newWidth === 50) newLeft = this.resizeStartLeft + this.resizeStartWidth - 50;
-                if (newHeight === 50) newTop = this.resizeStartTop + this.resizeStartHeight - 50;
-                break;
-        }
-        
-        this.resizeElement.style.width = newWidth + 'px';
-        this.resizeElement.style.height = newHeight + 'px';
-        
-        // Обновляем свойства
-        this.updatePropertyDisplay('propWidth', newWidth);
-        this.updatePropertyDisplay('propHeight', newHeight);
-    }
-
-    stopResizing() {
-        this.isResizing = false;
-        this.resizeHandle = null;
-        this.resizeElement = null;
-    }
-
-    updatePropertyDisplay(propId, value) {
-        const propElement = document.getElementById(propId);
-        if (propElement) {
-            propElement.value = value;
-            const valueDisplay = propElement.parentElement.querySelector('.property-value');
-            if (valueDisplay) {
-                valueDisplay.textContent = value + 'px';
-            }
-        }
-    }
 
     deselectAll() {
         document.querySelectorAll('.canvas-element').forEach(el => {
