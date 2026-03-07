@@ -19,10 +19,7 @@ class ContentEditor {
         this.elementStartX = 0;
         this.elementStartY = 0;
         this.currentResizeHandle = null;
-        this.boardCheckbox = null;
-        this.boardIndicator = null;
-        this.boardOverlay = null;
-        this.isBoardVisible = false;
+        this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
         
         this.init();
     }
@@ -120,12 +117,6 @@ class ContentEditor {
     closeModal() {
         this.modal.style.display = 'none';
         document.body.style.overflow = 'auto';
-        
-        // Reset board state when closing modal
-        if (this.boardCheckbox) {
-            this.boardCheckbox.checked = false;
-        }
-        this.hideBoard();
     }
 
     forceRefreshContent() {
@@ -164,7 +155,7 @@ class ContentEditor {
                 name: 'Доска с параметрами',
                 type: 'canvas',
                 description: 'Игровая доска с параметрами (манигейм/матч)',
-                available: true
+                available: false
             },
             {
                 id: 'question-text',
@@ -214,48 +205,30 @@ class ContentEditor {
     }
 
     renderTools(tools) {
-        this.toolsList.innerHTML = tools.map(tool => {
-            if (tool.id === 'boardCanvas') {
-                // Special rendering for board tool as checkbox
-                return `
-                    <div class="tool-item board-tool-checkbox" data-tool-id="${tool.id}">
-                        <div class="tool-item-header">
-                            <span class="tool-name">${tool.name}</span>
-                            <span class="tool-type">${tool.type}</span>
-                        </div>
-                        <div class="tool-description">${tool.description}</div>
-                        <div class="tool-checkbox-container">
-                            <label class="checkbox-wrapper">
-                                <input type="checkbox" id="boardCheckbox" onchange="contentEditor.toggleBoard()">
-                                <span class="checkbox-custom"></span>
-                                <span class="checkbox-label">Показать доску</span>
-                            </label>
-                        </div>
-                    </div>
-                `;
-            } else {
-                return `
-                    <div class="tool-item ${tool.available ? 'available' : 'unavailable'}" 
-                         data-tool-id="${tool.id}"
-                         onclick="contentEditor.selectTool('${tool.id}')">
-                        <div class="tool-item-header">
-                            <span class="tool-name">${tool.name}</span>
-                            <span class="tool-type">${tool.type}</span>
-                        </div>
-                        <div class="tool-description">${tool.description}</div>
-                        <div class="tool-status ${tool.available ? 'available' : 'unavailable'}">
-                            ${tool.available ? '✓ Доступно' : '✗ Недоступно'}
-                        </div>
-                    </div>
-                `;
-            }
-        }).join('');
-        
-        // Store reference to checkbox
-        this.boardCheckbox = document.getElementById('boardCheckbox');
+        this.toolsList.innerHTML = tools.map(tool => `
+            <div class="tool-item ${tool.available ? 'available' : 'unavailable'} ${tool.id === 'boardCanvas' ? 'toggle-button' : ''}" 
+                 data-tool-id="${tool.id}"
+                 onclick="contentEditor.selectTool('${tool.id}')">
+                <div class="tool-item-header">
+                    <span class="tool-name">${tool.name}</span>
+                    <span class="tool-type">${tool.type}</span>
+                    ${tool.id === 'boardCanvas' ? '<span class="toggle-indicator">⚡</span>' : ''}
+                </div>
+                <div class="tool-description">${tool.description}</div>
+                <div class="tool-status ${tool.available ? 'available' : 'unavailable'}">
+                    ${tool.available ? '✓ Доступно' : '✗ Недоступно'}
+                </div>
+            </div>
+        `).join('');
     }
 
     selectTool(toolId) {
+        // Особое поведение для boardCanvas - toggle режим
+        if (toolId === 'boardCanvas') {
+            this.toggleBoardCanvas(toolId);
+            return;
+        }
+
         // Убираем выделение с предыдущего инструмента
         document.querySelectorAll('.tool-item').forEach(item => {
             item.classList.remove('selected');
@@ -269,6 +242,64 @@ class ContentEditor {
 
         // Добавляем элемент на холст
         this.addElementToCanvas(toolId);
+    }
+
+    toggleBoardCanvas(toolId) {
+        // Инициализируем состояние если нужно
+        if (this.toggleStates[toolId] === undefined) {
+            this.toggleStates[toolId] = false;
+        }
+
+        // Переключаем состояние
+        this.toggleStates[toolId] = !this.toggleStates[toolId];
+
+        // Находим элемент кнопки
+        const toolElement = document.querySelector(`[data-tool-id="${toolId}"]`);
+        if (toolElement) {
+            if (this.toggleStates[toolId]) {
+                // Включаем "горит" состояние
+                toolElement.classList.add('toggle-active');
+                toolElement.classList.remove('selected');
+                
+                // Показываем уведомление или выполняем действие
+                this.showToggleNotification(toolId, true);
+            } else {
+                // Выключаем "горит" состояние
+                toolElement.classList.remove('toggle-active');
+                
+                // Скрываем уведомление
+                this.showToggleNotification(toolId, false);
+            }
+        }
+    }
+
+    showToggleNotification(toolId, isActive) {
+        // Можно добавить логику для показа уведомлений
+        console.log(`${toolId} is now ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+        
+        // При необходимости можно добавить визуальное уведомление в интерфейсе
+        if (isActive) {
+            // Активировано - можно показать сообщение или выполнить действие
+            this.performToggleAction(toolId, true);
+        } else {
+            // Деактивировано
+            this.performToggleAction(toolId, false);
+        }
+    }
+
+    performToggleAction(toolId, isActive) {
+        // Здесь можно добавить конкретные действия при toggle
+        switch(toolId) {
+            case 'boardCanvas':
+                if (isActive) {
+                    console.log('BoardCanvas активирован');
+                    // Добавляем логику для активации доски
+                } else {
+                    console.log('BoardCanvas деактивирован');
+                    // Добавляем логику для деактивации доски
+                }
+                break;
+        }
     }
 
     addElementToCanvas(toolId) {
@@ -330,45 +361,13 @@ class ContentEditor {
         
         switch(toolId) {
             case 'boardCanvas':
-                // Доска с параметрами
-                const originalCanvas = document.getElementById('boardCanvas');
-                if (originalCanvas) {
-                    // Force fresh copy by redrawing the canvas
-                    const clonedCanvas = originalCanvas.cloneNode(true);
-                    
-                    // Apply mobile width constraints
-                    const maxWidth = this.getMaxCanvasWidth();
-                    clonedCanvas.style.maxWidth = maxWidth + 'px';
-                    clonedCanvas.style.width = '100%';
-                    clonedCanvas.style.height = 'auto';
-                    
-                    // Copy the actual canvas content
-                    const ctx = clonedCanvas.getContext('2d');
-                    if (ctx) {
-                        // Scale canvas content to fit the new dimensions
-                        const scale = maxWidth / originalCanvas.width;
-                        if (this.isMobile() && scale < 1) {
-                            clonedCanvas.width = maxWidth;
-                            clonedCanvas.height = originalCanvas.height * scale;
-                            ctx.drawImage(originalCanvas, 0, 0, maxWidth, originalCanvas.height * scale);
-                        } else {
-                            clonedCanvas.width = originalCanvas.width;
-                            clonedCanvas.height = originalCanvas.height;
-                            ctx.drawImage(originalCanvas, 0, 0);
-                        }
-                    }
-                    
-                    // Add cache-busting
-                    clonedCanvas.setAttribute('data-canvas-timestamp', timestamp);
-                    element.appendChild(clonedCanvas);
-                } else {
-                    element.innerHTML = `
-                        <div style="padding: 20px; text-align: center; color: #666;">
-                            <strong>Доска не найдена</strong><br>
-                            <small>Игровая доска не доступна на странице</small>
-                        </div>
-                    `;
-                }
+                // Доска с параметрами - временно отключена
+                element.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #666;">
+                        <strong>Доска с параметрами</strong><br>
+                        <small>Функционал временно отключен</small>
+                    </div>
+                `;
                 break;
                 
             case 'question-text':
@@ -934,118 +933,6 @@ class ContentEditor {
         
         // Force refresh
         this.forceRefreshContent();
-    }
-
-    // Board toggle functionality
-    toggleBoard() {
-        if (this.boardCheckbox.checked) {
-            this.showBoard();
-        } else {
-            this.hideBoard();
-        }
-    }
-
-    showBoard() {
-        if (this.isBoardVisible) return;
-        
-        // Create board indicator if it doesn't exist
-        if (!this.boardIndicator) {
-            this.createBoardIndicator();
-        }
-        
-        // Show indicator
-        this.boardIndicator.style.display = 'block';
-        this.isBoardVisible = true;
-    }
-
-    hideBoard() {
-        if (!this.isBoardVisible) return;
-        
-        // Hide indicator and overlay
-        if (this.boardIndicator) {
-            this.boardIndicator.style.display = 'none';
-        }
-        if (this.boardOverlay) {
-            this.hideBoardOverlay();
-        }
-        
-        this.isBoardVisible = false;
-    }
-
-    createBoardIndicator() {
-        // Create the iPhone-style camera indicator
-        this.boardIndicator = document.createElement('div');
-        this.boardIndicator.className = 'board-indicator';
-        this.boardIndicator.innerHTML = `
-            <div class="indicator-square">
-                <div class="indicator-lens"></div>
-            </div>
-        `;
-        
-        // Position it at the top center of canvas
-        this.canvas.appendChild(this.boardIndicator);
-        
-        // Add click handler to show board overlay
-        this.boardIndicator.addEventListener('click', () => {
-            this.showBoardOverlay();
-        });
-    }
-
-    showBoardOverlay() {
-        if (this.boardOverlay && this.boardOverlay.style.display !== 'none') return;
-        
-        // Create overlay if it doesn't exist
-        if (!this.boardOverlay) {
-            this.createBoardOverlay();
-        }
-        
-        // Get the original board canvas
-        const originalCanvas = document.getElementById('boardCanvas');
-        if (!originalCanvas) return;
-        
-        // Clone the board content
-        const boardContent = originalCanvas.cloneNode(true);
-        boardContent.className = 'board-content';
-        
-        // Clear and add fresh content
-        this.boardOverlay.querySelector('.board-container').innerHTML = '';
-        this.boardOverlay.querySelector('.board-container').appendChild(boardContent);
-        
-        // Show overlay with animation
-        this.boardOverlay.style.display = 'flex';
-        setTimeout(() => {
-            this.boardOverlay.classList.add('show');
-        }, 10);
-    }
-
-    hideBoardOverlay() {
-        if (!this.boardOverlay) return;
-        
-        // Hide overlay with animation
-        this.boardOverlay.classList.remove('show');
-        setTimeout(() => {
-            this.boardOverlay.style.display = 'none';
-        }, 300);
-    }
-
-    createBoardOverlay() {
-        // Create the full-screen overlay for the board
-        this.boardOverlay = document.createElement('div');
-        this.boardOverlay.className = 'board-overlay';
-        this.boardOverlay.innerHTML = `
-            <div class="board-backdrop" onclick="contentEditor.hideBoardOverlay()"></div>
-            <div class="board-container">
-                <!-- Board content will be inserted here -->
-            </div>
-        `;
-        
-        // Add to modal container, not canvas
-        this.modal.appendChild(this.boardOverlay);
-        
-        // Add click handler to board container to hide
-        this.boardOverlay.querySelector('.board-container').addEventListener('click', () => {
-            this.hideBoardOverlay();
-        });
     }
 }
 
