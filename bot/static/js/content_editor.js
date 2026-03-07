@@ -557,23 +557,22 @@ class ContentEditor {
             this.applySmartTextWrapping(element);
         });
 
-        // Обработка ввода текста в реальном времени с дебаунсингом
+        // Обработка ввода текста в реальном времени с отслеживанием изменений
         let inputTimeout;
-
-        textContent.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' || e.key === 'Delete') {
-                // При удалении ждем дольше, чтобы DOM обновился
-                setTimeout(() => {
-                    this.applySmartTextWrapping(element);
-                }, 150);
-            }
-        });
-
+        let previousTextLength = textContent.textContent.length;
+        
         textContent.addEventListener('input', () => {
             clearTimeout(inputTimeout);
+            const currentTextLength = textContent.textContent.length;
+            const isDeleting = currentTextLength < previousTextLength;
+            
+            // При удалении ждем дольше для точности
+            const delay = isDeleting ? 150 : 100;
+            
             inputTimeout = setTimeout(() => {
                 this.applySmartTextWrapping(element);
-            }, 100); // Дебаунсинг 100мс для оптимизации
+                previousTextLength = textContent.textContent.length;
+            }, delay);
         });
 
         // Обработка клавиш для переноса строк
