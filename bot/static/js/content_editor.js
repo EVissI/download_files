@@ -130,16 +130,26 @@ class ContentEditor {
         this.forceRefreshContent();
     }
 
-    createTableFromData(cardData, options = { showHints: true, showCube: true }) {
+    createTableFromData(cardData) {
         if (!cardData) {
             console.warn('Нет данных для создания таблицы');
-            return document.createElement('div');
+            return;
+        }
+
+        console.log('Получены данные для таблицы:', cardData); // Для отладки
+
+        // Очищаем canvas перед созданием таблицы
+        if (this.canvas) {
+            this.canvas.innerHTML = '';
         }
 
         // Создаем элемент таблицы
         const tableElement = document.createElement('div');
-        tableElement.className = 'table-element';
+        tableElement.className = 'canvas-element table-element';
         tableElement.style.cssText = `
+            position: absolute;
+            left: 50px;
+            top: 50px;
             background: white;
             border: 2px solid #333;
             border-radius: 8px;
@@ -163,14 +173,14 @@ class ContentEditor {
         `;
         tableElement.appendChild(tableTitle);
 
-        // Создаем таблицу для hints если нужно
-        if (options.showHints && cardData.hints && cardData.hints.length > 0) {
+        // Создаем таблицу для hints
+        if (cardData.hints && cardData.hints.length > 0) {
             const hintsTable = this.createHintsTable(cardData.hints);
             tableElement.appendChild(hintsTable);
         }
 
-        // Создаем таблицу для cube_hints если нужно
-        if (options.showCube && cardData.cube_hints && cardData.cube_hints.length > 0) {
+        // Создаем таблицу для cube_hints
+        if (cardData.cube_hints && cardData.cube_hints.length > 0) {
             const cubeTitle = document.createElement('h4');
             cubeTitle.textContent = 'Решения с кубом';
             cubeTitle.style.cssText = `
@@ -202,7 +212,19 @@ class ContentEditor {
             tableElement.appendChild(currentMoveInfo);
         }
 
-        return tableElement;
+        // Добавляем таблицу на canvas
+        this.canvas.appendChild(tableElement);
+
+        // Добавляем в массив элементов
+        this.elements.push({
+            id: this.elementIdCounter++,
+            element: tableElement,
+            type: 'table',
+            data: cardData
+        });
+
+        // Делаем таблицу выбираемой
+        this.setupElementInteractions(tableElement);
     }
 
     createHintsTable(hints) {
@@ -389,13 +411,49 @@ class ContentEditor {
     }
 
     loadTools() {
-        // Только инструмент таблицы
+        // Определяем доступные инструменты согласно требованиям
         const tools = [
+            {
+                id: 'boardCanvas',
+                name: 'Доска с параметрами',
+                type: 'canvas',
+                description: 'Игровая доска с параметрами (манигейм/матч)'
+            },
+            {
+                id: 'question-text',
+                name: 'Текст вопроса',
+                type: 'text',
+                description: 'Текст вопроса для анализа'
+            },
             {
                 id: 'moveHintsTable',
                 name: 'Таблица',
                 type: 'table',
                 description: 'Таблица подсказок или данных'
+            },
+            {
+                id: 'answer-text',
+                name: 'Текст ответа',
+                type: 'text',
+                description: 'Текст ответа или решения'
+            },
+            {
+                id: 'board-illustration',
+                name: 'Иллюстрация',
+                type: 'image',
+                description: 'Изображение доски как иллюстрация'
+            },
+            {
+                id: 'audio-file',
+                name: 'Аудио-файл',
+                type: 'audio',
+                description: 'Аудиофайл для воспроизведения'
+            },
+            {
+                id: 'support-link',
+                name: 'Ссылка',
+                type: 'link',
+                description: 'Ссылка на дополнительные материалы'
             }
         ];
 
@@ -404,11 +462,12 @@ class ContentEditor {
 
     renderTools(tools) {
         this.toolsList.innerHTML = tools.map(tool => `
-            <div class="tool-item" 
+            <div class="tool-item ${tool.id === 'boardCanvas' ? 'toggle-button' : ''}" 
                  data-tool-id="${tool.id}"
                  onclick="contentEditor.selectTool('${tool.id}')">
                 <div class="tool-item-header">
                     <span class="tool-name">${tool.name}</span>
+                    ${tool.id === 'boardCanvas' ? '<span class="toggle-indicator">⚡</span>' : ''}
                 </div>
                 <div class="tool-description">${tool.description}</div>
             </div>
@@ -416,6 +475,12 @@ class ContentEditor {
     }
 
     selectTool(toolId) {
+        // Особое поведение для boardCanvas - toggle режим
+        if (toolId === 'boardCanvas') {
+            this.toggleBoardCanvas(toolId);
+            return;
+        }
+
         // Убираем выделение с предыдущего инструмента
         document.querySelectorAll('.tool-item').forEach(item => {
             item.classList.remove('selected');
@@ -427,93 +492,102 @@ class ContentEditor {
             selectedTool.classList.add('selected');
         }
 
-        // Создаем таблицу
-        this.createTableElement();
+        // Добавляем элемент на холст
+        this.addElementToCanvas(toolId);
     }
 
-    createTableElement() {
-        const elementId = `element_${this.elementIdCounter++}`;
-        const element = document.createElement('div');
-        element.id = elementId;
-        element.className = 'canvas-element table-element';
-        element.dataset.toolId = 'moveHintsTable';
+    toggleBoardCanvas(toolId) {
+        // Инициализируем состояние если нужно
+        if (this.toggleStates[toolId] === undefined) {
+            this.toggleStates[toolId] = false;
+        }
+
+        // Переключаем состояние
+        this.toggleStates[toolId] = !this.toggleStates[toolId];
+
+        // Находим элемент кнопки
+        const toolElement = document.querySelector(`[data-tool-id="${toolId}"]`);
+        if (toolElement) {
+            if (this.toggleStates[toolId]) {
+                // Включаем "горит" состояние
+                toolElement.classList.add('toggle-active');
+                toolElement.classList.remove('selected');
+                
+                // Показываем уведомление или выполняем действие
+                this.showToggleNotification(toolId, true);
+            } else {
+                // Выключаем "горит" состояние
+                toolElement.classList.remove('toggle-active');
+                
+                // Скрываем уведомление
+                this.showToggleNotification(toolId, false);
+            }
+        }
+    }
+
+    showToggleNotification(toolId, isActive) {
+        // Можно добавить логику для показа уведомлений
+        console.log(`${toolId} is now ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
         
-        // Создаем пример таблицы
-        const tableData = this.generateSampleTableData();
-        const tableElement = this.createTableFromData(tableData);
-        
-        // Копируем содержимое таблицы
-        element.innerHTML = tableElement.innerHTML;
-        
-        // Автоматический размер под таблицу
-        this.autoSizeTable(element);
-        
-        // Позиционирование
-        const position = this.calculateVerticalPosition(element.offsetWidth, element.offsetHeight);
-        element.style.left = position.x + 'px';
-        element.style.top = position.y + 'px';
-        
-        // Добавляем контролы
-        this.addElementControls(element);
+        // При необходимости можно добавить визуальное уведомление в интерфейсе
+        if (isActive) {
+            // Активировано - можно показать сообщение или выполнить действие
+            this.performToggleAction(toolId, true);
+        } else {
+            // Деактивировано
+            this.performToggleAction(toolId, false);
+        }
+    }
+
+    performToggleAction(toolId, isActive) {
+        // Здесь можно добавить конкретные действия при toggle
+        switch(toolId) {
+            case 'boardCanvas':
+                if (isActive) {
+                    console.log('BoardCanvas активирован');
+                    this.showBoardLabel();
+                } else {
+                    console.log('BoardCanvas деактивирован');
+                    this.hideBoardLabel();
+                }
+                break;
+        }
+    }
+
+    showBoardLabel() {
+        // Проверяем, есть ли уже надпись
+        if (document.getElementById('boardLabel')) {
+            return; // Уже существует
+        }
+
+        // Создаем элемент надписи
+        const boardLabel = document.createElement('div');
+        boardLabel.id = 'boardLabel';
+        boardLabel.className = 'board-label';
+        boardLabel.textContent = 'доска';
         
         // Добавляем на холст
-        this.canvas.appendChild(element);
+        this.canvas.appendChild(boardLabel);
         
-        // Сохраняем в массив элементов
-        this.elements.push({
-            id: elementId,
-            toolId: 'moveHintsTable',
-            element: element,
-            tableData: tableData
+        // Запускаем анимацию появления в следующем кадре
+        requestAnimationFrame(() => {
+            boardLabel.classList.add('show');
         });
-        
-        // Выделяем элемент
-        this.selectElement(element);
     }
 
-    generateSampleTableData() {
-        return {
-            turn: 1,
-            player: 'Player 1',
-            hints: [
-                { move: '8/6', probs: [0.654, 0.321], eq: 0.123 },
-                { move: '13/9', probs: [0.598, 0.287], eq: -0.045 },
-                { move: '24/20', probs: [0.432, 0.198], eq: -0.156 }
-            ],
-            cube_hints: [
-                {
-                    cubeful_equities: [
-                        { action_1: 'Double', eq: 0.234 },
-                        { action_1: 'Take', eq: -0.123 },
-                        { action_1: 'Drop', eq: -1.000 }
-                    ]
+    hideBoardLabel() {
+        // Находим и удаляем надпись
+        const boardLabel = document.getElementById('boardLabel');
+        if (boardLabel) {
+            boardLabel.classList.remove('show');
+            boardLabel.classList.add('hide');
+            
+            // Удаляем элемент после завершения анимации
+            setTimeout(() => {
+                if (boardLabel.parentNode) {
+                    boardLabel.remove();
                 }
-            ],
-            gnu_move: '8/6',
-            equity: 0.123
-        };
-    }
-    
-    autoSizeTable(element) {
-        // Получаем размер содержимого таблицы
-        const tableElement = element.querySelector('table');
-        if (tableElement) {
-            // Временно показываем элемент для измерения
-            const originalDisplay = element.style.display;
-            element.style.display = 'block';
-            element.style.visibility = 'hidden';
-            
-            // Измеряем размер таблицы
-            const tableWidth = tableElement.scrollWidth + 40; // + padding
-            const tableHeight = element.scrollHeight + 40;
-            
-            // Устанавливаем размер элемента
-            element.style.width = Math.min(tableWidth, this.getMaxCanvasWidth() - 40) + 'px';
-            element.style.height = Math.min(tableHeight, this.getMaxCanvasHeight() - 40) + 'px';
-            
-            // Восстанавливаем отображение
-            element.style.display = originalDisplay;
-            element.style.visibility = 'visible';
+            }, 300);
         }
     }
 
@@ -893,30 +967,49 @@ class ContentEditor {
     }
 
     showElementProperties(element) {
-        const elementData = this.elements.find(el => el.element === element);
-        const tableData = elementData ? elementData.tableData : null;
+        const computedStyle = window.getComputedStyle(element);
+        
+        // Get mobile-aware card dimensions
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        const maxElementWidth = this.isMobile() ? maxCanvasWidth - 40 : 750;
+        const maxElementHeight = this.isMobile() ? maxCanvasHeight - 40 : 600;
         
         this.propertiesContent.innerHTML = `
             <div class="property-group">
-                <h4>Свойства таблицы</h4>
+                <h4>Стиль</h4>
+                ${element.classList.contains('text-element') ? `
                 <div class="property-item">
-                    <label>Тип таблицы:</label>
-                    <select id="tableType" onchange="contentEditor.switchTableType(this.value)">
-                        <option value="hints">Подсказки ходов</option>
-                        <option value="cube">Решения с кубом</option>
-                        <option value="both">Обе таблицы</option>
-                    </select>
+                    <label>Размер шрифта:</label>
+                    <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}" 
+                           oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
+                    <div class="property-value">${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}px</div>
                 </div>
                 <div class="property-item">
-                    <label>Номер хода:</label>
-                    <input type="number" id="turnNumber" value="${tableData ? tableData.turn : 1}" 
-                           oninput="contentEditor.updateTableProperty('turn', this.value)">
+                    <label>Цвет текста:</label>
+                    <input type="color" id="propTextColor" value="${window.getComputedStyle(element.querySelector('.text-content')).color || '#333333'}" 
+                           oninput="contentEditor.updateElementProperty('textColor', this.value)">
+                </div>
+                ` : ''}
+                ${element.classList.contains('link-element') ? `
+                <div class="property-item">
+                    <label>Размер шрифта:</label>
+                    <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}" 
+                           oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
+                    <div class="property-value">${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}px</div>
                 </div>
                 <div class="property-item">
-                    <label>Игрок:</label>
-                    <input type="text" id="playerName" value="${tableData ? tableData.player : 'Player 1'}" 
-                           oninput="contentEditor.updateTableProperty('player', this.value)">
+                    <label>Цвет текста:</label>
+                    <input type="color" id="propTextColor" value="${window.getComputedStyle(element.querySelector('.link-text')).color || '#007bff'}" 
+                           oninput="contentEditor.updateElementProperty('textColor', this.value)">
                 </div>
+                <div class="property-item">
+                    <label>URL ссылки:</label>
+                    <input type="url" id="propLinkUrl" value="${element.querySelector('.link-url').value}" 
+                           placeholder="https://example.com"
+                           oninput="contentEditor.updateElementProperty('linkUrl', this.value)">
+                </div>
+                ` : ''}
                 <div class="property-item">
                     <label>Цвет обводки:</label>
                     <input type="color" id="propBorderColor" value="#667eea" 
@@ -949,70 +1042,6 @@ class ContentEditor {
         `;
     }
 
-    switchTableType(tableType) {
-        if (!this.selectedElement) return;
-        
-        const elementData = this.elements.find(el => el.element === this.selectedElement);
-        if (!elementData) return;
-        
-        const tableData = elementData.tableData;
-        
-        // Обновляем данные таблицы в зависимости от типа
-        switch(tableType) {
-            case 'hints':
-                // Показываем только таблицу подсказок
-                this.updateTableContent(tableData, { showHints: true, showCube: false });
-                break;
-            case 'cube':
-                // Показываем только таблицу куба
-                this.updateTableContent(tableData, { showHints: false, showCube: true });
-                break;
-            case 'both':
-                // Показываем обе таблицы
-                this.updateTableContent(tableData, { showHints: true, showCube: true });
-                break;
-        }
-        
-        // Автоматический размер под новое содержимое
-        this.autoSizeTable(this.selectedElement);
-    }
-    
-    updateTableContent(tableData, options) {
-        // Создаем новое содержимое таблицы
-        const tempElement = document.createElement('div');
-        const tableElement = this.createTableFromData(tableData, options);
-        tempElement.innerHTML = tableElement.innerHTML;
-        
-        // Обновляем содержимое выбранного элемента
-        this.selectedElement.innerHTML = tempElement.innerHTML;
-        
-        // Добавляем контролы обратно
-        this.addElementControls(this.selectedElement);
-    }
-    
-    updateTableProperty(property, value) {
-        if (!this.selectedElement) return;
-        
-        const elementData = this.elements.find(el => el.element === this.selectedElement);
-        if (!elementData) return;
-        
-        // Обновляем данные таблицы
-        switch(property) {
-            case 'turn':
-                elementData.tableData.turn = parseInt(value);
-                break;
-            case 'player':
-                elementData.tableData.player = value;
-                break;
-        }
-        
-        // Обновляем заголовок таблицы
-        const titleElement = this.selectedElement.querySelector('h3');
-        if (titleElement) {
-            titleElement.textContent = `Ход ${elementData.tableData.turn} - ${elementData.tableData.player}`;
-        }
-    }
-
     updateElementProperty(property, value) {
         if (!this.selectedElement) return;
         
@@ -1020,6 +1049,38 @@ class ContentEditor {
             case 'left':
             case 'top':
                 this.selectedElement.style[property] = value;
+                break;
+            case 'fontSize':
+                if (element.classList.contains('text-element')) {
+                    const textContent = this.selectedElement.querySelector('.text-content');
+                    if (textContent) {
+                        textContent.style.fontSize = value;
+                    }
+                } else if (element.classList.contains('link-element')) {
+                    const linkText = this.selectedElement.querySelector('.link-text');
+                    if (linkText) {
+                        linkText.style.fontSize = value;
+                    }
+                }
+                break;
+            case 'textColor':
+                if (element.classList.contains('text-element')) {
+                    const textContent = this.selectedElement.querySelector('.text-content');
+                    if (textContent) {
+                        textContent.style.color = value;
+                    }
+                } else if (element.classList.contains('link-element')) {
+                    const linkText = this.selectedElement.querySelector('.link-text');
+                    if (linkText) {
+                        linkText.style.color = value;
+                    }
+                }
+                break;
+            case 'linkUrl':
+                const linkUrl = this.selectedElement.querySelector('.link-url');
+                if (linkUrl) {
+                    linkUrl.value = value;
+                }
                 break;
             case 'borderColor':
                 this.selectedElement.style.borderColor = value;
@@ -1041,23 +1102,32 @@ class ContentEditor {
             if (valueDisplay) {
                 valueDisplay.textContent = value;
             }
-        } else if (property === 'borderWidth') {
-            const borderWidthInput = document.getElementById('propBorderWidth');
-            if (borderWidthInput) {
-                const borderWidthDisplay = borderWidthInput.parentElement.querySelector('.property-value');
-                if (borderWidthDisplay) {
-                    borderWidthDisplay.textContent = value;
-                }
-            }
-        } else if (property === 'opacity') {
-            const opacityInput = document.getElementById('propOpacity');
-            if (opacityInput) {
-                const opacityDisplay = opacityInput.parentElement.querySelector('.property-value');
-                if (opacityDisplay) {
-                    opacityDisplay.textContent = Math.round(value * 100) + '%';
+        } else if (property === 'fontSize') {
+            const fontSizeInput = document.getElementById('propFontSize');
+            if (fontSizeInput) {
+                const fontSizeDisplay = fontSizeInput.parentElement.querySelector('.property-value');
+                if (fontSizeDisplay) {
+                    fontSizeDisplay.textContent = value;
                 }
             }
         }
+        
+        // Автоматическое изменение высоты отключено
+    }
+
+    // Умный перенос текста (без автоматического изменения высоты)
+    applySmartTextWrapping(element) {
+        const textContent = element.querySelector('.text-content');
+        if (!textContent) return;
+
+        // Проверяем, является ли элемент текстовым
+        if (!element.classList.contains('text-element')) return;
+        
+        // Только обеспечиваем правильный перенос текста
+        // Высота элемента управляется вручную через панель свойств
+        
+        // Ничего не делаем - перенос уже работает через CSS
+        // Автоматическое изменение высоты отключено
     }
 
     duplicateElement(elementId) {
