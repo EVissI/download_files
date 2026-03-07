@@ -3884,7 +3884,6 @@
             if (typeof contentEditor !== 'undefined') {
                 // Передаем текущие данные в редактор
                 const currentData = data.length > 0 ? data[current] : null;
-                console.log('Передача данных в редактор:', currentData); // Для отладки
                 contentEditor.openModalWithData(currentData);
             } else {
                 console.error('ContentEditor не инициализирован');

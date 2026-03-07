@@ -13,6 +13,7 @@ class ContentEditor {
         this.elements = [];
         this.elementIdCounter = 0;
         this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
+        this.cardData = null; // Для хранения данных карточки
         
         this.init();
     }
@@ -119,121 +120,127 @@ class ContentEditor {
             this.modal.setAttribute('data-cache-timestamp', timestamp);
         }
         
+        // Сохраняем данные для использования при создании таблицы
+        this.cardData = cardData;
+        
         this.modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         this.loadTools(); // Обновляем инструменты при открытии
-        
-        // Создаем таблицу на основе данных карточки
-        this.createTableFromData(cardData);
         
         // Force refresh of all dynamic content
         this.forceRefreshContent();
     }
 
-    createTableFromData(cardData) {
-        if (!cardData) {
-            console.warn('Нет данных для создания таблицы');
+    createCleanTable(element) {
+        if (!this.cardData) {
+            element.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Нет данных для таблицы</div>';
             return;
         }
 
-        console.log('Получены данные для таблицы:', cardData); // Для отладки
-
-        // Очищаем canvas перед созданием таблицы
-        if (this.canvas) {
-            this.canvas.innerHTML = '';
-        }
-
-        // Создаем элемент таблицы
-        const tableElement = document.createElement('div');
-        tableElement.className = 'canvas-element table-element';
-        tableElement.style.cssText = `
-            position: absolute;
-            left: 50px;
-            top: 50px;
-            background: white;
-            border: 2px solid #333;
-            border-radius: 8px;
-            padding: 15px;
-            font-family: Arial, sans-serif;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            min-width: 400px;
+        // Создаем контейнер для таблицы
+        const tableContainer = document.createElement('div');
+        tableContainer.style.cssText = `
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         `;
 
-        // Заголовок таблицы
-        const tableTitle = document.createElement('h3');
-        tableTitle.textContent = `Ход ${cardData.turn || 'N/A'} - ${cardData.player || 'Unknown'}`;
-        tableTitle.style.cssText = `
-            margin: 0 0 10px 0;
-            padding: 10px;
-            background: #f0f0f0;
+        // Добавляем переключатель типа таблицы
+        const switchContainer = document.createElement('div');
+        switchContainer.style.cssText = `
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #f5f5f5;
             border-radius: 4px;
-            text-align: center;
-            font-size: 16px;
+        `;
+
+        const switchLabel = document.createElement('span');
+        switchLabel.textContent = 'Тип таблицы:';
+        switchLabel.style.cssText = `
+            margin-right: 10px;
+            font-size: 12px;
             font-weight: bold;
         `;
-        tableElement.appendChild(tableTitle);
 
-        // Создаем таблицу для hints
-        if (cardData.hints && cardData.hints.length > 0) {
-            const hintsTable = this.createHintsTable(cardData.hints);
-            tableElement.appendChild(hintsTable);
-        }
+        const hintsRadio = document.createElement('input');
+        hintsRadio.type = 'radio';
+        hintsRadio.name = 'tableType';
+        hintsRadio.id = 'hintsTable';
+        hintsRadio.checked = true;
+        hintsRadio.style.cssText = 'margin-right: 5px;';
 
-        // Создаем таблицу для cube_hints
-        if (cardData.cube_hints && cardData.cube_hints.length > 0) {
-            const cubeTitle = document.createElement('h4');
-            cubeTitle.textContent = 'Решения с кубом';
-            cubeTitle.style.cssText = `
-                margin: 20px 0 10px 0;
-                font-size: 14px;
-                font-weight: bold;
-                color: #333;
-            `;
-            tableElement.appendChild(cubeTitle);
+        const hintsLabel = document.createElement('label');
+        hintsLabel.htmlFor = 'hintsTable';
+        hintsLabel.textContent = 'Ходы';
+        hintsLabel.style.cssText = `
+            margin-right: 15px;
+            font-size: 12px;
+            cursor: pointer;
+        `;
 
-            const cubeTable = this.createCubeTable(cardData.cube_hints);
-            tableElement.appendChild(cubeTable);
-        }
+        const cubeRadio = document.createElement('input');
+        cubeRadio.type = 'radio';
+        cubeRadio.name = 'tableType';
+        cubeRadio.id = 'cubeTable';
+        cubeRadio.style.cssText = 'margin-right: 5px;';
 
-        // Добавляем информацию о текущем ходе
-        if (cardData.gnu_move || cardData.action) {
-            const currentMoveInfo = document.createElement('div');
-            currentMoveInfo.style.cssText = `
-                margin-top: 15px;
-                padding: 10px;
-                background: #e8f4ff;
-                border-radius: 4px;
-                border-left: 4px solid #2196F3;
-            `;
-            currentMoveInfo.innerHTML = `
-                <strong>Текущий ход:</strong> ${cardData.gnu_move || cardData.action || 'N/A'}<br>
-                <strong>Эквити:</strong> ${cardData.equity ? cardData.equity.toFixed(3) : 'N/A'}
-            `;
-            tableElement.appendChild(currentMoveInfo);
-        }
+        const cubeLabel = document.createElement('label');
+        cubeLabel.htmlFor = 'cubeTable';
+        cubeLabel.textContent = 'Куб';
+        cubeLabel.style.cssText = `
+            font-size: 12px;
+            cursor: pointer;
+        `;
 
-        // Добавляем таблицу на canvas
-        this.canvas.appendChild(tableElement);
+        switchContainer.appendChild(switchLabel);
+        switchContainer.appendChild(hintsRadio);
+        switchContainer.appendChild(hintsLabel);
+        switchContainer.appendChild(cubeRadio);
+        switchContainer.appendChild(cubeLabel);
 
-        // Добавляем в массив элементов
-        this.elements.push({
-            id: this.elementIdCounter++,
-            element: tableElement,
-            type: 'table',
-            data: cardData
-        });
+        // Создаем контейнер для таблиц
+        const tableContent = document.createElement('div');
+        tableContent.style.cssText = `
+            flex: 1;
+            overflow: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        `;
 
-        // Делаем таблицу выбираемой
-        this.setupElementInteractions(tableElement);
+        // Функция для обновления таблицы
+        const updateTable = () => {
+            tableContent.innerHTML = '';
+            if (hintsRadio.checked) {
+                tableContent.appendChild(this.createCleanHintsTable());
+            } else {
+                tableContent.appendChild(this.createCleanCubeTable());
+            }
+        };
+
+        // Добавляем обработчики событий
+        hintsRadio.addEventListener('change', updateTable);
+        cubeRadio.addEventListener('change', updateTable);
+
+        // Собираем все вместе
+        tableContainer.appendChild(switchContainer);
+        tableContainer.appendChild(tableContent);
+        
+        // Инициализация первой таблицы
+        updateTable();
+
+        element.appendChild(tableContainer);
     }
 
-    createHintsTable(hints) {
+    createCleanHintsTable() {
         const table = document.createElement('table');
         table.style.cssText = `
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
-            font-size: 12px;
+            font-size: 11px;
         `;
 
         // Заголовок таблицы
@@ -247,20 +254,21 @@ class ContentEditor {
             th.style.cssText = `
                 background: #4CAF50;
                 color: white;
-                padding: 8px;
+                padding: 6px;
                 text-align: left;
                 border: 1px solid #ddd;
                 font-weight: bold;
+                font-size: 11px;
             `;
             headerRow.appendChild(th);
         });
 
         // Тело таблицы
         const tbody = table.createTBody();
-        hints.forEach((hint, index) => {
+        this.cardData.hints.forEach((hint, index) => {
             const row = tbody.insertRow();
             
-            // Определяем стиль строки (лучшая подсказка выделяется)
+            // Выделяем лучший ход
             if (index === 0) {
                 row.style.background = '#d4edda';
             }
@@ -268,34 +276,33 @@ class ContentEditor {
             // Ход
             const moveCell = row.insertCell();
             moveCell.textContent = hint.move || 'N/A';
-            moveCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
+            moveCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; font-weight: bold; font-size: 10px;';
             
             // Win%
             const winCell = row.insertCell();
             winCell.textContent = hint.probs && hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : 'N/A';
-            winCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
+            winCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; text-align: center; font-size: 10px;';
             
             // Wg%
             const wgCell = row.insertCell();
             wgCell.textContent = hint.probs && hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : 'N/A';
-            wgCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
+            wgCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; text-align: center; font-size: 10px;';
             
             // Эквити
             const eqCell = row.insertCell();
             eqCell.textContent = hint.eq ? hint.eq.toFixed(3) : 'N/A';
-            eqCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center; font-weight: bold;';
+            eqCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 10px;';
         });
 
         return table;
     }
 
-    createCubeTable(cubeHints) {
+    createCleanCubeTable() {
         const table = document.createElement('table');
         table.style.cssText = `
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
-            font-size: 12px;
+            font-size: 11px;
         `;
 
         // Заголовок таблицы
@@ -309,18 +316,19 @@ class ContentEditor {
             th.style.cssText = `
                 background: #FF9800;
                 color: white;
-                padding: 8px;
+                padding: 6px;
                 text-align: left;
                 border: 1px solid #ddd;
                 font-weight: bold;
+                font-size: 11px;
             `;
             headerRow.appendChild(th);
         });
 
         // Тело таблицы
         const tbody = table.createTBody();
-        if (cubeHints[0] && cubeHints[0].cubeful_equities) {
-            cubeHints[0].cubeful_equities.forEach(eq => {
+        if (this.cardData.cube_hints && this.cardData.cube_hints[0] && this.cardData.cube_hints[0].cubeful_equities) {
+            this.cardData.cube_hints[0].cubeful_equities.forEach(eq => {
                 const row = tbody.insertRow();
                 
                 // Действие
@@ -331,55 +339,23 @@ class ContentEditor {
                 } else {
                     actionCell.textContent = action;
                 }
-                actionCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
+                actionCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; font-weight: bold; font-size: 10px;';
                 
                 // Эквити
                 const eqCell = row.insertCell();
                 eqCell.textContent = eq.eq ? eq.eq.toFixed(3) : 'N/A';
-                eqCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center; font-weight: bold;';
+                eqCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 10px;';
             });
+        } else {
+            // Если нет данных по кубу
+            const row = tbody.insertRow();
+            const cell = row.insertCell();
+            cell.colSpan = 2;
+            cell.textContent = 'Нет данных по решениям с кубом';
+            cell.style.cssText = 'padding: 10px; text-align: center; color: #666; font-style: italic;';
         }
 
         return table;
-    }
-
-    setupElementInteractions(element) {
-        // Добавляем обработчики для выделения элемента
-        element.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.selectElement(element);
-        });
-
-        // Добавляем обработчики для перемещения (drag and drop)
-        element.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('control-btn')) return;
-            
-            const startX = e.clientX - element.offsetLeft;
-            const startY = e.clientY - element.offsetTop;
-
-            const handleMouseMove = (e) => {
-                const newX = e.clientX - startX;
-                const newY = e.clientY - startY;
-                
-                // Ограничиваем перемещение в пределах canvas
-                const canvasRect = this.canvas.getBoundingClientRect();
-                const elementRect = element.getBoundingClientRect();
-                
-                const maxX = canvasRect.width - elementRect.width;
-                const maxY = canvasRect.height - elementRect.height;
-                
-                element.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
-                element.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
-            };
-
-            const handleMouseUp = () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-            };
-
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        });
     }
 
     forceRefreshContent() {
@@ -710,41 +686,9 @@ class ContentEditor {
                 break;
                 
             case 'moveHintsTable':
-                // Таблица
-                const originalTable = document.getElementById('moveHintsTable');
-                if (originalTable) {
-                    const clonedTable = originalTable.cloneNode(true);
-                    // Add cache-busting to table
-                    clonedTable.setAttribute('data-table-timestamp', timestamp);
-                    element.appendChild(clonedTable);
-                } else {
-                    // Создаем пример таблицы
-                    element.innerHTML = `
-                        <div style="padding: 10px; height: 100%; overflow: auto;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                <thead>
-                                    <tr style="background: #f0f0f0;">
-                                        <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
-                                        <th style="border: 1px solid #ddd; padding: 4px;">Вероятность</th>
-                                        <th style="border: 1px solid #ddd; padding: 4px;">Результат</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">8/6</td>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">0.654</td>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">+0.123</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">13/9</td>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">0.598</td>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">-0.045</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                }
+                // Таблица на основе данных карточки
+                this.createCleanTable(element);
+                element.classList.add('table-element');
                 break;
                 
             case 'board-illustration':
@@ -1253,6 +1197,9 @@ class ContentEditor {
         
         // Reset toggle states
         this.toggleStates = {};
+        
+        // Clear card data
+        this.cardData = null;
         
         // Reload tools
         this.loadTools();
