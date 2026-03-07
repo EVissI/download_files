@@ -490,6 +490,35 @@
     background: #dc2626;
 }
 
+/* Надпись "доска" на холсте */
+.board-label {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(102, 126, 234, 0.9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    opacity: 0;
+    transform: translateX(-50%) scale(0.9);
+    transition: all 0.3s ease-out;
+}
+
+.board-label.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
+.board-label.hide {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.9);
+}
+
 /* Скроллбары */
 ::-webkit-scrollbar {
     width: 8px;

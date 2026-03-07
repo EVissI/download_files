@@ -314,34 +314,27 @@ class ContentEditor {
         boardLabel.className = 'board-label';
         boardLabel.textContent = 'доска';
         
-        // Добавляем стили для позиционирования
-        boardLabel.style.cssText = `
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(102, 126, 234, 0.9);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            animation: fadeIn 0.3s ease-out;
-        `;
-        
         // Добавляем на холст
         this.canvas.appendChild(boardLabel);
+        
+        // Запускаем анимацию появления в следующем кадре
+        requestAnimationFrame(() => {
+            boardLabel.classList.add('show');
+        });
     }
 
     hideBoardLabel() {
         // Находим и удаляем надпись
         const boardLabel = document.getElementById('boardLabel');
         if (boardLabel) {
-            boardLabel.style.animation = 'fadeOut 0.3s ease-out';
+            boardLabel.classList.remove('show');
+            boardLabel.classList.add('hide');
+            
+            // Удаляем элемент после завершения анимации
             setTimeout(() => {
-                boardLabel.remove();
+                if (boardLabel.parentNode) {
+                    boardLabel.remove();
+                }
             }, 300);
         }
     }
