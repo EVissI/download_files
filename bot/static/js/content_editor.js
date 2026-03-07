@@ -569,9 +569,10 @@ class ContentEditor {
         // Обработка удаления текста для уменьшения высоты
         textContent.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace' || e.key === 'Delete') {
+                // При удалении ждем дольше, чтобы DOM обновился
                 setTimeout(() => {
                     this.applySmartTextWrapping(element);
-                }, 50);
+                }, 150);
             }
         });
 
@@ -802,12 +803,22 @@ class ContentEditor {
             // Вычисляем целевую высоту
             let targetHeight;
             
+            // Базовый расчет: текст + padding
+            const baseHeight = textHeight + 16;
+            
             if (textHeight <= elementHeight - 16) {
                 // Текст помещается, можно уменьшить высоту
-                targetHeight = Math.max(minHeight, textHeight + 16);
+                targetHeight = Math.max(minHeight, baseHeight);
             } else {
                 // Текст не помещается, увеличиваем высоту
-                targetHeight = Math.min(maxHeight, textHeight + 16);
+                targetHeight = Math.min(maxHeight, baseHeight);
+            }
+            
+            // Дополнительная проверка: не увеличиваем высоту при удалении
+            const isDeleting = textHeight < elementHeight - 20; // Если текст стал значительно меньше
+            if (isDeleting && targetHeight > elementHeight) {
+                // При удалении не увеличиваем высоту, только уменьшаем
+                targetHeight = Math.max(minHeight, textHeight + 16);
             }
             
             // Применяем изменение высоты только если разница существенная
@@ -832,7 +843,7 @@ class ContentEditor {
                     element.style.transition = '';
                 }, 200);
             }
-        }, 0);
+        }, 50); // Увеличим задержку для более точных измерений
     }
 
     duplicateElement(elementId) {
