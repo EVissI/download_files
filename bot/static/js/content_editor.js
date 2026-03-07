@@ -138,48 +138,60 @@ class ContentEditor {
         // Устанавливаем стандартный тип таблицы - "ход"
         element.dataset.tableType = 'hints';
         
+        // Create container for table with proper styling
+        const tableContainer = document.createElement('div');
+        tableContainer.style.cssText = `
+            padding: 10px;
+            height: 100%;
+            overflow: auto;
+            box-sizing: border-box;
+        `;
+        
         if (this.cardData) {
             // Создаем таблицу на основе данных карточки
-            this.updateTableContent(element, 'hints');
+            this.updateTableContent(tableContainer, 'hints');
         } else {
             // Создаем пример таблицы если нет данных
-            element.innerHTML = `
-                <div style="padding: 10px; height: 100%; overflow: auto;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                        <thead>
-                            <tr style="background: #f0f0f0;">
-                                <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
-                                <th style="border: 1px solid #ddd; padding: 4px;">Вероятность</th>
-                                <th style="border: 1px solid #ddd; padding: 4px;">Результат</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td style="border: 1px solid #ddd; padding: 4px;">8/6</td>
-                                <td style="border: 1px solid #ddd; padding: 4px;">0.654</td>
-                                <td style="border: 1px solid #ddd; padding: 4px;">+0.123</td>
-                            </tr>
-                            <tr>
-                                <td style="border: 1px solid #ddd; padding: 4px;">13/9</td>
-                                <td style="border: 1px solid #ddd; padding: 4px;">0.598</td>
-                                <td style="border: 1px solid #ddd; padding: 4px;">-0.045</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            tableContainer.innerHTML = `
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed;">
+                    <thead>
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
+                            <th style="border: 1px solid #ddd; padding: 4px;">Вероятность</th>
+                            <th style="border: 1px solid #ddd; padding: 4px;">Результат</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 4px;">8/6</td>
+                            <td style="border: 1px solid #ddd; padding: 4px;">0.654</td>
+                            <td style="border: 1px solid #ddd; padding: 4px;">+0.123</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 4px;">13/9</td>
+                            <td style="border: 1px solid #ddd; padding: 4px;">0.598</td>
+                            <td style="border: 1px solid #ddd; padding: 4px;">-0.045</td>
+                        </tr>
+                    </tbody>
+                </table>
             `;
         }
         
+        // Clear element and add container
+        element.innerHTML = '';
+        element.appendChild(tableContainer);
         element.classList.add('table-element');
     }
 
-    updateTableContent(element, tableType) {
+    updateTableContent(container, tableType) {
+        // Get the parent element to set the table type
+        const element = container.parentElement || container;
         element.dataset.tableType = tableType;
-        element.innerHTML = '';
+        container.innerHTML = '';
         
         if (!this.cardData) {
             // Если нет данных, показываем заглушку
-            element.innerHTML = `
+            container.innerHTML = `
                 <div style="padding: 20px; text-align: center; color: #666;">
                     <strong>Нет данных для таблицы</strong>
                 </div>
@@ -189,13 +201,13 @@ class ContentEditor {
         
         if (tableType === 'hints' && this.cardData.hints) {
             const table = this.createHintsTable(this.cardData.hints);
-            element.appendChild(table);
+            container.appendChild(table);
         } else if (tableType === 'cube' && this.cardData.cube_hints) {
             const table = this.createCubeTable(this.cardData.cube_hints);
-            element.appendChild(table);
+            container.appendChild(table);
         } else {
             // Если для выбранного типа нет данных
-            element.innerHTML = `
+            container.innerHTML = `
                 <div style="padding: 20px; text-align: center; color: #666;">
                     <strong>Нет данных для типа таблицы: ${tableType === 'hints' ? 'Ход' : 'Куб'}</strong>
                 </div>
@@ -209,6 +221,7 @@ class ContentEditor {
             width: 100%;
             border-collapse: collapse;
             font-size: 12px;
+            table-layout: fixed;
         `;
 
         // Заголовок таблицы
@@ -264,6 +277,7 @@ class ContentEditor {
             width: 100%;
             border-collapse: collapse;
             font-size: 12px;
+            table-layout: fixed;
         `;
 
         // Заголовок таблицы
@@ -568,8 +582,15 @@ class ContentEditor {
             .filter(el => !el.id.includes('boardLabel')) // Исключаем boardLabel
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
         
-        // Calculate center X position
-        const centerX = (Math.min(canvasRect.width, maxCanvasWidth) - elementWidth) / 2;
+        // Calculate center X position for full-width tables
+        let centerX;
+        if (elementWidth >= maxCanvasWidth - 100) {
+            // For full-width tables, align to left edge with small margin
+            centerX = 10;
+        } else {
+            // For other elements, center them
+            centerX = (Math.min(canvasRect.width, maxCanvasWidth) - elementWidth) / 2;
+        }
         
         // Calculate vertical position without spacing
         const startY = 20; // Начальный отступ сверху
@@ -616,8 +637,15 @@ class ContentEditor {
         const maxCanvasHeight = this.getMaxCanvasHeight();
         
         // Adjust element size for mobile cards
-        const defaultWidth = this.isMobile() ? Math.min(120, maxCanvasWidth - 40) : 200;
-        const defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
+        let defaultWidth, defaultHeight;
+        if (toolId === 'moveHintsTable') {
+            // Table elements occupy full canvas width
+            defaultWidth = this.isMobile() ? maxCanvasWidth - 20 : maxCanvasWidth - 50;
+            defaultHeight = this.isMobile() ? Math.min(200, maxCanvasHeight - 40) : 250;
+        } else {
+            defaultWidth = this.isMobile() ? Math.min(120, maxCanvasWidth - 40) : 200;
+            defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
+        }
         
         // Position elements in vertical blocks with center alignment
         const position = this.calculateVerticalPosition(defaultWidth, defaultHeight);
@@ -678,6 +706,9 @@ class ContentEditor {
                 
             case 'moveHintsTable':
                 // Таблица - создаем на основе сохраненных данных
+                element.style.width = '100%';
+                element.style.minWidth = '100%';
+                element.style.maxWidth = '100%';
                 this.createTableElement(element);
                 break;
                 
@@ -744,7 +775,7 @@ class ContentEditor {
                 
             default:
                 element.innerHTML = `
-                    <div style="padding: 10px; text-align: center; color: #666;">
+                    <div style=" text-align: center; color: #666;">
                         <strong>${toolId}</strong><br>
                         <small>Неизвестный тип элемента</small>
                     </div>
@@ -997,7 +1028,11 @@ class ContentEditor {
                 this.selectedElement.style[property] = value;
                 break;
             case 'tableType':
-                this.updateTableContent(this.selectedElement, value);
+                // Find the table container within the selected element
+                const tableContainer = this.selectedElement.querySelector('div[style*="padding: 10px"]');
+                if (tableContainer) {
+                    this.updateTableContent(tableContainer, value);
+                }
                 break;
             case 'fontSize':
                 if (this.selectedElement.classList.contains('text-element')) {
