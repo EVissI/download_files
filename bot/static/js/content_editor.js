@@ -23,6 +23,27 @@ class ContentEditor {
         this.init();
     }
 
+    // Check if mobile device and get max canvas width
+    isMobile() {
+        return window.innerWidth <= 768;
+    }
+
+    getMaxCanvasWidth() {
+        if (this.isMobile()) {
+            // For mobile, return standard mobile card width
+            return 360;
+        }
+        return 800; // Desktop default
+    }
+
+    getMaxCanvasHeight() {
+        if (this.isMobile()) {
+            // For mobile, return standard mobile card height
+            return 640;
+        }
+        return 600; // Desktop default
+    }
+
     init() {
         this.createModal();
         this.loadTools();
@@ -222,15 +243,23 @@ class ContentEditor {
         element.className = 'canvas-element';
         element.dataset.toolId = toolId;
         
-        // Позиционируем элемент в центре холста со смещением
+        // Get canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
-        const x = Math.random() * (canvasRect.width - 200) + 50;
-        const y = Math.random() * (canvasRect.height - 150) + 50;
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        
+        // Adjust element size for mobile cards
+        const defaultWidth = this.isMobile() ? Math.min(120, maxCanvasWidth - 40) : 200;
+        const defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
+        
+        // Position within canvas bounds
+        const x = Math.random() * Math.min(canvasRect.width - defaultWidth, maxCanvasWidth - defaultWidth) + 10;
+        const y = Math.random() * Math.min(canvasRect.height - defaultHeight, maxCanvasHeight - defaultHeight) + 10;
         
         element.style.left = x + 'px';
         element.style.top = y + 'px';
-        element.style.width = '200px';
-        element.style.height = '150px';
+        element.style.width = defaultWidth + 'px';
+        element.style.height = defaultHeight + 'px';
         
         // Добавляем контент в элемент
         this.populateElementContent(element, toolId);
@@ -271,13 +300,27 @@ class ContentEditor {
                 if (originalCanvas) {
                     // Force fresh copy by redrawing the canvas
                     const clonedCanvas = originalCanvas.cloneNode(true);
+                    
+                    // Apply mobile width constraints
+                    const maxWidth = this.getMaxCanvasWidth();
+                    clonedCanvas.style.maxWidth = maxWidth + 'px';
                     clonedCanvas.style.width = '100%';
-                    clonedCanvas.style.height = '100%';
+                    clonedCanvas.style.height = 'auto';
                     
                     // Copy the actual canvas content
                     const ctx = clonedCanvas.getContext('2d');
                     if (ctx) {
-                        ctx.drawImage(originalCanvas, 0, 0);
+                        // Scale canvas content to fit the new dimensions
+                        const scale = maxWidth / originalCanvas.width;
+                        if (this.isMobile() && scale < 1) {
+                            clonedCanvas.width = maxWidth;
+                            clonedCanvas.height = originalCanvas.height * scale;
+                            ctx.drawImage(originalCanvas, 0, 0, maxWidth, originalCanvas.height * scale);
+                        } else {
+                            clonedCanvas.width = originalCanvas.width;
+                            clonedCanvas.height = originalCanvas.height;
+                            ctx.drawImage(originalCanvas, 0, 0);
+                        }
                     }
                     
                     // Add cache-busting
@@ -350,8 +393,12 @@ class ContentEditor {
                     // Создаем изображение из canvas с cache-busting
                     const img = document.createElement('img');
                     img.src = canvasForImage.toDataURL() + '?t=' + timestamp;
+                    
+                    // Apply mobile width constraints
+                    const maxWidth = this.getMaxCanvasWidth();
+                    img.style.maxWidth = maxWidth + 'px';
                     img.style.width = '100%';
-                    img.style.height = '100%';
+                    img.style.height = 'auto';
                     img.style.objectFit = 'contain';
                     img.setAttribute('data-image-timestamp', timestamp);
                     element.appendChild(img);
@@ -440,6 +487,12 @@ class ContentEditor {
     showElementProperties(element) {
         const computedStyle = window.getComputedStyle(element);
         
+        // Get mobile-aware card dimensions
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        const maxElementWidth = this.isMobile() ? maxCanvasWidth - 40 : 750;
+        const maxElementHeight = this.isMobile() ? maxCanvasHeight - 40 : 600;
+        
         this.propertiesContent.innerHTML = `
             <div class="property-group">
                 <h4>Основные</h4>
@@ -457,14 +510,14 @@ class ContentEditor {
                 <h4>Позиция</h4>
                 <div class="property-item">
                     <label>X:</label>
-                    <input type="range" id="propX" min="0" max="${this.canvas.offsetWidth - 100}" 
+                    <input type="range" id="propX" min="0" max="${Math.min(this.canvas.offsetWidth, maxCanvasWidth) - 100}" 
                            value="${parseInt(element.style.left)}" 
                            oninput="contentEditor.updateElementProperty('left', this.value + 'px')">
                     <div class="property-value">${parseInt(element.style.left)}px</div>
                 </div>
                 <div class="property-item">
                     <label>Y:</label>
-                    <input type="range" id="propY" min="0" max="${this.canvas.offsetHeight - 100}" 
+                    <input type="range" id="propY" min="0" max="${Math.min(this.canvas.offsetHeight, maxCanvasHeight) - 100}" 
                            value="${parseInt(element.style.top)}" 
                            oninput="contentEditor.updateElementProperty('top', this.value + 'px')">
                     <div class="property-value">${parseInt(element.style.top)}px</div>
@@ -480,14 +533,14 @@ class ContentEditor {
                 <h4>Размер</h4>
                 <div class="property-item">
                     <label>Ширина:</label>
-                    <input type="range" id="propWidth" min="50" max="800" 
+                    <input type="range" id="propWidth" min="50" max="${maxElementWidth}" 
                            value="${parseInt(element.style.width)}" 
                            oninput="contentEditor.updateElementProperty('width', this.value + 'px')">
                     <div class="property-value">${parseInt(element.style.width)}px</div>
                 </div>
                 <div class="property-item">
                     <label>Высота:</label>
-                    <input type="range" id="propHeight" min="50" max="600" 
+                    <input type="range" id="propHeight" min="50" max="${maxElementHeight}" 
                            value="${parseInt(element.style.height)}" 
                            oninput="contentEditor.updateElementProperty('height', this.value + 'px')">
                     <div class="property-value">${parseInt(element.style.height)}px</div>
@@ -635,6 +688,29 @@ class ContentEditor {
                 this.deselectAll();
             }
         });
+        
+        // Handle window resize for mobile responsiveness
+        window.addEventListener('resize', () => {
+            this.handleWindowResize();
+        });
+    }
+    
+    handleWindowResize() {
+        // Update all canvas elements on window resize
+        const canvasElements = this.canvas.querySelectorAll('.canvas-element');
+        canvasElements.forEach(element => {
+            const toolId = element.dataset.toolId;
+            if (toolId === 'boardCanvas' || toolId === 'board-illustration') {
+                // Update canvas/image dimensions for mobile
+                const canvasOrImg = element.querySelector('canvas, img');
+                if (canvasOrImg) {
+                    const maxWidth = this.getMaxCanvasWidth();
+                    canvasOrImg.style.maxWidth = maxWidth + 'px';
+                    canvasOrImg.style.width = '100%';
+                    canvasOrImg.style.height = 'auto';
+                }
+            }
+        });
     }
 
     setupCanvasEvents() {
@@ -681,9 +757,15 @@ class ContentEditor {
         const deltaX = e.clientX - this.dragStartX;
         const deltaY = e.clientY - this.dragStartY;
         
-        const newX = Math.max(0, Math.min(this.canvas.offsetWidth - this.dragElement.offsetWidth, 
+        // Get canvas bounds with mobile constraints
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        const canvasWidth = Math.min(this.canvas.offsetWidth, maxCanvasWidth);
+        const canvasHeight = Math.min(this.canvas.offsetHeight, maxCanvasHeight);
+        
+        const newX = Math.max(0, Math.min(canvasWidth - this.dragElement.offsetWidth, 
                                          this.elementStartX + deltaX));
-        const newY = Math.max(0, Math.min(this.canvas.offsetHeight - this.dragElement.offsetHeight, 
+        const newY = Math.max(0, Math.min(canvasHeight - this.dragElement.offsetHeight, 
                                          this.elementStartY + deltaY));
         
         this.dragElement.style.left = newX + 'px';
@@ -723,6 +805,12 @@ class ContentEditor {
         const deltaX = e.clientX - this.resizeStartX;
         const deltaY = e.clientY - this.resizeStartY;
         
+        // Get mobile constraints
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        const maxElementWidth = maxCanvasWidth - 40;
+        const maxElementHeight = maxCanvasHeight - 40;
+        
         let newWidth = this.resizeStartWidth;
         let newHeight = this.resizeStartHeight;
         let newLeft = this.resizeStartLeft;
@@ -730,24 +818,24 @@ class ContentEditor {
         
         switch(this.resizePosition) {
             case 'se':
-                newWidth = Math.max(50, this.resizeStartWidth + deltaX);
-                newHeight = Math.max(50, this.resizeStartHeight + deltaY);
+                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth + deltaX));
+                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight + deltaY));
                 break;
             case 'sw':
-                newWidth = Math.max(50, this.resizeStartWidth - deltaX);
-                newHeight = Math.max(50, this.resizeStartHeight + deltaY);
+                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth - deltaX));
+                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight + deltaY));
                 newLeft = this.resizeStartLeft + deltaX;
                 if (newWidth === 50) newLeft = this.resizeStartLeft + this.resizeStartWidth - 50;
                 break;
             case 'ne':
-                newWidth = Math.max(50, this.resizeStartWidth + deltaX);
-                newHeight = Math.max(50, this.resizeStartHeight - deltaY);
+                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth + deltaX));
+                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight - deltaY));
                 newTop = this.resizeStartTop + deltaY;
                 if (newHeight === 50) newTop = this.resizeStartTop + this.resizeStartHeight - 50;
                 break;
             case 'nw':
-                newWidth = Math.max(50, this.resizeStartWidth - deltaX);
-                newHeight = Math.max(50, this.resizeStartHeight - deltaY);
+                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth - deltaX));
+                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight - deltaY));
                 newLeft = this.resizeStartLeft + deltaX;
                 newTop = this.resizeStartTop + deltaY;
                 if (newWidth === 50) newLeft = this.resizeStartLeft + this.resizeStartWidth - 50;
