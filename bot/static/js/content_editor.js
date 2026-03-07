@@ -152,7 +152,6 @@ class ContentEditor {
             background: white;
             border: 2px solid #333;
             border-radius: 8px;
-            padding: 15px;
             font-family: Arial, sans-serif;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             min-width: 400px;
@@ -207,7 +206,6 @@ class ContentEditor {
             th.style.cssText = `
                 background: #4CAF50;
                 color: white;
-                padding: 8px;
                 text-align: left;
                 border: 1px solid #ddd;
                 font-weight: bold;
@@ -269,7 +267,6 @@ class ContentEditor {
             th.style.cssText = `
                 background: #FF9800;
                 color: white;
-                padding: 8px;
                 text-align: left;
                 border: 1px solid #ddd;
                 font-weight: bold;
