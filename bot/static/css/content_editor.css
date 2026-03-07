@@ -1,0 +1,520 @@
+/**
+ * Content Editor Styles
+ * Редактор контента в стиле Photoshop (Модальное окно)
+ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Модальное окно */
+.content-editor-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.content-editor-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+.content-editor-container {
+    position: relative;
+    background: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    width: 95vw;
+    height: 95vh;
+    max-width: 1400px;
+    max-height: 900px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #404040;
+    color: #e0e0e0;
+}
+
+.content-editor-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #e0e0e0;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.content-editor-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.editor-container {
+    display: flex;
+    height: 100%;
+    background: #1e1e1e;
+}
+
+/* Панель инструментов */
+.toolbar {
+    width: 250px;
+    background: #2d2d2d;
+    border-right: 1px solid #404040;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.toolbar h3 {
+    padding: 15px;
+    background: #383838;
+    border-bottom: 1px solid #404040;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tools-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.tool-item {
+    background: #3a3a3a;
+    border: 1px solid #505050;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.tool-item:hover {
+    background: #454545;
+    border-color: #667eea;
+    transform: translateY(-1px);
+}
+
+.tool-item.selected {
+    background: #4a4a6e;
+    border-color: #667eea;
+}
+
+.tool-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.tool-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: #ffffff;
+}
+
+.tool-type {
+    font-size: 11px;
+    color: #a0a0a0;
+    background: #2a2a2a;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.tool-description {
+    font-size: 12px;
+    color: #b0b0b0;
+    line-height: 1.3;
+}
+
+.tool-status {
+    font-size: 10px;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.tool-status.available {
+    color: #4ade80;
+}
+
+.tool-status.unavailable {
+    color: #f87171;
+}
+
+/* Рабочая область */
+.workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #252525;
+}
+
+.canvas {
+    flex: 1;
+    background: #ffffff;
+    margin: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+    background-image: 
+        linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+        linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* Панель свойств */
+.properties-panel {
+    width: 280px;
+    background: #2d2d2d;
+    border-left: 1px solid #404040;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.properties-panel h3 {
+    padding: 15px;
+    background: #383838;
+    border-bottom: 1px solid #404040;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#propertiesContent {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.property-group {
+    margin-bottom: 20px;
+}
+
+.property-group h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: #a0a0a0;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.property-item {
+    margin-bottom: 12px;
+}
+
+.property-item label {
+    display: block;
+    font-size: 12px;
+    color: #e0e0e0;
+    margin-bottom: 4px;
+}
+
+.property-item input[type="range"],
+.property-item input[type="number"],
+.property-item input[type="color"],
+.property-item select {
+    width: 100%;
+    background: #3a3a3a;
+    border: 1px solid #505050;
+    border-radius: 4px;
+    color: #e0e0e0;
+}
+
+.property-item input[type="range"] {
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #505050;
+    outline: none;
+}
+
+.property-item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.property-item input[type="number"] {
+    padding: 6px 8px;
+}
+
+.property-item input[type="color"] {
+    height: 30px;
+    cursor: pointer;
+}
+
+.property-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.property-value {
+    font-size: 11px;
+    color: #a0a0a0;
+    text-align: right;
+    margin-top: 2px;
+}
+
+/* Элементы на холсте */
+.canvas-element {
+    position: absolute;
+    background: white;
+    border: 2px solid #667eea;
+    border-radius: 4px;
+    min-width: 50px;
+    min-height: 50px;
+    cursor: move;
+    transition: box-shadow 0.2s ease;
+    user-select: none;
+}
+
+.canvas-element:hover {
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+.canvas-element.selected {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
+}
+
+.canvas-element.dragging {
+    opacity: 0.8;
+    cursor: grabbing;
+}
+
+/* Контролы элементов */
+.element-controls {
+    position: absolute;
+    top: -30px;
+    right: 0;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+}
+
+.canvas-element:hover .element-controls,
+.canvas-element.selected .element-controls {
+    opacity: 1;
+}
+
+.control-btn {
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 2px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.control-btn.delete:hover {
+    background: #ef4444;
+}
+
+/* Resize handles */
+.resize-handle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #667eea;
+    border: 1px solid white;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.canvas-element.selected .resize-handle {
+    opacity: 1;
+}
+
+.resize-handle.nw { top: -4px; left: -4px; cursor: nw-resize; }
+.resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
+.resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
+.resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
+
+/* Кнопки действий */
+.action-buttons {
+    padding: 10px;
+    border-top: 1px solid #404040;
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    flex: 1;
+    padding: 8px 12px;
+    background: #3a3a3a;
+    border: 1px solid #505050;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: #454545;
+    border-color: #667eea;
+}
+
+.action-btn.primary {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.action-btn.primary:hover {
+    background: #5a67d8;
+}
+
+.action-btn.danger {
+    background: #ef4444;
+    border-color: #ef4444;
+}
+
+.action-btn.danger:hover {
+    background: #dc2626;
+}
+
+/* Скроллбары */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #2a2a2a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #505050;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #606060;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .content-editor-container {
+        width: 98vw;
+        height: 98vh;
+    }
+    
+    .toolbar {
+        width: 200px;
+    }
+    
+    .properties-panel {
+        width: 240px;
+    }
+}
+
+@media (max-width: 768px) {
+    .content-editor-container {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        max-width: none;
+        max-height: none;
+    }
+    
+    .content-editor-body {
+        flex-direction: column;
+    }
+    
+    .toolbar,
+    .properties-panel {
+        width: 100%;
+        height: 150px;
+    }
+    
+    .workspace {
+        flex: 1;
+    }
+    
+    .canvas {
+        margin: 10px;
+    }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.canvas-element {
+    animation: fadeIn 0.2s ease-out;
+}
