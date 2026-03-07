@@ -191,7 +191,6 @@ class ContentEditor {
         table.style.cssText = `
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
             font-size: 12px;
         `;
 
@@ -252,7 +251,6 @@ class ContentEditor {
         table.style.cssText = `
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
             font-size: 12px;
         `;
 
