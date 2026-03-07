@@ -13,6 +13,7 @@ class ContentEditor {
         this.elements = [];
         this.elementIdCounter = 0;
         this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
+        this.cardData = null; // Сохраняем данные карточки для таблиц
         
         this.init();
     }
@@ -122,68 +123,84 @@ class ContentEditor {
         document.body.style.overflow = 'hidden';
         this.loadTools(); // Обновляем инструменты при открытии
         
-        // Создаем таблицу на основе данных карточки
-        this.createTableFromData(cardData);
+        // Сохраняем данные карточки для использования при выборе инструмента таблицы
+        this.cardData = cardData;
         
         // Force refresh of all dynamic content
         this.forceRefreshContent();
     }
 
-    createTableFromData(cardData) {
-        if (!cardData) {
-            console.warn('Нет данных для создания таблицы');
+    createTableElement(element) {
+        // Add cache-busting timestamp
+        const timestamp = Date.now();
+        element.setAttribute('data-content-timestamp', timestamp);
+        
+        // Устанавливаем стандартный тип таблицы - "ход"
+        element.dataset.tableType = 'hints';
+        
+        if (this.cardData) {
+            // Создаем таблицу на основе данных карточки
+            this.updateTableContent(element, 'hints');
+        } else {
+            // Создаем пример таблицы если нет данных
+            element.innerHTML = `
+                <div style="padding: 10px; height: 100%; overflow: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <thead>
+                            <tr style="background: #f0f0f0;">
+                                <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
+                                <th style="border: 1px solid #ddd; padding: 4px;">Вероятность</th>
+                                <th style="border: 1px solid #ddd; padding: 4px;">Результат</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 4px;">8/6</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">0.654</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">+0.123</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 4px;">13/9</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">0.598</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">-0.045</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        element.classList.add('table-element');
+    }
+
+    updateTableContent(element, tableType) {
+        element.dataset.tableType = tableType;
+        element.innerHTML = '';
+        
+        if (!this.cardData) {
+            // Если нет данных, показываем заглушку
+            element.innerHTML = `
+                <div style="padding: 20px; text-align: center; color: #666;">
+                    <strong>Нет данных для таблицы</strong>
+                </div>
+            `;
             return;
         }
-
-        console.log('Получены данные для таблицы:', cardData); // Для отладки
-
-        // Очищаем canvas перед созданием таблицы
-        if (this.canvas) {
-            this.canvas.innerHTML = '';
+        
+        if (tableType === 'hints' && this.cardData.hints) {
+            const table = this.createHintsTable(this.cardData.hints);
+            element.appendChild(table);
+        } else if (tableType === 'cube' && this.cardData.cube_hints) {
+            const table = this.createCubeTable(this.cardData.cube_hints);
+            element.appendChild(table);
+        } else {
+            // Если для выбранного типа нет данных
+            element.innerHTML = `
+                <div style="padding: 20px; text-align: center; color: #666;">
+                    <strong>Нет данных для типа таблицы: ${tableType === 'hints' ? 'Ход' : 'Куб'}</strong>
+                </div>
+            `;
         }
-
-        // Создаем элемент таблицы
-        const tableElement = document.createElement('div');
-        tableElement.className = 'canvas-element table-element';
-        tableElement.style.cssText = `
-            position: absolute;
-            left: 50px;
-            top: 50px;
-            background: white;
-            border: 2px solid #333;
-            border-radius: 8px;
-            font-family: Arial, sans-serif;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            min-width: 400px;
-        `;
-
-
-        // Создаем таблицу для hints
-        if (cardData.hints && cardData.hints.length > 0) {
-            const hintsTable = this.createHintsTable(cardData.hints);
-            tableElement.appendChild(hintsTable);
-        }
-
-        // Создаем таблицу для cube_hints
-        if (cardData.cube_hints && cardData.cube_hints.length > 0) {
-
-            const cubeTable = this.createCubeTable(cardData.cube_hints);
-            tableElement.appendChild(cubeTable);
-        }
-
-        // Добавляем таблицу на canvas
-        this.canvas.appendChild(tableElement);
-
-        // Добавляем в массив элементов
-        this.elements.push({
-            id: this.elementIdCounter++,
-            element: tableElement,
-            type: 'table',
-            data: cardData
-        });
-
-        // Делаем таблицу выбираемой
-        this.setupElementInteractions(tableElement);
     }
 
     createHintsTable(hints) {
@@ -660,41 +677,8 @@ class ContentEditor {
                 break;
                 
             case 'moveHintsTable':
-                // Таблица
-                const originalTable = document.getElementById('moveHintsTable');
-                if (originalTable) {
-                    const clonedTable = originalTable.cloneNode(true);
-                    // Add cache-busting to table
-                    clonedTable.setAttribute('data-table-timestamp', timestamp);
-                    element.appendChild(clonedTable);
-                } else {
-                    // Создаем пример таблицы
-                    element.innerHTML = `
-                        <div style="padding: 10px; height: 100%; overflow: auto;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                <thead>
-                                    <tr style="background: #f0f0f0;">
-                                        <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
-                                        <th style="border: 1px solid #ddd; padding: 4px;">Вероятность</th>
-                                        <th style="border: 1px solid #ddd; padding: 4px;">Результат</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">8/6</td>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">0.654</td>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">+0.123</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">13/9</td>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">0.598</td>
-                                        <td style="border: 1px solid #ddd; padding: 4px;">-0.045</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                }
+                // Таблица - создаем на основе сохраненных данных
+                this.createTableElement(element);
                 break;
                 
             case 'board-illustration':
@@ -925,9 +909,21 @@ class ContentEditor {
         const maxElementWidth = this.isMobile() ? maxCanvasWidth - 40 : 750;
         const maxElementHeight = this.isMobile() ? maxCanvasHeight - 40 : 600;
         
+        // Check if this is a table element
+        const isTableElement = element.classList.contains('table-element') || element.dataset.toolId === 'moveHintsTable';
+        
         this.propertiesContent.innerHTML = `
             <div class="property-group">
                 <h4>Стиль</h4>
+                ${isTableElement ? `
+                <div class="property-item">
+                    <label>Тип таблицы:</label>
+                    <select id="propTableType" onchange="contentEditor.updateElementProperty('tableType', this.value)">
+                        <option value="hints" ${(element.dataset.tableType === 'hints' || !element.dataset.tableType) ? 'selected' : ''}>Таблица хода</option>
+                        <option value="cube" ${element.dataset.tableType === 'cube' ? 'selected' : ''}>Таблица по кубу</option>
+                    </select>
+                </div>
+                ` : ''}
                 ${element.classList.contains('text-element') ? `
                 <div class="property-item">
                     <label>Размер шрифта:</label>
@@ -1000,13 +996,16 @@ class ContentEditor {
             case 'top':
                 this.selectedElement.style[property] = value;
                 break;
+            case 'tableType':
+                this.updateTableContent(this.selectedElement, value);
+                break;
             case 'fontSize':
-                if (element.classList.contains('text-element')) {
+                if (this.selectedElement.classList.contains('text-element')) {
                     const textContent = this.selectedElement.querySelector('.text-content');
                     if (textContent) {
                         textContent.style.fontSize = value;
                     }
-                } else if (element.classList.contains('link-element')) {
+                } else if (this.selectedElement.classList.contains('link-element')) {
                     const linkText = this.selectedElement.querySelector('.link-text');
                     if (linkText) {
                         linkText.style.fontSize = value;
@@ -1014,12 +1013,12 @@ class ContentEditor {
                 }
                 break;
             case 'textColor':
-                if (element.classList.contains('text-element')) {
+                if (this.selectedElement.classList.contains('text-element')) {
                     const textContent = this.selectedElement.querySelector('.text-content');
                     if (textContent) {
                         textContent.style.color = value;
                     }
-                } else if (element.classList.contains('link-element')) {
+                } else if (this.selectedElement.classList.contains('link-element')) {
                     const linkText = this.selectedElement.querySelector('.link-text');
                     if (linkText) {
                         linkText.style.color = value;
