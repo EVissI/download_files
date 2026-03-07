@@ -340,28 +340,18 @@ class ContentEditor {
         const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
         
-        // Calculate position based on existing elements
-        const currentElements = this.canvas.querySelectorAll('.canvas-element');
-        let nextY = 10; // Start position
+        // Adjust element size for mobile cards
+        const defaultWidth = this.isMobile() ? Math.min(120, maxCanvasWidth - 40) : 200;
+        const defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
         
-        // Find the next available Y position
-        currentElements.forEach(el => {
-            const elHeight = parseInt(el.style.height) || el.offsetHeight;
-            const elTop = parseInt(el.style.top) || 0;
-            if (elTop + elHeight + 10 > nextY) {
-                nextY = elTop + elHeight + 10; // 10px spacing between elements
-            }
-        });
+        // Position within canvas bounds
+        const x = Math.random() * Math.min(canvasRect.width - defaultWidth, maxCanvasWidth - defaultWidth) + 10;
+        const y = Math.random() * Math.min(canvasRect.height - defaultHeight, maxCanvasHeight - defaultHeight) + 10;
         
-        // Set element dimensions - full width of canvas with margins
-        const elementWidth = Math.min(canvasRect.width, maxCanvasWidth) - 40; // 20px margins on each side
-        const elementHeight = this.getDefaultHeight(toolId);
-        
-        // Position element
-        element.style.left = '20px'; // Fixed left position with margin
-        element.style.top = nextY + 'px';
-        element.style.width = elementWidth + 'px';
-        element.style.height = elementHeight + 'px';
+        element.style.left = x + 'px';
+        element.style.top = y + 'px';
+        element.style.width = defaultWidth + 'px';
+        element.style.height = defaultHeight + 'px';
         
         // Добавляем контент в элемент
         this.populateElementContent(element, toolId);
@@ -369,8 +359,8 @@ class ContentEditor {
         // Добавляем контролы
         this.addElementControls(element);
         
-        // Добавляем resize handles (only bottom handle for vertical resizing)
-        this.addVerticalResizeHandles(element);
+        // Добавляем resize handles
+        this.addResizeHandles(element);
         
         // Добавляем на холст
         this.canvas.appendChild(element);
@@ -384,28 +374,6 @@ class ContentEditor {
         
         // Выделяем элемент
         this.selectElement(element);
-        
-        // Reorganize elements to ensure no overlap
-        this.reorganizeElements();
-    }
-
-    getDefaultHeight(toolId) {
-        // Return default height based on element type
-        switch(toolId) {
-            case 'question-text':
-            case 'answer-text':
-                return 80;
-            case 'moveHintsTable':
-                return 150;
-            case 'board-illustration':
-                return 200;
-            case 'audio-file':
-                return 120;
-            case 'support-link':
-                return 60;
-            default:
-                return 100;
-        }
     }
 
     populateElementContent(element, toolId) {
@@ -669,39 +637,6 @@ class ContentEditor {
 
     }
 
-    addVerticalResizeHandles(element) {
-        // Add only bottom resize handle for vertical resizing
-        const handle = document.createElement('div');
-        handle.className = 'resize-handle bottom';
-        handle.dataset.position = 'bottom';
-        element.appendChild(handle);
-    }
-
-    reorganizeElements() {
-        // Get all elements sorted by their current top position
-        const elements = Array.from(this.canvas.querySelectorAll('.canvas-element'));
-        elements.sort((a, b) => {
-            const topA = parseInt(a.style.top) || 0;
-            const topB = parseInt(b.style.top) || 0;
-            return topA - topB;
-        });
-
-        // Get canvas dimensions
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const maxCanvasWidth = this.getMaxCanvasWidth();
-        const elementWidth = Math.min(canvasRect.width, maxCanvasWidth) - 40; // 20px margins on each side
-
-        // Reorganize elements to ensure no overlap
-        let currentY = 10; // Start position
-        elements.forEach(element => {
-            const height = parseInt(element.style.height) || element.offsetHeight;
-            element.style.top = currentY + 'px';
-            element.style.left = '20px'; // Fixed left position with margin
-            element.style.width = elementWidth + 'px'; // Ensure full width
-            currentY += height + 10; // 10px spacing between elements
-        });
-    }
-
     addElementControls(element) {
         const controls = document.createElement('div');
         controls.className = 'element-controls';
@@ -742,11 +677,42 @@ class ContentEditor {
         // Get mobile-aware card dimensions
         const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
+        const maxElementWidth = this.isMobile() ? maxCanvasWidth - 40 : 750;
         const maxElementHeight = this.isMobile() ? maxCanvasHeight - 40 : 600;
         
         this.propertiesContent.innerHTML = `
             <div class="property-group">
+                <h4>Позиция</h4>
+                <div class="property-item">
+                    <label>X:</label>
+                    <input type="range" id="propX" min="0" max="${Math.min(this.canvas.offsetWidth, maxCanvasWidth) - 100}" 
+                           value="${parseInt(element.style.left)}" 
+                           oninput="contentEditor.updateElementProperty('left', this.value + 'px')">
+                    <div class="property-value">${parseInt(element.style.left)}px</div>
+                </div>
+                <div class="property-item">
+                    <label>Y:</label>
+                    <input type="range" id="propY" min="0" max="${Math.min(this.canvas.offsetHeight, maxCanvasHeight) - 100}" 
+                           value="${parseInt(element.style.top)}" 
+                           oninput="contentEditor.updateElementProperty('top', this.value + 'px')">
+                    <div class="property-value">${parseInt(element.style.top)}px</div>
+                </div>
+                <div class="property-item">
+                    <label>Z-Index:</label>
+                    <input type="number" id="propZ" min="1" max="9999" value="${element.style.zIndex || 1}" 
+                           oninput="contentEditor.updateElementProperty('zIndex', this.value)">
+                </div>
+            </div>
+            
+            <div class="property-group">
                 <h4>Размер</h4>
+                <div class="property-item">
+                    <label>Ширина:</label>
+                    <input type="range" id="propWidth" min="50" max="${maxElementWidth}" 
+                           value="${parseInt(element.style.width)}" 
+                           oninput="contentEditor.updateElementProperty('width', this.value + 'px')">
+                    <div class="property-value">${parseInt(element.style.width)}px</div>
+                </div>
                 <div class="property-item">
                     <label>Высота:</label>
                     <input type="range" id="propHeight" min="50" max="${maxElementHeight}" 
@@ -817,6 +783,8 @@ class ContentEditor {
             </div>
             
             <div class="action-buttons">
+                <button class="action-btn" onclick="contentEditor.bringToFront()">На передний план</button>
+                <button class="action-btn" onclick="contentEditor.sendToBack()">На задний план</button>
                 <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')">Удалить</button>
             </div>
         `;
@@ -826,18 +794,20 @@ class ContentEditor {
         if (!this.selectedElement) return;
         
         switch(property) {
+            case 'left':
+            case 'top':
+            case 'width':
             case 'height':
+            case 'zIndex':
                 this.selectedElement.style[property] = value;
-                // Reorganize elements when height changes
-                this.reorganizeElements();
                 break;
             case 'fontSize':
-                if (this.selectedElement.classList.contains('text-element')) {
+                if (element.classList.contains('text-element')) {
                     const textContent = this.selectedElement.querySelector('.text-content');
                     if (textContent) {
                         textContent.style.fontSize = value;
                     }
-                } else if (this.selectedElement.classList.contains('link-element')) {
+                } else if (element.classList.contains('link-element')) {
                     const linkText = this.selectedElement.querySelector('.link-text');
                     if (linkText) {
                         linkText.style.fontSize = value;
@@ -845,12 +815,12 @@ class ContentEditor {
                 }
                 break;
             case 'textColor':
-                if (this.selectedElement.classList.contains('text-element')) {
+                if (element.classList.contains('text-element')) {
                     const textContent = this.selectedElement.querySelector('.text-content');
                     if (textContent) {
                         textContent.style.color = value;
                     }
-                } else if (this.selectedElement.classList.contains('link-element')) {
+                } else if (element.classList.contains('link-element')) {
                     const linkText = this.selectedElement.querySelector('.link-text');
                     if (linkText) {
                         linkText.style.color = value;
@@ -878,7 +848,7 @@ class ContentEditor {
         }
         
         // Обновляем отображение значений
-        if (property === 'height') {
+        if (property === 'left' || property === 'top' || property === 'width' || property === 'height') {
             const valueDisplay = this.selectedElement.querySelector(`.property-value`);
             if (valueDisplay) {
                 valueDisplay.textContent = value;
@@ -919,6 +889,12 @@ class ContentEditor {
         const newId = `element_${this.elementIdCounter++}`;
         newElement.id = newId;
         
+        // Смещаем дубликат
+        const currentLeft = parseInt(element.style.left);
+        const currentTop = parseInt(element.style.top);
+        newElement.style.left = (currentLeft + 20) + 'px';
+        newElement.style.top = (currentTop + 20) + 'px';
+        
         // Обновляем контролы
         const controls = newElement.querySelector('.element-controls');
         if (controls) {
@@ -928,18 +904,12 @@ class ContentEditor {
             `;
         }
         
-        // Add resize handle to the new element
-        this.addVerticalResizeHandles(newElement);
-        
         this.canvas.appendChild(newElement);
         this.elements.push({
             id: newId,
             toolId: element.dataset.toolId,
             element: newElement
         });
-        
-        // Reorganize all elements to maintain proper layout
-        this.reorganizeElements();
         
         this.selectElement(newElement);
     }
@@ -954,10 +924,25 @@ class ContentEditor {
                 this.selectedElement = null;
                 this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
             }
-            
-            // Reorganize remaining elements
-            this.reorganizeElements();
         }
+    }
+
+    bringToFront() {
+        if (!this.selectedElement) return;
+        
+        const maxZ = Math.max(...this.elements.map(el => 
+            parseInt(el.element.style.zIndex || 1)
+        ));
+        this.selectedElement.style.zIndex = maxZ + 1;
+    }
+
+    sendToBack() {
+        if (!this.selectedElement) return;
+        
+        const minZ = Math.min(...this.elements.map(el => 
+            parseInt(el.element.style.zIndex || 1)
+        ));
+        this.selectedElement.style.zIndex = Math.max(1, minZ - 1);
     }
 
     setupEventListeners() {
@@ -971,23 +956,6 @@ class ContentEditor {
         // Handle window resize for mobile responsiveness
         window.addEventListener('resize', () => {
             this.handleWindowResize();
-        });
-        
-        // Only handle resizing, no dragging
-        this.canvas.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('resize-handle')) {
-                this.startVerticalResizing(e, e.target);
-            }
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (this.isResizing) {
-                this.verticalResize(e);
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            this.stopResizing();
         });
     }
     
@@ -1007,40 +975,150 @@ class ContentEditor {
                 }
             }
         });
-        
-        // Reorganize elements to ensure proper layout after resize
-        this.reorganizeElements();
     }
 
-    startVerticalResizing(e, handle) {
+    setupCanvasEvents() {
+        // Перетаскивание элементов
+        this.canvas.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('canvas-element') && 
+                !e.target.classList.contains('resize-handle') &&
+                !e.target.classList.contains('control-btn') &&
+                !e.target.classList.contains('text-content') &&
+                !e.target.classList.contains('link-text')) {
+                this.startDragging(e, e.target);
+            } else if (e.target.classList.contains('resize-handle')) {
+                this.startResizing(e, e.target);
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (this.isDragging) {
+                this.drag(e);
+            } else if (this.isResizing) {
+                this.resize(e);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            this.stopDragging();
+            this.stopResizing();
+        });
+    }
+
+    startDragging(e, element) {
+        this.isDragging = true;
+        this.dragElement = element;
+        this.dragStartX = e.clientX;
+        this.dragStartY = e.clientY;
+        this.elementStartX = parseInt(element.style.left);
+        this.elementStartY = parseInt(element.style.top);
+        
+        element.classList.add('dragging');
+        this.selectElement(element);
+    }
+
+    drag(e) {
+        if (!this.isDragging || !this.dragElement) return;
+        
+        const deltaX = e.clientX - this.dragStartX;
+        const deltaY = e.clientY - this.dragStartY;
+        
+        // Get canvas bounds with mobile constraints
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        const canvasWidth = Math.min(this.canvas.offsetWidth, maxCanvasWidth);
+        const canvasHeight = Math.min(this.canvas.offsetHeight, maxCanvasHeight);
+        
+        const newX = Math.max(0, Math.min(canvasWidth - this.dragElement.offsetWidth, 
+                                         this.elementStartX + deltaX));
+        const newY = Math.max(0, Math.min(canvasHeight - this.dragElement.offsetHeight, 
+                                         this.elementStartY + deltaY));
+        
+        this.dragElement.style.left = newX + 'px';
+        this.dragElement.style.top = newY + 'px';
+        
+        // Обновляем свойства
+        this.updatePropertyDisplay('propX', newX);
+        this.updatePropertyDisplay('propY', newY);
+    }
+
+    stopDragging() {
+        if (this.dragElement) {
+            this.dragElement.classList.remove('dragging');
+        }
+        this.isDragging = false;
+        this.dragElement = null;
+    }
+
+    startResizing(e, handle) {
         this.isResizing = true;
         this.resizeHandle = handle;
         this.resizeElement = handle.parentElement;
+        this.resizeStartX = e.clientX;
         this.resizeStartY = e.clientY;
+        this.resizeStartWidth = parseInt(this.resizeElement.style.width);
         this.resizeStartHeight = parseInt(this.resizeElement.style.height);
+        this.resizeStartLeft = parseInt(this.resizeElement.style.left);
         this.resizeStartTop = parseInt(this.resizeElement.style.top);
+        this.resizePosition = handle.dataset.position;
         
         e.stopPropagation();
     }
 
-    verticalResize(e) {
+    resize(e) {
         if (!this.isResizing || !this.resizeElement) return;
         
+        const deltaX = e.clientX - this.resizeStartX;
         const deltaY = e.clientY - this.resizeStartY;
         
         // Get mobile constraints
+        const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
+        const maxElementWidth = maxCanvasWidth - 40;
         const maxElementHeight = maxCanvasHeight - 40;
         
-        const newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight + deltaY));
+        let newWidth = this.resizeStartWidth;
+        let newHeight = this.resizeStartHeight;
+        let newLeft = this.resizeStartLeft;
+        let newTop = this.resizeStartTop;
         
+        switch(this.resizePosition) {
+            case 'se':
+                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth + deltaX));
+                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight + deltaY));
+                break;
+            case 'sw':
+                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth - deltaX));
+                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight + deltaY));
+                newLeft = this.resizeStartLeft + deltaX;
+                if (newWidth === 50) newLeft = this.resizeStartLeft + this.resizeStartWidth - 50;
+                break;
+            case 'ne':
+                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth + deltaX));
+                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight - deltaY));
+                newTop = this.resizeStartTop + deltaY;
+                if (newHeight === 50) newTop = this.resizeStartTop + this.resizeStartHeight - 50;
+                break;
+            case 'nw':
+                newWidth = Math.max(50, Math.min(maxElementWidth, this.resizeStartWidth - deltaX));
+                newHeight = Math.max(50, Math.min(maxElementHeight, this.resizeStartHeight - deltaY));
+                newLeft = this.resizeStartLeft + deltaX;
+                newTop = this.resizeStartTop + deltaY;
+                if (newWidth === 50) newLeft = this.resizeStartLeft + this.resizeStartWidth - 50;
+                if (newHeight === 50) newTop = this.resizeStartTop + this.resizeStartHeight - 50;
+                break;
+        }
+        
+        this.resizeElement.style.width = newWidth + 'px';
         this.resizeElement.style.height = newHeight + 'px';
+        this.resizeElement.style.left = newLeft + 'px';
+        this.resizeElement.style.top = newTop + 'px';
         
         // Обновляем свойства
+        this.updatePropertyDisplay('propWidth', newWidth);
         this.updatePropertyDisplay('propHeight', newHeight);
-        
-        // Reorganize elements after resize
-        this.reorganizeElements();
+        this.updatePropertyDisplay('propX', newLeft);
+        this.updatePropertyDisplay('propY', newTop);
     }
 
     stopResizing() {
