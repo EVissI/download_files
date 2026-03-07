@@ -623,9 +623,24 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
     if not game_id:
         raise HTTPException(status_code=400, detail="game_id parameter is required")
 
-    return templates.TemplateResponse(
-        "hint_viewer.html", {"request": request, "game_id": game_id}
+    # Add timestamp for cache-busting
+    import time
+    cache_timestamp = int(time.time())
+    
+    response = templates.TemplateResponse(
+        "hint_viewer.html", {
+            "request": request, 
+            "game_id": game_id,
+            "cache_timestamp": cache_timestamp
+        }
     )
+    
+    # Add cache-busting headers to prevent HTML caching
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
+    return response
 
 
 @hint_viewer_api_router.get("/api/analysis/{game_id}")

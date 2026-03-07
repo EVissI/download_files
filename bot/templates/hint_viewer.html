@@ -4,9 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>Backgammon Game Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
@@ -917,20 +914,10 @@
             background-color: #0056b3;
         }
     </style>
-    <script>
-        // Добавляем cache-busting для CSS и JS
-        const cacheBuster = Date.now();
-        // Загружаем CSS с cache-busting
-        const cssLink = document.createElement('link');
-        cssLink.rel = 'stylesheet';
-        cssLink.href = `/static/css/content_editor.css?t=${cacheBuster}`;
-        document.head.appendChild(cssLink);
-        
-        // Загружаем JS с cache-busting
-        const jsScript = document.createElement('script');
-        jsScript.src = `/static/js/content_editor.js?t=${cacheBuster}`;
-        document.head.appendChild(jsScript);
-    </script>
+    <link rel="stylesheet" href="/static/css/content_editor.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="/static/js/content_editor.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
@@ -3900,11 +3887,47 @@
                 console.error('ContentEditor не инициализирован');
             }
         }
+
+        // Функция для обновления контента кнопки с cache-busting
+        function updateButtonContent() {
+            const button = document.getElementById('openCardEditorBtn');
+            if (button) {
+                // Force refresh by adding timestamp to button content
+                const timestamp = Date.now();
+                button.setAttribute('data-refresh', timestamp);
+                
+                // Trigger a reflow to ensure the update is applied
+                button.style.display = 'none';
+                button.offsetHeight; // Force reflow
+                button.style.display = '';
+            }
+        }
+
+        // Обновляем контент кнопки при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            updateButtonContent();
+            
+            // Также обновляем при каждом показе контейнера админа
+            const adminContainer = document.getElementById('adminButtonContainer');
+            if (adminContainer) {
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            if (adminContainer.style.display !== 'none') {
+                                updateButtonContent();
+                            }
+                        }
+                    });
+                });
+                observer.observe(adminContainer, { attributes: true });
+            }
+        });
+
     </script>
 
     <!-- Admin button container -->
     <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
-        <button id="openCardEditorBtn" onclick="openCardEditor()" style="
+        <button id="openCardEditorBtn" onclick="openCardEditor()" data-version="{{ cache_timestamp }}" style="
             padding: 12px 24px;
             background-color: #28a745;
             color: white;
