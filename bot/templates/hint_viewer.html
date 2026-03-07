@@ -3832,7 +3832,73 @@
                 showMessageModal('Ошибка при открытии редактора: ' + error.message, 'error');
             }
         }
+
+        // Check admin status and show/hide admin button
+        async function checkAdminStatus() {
+            try {
+                // Get Telegram WebApp init data
+                let initData = '';
+                if (window.Telegram && window.Telegram.WebApp) {
+                    initData = window.Telegram.WebApp.initData;
+                }
+                
+                if (!initData) {
+                    console.log('No Telegram WebApp init data found');
+                    return;
+                }
+                
+                const response = await fetch('/api/check_admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        initData: initData
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.is_admin) {
+                        document.getElementById('adminButtonContainer').style.display = 'block';
+                        console.log('Admin access granted for user:', data.user_id);
+                    }
+                } else {
+                    console.log('Admin check failed:', response.status);
+                }
+            } catch (error) {
+                console.error('Error checking admin status:', error);
+            }
+        }
+
+        function openCardEditor() {
+            // Placeholder function for now
+            showMessageModal('Редактор карточек в разработке', 'info');
+        }
+
+        // Check admin status when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAdminStatus();
+        });
     </script>
+
+    <!-- Admin button container -->
+    <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
+        <button id="openCardEditorBtn" onclick="openCardEditor()" style="
+            padding: 12px 24px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        " onmouseover="this.style.backgroundColor='#218838'" onmouseout="this.style.backgroundColor='#28a745'">
+            Открыть редактор карточек
+        </button>
+    </div>
 
     <div id="msgModalOverlay" class="msg-modal-overlay">
         <div class="msg-modal">

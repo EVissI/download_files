@@ -60,6 +60,7 @@ from bot.common.general_states import GeneralStates
 from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import settings, bot, SUPPORT_TG_ID
 from bot.config import translator_hub
+from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from typing import TYPE_CHECKING
 
 from bot.db.dao import UserDAO, DetailedAnalysisDAO, MessagesTextsDAO
@@ -1205,3 +1206,34 @@ async def check_job_status(
     finally:
         remove_active_job(message.from_user.id, job_id)
         await state.clear()
+
+
+@hint_viewer_api_router.post("/api/check_admin")
+async def check_admin_status(request: Request):
+    """
+    Проверяет, является ли пользователь администратором на основе данных Telegram WebApp.
+    """
+    try:
+        data = await request.json()
+        init_data = data.get("initData")
+        
+        if not init_data:
+            raise HTTPException(status_code=400, detail="Missing initData")
+        
+        user_data = verify_telegram_webapp_data(init_data)
+        if not user_data:
+            raise HTTPException(status_code=401, detail="Invalid Telegram data")
+        
+        user_id = user_data.get("user", {}).get("id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Invalid user data")
+        
+        is_admin = user_id in settings.ROOT_ADMIN_IDS
+        
+        return {"is_admin": is_admin, "user_id": user_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error checking admin status: {e}")
+        raise HTTPException(status_code=500, detail="Error checking admin status")
