@@ -13,7 +13,6 @@ class ContentEditor {
         this.elements = [];
         this.elementIdCounter = 0;
         this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
-        this.cardData = null; // Для хранения данных карточки
         
         this.init();
     }
@@ -120,127 +119,99 @@ class ContentEditor {
             this.modal.setAttribute('data-cache-timestamp', timestamp);
         }
         
-        // Сохраняем данные для использования при создании таблицы
-        this.cardData = cardData;
-        
         this.modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         this.loadTools(); // Обновляем инструменты при открытии
+        
+        // Создаем таблицу на основе данных карточки
+        this.createTableFromData(cardData);
         
         // Force refresh of all dynamic content
         this.forceRefreshContent();
     }
 
-    createCleanTable(element) {
-        if (!this.cardData) {
-            element.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Нет данных для таблицы</div>';
-            return;
+    createTableFromData(cardData, options = { showHints: true, showCube: true }) {
+        if (!cardData) {
+            console.warn('Нет данных для создания таблицы');
+            return document.createElement('div');
         }
 
-        // Создаем контейнер для таблицы
-        const tableContainer = document.createElement('div');
-        tableContainer.style.cssText = `
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
+        // Создаем элемент таблицы
+        const tableElement = document.createElement('div');
+        tableElement.className = 'table-element';
+        tableElement.style.cssText = `
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            min-width: 400px;
         `;
 
-        // Добавляем переключатель типа таблицы
-        const switchContainer = document.createElement('div');
-        switchContainer.style.cssText = `
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            padding: 5px;
-            background: #f5f5f5;
+        // Заголовок таблицы
+        const tableTitle = document.createElement('h3');
+        tableTitle.textContent = `Ход ${cardData.turn || 'N/A'} - ${cardData.player || 'Unknown'}`;
+        tableTitle.style.cssText = `
+            margin: 0 0 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
             border-radius: 4px;
-        `;
-
-        const switchLabel = document.createElement('span');
-        switchLabel.textContent = 'Тип таблицы:';
-        switchLabel.style.cssText = `
-            margin-right: 10px;
-            font-size: 12px;
+            text-align: center;
+            font-size: 16px;
             font-weight: bold;
         `;
+        tableElement.appendChild(tableTitle);
 
-        const hintsRadio = document.createElement('input');
-        hintsRadio.type = 'radio';
-        hintsRadio.name = 'tableType';
-        hintsRadio.id = 'hintsTable';
-        hintsRadio.checked = true;
-        hintsRadio.style.cssText = 'margin-right: 5px;';
+        // Создаем таблицу для hints если нужно
+        if (options.showHints && cardData.hints && cardData.hints.length > 0) {
+            const hintsTable = this.createHintsTable(cardData.hints);
+            tableElement.appendChild(hintsTable);
+        }
 
-        const hintsLabel = document.createElement('label');
-        hintsLabel.htmlFor = 'hintsTable';
-        hintsLabel.textContent = 'Ходы';
-        hintsLabel.style.cssText = `
-            margin-right: 15px;
-            font-size: 12px;
-            cursor: pointer;
-        `;
+        // Создаем таблицу для cube_hints если нужно
+        if (options.showCube && cardData.cube_hints && cardData.cube_hints.length > 0) {
+            const cubeTitle = document.createElement('h4');
+            cubeTitle.textContent = 'Решения с кубом';
+            cubeTitle.style.cssText = `
+                margin: 20px 0 10px 0;
+                font-size: 14px;
+                font-weight: bold;
+                color: #333;
+            `;
+            tableElement.appendChild(cubeTitle);
 
-        const cubeRadio = document.createElement('input');
-        cubeRadio.type = 'radio';
-        cubeRadio.name = 'tableType';
-        cubeRadio.id = 'cubeTable';
-        cubeRadio.style.cssText = 'margin-right: 5px;';
+            const cubeTable = this.createCubeTable(cardData.cube_hints);
+            tableElement.appendChild(cubeTable);
+        }
 
-        const cubeLabel = document.createElement('label');
-        cubeLabel.htmlFor = 'cubeTable';
-        cubeLabel.textContent = 'Куб';
-        cubeLabel.style.cssText = `
-            font-size: 12px;
-            cursor: pointer;
-        `;
+        // Добавляем информацию о текущем ходе
+        if (cardData.gnu_move || cardData.action) {
+            const currentMoveInfo = document.createElement('div');
+            currentMoveInfo.style.cssText = `
+                margin-top: 15px;
+                padding: 10px;
+                background: #e8f4ff;
+                border-radius: 4px;
+                border-left: 4px solid #2196F3;
+            `;
+            currentMoveInfo.innerHTML = `
+                <strong>Текущий ход:</strong> ${cardData.gnu_move || cardData.action || 'N/A'}<br>
+                <strong>Эквити:</strong> ${cardData.equity ? cardData.equity.toFixed(3) : 'N/A'}
+            `;
+            tableElement.appendChild(currentMoveInfo);
+        }
 
-        switchContainer.appendChild(switchLabel);
-        switchContainer.appendChild(hintsRadio);
-        switchContainer.appendChild(hintsLabel);
-        switchContainer.appendChild(cubeRadio);
-        switchContainer.appendChild(cubeLabel);
-
-        // Создаем контейнер для таблиц
-        const tableContent = document.createElement('div');
-        tableContent.style.cssText = `
-            flex: 1;
-            overflow: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        `;
-
-        // Функция для обновления таблицы
-        const updateTable = () => {
-            tableContent.innerHTML = '';
-            if (hintsRadio.checked) {
-                tableContent.appendChild(this.createCleanHintsTable());
-            } else {
-                tableContent.appendChild(this.createCleanCubeTable());
-            }
-        };
-
-        // Добавляем обработчики событий
-        hintsRadio.addEventListener('change', updateTable);
-        cubeRadio.addEventListener('change', updateTable);
-
-        // Собираем все вместе
-        tableContainer.appendChild(switchContainer);
-        tableContainer.appendChild(tableContent);
-        
-        // Инициализация первой таблицы
-        updateTable();
-
-        element.appendChild(tableContainer);
+        return tableElement;
     }
 
-    createCleanHintsTable() {
+    createHintsTable(hints) {
         const table = document.createElement('table');
         table.style.cssText = `
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            margin-bottom: 15px;
+            font-size: 12px;
         `;
 
         // Заголовок таблицы
@@ -254,21 +225,20 @@ class ContentEditor {
             th.style.cssText = `
                 background: #4CAF50;
                 color: white;
-                padding: 6px;
+                padding: 8px;
                 text-align: left;
                 border: 1px solid #ddd;
                 font-weight: bold;
-                font-size: 11px;
             `;
             headerRow.appendChild(th);
         });
 
         // Тело таблицы
         const tbody = table.createTBody();
-        this.cardData.hints.forEach((hint, index) => {
+        hints.forEach((hint, index) => {
             const row = tbody.insertRow();
             
-            // Выделяем лучший ход
+            // Определяем стиль строки (лучшая подсказка выделяется)
             if (index === 0) {
                 row.style.background = '#d4edda';
             }
@@ -276,33 +246,34 @@ class ContentEditor {
             // Ход
             const moveCell = row.insertCell();
             moveCell.textContent = hint.move || 'N/A';
-            moveCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; font-weight: bold; font-size: 10px;';
+            moveCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
             
             // Win%
             const winCell = row.insertCell();
             winCell.textContent = hint.probs && hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : 'N/A';
-            winCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; text-align: center; font-size: 10px;';
+            winCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
             
             // Wg%
             const wgCell = row.insertCell();
             wgCell.textContent = hint.probs && hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : 'N/A';
-            wgCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; text-align: center; font-size: 10px;';
+            wgCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
             
             // Эквити
             const eqCell = row.insertCell();
             eqCell.textContent = hint.eq ? hint.eq.toFixed(3) : 'N/A';
-            eqCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 10px;';
+            eqCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center; font-weight: bold;';
         });
 
         return table;
     }
 
-    createCleanCubeTable() {
+    createCubeTable(cubeHints) {
         const table = document.createElement('table');
         table.style.cssText = `
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            margin-bottom: 15px;
+            font-size: 12px;
         `;
 
         // Заголовок таблицы
@@ -316,19 +287,18 @@ class ContentEditor {
             th.style.cssText = `
                 background: #FF9800;
                 color: white;
-                padding: 6px;
+                padding: 8px;
                 text-align: left;
                 border: 1px solid #ddd;
                 font-weight: bold;
-                font-size: 11px;
             `;
             headerRow.appendChild(th);
         });
 
         // Тело таблицы
         const tbody = table.createTBody();
-        if (this.cardData.cube_hints && this.cardData.cube_hints[0] && this.cardData.cube_hints[0].cubeful_equities) {
-            this.cardData.cube_hints[0].cubeful_equities.forEach(eq => {
+        if (cubeHints[0] && cubeHints[0].cubeful_equities) {
+            cubeHints[0].cubeful_equities.forEach(eq => {
                 const row = tbody.insertRow();
                 
                 // Действие
@@ -339,23 +309,55 @@ class ContentEditor {
                 } else {
                     actionCell.textContent = action;
                 }
-                actionCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; font-weight: bold; font-size: 10px;';
+                actionCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
                 
                 // Эквити
                 const eqCell = row.insertCell();
                 eqCell.textContent = eq.eq ? eq.eq.toFixed(3) : 'N/A';
-                eqCell.style.cssText = 'padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 10px;';
+                eqCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center; font-weight: bold;';
             });
-        } else {
-            // Если нет данных по кубу
-            const row = tbody.insertRow();
-            const cell = row.insertCell();
-            cell.colSpan = 2;
-            cell.textContent = 'Нет данных по решениям с кубом';
-            cell.style.cssText = 'padding: 10px; text-align: center; color: #666; font-style: italic;';
         }
 
         return table;
+    }
+
+    setupElementInteractions(element) {
+        // Добавляем обработчики для выделения элемента
+        element.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectElement(element);
+        });
+
+        // Добавляем обработчики для перемещения (drag and drop)
+        element.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('control-btn')) return;
+            
+            const startX = e.clientX - element.offsetLeft;
+            const startY = e.clientY - element.offsetTop;
+
+            const handleMouseMove = (e) => {
+                const newX = e.clientX - startX;
+                const newY = e.clientY - startY;
+                
+                // Ограничиваем перемещение в пределах canvas
+                const canvasRect = this.canvas.getBoundingClientRect();
+                const elementRect = element.getBoundingClientRect();
+                
+                const maxX = canvasRect.width - elementRect.width;
+                const maxY = canvasRect.height - elementRect.height;
+                
+                element.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
+                element.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
+            };
+
+            const handleMouseUp = () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
     }
 
     forceRefreshContent() {
@@ -387,49 +389,13 @@ class ContentEditor {
     }
 
     loadTools() {
-        // Определяем доступные инструменты согласно требованиям
+        // Только инструмент таблицы
         const tools = [
-            {
-                id: 'boardCanvas',
-                name: 'Доска с параметрами',
-                type: 'canvas',
-                description: 'Игровая доска с параметрами (манигейм/матч)'
-            },
-            {
-                id: 'question-text',
-                name: 'Текст вопроса',
-                type: 'text',
-                description: 'Текст вопроса для анализа'
-            },
             {
                 id: 'moveHintsTable',
                 name: 'Таблица',
                 type: 'table',
                 description: 'Таблица подсказок или данных'
-            },
-            {
-                id: 'answer-text',
-                name: 'Текст ответа',
-                type: 'text',
-                description: 'Текст ответа или решения'
-            },
-            {
-                id: 'board-illustration',
-                name: 'Иллюстрация',
-                type: 'image',
-                description: 'Изображение доски как иллюстрация'
-            },
-            {
-                id: 'audio-file',
-                name: 'Аудио-файл',
-                type: 'audio',
-                description: 'Аудиофайл для воспроизведения'
-            },
-            {
-                id: 'support-link',
-                name: 'Ссылка',
-                type: 'link',
-                description: 'Ссылка на дополнительные материалы'
             }
         ];
 
@@ -438,12 +404,11 @@ class ContentEditor {
 
     renderTools(tools) {
         this.toolsList.innerHTML = tools.map(tool => `
-            <div class="tool-item ${tool.id === 'boardCanvas' ? 'toggle-button' : ''}" 
+            <div class="tool-item" 
                  data-tool-id="${tool.id}"
                  onclick="contentEditor.selectTool('${tool.id}')">
                 <div class="tool-item-header">
                     <span class="tool-name">${tool.name}</span>
-                    ${tool.id === 'boardCanvas' ? '<span class="toggle-indicator">⚡</span>' : ''}
                 </div>
                 <div class="tool-description">${tool.description}</div>
             </div>
@@ -451,12 +416,6 @@ class ContentEditor {
     }
 
     selectTool(toolId) {
-        // Особое поведение для boardCanvas - toggle режим
-        if (toolId === 'boardCanvas') {
-            this.toggleBoardCanvas(toolId);
-            return;
-        }
-
         // Убираем выделение с предыдущего инструмента
         document.querySelectorAll('.tool-item').forEach(item => {
             item.classList.remove('selected');
@@ -468,102 +427,93 @@ class ContentEditor {
             selectedTool.classList.add('selected');
         }
 
-        // Добавляем элемент на холст
-        this.addElementToCanvas(toolId);
+        // Создаем таблицу
+        this.createTableElement();
     }
 
-    toggleBoardCanvas(toolId) {
-        // Инициализируем состояние если нужно
-        if (this.toggleStates[toolId] === undefined) {
-            this.toggleStates[toolId] = false;
-        }
-
-        // Переключаем состояние
-        this.toggleStates[toolId] = !this.toggleStates[toolId];
-
-        // Находим элемент кнопки
-        const toolElement = document.querySelector(`[data-tool-id="${toolId}"]`);
-        if (toolElement) {
-            if (this.toggleStates[toolId]) {
-                // Включаем "горит" состояние
-                toolElement.classList.add('toggle-active');
-                toolElement.classList.remove('selected');
-                
-                // Показываем уведомление или выполняем действие
-                this.showToggleNotification(toolId, true);
-            } else {
-                // Выключаем "горит" состояние
-                toolElement.classList.remove('toggle-active');
-                
-                // Скрываем уведомление
-                this.showToggleNotification(toolId, false);
-            }
-        }
-    }
-
-    showToggleNotification(toolId, isActive) {
-        // Можно добавить логику для показа уведомлений
-        console.log(`${toolId} is now ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+    createTableElement() {
+        const elementId = `element_${this.elementIdCounter++}`;
+        const element = document.createElement('div');
+        element.id = elementId;
+        element.className = 'canvas-element table-element';
+        element.dataset.toolId = 'moveHintsTable';
         
-        // При необходимости можно добавить визуальное уведомление в интерфейсе
-        if (isActive) {
-            // Активировано - можно показать сообщение или выполнить действие
-            this.performToggleAction(toolId, true);
-        } else {
-            // Деактивировано
-            this.performToggleAction(toolId, false);
-        }
-    }
-
-    performToggleAction(toolId, isActive) {
-        // Здесь можно добавить конкретные действия при toggle
-        switch(toolId) {
-            case 'boardCanvas':
-                if (isActive) {
-                    console.log('BoardCanvas активирован');
-                    this.showBoardLabel();
-                } else {
-                    console.log('BoardCanvas деактивирован');
-                    this.hideBoardLabel();
-                }
-                break;
-        }
-    }
-
-    showBoardLabel() {
-        // Проверяем, есть ли уже надпись
-        if (document.getElementById('boardLabel')) {
-            return; // Уже существует
-        }
-
-        // Создаем элемент надписи
-        const boardLabel = document.createElement('div');
-        boardLabel.id = 'boardLabel';
-        boardLabel.className = 'board-label';
-        boardLabel.textContent = 'доска';
+        // Создаем пример таблицы
+        const tableData = this.generateSampleTableData();
+        const tableElement = this.createTableFromData(tableData);
+        
+        // Копируем содержимое таблицы
+        element.innerHTML = tableElement.innerHTML;
+        
+        // Автоматический размер под таблицу
+        this.autoSizeTable(element);
+        
+        // Позиционирование
+        const position = this.calculateVerticalPosition(element.offsetWidth, element.offsetHeight);
+        element.style.left = position.x + 'px';
+        element.style.top = position.y + 'px';
+        
+        // Добавляем контролы
+        this.addElementControls(element);
         
         // Добавляем на холст
-        this.canvas.appendChild(boardLabel);
+        this.canvas.appendChild(element);
         
-        // Запускаем анимацию появления в следующем кадре
-        requestAnimationFrame(() => {
-            boardLabel.classList.add('show');
+        // Сохраняем в массив элементов
+        this.elements.push({
+            id: elementId,
+            toolId: 'moveHintsTable',
+            element: element,
+            tableData: tableData
         });
+        
+        // Выделяем элемент
+        this.selectElement(element);
     }
 
-    hideBoardLabel() {
-        // Находим и удаляем надпись
-        const boardLabel = document.getElementById('boardLabel');
-        if (boardLabel) {
-            boardLabel.classList.remove('show');
-            boardLabel.classList.add('hide');
-            
-            // Удаляем элемент после завершения анимации
-            setTimeout(() => {
-                if (boardLabel.parentNode) {
-                    boardLabel.remove();
+    generateSampleTableData() {
+        return {
+            turn: 1,
+            player: 'Player 1',
+            hints: [
+                { move: '8/6', probs: [0.654, 0.321], eq: 0.123 },
+                { move: '13/9', probs: [0.598, 0.287], eq: -0.045 },
+                { move: '24/20', probs: [0.432, 0.198], eq: -0.156 }
+            ],
+            cube_hints: [
+                {
+                    cubeful_equities: [
+                        { action_1: 'Double', eq: 0.234 },
+                        { action_1: 'Take', eq: -0.123 },
+                        { action_1: 'Drop', eq: -1.000 }
+                    ]
                 }
-            }, 300);
+            ],
+            gnu_move: '8/6',
+            equity: 0.123
+        };
+    }
+    
+    autoSizeTable(element) {
+        // Получаем размер содержимого таблицы
+        const tableElement = element.querySelector('table');
+        if (tableElement) {
+            // Временно показываем элемент для измерения
+            const originalDisplay = element.style.display;
+            element.style.display = 'block';
+            element.style.visibility = 'hidden';
+            
+            // Измеряем размер таблицы
+            const tableWidth = tableElement.scrollWidth + 40; // + padding
+            const tableHeight = element.scrollHeight + 40;
+            
+            // Устанавливаем размер элемента
+            element.style.width = Math.min(tableWidth, this.getMaxCanvasWidth() - 40) + 'px';
+            element.style.height = Math.min(tableHeight, this.getMaxCanvasHeight() - 40) + 'px';
+            
+            // Восстанавливаем отображение
+            element.style.display = originalDisplay;
+            element.style.visibility = 'visible';
         }
     }
 
@@ -686,9 +636,41 @@ class ContentEditor {
                 break;
                 
             case 'moveHintsTable':
-                // Таблица на основе данных карточки
-                this.createCleanTable(element);
-                element.classList.add('table-element');
+                // Таблица
+                const originalTable = document.getElementById('moveHintsTable');
+                if (originalTable) {
+                    const clonedTable = originalTable.cloneNode(true);
+                    // Add cache-busting to table
+                    clonedTable.setAttribute('data-table-timestamp', timestamp);
+                    element.appendChild(clonedTable);
+                } else {
+                    // Создаем пример таблицы
+                    element.innerHTML = `
+                        <div style="padding: 10px; height: 100%; overflow: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <thead>
+                                    <tr style="background: #f0f0f0;">
+                                        <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
+                                        <th style="border: 1px solid #ddd; padding: 4px;">Вероятность</th>
+                                        <th style="border: 1px solid #ddd; padding: 4px;">Результат</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">8/6</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">0.654</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">+0.123</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">13/9</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">0.598</td>
+                                        <td style="border: 1px solid #ddd; padding: 4px;">-0.045</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
                 break;
                 
             case 'board-illustration':
@@ -911,49 +893,30 @@ class ContentEditor {
     }
 
     showElementProperties(element) {
-        const computedStyle = window.getComputedStyle(element);
-        
-        // Get mobile-aware card dimensions
-        const maxCanvasWidth = this.getMaxCanvasWidth();
-        const maxCanvasHeight = this.getMaxCanvasHeight();
-        const maxElementWidth = this.isMobile() ? maxCanvasWidth - 40 : 750;
-        const maxElementHeight = this.isMobile() ? maxCanvasHeight - 40 : 600;
+        const elementData = this.elements.find(el => el.element === element);
+        const tableData = elementData ? elementData.tableData : null;
         
         this.propertiesContent.innerHTML = `
             <div class="property-group">
-                <h4>Стиль</h4>
-                ${element.classList.contains('text-element') ? `
+                <h4>Свойства таблицы</h4>
                 <div class="property-item">
-                    <label>Размер шрифта:</label>
-                    <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}" 
-                           oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
-                    <div class="property-value">${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}px</div>
+                    <label>Тип таблицы:</label>
+                    <select id="tableType" onchange="contentEditor.switchTableType(this.value)">
+                        <option value="hints">Подсказки ходов</option>
+                        <option value="cube">Решения с кубом</option>
+                        <option value="both">Обе таблицы</option>
+                    </select>
                 </div>
                 <div class="property-item">
-                    <label>Цвет текста:</label>
-                    <input type="color" id="propTextColor" value="${window.getComputedStyle(element.querySelector('.text-content')).color || '#333333'}" 
-                           oninput="contentEditor.updateElementProperty('textColor', this.value)">
-                </div>
-                ` : ''}
-                ${element.classList.contains('link-element') ? `
-                <div class="property-item">
-                    <label>Размер шрифта:</label>
-                    <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}" 
-                           oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
-                    <div class="property-value">${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}px</div>
+                    <label>Номер хода:</label>
+                    <input type="number" id="turnNumber" value="${tableData ? tableData.turn : 1}" 
+                           oninput="contentEditor.updateTableProperty('turn', this.value)">
                 </div>
                 <div class="property-item">
-                    <label>Цвет текста:</label>
-                    <input type="color" id="propTextColor" value="${window.getComputedStyle(element.querySelector('.link-text')).color || '#007bff'}" 
-                           oninput="contentEditor.updateElementProperty('textColor', this.value)">
+                    <label>Игрок:</label>
+                    <input type="text" id="playerName" value="${tableData ? tableData.player : 'Player 1'}" 
+                           oninput="contentEditor.updateTableProperty('player', this.value)">
                 </div>
-                <div class="property-item">
-                    <label>URL ссылки:</label>
-                    <input type="url" id="propLinkUrl" value="${element.querySelector('.link-url').value}" 
-                           placeholder="https://example.com"
-                           oninput="contentEditor.updateElementProperty('linkUrl', this.value)">
-                </div>
-                ` : ''}
                 <div class="property-item">
                     <label>Цвет обводки:</label>
                     <input type="color" id="propBorderColor" value="#667eea" 
@@ -986,6 +949,70 @@ class ContentEditor {
         `;
     }
 
+    switchTableType(tableType) {
+        if (!this.selectedElement) return;
+        
+        const elementData = this.elements.find(el => el.element === this.selectedElement);
+        if (!elementData) return;
+        
+        const tableData = elementData.tableData;
+        
+        // Обновляем данные таблицы в зависимости от типа
+        switch(tableType) {
+            case 'hints':
+                // Показываем только таблицу подсказок
+                this.updateTableContent(tableData, { showHints: true, showCube: false });
+                break;
+            case 'cube':
+                // Показываем только таблицу куба
+                this.updateTableContent(tableData, { showHints: false, showCube: true });
+                break;
+            case 'both':
+                // Показываем обе таблицы
+                this.updateTableContent(tableData, { showHints: true, showCube: true });
+                break;
+        }
+        
+        // Автоматический размер под новое содержимое
+        this.autoSizeTable(this.selectedElement);
+    }
+    
+    updateTableContent(tableData, options) {
+        // Создаем новое содержимое таблицы
+        const tempElement = document.createElement('div');
+        const tableElement = this.createTableFromData(tableData, options);
+        tempElement.innerHTML = tableElement.innerHTML;
+        
+        // Обновляем содержимое выбранного элемента
+        this.selectedElement.innerHTML = tempElement.innerHTML;
+        
+        // Добавляем контролы обратно
+        this.addElementControls(this.selectedElement);
+    }
+    
+    updateTableProperty(property, value) {
+        if (!this.selectedElement) return;
+        
+        const elementData = this.elements.find(el => el.element === this.selectedElement);
+        if (!elementData) return;
+        
+        // Обновляем данные таблицы
+        switch(property) {
+            case 'turn':
+                elementData.tableData.turn = parseInt(value);
+                break;
+            case 'player':
+                elementData.tableData.player = value;
+                break;
+        }
+        
+        // Обновляем заголовок таблицы
+        const titleElement = this.selectedElement.querySelector('h3');
+        if (titleElement) {
+            titleElement.textContent = `Ход ${elementData.tableData.turn} - ${elementData.tableData.player}`;
+        }
+    }
+
     updateElementProperty(property, value) {
         if (!this.selectedElement) return;
         
@@ -993,38 +1020,6 @@ class ContentEditor {
             case 'left':
             case 'top':
                 this.selectedElement.style[property] = value;
-                break;
-            case 'fontSize':
-                if (element.classList.contains('text-element')) {
-                    const textContent = this.selectedElement.querySelector('.text-content');
-                    if (textContent) {
-                        textContent.style.fontSize = value;
-                    }
-                } else if (element.classList.contains('link-element')) {
-                    const linkText = this.selectedElement.querySelector('.link-text');
-                    if (linkText) {
-                        linkText.style.fontSize = value;
-                    }
-                }
-                break;
-            case 'textColor':
-                if (element.classList.contains('text-element')) {
-                    const textContent = this.selectedElement.querySelector('.text-content');
-                    if (textContent) {
-                        textContent.style.color = value;
-                    }
-                } else if (element.classList.contains('link-element')) {
-                    const linkText = this.selectedElement.querySelector('.link-text');
-                    if (linkText) {
-                        linkText.style.color = value;
-                    }
-                }
-                break;
-            case 'linkUrl':
-                const linkUrl = this.selectedElement.querySelector('.link-url');
-                if (linkUrl) {
-                    linkUrl.value = value;
-                }
                 break;
             case 'borderColor':
                 this.selectedElement.style.borderColor = value;
@@ -1046,32 +1041,23 @@ class ContentEditor {
             if (valueDisplay) {
                 valueDisplay.textContent = value;
             }
-        } else if (property === 'fontSize') {
-            const fontSizeInput = document.getElementById('propFontSize');
-            if (fontSizeInput) {
-                const fontSizeDisplay = fontSizeInput.parentElement.querySelector('.property-value');
-                if (fontSizeDisplay) {
-                    fontSizeDisplay.textContent = value;
+        } else if (property === 'borderWidth') {
+            const borderWidthInput = document.getElementById('propBorderWidth');
+            if (borderWidthInput) {
+                const borderWidthDisplay = borderWidthInput.parentElement.querySelector('.property-value');
+                if (borderWidthDisplay) {
+                    borderWidthDisplay.textContent = value;
+                }
+            }
+        } else if (property === 'opacity') {
+            const opacityInput = document.getElementById('propOpacity');
+            if (opacityInput) {
+                const opacityDisplay = opacityInput.parentElement.querySelector('.property-value');
+                if (opacityDisplay) {
+                    opacityDisplay.textContent = Math.round(value * 100) + '%';
                 }
             }
         }
-        
-        // Автоматическое изменение высоты отключено
-    }
-
-    // Умный перенос текста (без автоматического изменения высоты)
-    applySmartTextWrapping(element) {
-        const textContent = element.querySelector('.text-content');
-        if (!textContent) return;
-
-        // Проверяем, является ли элемент текстовым
-        if (!element.classList.contains('text-element')) return;
-        
-        // Только обеспечиваем правильный перенос текста
-        // Высота элемента управляется вручную через панель свойств
-        
-        // Ничего не делаем - перенос уже работает через CSS
-        // Автоматическое изменение высоты отключено
     }
 
     duplicateElement(elementId) {
@@ -1197,9 +1183,6 @@ class ContentEditor {
         
         // Reset toggle states
         this.toggleStates = {};
-        
-        // Clear card data
-        this.cardData = null;
         
         // Reload tools
         this.loadTools();
