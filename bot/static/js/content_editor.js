@@ -397,15 +397,14 @@ class ContentEditor {
                 break;
                 
             case 'question-text':
-                // Текст вопроса
+                // Текст вопроса в стиле Photoshop
                 element.innerHTML = `
-                    <div style="padding: 15px; height: 100%; display: flex; flex-direction: column; justify-content: center;">
-                        <textarea placeholder="Введите текст вопроса..." 
-                                  style="width: 100%; height: 80%; border: 1px solid #ddd; border-radius: 4px; padding: 10px; resize: none; font-family: inherit;"
-                                  onchange="this.parentElement.querySelector('.text-preview').innerHTML = this.value.replace(/\\n/g, '<br>')"></textarea>
-                        <div class="text-preview" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px; min-height: 40px;"></div>
+                    <div class="text-content" contenteditable="true" placeholder="Введите текст вопроса...">
+                        Текст вопроса
                     </div>
                 `;
+                element.classList.add('text-element');
+                this.setupTextEditing(element);
                 break;
                 
             case 'moveHintsTable':
@@ -486,6 +485,17 @@ class ContentEditor {
                 `;
                 break;
                 
+            case 'answer-text':
+                // Текст ответа в стиле Photoshop
+                element.innerHTML = `
+                    <div class="text-content" contenteditable="true" placeholder="Введите текст ответа...">
+                        Текст ответа
+                    </div>
+                `;
+                element.classList.add('text-element');
+                this.setupTextEditing(element);
+                break;
+                
             case 'support-link':
                 // Ссылка
                 element.innerHTML = `
@@ -508,6 +518,57 @@ class ContentEditor {
                     </div>
                 `;
         }
+    }
+
+    setupTextEditing(element) {
+        const textContent = element.querySelector('.text-content');
+        if (!textContent) return;
+
+        // Делаем текст нефокусируемым при перетаскивании
+        textContent.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            if (e.target === textContent) {
+                // Начинаем редактирование при клике на текст
+                textContent.focus();
+                
+                // Выделяем весь текст при первом клике
+                if (textContent.textContent === 'Текст вопроса' || textContent.textContent === 'Текст ответа') {
+                    // Выделяем весь текст
+                    const selection = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(textContent);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            }
+        });
+
+        // Обработка окончания редактирования
+        textContent.addEventListener('blur', () => {
+            // Если текст пустой, возвращаем placeholder
+            if (textContent.textContent.trim() === '') {
+                if (element.dataset.toolId === 'question-text') {
+                    textContent.textContent = 'Текст вопроса';
+                } else if (element.dataset.toolId === 'answer-text') {
+                    textContent.textContent = 'Текст ответа';
+                }
+            }
+        });
+
+        // Обработка клавиш для выхода из режима редактирования
+        textContent.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                textContent.blur();
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                textContent.blur();
+            }
+        });
+
+        // Предотвращаем перетаскивание при редактировании текста
+        textContent.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+        });
     }
 
     addElementControls(element) {
@@ -778,7 +839,8 @@ class ContentEditor {
         this.canvas.addEventListener('mousedown', (e) => {
             if (e.target.classList.contains('canvas-element') && 
                 !e.target.classList.contains('resize-handle') &&
-                !e.target.classList.contains('control-btn')) {
+                !e.target.classList.contains('control-btn') &&
+                !e.target.classList.contains('text-content')) {
                 this.startDragging(e, e.target);
             } else if (e.target.classList.contains('resize-handle')) {
                 this.startResizing(e, e.target);

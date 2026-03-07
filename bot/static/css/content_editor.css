@@ -345,6 +345,46 @@
     user-select: none;
 }
 
+/* Текстовые элементы в стиле Photoshop */
+.canvas-element.text-element {
+    background: transparent;
+    border: 1px dashed #667eea;
+    min-width: 100px;
+    min-height: 30px;
+    cursor: text;
+}
+
+.canvas-element.text-element.selected {
+    border: 1px solid #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+.text-content {
+    width: 100%;
+    height: 100%;
+    padding: 8px;
+    font-family: 'Arial', sans-serif;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #333;
+    outline: none;
+    border: none;
+    background: transparent;
+    overflow: visible;
+    white-space: nowrap;
+    min-height: 20px;
+}
+
+.text-content:empty:before {
+    content: attr(placeholder);
+    color: #999;
+    font-style: italic;
+}
+
+.text-content:focus {
+    cursor: text;
+}
+
 .canvas-element:hover {
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
 }
