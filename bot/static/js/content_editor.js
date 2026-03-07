@@ -138,11 +138,15 @@ class ContentEditor {
         // Устанавливаем стандартный тип таблицы - "ход"
         element.dataset.tableType = 'hints';
         
-        // Remove fixed sizing - make it dynamic
-        element.style.width = 'auto';
-        element.style.height = 'auto';
-        element.style.minWidth = 'auto';
-        element.style.minHeight = 'auto';
+        // Remove all margins and padding - make it fill the entire container
+        element.style.cssText = `
+            width: 100%;
+            height: auto;
+            margin: 0;
+            padding: 0;
+            border: none;
+            box-sizing: border-box;
+        `;
         
         if (this.cardData) {
             // Создаем таблицу на основе данных карточки
@@ -150,7 +154,7 @@ class ContentEditor {
         } else {
             // Создаем пример таблицы если нет данных
             element.innerHTML = `
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; margin: 0; padding: 0; border-spacing: 0;">
                     <thead>
                         <tr style="background: #f0f0f0;">
                             <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
@@ -214,6 +218,9 @@ class ContentEditor {
             border-collapse: collapse;
             font-size: 12px;
             table-layout: fixed;
+            margin: 0;
+            padding: 0;
+            border-spacing: 0;
         `;
 
         // Заголовок таблицы
@@ -270,6 +277,9 @@ class ContentEditor {
             border-collapse: collapse;
             font-size: 12px;
             table-layout: fixed;
+            margin: 0;
+            padding: 0;
+            border-spacing: 0;
         `;
 
         // Заголовок таблицы
@@ -574,17 +584,17 @@ class ContentEditor {
             .filter(el => !el.id.includes('boardLabel')) // Исключаем boardLabel
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
         
-        // Calculate center X position for auto-sized tables
+        // Calculate center X position for table elements
         let centerX;
-        if (elementWidth === 'auto') {
-            // For auto-sized tables, center them in the canvas
-            centerX = 10; // Align to left with small margin
-        } else if (elementWidth >= maxCanvasWidth - 100) {
+        if (typeof elementWidth === 'number' && elementWidth >= maxCanvasWidth - 100) {
             // For full-width tables, align to left edge with small margin
             centerX = 10;
-        } else {
+        } else if (typeof elementWidth === 'number') {
             // For other elements, center them
             centerX = (Math.min(canvasRect.width, maxCanvasWidth) - elementWidth) / 2;
+        } else {
+            // For auto elements, center them
+            centerX = 10;
         }
         
         // Calculate vertical position without spacing
@@ -598,7 +608,8 @@ class ContentEditor {
             const existingHeight = parseInt(existingEl.style.height) || 150; // Default height for auto elements
             
             // Check if the current element fits before this existing element
-            if (nextY + (elementHeight === 'auto' ? 200 : elementHeight) <= existingTop) {
+            const currentElementHeight = elementHeight === 'auto' ? 200 : elementHeight;
+            if (nextY + currentElementHeight <= existingTop) {
                 break; // Found a gap
             }
             
@@ -607,10 +618,11 @@ class ContentEditor {
         }
         
         // Ensure the element doesn't go beyond canvas bounds
-        const maxY = Math.min(canvasRect.height, maxCanvasHeight) - (elementHeight === 'auto' ? 200 : elementHeight) - 20;
+        const currentElementHeight = elementHeight === 'auto' ? 200 : elementHeight;
+        const maxY = Math.min(canvasRect.height, maxCanvasHeight) - currentElementHeight - 20;
         if (nextY > maxY) {
             // If we run out of space, start from the top
-            nextY = startY + (this.elements.length % 5) * (elementHeight === 'auto' ? 200 : elementHeight);
+            nextY = startY + (this.elements.length % 5) * currentElementHeight;
         }
         
         return {
@@ -634,8 +646,8 @@ class ContentEditor {
         // Adjust element size for mobile cards
         let defaultWidth, defaultHeight;
         if (toolId === 'moveHintsTable') {
-            // Table elements have dynamic sizing
-            defaultWidth = 'auto';
+            // Table elements occupy full canvas width
+            defaultWidth = this.isMobile() ? maxCanvasWidth - 20 : maxCanvasWidth - 50;
             defaultHeight = 'auto';
         } else {
             defaultWidth = this.isMobile() ? Math.min(120, maxCanvasWidth - 40) : 200;
