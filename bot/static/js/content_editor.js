@@ -498,6 +498,12 @@ class ContentEditor {
             return;
         }
 
+        // Особое поведение для upload-image - прямая загрузка файла
+        if (toolId === 'upload-image') {
+            this.handleDirectImageUpload();
+            return;
+        }
+
         // Убираем выделение с предыдущего инструмента
         document.querySelectorAll('.tool-item-icon').forEach(item => {
             item.classList.remove('selected');
@@ -511,6 +517,88 @@ class ContentEditor {
 
         // Добавляем элемент на холст
         this.addElementToCanvas(toolId);
+    }
+
+    handleDirectImageUpload() {
+        // Создаем временный input для выбора файла
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                this.uploadImageDirectly(file);
+            }
+            // Удаляем временный input
+            document.body.removeChild(fileInput);
+        });
+        
+        // Добавляем input в DOM и вызываем клик
+        document.body.appendChild(fileInput);
+        fileInput.click();
+    }
+
+    uploadImageDirectly(file) {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const imageUrl = e.target.result;
+            
+            // Создаем элемент на канвасе с изображением
+            this.addImageElementToCanvas(imageUrl, file.name);
+        };
+        
+        reader.onerror = () => {
+            console.error('Ошибка при чтении файла изображения');
+            alert('Не удалось прочитать файл изображения');
+        };
+        
+        reader.readAsDataURL(file);
+    }
+
+    addImageElementToCanvas(imageUrl, fileName) {
+        const elementId = `element_${this.elementIdCounter++}`;
+        const element = document.createElement('div');
+        element.id = elementId;
+        element.className = 'canvas-element image-element';
+        element.dataset.toolId = 'upload-image';
+        element.dataset.imageUrl = imageUrl;
+        
+        // Get canvas dimensions
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        
+        // Calculate position for image element
+        const position = this.calculateVerticalPosition(canvasRect.width, 200); // Default height 200px
+        
+        element.style.left = position.x + 'px';
+        element.style.top = position.y + 'px';
+        element.style.width = position.width + 'px';
+        element.style.height = '200px'; // Default height
+        
+        // Add image content
+        element.innerHTML = `
+            <img src="${imageUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+        `;
+        
+        // Add controls
+        this.addElementControls(element);
+        
+        // Add to canvas
+        this.canvas.appendChild(element);
+        
+        // Save to elements array
+        this.elements.push({
+            id: elementId,
+            toolId: 'upload-image',
+            element: element
+        });
+        
+        // Select element
+        this.selectElement(element);
     }
 
     toggleBoardCanvas(toolId) {
@@ -867,25 +955,6 @@ class ContentEditor {
                 }
                 break;
                 
-            case 'upload-image':
-                // Загрузка изображения с локального хранилища
-                element.innerHTML = `
-                    <div class="upload-image-container" style="padding: 20px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #ccc; border-radius: 8px;">
-                        <div style="font-size: 48px; margin-bottom: 10px; color: #667eea;">📷</div>
-                        <input type="file" id="imageFileInput-${element.id}" accept="image/*" style="display: none;">
-                        <button onclick="document.getElementById('imageFileInput-${element.id}').click()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">
-                            Выбрать изображение
-                        </button>
-                        <div style="font-size: 12px; color: #666;">или перетащите файл сюда</div>
-                        <div id="imagePreview-${element.id}" style="margin-top: 10px; max-width: 100%; max-height: 200px; display: none;">
-                            <img id="previewImg-${element.id}" style="max-width: 100%; max-height: 200px; object-fit: contain;">
-                        </div>
-                    </div>
-                `;
-                element.classList.add('image-element');
-                this.setupImageUpload(element);
-                break;
-                
             case 'audio-file':
                 // Аудио-файл
                 element.innerHTML = `
@@ -995,79 +1064,6 @@ class ContentEditor {
                 }
             }
         });
-    }
-
-    setupImageUpload(element) {
-        const fileInput = document.getElementById(`imageFileInput-${element.id}`);
-        const previewContainer = document.getElementById(`imagePreview-${element.id}`);
-        const previewImg = document.getElementById(`previewImg-${element.id}`);
-        const uploadContainer = element.querySelector('.upload-image-container');
-        
-        if (!fileInput || !previewContainer || !previewImg) return;
-
-        // Обработка выбора файла
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file && file.type.startsWith('image/')) {
-                this.readAndDisplayImage(file, previewImg, previewContainer, uploadContainer, element);
-            }
-        });
-
-        // Обработка drag and drop
-        uploadContainer.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadContainer.style.borderColor = '#667eea';
-            uploadContainer.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
-        });
-
-        uploadContainer.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadContainer.style.borderColor = '#ccc';
-            uploadContainer.style.backgroundColor = 'transparent';
-        });
-
-        uploadContainer.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadContainer.style.borderColor = '#ccc';
-            uploadContainer.style.backgroundColor = 'transparent';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0 && files[0].type.startsWith('image/')) {
-                this.readAndDisplayImage(files[0], previewImg, previewContainer, uploadContainer, element);
-            }
-        });
-    }
-
-    readAndDisplayImage(file, previewImg, previewContainer, uploadContainer, element) {
-        const reader = new FileReader();
-        
-        reader.onload = (e) => {
-            const imageUrl = e.target.result;
-            
-            // Показываем превью
-            previewImg.src = imageUrl;
-            previewContainer.style.display = 'block';
-            
-            // Обновляем контейнер для отображения изображения
-            uploadContainer.innerHTML = `
-                <img src="${imageUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-            `;
-            uploadContainer.style.border = 'none';
-            uploadContainer.style.padding = '0';
-            
-            // Сохраняем URL изображения в элементе
-            element.dataset.imageUrl = imageUrl;
-            
-            // Выделяем элемент и показываем свойства
-            this.selectElement(element);
-        };
-        
-        reader.onerror = () => {
-            console.error('Ошибка при чтении файла изображения');
-            alert('Не удалось прочитать файл изображения');
-        };
-        
-        reader.readAsDataURL(file);
     }
 
     setupTextEditing(element) {
