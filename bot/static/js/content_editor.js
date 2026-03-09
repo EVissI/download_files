@@ -451,10 +451,10 @@ class ContentEditor {
                 icon: 'fa fa-comment'
             },
             {
-                id: 'board-illustration',
-                name: 'Иллюстрация',
+                id: 'upload-image',
+                name: 'Загрузить изображение',
                 type: 'image',
-                description: 'Изображение доски как иллюстрация',
+                description: 'Загрузить изображение с локального хранилища',
                 icon: 'fa fa-image'
             },
             {
@@ -867,6 +867,25 @@ class ContentEditor {
                 }
                 break;
                 
+            case 'upload-image':
+                // Загрузка изображения с локального хранилища
+                element.innerHTML = `
+                    <div class="upload-image-container" style="padding: 20px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #ccc; border-radius: 8px;">
+                        <div style="font-size: 48px; margin-bottom: 10px; color: #667eea;">📷</div>
+                        <input type="file" id="imageFileInput-${element.id}" accept="image/*" style="display: none;">
+                        <button onclick="document.getElementById('imageFileInput-${element.id}').click()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">
+                            Выбрать изображение
+                        </button>
+                        <div style="font-size: 12px; color: #666;">или перетащите файл сюда</div>
+                        <div id="imagePreview-${element.id}" style="margin-top: 10px; max-width: 100%; max-height: 200px; display: none;">
+                            <img id="previewImg-${element.id}" style="max-width: 100%; max-height: 200px; object-fit: contain;">
+                        </div>
+                    </div>
+                `;
+                element.classList.add('image-element');
+                this.setupImageUpload(element);
+                break;
+                
             case 'audio-file':
                 // Аудио-файл
                 element.innerHTML = `
@@ -976,6 +995,79 @@ class ContentEditor {
                 }
             }
         });
+    }
+
+    setupImageUpload(element) {
+        const fileInput = document.getElementById(`imageFileInput-${element.id}`);
+        const previewContainer = document.getElementById(`imagePreview-${element.id}`);
+        const previewImg = document.getElementById(`previewImg-${element.id}`);
+        const uploadContainer = element.querySelector('.upload-image-container');
+        
+        if (!fileInput || !previewContainer || !previewImg) return;
+
+        // Обработка выбора файла
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                this.readAndDisplayImage(file, previewImg, previewContainer, uploadContainer, element);
+            }
+        });
+
+        // Обработка drag and drop
+        uploadContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadContainer.style.borderColor = '#667eea';
+            uploadContainer.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+        });
+
+        uploadContainer.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadContainer.style.borderColor = '#ccc';
+            uploadContainer.style.backgroundColor = 'transparent';
+        });
+
+        uploadContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadContainer.style.borderColor = '#ccc';
+            uploadContainer.style.backgroundColor = 'transparent';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                this.readAndDisplayImage(files[0], previewImg, previewContainer, uploadContainer, element);
+            }
+        });
+    }
+
+    readAndDisplayImage(file, previewImg, previewContainer, uploadContainer, element) {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const imageUrl = e.target.result;
+            
+            // Показываем превью
+            previewImg.src = imageUrl;
+            previewContainer.style.display = 'block';
+            
+            // Обновляем контейнер для отображения изображения
+            uploadContainer.innerHTML = `
+                <img src="${imageUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            `;
+            uploadContainer.style.border = 'none';
+            uploadContainer.style.padding = '0';
+            
+            // Сохраняем URL изображения в элементе
+            element.dataset.imageUrl = imageUrl;
+            
+            // Выделяем элемент и показываем свойства
+            this.selectElement(element);
+        };
+        
+        reader.onerror = () => {
+            console.error('Ошибка при чтении файла изображения');
+            alert('Не удалось прочитать файл изображения');
+        };
+        
+        reader.readAsDataURL(file);
     }
 
     setupTextEditing(element) {
@@ -1334,7 +1426,7 @@ class ContentEditor {
             const toolId = element.dataset.toolId;
             
             // Special handling for canvas/image elements
-            if (toolId === 'boardCanvas' || toolId === 'board-illustration') {
+            if (toolId === 'boardCanvas' || toolId === 'board-illustration' || toolId === 'upload-image') {
                 const canvasOrImg = element.querySelector('canvas, img');
                 if (canvasOrImg) {
                     canvasOrImg.style.maxWidth = fullWidth + 'px';
