@@ -1046,13 +1046,8 @@ class ContentEditor {
     }
 
     addElementControls(element) {
-        const controls = document.createElement('div');
-        controls.className = 'element-controls';
-        controls.innerHTML = `
-            <button class="control-btn" onclick="contentEditor.duplicateElement('${element.id}')" title="Дублировать">📋</button>
-            <button class="control-btn delete" onclick="contentEditor.deleteElement('${element.id}')" title="Удалить">🗑️</button>
-        `;
-        element.appendChild(controls);
+        // Remove mini menu - no controls added
+        // Elements will be managed through other means
     }
 
 
