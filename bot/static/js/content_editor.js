@@ -624,9 +624,9 @@ class ContentEditor {
         // Use actual canvas width for proper scaling on mobile
         const fullWidth = canvasRect.width;
         
-        // Calculate vertical position with proper spacing
-        const startY = 20; // Начальный отступ сверху
-        const elementSpacing = 10; // Отступ между элементами
+        // Calculate vertical position with no spacing
+        const startY = 0; // No top margin for first element
+        const elementSpacing = 0; // No spacing between elements
         
         let nextY = startY;
         
@@ -686,7 +686,7 @@ class ContentEditor {
                 break; // Found a gap
             }
             
-            // Move to the next position after this element with spacing
+            // Move to the next position after this element with no spacing
             nextY = existingTop + existingHeight + elementSpacing;
         }
         
