@@ -599,10 +599,9 @@ class ContentEditor {
             .filter(el => !el.id.includes('boardLabel')) // Исключаем boardLabel
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
         
-        // All elements now occupy full canvas width with margins
-        const elementMargin = 10;
-        const centerX = elementMargin;
-        const fullWidth = Math.min(canvasRect.width, maxCanvasWidth) - (elementMargin * 2);
+        // All elements now occupy full canvas width without margins
+        const centerX = 0;
+        const fullWidth = Math.min(canvasRect.width, maxCanvasWidth);
         
         // Calculate vertical position with proper spacing
         const startY = 20; // Начальный отступ сверху
@@ -664,7 +663,7 @@ class ContentEditor {
         const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
         
-        // All elements now occupy full canvas width with appropriate height
+        // All elements now occupy full canvas width without margins
         let defaultHeight;
         if (toolId === 'moveHintsTable') {
             // Table elements have auto height
@@ -680,7 +679,7 @@ class ContentEditor {
         element.style.left = position.x + 'px';
         element.style.top = position.y + 'px';
         
-        // Set width to full canvas width and height
+        // Set width to full canvas width without margins and height
         element.style.width = position.width + 'px';
         
         if (defaultHeight === 'auto') {
@@ -1149,7 +1148,7 @@ class ContentEditor {
         const newId = `element_${this.elementIdCounter++}`;
         newElement.id = newId;
         
-        // Get appropriate dimensions for positioning - all elements now use full width
+        // Get appropriate dimensions for positioning - all elements now use full width without margins
         let elementHeight;
         if (element.classList.contains('table-element')) {
             // For table elements, use actual dimensions
@@ -1159,7 +1158,7 @@ class ContentEditor {
             elementHeight = parseInt(element.style.height) || 150;
         }
         
-        // Get canvas width for full-width positioning
+        // Get canvas width for full-width positioning without margins
         const maxCanvasWidth = this.getMaxCanvasWidth();
         
         // Use new logic for positioning with full width
@@ -1217,18 +1216,34 @@ class ContentEditor {
     }
     
     handleWindowResize() {
-        // Update all canvas elements on window resize
+        // Get current canvas dimensions
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const fullWidth = Math.min(canvasRect.width, maxCanvasWidth);
+        
+        // Update all canvas elements to match new canvas width
         const canvasElements = this.canvas.querySelectorAll('.canvas-element');
         canvasElements.forEach(element => {
+            // Update width for all elements
+            element.style.width = fullWidth + 'px';
+            
             const toolId = element.dataset.toolId;
+            
+            // Special handling for canvas/image elements
             if (toolId === 'boardCanvas' || toolId === 'board-illustration') {
-                // Update canvas/image dimensions for mobile
                 const canvasOrImg = element.querySelector('canvas, img');
                 if (canvasOrImg) {
-                    const maxWidth = this.getMaxCanvasWidth();
-                    canvasOrImg.style.maxWidth = maxWidth + 'px';
+                    canvasOrImg.style.maxWidth = fullWidth + 'px';
                     canvasOrImg.style.width = '100%';
                     canvasOrImg.style.height = 'auto';
+                }
+            }
+            
+            // Special handling for tables
+            if (element.classList.contains('table-element') || toolId === 'moveHintsTable') {
+                const table = element.querySelector('table');
+                if (table) {
+                    table.style.width = '100%';
                 }
             }
         });
