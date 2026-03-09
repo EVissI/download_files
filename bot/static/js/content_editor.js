@@ -428,7 +428,7 @@ class ContentEditor {
                 name: 'Доска с параметрами',
                 type: 'canvas',
                 description: 'Игровая доска с параметрами (манигейм/матч)',
-                icon: 'fa fa-chess-board'
+                icon: 'fa fa-bolt'
             },
             {
                 id: 'question-text',
