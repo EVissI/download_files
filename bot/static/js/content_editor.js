@@ -599,9 +599,10 @@ class ContentEditor {
             .filter(el => !el.id.includes('boardLabel')) // Исключаем boardLabel
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
         
-        // All elements now occupy full canvas width without margins
+        // All elements now occupy actual canvas width without margins
         const centerX = 0;
-        const fullWidth = Math.min(canvasRect.width, maxCanvasWidth);
+        // Use actual canvas width for proper scaling on mobile
+        const fullWidth = canvasRect.width;
         
         // Calculate vertical position with proper spacing
         const startY = 20; // Начальный отступ сверху
@@ -663,7 +664,7 @@ class ContentEditor {
         const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
         
-        // All elements now occupy full canvas width without margins
+        // All elements now occupy actual canvas width without margins
         let defaultHeight;
         if (toolId === 'moveHintsTable') {
             // Table elements have auto height
@@ -673,13 +674,13 @@ class ContentEditor {
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
         }
         
-        // Position elements in vertical blocks with full width
-        const position = this.calculateVerticalPosition(maxCanvasWidth, defaultHeight);
+        // Position elements in vertical blocks with actual canvas width
+        const position = this.calculateVerticalPosition(canvasRect.width, defaultHeight);
         
         element.style.left = position.x + 'px';
         element.style.top = position.y + 'px';
         
-        // Set width to full canvas width without margins and height
+        // Set width to actual canvas width without margins and height
         element.style.width = position.width + 'px';
         
         if (defaultHeight === 'auto') {
@@ -1148,7 +1149,7 @@ class ContentEditor {
         const newId = `element_${this.elementIdCounter++}`;
         newElement.id = newId;
         
-        // Get appropriate dimensions for positioning - all elements now use full width without margins
+        // Get appropriate dimensions for positioning - all elements now use actual canvas width
         let elementHeight;
         if (element.classList.contains('table-element')) {
             // For table elements, use actual dimensions
@@ -1158,11 +1159,11 @@ class ContentEditor {
             elementHeight = parseInt(element.style.height) || 150;
         }
         
-        // Get canvas width for full-width positioning without margins
-        const maxCanvasWidth = this.getMaxCanvasWidth();
+        // Get actual canvas width for proper mobile scaling
+        const canvasRect = this.canvas.getBoundingClientRect();
         
-        // Use new logic for positioning with full width
-        const position = this.calculateVerticalPosition(maxCanvasWidth, elementHeight);
+        // Use new logic for positioning with actual canvas width
+        const position = this.calculateVerticalPosition(canvasRect.width, elementHeight);
         
         newElement.style.left = position.x + 'px';
         newElement.style.top = position.y + 'px';
@@ -1219,12 +1220,13 @@ class ContentEditor {
         // Get current canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
         const maxCanvasWidth = this.getMaxCanvasWidth();
-        const fullWidth = Math.min(canvasRect.width, maxCanvasWidth);
+        // Use actual canvas width for proper mobile scaling
+        const fullWidth = canvasRect.width;
         
         // Update all canvas elements to match new canvas width
         const canvasElements = this.canvas.querySelectorAll('.canvas-element');
         canvasElements.forEach(element => {
-            // Update width for all elements
+            // Update width for all elements to actual canvas width
             element.style.width = fullWidth + 'px';
             
             const toolId = element.dataset.toolId;
