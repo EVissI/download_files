@@ -146,6 +146,7 @@ class ContentEditor {
             padding: 0;
             border: none;
             box-sizing: border-box;
+            min-height: 100px;
         `;
         
         if (this.cardData) {
@@ -179,6 +180,11 @@ class ContentEditor {
         }
         
         element.classList.add('table-element');
+        
+        // Force a reflow to ensure proper height calculation
+        setTimeout(() => {
+            element.offsetHeight;
+        }, 0);
     }
 
     updateTableContent(element, tableType) {
@@ -192,6 +198,10 @@ class ContentEditor {
                     <strong>Нет данных для таблицы</strong>
                 </div>
             `;
+            // Force reflow after content update
+            setTimeout(() => {
+                element.offsetHeight;
+            }, 0);
             return;
         }
         
@@ -209,6 +219,11 @@ class ContentEditor {
                 </div>
             `;
         }
+        
+        // Force reflow after content update to ensure accurate height calculation
+        setTimeout(() => {
+            element.offsetHeight;
+        }, 0);
     }
 
     createHintsTable(hints) {
@@ -597,8 +612,9 @@ class ContentEditor {
             centerX = 10;
         }
         
-        // Calculate vertical position without spacing
+        // Calculate vertical position with proper spacing
         const startY = 20; // Начальный отступ сверху
+        const elementSpacing = 10; // Отступ между элементами
         
         let nextY = startY;
         
@@ -609,29 +625,32 @@ class ContentEditor {
             
             // Get actual height of existing element
             if (existingEl.classList.contains('table-element')) {
-                // For table elements, get the actual rendered height
+                // For table elements, get the actual rendered height after content is loaded
+                // Force a reflow to get accurate dimensions
+                existingEl.offsetHeight;
                 existingHeight = existingEl.offsetHeight || 200;
             } else {
                 // For other elements, use the styled height or default
-                existingHeight = parseInt(existingEl.style.height) || 150;
+                const styledHeight = parseInt(existingEl.style.height);
+                existingHeight = styledHeight || existingEl.offsetHeight || 150;
             }
             
             // Check if the current element fits before this existing element
             const currentElementHeight = elementHeight === 'auto' ? 150 : elementHeight;
-            if (nextY + currentElementHeight <= existingTop) {
+            if (nextY + currentElementHeight + elementSpacing <= existingTop) {
                 break; // Found a gap
             }
             
-            // Move to the next position after this element (no spacing)
-            nextY = existingTop + existingHeight;
+            // Move to the next position after this element with spacing
+            nextY = existingTop + existingHeight + elementSpacing;
         }
         
         // Ensure the element doesn't go beyond canvas bounds
         const currentElementHeight = elementHeight === 'auto' ? 150 : elementHeight;
         const maxY = Math.min(canvasRect.height, maxCanvasHeight) - currentElementHeight - 20;
         if (nextY > maxY) {
-            // If we run out of space, start from the top
-            nextY = startY + (this.elements.length % 5) * currentElementHeight;
+            // If we run out of space, start from the top with offset
+            nextY = startY + (this.elements.length % 3) * (currentElementHeight + elementSpacing);
         }
         
         return {
