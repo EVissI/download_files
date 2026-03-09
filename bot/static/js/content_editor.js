@@ -60,7 +60,6 @@ class ContentEditor {
                         </div>
                         <div class="content-editor-body">
                             <div class="toolbar">
-                                <h3>Инструменты</h3>
                                 <div class="tools-list" id="toolsList">
                                     <!-- Динамический список инструментов -->
                                 </div>
