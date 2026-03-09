@@ -504,6 +504,12 @@ class ContentEditor {
             return;
         }
 
+        // Особое поведение для audio-file - прямая загрузка файла
+        if (toolId === 'audio-file') {
+            this.handleDirectAudioUpload();
+            return;
+        }
+
         // Убираем выделение с предыдущего инструмента
         document.querySelectorAll('.tool-item-icon').forEach(item => {
             item.classList.remove('selected');
@@ -556,6 +562,142 @@ class ContentEditor {
         };
         
         reader.readAsDataURL(file);
+    }
+
+    handleDirectAudioUpload() {
+        // Создаем временный input для выбора файла
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'audio/*';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('audio/')) {
+                this.uploadAudioDirectly(file);
+            }
+            // Удаляем временный input
+            document.body.removeChild(fileInput);
+        });
+        
+        // Добавляем input в DOM и вызываем клик
+        document.body.appendChild(fileInput);
+        fileInput.click();
+    }
+
+    uploadAudioDirectly(file) {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const audioUrl = e.target.result;
+            
+            // Создаем элемент на канвасе с аудио
+            this.addAudioElementToCanvas(audioUrl, file.name, file);
+        };
+        
+        reader.onerror = () => {
+            console.error('Ошибка при чтении файла аудио');
+            alert('Не удалось прочитать файл аудио');
+        };
+        
+        reader.readAsDataURL(file);
+    }
+
+    addAudioElementToCanvas(audioUrl, fileName, file) {
+        const elementId = `element_${this.elementIdCounter++}`;
+        const element = document.createElement('div');
+        element.id = elementId;
+        element.className = 'canvas-element audio-element';
+        element.dataset.toolId = 'audio-file';
+        element.dataset.audioUrl = audioUrl;
+        element.dataset.audioName = fileName;
+        
+        // Get canvas dimensions
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        
+        // Calculate position for audio element
+        const position = this.calculateVerticalPosition(canvasRect.width, 80); // Default height 80px
+        
+        element.style.left = position.x + 'px';
+        element.style.top = position.y + 'px';
+        element.style.width = position.width + 'px';
+        element.style.height = '80px'; // Default height
+        
+        // Add messenger-style audio content
+        element.innerHTML = `
+            <div class="audio-message" style="display: flex; align-items: center; padding: 12px; height: 100%; background: #f0f0f0; border-radius: 8px;">
+                <div class="audio-icon" style="font-size: 24px; margin-right: 12px; color: #667eea;">🎵</div>
+                <div class="audio-info" style="flex: 1;">
+                    <div class="audio-name" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px;">${fileName}</div>
+                    <div class="audio-duration" style="font-size: 12px; color: #666;">Загрузка...</div>
+                </div>
+                <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                    ▶
+                </div>
+            </div>
+        `;
+        
+        // Add controls
+        this.addElementControls(element);
+        
+        // Add to canvas
+        this.canvas.appendChild(element);
+        
+        // Setup audio functionality
+        this.setupAudioElement(element, audioUrl, file);
+        
+        // Save to elements array
+        this.elements.push({
+            id: elementId,
+            toolId: 'audio-file',
+            element: element
+        });
+        
+        // Select element
+        this.selectElement(element);
+    }
+
+    setupAudioElement(element, audioUrl, file) {
+        const playBtn = element.querySelector('.audio-play-btn');
+        const durationEl = element.querySelector('.audio-duration');
+        
+        // Create audio element (hidden)
+        const audio = document.createElement('audio');
+        audio.src = audioUrl;
+        audio.preload = 'metadata';
+        element.appendChild(audio);
+        
+        // Get audio duration
+        audio.addEventListener('loadedmetadata', () => {
+            const duration = audio.duration;
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            durationEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        });
+        
+        // Play/pause functionality
+        let isPlaying = false;
+        playBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            if (isPlaying) {
+                audio.pause();
+                playBtn.textContent = '▶';
+                isPlaying = false;
+            } else {
+                audio.play();
+                playBtn.textContent = '⏸';
+                isPlaying = true;
+            }
+        });
+        
+        // Reset play button when audio ends
+        audio.addEventListener('ended', () => {
+            playBtn.textContent = '▶';
+            isPlaying = false;
+        });
     }
 
     addImageElementToCanvas(imageUrl, fileName) {
@@ -955,20 +1097,6 @@ class ContentEditor {
                 }
                 break;
                 
-            case 'audio-file':
-                // Аудио-файл
-                element.innerHTML = `
-                    <div style="padding: 20px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                        <div style="font-size: 48px; margin-bottom: 10px;">🎵</div>
-                        <input type="file" accept="audio/*" style="margin-bottom: 10px;">
-                        <audio controls style="width: 100%;">
-                            <source src="" type="audio/mpeg">
-                            Ваш браузер не поддерживает аудио.
-                        </audio>
-                    </div>
-                `;
-                break;
-                
             case 'answer-text':
                 // Текст ответа в стиле Photoshop
                 element.innerHTML = `
@@ -1208,6 +1336,26 @@ class ContentEditor {
                            oninput="contentEditor.updateElementProperty('linkUrl', this.value)">
                 </div>
                 ` : ''}
+                ${element.classList.contains('audio-element') ? `
+                <div class="property-item">
+                    <label>Имя файла:</label>
+                    <input type="text" id="propAudioName" value="${element.dataset.audioName || 'Аудио файл'}" 
+                           oninput="contentEditor.updateElementProperty('audioName', this.value)">
+                </div>
+                <div class="property-item">
+                    <label>Управление воспроизведением:</label>
+                    <div style="display: flex; gap: 10px; margin-top: 5px;">
+                        <button class="action-btn" onclick="contentEditor.playAudioElement('${element.id}')">▶ Воспроизвести</button>
+                        <button class="action-btn" onclick="contentEditor.pauseAudioElement('${element.id}')">⏸ Пауза</button>
+                    </div>
+                </div>
+                <div class="property-item">
+                    <label>Громкость:</label>
+                    <input type="range" id="propAudioVolume" min="0" max="100" value="100" 
+                           oninput="contentEditor.updateElementProperty('audioVolume', this.value / 100)">
+                    <div class="property-value">100%</div>
+                </div>
+                ` : ''}
                 <div class="property-item">
                     <label>Цвет обводки:</label>
                     <input type="color" id="propBorderColor" value="#667eea" 
@@ -1244,37 +1392,34 @@ class ContentEditor {
         if (!this.selectedElement) return;
         
         switch(property) {
-            case 'left':
-            case 'top':
-                this.selectedElement.style[property] = value;
+            case 'audioName':
+                this.selectedElement.dataset.audioName = value;
+                const audioNameEl = this.selectedElement.querySelector('.audio-name');
+                if (audioNameEl) {
+                    audioNameEl.textContent = value;
+                }
                 break;
-            case 'tableType':
-                this.updateTableContent(this.selectedElement, value);
+            case 'audioVolume':
+                const audio = this.selectedElement.querySelector('audio');
+                if (audio) {
+                    audio.volume = value;
+                }
                 break;
             case 'fontSize':
-                if (this.selectedElement.classList.contains('text-element')) {
-                    const textContent = this.selectedElement.querySelector('.text-content');
-                    if (textContent) {
-                        textContent.style.fontSize = value;
-                    }
-                } else if (this.selectedElement.classList.contains('link-element')) {
-                    const linkText = this.selectedElement.querySelector('.link-text');
-                    if (linkText) {
-                        linkText.style.fontSize = value;
+                const textElement = this.selectedElement.querySelector('.text-content, .link-text');
+                if (textElement) {
+                    textElement.style.fontSize = value;
+                    // Update display value
+                    const valueDisplay = document.querySelector(`#prop${property.charAt(0).toUpperCase() + property.slice(1)} + .property-value`);
+                    if (valueDisplay) {
+                        valueDisplay.textContent = value;
                     }
                 }
                 break;
             case 'textColor':
-                if (this.selectedElement.classList.contains('text-element')) {
-                    const textContent = this.selectedElement.querySelector('.text-content');
-                    if (textContent) {
-                        textContent.style.color = value;
-                    }
-                } else if (this.selectedElement.classList.contains('link-element')) {
-                    const linkText = this.selectedElement.querySelector('.link-text');
-                    if (linkText) {
-                        linkText.style.color = value;
-                    }
+                const textContent = this.selectedElement.querySelector('.text-content, .link-text');
+                if (textContent) {
+                    textContent.style.color = value;
                 }
                 break;
             case 'linkUrl':
@@ -1288,32 +1433,62 @@ class ContentEditor {
                 break;
             case 'borderWidth':
                 this.selectedElement.style.borderWidth = value;
+                // Update display value
+                const borderWidthDisplay = document.querySelector('#propBorderWidth + .property-value');
+                if (borderWidthDisplay) {
+                    borderWidthDisplay.textContent = value;
+                }
                 break;
             case 'opacity':
                 this.selectedElement.style.opacity = value;
+                // Update display value
+                const opacityDisplay = document.querySelector('#propOpacity + .property-value');
+                if (opacityDisplay) {
+                    opacityDisplay.textContent = Math.round(value * 100) + '%';
+                }
                 break;
             case 'shadow':
-                this.selectedElement.style.boxShadow = value ? '0 4px 16px rgba(0,0,0,0.3)' : 'none';
+                if (value) {
+                    this.selectedElement.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+                } else {
+                    this.selectedElement.style.boxShadow = 'none';
+                }
+                break;
+            case 'tableType':
+                this.selectedElement.dataset.tableType = value;
+                this.updateTableContent(this.selectedElement, value);
                 break;
         }
-        
-        // Обновляем отображение значений
-        if (property === 'left' || property === 'top') {
-            const valueDisplay = this.selectedElement.querySelector(`.property-value`);
-            if (valueDisplay) {
-                valueDisplay.textContent = value;
-            }
-        } else if (property === 'fontSize') {
-            const fontSizeInput = document.getElementById('propFontSize');
-            if (fontSizeInput) {
-                const fontSizeDisplay = fontSizeInput.parentElement.querySelector('.property-value');
-                if (fontSizeDisplay) {
-                    fontSizeDisplay.textContent = value;
+    }
+
+    playAudioElement(elementId) {
+        const element = document.getElementById(elementId);
+        if (element && element.classList.contains('audio-element')) {
+            const audio = element.querySelector('audio');
+            const playBtn = element.querySelector('.audio-play-btn');
+            
+            if (audio) {
+                audio.play();
+                if (playBtn) {
+                    playBtn.textContent = '⏸';
                 }
             }
         }
-        
-        // Автоматическое изменение высоты отключено
+    }
+
+    pauseAudioElement(elementId) {
+        const element = document.getElementById(elementId);
+        if (element && element.classList.contains('audio-element')) {
+            const audio = element.querySelector('audio');
+            const playBtn = element.querySelector('.audio-play-btn');
+            
+            if (audio) {
+                audio.pause();
+                if (playBtn) {
+                    playBtn.textContent = '▶';
+                }
+            }
+        }
     }
 
     // Умный перенос текста (без автоматического изменения высоты)
