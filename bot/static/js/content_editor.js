@@ -427,43 +427,50 @@ class ContentEditor {
                 id: 'boardCanvas',
                 name: 'Доска с параметрами',
                 type: 'canvas',
-                description: 'Игровая доска с параметрами (манигейм/матч)'
+                description: 'Игровая доска с параметрами (манигейм/матч)',
+                icon: 'fas fa-chess-board'
             },
             {
                 id: 'question-text',
                 name: 'Текст вопроса',
                 type: 'text',
-                description: 'Текст вопроса для анализа'
+                description: 'Текст вопроса для анализа',
+                icon: 'fas fa-question-circle'
             },
             {
                 id: 'moveHintsTable',
                 name: 'Таблица',
                 type: 'table',
-                description: 'Таблица подсказок или данных'
+                description: 'Таблица подсказок или данных',
+                icon: 'fas fa-table'
             },
             {
                 id: 'answer-text',
                 name: 'Текст ответа',
                 type: 'text',
-                description: 'Текст ответа или решения'
+                description: 'Текст ответа или решения',
+                icon: 'fas fa-comment-dots'
             },
             {
                 id: 'board-illustration',
                 name: 'Иллюстрация',
                 type: 'image',
-                description: 'Изображение доски как иллюстрация'
+                description: 'Изображение доски как иллюстрация',
+                icon: 'fas fa-image'
             },
             {
                 id: 'audio-file',
                 name: 'Аудио-файл',
                 type: 'audio',
-                description: 'Аудиофайл для воспроизведения'
+                description: 'Аудиофайл для воспроизведения',
+                icon: 'fas fa-volume-up'
             },
             {
                 id: 'support-link',
                 name: 'Ссылка',
                 type: 'link',
-                description: 'Ссылка на дополнительные материалы'
+                description: 'Ссылка на дополнительные материалы',
+                icon: 'fas fa-link'
             }
         ];
 
@@ -471,17 +478,87 @@ class ContentEditor {
     }
 
     renderTools(tools) {
-        this.toolsList.innerHTML = tools.map(tool => `
-            <div class="tool-item ${tool.id === 'boardCanvas' ? 'toggle-button' : ''}" 
-                 data-tool-id="${tool.id}"
-                 onclick="contentEditor.selectTool('${tool.id}')">
-                <div class="tool-item-header">
-                    <span class="tool-name">${tool.name}</span>
-                    ${tool.id === 'boardCanvas' ? '<span class="toggle-indicator">⚡</span>' : ''}
-                </div>
-                <div class="tool-description">${tool.description}</div>
+        this.toolsList.innerHTML = `
+            <div class="tools-grid">
+                ${tools.map(tool => `
+                    <div class="tool-item-icon ${tool.id === 'boardCanvas' ? 'toggle-button' : ''}" 
+                         data-tool-id="${tool.id}"
+                         onclick="contentEditor.selectTool('${tool.id}')"
+                         title="${tool.name}">
+                        <i class="${tool.icon}"></i>
+                    </div>
+                `).join('')}
             </div>
-        `).join('');
+            <div class="tools-input-section">
+                <input type="text" 
+                       class="tools-search-input" 
+                       placeholder="Поиск инструментов..." 
+                       oninput="contentEditor.filterTools(this.value)">
+            </div>
+        `;
+    }
+
+    filterTools(searchTerm) {
+        const allTools = [
+            {
+                id: 'boardCanvas',
+                name: 'Доска с параметрами',
+                type: 'canvas',
+                description: 'Игровая доска с параметрами (манигейм/матч)',
+                icon: 'fas fa-chess-board'
+            },
+            {
+                id: 'question-text',
+                name: 'Текст вопроса',
+                type: 'text',
+                description: 'Текст вопроса для анализа',
+                icon: 'fas fa-question-circle'
+            },
+            {
+                id: 'moveHintsTable',
+                name: 'Таблица',
+                type: 'table',
+                description: 'Таблица подсказок или данных',
+                icon: 'fas fa-table'
+            },
+            {
+                id: 'answer-text',
+                name: 'Текст ответа',
+                type: 'text',
+                description: 'Текст ответа или решения',
+                icon: 'fas fa-comment-dots'
+            },
+            {
+                id: 'board-illustration',
+                name: 'Иллюстрация',
+                type: 'image',
+                description: 'Изображение доски как иллюстрация',
+                icon: 'fas fa-image'
+            },
+            {
+                id: 'audio-file',
+                name: 'Аудио-файл',
+                type: 'audio',
+                description: 'Аудиофайл для воспроизведения',
+                icon: 'fas fa-volume-up'
+            },
+            {
+                id: 'support-link',
+                name: 'Ссылка',
+                type: 'link',
+                description: 'Ссылка на дополнительные материалы',
+                icon: 'fas fa-link'
+            }
+        ];
+
+        const filteredTools = searchTerm.trim() === '' 
+            ? allTools 
+            : allTools.filter(tool => 
+                tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                tool.description.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+        this.renderTools(filteredTools);
     }
 
     selectTool(toolId) {
@@ -492,7 +569,7 @@ class ContentEditor {
         }
 
         // Убираем выделение с предыдущего инструмента
-        document.querySelectorAll('.tool-item').forEach(item => {
+        document.querySelectorAll('.tool-item-icon').forEach(item => {
             item.classList.remove('selected');
         });
 
