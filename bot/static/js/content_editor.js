@@ -632,21 +632,33 @@ class ContentEditor {
                 // For table elements, get the actual rendered height
                 existingHeight = existingEl.offsetHeight;
                 
-                // If table has no content yet or very small height, estimate properly
+                // Force a reflow to ensure we have the correct height
+                if (existingHeight < 50) {
+                    // Force reflow to get accurate table height
+                    existingEl.style.display = 'block';
+                    existingEl.offsetHeight; // Force reflow
+                    existingHeight = existingEl.offsetHeight;
+                    existingEl.style.display = '';
+                }
+                
+                // If table still has very small height, estimate based on content
                 if (existingHeight < 50) {
                     const table = existingEl.querySelector('table');
                     if (table) {
                         const rowCount = table.querySelectorAll('tr').length;
                         existingHeight = Math.max(80, rowCount * 35); // Estimate 35px per row + minimum 80px
                     } else {
-                        // No table found, check if it's loading
-                        if (existingEl.innerHTML.trim() === '') {
-                            existingHeight = 150; // Empty table placeholder
+                        // Check if table has content but no table element yet
+                        if (existingEl.innerHTML.trim() !== '') {
+                            existingHeight = 150; // Content present but no table structure
                         } else {
-                            existingHeight = 100; // Some content but no table
+                            existingHeight = 100; // Empty table
                         }
                     }
                 }
+                
+                // Debug: Log table height calculation
+                console.log(`Table height calculation for element at top=${existingTop}: final height=${existingHeight}`);
             } else {
                 // For other elements, use the styled height or default
                 const styledHeight = parseInt(existingEl.style.height);
@@ -684,6 +696,9 @@ class ContentEditor {
             nextY = startY + (this.elements.length % 3) * (currentElementHeight + elementSpacing);
         }
         
+        // Debug: Log final calculation
+        console.log(`Final position calculation: y=${nextY}, elementHeight=${currentElementHeight}`);
+        
         return {
             x: centerX,
             y: Math.max(startY, nextY),
@@ -713,65 +728,76 @@ class ContentEditor {
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
         }
         
-        // Debug: Log existing elements before positioning
-        if (toolId === 'moveHintsTable') {
-            console.log('=== TABLE POSITIONING DEBUG ===');
-            const existingElements = this.canvas.querySelectorAll('.canvas-element');
-            console.log('Existing elements count:', existingElements.length);
-            existingElements.forEach((el, index) => {
-                console.log(`Element ${index}: top=${el.style.top}, height=${el.offsetHeight}, class=${el.className}`);
-            });
-        }
-        
-        // Position elements in vertical blocks with actual canvas width
-        const position = this.calculateVerticalPosition(canvasRect.width, defaultHeight);
-        
-        // Debug: Log calculated position for table
-        if (toolId === 'moveHintsTable') {
-            console.log('Calculated position for table:', position);
-        }
-        
-        element.style.left = position.x + 'px';
-        element.style.top = position.y + 'px';
-        
-        // Set width to actual canvas width without margins and height
-        element.style.width = position.width + 'px';
-        
-        if (defaultHeight === 'auto') {
-            element.style.height = 'auto';
-        } else {
-            element.style.height = defaultHeight + 'px';
-        }
-        
-        // Добавляем контент в элемент
-        this.populateElementContent(element, toolId);
-        
-        // Добавляем контролы
-        this.addElementControls(element);
-        
-        // Добавляем на холст
-        this.canvas.appendChild(element);
-        
-        // Debug: Log final position after adding to canvas
-        if (toolId === 'moveHintsTable') {
-            setTimeout(() => {
-                console.log('Final table position after adding:', {
-                    top: element.style.top,
-                    height: element.offsetHeight,
-                    offsetTop: element.offsetTop
+        // For non-table elements, add a small delay to ensure any existing tables have rendered
+        const calculatePosition = () => {
+            // Debug: Log existing elements before positioning
+            if (toolId !== 'moveHintsTable') {
+                console.log('=== ELEMENT POSITIONING DEBUG ===');
+                const existingElements = this.canvas.querySelectorAll('.canvas-element');
+                console.log('Existing elements count:', existingElements.length);
+                existingElements.forEach((el, index) => {
+                    console.log(`Element ${index}: top=${el.style.top}, height=${el.offsetHeight}, class=${el.className}`);
                 });
-            }, 100);
+            }
+            
+            // Position elements in vertical blocks with actual canvas width
+            const position = this.calculateVerticalPosition(canvasRect.width, defaultHeight);
+            
+            // Debug: Log calculated position
+            if (toolId !== 'moveHintsTable') {
+                console.log(`Calculated position for ${toolId}:`, position);
+            }
+            
+            element.style.left = position.x + 'px';
+            element.style.top = position.y + 'px';
+            
+            // Set width to actual canvas width without margins and height
+            element.style.width = position.width + 'px';
+            
+            if (defaultHeight === 'auto') {
+                element.style.height = 'auto';
+            } else {
+                element.style.height = defaultHeight + 'px';
+            }
+            
+            // Добавляем контент в элемент
+            this.populateElementContent(element, toolId);
+            
+            // Добавляем контролы
+            this.addElementControls(element);
+            
+            // Добавляем на холст
+            this.canvas.appendChild(element);
+            
+            // Debug: Log final position for non-table elements
+            if (toolId !== 'moveHintsTable') {
+                setTimeout(() => {
+                    console.log(`Final ${toolId} position:`, {
+                        top: element.style.top,
+                        height: element.offsetHeight,
+                        offsetTop: element.offsetTop
+                    });
+                }, 100);
+            }
+            
+            // Сохраняем в массив элементов
+            this.elements.push({
+                id: elementId,
+                toolId: toolId,
+                element: element
+            });
+            
+            // Выделяем элемент
+            this.selectElement(element);
+        };
+        
+        if (toolId === 'moveHintsTable') {
+            // For tables, calculate position immediately
+            calculatePosition();
+        } else {
+            // For other elements, add a small delay to ensure tables are rendered
+            setTimeout(calculatePosition, 50);
         }
-        
-        // Сохраняем в массив элементов
-        this.elements.push({
-            id: elementId,
-            toolId: toolId,
-            element: element
-        });
-        
-        // Выделяем элемент
-        this.selectElement(element);
     }
 
     populateElementContent(element, toolId) {
