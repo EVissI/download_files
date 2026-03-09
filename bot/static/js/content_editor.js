@@ -373,30 +373,31 @@ class ContentEditor {
     }
 
     forceRefreshContent() {
-        // Force refresh all cached content
+        // Force refresh all cached content without affecting positioning
         if (this.canvas) {
-            // Clear canvas and force reflow
+            // Just trigger a gentle reflow without hiding/showing elements
             const elements = this.canvas.querySelectorAll('.canvas-element');
             elements.forEach(el => {
-                el.style.display = 'none';
+                // Gentle reflow that doesn't affect positioning
+                el.style.transform = 'translateZ(0)';
                 el.offsetHeight; // Force reflow
-                el.style.display = '';
+                el.style.transform = '';
             });
         }
         
         // Refresh tools list
         if (this.toolsList) {
-            this.toolsList.style.display = 'none';
+            this.toolsList.style.transform = 'translateZ(0)';
             this.toolsList.offsetHeight; // Force reflow
-            this.toolsList.style.display = '';
+            this.toolsList.style.transform = '';
         }
         
         // Refresh properties panel
         if (this.propertiesContent) {
             const currentContent = this.propertiesContent.innerHTML;
-            this.propertiesContent.innerHTML = '';
+            this.propertiesContent.style.transform = 'translateZ(0)';
             this.propertiesContent.offsetHeight; // Force reflow
-            this.propertiesContent.innerHTML = currentContent;
+            this.propertiesContent.style.transform = '';
         }
     }
 
@@ -609,19 +610,22 @@ class ContentEditor {
             
             // Get actual height of existing element
             if (existingEl.classList.contains('table-element')) {
-                // For table elements, get the actual rendered height after content is loaded
-                // Force a reflow to get accurate dimensions
-                existingEl.offsetHeight;
-                existingHeight = existingEl.offsetHeight || 200;
+                // For table elements, get the actual rendered height
+                existingHeight = existingEl.offsetHeight;
                 
-                // If table has no content yet, estimate height based on typical table structure
+                // If table has no content yet or very small height, estimate properly
                 if (existingHeight < 50) {
                     const table = existingEl.querySelector('table');
                     if (table) {
                         const rowCount = table.querySelectorAll('tr').length;
-                        existingHeight = Math.max(50, rowCount * 30); // Estimate 30px per row
+                        existingHeight = Math.max(80, rowCount * 35); // Estimate 35px per row + minimum 80px
                     } else {
-                        existingHeight = 150; // Default for empty table
+                        // No table found, check if it's loading
+                        if (existingEl.innerHTML.trim() === '') {
+                            existingHeight = 150; // Empty table placeholder
+                        } else {
+                            existingHeight = 100; // Some content but no table
+                        }
                     }
                 }
             } else {
@@ -633,8 +637,8 @@ class ContentEditor {
             // Check if the current element fits before this existing element
             let currentElementHeight;
             if (elementHeight === 'auto') {
-                // For auto height elements (like tables), estimate height
-                currentElementHeight = 150; // Default estimate
+                // For auto height elements (like tables), estimate height based on typical content
+                currentElementHeight = 120; // Reasonable estimate for new table
             } else {
                 currentElementHeight = elementHeight;
             }
@@ -650,7 +654,7 @@ class ContentEditor {
         // Ensure the element doesn't go beyond canvas bounds
         let currentElementHeight;
         if (elementHeight === 'auto') {
-            currentElementHeight = 150; // Default estimate for auto elements
+            currentElementHeight = 120; // Default estimate for auto elements
         } else {
             currentElementHeight = elementHeight;
         }
@@ -690,8 +694,23 @@ class ContentEditor {
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
         }
         
+        // Debug: Log existing elements before positioning
+        if (toolId === 'moveHintsTable') {
+            console.log('=== TABLE POSITIONING DEBUG ===');
+            const existingElements = this.canvas.querySelectorAll('.canvas-element');
+            console.log('Existing elements count:', existingElements.length);
+            existingElements.forEach((el, index) => {
+                console.log(`Element ${index}: top=${el.style.top}, height=${el.offsetHeight}, class=${el.className}`);
+            });
+        }
+        
         // Position elements in vertical blocks with actual canvas width
         const position = this.calculateVerticalPosition(canvasRect.width, defaultHeight);
+        
+        // Debug: Log calculated position for table
+        if (toolId === 'moveHintsTable') {
+            console.log('Calculated position for table:', position);
+        }
         
         element.style.left = position.x + 'px';
         element.style.top = position.y + 'px';
@@ -713,6 +732,17 @@ class ContentEditor {
         
         // Добавляем на холст
         this.canvas.appendChild(element);
+        
+        // Debug: Log final position after adding to canvas
+        if (toolId === 'moveHintsTable') {
+            setTimeout(() => {
+                console.log('Final table position after adding:', {
+                    top: element.style.top,
+                    height: element.offsetHeight,
+                    offsetTop: element.offsetTop
+                });
+            }, 100);
+        }
         
         // Сохраняем в массив элементов
         this.elements.push({
