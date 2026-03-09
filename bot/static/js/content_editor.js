@@ -937,6 +937,11 @@ class ContentEditor {
             }
         });
 
+        // Добавляем обработчик фокуса для открытия свойств
+        linkText.addEventListener('focus', () => {
+            this.selectElement(element);
+        });
+
         // Обработка окончания редактирования
         linkText.addEventListener('blur', () => {
             // Если текст пустой, возвращаем placeholder
@@ -997,6 +1002,11 @@ class ContentEditor {
             }
         });
 
+        // Добавляем обработчик фокуса для открытия свойств
+        textContent.addEventListener('focus', () => {
+            this.selectElement(element);
+        });
+
         // Обработка окончания редактирования
         textContent.addEventListener('blur', () => {
             // Если текст пустой, возвращаем placeholder
@@ -1033,7 +1043,6 @@ class ContentEditor {
                 }
             }
         });
-
     }
 
     addElementControls(element) {
