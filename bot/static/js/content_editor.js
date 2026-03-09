@@ -138,22 +138,24 @@ class ContentEditor {
         // Устанавливаем стандартный тип таблицы - "ход"
         element.dataset.tableType = 'hints';
         
-        // Remove all margins and padding - make it fill the entire container
-        element.style.cssText = `
-            width: 100%;
-            height: auto;
-            margin: 0;
-            padding: 0;
-            border: none;
-            box-sizing: border-box;
-            min-height: 100px;
-        `;
+        // Preserve existing positioning styles and only update content-related styles
+        const existingTop = element.style.top;
+        const existingLeft = element.style.left;
+        const existingWidth = element.style.width;
+        const existingHeight = element.style.height;
+        
+        // Update only content-related styles without affecting positioning
+        element.style.margin = '0';
+        element.style.padding = '0';
+        element.style.border = 'none';
+        element.style.boxSizing = 'border-box';
+        element.style.minHeight = '100px';
         
         if (this.cardData) {
             // Создаем таблицу на основе данных карточки
             this.updateTableContent(element, 'hints');
         } else {
-            // Создаем пример таблицы если нет данных
+            // Создаем пример таблицу если нет данных
             element.innerHTML = `
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; margin: 0; padding: 0; border-spacing: 0;">
                     <thead>
@@ -181,11 +183,24 @@ class ContentEditor {
         
         element.classList.add('table-element');
         
-        // Don't force reflow here - let the natural layout handle positioning
-        // The positioning is already calculated in addElementToCanvas
+        // Debug: Log position preservation
+        console.log('Table position after createTableElement:', {
+            top: element.style.top,
+            left: element.style.left,
+            width: element.style.width,
+            height: element.style.height
+        });
     }
 
     updateTableContent(element, tableType) {
+        // Debug: Log position before update
+        console.log('updateTableContent - before:', {
+            top: element.style.top,
+            left: element.style.left,
+            width: element.style.width,
+            height: element.style.height
+        });
+        
         element.dataset.tableType = tableType;
         element.innerHTML = '';
         
@@ -196,26 +211,30 @@ class ContentEditor {
                     <strong>Нет данных для таблицы</strong>
                 </div>
             `;
-            return;
-        }
-        
-        if (tableType === 'hints' && this.cardData.hints) {
-            const table = this.createHintsTable(this.cardData.hints);
-            element.appendChild(table);
-        } else if (tableType === 'cube' && this.cardData.cube_hints) {
-            const table = this.createCubeTable(this.cardData.cube_hints);
-            element.appendChild(table);
         } else {
-            // Если для выбранного типа нет данных
-            element.innerHTML = `
-                <div style="padding: 20px; text-align: center; color: #666;">
-                    <strong>Нет данных для типа таблицы: ${tableType === 'hints' ? 'Ход' : 'Куб'}</strong>
-                </div>
-            `;
+            if (tableType === 'hints' && this.cardData.hints) {
+                const table = this.createHintsTable(this.cardData.hints);
+                element.appendChild(table);
+            } else if (tableType === 'cube' && this.cardData.cube_hints) {
+                const table = this.createCubeTable(this.cardData.cube_hints);
+                element.appendChild(table);
+            } else {
+                // Если для выбранного типа нет данных
+                element.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #666;">
+                        <strong>Нет данных для типа таблицы: ${tableType === 'hints' ? 'Ход' : 'Куб'}</strong>
+                    </div>
+                `;
+            }
         }
         
-        // Don't force reflow here to prevent repositioning
-        // The table will naturally expand to fit its content
+        // Debug: Log position after update
+        console.log('updateTableContent - after:', {
+            top: element.style.top,
+            left: element.style.left,
+            width: element.style.width,
+            height: element.style.height
+        });
     }
 
     createHintsTable(hints) {
