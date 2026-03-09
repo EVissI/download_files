@@ -428,49 +428,49 @@ class ContentEditor {
                 name: 'Доска с параметрами',
                 type: 'canvas',
                 description: 'Игровая доска с параметрами (манигейм/матч)',
-                icon: 'fas fa-chess-board'
+                icon: 'fa fa-chess-board'
             },
             {
                 id: 'question-text',
                 name: 'Текст вопроса',
                 type: 'text',
                 description: 'Текст вопроса для анализа',
-                icon: 'fas fa-question-circle'
+                icon: 'fa fa-question-circle'
             },
             {
                 id: 'moveHintsTable',
                 name: 'Таблица',
                 type: 'table',
                 description: 'Таблица подсказок или данных',
-                icon: 'fas fa-table'
+                icon: 'fa fa-table'
             },
             {
                 id: 'answer-text',
                 name: 'Текст ответа',
                 type: 'text',
                 description: 'Текст ответа или решения',
-                icon: 'fas fa-comment-dots'
+                icon: 'fa fa-comment'
             },
             {
                 id: 'board-illustration',
                 name: 'Иллюстрация',
                 type: 'image',
                 description: 'Изображение доски как иллюстрация',
-                icon: 'fas fa-image'
+                icon: 'fa fa-image'
             },
             {
                 id: 'audio-file',
                 name: 'Аудио-файл',
                 type: 'audio',
                 description: 'Аудиофайл для воспроизведения',
-                icon: 'fas fa-volume-up'
+                icon: 'fa fa-volume-up'
             },
             {
                 id: 'support-link',
                 name: 'Ссылка',
                 type: 'link',
                 description: 'Ссылка на дополнительные материалы',
-                icon: 'fas fa-link'
+                icon: 'fa fa-link'
             }
         ];
 
