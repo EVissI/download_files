@@ -599,18 +599,10 @@ class ContentEditor {
             .filter(el => !el.id.includes('boardLabel')) // Исключаем boardLabel
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
         
-        // Calculate center X position for table elements
-        let centerX;
-        if (typeof elementWidth === 'number' && elementWidth >= maxCanvasWidth - 100) {
-            // For full-width tables, align to left edge with small margin
-            centerX = 10;
-        } else if (typeof elementWidth === 'number') {
-            // For other elements, center them
-            centerX = (Math.min(canvasRect.width, maxCanvasWidth) - elementWidth) / 2;
-        } else {
-            // For auto elements, center them
-            centerX = 10;
-        }
+        // All elements now occupy full canvas width with margins
+        const elementMargin = 10;
+        const centerX = elementMargin;
+        const fullWidth = Math.min(canvasRect.width, maxCanvasWidth) - (elementMargin * 2);
         
         // Calculate vertical position with proper spacing
         const startY = 20; // Начальный отступ сверху
@@ -654,8 +646,9 @@ class ContentEditor {
         }
         
         return {
-            x: Math.max(10, centerX),
-            y: Math.max(startY, nextY)
+            x: centerX,
+            y: Math.max(startY, nextY),
+            width: fullWidth
         };
     }
 
@@ -671,29 +664,24 @@ class ContentEditor {
         const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
         
-        // Adjust element size for mobile cards
-        let defaultWidth, defaultHeight;
+        // All elements now occupy full canvas width with appropriate height
+        let defaultHeight;
         if (toolId === 'moveHintsTable') {
-            // Table elements occupy full canvas width
-            defaultWidth = this.isMobile() ? maxCanvasWidth - 20 : maxCanvasWidth - 50;
+            // Table elements have auto height
             defaultHeight = 'auto';
         } else {
-            defaultWidth = this.isMobile() ? Math.min(120, maxCanvasWidth - 40) : 200;
+            // Other elements have fixed height based on mobile/desktop
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
         }
         
-        // Position elements in vertical blocks with center alignment
-        const position = this.calculateVerticalPosition(defaultWidth, defaultHeight);
+        // Position elements in vertical blocks with full width
+        const position = this.calculateVerticalPosition(maxCanvasWidth, defaultHeight);
         
         element.style.left = position.x + 'px';
         element.style.top = position.y + 'px';
         
-        // Set width and height - handle auto for tables
-        if (defaultWidth === 'auto') {
-            element.style.width = 'auto';
-        } else {
-            element.style.width = defaultWidth + 'px';
-        }
+        // Set width to full canvas width and height
+        element.style.width = position.width + 'px';
         
         if (defaultHeight === 'auto') {
             element.style.height = 'auto';
@@ -1161,23 +1149,25 @@ class ContentEditor {
         const newId = `element_${this.elementIdCounter++}`;
         newElement.id = newId;
         
-        // Get appropriate dimensions for positioning
-        let elementWidth, elementHeight;
+        // Get appropriate dimensions for positioning - all elements now use full width
+        let elementHeight;
         if (element.classList.contains('table-element')) {
             // For table elements, use actual dimensions
-            elementWidth = element.offsetWidth;
             elementHeight = element.offsetHeight;
         } else {
-            // For other elements, use styled dimensions
-            elementWidth = parseInt(element.style.width) || 200;
+            // For other elements, use styled height or default
             elementHeight = parseInt(element.style.height) || 150;
         }
         
-        // Use new logic for positioning
-        const position = this.calculateVerticalPosition(elementWidth, elementHeight);
+        // Get canvas width for full-width positioning
+        const maxCanvasWidth = this.getMaxCanvasWidth();
+        
+        // Use new logic for positioning with full width
+        const position = this.calculateVerticalPosition(maxCanvasWidth, elementHeight);
         
         newElement.style.left = position.x + 'px';
         newElement.style.top = position.y + 'px';
+        newElement.style.width = position.width + 'px';
         
         // Обновляем контролы
         const controls = newElement.querySelector('.element-controls');
