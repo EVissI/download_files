@@ -181,10 +181,8 @@ class ContentEditor {
         
         element.classList.add('table-element');
         
-        // Force a reflow to ensure proper height calculation
-        setTimeout(() => {
-            element.offsetHeight;
-        }, 0);
+        // Don't force reflow here - let the natural layout handle positioning
+        // The positioning is already calculated in addElementToCanvas
     }
 
     updateTableContent(element, tableType) {
@@ -198,10 +196,6 @@ class ContentEditor {
                     <strong>Нет данных для таблицы</strong>
                 </div>
             `;
-            // Force reflow after content update
-            setTimeout(() => {
-                element.offsetHeight;
-            }, 0);
             return;
         }
         
@@ -220,10 +214,8 @@ class ContentEditor {
             `;
         }
         
-        // Force reflow after content update to ensure accurate height calculation
-        setTimeout(() => {
-            element.offsetHeight;
-        }, 0);
+        // Don't force reflow here to prevent repositioning
+        // The table will naturally expand to fit its content
     }
 
     createHintsTable(hints) {
@@ -621,6 +613,17 @@ class ContentEditor {
                 // Force a reflow to get accurate dimensions
                 existingEl.offsetHeight;
                 existingHeight = existingEl.offsetHeight || 200;
+                
+                // If table has no content yet, estimate height based on typical table structure
+                if (existingHeight < 50) {
+                    const table = existingEl.querySelector('table');
+                    if (table) {
+                        const rowCount = table.querySelectorAll('tr').length;
+                        existingHeight = Math.max(50, rowCount * 30); // Estimate 30px per row
+                    } else {
+                        existingHeight = 150; // Default for empty table
+                    }
+                }
             } else {
                 // For other elements, use the styled height or default
                 const styledHeight = parseInt(existingEl.style.height);
@@ -628,7 +631,14 @@ class ContentEditor {
             }
             
             // Check if the current element fits before this existing element
-            const currentElementHeight = elementHeight === 'auto' ? 150 : elementHeight;
+            let currentElementHeight;
+            if (elementHeight === 'auto') {
+                // For auto height elements (like tables), estimate height
+                currentElementHeight = 150; // Default estimate
+            } else {
+                currentElementHeight = elementHeight;
+            }
+            
             if (nextY + currentElementHeight + elementSpacing <= existingTop) {
                 break; // Found a gap
             }
@@ -638,7 +648,13 @@ class ContentEditor {
         }
         
         // Ensure the element doesn't go beyond canvas bounds
-        const currentElementHeight = elementHeight === 'auto' ? 150 : elementHeight;
+        let currentElementHeight;
+        if (elementHeight === 'auto') {
+            currentElementHeight = 150; // Default estimate for auto elements
+        } else {
+            currentElementHeight = elementHeight;
+        }
+        
         const maxY = Math.min(canvasRect.height, maxCanvasHeight) - currentElementHeight - 20;
         if (nextY > maxY) {
             // If we run out of space, start from the top with offset
