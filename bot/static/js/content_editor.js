@@ -489,76 +489,7 @@ class ContentEditor {
                     </div>
                 `).join('')}
             </div>
-            <div class="tools-input-section">
-                <input type="text" 
-                       class="tools-search-input" 
-                       placeholder="Поиск инструментов..." 
-                       oninput="contentEditor.filterTools(this.value)">
-            </div>
         `;
-    }
-
-    filterTools(searchTerm) {
-        const allTools = [
-            {
-                id: 'boardCanvas',
-                name: 'Доска с параметрами',
-                type: 'canvas',
-                description: 'Игровая доска с параметрами (манигейм/матч)',
-                icon: 'fas fa-chess-board'
-            },
-            {
-                id: 'question-text',
-                name: 'Текст вопроса',
-                type: 'text',
-                description: 'Текст вопроса для анализа',
-                icon: 'fas fa-question-circle'
-            },
-            {
-                id: 'moveHintsTable',
-                name: 'Таблица',
-                type: 'table',
-                description: 'Таблица подсказок или данных',
-                icon: 'fas fa-table'
-            },
-            {
-                id: 'answer-text',
-                name: 'Текст ответа',
-                type: 'text',
-                description: 'Текст ответа или решения',
-                icon: 'fas fa-comment-dots'
-            },
-            {
-                id: 'board-illustration',
-                name: 'Иллюстрация',
-                type: 'image',
-                description: 'Изображение доски как иллюстрация',
-                icon: 'fas fa-image'
-            },
-            {
-                id: 'audio-file',
-                name: 'Аудио-файл',
-                type: 'audio',
-                description: 'Аудиофайл для воспроизведения',
-                icon: 'fas fa-volume-up'
-            },
-            {
-                id: 'support-link',
-                name: 'Ссылка',
-                type: 'link',
-                description: 'Ссылка на дополнительные материалы',
-                icon: 'fas fa-link'
-            }
-        ];
-
-        const filteredTools = searchTerm.trim() === '' 
-            ? allTools 
-            : allTools.filter(tool => 
-                tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                tool.description.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-
-        this.renderTools(filteredTools);
     }
 
     selectTool(toolId) {

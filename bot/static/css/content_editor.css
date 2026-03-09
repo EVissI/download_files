@@ -120,6 +120,56 @@
     padding: 10px;
 }
 
+/* Новая сетка инструментов с иконками */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    gap: 8px;
+    padding: 10px;
+    overflow-y: auto;
+    max-height: 200px;
+}
+
+.tool-item-icon {
+    background: #3a3a3a;
+    border: 1px solid #505050;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    position: relative;
+}
+
+.tool-item-icon:hover {
+    background: #454545;
+    border-color: #667eea;
+    transform: translateY(-1px);
+}
+
+.tool-item-icon.selected {
+    background: #4a4a6e;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+.tool-item-icon i {
+    font-size: 16px;
+    color: #e0e0e0;
+    transition: color 0.2s ease;
+}
+
+.tool-item-icon:hover i {
+    color: #ffffff;
+}
+
+.tool-item-icon.selected i {
+    color: #ffffff;
+}
+
 .tool-item {
     background: #3a3a3a;
     border: 1px solid #505050;
