@@ -1927,6 +1927,13 @@ class ContentEditor {
                                 ${this.renderPresetColors()}
                             </div>
                             <div class="preset-controls">
+                                <div class="preset-mode-toggle">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="deleteModeCheckbox">
+                                        <span class="checkbox-custom"></span>
+                                        <span class="checkbox-text">Режим удаления</span>
+                                    </label>
+                                </div>
                                 <button class="add-preset-btn" onclick="contentEditor.addPresetColor()">
                                     <i class="fa fa-plus"></i> Добавить цвет
                                 </button>
@@ -1971,21 +1978,36 @@ class ContentEditor {
     renderPresetColors() {
         return this.presetColors.map((color, index) => `
             <div class="preset-color" style="background: ${color};" data-color="${color}" data-index="${index}">
-                <button class="preset-delete-btn" onclick="contentEditor.deletePresetColor(${index})" title="Удалить">
-                    <i class="fa fa-times"></i>
-                </button>
             </div>
         `).join('');
     }
 
     setupPresetColorHandlers() {
+        const deleteModeCheckbox = document.getElementById('deleteModeCheckbox');
+        
         document.querySelectorAll('.preset-color').forEach(preset => {
             preset.addEventListener('click', (e) => {
-                // Если клик не по кнопке удаления
-                if (!e.target.closest('.preset-delete-btn')) {
+                if (deleteModeCheckbox.checked) {
+                    // Режим удаления - удаляем цвет
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    this.deletePresetColor(index);
+                } else {
+                    // Обычный режим - выбираем цвет
                     const color = e.currentTarget.dataset.color;
                     document.getElementById('canvasBackgroundColor').value = color;
                     document.getElementById('canvasBackgroundText').value = color;
+                }
+            });
+        });
+        
+        // Добавляем обработчик для чекбокса режима удаления
+        deleteModeCheckbox.addEventListener('change', (e) => {
+            // Обновляем стиль цветов в зависимости от режима
+            document.querySelectorAll('.preset-color').forEach(color => {
+                if (e.target.checked) {
+                    color.classList.add('delete-mode');
+                } else {
+                    color.classList.remove('delete-mode');
                 }
             });
         });
