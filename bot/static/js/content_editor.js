@@ -1003,7 +1003,8 @@ class ContentEditor {
         
         if (allElements.length === 0) {
             // No elements - set minimum height
-            this.canvas.style.height = '0px';
+            this.canvas.style.minHeight = '400px';
+            this.canvas.style.paddingBottom = '20px';
             return;
         }
         
@@ -1016,9 +1017,38 @@ class ContentEditor {
             maxBottom = Math.max(maxBottom, bottom);
         });
         
-        // Add some padding at the bottom
-        const canvasHeight = maxBottom + 20;
-        this.canvas.style.height = canvasHeight + 'px';
+        // Set minimum height to accommodate all elements plus padding
+        const minHeight = Math.max(400, maxBottom + 40); // 40px padding at bottom
+        this.canvas.style.minHeight = minHeight + 'px';
+        this.canvas.style.paddingBottom = '40px';
+    }
+
+    scrollToElementIfNeeded(element) {
+        if (!element) return;
+        
+        // Get the canvas container (the scrollable element)
+        const canvasContainer = this.canvas.parentElement;
+        if (!canvasContainer) return;
+        
+        // Get element position relative to canvas
+        const elementRect = element.getBoundingClientRect();
+        const containerRect = canvasContainer.getBoundingClientRect();
+        
+        // Calculate if element is visible in the container
+        const elementBottom = elementRect.bottom - containerRect.top;
+        const containerHeight = containerRect.height;
+        
+        // If element is below the visible area, scroll to it
+        if (elementBottom > containerHeight) {
+            // Calculate scroll position to show the element at the bottom
+            const scrollPosition = elementBottom - containerHeight + 50; // 50px padding
+            
+            // Smooth scroll to the element
+            canvasContainer.scrollTo({
+                top: scrollPosition,
+                behavior: 'smooth'
+            });
+        }
     }
 
     addElementToCanvas(toolId) {
@@ -1105,7 +1135,12 @@ class ContentEditor {
             // Update canvas height
             this.updateCanvasHeight();
             
-            // Выделяем элемент
+            // Scroll to new element if it's at the bottom
+            setTimeout(() => {
+                this.scrollToElementIfNeeded(element);
+            }, 100);
+            
+            // Select element
             this.selectElement(element);
         };
         
