@@ -1666,13 +1666,72 @@ class ContentEditor {
     deleteElement(elementId) {
         const element = document.getElementById(elementId);
         if (element) {
+            // Get position of deleted element before removing
+            const deletedTop = parseInt(element.style.top);
+            const deletedHeight = element.offsetHeight;
+            
+            // Remove the element
             element.remove();
             this.elements = this.elements.filter(el => el.id !== elementId);
             
+            // Clear selection if deleted element was selected
             if (this.selectedElement && this.selectedElement.id === elementId) {
                 this.selectedElement = null;
                 this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
             }
+            
+            // Move elements below the deleted element up
+            this.moveElementsUpAfterDeletion(deletedTop, deletedHeight);
+            
+            // Adjust canvas height if needed
+            this.adjustCanvasHeightAfterDeletion();
+        }
+    }
+
+    moveElementsUpAfterDeletion(deletedTop, deletedHeight) {
+        // Get all elements sorted by their top position
+        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
+            .filter(el => !el.id.includes('boardLabel'))
+            .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
+        
+        // Find elements that were below the deleted element and move them up
+        allElements.forEach(element => {
+            const elementTop = parseInt(element.style.top);
+            
+            // If this element was below the deleted element, move it up
+            if (elementTop > deletedTop) {
+                const newTop = elementTop - deletedHeight;
+                element.style.top = Math.max(0, newTop) + 'px';
+            }
+        });
+    }
+
+    adjustCanvasHeightAfterDeletion() {
+        // Get all elements to determine if canvas can be shrunk
+        const allElements = this.canvas.querySelectorAll('.canvas-element');
+        
+        if (allElements.length === 0) {
+            // No elements left, reset to minimum height
+            this.canvas.style.height = '400px';
+            return;
+        }
+        
+        // Find the bottom-most element
+        const lastElement = Array.from(allElements).reduce((last, current) => {
+            const lastBottom = parseInt(last.style.top) + last.offsetHeight;
+            const currentBottom = parseInt(current.style.top) + current.offsetHeight;
+            return currentBottom > lastBottom ? current : last;
+        });
+        
+        const maxBottom = parseInt(lastElement.style.top) + lastElement.offsetHeight;
+        const minCanvasHeight = 400;
+        const requiredHeight = Math.max(minCanvasHeight, maxBottom + 40); // 40px padding
+        
+        // Only shrink if the canvas is significantly larger than needed
+        const currentHeight = this.canvas.offsetHeight;
+        if (currentHeight > requiredHeight + 100) { // 100px threshold to avoid constant resizing
+            this.canvas.style.height = requiredHeight + 'px';
+            console.log(`Canvas shrunk to ${requiredHeight}px after deletion`);
         }
     }
 
