@@ -710,37 +710,52 @@ class ContentEditor {
         
         // Get canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
-        const maxCanvasWidth = this.getMaxCanvasWidth();
-        const maxCanvasHeight = this.getMaxCanvasHeight();
+        const canvasWidth = canvasRect.width;
         
-        // Calculate position for image element
-        const position = this.calculateVerticalPosition(canvasRect.width, 200); // Default height 200px
+        // Create image to get natural dimensions
+        const img = new Image();
+        img.onload = () => {
+            // Calculate smart height based on aspect ratio
+            const aspectRatio = img.naturalHeight / img.naturalWidth;
+            const smartHeight = Math.max(100, Math.min(600, canvasWidth * aspectRatio));
+            
+            // Calculate position for image element
+            const position = this.calculateVerticalPosition(canvasWidth, smartHeight);
+            
+            element.style.left = position.x + 'px';
+            element.style.top = position.y + 'px';
+            element.style.width = position.width + 'px';
+            element.style.height = smartHeight + 'px';
+            
+            // Add image content with proper styling
+            element.innerHTML = `
+                <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: contain;" />
+            `;
+            
+            // Add controls
+            this.addElementControls(element);
+            
+            // Add to canvas
+            this.canvas.appendChild(element);
+            
+            // Save to elements array
+            this.elements.push({
+                id: elementId,
+                toolId: 'upload-image',
+                element: element
+            });
+            
+            // Select element
+            this.selectElement(element);
+        };
         
-        element.style.left = position.x + 'px';
-        element.style.top = position.y + 'px';
-        element.style.width = position.width + 'px';
-        element.style.height = '200px'; // Default height
+        img.onerror = () => {
+            console.error('Ошибка загрузки изображения');
+            alert('Не удалось загрузить изображение');
+        };
         
-        // Add image content
-        element.innerHTML = `
-            <img src="${imageUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-        `;
-        
-        // Add controls
-        this.addElementControls(element);
-        
-        // Add to canvas
-        this.canvas.appendChild(element);
-        
-        // Save to elements array
-        this.elements.push({
-            id: elementId,
-            toolId: 'upload-image',
-            element: element
-        });
-        
-        // Select element
-        this.selectElement(element);
+        // Start loading the image
+        img.src = imageUrl;
     }
 
     toggleBoardCanvas(toolId) {
@@ -1519,6 +1534,16 @@ class ContentEditor {
         if (element.classList.contains('table-element')) {
             // For table elements, use actual dimensions
             elementHeight = element.offsetHeight;
+        } else if (element.dataset.toolId === 'upload-image') {
+            // For uploaded images, recalculate smart height based on current canvas width
+            const img = element.querySelector('img');
+            if (img && img.naturalWidth && img.naturalHeight) {
+                const canvasRect = this.canvas.getBoundingClientRect();
+                const aspectRatio = img.naturalHeight / img.naturalWidth;
+                elementHeight = Math.max(100, Math.min(600, canvasRect.width * aspectRatio));
+            } else {
+                elementHeight = parseInt(element.style.height) || 200;
+            }
         } else {
             // For other elements, use styled height or default
             elementHeight = parseInt(element.style.height) || 150;
@@ -1597,12 +1622,27 @@ class ContentEditor {
             const toolId = element.dataset.toolId;
             
             // Special handling for canvas/image elements
-            if (toolId === 'boardCanvas' || toolId === 'board-illustration' || toolId === 'upload-image') {
+            if (toolId === 'boardCanvas' || toolId === 'board-illustration') {
                 const canvasOrImg = element.querySelector('canvas, img');
                 if (canvasOrImg) {
                     canvasOrImg.style.maxWidth = fullWidth + 'px';
                     canvasOrImg.style.width = '100%';
                     canvasOrImg.style.height = 'auto';
+                }
+            }
+            
+            // Special handling for uploaded images - recalculate smart height
+            if (toolId === 'upload-image') {
+                const img = element.querySelector('img');
+                if (img && img.naturalWidth && img.naturalHeight) {
+                    // Recalculate smart height based on new canvas width
+                    const aspectRatio = img.naturalHeight / img.naturalWidth;
+                    const smartHeight = Math.max(100, Math.min(600, fullWidth * aspectRatio));
+                    
+                    element.style.height = smartHeight + 'px';
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'contain';
                 }
             }
             
