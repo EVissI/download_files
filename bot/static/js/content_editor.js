@@ -30,40 +30,12 @@ class ContentEditor {
         return 800; // Desktop default
     }
 
-    initializeCanvas() {
-        // Set initial canvas height to 0
-        this.canvas.style.height = '0px';
-        this.updateCanvasHeight();
-    }
-
-    updateCanvasHeight() {
-        // Get all canvas elements
-        const elements = this.canvas.querySelectorAll('.canvas-element');
-        
-        if (elements.length === 0) {
-            // If no elements, set height to 0
-            this.canvas.style.height = '0px';
-            return;
-        }
-        
-        // Find the bottom-most element
-        let maxBottom = 0;
-        elements.forEach(element => {
-            const top = parseInt(element.style.top) || 0;
-            const height = element.offsetHeight || 0;
-            const bottom = top + height;
-            maxBottom = Math.max(maxBottom, bottom);
-        });
-        
-        // Add some padding at the bottom
-        const canvasHeight = maxBottom + 20;
-        this.canvas.style.height = canvasHeight + 'px';
-    }
-
     getMaxCanvasHeight() {
-        // For dynamic canvas, we don't need a max height constraint
-        // Return a large number to effectively remove the limit
-        return 999999;
+        if (this.isMobile()) {
+            // For mobile, return standard mobile card height
+            return 640;
+        }
+        return 600; // Desktop default
     }
 
     init() {
@@ -71,7 +43,6 @@ class ContentEditor {
         this.loadTools();
         this.setupEventListeners();
         this.setupCanvasEvents();
-        this.initializeCanvas();
     }
 
     createModal() {
@@ -674,9 +645,6 @@ class ContentEditor {
         // Add to canvas
         this.canvas.appendChild(element);
         
-        // Update canvas height
-        this.updateCanvasHeight();
-        
         // Setup audio functionality
         this.setupAudioElement(element, audioUrl, file);
         
@@ -769,9 +737,6 @@ class ContentEditor {
             
             // Add to canvas
             this.canvas.appendChild(element);
-            
-            // Update canvas height
-            this.updateCanvasHeight();
             
             // Save to elements array
             this.elements.push({
@@ -869,9 +834,6 @@ class ContentEditor {
         // Добавляем на холст
         this.canvas.appendChild(boardLabel);
         
-        // Update canvas height after adding label
-        this.updateCanvasHeight();
-        
         // Запускаем анимацию появления в следующем кадре
         requestAnimationFrame(() => {
             boardLabel.classList.add('show');
@@ -889,8 +851,6 @@ class ContentEditor {
             setTimeout(() => {
                 if (boardLabel.parentNode) {
                     boardLabel.remove();
-                    // Update canvas height after removing label
-                    this.updateCanvasHeight();
                 }
             }, 300);
         }
@@ -1044,9 +1004,6 @@ class ContentEditor {
                 nextY += elementHeight + elementSpacing;
             }
         });
-        
-        // Update canvas height after repositioning
-        this.updateCanvasHeight();
     }
 
     addElementToCanvas(toolId) {
@@ -1111,11 +1068,6 @@ class ContentEditor {
             
             // Добавляем на холст
             this.canvas.appendChild(element);
-            
-            // Update canvas height
-            setTimeout(() => {
-                this.updateCanvasHeight();
-            }, 100); // Small delay to ensure element is rendered
             
             // Debug: Log final position for non-table elements
             if (toolId !== 'moveHintsTable') {
@@ -1680,9 +1632,6 @@ class ContentEditor {
             element.remove();
             this.elements = this.elements.filter(el => el.id !== elementId);
             
-            // Update canvas height after deletion
-            this.updateCanvasHeight();
-            
             if (this.selectedElement && this.selectedElement.id === elementId) {
                 this.selectedElement = null;
                 this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
@@ -1763,9 +1712,6 @@ class ContentEditor {
         
         // After updating all element sizes, recalculate positions for all elements
         this.recalculateAllElementPositions();
-        
-        // Update canvas height after resize
-        this.updateCanvasHeight();
     }
 
     recalculateAllElementPositions() {
@@ -1803,9 +1749,6 @@ class ContentEditor {
             // Move to next position
             nextY += elementHeight + elementSpacing;
         });
-        
-        // Update canvas height after recalculating positions
-        this.updateCanvasHeight();
     }
 
     setupCanvasEvents() {
