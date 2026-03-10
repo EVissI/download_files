@@ -655,9 +655,6 @@ class ContentEditor {
             element: element
         });
         
-        // Update canvas height
-        this.updateCanvasHeight();
-        
         // Select element
         this.selectElement(element);
     }
@@ -734,6 +731,23 @@ class ContentEditor {
             element.innerHTML = `
                 <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: contain;" />
             `;
+            
+            // Add controls
+            this.addElementControls(element);
+            
+            // Add to canvas
+            this.canvas.appendChild(element);
+            
+            // Save to elements array
+            this.elements.push({
+                id: elementId,
+                toolId: 'upload-image',
+                element: element
+            });
+            
+            // Reposition elements below the new image
+            this.repositionElementsBelow(elementId);
+            
             // Select element
             this.selectElement(element);
         };
@@ -990,65 +1004,6 @@ class ContentEditor {
                 nextY += elementHeight + elementSpacing;
             }
         });
-        
-        // Update canvas height after repositioning
-        this.updateCanvasHeight();
-    }
-
-    updateCanvasHeight() {
-        if (!this.canvas) return;
-        
-        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
-            .filter(el => !el.id.includes('boardLabel'));
-        
-        if (allElements.length === 0) {
-            // No elements - set minimum height
-            this.canvas.style.minHeight = '400px';
-            this.canvas.style.paddingBottom = '20px';
-            return;
-        }
-        
-        // Find the bottom-most element
-        let maxBottom = 0;
-        allElements.forEach(element => {
-            const top = parseInt(element.style.top) || 0;
-            const height = element.offsetHeight;
-            const bottom = top + height;
-            maxBottom = Math.max(maxBottom, bottom);
-        });
-        
-        // Set minimum height to accommodate all elements plus padding
-        const minHeight = Math.max(400, maxBottom + 40); // 40px padding at bottom
-        this.canvas.style.minHeight = minHeight + 'px';
-        this.canvas.style.paddingBottom = '40px';
-    }
-
-    scrollToElementIfNeeded(element) {
-        if (!element) return;
-        
-        // Get the canvas container (the scrollable element)
-        const canvasContainer = this.canvas.parentElement;
-        if (!canvasContainer) return;
-        
-        // Get element position relative to canvas
-        const elementRect = element.getBoundingClientRect();
-        const containerRect = canvasContainer.getBoundingClientRect();
-        
-        // Calculate if element is visible in the container
-        const elementBottom = elementRect.bottom - containerRect.top;
-        const containerHeight = containerRect.height;
-        
-        // If element is below the visible area, scroll to it
-        if (elementBottom > containerHeight) {
-            // Calculate scroll position to show the element at the bottom
-            const scrollPosition = elementBottom - containerHeight + 50; // 50px padding
-            
-            // Smooth scroll to the element
-            canvasContainer.scrollTo({
-                top: scrollPosition,
-                behavior: 'smooth'
-            });
-        }
     }
 
     addElementToCanvas(toolId) {
@@ -1132,15 +1087,7 @@ class ContentEditor {
                 element: element
             });
             
-            // Update canvas height
-            this.updateCanvasHeight();
-            
-            // Scroll to new element if it's at the bottom
-            setTimeout(() => {
-                this.scrollToElementIfNeeded(element);
-            }, 100);
-            
-            // Select element
+            // Выделяем элемент
             this.selectElement(element);
         };
         
@@ -1685,9 +1632,6 @@ class ContentEditor {
             element.remove();
             this.elements = this.elements.filter(el => el.id !== elementId);
             
-            // Update canvas height after deletion
-            this.updateCanvasHeight();
-            
             if (this.selectedElement && this.selectedElement.id === elementId) {
                 this.selectedElement = null;
                 this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
@@ -1768,7 +1712,6 @@ class ContentEditor {
         
         // After updating all element sizes, recalculate positions for all elements
         this.recalculateAllElementPositions();
-        // Note: updateCanvasHeight is already called inside recalculateAllElementPositions
     }
 
     recalculateAllElementPositions() {
@@ -1806,9 +1749,6 @@ class ContentEditor {
             // Move to next position
             nextY += elementHeight + elementSpacing;
         });
-        
-        // Update canvas height after recalculation
-        this.updateCanvasHeight();
     }
 
     setupCanvasEvents() {
