@@ -1406,12 +1406,6 @@ class ContentEditor {
                 ` : ''}
                 ${element.classList.contains('text-element') ? `
                 <div class="property-item">
-                    <label>Ширина элемента:</label>
-                    <input type="range" id="propElementWidth" min="100" max="${maxElementWidth}" value="${parseInt(element.style.width) || canvasRect.width}" 
-                           oninput="contentEditor.updateElementProperty('elementWidth', this.value + 'px')">
-                    <div class="property-value">${parseInt(element.style.width) || canvasRect.width}px</div>
-                </div>
-                <div class="property-item">
                     <label>Размер шрифта:</label>
                     <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}" 
                            oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
@@ -1424,12 +1418,6 @@ class ContentEditor {
                 </div>
                 ` : ''}
                 ${element.classList.contains('link-element') ? `
-                <div class="property-item">
-                    <label>Ширина элемента:</label>
-                    <input type="range" id="propElementWidth" min="100" max="${maxElementWidth}" value="${parseInt(element.style.width) || canvasRect.width}" 
-                           oninput="contentEditor.updateElementProperty('elementWidth', this.value + 'px')">
-                    <div class="property-value">${parseInt(element.style.width) || canvasRect.width}px</div>
-                </div>
                 <div class="property-item">
                     <label>Размер шрифта:</label>
                     <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}" 
@@ -1504,16 +1492,6 @@ class ContentEditor {
         if (!this.selectedElement) return;
         
         switch(property) {
-            case 'elementWidth':
-                this.selectedElement.style.width = value;
-                // Update display value
-                const widthDisplay = document.querySelector('#propElementWidth + .property-value');
-                if (widthDisplay) {
-                    widthDisplay.textContent = parseInt(value) + 'px';
-                }
-                // Reposition elements below if width changed significantly
-                this.repositionElementsBelow(this.selectedElement.id);
-                break;
             case 'audioName':
                 this.selectedElement.dataset.audioName = value;
                 const audioNameEl = this.selectedElement.querySelector('.audio-name');
