@@ -917,6 +917,8 @@
     opacity: 0;
     transition: all 0.2s ease;
     z-index: 10;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .preset-color:hover .preset-delete-btn {
