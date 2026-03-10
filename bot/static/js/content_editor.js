@@ -43,6 +43,7 @@ class ContentEditor {
         this.loadTools();
         this.setupEventListeners();
         this.setupCanvasEvents();
+        this.setupPropertiesPanelHandle();
     }
 
     createModal() {
@@ -72,7 +73,16 @@ class ContentEditor {
                             </div>
 
                             <div class="properties-panel">
-                                <h3>Свойства</h3>
+                                <div class="properties-panel-header">
+                                    <h3>Свойства</h3>
+                                    <div class="properties-panel-handle" title="Зажмите для выдвижения панели вверх">
+                                        <div class="handle-dots">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div id="propertiesContent">
                                     <p>Выберите элемент для редактирования</p>
                                 </div>
@@ -1911,6 +1921,103 @@ class ContentEditor {
         
         // Force refresh
         this.forceRefreshContent();
+    }
+
+    setupPropertiesPanelHandle() {
+        const handle = document.querySelector('.properties-panel-handle');
+        const propertiesPanel = document.querySelector('.properties-panel');
+        
+        if (!handle || !propertiesPanel) return;
+        
+        let isPressed = false;
+        let pressTimer = null;
+        let isExpanded = false;
+        
+        // Обработка нажатия и удержания
+        handle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isPressed = true;
+            
+            // Добавляем визуальную обратную связь при нажатии
+            handle.classList.add('pressing');
+            
+            // Запускаем таймер для определения зажатия
+            pressTimer = setTimeout(() => {
+                if (isPressed) {
+                    // Панель зажата - выдвигаем/убираем
+                    isExpanded = !isExpanded;
+                    propertiesPanel.classList.toggle('expanded', isExpanded);
+                    
+                    // Визуальная обратная связь
+                    handle.style.transform = isExpanded ? 'scale(1.1)' : 'scale(0.9)';
+                    
+                    // Добавляем вибрацию если доступно
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                    
+                    setTimeout(() => {
+                        handle.style.transform = '';
+                    }, 200);
+                }
+            }, 300); // 300ms для определения зажатия
+        });
+        
+        // Обработка отпускания
+        document.addEventListener('mouseup', () => {
+            isPressed = false;
+            handle.classList.remove('pressing');
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+            }
+        });
+        
+        // Обработка ухода мыши с ручки
+        handle.addEventListener('mouseleave', () => {
+            if (pressTimer && isPressed) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+                isPressed = false;
+                handle.classList.remove('pressing');
+            }
+        });
+        
+        // Добавляем поддержку touch событий для мобильных устройств
+        handle.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isPressed = true;
+            
+            // Добавляем визуальную обратную связь при нажатии
+            handle.classList.add('pressing');
+            
+            pressTimer = setTimeout(() => {
+                if (isPressed) {
+                    isExpanded = !isExpanded;
+                    propertiesPanel.classList.toggle('expanded', isExpanded);
+                    
+                    handle.style.transform = isExpanded ? 'scale(1.1)' : 'scale(0.9)';
+                    
+                    // Добавляем вибрацию если доступно
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                    
+                    setTimeout(() => {
+                        handle.style.transform = '';
+                    }, 200);
+                }
+            }, 300);
+        });
+        
+        document.addEventListener('touchend', () => {
+            isPressed = false;
+            handle.classList.remove('pressing');
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+            }
+        });
     }
 }
 
