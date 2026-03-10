@@ -745,6 +745,9 @@ class ContentEditor {
                 element: element
             });
             
+            // Reposition elements below the new image
+            this.repositionElementsBelow(elementId);
+            
             // Select element
             this.selectElement(element);
         };
@@ -956,6 +959,51 @@ class ContentEditor {
             y: Math.max(startY, nextY),
             width: fullWidth
         };
+    }
+
+    repositionElementsBelow(elementId) {
+        const changedElement = document.getElementById(elementId);
+        if (!changedElement) return;
+        
+        const changedTop = parseInt(changedElement.style.top);
+        const changedHeight = changedElement.offsetHeight;
+        const changedBottom = changedTop + changedHeight;
+        
+        // Get all elements sorted by their top position
+        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
+            .filter(el => el.id !== elementId && !el.id.includes('boardLabel'))
+            .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
+        
+        // Find elements that need to be repositioned (those below the changed element)
+        const elementsBelow = allElements.filter(el => {
+            const elementTop = parseInt(el.style.top);
+            return elementTop >= changedTop;
+        });
+        
+        // Reposition elements below
+        let nextY = changedBottom;
+        const elementSpacing = 0; // No spacing between elements
+        
+        elementsBelow.forEach(element => {
+            const currentTop = parseInt(element.style.top);
+            let elementHeight;
+            
+            // Get actual height of element
+            if (element.classList.contains('table-element')) {
+                elementHeight = element.offsetHeight;
+                if (elementHeight < 50) {
+                    elementHeight = 100; // Default for empty tables
+                }
+            } else {
+                elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
+            }
+            
+            // Only reposition if this element was actually below
+            if (currentTop >= changedTop) {
+                element.style.top = nextY + 'px';
+                nextY += elementHeight + elementSpacing;
+            }
+        });
     }
 
     addElementToCanvas(toolId) {
@@ -1635,6 +1683,8 @@ class ContentEditor {
             if (toolId === 'upload-image') {
                 const img = element.querySelector('img');
                 if (img && img.naturalWidth && img.naturalHeight) {
+                    const oldHeight = parseInt(element.style.height);
+                    
                     // Recalculate smart height based on new canvas width
                     const aspectRatio = img.naturalHeight / img.naturalWidth;
                     const smartHeight = Math.max(100, Math.min(600, fullWidth * aspectRatio));
@@ -1643,6 +1693,11 @@ class ContentEditor {
                     img.style.width = '100%';
                     img.style.height = '100%';
                     img.style.objectFit = 'contain';
+                    
+                    // If height changed, reposition elements below
+                    if (oldHeight !== smartHeight) {
+                        this.repositionElementsBelow(element.id);
+                    }
                 }
             }
             
