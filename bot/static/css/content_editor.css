@@ -294,127 +294,16 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: relative;
-    transition: transform 0.3s ease, height 0.3s ease;
 }
 
-/* Заголовок панели свойств с ручкой */
-.properties-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.properties-panel h3 {
     padding: 15px;
     background: #383838;
     border-bottom: 1px solid #404040;
-    position: relative;
-}
-
-.properties-panel-header h3 {
     font-size: 14px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #a0a0a0;
-    margin: 0;
-    flex: 1;
-}
-
-/* Выдвижная ручка */
-.properties-panel-handle {
-    width: 40px;
-    height: 20px;
-    background: #4a4a4a;
-    border-radius: 10px;
-    cursor: grab;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    user-select: none;
-    position: relative;
-    border: 1px solid #555;
-}
-
-.properties-panel-handle:hover {
-    background: #5a5a5a;
-    transform: scale(1.05);
-    border-color: #667eea;
-}
-
-.properties-panel-handle:active {
-    cursor: grabbing;
-    background: #667eea;
-    transform: scale(0.95);
-    border-color: #7a8fff;
-}
-
-.properties-panel-handle.pressing {
-    background: #667eea;
-    border-color: #7a8fff;
-    animation: pulse 0.5s ease-in-out infinite;
-}
-
-.handle-dots {
-    display: flex;
-    gap: 3px;
-    align-items: center;
-}
-
-.handle-dots span {
-    width: 4px;
-    height: 4px;
-    background: #888;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-}
-
-.properties-panel-handle:hover .handle-dots span {
-    background: #aaa;
-}
-
-.properties-panel-handle:active .handle-dots span,
-.properties-panel-handle.pressing .handle-dots span {
-    background: #fff;
-}
-
-/* Выдвинутое состояние панели */
-.properties-panel.expanded {
-    transform: translateY(-200px);
-    height: auto;
-    z-index: 1000;
-}
-
-.properties-panel.expanded .properties-panel-handle {
-    background: #667eea;
-    border-color: #7a8fff;
-}
-
-.properties-panel.expanded .handle-dots span {
-    background: #fff;
-}
-
-/* Затемнение области под выдвиннутой панелью */
-.properties-panel.expanded::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    height: 200px;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
-    pointer-events: none;
-}
-
-/* Анимация для индикатора зажатия */
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.8;
-        transform: scale(1.05);
-    }
 }
 
 #propertiesContent {
