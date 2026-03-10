@@ -868,69 +868,6 @@ class ContentEditor {
         }
     }
 
-    moveElementsUpAfterHeightChange(elementId, heightDifference) {
-        const changedElement = document.getElementById(elementId);
-        if (!changedElement) return;
-        
-        const changedTop = parseInt(changedElement.style.top);
-        const changedHeight = changedElement.offsetHeight;
-        const changedBottom = changedTop + changedHeight;
-        
-        // Get all elements sorted by their top position
-        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
-            .filter(el => el.id !== elementId && !el.id.includes('boardLabel'))
-            .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
-        
-        // Find elements that need to be moved up (those below the changed element)
-        const elementsBelow = allElements.filter(el => {
-            const elementTop = parseInt(el.style.top);
-            return elementTop > changedTop; // Elements that were below the original position
-        });
-        
-        // Move elements up by the height difference
-        elementsBelow.forEach(element => {
-            const currentTop = parseInt(element.style.top);
-            const newTop = currentTop - heightDifference;
-            element.style.top = Math.max(0, newTop) + 'px';
-        });
-        
-        // Adjust canvas height if needed after moving elements up
-        this.adjustCanvasHeightAfterHeightChange();
-    }
-
-    adjustCanvasHeightAfterHeightChange() {
-        // Get all elements to determine new canvas height
-        const allElements = this.canvas.querySelectorAll('.canvas-element');
-        
-        if (allElements.length === 0) {
-            // No elements left, reset to minimum height
-            this.canvas.style.height = '0px';
-            return;
-        }
-        
-        // Find the bottom-most element
-        const lastElement = Array.from(allElements).reduce((last, current) => {
-            const lastBottom = parseInt(last.style.top) + last.offsetHeight;
-            const currentBottom = parseInt(current.style.top) + current.offsetHeight;
-            return currentBottom > lastBottom ? current : last;
-        });
-        
-        const maxBottom = parseInt(lastElement.style.top) + lastElement.offsetHeight;
-        const minCanvasHeight = 0;
-        const requiredHeight = Math.max(minCanvasHeight, maxBottom + 40); // 40px padding
-        
-        // Only shrink if the canvas is significantly larger than needed
-        const currentHeight = this.canvas.offsetHeight;
-        if (currentHeight > requiredHeight + 100) { // 100px threshold to avoid constant resizing
-            this.canvas.style.height = requiredHeight + 'px';
-            console.log(`Canvas adjusted to ${requiredHeight}px after height change`);
-        } else if (requiredHeight > currentHeight) {
-            // Expand if needed
-            this.canvas.style.height = requiredHeight + 'px';
-            console.log(`Canvas expanded to ${requiredHeight}px after height change`);
-        }
-    }
-
     expandCanvasIfNeeded(elementBottom) {
         const canvasRect = this.canvas.getBoundingClientRect();
         const currentCanvasHeight = this.canvas.offsetHeight;
@@ -1117,9 +1054,6 @@ class ContentEditor {
         if (toolId === 'moveHintsTable') {
             // Table elements have auto height
             defaultHeight = 'auto';
-        } else if (toolId === 'support-link') {
-            // Link elements have smaller default height
-            defaultHeight = this.isMobile() ? 60 : 80;
         } else {
             // Other elements have fixed height based on mobile/desktop
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
@@ -1472,12 +1406,6 @@ class ContentEditor {
                 ` : ''}
                 ${element.classList.contains('text-element') ? `
                 <div class="property-item">
-                    <label>Высота элемента:</label>
-                    <input type="range" id="propElementHeight" min="50" max="${maxElementHeight}" value="${parseInt(element.style.height) || 150}" 
-                           oninput="contentEditor.updateElementProperty('elementHeight', this.value + 'px')">
-                    <div class="property-value">${parseInt(element.style.height) || 150}px</div>
-                </div>
-                <div class="property-item">
                     <label>Размер шрифта:</label>
                     <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}" 
                            oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
@@ -1490,12 +1418,6 @@ class ContentEditor {
                 </div>
                 ` : ''}
                 ${element.classList.contains('link-element') ? `
-                <div class="property-item">
-                    <label>Высота элемента:</label>
-                    <input type="range" id="propElementHeight" min="50" max="${maxElementHeight}" value="${parseInt(element.style.height) || 80}" 
-                           oninput="contentEditor.updateElementProperty('elementHeight', this.value + 'px')">
-                    <div class="property-value">${parseInt(element.style.height) || 80}px</div>
-                </div>
                 <div class="property-item">
                     <label>Размер шрифта:</label>
                     <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}" 
@@ -1570,34 +1492,6 @@ class ContentEditor {
         if (!this.selectedElement) return;
         
         switch(property) {
-            case 'elementHeight':
-                const oldHeight = this.selectedElement.offsetHeight;
-                const oldTop = parseInt(this.selectedElement.style.top);
-                
-                // Set new height
-                this.selectedElement.style.height = value;
-                
-                // Update display value
-                const heightDisplay = document.querySelector('#propElementHeight + .property-value');
-                if (heightDisplay) {
-                    heightDisplay.textContent = value;
-                }
-                
-                // Reposition elements below if height increased
-                const newHeight = parseInt(value);
-                if (newHeight > oldHeight) {
-                    this.repositionElementsBelow(this.selectedElement.id);
-                } else if (newHeight < oldHeight) {
-                    // If height decreased, move elements up
-                    this.moveElementsUpAfterHeightChange(this.selectedElement.id, oldHeight - newHeight);
-                }
-                
-                // Update canvas height if needed
-                setTimeout(() => {
-                    const elementBottom = parseInt(this.selectedElement.style.top) + this.selectedElement.offsetHeight;
-                    this.expandCanvasIfNeeded(elementBottom);
-                }, 100);
-                break;
             case 'audioName':
                 this.selectedElement.dataset.audioName = value;
                 const audioNameEl = this.selectedElement.querySelector('.audio-name');
