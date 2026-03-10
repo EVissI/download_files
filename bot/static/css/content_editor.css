@@ -955,9 +955,6 @@
 }
 
 .checkbox-custom {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #667eea;
     border-radius: 4px;
     background: #1a1a1a;
     position: relative;
@@ -981,6 +978,7 @@
 }
 
 .checkbox-text {
+    padding: 10px;
     transition: color 0.2s ease;
 }
 
