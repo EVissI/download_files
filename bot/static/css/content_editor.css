@@ -738,3 +738,122 @@
         transform: scale(0.9);
     }
 }
+
+/* Модальное окно настроек */
+.settings-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.settings-container {
+    position: relative;
+    background: #2d2d2d;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    width: 400px;
+    max-width: 90vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #383838;
+    border-bottom: 1px solid #404040;
+    color: #e0e0e0;
+}
+
+.settings-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.settings-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.setting-group {
+    margin-bottom: 20px;
+}
+
+.setting-group label {
+    display: block;
+    font-size: 14px;
+    color: #e0e0e0;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.color-input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.color-input-group input[type="color"] {
+    width: 60px;
+    height: 40px;
+    background: #3a3a3a;
+    border: 1px solid #505050;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.color-input-group input[type="text"] {
+    flex: 1;
+    background: #3a3a3a;
+    border: 1px solid #505050;
+    border-radius: 6px;
+    color: #e0e0e0;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+}
+
+.color-input-group input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+.color-input-group input[type="text"]::placeholder {
+    color: #888;
+}
+
+.settings-footer {
+    padding: 20px;
+    background: #383838;
+    border-top: 1px solid #404040;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.settings-footer .action-btn {
+    min-width: 80px;
+}
