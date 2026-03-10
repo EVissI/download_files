@@ -1712,7 +1712,7 @@ class ContentEditor {
         
         if (allElements.length === 0) {
             // No elements left, reset to minimum height
-            this.canvas.style.height = '400px';
+            this.canvas.style.height = '0px';
             return;
         }
         
@@ -1724,7 +1724,7 @@ class ContentEditor {
         });
         
         const maxBottom = parseInt(lastElement.style.top) + lastElement.offsetHeight;
-        const minCanvasHeight = 400;
+        const minCanvasHeight = 0;
         const requiredHeight = Math.max(minCanvasHeight, maxBottom + 40); // 40px padding
         
         // Only shrink if the canvas is significantly larger than needed
