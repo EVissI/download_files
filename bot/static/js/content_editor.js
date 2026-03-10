@@ -869,18 +869,16 @@ class ContentEditor {
     }
 
     expandCanvasIfNeeded(elementBottom) {
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const currentCanvasHeight = this.canvas.offsetHeight;
-        const maxCanvasHeight = this.getMaxCanvasHeight();
+        // Instead of expanding the canvas, we'll ensure it has proper scrolling
+        // This prevents layout changes to toolbar and properties panel
+        const canvasHeight = this.canvas.offsetHeight;
         
-        // Calculate required height with some padding
-        const requiredHeight = elementBottom + 40; // 40px padding at bottom
-        const newHeight = Math.min(requiredHeight, maxCanvasHeight);
-        
-        // Only expand if needed and within limits
-        if (newHeight > currentCanvasHeight && newHeight <= maxCanvasHeight) {
-            this.canvas.style.height = newHeight + 'px';
-            console.log(`Canvas expanded to ${newHeight}px`);
+        // If content exceeds canvas height, ensure scrolling works properly
+        if (elementBottom > canvasHeight) {
+            // Set a minimum content height to ensure scrolling
+            const contentHeight = Math.max(elementBottom + 40, canvasHeight);
+            this.canvas.style.minHeight = contentHeight + 'px';
+            console.log(`Canvas content height set to ${contentHeight}px for proper scrolling`);
         }
     }
 
