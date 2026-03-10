@@ -470,6 +470,13 @@ class ContentEditor {
                 type: 'link',
                 description: 'Ссылка на дополнительные материалы',
                 icon: 'fa fa-link'
+            },
+            {
+                id: 'canvas-settings',
+                name: 'Настройки',
+                type: 'settings',
+                description: 'Настройки фона канваса',
+                icon: 'fa fa-cog'
             }
         ];
 
@@ -507,6 +514,12 @@ class ContentEditor {
         // Особое поведение для audio-file - прямая загрузка файла
         if (toolId === 'audio-file') {
             this.handleDirectAudioUpload();
+            return;
+        }
+
+        // Особое поведение для canvas-settings - открытие модального окна настроек
+        if (toolId === 'canvas-settings') {
+            this.openCanvasSettingsModal();
             return;
         }
 
@@ -1884,6 +1897,110 @@ class ContentEditor {
         });
         this.selectedElement = null;
         this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
+    }
+
+    openCanvasSettingsModal() {
+        // Создаем модальное окно настроек фона канваса
+        const modalHTML = `
+            <div id="canvasSettingsModal" class="canvas-settings-modal" style="display: flex;">
+                <div class="canvas-settings-overlay" onclick="contentEditor.closeCanvasSettingsModal()"></div>
+                <div class="canvas-settings-container">
+                    <div class="canvas-settings-header">
+                        <h3>Настройки фона канваса</h3>
+                        <button class="close-btn" onclick="contentEditor.closeCanvasSettingsModal()">&times;</button>
+                    </div>
+                    <div class="canvas-settings-body">
+                        <div class="setting-group">
+                            <label for="canvasBackgroundColor">Цвет фона:</label>
+                            <div class="color-input-group">
+                                <input type="color" id="canvasBackgroundColor" value="#ffffff">
+                                <input type="text" id="canvasBackgroundText" value="#ffffff" placeholder="#ffffff">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>Предустановленные цвета:</label>
+                            <div class="preset-colors">
+                                <div class="preset-color" style="background: #ffffff;" data-color="#ffffff"></div>
+                                <div class="preset-color" style="background: #f8f9fa;" data-color="#f8f9fa"></div>
+                                <div class="preset-color" style="background: #e9ecef;" data-color="#e9ecef"></div>
+                                <div class="preset-color" style="background: #dee2e6;" data-color="#dee2e6"></div>
+                                <div class="preset-color" style="background: #ced4da;" data-color="#ced4da"></div>
+                                <div class="preset-color" style="background: #f8f8f8;" data-color="#f8f8f8"></div>
+                                <div class="preset-color" style="background: #333333;" data-color="#333333"></div>
+                                <div class="preset-color" style="background: #1a1a1a;" data-color="#1a1a1a"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="canvas-settings-footer">
+                        <button class="cancel-btn" onclick="contentEditor.closeCanvasSettingsModal()">Отмена</button>
+                        <button class="apply-btn" onclick="contentEditor.applyCanvasBackground()">Применить</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Добавляем модальное окно в DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Устанавливаем текущий цвет фона
+        const currentBg = window.getComputedStyle(this.canvas).backgroundColor;
+        const hexColor = this.rgbToHex(currentBg);
+        document.getElementById('canvasBackgroundColor').value = hexColor;
+        document.getElementById('canvasBackgroundText').value = hexColor;
+        
+        // Добавляем обработчики для предустановленных цветов
+        document.querySelectorAll('.preset-color').forEach(preset => {
+            preset.addEventListener('click', (e) => {
+                const color = e.target.dataset.color;
+                document.getElementById('canvasBackgroundColor').value = color;
+                document.getElementById('canvasBackgroundText').value = color;
+            });
+        });
+        
+        // Синхронизация color picker и текстового поля
+        const colorPicker = document.getElementById('canvasBackgroundColor');
+        const colorText = document.getElementById('canvasBackgroundText');
+        
+        colorPicker.addEventListener('input', (e) => {
+            colorText.value = e.target.value;
+        });
+        
+        colorText.addEventListener('input', (e) => {
+            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                colorPicker.value = e.target.value;
+            }
+        });
+    }
+
+    closeCanvasSettingsModal() {
+        const modal = document.getElementById('canvasSettingsModal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    applyCanvasBackground() {
+        const color = document.getElementById('canvasBackgroundColor').value;
+        this.canvas.style.backgroundColor = color;
+        this.closeCanvasSettingsModal();
+    }
+
+    rgbToHex(rgb) {
+        // Конвертация RGB в HEX
+        if (rgb.startsWith('#')) {
+            return rgb;
+        }
+        
+        const result = rgb.match(/\d+/g);
+        if (!result || result.length < 3) {
+            return '#ffffff';
+        }
+        
+        const r = parseInt(result[0]);
+        const g = parseInt(result[1]);
+        const b = parseInt(result[2]);
+        
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     }
 
     // Method to force complete reload of the editor

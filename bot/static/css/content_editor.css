@@ -738,3 +738,215 @@
         transform: scale(0.9);
     }
 }
+
+/* Модальное окно настроек канваса */
+.canvas-settings-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 15000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.canvas-settings-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(3px);
+}
+
+.canvas-settings-container {
+    position: relative;
+    background: #2a2a2a;
+    border-radius: 12px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 450px;
+    overflow: hidden;
+    animation: canvasSettingsFadeIn 0.3s ease-out;
+}
+
+@keyframes canvasSettingsFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.canvas-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    background: #333333;
+    border-bottom: 1px solid #444444;
+}
+
+.canvas-settings-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.canvas-settings-header .close-btn {
+    background: none;
+    border: none;
+    color: #cccccc;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.canvas-settings-header .close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.canvas-settings-body {
+    padding: 25px;
+}
+
+.setting-group {
+    margin-bottom: 25px;
+}
+
+.setting-group:last-child {
+    margin-bottom: 0;
+}
+
+.setting-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-bottom: 10px;
+}
+
+.color-input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.color-input-group input[type="color"] {
+    width: 60px;
+    height: 40px;
+    border: 2px solid #444444;
+    border-radius: 6px;
+    background: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.color-input-group input[type="color"]:hover {
+    border-color: #667eea;
+}
+
+.color-input-group input[type="text"] {
+    flex: 1;
+    padding: 10px 12px;
+    background: #1a1a1a;
+    border: 2px solid #444444;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+    transition: border-color 0.2s ease;
+}
+
+.color-input-group input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.preset-colors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.preset-color {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.preset-color:hover {
+    transform: scale(1.1);
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.preset-color:active {
+    transform: scale(0.95);
+}
+
+.canvas-settings-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px 25px;
+    background: #333333;
+    border-top: 1px solid #444444;
+}
+
+.canvas-settings-footer button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.canvas-settings-footer .cancel-btn {
+    background: #555555;
+    color: #cccccc;
+}
+
+.canvas-settings-footer .cancel-btn:hover {
+    background: #666666;
+    color: #ffffff;
+}
+
+.canvas-settings-footer .apply-btn {
+    background: #667eea;
+    color: #ffffff;
+}
+
+.canvas-settings-footer .apply-btn:hover {
+    background: #5a67d8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.canvas-settings-footer .apply-btn:active {
+    transform: translateY(0);
+}
