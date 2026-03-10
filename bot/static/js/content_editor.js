@@ -645,6 +645,12 @@ class ContentEditor {
         // Add to canvas
         this.canvas.appendChild(element);
         
+        // Expand canvas if needed for the audio element
+        setTimeout(() => {
+            const elementBottom = parseInt(element.style.top) + element.offsetHeight;
+            this.expandCanvasIfNeeded(elementBottom);
+        }, 100);
+        
         // Setup audio functionality
         this.setupAudioElement(element, audioUrl, file);
         
@@ -737,6 +743,12 @@ class ContentEditor {
             
             // Add to canvas
             this.canvas.appendChild(element);
+            
+            // Expand canvas if needed for the image
+            setTimeout(() => {
+                const elementBottom = parseInt(element.style.top) + element.offsetHeight;
+                this.expandCanvasIfNeeded(elementBottom);
+            }, 100);
             
             // Save to elements array
             this.elements.push({
@@ -856,6 +868,22 @@ class ContentEditor {
         }
     }
 
+    expandCanvasIfNeeded(elementBottom) {
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const currentCanvasHeight = this.canvas.offsetHeight;
+        const maxCanvasHeight = this.getMaxCanvasHeight();
+        
+        // Calculate required height with some padding
+        const requiredHeight = elementBottom + 40; // 40px padding at bottom
+        const newHeight = Math.min(requiredHeight, maxCanvasHeight);
+        
+        // Only expand if needed and within limits
+        if (newHeight > currentCanvasHeight && newHeight <= maxCanvasHeight) {
+            this.canvas.style.height = newHeight + 'px';
+            console.log(`Canvas expanded to ${newHeight}px`);
+        }
+    }
+
     calculateVerticalPosition(elementWidth, elementHeight) {
         const canvasRect = this.canvas.getBoundingClientRect();
         const maxCanvasWidth = this.getMaxCanvasWidth();
@@ -937,7 +965,7 @@ class ContentEditor {
             nextY = existingTop + existingHeight + elementSpacing;
         }
         
-        // Ensure the element doesn't go beyond canvas bounds
+        // Ensure the element doesn't go beyond canvas bounds - expand canvas instead
         let currentElementHeight;
         if (elementHeight === 'auto') {
             currentElementHeight = 120; // Default estimate for auto elements
@@ -945,14 +973,14 @@ class ContentEditor {
             currentElementHeight = elementHeight;
         }
         
-        const maxY = Math.min(canvasRect.height, maxCanvasHeight) - currentElementHeight - 20;
-        if (nextY > maxY) {
-            // If we run out of space, start from the top with offset
-            nextY = startY + (this.elements.length % 3) * (currentElementHeight + elementSpacing);
-        }
+        // Calculate where the element would end
+        const elementBottom = nextY + currentElementHeight;
+        
+        // Expand canvas if needed instead of restricting element placement
+        this.expandCanvasIfNeeded(elementBottom);
         
         // Debug: Log final calculation
-        console.log(`Final position calculation: y=${nextY}, elementHeight=${currentElementHeight}`);
+        console.log(`Final position calculation: y=${nextY}, elementHeight=${currentElementHeight}, elementBottom=${elementBottom}`);
         
         return {
             x: centerX,
@@ -1004,6 +1032,9 @@ class ContentEditor {
                 nextY += elementHeight + elementSpacing;
             }
         });
+        
+        // Expand canvas if needed after repositioning
+        this.expandCanvasIfNeeded(nextY);
     }
 
     addElementToCanvas(toolId) {
@@ -1068,6 +1099,12 @@ class ContentEditor {
             
             // Добавляем на холст
             this.canvas.appendChild(element);
+            
+            // Expand canvas if needed for the new element
+            setTimeout(() => {
+                const elementBottom = parseInt(element.style.top) + element.offsetHeight;
+                this.expandCanvasIfNeeded(elementBottom);
+            }, 100);
             
             // Debug: Log final position for non-table elements
             if (toolId !== 'moveHintsTable') {
@@ -1712,6 +1749,19 @@ class ContentEditor {
         
         // After updating all element sizes, recalculate positions for all elements
         this.recalculateAllElementPositions();
+        
+        // Ensure canvas height is appropriate after resize
+        const allElements = this.canvas.querySelectorAll('.canvas-element');
+        if (allElements.length > 0) {
+            const lastElement = Array.from(allElements).reduce((last, current) => {
+                const lastBottom = parseInt(last.style.top) + last.offsetHeight;
+                const currentBottom = parseInt(current.style.top) + current.offsetHeight;
+                return currentBottom > lastBottom ? current : last;
+            });
+            
+            const maxBottom = parseInt(lastElement.style.top) + lastElement.offsetHeight;
+            this.expandCanvasIfNeeded(maxBottom);
+        }
     }
 
     recalculateAllElementPositions() {
@@ -1749,6 +1799,9 @@ class ContentEditor {
             // Move to next position
             nextY += elementHeight + elementSpacing;
         });
+        
+        // Expand canvas if needed after recalculating all positions
+        this.expandCanvasIfNeeded(nextY);
     }
 
     setupCanvasEvents() {
