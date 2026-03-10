@@ -80,30 +80,6 @@ class ContentEditor {
                         </div>
                     </div>
                 </div>
-                
-                <!-- Модальное окно настроек -->
-                <div id="settingsModal" class="settings-modal" style="display: none;">
-                    <div class="settings-overlay" onclick="contentEditor.closeSettingsModal()"></div>
-                    <div class="settings-container">
-                        <div class="settings-header">
-                            <h3>Настройки</h3>
-                            <button class="close-btn" onclick="contentEditor.closeSettingsModal()">&times;</button>
-                        </div>
-                        <div class="settings-body">
-                            <div class="setting-group">
-                                <label for="canvasBackgroundColor">Цвет фона канваса:</label>
-                                <div class="color-input-group">
-                                    <input type="color" id="canvasBackgroundColor" value="#ffffff">
-                                    <input type="text" id="canvasBackgroundColorText" value="#ffffff" placeholder="#ffffff">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="settings-footer">
-                            <button class="action-btn primary" onclick="contentEditor.applyCanvasBackground()">Применить</button>
-                            <button class="action-btn" onclick="contentEditor.closeSettingsModal()">Отмена</button>
-                        </div>
-                    </div>
-                </div>
             `;
             
             document.body.insertAdjacentHTML('beforeend', modalHTML);
@@ -494,13 +470,6 @@ class ContentEditor {
                 type: 'link',
                 description: 'Ссылка на дополнительные материалы',
                 icon: 'fa fa-link'
-            },
-            {
-                id: 'settings',
-                name: 'Настройки',
-                type: 'settings',
-                description: 'Настройки редактора',
-                icon: 'fa fa-cog'
             }
         ];
 
@@ -538,12 +507,6 @@ class ContentEditor {
         // Особое поведение для audio-file - прямая загрузка файла
         if (toolId === 'audio-file') {
             this.handleDirectAudioUpload();
-            return;
-        }
-
-        // Особое поведение для settings - открытие модального окна настроек
-        if (toolId === 'settings') {
-            this.openSettingsModal();
             return;
         }
 
@@ -1948,109 +1911,6 @@ class ContentEditor {
         
         // Force refresh
         this.forceRefreshContent();
-    }
-
-    // Settings modal methods
-    openSettingsModal() {
-        const settingsModal = document.getElementById('settingsModal');
-        if (settingsModal) {
-            // Get current canvas background color
-            const currentColor = window.getComputedStyle(this.canvas).backgroundColor;
-            const hexColor = this.rgbToHex(currentColor);
-            
-            // Set current color in inputs
-            const colorInput = document.getElementById('canvasBackgroundColor');
-            const textInput = document.getElementById('canvasBackgroundColorText');
-            
-            if (colorInput) colorInput.value = hexColor;
-            if (textInput) textInput.value = hexColor;
-            
-            // Show modal
-            settingsModal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-            
-            // Setup color input sync
-            this.setupColorInputSync();
-        }
-    }
-
-    closeSettingsModal() {
-        const settingsModal = document.getElementById('settingsModal');
-        if (settingsModal) {
-            settingsModal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-    }
-
-    setupColorInputSync() {
-        const colorInput = document.getElementById('canvasBackgroundColor');
-        const textInput = document.getElementById('canvasBackgroundColorText');
-        
-        if (colorInput && textInput) {
-            // Sync color picker to text input
-            colorInput.addEventListener('input', (e) => {
-                textInput.value = e.target.value;
-            });
-            
-            // Sync text input to color picker
-            textInput.addEventListener('input', (e) => {
-                const value = e.target.value;
-                if (this.isValidHex(value)) {
-                    colorInput.value = value;
-                }
-            });
-        }
-    }
-
-    applyCanvasBackground() {
-        const colorInput = document.getElementById('canvasBackgroundColor');
-        const textInput = document.getElementById('canvasBackgroundColorText');
-        
-        if (colorInput && textInput && this.canvas) {
-            const color = textInput.value;
-            if (this.isValidHex(color)) {
-                // Apply background color
-                this.canvas.style.backgroundColor = color;
-                
-                // Also update the pattern background if needed
-                if (color === '#ffffff' || color === '#FFFFFF') {
-                    // Keep pattern for white background
-                    this.canvas.style.backgroundImage = `
-                        linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
-                        linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
-                        linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
-                        linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)
-                    `;
-                    this.canvas.style.backgroundSize = '20px 20px';
-                    this.canvas.style.backgroundPosition = '0 0, 0 10px, 10px -10px, -10px 0px';
-                } else {
-                    // Remove pattern for colored backgrounds
-                    this.canvas.style.backgroundImage = 'none';
-                }
-                
-                // Close settings modal
-                this.closeSettingsModal();
-            } else {
-                alert('Пожалуйста, введите корректный цвет в формате HEX (например, #ffffff)');
-            }
-        }
-    }
-
-    rgbToHex(rgb) {
-        // Convert RGB color to HEX
-        const result = rgb.match(/\d+/g);
-        if (!result) return '#ffffff';
-        
-        const r = parseInt(result[0]);
-        const g = parseInt(result[1]);
-        const b = parseInt(result[2]);
-        
-        return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-    }
-
-    isValidHex(hex) {
-        // Validate HEX color format
-        return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex);
     }
 }
 
