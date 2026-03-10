@@ -470,13 +470,6 @@ class ContentEditor {
                 type: 'link',
                 description: 'Ссылка на дополнительные материалы',
                 icon: 'fa fa-link'
-            },
-            {
-                id: 'settings',
-                name: 'Настройки',
-                type: 'settings',
-                description: 'Настройки редактора',
-                icon: 'fa fa-cog'
             }
         ];
 
@@ -514,12 +507,6 @@ class ContentEditor {
         // Особое поведение для audio-file - прямая загрузка файла
         if (toolId === 'audio-file') {
             this.handleDirectAudioUpload();
-            return;
-        }
-
-        // Особое поведение для settings - открытие модального окна настроек
-        if (toolId === 'settings') {
-            this.openSettingsModal();
             return;
         }
 
@@ -1924,49 +1911,6 @@ class ContentEditor {
         
         // Force refresh
         this.forceRefreshContent();
-    }
-
-    openSettingsModal() {
-        // Создаем модальное окно настроек
-        const settingsModal = document.createElement('div');
-        settingsModal.id = 'settingsModal';
-        settingsModal.className = 'settings-modal';
-        settingsModal.innerHTML = `
-            <div class="settings-overlay" onclick="contentEditor.closeSettingsModal()"></div>
-            <div class="settings-container">
-                <div class="settings-header">
-                    <h3>Настройки редактора</h3>
-                    <button class="close-btn" onclick="contentEditor.closeSettingsModal()">&times;</button>
-                </div>
-                <div class="settings-body">
-                    <div class="setting-group">
-                        <label for="canvasBackground">Фон канваса:</label>
-                        <div class="background-options">
-                            <input type="color" id="canvasBackgroundColor" value="#ffffff">
-                            <button onclick="contentEditor.setCanvasBackground('#ffffff')">Белый</button>
-                            <button onclick="contentEditor.setCanvasBackground('#f5f5f5')">Серый</button>
-                            <button onclick="contentEditor.setCanvasBackground('#000000')">Черный</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(settingsModal);
-        settingsModal.style.display = 'flex';
-    }
-
-    closeSettingsModal() {
-        const settingsModal = document.getElementById('settingsModal');
-        if (settingsModal) {
-            settingsModal.remove();
-        }
-    }
-
-    setCanvasBackground(color) {
-        if (this.canvas) {
-            this.canvas.style.backgroundColor = color;
-        }
     }
 }
 
