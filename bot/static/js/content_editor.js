@@ -33,7 +33,7 @@ class ContentEditor {
     getMaxCanvasHeight() {
         if (this.isMobile()) {
             // For mobile, return standard mobile card height
-            return 640;
+            return 320;
         }
         return 600; // Desktop default
     }
