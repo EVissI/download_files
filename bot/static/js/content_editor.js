@@ -14,6 +14,10 @@ class ContentEditor {
         this.elementIdCounter = 0;
         this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
         this.cardData = null; // Сохраняем данные карточки для таблиц
+        this.presetColors = [ // Сохраняем предустановленные цвета
+            '#ffffff', '#f8f9fa', '#e9ecef', '#dee2e6', 
+            '#ced4da', '#f8f8f8', '#333333', '#1a1a1a'
+        ];
         
         this.init();
     }
@@ -1919,15 +1923,13 @@ class ContentEditor {
                         </div>
                         <div class="setting-group">
                             <label>Предустановленные цвета:</label>
-                            <div class="preset-colors">
-                                <div class="preset-color" style="background: #ffffff;" data-color="#ffffff"></div>
-                                <div class="preset-color" style="background: #f8f9fa;" data-color="#f8f9fa"></div>
-                                <div class="preset-color" style="background: #e9ecef;" data-color="#e9ecef"></div>
-                                <div class="preset-color" style="background: #dee2e6;" data-color="#dee2e6"></div>
-                                <div class="preset-color" style="background: #ced4da;" data-color="#ced4da"></div>
-                                <div class="preset-color" style="background: #f8f8f8;" data-color="#f8f8f8"></div>
-                                <div class="preset-color" style="background: #333333;" data-color="#333333"></div>
-                                <div class="preset-color" style="background: #1a1a1a;" data-color="#1a1a1a"></div>
+                            <div class="preset-colors" id="presetColorsContainer">
+                                ${this.renderPresetColors()}
+                            </div>
+                            <div class="preset-controls">
+                                <button class="add-preset-btn" onclick="contentEditor.addPresetColor()">
+                                    <i class="fa fa-plus"></i> Добавить цвет
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1949,13 +1951,7 @@ class ContentEditor {
         document.getElementById('canvasBackgroundText').value = hexColor;
         
         // Добавляем обработчики для предустановленных цветов
-        document.querySelectorAll('.preset-color').forEach(preset => {
-            preset.addEventListener('click', (e) => {
-                const color = e.target.dataset.color;
-                document.getElementById('canvasBackgroundColor').value = color;
-                document.getElementById('canvasBackgroundText').value = color;
-            });
-        });
+        this.setupPresetColorHandlers();
         
         // Синхронизация color picker и текстового поля
         const colorPicker = document.getElementById('canvasBackgroundColor');
@@ -1970,6 +1966,99 @@ class ContentEditor {
                 colorPicker.value = e.target.value;
             }
         });
+    }
+
+    renderPresetColors() {
+        return this.presetColors.map((color, index) => `
+            <div class="preset-color" style="background: ${color};" data-color="${color}" data-index="${index}">
+                <button class="preset-delete-btn" onclick="contentEditor.deletePresetColor(${index})" title="Удалить">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    setupPresetColorHandlers() {
+        document.querySelectorAll('.preset-color').forEach(preset => {
+            preset.addEventListener('click', (e) => {
+                // Если клик не по кнопке удаления
+                if (!e.target.closest('.preset-delete-btn')) {
+                    const color = e.currentTarget.dataset.color;
+                    document.getElementById('canvasBackgroundColor').value = color;
+                    document.getElementById('canvasBackgroundText').value = color;
+                }
+            });
+        });
+    }
+
+    addPresetColor() {
+        const color = document.getElementById('canvasBackgroundColor').value;
+        
+        // Проверяем, что цвет еще не добавлен
+        if (!this.presetColors.includes(color)) {
+            this.presetColors.push(color);
+            
+            // Обновляем контейнер с предустановленными цветами
+            const container = document.getElementById('presetColorsContainer');
+            container.innerHTML = this.renderPresetColors();
+            
+            // Обновляем обработчики
+            this.setupPresetColorHandlers();
+            
+            // Показать уведомление
+            this.showNotification('Цвет добавлен в предустановленные', 'success');
+        } else {
+            this.showNotification('Этот цвет уже есть в списке', 'warning');
+        }
+    }
+
+    deletePresetColor(index) {
+        const color = this.presetColors[index];
+        this.presetColors.splice(index, 1);
+        
+        // Обновляем контейнер с предустановленными цветами
+        const container = document.getElementById('presetColorsContainer');
+        container.innerHTML = this.renderPresetColors();
+        
+        // Обновляем обработчики
+        this.setupPresetColorHandlers();
+        
+        // Показать уведомление
+        this.showNotification(`Цвет ${color} удален`, 'info');
+    }
+
+    showNotification(message, type = 'info') {
+        // Создаем уведомление
+        const notification = document.createElement('div');
+        notification.className = `canvas-notification canvas-notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fa fa-${this.getNotificationIcon(type)}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        // Добавляем в DOM
+        document.body.appendChild(notification);
+        
+        // Показываем уведомление
+        setTimeout(() => notification.classList.add('show'), 10);
+        
+        // Автоматически скрываем через 3 секунды
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    getNotificationIcon(type) {
+        const icons = {
+            'success': 'check-circle',
+            'warning': 'exclamation-triangle',
+            'info': 'info-circle',
+            'error': 'times-circle'
+        };
+        return icons[type] || 'info-circle';
     }
 
     closeCanvasSettingsModal() {
