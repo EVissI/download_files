@@ -1709,6 +1709,46 @@ class ContentEditor {
                 }
             }
         });
+        
+        // After updating all element sizes, recalculate positions for all elements
+        this.recalculateAllElementPositions();
+    }
+
+    recalculateAllElementPositions() {
+        // Get all elements sorted by their current top position
+        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
+            .filter(el => !el.id.includes('boardLabel'))
+            .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
+        
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const elementSpacing = 0; // No spacing between elements
+        let nextY = 0; // Start from top
+        
+        // Recalculate positions for all elements
+        allElements.forEach(element => {
+            let elementHeight;
+            
+            // Get actual height of element
+            if (element.classList.contains('table-element')) {
+                elementHeight = element.offsetHeight;
+                if (elementHeight < 50) {
+                    elementHeight = 100; // Default for empty tables
+                }
+            } else if (element.dataset.toolId === 'upload-image') {
+                // For images, use the current styled height
+                elementHeight = parseInt(element.style.height) || 200;
+            } else {
+                elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
+            }
+            
+            // Update position
+            element.style.top = nextY + 'px';
+            element.style.left = '0px'; // Always align to left
+            element.style.width = canvasRect.width + 'px'; // Full canvas width
+            
+            // Move to next position
+            nextY += elementHeight + elementSpacing;
+        });
     }
 
     setupCanvasEvents() {
