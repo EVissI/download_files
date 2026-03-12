@@ -1840,7 +1840,58 @@ class ContentEditor {
         const resizers = this.modal.querySelectorAll('.editor-resizer');
         if (!resizers.length) return;
 
+        const startResize = (startX, startY, target, isMobile, startToolbarWidth, startPropsWidth, startToolbarHeight, startPropsHeight) => {
+            // Разрешаем практически полностью "задвигать" панели
+            const minPanelSize = 0;
+            const maxPanelSize = 400;
+
+            const handleMove = (clientX, clientY) => {
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+
+                if (!isMobile) {
+                    // Desktop: ресайз по горизонтали (ширина панелей)
+                    if (target === 'toolbar' && this.toolbarPanel) {
+                        let newWidth = startToolbarWidth + dx;
+                        newWidth = Math.max(minPanelSize, Math.min(maxPanelSize, newWidth));
+                        this.toolbarPanel.style.width = newWidth + 'px';
+                    } else if (target === 'properties' && this.propertiesPanel) {
+                        let newWidth = startPropsWidth - dx;
+                        newWidth = Math.max(minPanelSize, Math.min(maxPanelSize, newWidth));
+                        this.propertiesPanel.style.width = newWidth + 'px';
+                    }
+                } else {
+                    // Mobile: ресайз по вертикали (высота панелей)
+                    if (target === 'toolbar' && this.toolbarPanel) {
+                        let newHeight = startToolbarHeight + dy;
+                        newHeight = Math.max(minPanelSize, Math.min(maxPanelSize, newHeight));
+                        this.toolbarPanel.style.height = newHeight + 'px';
+                    } else if (target === 'properties' && this.propertiesPanel) {
+                        let newHeight = startPropsHeight - dy;
+                        newHeight = Math.max(minPanelSize, Math.min(maxPanelSize, newHeight));
+                        this.propertiesPanel.style.height = newHeight + 'px';
+                    }
+                }
+            };
+
+            const onMouseMove = (moveEvent) => {
+                handleMove(moveEvent.clientX, moveEvent.clientY);
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+
+            // Возвращаем функции, чтобы можно было переиспользовать для touch
+            return { handleMove, onMouseUp };
+        };
+
         resizers.forEach(resizer => {
+            // Desktop / мышь
             resizer.addEventListener('mousedown', (e) => {
                 e.preventDefault();
 
@@ -1855,47 +1906,52 @@ class ContentEditor {
                 const startToolbarHeight = this.toolbarPanel ? this.toolbarPanel.offsetHeight : 0;
                 const startPropsHeight = this.propertiesPanel ? this.propertiesPanel.offsetHeight : 0;
 
-                // Разрешаем практически полностью "задвигать" панели
-                const minPanelSize = 0;
-                const maxPanelSize = 400;
-
-                const onMouseMove = (moveEvent) => {
-                    const dx = moveEvent.clientX - startX;
-                    const dy = moveEvent.clientY - startY;
-
-                    if (!isMobile) {
-                        // Desktop: ресайз по горизонтали (ширина панелей)
-                        if (target === 'toolbar' && this.toolbarPanel) {
-                            let newWidth = startToolbarWidth + dx;
-                            newWidth = Math.max(minPanelSize, Math.min(maxPanelSize, newWidth));
-                            this.toolbarPanel.style.width = newWidth + 'px';
-                        } else if (target === 'properties' && this.propertiesPanel) {
-                            let newWidth = startPropsWidth - dx;
-                            newWidth = Math.max(minPanelSize, Math.min(maxPanelSize, newWidth));
-                            this.propertiesPanel.style.width = newWidth + 'px';
-                        }
-                    } else {
-                        // Mobile: ресайз по вертикали (высота панелей)
-                        if (target === 'toolbar' && this.toolbarPanel) {
-                            let newHeight = startToolbarHeight + dy;
-                            newHeight = Math.max(minPanelSize, Math.min(maxPanelSize, newHeight));
-                            this.toolbarPanel.style.height = newHeight + 'px';
-                        } else if (target === 'properties' && this.propertiesPanel) {
-                            let newHeight = startPropsHeight - dy;
-                            newHeight = Math.max(minPanelSize, Math.min(maxPanelSize, newHeight));
-                            this.propertiesPanel.style.height = newHeight + 'px';
-                        }
-                    }
-                };
-
-                const onMouseUp = () => {
-                    document.removeEventListener('mousemove', onMouseMove);
-                    document.removeEventListener('mouseup', onMouseUp);
-                };
-
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
+                startResize(startX, startY, target, isMobile, startToolbarWidth, startPropsWidth, startToolbarHeight, startPropsHeight);
             });
+
+            // Mobile / touch
+            resizer.addEventListener('touchstart', (e) => {
+                if (!e.touches || !e.touches.length) return;
+                e.preventDefault();
+
+                const touch = e.touches[0];
+                const target = resizer.dataset.resizeTarget;
+                const isMobile = true; // при touch считаем, что мобильный сценарий
+
+                const startX = touch.clientX;
+                const startY = touch.clientY;
+
+                const startToolbarWidth = this.toolbarPanel ? this.toolbarPanel.offsetWidth : 0;
+                const startPropsWidth = this.propertiesPanel ? this.propertiesPanel.offsetWidth : 0;
+                const startToolbarHeight = this.toolbarPanel ? this.toolbarPanel.offsetHeight : 0;
+                const startPropsHeight = this.propertiesPanel ? this.propertiesPanel.offsetHeight : 0;
+
+                const { handleMove, onMouseUp } = startResize(
+                    startX,
+                    startY,
+                    target,
+                    isMobile,
+                    startToolbarWidth,
+                    startPropsWidth,
+                    startToolbarHeight,
+                    startPropsHeight
+                );
+
+                const onTouchMove = (moveEvent) => {
+                    if (!moveEvent.touches || !moveEvent.touches.length) return;
+                    const t = moveEvent.touches[0];
+                    handleMove(t.clientX, t.clientY);
+                };
+
+                const onTouchEnd = () => {
+                    document.removeEventListener('touchmove', onTouchMove);
+                    document.removeEventListener('touchend', onTouchEnd);
+                    onMouseUp();
+                };
+
+                document.addEventListener('touchmove', onTouchMove, { passive: false });
+                document.addEventListener('touchend', onTouchEnd);
+            }, { passive: false });
         });
     }
     
