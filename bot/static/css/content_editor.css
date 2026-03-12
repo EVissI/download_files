@@ -267,6 +267,8 @@
     display: flex;
     flex-direction: column;
     background: #252525;
+    /* Канвас скроллится внутри рабочей области, не влияя на тулбары */
+    overflow: hidden;
 }
 
 .canvas {
@@ -275,11 +277,14 @@
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     position: relative;
+    /* Канвас заполняет рабочую область и скроллится внутри неё */
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    min-height: 0px;
-    max-height: calc(95vh - 140px);
-    transition: height 0.3s ease, background-color 0.3s ease;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    transition: background-color 0.3s ease;
 }
 
 /* Ресайзер между панелями и рабочей областью */
@@ -737,11 +742,12 @@
     
     .workspace {
         flex: 1;
+        /* На мобиле тоже оставляем независимую область с прокруткой */
+        overflow: hidden;
     }
     
     .canvas {
         margin: 10px;
-        /* На мобиле избегаем жёсткой привязки max-height к vh, даём прокрутку внутри */
         max-height: none;
     }
 

@@ -896,19 +896,10 @@ class ContentEditor {
     }
 
     expandCanvasIfNeeded(elementBottom) {
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const currentCanvasHeight = this.canvas.offsetHeight;
-        const maxCanvasHeight = this.getMaxCanvasHeight();
-        
-        // Calculate required height with some padding
-        const requiredHeight = elementBottom + 40; // 40px padding at bottom
-        const newHeight = Math.min(requiredHeight, maxCanvasHeight);
-        
-        // Only expand if needed and within limits
-        if (newHeight > currentCanvasHeight && newHeight <= maxCanvasHeight) {
-            this.canvas.style.height = newHeight + 'px';
-            console.log(`Canvas expanded to ${newHeight}px`);
-        }
+        // Канвас больше не управляет размером контейнера, он всегда занимает
+        // фиксированную область и скроллится внутри. Здесь оставляем только лог при отладке.
+        // const requiredHeight = elementBottom + 40;
+        // console.log(`Canvas content bottom at ${requiredHeight}px`);
     }
 
     calculateVerticalPosition(elementWidth, elementHeight) {
@@ -1734,32 +1725,8 @@ class ContentEditor {
     }
 
     adjustCanvasHeightAfterDeletion() {
-        // Get all elements to determine if canvas can be shrunk
-        const allElements = this.canvas.querySelectorAll('.canvas-element');
-        
-        if (allElements.length === 0) {
-            // No elements left, reset to minimum height
-            this.canvas.style.height = '0px';
-            return;
-        }
-        
-        // Find the bottom-most element
-        const lastElement = Array.from(allElements).reduce((last, current) => {
-            const lastBottom = parseInt(last.style.top) + last.offsetHeight;
-            const currentBottom = parseInt(current.style.top) + current.offsetHeight;
-            return currentBottom > lastBottom ? current : last;
-        });
-        
-        const maxBottom = parseInt(lastElement.style.top) + lastElement.offsetHeight;
-        const minCanvasHeight = 0;
-        const requiredHeight = Math.max(minCanvasHeight, maxBottom + 40); // 40px padding
-        
-        // Only shrink if the canvas is significantly larger than needed
-        const currentHeight = this.canvas.offsetHeight;
-        if (currentHeight > requiredHeight + 100) { // 100px threshold to avoid constant resizing
-            this.canvas.style.height = requiredHeight + 'px';
-            console.log(`Canvas shrunk to ${requiredHeight}px after deletion`);
-        }
+        // Высота канваса больше не подстраивается под элементы —
+        // они скроллятся внутри фиксированной области.
     }
 
 
