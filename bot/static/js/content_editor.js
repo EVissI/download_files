@@ -1634,7 +1634,21 @@ class ContentEditor {
         const target = this.selectedElement.querySelector('.text-content, .link-text');
         if (!target) return;
 
+        // Если уже в режиме "рендеренного" markdown — возвращаемся к исходному тексту
+        if (target.dataset && target.dataset.markdownMode === 'rendered') {
+            const original = target.dataset.markdownRaw || target.innerText;
+            target.innerText = original;
+            delete target.dataset.markdownMode;
+            delete target.dataset.markdownRaw;
+            return;
+        }
+
+        // Сохраняем текущий текст как исходный markdown
         const raw = target.innerText;
+        if (target.dataset) {
+            target.dataset.markdownRaw = raw;
+            target.dataset.markdownMode = 'rendered';
+        }
 
         // Простейший Markdown-парсер в духе Telegram:
         // *bold*, _italic_, `code`
