@@ -18,7 +18,10 @@ class ContentEditor {
             '#ffffff', '#f8f9fa', '#e9ecef', '#dee2e6', 
             '#ced4da', '#f8f8f8', '#333333', '#1a1a1a'
         ];
-        
+        // Сохранённое выделение в contenteditable для Word-like форматирования
+        this.savedSelection = null;
+        this.savedSelectionEditable = null;
+
         this.init();
     }
 
@@ -1275,9 +1278,9 @@ class ContentEditor {
             this.selectElement(element);
         });
 
-        // Обработка окончания редактирования
+        // Обработка окончания редактирования и сохранение выделения
         linkText.addEventListener('blur', () => {
-            // Если текст пустой, возвращаем placeholder
+            this.saveSelectionForEditable(linkText);
             if (linkText.textContent.trim() === '') {
                 linkText.textContent = 'Ссылка';
             }
@@ -1340,8 +1343,9 @@ class ContentEditor {
             this.selectElement(element);
         });
 
-        // Обработка окончания редактирования
+        // Обработка окончания редактирования и сохранение выделения для форматирования
         textContent.addEventListener('blur', () => {
+            this.saveSelectionForEditable(textContent);
             // Если текст пустой, возвращаем placeholder
             if (textContent.textContent.trim() === '') {
                 if (element.dataset.toolId === 'question-text') {
@@ -1350,7 +1354,6 @@ class ContentEditor {
                     textContent.textContent = 'Текст ответа';
                 }
             }
-            // Автоматическое изменение высоты отключено
         });
 
         // Обработка ввода текста - только перенос строк
@@ -1383,6 +1386,115 @@ class ContentEditor {
         // Elements will be managed through other means
     }
 
+    // --- Word-like: сохранение/восстановление выделения и форматирование по выделению ---
+
+    getCharacterOffset(container, targetNode, targetOffset) {
+        let offset = 0;
+        const walk = (node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                if (node === targetNode) {
+                    offset += targetOffset;
+                    return true;
+                }
+                offset += node.length;
+                return false;
+            }
+            for (let i = 0; i < node.childNodes.length; i++) {
+                if (walk(node.childNodes[i])) return true;
+            }
+            return false;
+        };
+        walk(container);
+        return offset;
+    }
+
+    setSelectionByCharacterOffset(editable, start, end) {
+        let cur = 0;
+        let startNode = null, startOffset = 0, endNode = null, endOffset = 0;
+        const walk = (node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const len = node.length;
+                if (cur <= start && start < cur + len) {
+                    startNode = node;
+                    startOffset = start - cur;
+                }
+                if (cur <= end && end <= cur + len) {
+                    endNode = node;
+                    endOffset = end - cur;
+                }
+                cur += len;
+                return;
+            }
+            for (let i = 0; i < node.childNodes.length; i++) {
+                walk(node.childNodes[i]);
+                if (endNode) return;
+            }
+        };
+        walk(editable);
+        if (!startNode) startNode = editable.firstChild || editable, startOffset = 0;
+        if (!endNode) endNode = editable.firstChild || editable, endOffset = endNode.nodeType === Node.TEXT_NODE ? endNode.length : 0;
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+
+    saveSelectionForEditable(editableEl) {
+        const sel = window.getSelection();
+        if (!sel.rangeCount || !editableEl.contains(sel.anchorNode)) return;
+        const range = sel.getRangeAt(0);
+        if (!editableEl.contains(range.commonAncestorContainer)) return;
+        const start = this.getCharacterOffset(editableEl, range.startContainer, range.startOffset);
+        const end = this.getCharacterOffset(editableEl, range.endContainer, range.endOffset);
+        this.savedSelection = { start, end };
+        this.savedSelectionEditable = editableEl;
+    }
+
+    restoreSelectionForEditable(editableEl) {
+        editableEl.focus();
+        if (this.savedSelectionEditable === editableEl && this.savedSelection) {
+            const { start, end } = this.savedSelection;
+            this.setSelectionByCharacterOffset(editableEl, start, end);
+        }
+    }
+
+    hasValidSelectionForFormat(editableEl) {
+        if (this.savedSelectionEditable === editableEl && this.savedSelection) {
+            const { start, end } = this.savedSelection;
+            if (start !== end) return true;
+        }
+        const sel = window.getSelection();
+        return sel.rangeCount && editableEl.contains(sel.anchorNode) && !sel.isCollapsed;
+    }
+
+    applyFormatToSelection(editableEl, execCommandName, value) {
+        this.restoreSelectionForEditable(editableEl);
+        const sel = window.getSelection();
+        if (sel.isCollapsed) return;
+        if (value !== undefined) {
+            document.execCommand(execCommandName, false, value);
+        } else {
+            document.execCommand(execCommandName, false, null);
+        }
+    }
+
+    applyStyleToSelection(editableEl, styleObj) {
+        this.restoreSelectionForEditable(editableEl);
+        const sel = window.getSelection();
+        if (sel.isCollapsed || !sel.rangeCount) return;
+        const range = sel.getRangeAt(0);
+        const span = document.createElement('span');
+        Object.assign(span.style, styleObj);
+        try {
+            range.surroundContents(span);
+        } catch (e) {
+            const fragment = range.extractContents();
+            span.appendChild(fragment);
+            range.insertNode(span);
+        }
+    }
 
     selectElement(element) {
         // Убираем выделение с предыдущего элемента
@@ -1471,15 +1583,12 @@ class ContentEditor {
                            oninput="contentEditor.updateElementProperty('backgroundColor', this.value)">
                 </div>
                 <div class="property-item">
-                    <label>Форматирование текста:</label>
-                    <div style="display:flex;gap:6px;margin-bottom:6px;">
+                    <label>Форматирование (только выделенный текст):</label>
+                    <div style="display:flex;gap:6px;">
                         <button class="action-btn" type="button" onclick="contentEditor.updateElementProperty('toggleBold')"><b>B</b></button>
                         <button class="action-btn" type="button" onclick="contentEditor.updateElementProperty('toggleItalic')"><i>I</i></button>
                         <button class="action-btn" type="button" onclick="contentEditor.updateElementProperty('toggleUnderline')"><u>U</u></button>
                     </div>
-                    <button class="action-btn" type="button" onclick="contentEditor.applyMarkdownFormatting()">
-                        Применить Markdown (*bold*, _italic_, \`code\`)
-                    </button>
                 </div>
                 ` : ''}
                 ${element.classList.contains('link-element') ? `
@@ -1554,23 +1663,28 @@ class ContentEditor {
                     audio.volume = value;
                 }
                 break;
-            case 'fontSize':
-                const textElement = this.selectedElement.querySelector('.text-content, .link-text');
-                if (textElement) {
-                    textElement.style.fontSize = value;
-                    // Update display value
-                    const valueDisplay = document.querySelector(`#prop${property.charAt(0).toUpperCase() + property.slice(1)} + .property-value`);
-                    if (valueDisplay) {
-                        valueDisplay.textContent = value;
-                    }
+            case 'fontSize': {
+                const textEl = this.selectedElement.querySelector('.text-content, .link-text');
+                if (!textEl) break;
+                if (this.hasValidSelectionForFormat(textEl)) {
+                    this.applyStyleToSelection(textEl, { fontSize: value });
+                } else {
+                    textEl.style.fontSize = value;
+                }
+                const fontSizeDisplay = document.querySelector('#propFontSize + .property-value');
+                if (fontSizeDisplay) fontSizeDisplay.textContent = value;
+                break;
+            }
+            case 'textColor': {
+                const textEl = this.selectedElement.querySelector('.text-content, .link-text');
+                if (!textEl) break;
+                if (this.hasValidSelectionForFormat(textEl)) {
+                    this.applyFormatToSelection(textEl, 'foreColor', value);
+                } else {
+                    textEl.style.color = value;
                 }
                 break;
-            case 'textColor':
-                const textContent = this.selectedElement.querySelector('.text-content, .link-text');
-                if (textContent) {
-                    textContent.style.color = value;
-                }
-                break;
+            }
             case 'linkUrl':
                 const linkUrl = this.selectedElement.querySelector('.link-url');
                 if (linkUrl) {
@@ -1606,66 +1720,39 @@ class ContentEditor {
             case 'toggleBold': {
                 const el = this.selectedElement.querySelector('.text-content, .link-text');
                 if (el) {
-                    el.style.fontWeight = el.style.fontWeight === 'bold' ? 'normal' : 'bold';
+                    if (this.hasValidSelectionForFormat(el)) {
+                        this.applyFormatToSelection(el, 'bold');
+                    } else {
+                        el.style.fontWeight = el.style.fontWeight === 'bold' ? 'normal' : 'bold';
+                    }
                 }
                 break;
             }
             case 'toggleItalic': {
                 const el = this.selectedElement.querySelector('.text-content, .link-text');
                 if (el) {
-                    el.style.fontStyle = el.style.fontStyle === 'italic' ? 'normal' : 'italic';
+                    if (this.hasValidSelectionForFormat(el)) {
+                        this.applyFormatToSelection(el, 'italic');
+                    } else {
+                        el.style.fontStyle = el.style.fontStyle === 'italic' ? 'normal' : 'italic';
+                    }
                 }
                 break;
             }
             case 'toggleUnderline': {
                 const el = this.selectedElement.querySelector('.text-content, .link-text');
                 if (el) {
-                    const dec = el.style.textDecorationLine || el.style.textDecoration;
-                    const hasUnderline = dec && dec.includes('underline');
-                    el.style.textDecoration = hasUnderline ? 'none' : 'underline';
+                    if (this.hasValidSelectionForFormat(el)) {
+                        this.applyFormatToSelection(el, 'underline');
+                    } else {
+                        const dec = el.style.textDecorationLine || el.style.textDecoration;
+                        const hasUnderline = dec && dec.includes('underline');
+                        el.style.textDecoration = hasUnderline ? 'none' : 'underline';
+                    }
                 }
                 break;
             }
         }
-    }
-
-    applyMarkdownFormatting() {
-        if (!this.selectedElement) return;
-        const target = this.selectedElement.querySelector('.text-content, .link-text');
-        if (!target) return;
-
-        // Если уже в режиме "рендеренного" markdown — возвращаемся к исходному тексту
-        if (target.dataset && target.dataset.markdownMode === 'rendered') {
-            const original = target.dataset.markdownRaw || target.innerText;
-            target.innerText = original;
-            delete target.dataset.markdownMode;
-            delete target.dataset.markdownRaw;
-            return;
-        }
-
-        // Сохраняем текущий текст как исходный markdown
-        const raw = target.innerText;
-        if (target.dataset) {
-            target.dataset.markdownRaw = raw;
-            target.dataset.markdownMode = 'rendered';
-        }
-
-        // Простейший Markdown-парсер в духе Telegram:
-        // *bold*, _italic_, `code`
-        let html = raw
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-
-        html = html
-            .replace(/`([^`]+)`/g, '<code>$1</code>')
-            .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
-            .replace(/_([^_]+)_/g, '<em>$1</em>');
-
-        // Переносы строк
-        html = html.replace(/\n/g, '<br>');
-
-        target.innerHTML = html;
     }
 
     playAudioElement(elementId) {
