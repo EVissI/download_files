@@ -36,8 +36,13 @@ class ContentEditor {
 
     getMaxCanvasHeight() {
         if (this.isMobile()) {
-            // For mobile, return standard mobile card height
-            return 250;
+            // Для мобильных устройств учитываем высоту вьюпорта и панели
+            // Оставляем место под заголовок и оба тулбара
+            const viewportHeight = window.innerHeight || 600;
+            const reserved = 260; // header + toolbars + отступы
+            const dynamicMax = viewportHeight - reserved;
+            // Не даём канвасу быть слишком маленьким
+            return Math.max(400, dynamicMax);
         }
         return 600; // Desktop default
     }
@@ -63,19 +68,19 @@ class ContentEditor {
                             <button class="close-btn" onclick="contentEditor.closeModal()">&times;</button>
                         </div>
                         <div class="content-editor-body">
-                            <div class="toolbar">
+                            <div class="toolbar toolbar-tools">
                                 <div class="tools-list" id="toolsList">
                                     <!-- Динамический список инструментов -->
                                 </div>
                             </div>
-
+                            <div class="editor-resizer editor-resizer-vertical" data-resize-target="toolbar"></div>
                             <div class="workspace">
                                 <div class="canvas" id="canvas">
                                     <!-- Здесь будут размещаться элементы -->
                                 </div>
                             </div>
-
-                            <div class="properties-panel">
+                            <div class="editor-resizer editor-resizer-vertical" data-resize-target="properties"></div>
+                            <div class="properties-panel toolbar-properties">
                                 <h3>Свойства</h3>
                                 <div id="propertiesContent">
                                     <p>Выберите элемент для редактирования</p>
@@ -93,6 +98,11 @@ class ContentEditor {
         this.canvas = document.getElementById('canvas');
         this.toolsList = document.getElementById('toolsList');
         this.propertiesContent = document.getElementById('propertiesContent');
+
+        // Дополнительные ссылки на панели для ресайза
+        this.toolbarPanel = this.modal.querySelector('.toolbar');
+        this.workspacePanel = this.modal.querySelector('.workspace');
+        this.propertiesPanel = this.modal.querySelector('.properties-panel');
     }
 
     openModal() {
@@ -1764,6 +1774,71 @@ class ContentEditor {
         // Handle window resize for mobile responsiveness
         window.addEventListener('resize', () => {
             this.handleWindowResize();
+        });
+
+        // Ресайз тулбаров и панели свойств / канваса
+        this.initPanelResizers();
+    }
+
+    initPanelResizers() {
+        const resizers = this.modal.querySelectorAll('.editor-resizer');
+        if (!resizers.length) return;
+
+        resizers.forEach(resizer => {
+            resizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+
+                const target = resizer.dataset.resizeTarget;
+                const isMobile = this.isMobile();
+
+                const startX = e.clientX;
+                const startY = e.clientY;
+
+                const startToolbarWidth = this.toolbarPanel ? this.toolbarPanel.offsetWidth : 0;
+                const startPropsWidth = this.propertiesPanel ? this.propertiesPanel.offsetWidth : 0;
+                const startToolbarHeight = this.toolbarPanel ? this.toolbarPanel.offsetHeight : 0;
+                const startPropsHeight = this.propertiesPanel ? this.propertiesPanel.offsetHeight : 0;
+
+                const minPanelSize = 120;
+                const maxPanelSize = 400;
+
+                const onMouseMove = (moveEvent) => {
+                    const dx = moveEvent.clientX - startX;
+                    const dy = moveEvent.clientY - startY;
+
+                    if (!isMobile) {
+                        // Desktop: ресайз по горизонтали (ширина панелей)
+                        if (target === 'toolbar' && this.toolbarPanel) {
+                            let newWidth = startToolbarWidth + dx;
+                            newWidth = Math.max(minPanelSize, Math.min(maxPanelSize, newWidth));
+                            this.toolbarPanel.style.width = newWidth + 'px';
+                        } else if (target === 'properties' && this.propertiesPanel) {
+                            let newWidth = startPropsWidth - dx;
+                            newWidth = Math.max(minPanelSize, Math.min(maxPanelSize, newWidth));
+                            this.propertiesPanel.style.width = newWidth + 'px';
+                        }
+                    } else {
+                        // Mobile: ресайз по вертикали (высота панелей)
+                        if (target === 'toolbar' && this.toolbarPanel) {
+                            let newHeight = startToolbarHeight + dy;
+                            newHeight = Math.max(minPanelSize, Math.min(maxPanelSize, newHeight));
+                            this.toolbarPanel.style.height = newHeight + 'px';
+                        } else if (target === 'properties' && this.propertiesPanel) {
+                            let newHeight = startPropsHeight - dy;
+                            newHeight = Math.max(minPanelSize, Math.min(maxPanelSize, newHeight));
+                            this.propertiesPanel.style.height = newHeight + 'px';
+                        }
+                    }
+                };
+
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
         });
     }
     

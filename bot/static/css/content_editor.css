@@ -104,6 +104,10 @@
     overflow: hidden;
 }
 
+/* Левый тулбар с инструментами (для возможной отдельной стилизации) */
+.toolbar-tools {
+}
+
 .toolbar h3 {
     padding: 15px;
     background: #383838;
@@ -278,6 +282,17 @@
     transition: height 0.3s ease, background-color 0.3s ease;
 }
 
+/* Ресайзер между панелями и рабочей областью */
+.editor-resizer {
+    background: #3a3a3a;
+    flex-shrink: 0;
+}
+
+.editor-resizer-vertical {
+    width: 6px;
+    cursor: col-resize;
+}
+
 /* Панель свойств */
 .properties-panel {
     width: 280px;
@@ -286,6 +301,10 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+/* Правый тулбар свойств (для возможной отдельной стилизации) */
+.toolbar-properties {
 }
 
 .properties-panel h3 {
@@ -705,7 +724,12 @@
         flex-direction: column;
     }
     
-    .toolbar,
+    /* Отдельное управление размерами панелей на мобиле */
+    .toolbar {
+        width: 100%;
+        height: 150px;
+    }
+    
     .properties-panel {
         width: 100%;
         height: 150px;
@@ -717,6 +741,15 @@
     
     .canvas {
         margin: 10px;
+        /* На мобиле избегаем жёсткой привязки max-height к vh, даём прокрутку внутри */
+        max-height: none;
+    }
+
+    /* На мобиле ресайзер работает по вертикали */
+    .editor-resizer-vertical {
+        width: 100%;
+        height: 6px;
+        cursor: row-resize;
     }
 }
 
