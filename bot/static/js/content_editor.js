@@ -1,7 +1,3 @@
-/**
- * Content Editor Module
- * Редактор контента в стиле Photoshop
- */
 
 class ContentEditor {
     constructor() {
@@ -356,32 +352,55 @@ class ContentEditor {
     }
 
     setupElementInteractions(element) {
-        // Добавляем обработчики для выделения элемента
+        // Обработчик клика для выделения элемента
         element.addEventListener('click', (e) => {
             e.stopPropagation();
             this.selectElement(element);
         });
 
-        // Добавляем обработчики для перемещения (drag and drop)
-        element.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('control-btn')) return;
-            
-            const startX = e.clientX - element.offsetLeft;
-            const startY = e.clientY - element.offsetTop;
+        // Добавляем визуальный хэндл для изменения размера (в правом нижнем углу)
+        let resizeHandle = element.querySelector('.resize-handle');
+        if (!resizeHandle) {
+            resizeHandle = document.createElement('div');
+            resizeHandle.className = 'resize-handle';
+            resizeHandle.style.position = 'absolute';
+            resizeHandle.style.right = '0';
+            resizeHandle.style.bottom = '0';
+            resizeHandle.style.width = '10px';
+            resizeHandle.style.height = '10px';
+            resizeHandle.style.background = '#667eea';
+            resizeHandle.style.cursor = 'se-resize';
+            resizeHandle.style.borderRadius = '2px';
+            element.appendChild(resizeHandle);
+        }
 
-            const handleMouseMove = (e) => {
-                const newX = e.clientX - startX;
-                const newY = e.clientY - startY;
-                
-                // Ограничиваем перемещение в пределах canvas
+        // Перемещение элемента (drag) по заголовку/телу, но не по контролам и не по хэндлу ресайза
+        element.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('control-btn') || e.target.classList.contains('resize-handle')) return;
+            
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const initialLeft = parseInt(element.style.left || 0);
+            const initialTop = parseInt(element.style.top || 0);
+
+            const handleMouseMove = (moveEvent) => {
+                const dx = moveEvent.clientX - startX;
+                const dy = moveEvent.clientY - startY;
+
                 const canvasRect = this.canvas.getBoundingClientRect();
                 const elementRect = element.getBoundingClientRect();
-                
+
+                let newLeft = initialLeft + dx;
+                let newTop = initialTop + dy;
+
                 const maxX = canvasRect.width - elementRect.width;
                 const maxY = canvasRect.height - elementRect.height;
-                
-                element.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
-                element.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
+
+                newLeft = Math.max(0, Math.min(newLeft, maxX));
+                newTop = Math.max(0, Math.min(newTop, maxY));
+
+                element.style.left = newLeft + 'px';
+                element.style.top = newTop + 'px';
             };
 
             const handleMouseUp = () => {
@@ -391,6 +410,53 @@ class ContentEditor {
 
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
+        });
+
+        // Изменение размера через хэндл
+        resizeHandle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const initialWidth = element.offsetWidth;
+            const initialHeight = element.offsetHeight;
+            const elementLeft = element.offsetLeft;
+            const elementTop = element.offsetTop;
+
+            const handleResizeMove = (moveEvent) => {
+                const dx = moveEvent.clientX - startX;
+                const dy = moveEvent.clientY - startY;
+
+                const canvasRect = this.canvas.getBoundingClientRect();
+
+                let newWidth = initialWidth + dx;
+                let newHeight = initialHeight + dy;
+
+                const minWidth = 50;
+                const minHeight = 40;
+
+                // Ограничиваем размеры элементом канваса
+                const maxWidth = canvasRect.width - elementLeft;
+                const maxHeight = canvasRect.height - elementTop;
+
+                newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+                newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+
+                element.style.width = newWidth + 'px';
+                element.style.height = newHeight + 'px';
+
+                const elementBottom = elementTop + newHeight;
+                this.expandCanvasIfNeeded(elementBottom);
+            };
+
+            const handleResizeUp = () => {
+                document.removeEventListener('mousemove', handleResizeMove);
+                document.removeEventListener('mouseup', handleResizeUp);
+            };
+
+            document.addEventListener('mousemove', handleResizeMove);
+            document.addEventListener('mouseup', handleResizeUp);
         });
     }
 
@@ -656,11 +722,10 @@ class ContentEditor {
             </div>
         `;
         
-        // Add controls
+        // Add controls (в том числе настройка drag/resize)
         this.addElementControls(element);
-        
-        // Add to canvas
         this.canvas.appendChild(element);
+        this.setupElementInteractions(element);
         
         // Expand canvas if needed for the audio element
         setTimeout(() => {
@@ -755,11 +820,10 @@ class ContentEditor {
                 <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: contain;" />
             `;
             
-            // Add controls
+            // Add controls (в том числе настройка drag/resize)
             this.addElementControls(element);
-            
-            // Add to canvas
             this.canvas.appendChild(element);
+            this.setupElementInteractions(element);
             
             // Expand canvas if needed for the image
             setTimeout(() => {
@@ -1111,11 +1175,10 @@ class ContentEditor {
             // Добавляем контент в элемент
             this.populateElementContent(element, toolId);
             
-            // Добавляем контролы
+            // Добавляем контролы и настраиваем drag/resize
             this.addElementControls(element);
-            
-            // Добавляем на холст
             this.canvas.appendChild(element);
+            this.setupElementInteractions(element);
             
             // Expand canvas if needed for the new element
             setTimeout(() => {
@@ -1671,6 +1734,7 @@ class ContentEditor {
         }
         
         this.canvas.appendChild(newElement);
+        this.setupElementInteractions(newElement);
         this.elements.push({
             id: newId,
             toolId: element.dataset.toolId,
@@ -1768,116 +1832,9 @@ class ContentEditor {
     }
     
     handleWindowResize() {
-        // Get current canvas dimensions
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const maxCanvasWidth = this.getMaxCanvasWidth();
-        // Use actual canvas width for proper mobile scaling
-        const fullWidth = canvasRect.width;
-        
-        // Update all canvas elements to match new canvas width
-        const canvasElements = this.canvas.querySelectorAll('.canvas-element');
-        canvasElements.forEach(element => {
-            // Update width for all elements to actual canvas width
-            element.style.width = fullWidth + 'px';
-            
-            const toolId = element.dataset.toolId;
-            
-            // Special handling for canvas/image elements
-            if (toolId === 'boardCanvas' || toolId === 'board-illustration') {
-                const canvasOrImg = element.querySelector('canvas, img');
-                if (canvasOrImg) {
-                    canvasOrImg.style.maxWidth = fullWidth + 'px';
-                    canvasOrImg.style.width = '100%';
-                    canvasOrImg.style.height = 'auto';
-                }
-            }
-            
-            // Special handling for uploaded images - recalculate smart height
-            if (toolId === 'upload-image') {
-                const img = element.querySelector('img');
-                if (img && img.naturalWidth && img.naturalHeight) {
-                    const oldHeight = parseInt(element.style.height);
-                    
-                    // Recalculate smart height based on new canvas width
-                    const aspectRatio = img.naturalHeight / img.naturalWidth;
-                    const smartHeight = Math.max(100, Math.min(600, fullWidth * aspectRatio));
-                    
-                    element.style.height = smartHeight + 'px';
-                    img.style.width = '100%';
-                    img.style.height = '100%';
-                    img.style.objectFit = 'contain';
-                    
-                    // If height changed, reposition elements below
-                    if (oldHeight !== smartHeight) {
-                        this.repositionElementsBelow(element.id);
-                    }
-                }
-            }
-            
-            // Special handling for tables
-            if (element.classList.contains('table-element') || toolId === 'moveHintsTable') {
-                const table = element.querySelector('table');
-                if (table) {
-                    table.style.width = '100%';
-                }
-            }
-        });
-        
-        // After updating all element sizes, recalculate positions for all elements
-        this.recalculateAllElementPositions();
-        
-        // Ensure canvas height is appropriate after resize
-        const allElements = this.canvas.querySelectorAll('.canvas-element');
-        if (allElements.length > 0) {
-            const lastElement = Array.from(allElements).reduce((last, current) => {
-                const lastBottom = parseInt(last.style.top) + last.offsetHeight;
-                const currentBottom = parseInt(current.style.top) + current.offsetHeight;
-                return currentBottom > lastBottom ? current : last;
-            });
-            
-            const maxBottom = parseInt(lastElement.style.top) + lastElement.offsetHeight;
-            this.expandCanvasIfNeeded(maxBottom);
-        }
-    }
-
-    recalculateAllElementPositions() {
-        // Get all elements sorted by their current top position
-        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
-            .filter(el => !el.id.includes('boardLabel'))
-            .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
-        
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const elementSpacing = 0; // No spacing between elements
-        let nextY = 0; // Start from top
-        
-        // Recalculate positions for all elements
-        allElements.forEach(element => {
-            let elementHeight;
-            
-            // Get actual height of element
-            if (element.classList.contains('table-element')) {
-                elementHeight = element.offsetHeight;
-                if (elementHeight < 50) {
-                    elementHeight = 100; // Default for empty tables
-                }
-            } else if (element.dataset.toolId === 'upload-image') {
-                // For images, use the current styled height
-                elementHeight = parseInt(element.style.height) || 200;
-            } else {
-                elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
-            }
-            
-            // Update position
-            element.style.top = nextY + 'px';
-            element.style.left = '0px'; // Always align to left
-            element.style.width = canvasRect.width + 'px'; // Full canvas width
-            
-            // Move to next position
-            nextY += elementHeight + elementSpacing;
-        });
-        
-        // Expand canvas if needed after recalculating all positions
-        this.expandCanvasIfNeeded(nextY);
+        // При ресайзе окна мы больше не меняем размеры и позиции элементов,
+        // чтобы пользовательский лейаут оставался стабильным.
+        // Можно при необходимости ограничивать только ширину самого канваса через CSS.
     }
 
     setupCanvasEvents() {
