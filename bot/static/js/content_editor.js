@@ -1766,7 +1766,8 @@ class ContentEditor {
                 const startToolbarHeight = this.toolbarPanel ? this.toolbarPanel.offsetHeight : 0;
                 const startPropsHeight = this.propertiesPanel ? this.propertiesPanel.offsetHeight : 0;
 
-                const minPanelSize = 120;
+                // Разрешаем практически полностью "задвигать" панели
+                const minPanelSize = 0;
                 const maxPanelSize = 400;
 
                 const onMouseMove = (moveEvent) => {
