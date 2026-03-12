@@ -1561,7 +1561,7 @@ class ContentEditor {
                            oninput="contentEditor.updateElementProperty('backgroundColor', this.value)">
                 </div>
                 <div class="property-item">
-                    <label>Форматирование (только выделенный текст):</label>
+                    <label>Форматирование:</label>
                     <div style="display:flex;gap:6px;">
                         <button class="action-btn" type="button" onclick="contentEditor.updateElementProperty('toggleBold')"><b>B</b></button>
                         <button class="action-btn" type="button" onclick="contentEditor.updateElementProperty('toggleItalic')"><i>I</i></button>
