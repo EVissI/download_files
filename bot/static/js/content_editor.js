@@ -1410,6 +1410,18 @@ class ContentEditor {
         // Check if this is a table element
         const isTableElement = element.classList.contains('table-element') || element.dataset.toolId === 'moveHintsTable';
         
+        const textContentEl = element.querySelector('.text-content');
+        const linkTextEl = element.querySelector('.link-text');
+        const currentTextNode = textContentEl || linkTextEl;
+
+        // Безопасно конвертируем вычисленные цвета в HEX, чтобы color input работал корректно
+        const textColorValue = textContentEl
+            ? this.rgbToHex(window.getComputedStyle(textContentEl).color || '#333333')
+            : '#333333';
+        const linkColorValue = linkTextEl
+            ? this.rgbToHex(window.getComputedStyle(linkTextEl).color || '#007bff')
+            : '#007bff';
+
         this.propertiesContent.innerHTML = `
             <div class="property-group">
                 <h4>Стиль</h4>
@@ -1431,8 +1443,43 @@ class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Цвет текста:</label>
-                    <input type="color" id="propTextColor" value="${window.getComputedStyle(element.querySelector('.text-content')).color || '#333333'}" 
+                    <input type="color" id="propTextColor" value="${textColorValue}" 
                            oninput="contentEditor.updateElementProperty('textColor', this.value)">
+                </div>
+                <div class="property-item">
+                    <label>Выравнивание:</label>
+                    <select id="propTextAlign" onchange="contentEditor.updateElementProperty('textAlign', this.value)">
+                        <option value="left" ${window.getComputedStyle(element.querySelector('.text-content')).textAlign === 'left' ? 'selected' : ''}>Слева</option>
+                        <option value="center" ${window.getComputedStyle(element.querySelector('.text-content')).textAlign === 'center' ? 'selected' : ''}>По центру</option>
+                        <option value="right" ${window.getComputedStyle(element.querySelector('.text-content')).textAlign === 'right' ? 'selected' : ''}>Справа</option>
+                        <option value="justify" ${window.getComputedStyle(element.querySelector('.text-content')).textAlign === 'justify' ? 'selected' : ''}>По ширине</option>
+                    </select>
+                </div>
+                <div class="property-item">
+                    <label>Межстрочный интервал:</label>
+                    <input type="range" id="propLineHeight" min="10" max="30" value="${Math.round(parseFloat(window.getComputedStyle(element.querySelector('.text-content')).lineHeight) || 20)}"
+                           oninput="contentEditor.updateElementProperty('lineHeight', this.value + 'px')">
+                </div>
+                <div class="property-item">
+                    <label>Отступ внутри блока:</label>
+                    <input type="range" id="propPadding" min="0" max="40" value="${parseInt(window.getComputedStyle(element).padding) || 8}"
+                           oninput="contentEditor.updateElementProperty('padding', this.value + 'px')">
+                </div>
+                <div class="property-item">
+                    <label>Цвет фона блока:</label>
+                    <input type="color" id="propBgColor" value="${window.getComputedStyle(element).backgroundColor || '#ffffff'}"
+                           oninput="contentEditor.updateElementProperty('backgroundColor', this.value)">
+                </div>
+                <div class="property-item">
+                    <label>Форматирование текста:</label>
+                    <div style="display:flex;gap:6px;margin-bottom:6px;">
+                        <button class="action-btn" type="button" onclick="contentEditor.updateElementProperty('toggleBold')"><b>B</b></button>
+                        <button class="action-btn" type="button" onclick="contentEditor.updateElementProperty('toggleItalic')"><i>I</i></button>
+                        <button class="action-btn" type="button" onclick="contentEditor.updateElementProperty('toggleUnderline')"><u>U</u></button>
+                    </div>
+                    <button class="action-btn" type="button" onclick="contentEditor.applyMarkdownFormatting()">
+                        Применить Markdown (*bold*, _italic_, \`code\`)
+                    </button>
                 </div>
                 ` : ''}
                 ${element.classList.contains('link-element') ? `
@@ -1444,8 +1491,16 @@ class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Цвет текста:</label>
-                    <input type="color" id="propTextColor" value="${window.getComputedStyle(element.querySelector('.link-text')).color || '#007bff'}" 
+                    <input type="color" id="propTextColor" value="${linkColorValue}" 
                            oninput="contentEditor.updateElementProperty('textColor', this.value)">
+                </div>
+                <div class="property-item">
+                    <label>Выравнивание:</label>
+                    <select id="propTextAlign" onchange="contentEditor.updateElementProperty('textAlign', this.value)">
+                        <option value="left" ${window.getComputedStyle(element.querySelector('.link-text')).textAlign === 'left' ? 'selected' : ''}>Слева</option>
+                        <option value="center" ${window.getComputedStyle(element.querySelector('.link-text')).textAlign === 'center' ? 'selected' : ''}>По центру</option>
+                        <option value="right" ${window.getComputedStyle(element.querySelector('.link-text')).textAlign === 'right' ? 'selected' : ''}>Справа</option>
+                    </select>
                 </div>
                 <div class="property-item">
                     <label>URL ссылки:</label>
@@ -1474,30 +1529,6 @@ class ContentEditor {
                     <div class="property-value">100%</div>
                 </div>
                 ` : ''}
-                <div class="property-item">
-                    <label>Цвет обводки:</label>
-                    <input type="color" id="propBorderColor" value="#667eea" 
-                           oninput="contentEditor.updateElementProperty('borderColor', this.value)">
-                </div>
-                <div class="property-item">
-                    <label>Толщина обводки:</label>
-                    <input type="range" id="propBorderWidth" min="0" max="10" value="2" 
-                           oninput="contentEditor.updateElementProperty('borderWidth', this.value + 'px')">
-                    <div class="property-value">2px</div>
-                </div>
-                <div class="property-item">
-                    <label>Прозрачность:</label>
-                    <input type="range" id="propOpacity" min="0" max="100" value="100" 
-                           oninput="contentEditor.updateElementProperty('opacity', this.value / 100)">
-                    <div class="property-value">100%</div>
-                </div>
-                <div class="property-item">
-                    <label>
-                        <input type="checkbox" id="propShadow" 
-                               onchange="contentEditor.updateElementProperty('shadow', this.checked)">
-                        Тень
-                    </label>
-                </div>
             </div>
             
             <div class="action-buttons">
@@ -1546,37 +1577,81 @@ class ContentEditor {
                     linkUrl.value = value;
                 }
                 break;
-            case 'borderColor':
-                this.selectedElement.style.borderColor = value;
-                break;
-            case 'borderWidth':
-                this.selectedElement.style.borderWidth = value;
-                // Update display value
-                const borderWidthDisplay = document.querySelector('#propBorderWidth + .property-value');
-                if (borderWidthDisplay) {
-                    borderWidthDisplay.textContent = value;
-                }
-                break;
-            case 'opacity':
-                this.selectedElement.style.opacity = value;
-                // Update display value
-                const opacityDisplay = document.querySelector('#propOpacity + .property-value');
-                if (opacityDisplay) {
-                    opacityDisplay.textContent = Math.round(value * 100) + '%';
-                }
-                break;
-            case 'shadow':
-                if (value) {
-                    this.selectedElement.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
-                } else {
-                    this.selectedElement.style.boxShadow = 'none';
-                }
-                break;
             case 'tableType':
                 this.selectedElement.dataset.tableType = value;
                 this.updateTableContent(this.selectedElement, value);
                 break;
+            case 'textAlign': {
+                const el = this.selectedElement.querySelector('.text-content, .link-text');
+                if (el) {
+                    el.style.textAlign = value;
+                }
+                break;
+            }
+            case 'lineHeight': {
+                const el = this.selectedElement.querySelector('.text-content, .link-text');
+                if (el) {
+                    el.style.lineHeight = value;
+                }
+                break;
+            }
+            case 'padding': {
+                this.selectedElement.style.padding = value;
+                break;
+            }
+            case 'backgroundColor': {
+                this.selectedElement.style.backgroundColor = value;
+                break;
+            }
+            case 'toggleBold': {
+                const el = this.selectedElement.querySelector('.text-content, .link-text');
+                if (el) {
+                    el.style.fontWeight = el.style.fontWeight === 'bold' ? 'normal' : 'bold';
+                }
+                break;
+            }
+            case 'toggleItalic': {
+                const el = this.selectedElement.querySelector('.text-content, .link-text');
+                if (el) {
+                    el.style.fontStyle = el.style.fontStyle === 'italic' ? 'normal' : 'italic';
+                }
+                break;
+            }
+            case 'toggleUnderline': {
+                const el = this.selectedElement.querySelector('.text-content, .link-text');
+                if (el) {
+                    const dec = el.style.textDecorationLine || el.style.textDecoration;
+                    const hasUnderline = dec && dec.includes('underline');
+                    el.style.textDecoration = hasUnderline ? 'none' : 'underline';
+                }
+                break;
+            }
         }
+    }
+
+    applyMarkdownFormatting() {
+        if (!this.selectedElement) return;
+        const target = this.selectedElement.querySelector('.text-content, .link-text');
+        if (!target) return;
+
+        const raw = target.innerText;
+
+        // Простейший Markdown-парсер в духе Telegram:
+        // *bold*, _italic_, `code`
+        let html = raw
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        html = html
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
+            .replace(/_([^_]+)_/g, '<em>$1</em>');
+
+        // Переносы строк
+        html = html.replace(/\n/g, '<br>');
+
+        target.innerHTML = html;
     }
 
     playAudioElement(elementId) {
