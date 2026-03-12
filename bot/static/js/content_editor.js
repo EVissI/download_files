@@ -1258,18 +1258,7 @@ class ContentEditor {
         linkText.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             if (e.target === linkText) {
-                // Начинаем редактирование при клике на текст
                 linkText.focus();
-                
-                // Выделяем весь текст при первом клике
-                if (linkText.textContent === 'Ссылка') {
-                    // Выделяем весь текст
-                    const selection = window.getSelection();
-                    const range = document.createRange();
-                    range.selectNodeContents(linkText);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                }
             }
         });
 
@@ -1323,18 +1312,7 @@ class ContentEditor {
         textContent.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             if (e.target === textContent) {
-                // Начинаем редактирование при клике на текст
                 textContent.focus();
-                
-                // Выделяем весь текст при первом клике
-                if (textContent.textContent === 'Текст вопроса' || textContent.textContent === 'Текст ответа') {
-                    // Выделяем весь текст
-                    const selection = window.getSelection();
-                    const range = document.createRange();
-                    range.selectNodeContents(textContent);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                }
             }
         });
 
@@ -1555,8 +1533,8 @@ class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Цвет текста:</label>
-                    <input type="color" id="propTextColor" value="${textColorValue}" 
-                           oninput="contentEditor.updateElementProperty('textColor', this.value)">
+                    <input type="color" id="propTextColor" value="${textColorValue}"
+                           onchange="contentEditor.updateElementProperty('textColor', this.value)">
                 </div>
                 <div class="property-item">
                     <label>Выравнивание:</label>
@@ -1600,8 +1578,8 @@ class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Цвет текста:</label>
-                    <input type="color" id="propTextColor" value="${linkColorValue}" 
-                           oninput="contentEditor.updateElementProperty('textColor', this.value)">
+                    <input type="color" id="propTextColor" value="${linkColorValue}"
+                           onchange="contentEditor.updateElementProperty('textColor', this.value)">
                 </div>
                 <div class="property-item">
                     <label>Выравнивание:</label>
