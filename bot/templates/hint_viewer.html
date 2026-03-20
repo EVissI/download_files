@@ -1179,7 +1179,7 @@
                     gameRedScore = scores.Red || 0;
                     gameBlackScore = scores.Black || 0;
                     matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br> Черные: ${blackPlayer}<br>`;
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
                     let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                     console.log('currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
                     topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox"><div id="black-pips" class="pips-above-board">0</div></div>';
@@ -1201,7 +1201,7 @@
                     }
                 } else if (availableGames.length > 0) {
                     matchInfoDiv.innerHTML = "Манигейм";
-                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
                     topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
 
                     const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
@@ -1327,10 +1327,10 @@
                         gameRedScore = gameScores.Red || 0;
                         gameBlackScore = gameScores.Black || 0;
                         if (matchLength === 0) {
-                            playersInfoDiv.innerHTML = "Белые: " + redPlayer + " – Черные: " + blackPlayer + "<br>";
+                            playersInfoDiv.innerHTML = "Белые: " + redPlayer + " <br>Черные: " + blackPlayer + "<br>";
                         } else {
                             matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-                            playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                            playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
                         }
                         let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                         console.log('loadGame currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
