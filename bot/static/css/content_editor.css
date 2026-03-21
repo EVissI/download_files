@@ -337,6 +337,100 @@
     flex: 1;
     padding: 15px;
     overflow-y: auto;
+    min-height: 0;
+}
+
+.properties-panel-footer {
+    flex-shrink: 0;
+    padding: 12px 15px;
+    border-top: 1px solid #404040;
+    background: #252525;
+}
+
+.save-frame-btn {
+    width: 100%;
+    padding: 10px 12px;
+    background: #166534;
+    border: 1px solid #22c55e;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.save-frame-btn:hover {
+    background: #15803d;
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
+}
+
+/* Подтверждение сохранения кадра */
+.save-frame-confirm-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10050;
+}
+
+.save-frame-confirm-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.save-frame-confirm-box {
+    position: relative;
+    max-width: 420px;
+    margin: 16px;
+    padding: 20px 22px;
+    background: #2d2d2d;
+    border: 1px solid #505050;
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.save-frame-confirm-text {
+    margin: 0 0 18px 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #e0e0e0;
+}
+
+.save-frame-confirm-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.save-frame-cancel-btn,
+.save-frame-ok-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid #505050;
+}
+
+.save-frame-cancel-btn {
+    background: #3a3a3a;
+    color: #e0e0e0;
+}
+
+.save-frame-cancel-btn:hover {
+    background: #454545;
+}
+
+.save-frame-ok-btn {
+    background: #166534;
+    border-color: #22c55e;
+    color: #fff;
+}
+
+.save-frame-ok-btn:hover {
+    background: #15803d;
 }
 
 .property-group {

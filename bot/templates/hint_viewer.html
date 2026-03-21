@@ -3902,6 +3902,67 @@
             checkAdminStatus();
         });
 
+        /**
+         * Снимок состояния доски и кадра для сохранения вместе с редактором (JSON / localStorage).
+         * Вызывается из content_editor.js при «Сохранить кадр».
+         */
+        window.getHintViewerBoardSnapshot = function() {
+            try {
+                const gid = typeof gameId !== 'undefined' ? gameId : 'default';
+                if (typeof dataLoaded === 'undefined' || !dataLoaded || !data || current === undefined) {
+                    return {
+                        frameId: `${gid}_g_na_f_na`,
+                        gameId: gid,
+                        currentGameNum: typeof currentGameNum !== 'undefined' ? currentGameNum : null,
+                        frameIndex: null,
+                        error: 'no_game_data'
+                    };
+                }
+                const gNum = currentGameNum != null ? currentGameNum : 'na';
+                const idx = current;
+                const frameId = `${gid}_g${gNum}_f${idx}`;
+                const xgid = typeof generateXGID === 'function' ? generateXGID() : '';
+
+                let positions = null;
+                if (idx > 0 && data[idx - 1]) {
+                    const prev = data[idx - 1];
+                    if (invertColors && prev.inverted_positions) {
+                        positions = JSON.parse(JSON.stringify(prev.inverted_positions));
+                    } else if (prev.positions) {
+                        positions = JSON.parse(JSON.stringify(prev.positions));
+                    }
+                }
+
+                const row = data[idx] || null;
+                return {
+                    frameId,
+                    gameId: gid,
+                    currentGameNum: currentGameNum != null ? currentGameNum : null,
+                    frameIndex: idx,
+                    invertColors: !!invertColors,
+                    xgid,
+                    positions,
+                    scores: typeof matchLength !== 'undefined' ? {
+                        matchLength,
+                        gameRedScore: typeof gameRedScore !== 'undefined' ? gameRedScore : null,
+                        gameBlackScore: typeof gameBlackScore !== 'undefined' ? gameBlackScore : null
+                    } : null,
+                    turn: row ? {
+                        turn: row.turn,
+                        action: row.action,
+                        player: row.player,
+                        player_name: row.player_name,
+                        dice: row.dice,
+                        cube: row.cube,
+                        gnu_move: row.gnu_move
+                    } : null
+                };
+            } catch (e) {
+                console.error('getHintViewerBoardSnapshot:', e);
+                return { error: String(e.message || e) };
+            }
+        };
+
         // Функция открытия редактора контента
         function openCardEditor() {
             if (typeof contentEditor !== 'undefined') {

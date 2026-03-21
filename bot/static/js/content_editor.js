@@ -88,6 +88,9 @@ class ContentEditor {
                                 <div id="propertiesContent">
                                     <p>Выберите элемент для редактирования</p>
                                 </div>
+                                <div class="properties-panel-footer">
+                                    <button type="button" class="save-frame-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -97,6 +100,22 @@ class ContentEditor {
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             this.modal = document.getElementById('contentEditorModal');
         }
+
+        if (!document.getElementById('saveFrameConfirmModal')) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="saveFrameConfirmModal" class="save-frame-confirm-modal" style="display: none;" aria-hidden="true">
+                    <div class="save-frame-confirm-overlay" onclick="contentEditor.cancelSaveFrame()"></div>
+                    <div class="save-frame-confirm-box" role="dialog" aria-modal="true">
+                        <p class="save-frame-confirm-text">Сохранить весь контент канваса в локальный JSON (с привязкой к кадру и доске), закрыть редактор и очистить холст?</p>
+                        <div class="save-frame-confirm-actions">
+                            <button type="button" class="save-frame-cancel-btn" onclick="contentEditor.cancelSaveFrame()">Отмена</button>
+                            <button type="button" class="save-frame-ok-btn" onclick="contentEditor.confirmSaveFrame()">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+        this.saveFrameConfirmModal = document.getElementById('saveFrameConfirmModal');
         
         this.canvas = document.getElementById('canvas');
         this.toolsList = document.getElementById('toolsList');
@@ -106,6 +125,14 @@ class ContentEditor {
         this.toolbarPanel = this.modal.querySelector('.toolbar');
         this.workspacePanel = this.modal.querySelector('.workspace');
         this.propertiesPanel = this.modal.querySelector('.properties-panel');
+
+        if (this.propertiesPanel && !this.propertiesPanel.querySelector('.properties-panel-footer')) {
+            this.propertiesPanel.insertAdjacentHTML('beforeend', `
+                <div class="properties-panel-footer">
+                    <button type="button" class="save-frame-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
+                </div>
+            `);
+        }
     }
 
     openModal() {
@@ -1835,8 +1862,148 @@ class ContentEditor {
             this.handleWindowResize();
         });
 
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.saveFrameConfirmModal &&
+                this.saveFrameConfirmModal.style.display === 'flex') {
+                this.cancelSaveFrame();
+            }
+        });
+
         // Ресайз тулбаров и панели свойств / канваса
         this.initPanelResizers();
+    }
+
+    openSaveFrameConfirm() {
+        if (!this.saveFrameConfirmModal) return;
+        this.saveFrameConfirmModal.style.display = 'flex';
+        this.saveFrameConfirmModal.setAttribute('aria-hidden', 'false');
+    }
+
+    cancelSaveFrame() {
+        if (!this.saveFrameConfirmModal) return;
+        this.saveFrameConfirmModal.style.display = 'none';
+        this.saveFrameConfirmModal.setAttribute('aria-hidden', 'true');
+    }
+
+    confirmSaveFrame() {
+        try {
+            const payload = this.buildFrameSavePayload();
+            const key = `contentEditor_frame_${payload.frameId}`;
+            localStorage.setItem(key, JSON.stringify(payload));
+            this.showNotification(`Кадр сохранён: ${key}`, 'success');
+        } catch (err) {
+            console.error('confirmSaveFrame:', err);
+            this.showNotification('Не удалось сохранить: ' + (err.message || err), 'error');
+            return;
+        }
+        this.cancelSaveFrame();
+        this.closeModal();
+        this.resetEditorAfterSave();
+    }
+
+    buildFrameSavePayload() {
+        const board = typeof window.getHintViewerBoardSnapshot === 'function'
+            ? window.getHintViewerBoardSnapshot()
+            : null;
+        const frameId = (board && board.frameId) ? board.frameId : `editor_${Date.now()}`;
+
+        let cardDataCopy = null;
+        if (this.cardData) {
+            try {
+                cardDataCopy = JSON.parse(JSON.stringify(this.cardData));
+            } catch (e) {
+                cardDataCopy = null;
+            }
+        }
+
+        const bg = this.canvas.style.backgroundColor || window.getComputedStyle(this.canvas).backgroundColor;
+        return {
+            version: 1,
+            frameId,
+            savedAt: new Date().toISOString(),
+            board,
+            cardData: cardDataCopy,
+            editor: {
+                boardCanvasToggle: !!this.toggleStates['boardCanvas'],
+                canvasBackground: bg
+            },
+            elements: this.serializeCanvasElements()
+        };
+    }
+
+    serializeCanvasElements() {
+        const out = [];
+        this.canvas.querySelectorAll('.canvas-element').forEach(el => {
+            const toolId = el.dataset.toolId || '';
+            const item = {
+                id: el.id,
+                toolId,
+                style: {
+                    top: el.style.top,
+                    left: el.style.left,
+                    width: el.style.width,
+                    height: el.style.height
+                },
+                dataset: { ...el.dataset }
+            };
+
+            switch (toolId) {
+                case 'question-text':
+                case 'answer-text': {
+                    const tc = el.querySelector('.text-content');
+                    item.textHtml = tc ? tc.innerHTML : '';
+                    break;
+                }
+                case 'support-link': {
+                    const lt = el.querySelector('.link-text');
+                    const lu = el.querySelector('.link-url');
+                    item.linkTextHtml = lt ? lt.innerHTML : '';
+                    item.linkUrl = lu ? lu.value : '';
+                    break;
+                }
+                case 'moveHintsTable': {
+                    const tbl = el.querySelector('table');
+                    item.tableType = el.dataset.tableType || 'hints';
+                    item.tableHtml = tbl ? tbl.outerHTML : el.innerHTML;
+                    break;
+                }
+                case 'upload-image': {
+                    item.imageUrl = el.dataset.imageUrl || '';
+                    break;
+                }
+                case 'audio-file': {
+                    item.audioUrl = el.dataset.audioUrl || '';
+                    item.audioName = el.dataset.audioName || '';
+                    break;
+                }
+                case 'board-illustration': {
+                    const img = el.querySelector('img');
+                    item.imageDataUrl = img ? img.src : '';
+                    break;
+                }
+                default:
+                    item.innerHtml = el.innerHTML;
+            }
+            out.push(item);
+        });
+        return out;
+    }
+
+    resetEditorAfterSave() {
+        this.elements = [];
+        if (this.canvas) {
+            this.canvas.innerHTML = '';
+            this.canvas.style.backgroundColor = '#ffffff';
+        }
+        this.selectedElement = null;
+        if (this.propertiesContent) {
+            this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
+        }
+        this.toggleStates = {};
+        this.cardData = null;
+        this.elementIdCounter = 0;
+        this.loadTools();
+        this.forceRefreshContent();
     }
 
     initPanelResizers() {
