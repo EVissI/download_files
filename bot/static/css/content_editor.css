@@ -340,31 +340,6 @@
     min-height: 0;
 }
 
-.properties-panel-footer {
-    flex-shrink: 0;
-    padding: 12px 15px;
-    border-top: 1px solid #404040;
-    background: #252525;
-}
-
-.save-frame-btn {
-    width: 100%;
-    padding: 10px 12px;
-    background: #166534;
-    border: 1px solid #22c55e;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-}
-
-.save-frame-btn:hover {
-    background: #15803d;
-    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
-}
-
 /* Подтверждение сохранения кадра */
 .save-frame-confirm-modal {
     position: fixed;
@@ -717,10 +692,34 @@
 
 /* Кнопки действий */
 .action-buttons {
-    padding: 10px;
+    padding: 10px 0 0 0;
+    margin-top: 8px;
     border-top: 1px solid #404040;
     display: flex;
     gap: 8px;
+}
+
+.action-buttons-col {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.action-buttons-col .action-btn {
+    flex: none;
+}
+
+.save-frame-inline-btn {
+    background: #1a472a;
+    border-color: #22c55e;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 8px;
+}
+
+.save-frame-inline-btn:hover {
+    background: #15803d;
+    border-color: #4ade80;
 }
 
 .action-btn {

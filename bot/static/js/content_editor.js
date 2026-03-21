@@ -88,9 +88,6 @@ class ContentEditor {
                                 <div id="propertiesContent">
                                     <p>Выберите элемент для редактирования</p>
                                 </div>
-                                <div class="properties-panel-footer">
-                                    <button type="button" class="save-frame-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -125,14 +122,6 @@ class ContentEditor {
         this.toolbarPanel = this.modal.querySelector('.toolbar');
         this.workspacePanel = this.modal.querySelector('.workspace');
         this.propertiesPanel = this.modal.querySelector('.properties-panel');
-
-        if (this.propertiesPanel && !this.propertiesPanel.querySelector('.properties-panel-footer')) {
-            this.propertiesPanel.insertAdjacentHTML('beforeend', `
-                <div class="properties-panel-footer">
-                    <button type="button" class="save-frame-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
-                </div>
-            `);
-        }
     }
 
     openModal() {
@@ -1583,8 +1572,9 @@ class ContentEditor {
                 ` : ''}
             </div>
             
-            <div class="action-buttons">
+            <div class="action-buttons action-buttons-col">
                 <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')">Удалить</button>
+                <button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
             </div>
         `;
     }
