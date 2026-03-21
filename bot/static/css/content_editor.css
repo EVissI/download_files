@@ -173,6 +173,17 @@
     color: #ffffff;
 }
 
+/* Инструмент «Доска»: активное состояние — только подсветка кнопки, без изменений канваса */
+.tool-item-icon.toggle-button.toggle-active {
+    background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+    border-color: #22c55e;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.4);
+}
+
+.tool-item-icon.toggle-button.toggle-active i {
+    color: #ffffff;
+}
+
 .tool-item {
     background: #3a3a3a;
     border: 1px solid #505050;
@@ -651,35 +662,6 @@
 
 .action-btn.danger:hover {
     background: #dc2626;
-}
-
-/* Надпись "доска" на холсте */
-.board-label {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(102, 126, 234, 0.9);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-    opacity: 0;
-    transform: translateX(-50%) scale(0.9);
-    transition: all 0.3s ease-out;
-}
-
-.board-label.show {
-    opacity: 1;
-    transform: translateX(-50%) scale(1);
-}
-
-.board-label.hide {
-    opacity: 0;
-    transform: translateX(-50%) scale(0.9);
 }
 
 /* Скроллбары */

@@ -833,69 +833,7 @@ class ContentEditor {
     }
 
     showToggleNotification(toolId, isActive) {
-        // Можно добавить логику для показа уведомлений
         console.log(`${toolId} is now ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
-        
-        // При необходимости можно добавить визуальное уведомление в интерфейсе
-        if (isActive) {
-            // Активировано - можно показать сообщение или выполнить действие
-            this.performToggleAction(toolId, true);
-        } else {
-            // Деактивировано
-            this.performToggleAction(toolId, false);
-        }
-    }
-
-    performToggleAction(toolId, isActive) {
-        // Здесь можно добавить конкретные действия при toggle
-        switch(toolId) {
-            case 'boardCanvas':
-                if (isActive) {
-                    console.log('BoardCanvas активирован');
-                    this.showBoardLabel();
-                } else {
-                    console.log('BoardCanvas деактивирован');
-                    this.hideBoardLabel();
-                }
-                break;
-        }
-    }
-
-    showBoardLabel() {
-        // Проверяем, есть ли уже надпись
-        if (document.getElementById('boardLabel')) {
-            return; // Уже существует
-        }
-
-        // Создаем элемент надписи
-        const boardLabel = document.createElement('div');
-        boardLabel.id = 'boardLabel';
-        boardLabel.className = 'board-label';
-        boardLabel.textContent = 'доска';
-        
-        // Добавляем на холст
-        this.canvas.appendChild(boardLabel);
-        
-        // Запускаем анимацию появления в следующем кадре
-        requestAnimationFrame(() => {
-            boardLabel.classList.add('show');
-        });
-    }
-
-    hideBoardLabel() {
-        // Находим и удаляем надпись
-        const boardLabel = document.getElementById('boardLabel');
-        if (boardLabel) {
-            boardLabel.classList.remove('show');
-            boardLabel.classList.add('hide');
-            
-            // Удаляем элемент после завершения анимации
-            setTimeout(() => {
-                if (boardLabel.parentNode) {
-                    boardLabel.remove();
-                }
-            }, 300);
-        }
     }
 
     expandCanvasIfNeeded(elementBottom) {
@@ -2369,9 +2307,6 @@ class ContentEditor {
 
     // Method to force complete reload of the editor
     forceReload() {
-        // Clear board label if exists
-        this.hideBoardLabel();
-        
         // Clear all elements
         this.elements = [];
         if (this.canvas) {
