@@ -2936,6 +2936,24 @@ class ContentEditor {
 // Создаем глобальный экземпляр редактора
 let contentEditor;
 
+/**
+ * При каждой загрузке страницы удаляем из localStorage только данные редактора
+ * (кадры, карточки, счётчики слотов). Настройки страницы (eqThreshold, чекбоксы и т.д.) не трогаем.
+ */
+function clearContentEditorLocalStorage() {
+    if (typeof localStorage === 'undefined') return;
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('contentEditor_')) {
+            toRemove.push(k);
+        }
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+}
+
+clearContentEditorLocalStorage();
+
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     contentEditor = new ContentEditor();
