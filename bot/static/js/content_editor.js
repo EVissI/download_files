@@ -3,6 +3,13 @@
  * Редактор контента в стиле Photoshop
  */
 
+const HINT_VIEWER_EDITOR_FRAME_KEY = 'hintViewer_editorSavedFrame_v1';
+const HINT_VIEWER_CARD_FRAMES_KEY = 'hintViewer_cardFrames_v1';
+if (typeof window !== 'undefined') {
+    window.HINT_VIEWER_EDITOR_FRAME_KEY = HINT_VIEWER_EDITOR_FRAME_KEY;
+    window.HINT_VIEWER_CARD_FRAMES_KEY = HINT_VIEWER_CARD_FRAMES_KEY;
+}
+
 class ContentEditor {
     constructor() {
         this.modal = null;
@@ -21,6 +28,10 @@ class ContentEditor {
         // Сохранённое выделение в contenteditable для Word-like форматирования
         this.savedSelection = null;
         this.savedSelectionEditable = null;
+        /** Индекс кадра карточки при редактировании из предпросмотра (или null) */
+        this._editingCardFrameIndex = null;
+        /** Текущий индекс в оверлее предпросмотра карточки */
+        this._cardPreviewFrameIndex = 0;
 
         this.init();
     }
@@ -53,8 +64,109 @@ class ContentEditor {
     init() {
         this.createModal();
         this.loadTools();
+        this.setupPropertiesFooterButtons();
         this.setupEventListeners();
         this.setupCanvasEvents();
+    }
+
+    setupPropertiesFooterButtons() {
+        const saveFrame = document.getElementById('contentEditorSaveFrameBtn');
+        if (saveFrame && !saveFrame.dataset.bound) {
+            saveFrame.dataset.bound = '1';
+            saveFrame.addEventListener('click', () => this.openSaveFrameConfirmModal());
+        }
+        const saveCard = document.getElementById('contentEditorSaveCardBtn');
+        if (saveCard && !saveCard.dataset.bound) {
+            saveCard.dataset.bound = '1';
+            saveCard.addEventListener('click', () => this.openSaveCardConfirmModal());
+        }
+    }
+
+    deepCloneJson(obj) {
+        if (obj == null) return null;
+        try {
+            return JSON.parse(JSON.stringify(obj));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    getEditorStateForStorage() {
+        const board = typeof window.getHintViewerBoardSnapshotForEditor === 'function'
+            ? window.getHintViewerBoardSnapshotForEditor()
+            : null;
+        return {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            board,
+            editor: {
+                cardData: this.deepCloneJson(this.cardData),
+                canvasBackground: this.canvas ? (this.canvas.style.backgroundColor || '') : '',
+                canvasInnerHTML: this.canvas ? this.canvas.innerHTML : '',
+                toggleStates: { ...this.toggleStates },
+                presetColors: [...this.presetColors],
+                elementIdCounter: this.elementIdCounter
+            }
+        };
+    }
+
+    openSaveFrameConfirmModal() {
+        if (document.getElementById('contentEditorSaveFrameConfirm')) return;
+        const html = `
+            <div id="contentEditorSaveFrameConfirm" class="content-editor-save-confirm-modal" style="display: flex;">
+                <div class="content-editor-save-confirm-overlay" data-save-frame-dismiss="1"></div>
+                <div class="content-editor-save-confirm-box" role="dialog" aria-labelledby="contentEditorSaveFrameTitle">
+                    <h3 id="contentEditorSaveFrameTitle">Сохранить кадр</h3>
+                    <p class="content-editor-save-confirm-text">Сохранить текущий кадр в память устройства? Будут записаны содержимое редактора и состояние доски. После сохранения редактор закроется.</p>
+                    <div class="content-editor-save-confirm-actions">
+                        <button type="button" class="content-editor-save-confirm-cancel" data-save-frame-dismiss="1">Отмена</button>
+                        <button type="button" class="content-editor-save-confirm-ok" id="contentEditorSaveFrameConfirmBtn">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', html);
+        const root = document.getElementById('contentEditorSaveFrameConfirm');
+        const dismiss = () => this.closeSaveFrameConfirmModal();
+        root.querySelectorAll('[data-save-frame-dismiss="1"]').forEach(el => {
+            el.addEventListener('click', dismiss);
+        });
+        document.getElementById('contentEditorSaveFrameConfirmBtn').addEventListener('click', () => {
+            this.executeSaveFrameToLocalStorage();
+        });
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                dismiss();
+                document.removeEventListener('keydown', onKey);
+            }
+        };
+        document.addEventListener('keydown', onKey);
+        root._saveFrameKeyHandler = onKey;
+    }
+
+    closeSaveFrameConfirmModal() {
+        const root = document.getElementById('contentEditorSaveFrameConfirm');
+        if (root) {
+            if (root._saveFrameKeyHandler) {
+                document.removeEventListener('keydown', root._saveFrameKeyHandler);
+            }
+            root.remove();
+        }
+    }
+
+    executeSaveFrameToLocalStorage() {
+        try {
+            const state = this.getEditorStateForStorage();
+            const json = JSON.stringify(state);
+            localStorage.setItem(HINT_VIEWER_EDITOR_FRAME_KEY, json);
+            this.closeSaveFrameConfirmModal();
+            this.showNotification('Кадр сохранён локально', 'success');
+            this._editingCardFrameIndex = null;
+            this.closeModal();
+        } catch (e) {
+            console.error('executeSaveFrameToLocalStorage', e);
+            this.showNotification('Не удалось сохранить: ' + (e.message || e), 'error');
+        }
     }
 
     createModal() {
@@ -85,8 +197,14 @@ class ContentEditor {
                             <div class="editor-resizer editor-resizer-vertical" data-resize-target="properties"></div>
                             <div class="properties-panel toolbar-properties">
                                 <h3>Свойства</h3>
-                                <div id="propertiesContent">
-                                    <p>Выберите элемент для редактирования</p>
+                                <div class="properties-content-wrapper">
+                                    <div id="propertiesContent">
+                                        <p>Выберите элемент для редактирования</p>
+                                    </div>
+                                </div>
+                                <div class="properties-panel-footer">
+                                    <button type="button" class="content-editor-save-frame-btn" id="contentEditorSaveFrameBtn">Сохранить кадр</button>
+                                    <button type="button" class="content-editor-save-card-btn" id="contentEditorSaveCardBtn">Сохранить карточку</button>
                                 </div>
                             </div>
                         </div>
@@ -128,7 +246,400 @@ class ContentEditor {
         document.body.style.overflow = 'auto';
     }
 
+    loadCardFramesFromStorage() {
+        try {
+            const raw = localStorage.getItem(HINT_VIEWER_CARD_FRAMES_KEY);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    saveCardFramesToStorage(frames) {
+        localStorage.setItem(HINT_VIEWER_CARD_FRAMES_KEY, JSON.stringify(frames));
+    }
+
+    openSaveCardConfirmModal() {
+        if (document.getElementById('contentEditorSaveCardConfirm')) return;
+        const html = `
+            <div id="contentEditorSaveCardConfirm" class="content-editor-save-confirm-modal" style="display: flex;">
+                <div class="content-editor-save-confirm-overlay" data-save-card-dismiss="1"></div>
+                <div class="content-editor-save-confirm-box" role="dialog" aria-labelledby="contentEditorSaveCardTitle">
+                    <h3 id="contentEditorSaveCardTitle">Сохранить карточку</h3>
+                    <p class="content-editor-save-confirm-text">Текущий кадр будет добавлен в карточку (или обновлён при редактировании из предпросмотра). Откроется режим предпросмотра кадров. Продолжить?</p>
+                    <div class="content-editor-save-confirm-actions">
+                        <button type="button" class="content-editor-save-confirm-cancel" data-save-card-dismiss="1">Отмена</button>
+                        <button type="button" class="content-editor-save-confirm-ok" id="contentEditorSaveCardConfirmBtn">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', html);
+        const root = document.getElementById('contentEditorSaveCardConfirm');
+        const dismiss = () => this.closeSaveCardConfirmModal();
+        root.querySelectorAll('[data-save-card-dismiss="1"]').forEach(el => el.addEventListener('click', dismiss));
+        document.getElementById('contentEditorSaveCardConfirmBtn').addEventListener('click', () => {
+            this.executeSaveCardAndOpenPreview();
+        });
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                dismiss();
+                document.removeEventListener('keydown', onKey);
+            }
+        };
+        document.addEventListener('keydown', onKey);
+        root._saveCardKeyHandler = onKey;
+    }
+
+    closeSaveCardConfirmModal() {
+        const root = document.getElementById('contentEditorSaveCardConfirm');
+        if (root) {
+            if (root._saveCardKeyHandler) {
+                document.removeEventListener('keydown', root._saveCardKeyHandler);
+            }
+            root.remove();
+        }
+    }
+
+    executeSaveCardAndOpenPreview() {
+        try {
+            const state = this.getEditorStateForStorage();
+            let frames = this.loadCardFramesFromStorage();
+            const idx = this._editingCardFrameIndex;
+            if (idx !== null && idx >= 0 && idx < frames.length) {
+                frames[idx] = state;
+            } else {
+                frames.push(state);
+            }
+            this._editingCardFrameIndex = null;
+            this.saveCardFramesToStorage(frames);
+            this.closeSaveCardConfirmModal();
+            this.closeModal();
+            this._cardPreviewFrameIndex = Math.max(0, frames.length - 1);
+            this.openCardPreviewOverlay();
+            this.showNotification('Карточка сохранена, открыт предпросмотр', 'success');
+        } catch (e) {
+            console.error('executeSaveCardAndOpenPreview', e);
+            this.showNotification('Не удалось сохранить карточку: ' + (e.message || e), 'error');
+        }
+    }
+
+    buildPokazEmbedUrl(board) {
+        if (!board || !board.xgid) return '';
+        try {
+            const base = window.location.origin || '';
+            const u = new URL('/pokaz', base || window.location.href);
+            u.searchParams.set('xgid', board.xgid);
+            const lang = board.lang && (board.lang === 'ru' || board.lang === 'en') ? board.lang : 'ru';
+            u.searchParams.set('lang', lang);
+            const cid = board.urlChatId != null ? board.urlChatId : board.chatId;
+            if (cid) u.searchParams.set('chat_id', String(cid));
+            if (board.invertColors) u.searchParams.set('invert', '1');
+            return u.pathname + u.search;
+        } catch (e) {
+            return '/pokaz?xgid=' + encodeURIComponent(board.xgid) + '&lang=ru' + (board.invertColors ? '&invert=1' : '');
+        }
+    }
+
+    translateCubeActionPreview(str) {
+        if (!str || typeof str !== 'string') return str;
+        const translations = {
+            'no double': 'не удваивать',
+            'double': 'удвоить',
+            'take': 'принять',
+            'pass': 'сдаться'
+        };
+        const result = str.split(',').map(part => {
+            const match = part.match(/^([^(]*)(\(.*\))?$/);
+            const textPart = (match ? match[1] : part).trim();
+            const parenPart = match && match[2] ? match[2] : '';
+            const key = textPart.toLowerCase();
+            const translated = translations[key] !== undefined ? translations[key] : textPart;
+            return translated + parenPart;
+        }).join(', ');
+        if (!result) return str;
+        return result.charAt(0).toUpperCase() + result.slice(1);
+    }
+
+    buildPreviewHintsTableHtml(cardData) {
+        if (!cardData) {
+            return '<p class="ce-preview-hints-empty">Нет данных для таблицы подсказок</p>';
+        }
+        if (cardData.cube_hints && cardData.cube_hints.length > 0) {
+            const ch = cardData.cube_hints[0];
+            const rows = (ch && ch.cubeful_equities) ? ch.cubeful_equities : [];
+            if (rows.length === 0) {
+                return '<p class="ce-preview-hints-empty">Нет строк таблицы куба</p>';
+            }
+            let tableHtml = '<table class="ce-preview-table ce-preview-cube-table"><thead><tr><th>Действие</th><th>Эквити</th></tr></thead><tbody>';
+            rows.forEach((eq) => {
+                const eqq = eq.eq != null ? Number(eq.eq).toFixed(3) : '—';
+                let displayAction = eq.action_1 || '';
+                if (eq.action_2) displayAction += ', ' + eq.action_2;
+                displayAction = this.translateCubeActionPreview(displayAction);
+                tableHtml += `<tr><td>${displayAction}</td><td>${eqq}</td></tr>`;
+            });
+            tableHtml += '</tbody></table>';
+            return tableHtml;
+        }
+        const hints = cardData.hints;
+        if (hints && hints.length > 0) {
+            const firstEq = hints[0].eq != null ? hints[0].eq : null;
+            let tableHtml = '<table class="ce-preview-table"><thead><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr></thead><tbody>';
+            hints.forEach((hint, index) => {
+                const prob1 = hint.probs && hint.probs[0] != null ? (hint.probs[0] * 100).toFixed(1) : '—';
+                const prob2 = hint.probs && hint.probs[1] != null ? (hint.probs[1] * 100).toFixed(1) : '—';
+                const eqRaw = hint.eq != null ? hint.eq : null;
+                const displayEq = (firstEq != null && eqRaw != null && index > 0)
+                    ? (eqRaw - firstEq).toFixed(3)
+                    : (eqRaw != null ? eqRaw.toFixed(3) : '—');
+                const move = hint.move || '—';
+                tableHtml += `<tr><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
+            });
+            tableHtml += '</tbody></table>';
+            return tableHtml;
+        }
+        return '<p class="ce-preview-hints-empty">Нет подсказок (ход / куб)</p>';
+    }
+
+    frameWantsBoardCanvas(frame) {
+        return !!(frame && frame.editor && frame.editor.toggleStates && frame.editor.toggleStates.boardCanvas);
+    }
+
+    closeCardPreviewOverlay() {
+        const el = document.getElementById('contentEditorCardPreview');
+        if (el) {
+            if (el._previewKeyHandler) {
+                document.removeEventListener('keydown', el._previewKeyHandler);
+            }
+            el.remove();
+        }
+        document.body.style.overflow = 'auto';
+    }
+
+    renderCardPreviewFrame(idx) {
+        const root = document.getElementById('contentEditorCardPreview');
+        if (!root) return;
+        const frames = this.loadCardFramesFromStorage();
+        if (!frames.length) {
+            this.closeCardPreviewOverlay();
+            return;
+        }
+        const safeIdx = Math.max(0, Math.min(idx, frames.length - 1));
+        this._cardPreviewFrameIndex = safeIdx;
+        const frame = frames[safeIdx];
+        const board = frame.board || {};
+        const cardData = board.cardData || frame.editor.cardData;
+        const showBoardIframe = this.frameWantsBoardCanvas(frame) && board.xgid;
+        const showBoardLabelOnly = this.frameWantsBoardCanvas(frame) && !board.xgid;
+
+        const stickyEl = root.querySelector('.ce-card-preview-sticky');
+        const hintsHost = root.querySelector('.ce-preview-hints-table-host');
+        const canvasHost = root.querySelector('.ce-preview-canvas-host');
+        const counterEl = root.querySelector('.ce-card-preview-counter');
+
+        if (counterEl) counterEl.textContent = `${safeIdx + 1} / ${frames.length}`;
+
+        if (stickyEl) {
+            if (showBoardIframe) {
+                stickyEl.innerHTML = `
+                    <div class="ce-card-preview-board-bar">
+                        <span class="ce-card-preview-board-caption">Доска (позиция кадра)</span>
+                    </div>
+                    <div class="ce-card-preview-iframe-wrap"></div>
+                `;
+                const wrap = stickyEl.querySelector('.ce-card-preview-iframe-wrap');
+                if (wrap) {
+                    const iframe = document.createElement('iframe');
+                    iframe.className = 'ce-card-preview-pokaz-iframe';
+                    iframe.title = 'Доска';
+                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+                    iframe.src = this.buildPokazEmbedUrl(board);
+                    wrap.appendChild(iframe);
+                }
+                stickyEl.style.display = 'block';
+            } else if (showBoardLabelOnly) {
+                stickyEl.innerHTML = '<div class="ce-card-preview-board-fallback">доска</div>';
+                stickyEl.style.display = 'block';
+            } else {
+                stickyEl.innerHTML = '';
+                stickyEl.style.display = 'none';
+            }
+        }
+
+        if (hintsHost) {
+            hintsHost.innerHTML = `
+                <div class="ce-hints-table hints-table active">
+                    <div class="hints-table-body">
+                        <button type="button" class="hints-table-toggle ce-hints-table-toggle" aria-label="Свернуть таблицу">
+                            <i class="fa fa-chevron-down"></i>
+                        </button>
+                        <div class="hints-table-content">
+                            <div class="hints-content active">${this.buildPreviewHintsTableHtml(cardData)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            const toggle = hintsHost.querySelector('.ce-hints-table-toggle');
+            const container = hintsHost.querySelector('.ce-hints-table');
+            if (toggle && container) {
+                toggle.addEventListener('click', () => container.classList.toggle('collapsed'));
+            }
+        }
+
+        if (canvasHost) {
+            const bg = (frame.editor && frame.editor.canvasBackground) ? frame.editor.canvasBackground : '#ffffff';
+            canvasHost.style.backgroundColor = bg;
+            canvasHost.innerHTML = frame.editor && frame.editor.canvasInnerHTML
+                ? frame.editor.canvasInnerHTML
+                : '<p class="ce-preview-hints-empty">Пустой холст</p>';
+            canvasHost.querySelectorAll('.canvas-element').forEach((cel) => {
+                cel.classList.remove('selected');
+            });
+        }
+
+        const prevBtn = root.querySelector('.ce-card-preview-prev');
+        const nextBtn = root.querySelector('.ce-card-preview-next');
+        if (prevBtn) prevBtn.disabled = safeIdx <= 0;
+        if (nextBtn) nextBtn.disabled = safeIdx >= frames.length - 1;
+    }
+
+    openCardPreviewOverlay() {
+        if (document.getElementById('contentEditorCardPreview')) {
+            this.renderCardPreviewFrame(this._cardPreviewFrameIndex);
+            return;
+        }
+        const frames = this.loadCardFramesFromStorage();
+        if (!frames.length) {
+            this.showNotification('Нет кадров для предпросмотра', 'warning');
+            return;
+        }
+        this._cardPreviewFrameIndex = Math.min(this._cardPreviewFrameIndex, frames.length - 1);
+        const html = `
+            <div id="contentEditorCardPreview" class="ce-card-preview-root">
+                <div class="ce-card-preview-toolbar">
+                    <button type="button" class="ce-card-preview-icon-btn ce-card-preview-close" title="Закрыть">&times;</button>
+                    <div class="ce-card-preview-nav">
+                        <button type="button" class="ce-card-preview-arrow ce-card-preview-prev" aria-label="Предыдущий кадр"><i class="fa fa-chevron-left"></i></button>
+                        <span class="ce-card-preview-counter">1 / 1</span>
+                        <button type="button" class="ce-card-preview-arrow ce-card-preview-next" aria-label="Следующий кадр"><i class="fa fa-chevron-right"></i></button>
+                    </div>
+                    <div class="ce-card-preview-actions">
+                        <button type="button" class="ce-card-preview-edit-btn">Редактировать кадр</button>
+                        <button type="button" class="ce-card-preview-approve-btn">Апрув</button>
+                    </div>
+                </div>
+                <div class="ce-card-preview-scroll">
+                    <div class="ce-card-preview-sticky"></div>
+                    <div class="ce-preview-hints-table-host"></div>
+                    <div class="ce-preview-canvas-host ce-preview-canvas-readonly"></div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.body.style.overflow = 'hidden';
+        const root = document.getElementById('contentEditorCardPreview');
+
+        root.querySelector('.ce-card-preview-close').addEventListener('click', () => this.closeCardPreviewOverlay());
+        root.querySelector('.ce-card-preview-prev').addEventListener('click', () => {
+            this.renderCardPreviewFrame(this._cardPreviewFrameIndex - 1);
+        });
+        root.querySelector('.ce-card-preview-next').addEventListener('click', () => {
+            this.renderCardPreviewFrame(this._cardPreviewFrameIndex + 1);
+        });
+        root.querySelector('.ce-card-preview-edit-btn').addEventListener('click', () => {
+            const frames = this.loadCardFramesFromStorage();
+            const i = this._cardPreviewFrameIndex;
+            if (i < 0 || i >= frames.length) return;
+            this.applyEditorFrameState(frames[i]);
+            this._editingCardFrameIndex = i;
+            this.closeCardPreviewOverlay();
+            this.openModal();
+        });
+        root.querySelector('.ce-card-preview-approve-btn').addEventListener('click', () => {
+            this.showNotification('Апрув (заглушка)', 'info');
+        });
+
+        const onKey = (e) => {
+            if (e.key === 'Escape') this.closeCardPreviewOverlay();
+            else if (e.key === 'ArrowLeft') this.renderCardPreviewFrame(this._cardPreviewFrameIndex - 1);
+            else if (e.key === 'ArrowRight') this.renderCardPreviewFrame(this._cardPreviewFrameIndex + 1);
+        };
+        document.addEventListener('keydown', onKey);
+        root._previewKeyHandler = onKey;
+
+        this.renderCardPreviewFrame(this._cardPreviewFrameIndex);
+    }
+
+    syncBoardToolToggleUI() {
+        const toolElement = document.querySelector('#contentEditorModal [data-tool-id="boardCanvas"]');
+        if (!toolElement) return;
+        if (this.toggleStates.boardCanvas) {
+            toolElement.classList.add('toggle-active');
+            toolElement.classList.remove('selected');
+        } else {
+            toolElement.classList.remove('toggle-active');
+        }
+    }
+
+    rehydrateCanvasAfterInnerHTMLRestore() {
+        if (!this.canvas) return;
+        this.elements = [];
+        const nodes = Array.from(this.canvas.querySelectorAll('.canvas-element'));
+        nodes.forEach((element) => {
+            this.elements.push({
+                id: element.id,
+                toolId: element.dataset.toolId,
+                element
+            });
+            this.setupElementInteractions(element);
+            if (element.classList.contains('text-element')) this.setupTextEditing(element);
+            if (element.classList.contains('link-element')) this.setupLinkEditing(element);
+            if (element.classList.contains('audio-element')) {
+                const url = element.dataset.audioUrl || '';
+                if (url) {
+                    element.querySelectorAll('audio').forEach(a => a.remove());
+                    this.setupAudioElement(element, url, null);
+                }
+            }
+        });
+        let maxNum = 0;
+        nodes.forEach((el) => {
+            const m = /^element_(\d+)$/.exec(el.id);
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+        });
+        this.elementIdCounter = Math.max(this.elementIdCounter || 0, maxNum + 1);
+    }
+
+    applyEditorFrameState(frame) {
+        if (!frame || !frame.editor) return;
+        const ed = frame.editor;
+        this.cardData = this.deepCloneJson(ed.cardData);
+        if (ed.canvasBackground && this.canvas) this.canvas.style.backgroundColor = ed.canvasBackground;
+        if (this.canvas) {
+            this.canvas.innerHTML = ed.canvasInnerHTML != null ? ed.canvasInnerHTML : '';
+        }
+        this.toggleStates = { ...(ed.toggleStates || {}) };
+        if (Array.isArray(ed.presetColors) && ed.presetColors.length) {
+            this.presetColors = [...ed.presetColors];
+        }
+        if (typeof ed.elementIdCounter === 'number') this.elementIdCounter = ed.elementIdCounter;
+        this.rehydrateCanvasAfterInnerHTMLRestore();
+        this.syncBoardToolToggleUI();
+        if (this.toggleStates.boardCanvas) this.showBoardLabel();
+        else this.hideBoardLabel();
+        this.selectedElement = null;
+        if (this.propertiesContent) {
+            this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
+        }
+        this.loadTools();
+        this.forceRefreshContent();
+    }
+
     openModalWithData(cardData) {
+        this._editingCardFrameIndex = null;
         // Force cache-busting by adding timestamp to modal
         const timestamp = Date.now();
         if (this.modal) {
@@ -698,7 +1209,8 @@ class ContentEditor {
     setupAudioElement(element, audioUrl, file) {
         const playBtn = element.querySelector('.audio-play-btn');
         const durationEl = element.querySelector('.audio-duration');
-        
+        if (!playBtn || !durationEl) return;
+
         // Create audio element (hidden)
         const audio = document.createElement('audio');
         audio.src = audioUrl;
