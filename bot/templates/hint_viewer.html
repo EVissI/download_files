@@ -3830,49 +3830,6 @@
             
             return xgid;
         }
-
-        /**
-         * Снимок состояния партии для сохранения кадра редактора (localStorage).
-         * Вызывается из content_editor через window.getHintViewerBoardSnapshotForEditor.
-         */
-        function getHintViewerBoardSnapshotForEditor() {
-            const params = new URLSearchParams(window.location.search);
-            let xgid = '';
-            try {
-                if (typeof generateXGID === 'function') {
-                    xgid = generateXGID() || '';
-                }
-            } catch (e) {
-                console.warn('getHintViewerBoardSnapshotForEditor: generateXGID failed', e);
-            }
-            let cardClone = null;
-            try {
-                if (dataLoaded && data && data.length && typeof current === 'number' && current >= 0 && current < data.length) {
-                    cardClone = JSON.parse(JSON.stringify(data[current]));
-                }
-            } catch (e) {
-                console.warn('getHintViewerBoardSnapshotForEditor: card clone failed', e);
-            }
-            const lang = params.get('lang') || '';
-            return {
-                gameId: typeof gameId !== 'undefined' ? gameId : (params.get('game_id') || 'default'),
-                chatId: typeof chatId !== 'undefined' ? chatId : null,
-                urlChatId: params.get('chat_id'),
-                lang: (lang === 'ru' || lang === 'en') ? lang : '',
-                dataLoaded: !!dataLoaded,
-                current: typeof current === 'number' ? current : 0,
-                currentGameNum: currentGameNum,
-                invertColors: !!invertColors,
-                matchLength: matchLength,
-                gameRedScore: gameRedScore,
-                gameBlackScore: gameBlackScore,
-                redPlayer: redPlayer,
-                blackPlayer: blackPlayer,
-                xgid: xgid,
-                cardData: cardClone
-            };
-        }
-        window.getHintViewerBoardSnapshotForEditor = getHintViewerBoardSnapshotForEditor;
         
         function openPokazEditor() {
             try {
