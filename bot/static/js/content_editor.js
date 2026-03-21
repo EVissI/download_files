@@ -103,7 +103,7 @@ class ContentEditor {
                 <div id="saveFrameConfirmModal" class="save-frame-confirm-modal" style="display: none;" aria-hidden="true">
                     <div class="save-frame-confirm-overlay" onclick="contentEditor.cancelSaveFrame()"></div>
                     <div class="save-frame-confirm-box" role="dialog" aria-modal="true">
-                        <p class="save-frame-confirm-text">Сохранить весь контент канваса в локальный JSON (с привязкой к кадру и доске), закрыть редактор и очистить холст?</p>
+                        <h3 class="save-frame-confirm-title">Сохранить кадр</h3>
                         <div class="save-frame-confirm-actions">
                             <button type="button" class="save-frame-cancel-btn" onclick="contentEditor.cancelSaveFrame()">Отмена</button>
                             <button type="button" class="save-frame-ok-btn" onclick="contentEditor.confirmSaveFrame()">Сохранить</button>
@@ -1875,12 +1875,38 @@ class ContentEditor {
         this.saveFrameConfirmModal.setAttribute('aria-hidden', 'true');
     }
 
+    sanitizeFrameIdForStorageKey(frameId) {
+        return String(frameId).replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+
+    /** Следующий свободный индекс сохранения для данного кадра (0, 1, 2, …). */
+    allocateNextSaveSlotIndex(frameId) {
+        const safe = this.sanitizeFrameIdForStorageKey(frameId);
+        const counterKey = `contentEditor_saveSlotNext_${safe}`;
+        const next = parseInt(localStorage.getItem(counterKey) || '0', 10);
+        localStorage.setItem(counterKey, String(next + 1));
+        return next;
+    }
+
+    frameStorageKey(frameId, slotIndex) {
+        return `contentEditor_frame_${this.sanitizeFrameIdForStorageKey(frameId)}_${slotIndex}`;
+    }
+
+    getFrameIdForSave() {
+        const board = typeof window.getHintViewerBoardSnapshot === 'function'
+            ? window.getHintViewerBoardSnapshot()
+            : null;
+        return (board && board.frameId) ? board.frameId : `editor_${Date.now()}`;
+    }
+
     confirmSaveFrame() {
         try {
-            const payload = this.buildFrameSavePayload();
-            const key = `contentEditor_frame_${payload.frameId}`;
+            const frameId = this.getFrameIdForSave();
+            const saveSlotIndex = this.allocateNextSaveSlotIndex(frameId);
+            const payload = this.buildFrameSavePayload(frameId, saveSlotIndex);
+            const key = this.frameStorageKey(frameId, saveSlotIndex);
             localStorage.setItem(key, JSON.stringify(payload));
-            this.showNotification(`Кадр сохранён: ${key}`, 'success');
+            this.showNotification(`Кадр сохранён №${saveSlotIndex + 1}`, 'success');
         } catch (err) {
             console.error('confirmSaveFrame:', err);
             this.showNotification('Не удалось сохранить: ' + (err.message || err), 'error');
@@ -1891,11 +1917,10 @@ class ContentEditor {
         this.resetEditorAfterSave();
     }
 
-    buildFrameSavePayload() {
+    buildFrameSavePayload(frameId, saveSlotIndex) {
         const board = typeof window.getHintViewerBoardSnapshot === 'function'
             ? window.getHintViewerBoardSnapshot()
             : null;
-        const frameId = (board && board.frameId) ? board.frameId : `editor_${Date.now()}`;
 
         let cardDataCopy = null;
         if (this.cardData) {
@@ -1910,6 +1935,7 @@ class ContentEditor {
         return {
             version: 1,
             frameId,
+            saveSlotIndex,
             savedAt: new Date().toISOString(),
             board,
             cardData: cardDataCopy,
