@@ -409,6 +409,183 @@
     background: #15803d;
 }
 
+.save-card-ok-btn {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+}
+
+.save-card-ok-btn:hover {
+    background: #1d4ed8;
+    border-color: #60a5fa;
+}
+
+/* Предпросмотр сохранённой карточки */
+.card-preview-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10100;
+}
+
+.card-preview-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.card-preview-box {
+    position: relative;
+    width: min(420px, calc(100vw - 24px));
+    max-height: min(90vh, 560px);
+    overflow: auto;
+    margin: 12px;
+    padding: 16px 18px;
+    background: #2d2d2d;
+    border: 1px solid #505050;
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.card-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #404040;
+}
+
+.card-preview-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #f0f0f0;
+}
+
+.card-preview-close {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.card-preview-close:hover {
+    color: #fff;
+}
+
+.card-preview-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.card-preview-nav-btn {
+    min-width: 36px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #505050;
+    background: #3a3a3a;
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.card-preview-nav-btn:hover:not(:disabled) {
+    background: #454545;
+    border-color: #667eea;
+}
+
+.card-preview-nav-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.card-preview-counter {
+    font-size: 13px;
+    color: #b0b0b0;
+    min-width: 56px;
+    text-align: center;
+}
+
+.card-preview-meta {
+    font-size: 12px;
+    color: #c0c0c0;
+    margin-bottom: 12px;
+    line-height: 1.45;
+}
+
+.card-preview-meta-line {
+    margin-bottom: 4px;
+}
+
+.card-preview-meta-empty {
+    color: #888;
+}
+
+.card-preview-saved-at {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.card-preview-stub {
+    border: 1px dashed #505050;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.card-preview-placeholder {
+    font-size: 12px;
+    color: #a0a0a0;
+    margin-bottom: 10px;
+}
+
+.card-preview-approve {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #ca8a04;
+    background: #713f12;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.card-preview-approve:hover {
+    background: #854d0e;
+}
+
+.card-preview-footer {
+    display: flex;
+    justify-content: stretch;
+}
+
+.card-preview-open-editor {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #667eea;
+    background: #4a5568;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.card-preview-open-editor:hover {
+    background: #5a67d8;
+}
+
 .property-group {
     margin-bottom: 20px;
 }
@@ -721,6 +898,20 @@
 .save-frame-inline-btn:hover {
     background: #15803d;
     border-color: #4ade80;
+}
+
+.save-card-inline-btn {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 8px;
+}
+
+.save-card-inline-btn:hover {
+    background: #1d4ed8;
+    border-color: #60a5fa;
 }
 
 .action-btn {

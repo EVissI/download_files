@@ -22,6 +22,10 @@ class ContentEditor {
         this.savedSelection = null;
         this.savedSelectionEditable = null;
 
+        /** Предпросмотр сохранённой карточки: список ссылок на кадры и текущий индекс */
+        this.cardPreviewRefs = [];
+        this.cardPreviewIndex = 0;
+
         this.init();
     }
 
@@ -113,6 +117,50 @@ class ContentEditor {
             `);
         }
         this.saveFrameConfirmModal = document.getElementById('saveFrameConfirmModal');
+
+        if (!document.getElementById('saveCardConfirmModal')) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="saveCardConfirmModal" class="save-frame-confirm-modal" style="display: none;" aria-hidden="true">
+                    <div class="save-frame-confirm-overlay" onclick="contentEditor.cancelSaveCard()"></div>
+                    <div class="save-frame-confirm-box" role="dialog" aria-modal="true">
+                        <h3 class="save-frame-confirm-title">Сохранить карточку</h3>
+                        <div class="save-frame-confirm-actions">
+                            <button type="button" class="save-frame-cancel-btn" onclick="contentEditor.cancelSaveCard()">Отмена</button>
+                            <button type="button" class="save-frame-ok-btn save-card-ok-btn" onclick="contentEditor.confirmSaveCard()">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+        this.saveCardConfirmModal = document.getElementById('saveCardConfirmModal');
+
+        if (!document.getElementById('cardPreviewModal')) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="cardPreviewModal" class="card-preview-modal" style="display: none;" aria-hidden="true">
+                    <div class="card-preview-overlay" onclick="contentEditor.closeCardPreviewModal()"></div>
+                    <div class="card-preview-box" role="dialog" aria-modal="true">
+                        <div class="card-preview-header">
+                            <h3 class="card-preview-title">Предпросмотр карточки</h3>
+                            <button type="button" class="card-preview-close" onclick="contentEditor.closeCardPreviewModal()" aria-label="Закрыть">&times;</button>
+                        </div>
+                        <div class="card-preview-nav">
+                            <button type="button" class="card-preview-nav-btn" id="cardPreviewPrevBtn" onclick="contentEditor.cardPreviewPrev()">←</button>
+                            <span class="card-preview-counter" id="cardPreviewCounter">0 / 0</span>
+                            <button type="button" class="card-preview-nav-btn" id="cardPreviewNextBtn" onclick="contentEditor.cardPreviewNext()">→</button>
+                        </div>
+                        <div class="card-preview-meta" id="cardPreviewMeta"></div>
+                        <div class="card-preview-stub">
+                            <div class="card-preview-placeholder" id="cardPreviewPlaceholder">Предпросмотр кадра (заглушка)</div>
+                            <button type="button" class="card-preview-approve" onclick="contentEditor.cardPreviewApprove()">Апрув</button>
+                        </div>
+                        <div class="card-preview-footer">
+                            <button type="button" class="card-preview-open-editor" onclick="contentEditor.openEditorFromSelectedPreview()">Открыть редактор</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+        this.cardPreviewModal = document.getElementById('cardPreviewModal');
         
         this.canvas = document.getElementById('canvas');
         this.toolsList = document.getElementById('toolsList');
@@ -1575,6 +1623,7 @@ class ContentEditor {
             <div class="action-buttons action-buttons-col">
                 <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')">Удалить</button>
                 <button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
+                <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openSaveCardConfirm()">Сохранить карточку</button>
             </div>
         `;
     }
@@ -1853,9 +1902,17 @@ class ContentEditor {
         });
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.saveFrameConfirmModal &&
-                this.saveFrameConfirmModal.style.display === 'flex') {
+            if (e.key !== 'Escape') return;
+            if (this.saveFrameConfirmModal && this.saveFrameConfirmModal.style.display === 'flex') {
                 this.cancelSaveFrame();
+                return;
+            }
+            if (this.saveCardConfirmModal && this.saveCardConfirmModal.style.display === 'flex') {
+                this.cancelSaveCard();
+                return;
+            }
+            if (this.cardPreviewModal && this.cardPreviewModal.style.display === 'flex') {
+                this.closeCardPreviewModal();
             }
         });
 
@@ -2020,6 +2077,369 @@ class ContentEditor {
         this.elementIdCounter = 0;
         this.loadTools();
         this.forceRefreshContent();
+    }
+
+    openSaveCardConfirm() {
+        if (!this.saveCardConfirmModal) return;
+        this.saveCardConfirmModal.style.display = 'flex';
+        this.saveCardConfirmModal.setAttribute('aria-hidden', 'false');
+    }
+
+    cancelSaveCard() {
+        if (!this.saveCardConfirmModal) return;
+        this.saveCardConfirmModal.style.display = 'none';
+        this.saveCardConfirmModal.setAttribute('aria-hidden', 'true');
+    }
+
+    getGameContextForCard() {
+        const b = typeof window.getHintViewerBoardSnapshot === 'function'
+            ? window.getHintViewerBoardSnapshot()
+            : null;
+        const gameId = (b && b.gameId) ? b.gameId : 'default';
+        const gameNum = b && b.currentGameNum != null ? b.currentGameNum : null;
+        return { gameId, gameNum, board: b };
+    }
+
+    /**
+     * Все сохранённые кадры из localStorage, относящиеся к текущей игре (gameId + номер игры).
+     */
+    collectSavedFrameRefsForCurrentGame() {
+        const { gameId, gameNum } = this.getGameContextForCard();
+        const refs = [];
+        const prefix = 'contentEditor_frame_';
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith(prefix)) continue;
+            try {
+                const raw = localStorage.getItem(key);
+                const payload = JSON.parse(raw);
+                if (!payload || !payload.frameId) continue;
+
+                let match = false;
+                if (gameNum != null) {
+                    const idPrefix = `${gameId}_g${gameNum}_`;
+                    match = String(payload.frameId).startsWith(idPrefix);
+                } else {
+                    match = String(payload.frameId).startsWith(`${gameId}_`) ||
+                        (payload.board && payload.board.gameId === gameId);
+                }
+                if (!match) continue;
+
+                refs.push({
+                    storageKey: key,
+                    frameId: payload.frameId,
+                    saveSlotIndex: payload.saveSlotIndex != null ? payload.saveSlotIndex : 0,
+                    savedAt: payload.savedAt || ''
+                });
+            } catch (err) {
+                console.warn('collectSavedFrameRefsForCurrentGame:', key, err);
+            }
+        }
+
+        refs.sort((a, b) => {
+            const fa = this.parseFrameIndexFromFrameId(a.frameId);
+            const fb = this.parseFrameIndexFromFrameId(b.frameId);
+            if (fa !== fb) return fa - fb;
+            if (a.saveSlotIndex !== b.saveSlotIndex) return a.saveSlotIndex - b.saveSlotIndex;
+            return String(a.savedAt).localeCompare(String(b.savedAt));
+        });
+
+        return refs;
+    }
+
+    parseFrameIndexFromFrameId(frameId) {
+        const m = String(frameId).match(/_f(\d+)$/);
+        return m ? parseInt(m[1], 10) : 0;
+    }
+
+    cardManifestStorageKey(gameId, gameNum) {
+        const safe = this.sanitizeFrameIdForStorageKey(`${gameId}_g${gameNum != null ? gameNum : 'na'}`);
+        return `contentEditor_card_${safe}`;
+    }
+
+    confirmSaveCard() {
+        try {
+            const refs = this.collectSavedFrameRefsForCurrentGame();
+            const { gameId, gameNum } = this.getGameContextForCard();
+            const manifest = {
+                version: 1,
+                savedAt: new Date().toISOString(),
+                gameId,
+                currentGameNum: gameNum,
+                frameRefs: refs.map(r => ({
+                    storageKey: r.storageKey,
+                    frameId: r.frameId,
+                    saveSlotIndex: r.saveSlotIndex
+                }))
+            };
+            localStorage.setItem(this.cardManifestStorageKey(gameId, gameNum), JSON.stringify(manifest));
+            this.showNotification('Карточка сохранена', 'success');
+        } catch (err) {
+            console.error('confirmSaveCard:', err);
+            this.showNotification('Не удалось сохранить карточку: ' + (err.message || err), 'error');
+            return;
+        }
+        this.cancelSaveCard();
+        this.openCardPreviewModal();
+    }
+
+    openCardPreviewModal() {
+        if (!this.cardPreviewModal) return;
+        this.cardPreviewRefs = this.collectSavedFrameRefsForCurrentGame();
+        this.cardPreviewIndex = 0;
+        this.cardPreviewModal.style.display = 'flex';
+        this.cardPreviewModal.setAttribute('aria-hidden', 'false');
+        this.refreshCardPreviewUI();
+    }
+
+    closeCardPreviewModal() {
+        if (!this.cardPreviewModal) return;
+        this.cardPreviewModal.style.display = 'none';
+        this.cardPreviewModal.setAttribute('aria-hidden', 'true');
+    }
+
+    refreshCardPreviewUI() {
+        const total = this.cardPreviewRefs.length;
+        const counter = document.getElementById('cardPreviewCounter');
+        const meta = document.getElementById('cardPreviewMeta');
+        const prevBtn = document.getElementById('cardPreviewPrevBtn');
+        const nextBtn = document.getElementById('cardPreviewNextBtn');
+        const ph = document.getElementById('cardPreviewPlaceholder');
+
+        if (counter) {
+            counter.textContent = total === 0 ? '0 / 0' : `${this.cardPreviewIndex + 1} / ${total}`;
+        }
+        if (prevBtn) prevBtn.disabled = total === 0 || this.cardPreviewIndex <= 0;
+        if (nextBtn) nextBtn.disabled = total === 0 || this.cardPreviewIndex >= total - 1;
+
+        if (!meta || !ph) return;
+
+        if (total === 0) {
+            meta.innerHTML = '<span class="card-preview-meta-empty">Нет сохранённых кадров для этой игры</span>';
+            ph.textContent = 'Предпросмотр кадра (заглушка)';
+            return;
+        }
+
+        const ref = this.cardPreviewRefs[this.cardPreviewIndex];
+        let extra = '';
+        try {
+            const raw = localStorage.getItem(ref.storageKey);
+            const payload = raw ? JSON.parse(raw) : null;
+            if (payload && payload.savedAt) {
+                extra = `<span class="card-preview-saved-at">${this.escapeHtml(payload.savedAt)}</span>`;
+            }
+        } catch (e) { /* ignore */ }
+
+        meta.innerHTML = `
+            <div class="card-preview-meta-line"><strong>Кадр</strong> ${this.escapeHtml(ref.frameId)}</div>
+            <div class="card-preview-meta-line">Версия сохранения: ${ref.saveSlotIndex + 1}</div>
+            ${extra}
+        `;
+        ph.textContent = `Кадр ${this.cardPreviewIndex + 1} из ${total} (заглушка предпросмотра)`;
+    }
+
+    escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    cardPreviewPrev() {
+        if (this.cardPreviewIndex > 0) {
+            this.cardPreviewIndex--;
+            this.refreshCardPreviewUI();
+        }
+    }
+
+    cardPreviewNext() {
+        if (this.cardPreviewIndex < this.cardPreviewRefs.length - 1) {
+            this.cardPreviewIndex++;
+            this.refreshCardPreviewUI();
+        }
+    }
+
+    cardPreviewApprove() {
+        const ref = this.cardPreviewRefs[this.cardPreviewIndex];
+        if (!ref) {
+            this.showNotification('Нет выбранного кадра', 'warning');
+            return;
+        }
+        this.showNotification(`Апрув (заглушка): ${ref.frameId}`, 'info');
+    }
+
+    openEditorFromSelectedPreview() {
+        const ref = this.cardPreviewRefs[this.cardPreviewIndex];
+        if (!ref) {
+            this.showNotification('Нет кадра для редактора', 'warning');
+            return;
+        }
+        let payload;
+        try {
+            const raw = localStorage.getItem(ref.storageKey);
+            payload = raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            this.showNotification('Не удалось прочитать кадр', 'error');
+            return;
+        }
+        if (!payload) {
+            this.showNotification('Пустые данные кадра', 'error');
+            return;
+        }
+        this.closeCardPreviewModal();
+        this.openModalWithData(payload.cardData || null);
+        this.restoreCanvasFromPayload(payload);
+    }
+
+    restoreCanvasFromPayload(payload) {
+        if (!this.canvas) return;
+
+        this.elements = [];
+        this.canvas.innerHTML = '';
+        this.selectedElement = null;
+        this.toggleStates = {};
+
+        if (payload.editor && payload.editor.boardCanvasToggle) {
+            this.toggleStates['boardCanvas'] = true;
+        }
+        if (payload.editor && payload.editor.canvasBackground) {
+            this.canvas.style.backgroundColor = payload.editor.canvasBackground;
+        } else {
+            this.canvas.style.backgroundColor = '#ffffff';
+        }
+
+        const items = payload.elements || [];
+        let maxNum = 0;
+        items.forEach(item => {
+            const m = /^element_(\d+)$/.exec(item.id || '');
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10) + 1);
+        });
+        this.elementIdCounter = maxNum;
+
+        items.forEach(item => {
+            const el = this.deserializeCanvasElement(item);
+            if (el) {
+                this.canvas.appendChild(el);
+                this.elements.push({
+                    id: el.id,
+                    toolId: el.dataset.toolId,
+                    element: el
+                });
+            }
+        });
+
+        if (this.propertiesContent) {
+            this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
+        }
+
+        this.loadTools();
+        this.syncBoardToolToggleFromState();
+        this.forceRefreshContent();
+    }
+
+    syncBoardToolToggleFromState() {
+        const toolElement = document.querySelector('[data-tool-id="boardCanvas"]');
+        if (!toolElement) return;
+        if (this.toggleStates['boardCanvas']) {
+            toolElement.classList.add('toggle-active');
+        } else {
+            toolElement.classList.remove('toggle-active');
+        }
+    }
+
+    deserializeCanvasElement(item) {
+        const toolId = item.toolId || '';
+        const elementId = item.id || `element_${this.elementIdCounter++}`;
+        const element = document.createElement('div');
+        element.id = elementId;
+        element.className = 'canvas-element';
+        element.dataset.toolId = toolId;
+        if (item.dataset) {
+            Object.keys(item.dataset).forEach(k => {
+                element.dataset[k] = item.dataset[k];
+            });
+        }
+        if (item.style) {
+            if (item.style.top) element.style.top = item.style.top;
+            if (item.style.left) element.style.left = item.style.left;
+            if (item.style.width) element.style.width = item.style.width;
+            if (item.style.height) element.style.height = item.style.height;
+        }
+
+        switch (toolId) {
+            case 'question-text':
+                element.classList.add('text-element');
+                element.innerHTML = `<div class="text-content" contenteditable="true" placeholder="Введите текст вопроса...">${item.textHtml || ''}</div>`;
+                this.setupTextEditing(element);
+                break;
+            case 'answer-text':
+                element.classList.add('text-element');
+                element.innerHTML = `<div class="text-content" contenteditable="true" placeholder="Введите текст ответа...">${item.textHtml || ''}</div>`;
+                this.setupTextEditing(element);
+                break;
+            case 'support-link': {
+                element.classList.add('link-element');
+                const rawUrl = item.linkUrl != null ? String(item.linkUrl) : '';
+                const urlAttr = rawUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+                element.innerHTML = `
+                    <div class="link-content">
+                        <div class="link-text" contenteditable="true" placeholder="Введите текст ссылки...">${item.linkTextHtml || ''}</div>
+                        <input type="hidden" class="link-url" value="${urlAttr}">
+                    </div>`;
+                this.setupLinkEditing(element);
+                break;
+            }
+            case 'moveHintsTable':
+                element.classList.add('table-element');
+                element.dataset.tableType = item.tableType || 'hints';
+                element.innerHTML = item.tableHtml || '';
+                break;
+            case 'upload-image':
+                element.classList.add('image-element');
+                if (item.imageUrl) element.dataset.imageUrl = item.imageUrl;
+                element.innerHTML = `<img src="${item.imageUrl || ''}" style="width: 100%; height: 100%; object-fit: contain;" alt="" />`;
+                break;
+            case 'audio-file':
+                element.classList.add('audio-element');
+                if (item.audioUrl) element.dataset.audioUrl = item.audioUrl;
+                if (item.audioName) element.dataset.audioName = item.audioName;
+                element.innerHTML = `
+                    <div class="audio-message" style="display: flex; align-items: center; padding: 12px; height: 100%; background: #f0f0f0; border-radius: 8px;">
+                        <div class="audio-icon" style="font-size: 24px; margin-right: 12px; color: #667eea;">🎵</div>
+                        <div class="audio-info" style="flex: 1;">
+                            <div class="audio-name" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px;">${this.escapeHtml(item.audioName || 'Аудио')}</div>
+                            <div class="audio-duration" style="font-size: 12px; color: #666;">—</div>
+                        </div>
+                        <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">▶</div>
+                    </div>`;
+                if (item.audioUrl) {
+                    this.setupAudioElement(element, item.audioUrl, null);
+                }
+                break;
+            case 'board-illustration': {
+                const img = document.createElement('img');
+                img.src = item.imageDataUrl || '';
+                img.style.maxWidth = this.getMaxCanvasWidth() + 'px';
+                img.style.width = '100%';
+                img.style.height = 'auto';
+                img.style.objectFit = 'contain';
+                element.appendChild(img);
+                break;
+            }
+            case 'boardCanvas':
+                element.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #666;">
+                        <strong>Доска с параметрами</strong><br>
+                        <small>Функционал временно отключен</small>
+                    </div>`;
+                break;
+            default:
+                element.innerHTML = item.innerHtml || '';
+        }
+
+        return element;
     }
 
     initPanelResizers() {
