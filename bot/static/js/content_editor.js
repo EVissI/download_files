@@ -25,6 +25,7 @@ class ContentEditor {
         /** Предпросмотр сохранённой карточки: список ссылок на кадры и текущий индекс */
         this.cardPreviewRefs = [];
         this.cardPreviewIndex = 0;
+        this._onCardPreviewResize = () => this.refreshCardPreviewScale();
 
         this.init();
     }
@@ -136,7 +137,7 @@ class ContentEditor {
 
         if (!document.getElementById('cardPreviewModal')) {
             document.body.insertAdjacentHTML('beforeend', `
-                <div id="cardPreviewModal" class="card-preview-modal" style="display: none;" aria-hidden="true">
+                <div id="cardPreviewModal" class="card-preview-modal card-preview-modal--fullscreen" style="display: none;" aria-hidden="true">
                     <div class="card-preview-overlay" onclick="contentEditor.closeCardPreviewModal()"></div>
                     <div class="card-preview-box" role="dialog" aria-modal="true">
                         <div class="card-preview-header">
@@ -147,12 +148,10 @@ class ContentEditor {
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewPrevBtn" onclick="contentEditor.cardPreviewPrev()">←</button>
                             <span class="card-preview-counter" id="cardPreviewCounter">0 / 0</span>
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewNextBtn" onclick="contentEditor.cardPreviewNext()">→</button>
+                            <button type="button" class="card-preview-approve" id="cardPreviewApproveBtn" onclick="contentEditor.cardPreviewApprove()">Апрув</button>
                         </div>
                         <div class="card-preview-meta" id="cardPreviewMeta"></div>
-                        <div class="card-preview-stub">
-                            <div class="card-preview-placeholder" id="cardPreviewPlaceholder">Предпросмотр кадра (заглушка)</div>
-                            <button type="button" class="card-preview-approve" onclick="contentEditor.cardPreviewApprove()">Апрув</button>
-                        </div>
+                        <div class="card-preview-frame-host" id="cardPreviewFrameHost"></div>
                         <div class="card-preview-footer">
                             <button type="button" class="card-preview-open-editor" onclick="contentEditor.openEditorFromSelectedPreview()">Открыть редактор</button>
                         </div>
@@ -2160,6 +2159,11 @@ class ContentEditor {
 
     confirmSaveCard() {
         try {
+            const frameId = this.getFrameIdForSave();
+            const saveSlotIndex = this.allocateNextSaveSlotIndex(frameId);
+            const currentPayload = this.buildFrameSavePayload(frameId, saveSlotIndex);
+            localStorage.setItem(this.frameStorageKey(frameId, saveSlotIndex), JSON.stringify(currentPayload));
+
             const refs = this.collectSavedFrameRefsForCurrentGame();
             const { gameId, gameNum } = this.getGameContextForCard();
             const manifest = {
@@ -2174,13 +2178,15 @@ class ContentEditor {
                 }))
             };
             localStorage.setItem(this.cardManifestStorageKey(gameId, gameNum), JSON.stringify(manifest));
-            this.showNotification('Карточка сохранена', 'success');
+            this.showNotification('Карточка и текущий кадр сохранены', 'success');
         } catch (err) {
             console.error('confirmSaveCard:', err);
             this.showNotification('Не удалось сохранить карточку: ' + (err.message || err), 'error');
             return;
         }
         this.cancelSaveCard();
+        this.closeModal();
+        this.resetEditorAfterSave();
         this.openCardPreviewModal();
     }
 
@@ -2188,15 +2194,22 @@ class ContentEditor {
         if (!this.cardPreviewModal) return;
         this.cardPreviewRefs = this.collectSavedFrameRefsForCurrentGame();
         this.cardPreviewIndex = 0;
+        this.cardPreviewModal.classList.add('card-preview-modal--fullscreen');
         this.cardPreviewModal.style.display = 'flex';
         this.cardPreviewModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('resize', this._onCardPreviewResize);
         this.refreshCardPreviewUI();
     }
 
     closeCardPreviewModal() {
         if (!this.cardPreviewModal) return;
+        window.removeEventListener('resize', this._onCardPreviewResize);
         this.cardPreviewModal.style.display = 'none';
         this.cardPreviewModal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = 'auto';
+        const host = document.getElementById('cardPreviewFrameHost');
+        if (host) host.innerHTML = '';
     }
 
     refreshCardPreviewUI() {
@@ -2205,38 +2218,104 @@ class ContentEditor {
         const meta = document.getElementById('cardPreviewMeta');
         const prevBtn = document.getElementById('cardPreviewPrevBtn');
         const nextBtn = document.getElementById('cardPreviewNextBtn');
-        const ph = document.getElementById('cardPreviewPlaceholder');
+        const approveBtn = document.getElementById('cardPreviewApproveBtn');
 
         if (counter) {
             counter.textContent = total === 0 ? '0 / 0' : `${this.cardPreviewIndex + 1} / ${total}`;
         }
         if (prevBtn) prevBtn.disabled = total === 0 || this.cardPreviewIndex <= 0;
         if (nextBtn) nextBtn.disabled = total === 0 || this.cardPreviewIndex >= total - 1;
+        if (approveBtn) approveBtn.disabled = total === 0;
 
-        if (!meta || !ph) return;
+        if (!meta) return;
 
         if (total === 0) {
             meta.innerHTML = '<span class="card-preview-meta-empty">Нет сохранённых кадров для этой игры</span>';
-            ph.textContent = 'Предпросмотр кадра (заглушка)';
+            this.renderCardPreviewSurface(null);
             return;
         }
 
         const ref = this.cardPreviewRefs[this.cardPreviewIndex];
+        let payload = null;
         let extra = '';
         try {
             const raw = localStorage.getItem(ref.storageKey);
-            const payload = raw ? JSON.parse(raw) : null;
+            payload = raw ? JSON.parse(raw) : null;
             if (payload && payload.savedAt) {
                 extra = `<span class="card-preview-saved-at">${this.escapeHtml(payload.savedAt)}</span>`;
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+            payload = null;
+        }
 
         meta.innerHTML = `
-            <div class="card-preview-meta-line"><strong>Кадр</strong> ${this.escapeHtml(ref.frameId)}</div>
-            <div class="card-preview-meta-line">Версия сохранения: ${ref.saveSlotIndex + 1}</div>
+            <div class="card-preview-meta-line"><strong>ID</strong> ${this.escapeHtml(ref.frameId)} · сохранение ${ref.saveSlotIndex + 1}</div>
             ${extra}
         `;
-        ph.textContent = `Кадр ${this.cardPreviewIndex + 1} из ${total} (заглушка предпросмотра)`;
+        this.renderCardPreviewSurface(payload);
+    }
+
+    renderCardPreviewSurface(payload) {
+        const host = document.getElementById('cardPreviewFrameHost');
+        if (!host) return;
+        host.innerHTML = '';
+        if (!payload) {
+            return;
+        }
+
+        const list = Array.isArray(payload.elements) ? payload.elements : [];
+
+        const designW = this.getMaxCanvasWidth();
+        const wrap = document.createElement('div');
+        wrap.className = 'card-preview-surface-wrap';
+        const inner = document.createElement('div');
+        inner.className = 'card-preview-surface-inner';
+        inner.dataset.designWidth = String(designW);
+        inner.style.width = designW + 'px';
+        inner.style.position = 'relative';
+        inner.style.boxSizing = 'border-box';
+        inner.style.background = (payload.editor && payload.editor.canvasBackground) ? payload.editor.canvasBackground : '#ffffff';
+
+        let maxNum = 0;
+        list.forEach(item => {
+            const m = /^element_(\d+)$/.exec(item.id || '');
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10) + 1);
+        });
+        const savedCounter = this.elementIdCounter;
+        this.elementIdCounter = maxNum;
+        list.forEach(item => {
+            const el = this.deserializeCanvasElement(item, { previewMode: true });
+            if (el) inner.appendChild(el);
+        });
+        this.elementIdCounter = savedCounter;
+
+        wrap.appendChild(inner);
+        host.appendChild(wrap);
+
+        inner.querySelectorAll('img').forEach((img) => {
+            img.addEventListener('load', () => this.refreshCardPreviewScale());
+        });
+
+        requestAnimationFrame(() => {
+            this.refreshCardPreviewScale();
+        });
+    }
+
+    refreshCardPreviewScale() {
+        const host = document.getElementById('cardPreviewFrameHost');
+        if (!host) return;
+        const inner = host.querySelector('.card-preview-surface-inner');
+        const wrap = host.querySelector('.card-preview-surface-wrap');
+        if (!inner || !wrap) return;
+
+        const designW = parseFloat(inner.dataset.designWidth) || this.getMaxCanvasWidth();
+        const avail = Math.max(120, host.clientWidth - 16);
+        const scale = Math.min(1, avail / designW);
+        inner.style.transform = `scale(${scale})`;
+        inner.style.transformOrigin = 'top center';
+
+        const h = inner.offsetHeight * scale;
+        wrap.style.minHeight = `${Math.ceil(h + 8)}px`;
     }
 
     escapeHtml(s) {
@@ -2349,12 +2428,16 @@ class ContentEditor {
         }
     }
 
-    deserializeCanvasElement(item) {
+    deserializeCanvasElement(item, options = {}) {
+        const previewMode = options.previewMode === true;
         const toolId = item.toolId || '';
         const elementId = item.id || `element_${this.elementIdCounter++}`;
         const element = document.createElement('div');
         element.id = elementId;
         element.className = 'canvas-element';
+        if (previewMode) {
+            element.classList.add('card-preview-canvas-clone');
+        }
         element.dataset.toolId = toolId;
         if (item.dataset) {
             Object.keys(item.dataset).forEach(k => {
@@ -2368,16 +2451,18 @@ class ContentEditor {
             if (item.style.height) element.style.height = item.style.height;
         }
 
+        const ce = previewMode ? 'false' : 'true';
+
         switch (toolId) {
             case 'question-text':
                 element.classList.add('text-element');
-                element.innerHTML = `<div class="text-content" contenteditable="true" placeholder="Введите текст вопроса...">${item.textHtml || ''}</div>`;
-                this.setupTextEditing(element);
+                element.innerHTML = `<div class="text-content" contenteditable="${ce}" placeholder="Введите текст вопроса...">${item.textHtml || ''}</div>`;
+                if (!previewMode) this.setupTextEditing(element);
                 break;
             case 'answer-text':
                 element.classList.add('text-element');
-                element.innerHTML = `<div class="text-content" contenteditable="true" placeholder="Введите текст ответа...">${item.textHtml || ''}</div>`;
-                this.setupTextEditing(element);
+                element.innerHTML = `<div class="text-content" contenteditable="${ce}" placeholder="Введите текст ответа...">${item.textHtml || ''}</div>`;
+                if (!previewMode) this.setupTextEditing(element);
                 break;
             case 'support-link': {
                 element.classList.add('link-element');
@@ -2385,10 +2470,10 @@ class ContentEditor {
                 const urlAttr = rawUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
                 element.innerHTML = `
                     <div class="link-content">
-                        <div class="link-text" contenteditable="true" placeholder="Введите текст ссылки...">${item.linkTextHtml || ''}</div>
+                        <div class="link-text" contenteditable="${ce}" placeholder="Введите текст ссылки...">${item.linkTextHtml || ''}</div>
                         <input type="hidden" class="link-url" value="${urlAttr}">
                     </div>`;
-                this.setupLinkEditing(element);
+                if (!previewMode) this.setupLinkEditing(element);
                 break;
             }
             case 'moveHintsTable':
@@ -2412,9 +2497,9 @@ class ContentEditor {
                             <div class="audio-name" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px;">${this.escapeHtml(item.audioName || 'Аудио')}</div>
                             <div class="audio-duration" style="font-size: 12px; color: #666;">—</div>
                         </div>
-                        <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">▶</div>
+                        <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: ${previewMode ? 'default' : 'pointer'}; display: flex; align-items: center; justify-content: center; font-size: 16px; opacity: ${previewMode ? '0.5' : '1'};">▶</div>
                     </div>`;
-                if (item.audioUrl) {
+                if (item.audioUrl && !previewMode) {
                     this.setupAudioElement(element, item.audioUrl, null);
                 }
                 break;
