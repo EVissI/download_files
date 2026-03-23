@@ -598,6 +598,7 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
+    /* фон задаётся из JS (цвет канваса редактора), иначе тёмная подложка */
     background: #1e1e1e;
     border-radius: 8px;
     padding: 12px;
@@ -624,6 +625,17 @@
 
 .card-preview-canvas-clone {
     box-sizing: border-box;
+}
+
+/* В предпросмотре не тянуть белый фон с .canvas-element — иначе перекрывается цвет канваса.
+   Явный фон блока из сохранения задаётся inline (blockStyle) и перебивает это правило. */
+.card-preview-surface-inner .canvas-element.card-preview-canvas-clone {
+    background: transparent;
+}
+
+.card-preview-surface-inner .canvas-element.card-preview-canvas-clone:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 .card-preview-footer {

@@ -2017,6 +2017,15 @@ class ContentEditor {
         return '#ffffff';
     }
 
+    /** Фон канваса из сохранённого payload (предпросмотр / восстановление) */
+    resolveSavedCanvasBackground(payload) {
+        const raw = payload && payload.editor && payload.editor.canvasBackground;
+        if (raw != null && String(raw).trim() !== '') {
+            return String(raw).trim();
+        }
+        return '#ffffff';
+    }
+
     /** Стили обёртки .canvas-element (фон блока, отступы из панели свойств) */
     collectBlockStyle(el) {
         const cs = window.getComputedStyle(el);
@@ -2325,22 +2334,26 @@ class ContentEditor {
         const host = document.getElementById('cardPreviewFrameHost');
         if (!host) return;
         host.innerHTML = '';
+        host.style.backgroundColor = '';
         if (!payload) {
             return;
         }
 
         const list = Array.isArray(payload.elements) ? payload.elements : [];
+        const canvasBg = this.resolveSavedCanvasBackground(payload);
+        host.style.backgroundColor = canvasBg;
 
         const designW = this.getMaxCanvasWidth();
         const wrap = document.createElement('div');
         wrap.className = 'card-preview-surface-wrap';
+        wrap.style.backgroundColor = canvasBg;
         const inner = document.createElement('div');
         inner.className = 'card-preview-surface-inner';
         inner.dataset.designWidth = String(designW);
         inner.style.width = designW + 'px';
         inner.style.position = 'relative';
         inner.style.boxSizing = 'border-box';
-        inner.style.background = (payload.editor && payload.editor.canvasBackground) ? payload.editor.canvasBackground : '#ffffff';
+        inner.style.backgroundColor = canvasBg;
 
         let maxNum = 0;
         list.forEach(item => {
@@ -2449,11 +2462,7 @@ class ContentEditor {
         if (payload.editor && payload.editor.boardCanvasToggle) {
             this.toggleStates['boardCanvas'] = true;
         }
-        if (payload.editor && payload.editor.canvasBackground) {
-            this.canvas.style.backgroundColor = payload.editor.canvasBackground;
-        } else {
-            this.canvas.style.backgroundColor = '#ffffff';
-        }
+        this.canvas.style.backgroundColor = this.resolveSavedCanvasBackground(payload);
 
         const items = payload.elements || [];
         let maxNum = 0;
