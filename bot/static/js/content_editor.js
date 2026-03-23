@@ -2319,20 +2319,18 @@ class ContentEditor {
 
         const ref = this.cardPreviewRefs[this.cardPreviewIndex];
         let payload = null;
-        let extra = '';
         try {
             const raw = localStorage.getItem(ref.storageKey);
             payload = raw ? JSON.parse(raw) : null;
-            if (payload && payload.savedAt) {
-                extra = `<span class="card-preview-saved-at">${this.escapeHtml(payload.savedAt)}</span>`;
-            }
         } catch (e) {
             payload = null;
         }
 
+        const fm = String(ref.frameId).match(/_f(\d+)$/);
+        const displayFrame = fm ? parseInt(fm[1], 10) + 1 : this.cardPreviewIndex + 1;
+
         meta.innerHTML = `
-            <div class="card-preview-meta-line"><strong>ID</strong> ${this.escapeHtml(ref.frameId)} · сохранение ${ref.saveSlotIndex + 1}</div>
-            ${extra}
+            <div class="card-preview-meta-line">Кадр ${displayFrame}</div>
         `;
         this.renderCardPreviewSurface(payload);
     }

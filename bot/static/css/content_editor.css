@@ -566,13 +566,6 @@
     color: #888;
 }
 
-.card-preview-saved-at {
-    display: block;
-    font-size: 11px;
-    color: #888;
-    margin-top: 4px;
-}
-
 .card-preview-approve {
     padding: 6px 14px;
     border-radius: 6px;
