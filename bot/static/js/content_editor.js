@@ -27,6 +27,14 @@ class ContentEditor {
         this.cardPreviewIndex = 0;
         this._onCardPreviewResize = () => this.refreshCardPreviewScale();
 
+        /** Редактор открыт из предпросмотра карточки — одна кнопка «Сохранить», перезапись того же кадра */
+        this.editorOpenedFromPreview = false;
+        this.previewEditStorageKey = null;
+        this.previewEditFrameId = null;
+        this.previewEditSaveSlotIndex = null;
+        /** После сохранения из предпросмотра-редактора — открыть предпросмотр на этом кадре */
+        this._resumePreviewStorageKey = null;
+
         this.init();
     }
 
@@ -171,7 +179,15 @@ class ContentEditor {
         this.propertiesPanel = this.modal.querySelector('.properties-panel');
     }
 
+    clearPreviewEditSession() {
+        this.editorOpenedFromPreview = false;
+        this.previewEditStorageKey = null;
+        this.previewEditFrameId = null;
+        this.previewEditSaveSlotIndex = null;
+    }
+
     openModal() {
+        this.clearPreviewEditSession();
         // Force cache-busting by adding timestamp to modal
         const timestamp = Date.now();
         if (this.modal) {
@@ -189,9 +205,17 @@ class ContentEditor {
     closeModal() {
         this.modal.style.display = 'none';
         document.body.style.overflow = 'auto';
+        this.clearPreviewEditSession();
     }
 
-    openModalWithData(cardData) {
+    /**
+     * @param {object|null} cardData
+     * @param {{ fromPreviewRestore?: boolean }} [options] — если true, не сбрасываем сессию «из предпросмотра»
+     */
+    openModalWithData(cardData, options = {}) {
+        if (!options.fromPreviewRestore) {
+            this.clearPreviewEditSession();
+        }
         // Force cache-busting by adding timestamp to modal
         const timestamp = Date.now();
         if (this.modal) {
@@ -1621,8 +1645,12 @@ class ContentEditor {
             
             <div class="action-buttons action-buttons-col">
                 <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')">Удалить</button>
+                ${this.editorOpenedFromPreview ? `
+                <button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()">Сохранить</button>
+                ` : `
                 <button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
                 <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openSaveCardConfirm()">Сохранить карточку</button>
+                `}
             </div>
         `;
     }
@@ -2275,7 +2303,13 @@ class ContentEditor {
     openCardPreviewModal() {
         if (!this.cardPreviewModal) return;
         this.cardPreviewRefs = this.collectSavedFrameRefsForCurrentGame();
-        this.cardPreviewIndex = 0;
+        if (this._resumePreviewStorageKey) {
+            const i = this.cardPreviewRefs.findIndex((r) => r.storageKey === this._resumePreviewStorageKey);
+            this.cardPreviewIndex = i >= 0 ? i : 0;
+            this._resumePreviewStorageKey = null;
+        } else {
+            this.cardPreviewIndex = 0;
+        }
         this.cardPreviewModal.classList.add('card-preview-modal--fullscreen');
         this.cardPreviewModal.style.display = 'flex';
         this.cardPreviewModal.setAttribute('aria-hidden', 'false');
@@ -2467,8 +2501,35 @@ class ContentEditor {
             return;
         }
         this.closeCardPreviewModal();
-        this.openModalWithData(payload.cardData || null);
+        this.editorOpenedFromPreview = true;
+        this.previewEditStorageKey = ref.storageKey;
+        this.previewEditFrameId = ref.frameId;
+        this.previewEditSaveSlotIndex = ref.saveSlotIndex;
+        this.openModalWithData(payload.cardData || null, { fromPreviewRestore: true });
         this.restoreCanvasFromPayload(payload);
+    }
+
+    /** Сохранение из редактора, открытого из предпросмотра: перезапись того же кадра и возврат в предпросмотр */
+    confirmSaveFromPreviewEditor() {
+        if (!this.editorOpenedFromPreview || !this.previewEditStorageKey || this.previewEditFrameId == null) {
+            this.showNotification('Нет привязки к кадру предпросмотра', 'warning');
+            return;
+        }
+        try {
+            const slot = this.previewEditSaveSlotIndex != null ? this.previewEditSaveSlotIndex : 0;
+            const payload = this.buildFrameSavePayload(this.previewEditFrameId, slot);
+            localStorage.setItem(this.previewEditStorageKey, JSON.stringify(payload));
+            this.showNotification('Кадр обновлён', 'success');
+        } catch (err) {
+            console.error('confirmSaveFromPreviewEditor:', err);
+            this.showNotification('Не удалось сохранить: ' + (err.message || err), 'error');
+            return;
+        }
+        const resumeKey = this.previewEditStorageKey;
+        this.closeModal();
+        this.resetEditorAfterSave();
+        this._resumePreviewStorageKey = resumeKey;
+        this.openCardPreviewModal();
     }
 
     restoreCanvasFromPayload(payload) {
@@ -3105,6 +3166,7 @@ class ContentEditor {
 
     // Method to force complete reload of the editor
     forceReload() {
+        this.clearPreviewEditSession();
         // Clear all elements
         this.elements = [];
         if (this.canvas) {
