@@ -2350,14 +2350,12 @@ class ContentEditor {
         const canvasBg = this.resolveSavedCanvasBackground(payload);
         host.style.backgroundColor = canvasBg;
 
-        const designW = this.getMaxCanvasWidth();
         const wrap = document.createElement('div');
         wrap.className = 'card-preview-surface-wrap';
         wrap.style.backgroundColor = canvasBg;
         const inner = document.createElement('div');
         inner.className = 'card-preview-surface-inner';
-        inner.dataset.designWidth = String(designW);
-        inner.style.width = designW + 'px';
+        inner.style.width = '100%';
         inner.style.position = 'relative';
         inner.style.boxSizing = 'border-box';
         inner.style.backgroundColor = canvasBg;
@@ -2372,8 +2370,9 @@ class ContentEditor {
         list.forEach(item => {
             const el = this.deserializeCanvasElement(item, { previewMode: true });
             if (el) {
-                el.style.width = designW + 'px';
+                el.style.width = '100%';
                 el.style.left = '0px';
+                el.style.boxSizing = 'border-box';
                 inner.appendChild(el);
             }
         });
@@ -2398,14 +2397,8 @@ class ContentEditor {
         const wrap = host.querySelector('.card-preview-surface-wrap');
         if (!inner || !wrap) return;
 
-        const designW = parseFloat(inner.dataset.designWidth) || this.getMaxCanvasWidth();
-        const avail = Math.max(120, host.clientWidth - 16);
-        const scale = Math.min(1, avail / designW);
-        inner.style.transform = `scale(${scale})`;
-        inner.style.transformOrigin = 'top center';
-
-        const h = inner.offsetHeight * scale;
-        wrap.style.minHeight = `${Math.ceil(h + 8)}px`;
+        inner.style.transform = 'none';
+        wrap.style.minHeight = `${Math.ceil(inner.offsetHeight + 4)}px`;
     }
 
     escapeHtml(s) {

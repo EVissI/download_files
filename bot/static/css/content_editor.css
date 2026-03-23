@@ -598,10 +598,10 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
-    /* фон задаётся из JS (цвет канваса редактора), иначе тёмная подложка */
     background: #1e1e1e;
     border-radius: 8px;
-    padding: 12px;
+    /* без отступов по ширине — блоки на всю ширину области предпросмотра */
+    padding: 8px 0;
     margin-bottom: 10px;
 }
 
@@ -611,14 +611,16 @@
 }
 
 .card-preview-surface-wrap {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    width: 100%;
     min-height: 120px;
+    box-sizing: border-box;
 }
 
 .card-preview-surface-inner {
-    flex-shrink: 0;
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     pointer-events: none;
     user-select: none;
 }
@@ -627,16 +629,26 @@
     box-sizing: border-box;
 }
 
-/* В предпросмотре не тянуть белый фон с .canvas-element — иначе перекрывается цвет канваса.
-   Явный фон блока из сохранения задаётся inline (blockStyle) и перебивает это правило. */
-.card-preview-surface-inner .canvas-element.card-preview-canvas-clone {
+/* Предпросмотр: без белой заливки редактора; без рамок и теней; inline blockStyle перебивает фон */
+.card-preview-surface-inner .canvas-element.card-preview-canvas-clone,
+.card-preview-surface-inner .canvas-element.card-preview-canvas-clone.text-element,
+.card-preview-surface-inner .canvas-element.card-preview-canvas-clone.link-element {
     background: transparent;
     box-sizing: border-box;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    animation: none !important;
 }
 
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone:hover {
     transform: none;
-    box-shadow: none;
+    box-shadow: none !important;
+}
+
+.card-preview-surface-inner .text-content,
+.card-preview-surface-inner .link-text {
+    outline: none !important;
 }
 
 .card-preview-footer {
