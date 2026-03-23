@@ -593,8 +593,7 @@
     overflow: auto;
     background: #1e1e1e;
     border-radius: 8px;
-    /* без отступов по ширине — блоки на всю ширину области предпросмотра */
-    padding: 8px 0;
+    padding: 0;
     margin-bottom: 10px;
 }
 

@@ -2335,6 +2335,22 @@ class ContentEditor {
         this.renderCardPreviewSurface(payload);
     }
 
+    /** В предпросмотре убираем пустой верх: сдвигаем все блоки так, чтобы верхний был у top: 0 */
+    normalizePreviewStackTops(inner) {
+        const children = Array.from(inner.querySelectorAll('.canvas-element'));
+        if (!children.length) return;
+        let minTop = Infinity;
+        children.forEach((el) => {
+            const t = parseInt(el.style.top, 10);
+            if (!Number.isNaN(t)) minTop = Math.min(minTop, t);
+        });
+        if (!Number.isFinite(minTop) || minTop <= 0) return;
+        children.forEach((el) => {
+            const t = parseInt(el.style.top, 10);
+            if (!Number.isNaN(t)) el.style.top = `${t - minTop}px`;
+        });
+    }
+
     renderCardPreviewSurface(payload) {
         const host = document.getElementById('cardPreviewFrameHost');
         if (!host) return;
@@ -2376,6 +2392,8 @@ class ContentEditor {
         });
         this.elementIdCounter = savedCounter;
 
+        this.normalizePreviewStackTops(inner);
+
         wrap.appendChild(inner);
         host.appendChild(wrap);
 
@@ -2396,7 +2414,7 @@ class ContentEditor {
         if (!inner || !wrap) return;
 
         inner.style.transform = 'none';
-        wrap.style.minHeight = `${Math.ceil(inner.offsetHeight + 4)}px`;
+        wrap.style.minHeight = `${Math.ceil(inner.offsetHeight)}px`;
     }
 
     escapeHtml(s) {
