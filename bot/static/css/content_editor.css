@@ -631,6 +631,7 @@
    Явный фон блока из сохранения задаётся inline (blockStyle) и перебивает это правило. */
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone {
     background: transparent;
+    box-sizing: border-box;
 }
 
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone:hover {

@@ -2026,17 +2026,23 @@ class ContentEditor {
         return '#ffffff';
     }
 
-    /** Стили обёртки .canvas-element (фон блока, отступы из панели свойств) */
+    /** Стили обёртки .canvas-element (фон блока; padding — только если задан в панели свойств, не из computed) */
     collectBlockStyle(el) {
         const cs = window.getComputedStyle(el);
-        const pick = (prop) => {
-            const i = el.style[prop];
-            return (i && String(i).trim()) ? i : cs[prop];
-        };
-        return {
-            backgroundColor: pick('backgroundColor'),
-            padding: pick('padding')
-        };
+        const out = {};
+        const bgInline = el.style.backgroundColor;
+        if (bgInline && String(bgInline).trim()) {
+            out.backgroundColor = bgInline;
+        } else {
+            const c = cs.backgroundColor;
+            if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') {
+                out.backgroundColor = c;
+            }
+        }
+        if (el.style.padding && String(el.style.padding).trim()) {
+            out.padding = el.style.padding;
+        }
+        return Object.keys(out).length ? out : undefined;
     }
 
     /** Стили .text-content / .link-text (цвет текста, шрифт, выравнивание) */
@@ -2125,7 +2131,8 @@ class ContentEditor {
                     item.innerHtml = el.innerHTML;
             }
 
-            item.blockStyle = this.collectBlockStyle(el);
+            const bs = this.collectBlockStyle(el);
+            if (bs) item.blockStyle = bs;
             const textInner = el.querySelector('.text-content, .link-text');
             if (textInner) {
                 item.textStyle = this.collectTextStyle(textInner);
@@ -2364,7 +2371,11 @@ class ContentEditor {
         this.elementIdCounter = maxNum;
         list.forEach(item => {
             const el = this.deserializeCanvasElement(item, { previewMode: true });
-            if (el) inner.appendChild(el);
+            if (el) {
+                el.style.width = designW + 'px';
+                el.style.left = '0px';
+                inner.appendChild(el);
+            }
         });
         this.elementIdCounter = savedCounter;
 
@@ -2490,7 +2501,14 @@ class ContentEditor {
 
         this.loadTools();
         this.syncBoardToolToggleFromState();
-        this.forceRefreshContent();
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (this.canvas && this.canvas.getBoundingClientRect().width > 0) {
+                    this.handleWindowResize();
+                }
+                this.forceRefreshContent();
+            });
+        });
     }
 
     syncBoardToolToggleFromState() {
