@@ -1987,7 +1987,6 @@ class ContentEditor {
             }
         }
 
-        const bg = this.canvas.style.backgroundColor || window.getComputedStyle(this.canvas).backgroundColor;
         return {
             version: 1,
             frameId,
@@ -1997,10 +1996,70 @@ class ContentEditor {
             cardData: cardDataCopy,
             editor: {
                 boardCanvasToggle: !!this.toggleStates['boardCanvas'],
-                canvasBackground: bg
+                canvasBackground: this.getCanvasBackgroundForSave()
             },
             elements: this.serializeCanvasElements()
         };
+    }
+
+    /** Надёжное чтение фона канваса (inline или computed), чтобы корректно восстанавливать после сохранения */
+    getCanvasBackgroundForSave() {
+        if (!this.canvas) return '#ffffff';
+        const inline = (this.canvas.style.backgroundColor || '').trim();
+        if (inline && inline !== 'transparent') {
+            return this.canvas.style.backgroundColor;
+        }
+        const cs = window.getComputedStyle(this.canvas);
+        const c = (cs.backgroundColor || '').trim();
+        if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') {
+            return c;
+        }
+        return '#ffffff';
+    }
+
+    /** Стили обёртки .canvas-element (фон блока, отступы из панели свойств) */
+    collectBlockStyle(el) {
+        const cs = window.getComputedStyle(el);
+        const pick = (prop) => {
+            const i = el.style[prop];
+            return (i && String(i).trim()) ? i : cs[prop];
+        };
+        return {
+            backgroundColor: pick('backgroundColor'),
+            padding: pick('padding')
+        };
+    }
+
+    /** Стили .text-content / .link-text (цвет текста, шрифт, выравнивание) */
+    collectTextStyle(node) {
+        const cs = window.getComputedStyle(node);
+        const pick = (prop) => {
+            const i = node.style[prop];
+            return (i && String(i).trim()) ? i : cs[prop];
+        };
+        const td = pick('textDecoration');
+        return {
+            color: pick('color'),
+            fontSize: pick('fontSize'),
+            lineHeight: pick('lineHeight'),
+            textAlign: pick('textAlign'),
+            fontWeight: pick('fontWeight'),
+            fontStyle: pick('fontStyle'),
+            textDecoration: td && String(td).trim() ? td : cs.textDecoration,
+            fontFamily: pick('fontFamily')
+        };
+    }
+
+    applyStyleSnapshot(domEl, snap) {
+        if (!domEl || !snap || typeof snap !== 'object') return;
+        Object.keys(snap).forEach((key) => {
+            const v = snap[key];
+            if (v != null && String(v).trim() !== '') {
+                try {
+                    domEl.style[key] = v;
+                } catch (e) { /* ignore */ }
+            }
+        });
     }
 
     serializeCanvasElements() {
@@ -2056,6 +2115,13 @@ class ContentEditor {
                 default:
                     item.innerHtml = el.innerHTML;
             }
+
+            item.blockStyle = this.collectBlockStyle(el);
+            const textInner = el.querySelector('.text-content, .link-text');
+            if (textInner) {
+                item.textStyle = this.collectTextStyle(textInner);
+            }
+
             out.push(item);
         });
         return out;
@@ -2522,6 +2588,14 @@ class ContentEditor {
                 break;
             default:
                 element.innerHTML = item.innerHtml || '';
+        }
+
+        if (item.blockStyle) {
+            this.applyStyleSnapshot(element, item.blockStyle);
+        }
+        const textInner = element.querySelector('.text-content, .link-text');
+        if (textInner && item.textStyle) {
+            this.applyStyleSnapshot(textInner, item.textStyle);
         }
 
         return element;
