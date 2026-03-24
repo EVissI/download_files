@@ -3,7 +3,7 @@
  * Редактор контента в стиле Photoshop (Модальное окно)
  */
 
- * {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -105,8 +105,7 @@
 }
 
 /* Левый тулбар с инструментами (для возможной отдельной стилизации) */
-.toolbar-tools {
-}
+.toolbar-tools {}
 
 .toolbar h3 {
     padding: 15px;
@@ -223,6 +222,7 @@
     from {
         box-shadow: 0 0 20px rgba(102, 126, 234, 0.6), 0 0 40px rgba(102, 126, 234, 0.3);
     }
+
     to {
         box-shadow: 0 0 30px rgba(102, 126, 234, 0.8), 0 0 60px rgba(102, 126, 234, 0.4);
     }
@@ -250,9 +250,12 @@
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
     }
+
     50% {
         transform: scale(1.2);
     }
@@ -320,8 +323,7 @@
 }
 
 /* Правый тулбар свойств (для возможной отдельной стилизации) */
-.toolbar-properties {
-}
+.toolbar-properties {}
 
 .properties-panel h3 {
     padding: 15px;
@@ -602,33 +604,22 @@
     box-sizing: border-box;
 }
 
-/*
- * Доска в предпросмотре:
- * развёрнута — absolute поверх кадра (наслоение);
- * свёрнута — только ручка в потоке, контент под ней без перекрытия.
- */
+/* Доска в предпросмотре — в потоке, как остальной контент (без наслоения поверх кадра). */
 .card-preview-board-overlay {
+    position: relative;
+    z-index: auto;
+    flex-shrink: 0;
     width: 100%;
     box-sizing: border-box;
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
-}
-
-.card-preview-board-overlay:not(.card-preview-board-overlay--collapsed) {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 10;
     pointer-events: none;
 }
 
 .card-preview-board-overlay.card-preview-board-overlay--collapsed {
-    position: relative;
-    z-index: auto;
-    flex-shrink: 0;
-    pointer-events: none;
+    border-radius: 0 0 12px 12px;
+    overflow: hidden;
 }
 
 .card-preview-board-body {
@@ -637,11 +628,6 @@
 
 .card-preview-board-overlay--collapsed .card-preview-board-body {
     display: none;
-}
-
-.card-preview-board-overlay--collapsed {
-    border-radius: 0 0 12px 12px;
-    overflow: hidden;
 }
 
 .card-preview-board-canvas-wrap {
@@ -886,6 +872,7 @@
         opacity: 0;
         transform: translateY(-20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1011,11 +998,9 @@
     height: 10px;
     margin: 0 6px 3px;
     border-radius: 0 0 4px 4px;
-    background: linear-gradient(
-        180deg,
-        rgba(102, 126, 234, 0.15) 0%,
-        rgba(102, 126, 234, 0.45) 100%
-    );
+    background: linear-gradient(180deg,
+            rgba(102, 126, 234, 0.15) 0%,
+            rgba(102, 126, 234, 0.45) 100%);
     cursor: ns-resize;
     box-sizing: border-box;
     opacity: 0.55;
@@ -1024,11 +1009,9 @@
 }
 
 .canvas-element.link-element .text-block-resize-handle {
-    background: linear-gradient(
-        180deg,
-        rgba(0, 123, 255, 0.12) 0%,
-        rgba(0, 123, 255, 0.42) 100%
-    );
+    background: linear-gradient(180deg,
+            rgba(0, 123, 255, 0.12) 0%,
+            rgba(0, 123, 255, 0.42) 100%);
 }
 
 .canvas-element.text-element:hover .text-block-resize-handle,
@@ -1112,11 +1095,11 @@
     opacity: 1;
 }
 
-.resize-handle.bottom { 
-    bottom: -6px; 
-    left: 50%; 
-    transform: translateX(-50%); 
-    cursor: s-resize; 
+.resize-handle.bottom {
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: s-resize;
 }
 
 /* Кнопки действий */
@@ -1238,11 +1221,11 @@
         width: 98vw;
         height: 98vh;
     }
-    
+
     .toolbar {
         width: 200px;
     }
-    
+
     .properties-panel {
         width: 240px;
     }
@@ -1256,28 +1239,28 @@
         max-width: none;
         max-height: none;
     }
-    
+
     .content-editor-body {
         flex-direction: column;
     }
-    
+
     /* Отдельное управление размерами панелей на мобиле */
     .toolbar {
         width: 100%;
         height: 150px;
     }
-    
+
     .properties-panel {
         width: 100%;
         height: 150px;
     }
-    
+
     .workspace {
         flex: 1;
         /* На мобиле тоже оставляем независимую область с прокруткой */
         overflow: hidden;
     }
-    
+
     .canvas {
         margin: 10px;
         max-height: none;
@@ -1297,6 +1280,7 @@
         opacity: 1;
         transform: scale(1);
     }
+
     to {
         opacity: 0;
         transform: scale(0.9);
@@ -1345,6 +1329,7 @@
         opacity: 0;
         transform: scale(0.9) translateY(-20px);
     }
+
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -1614,12 +1599,12 @@
     transition: all 0.2s ease;
 }
 
-.checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+.checkbox-label input[type="checkbox"]:checked+.checkbox-custom {
     background: #667eea;
     border-color: #667eea;
 }
 
-.checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
+.checkbox-label input[type="checkbox"]:checked+.checkbox-custom::after {
     content: '✓';
     position: absolute;
     top: 50%;

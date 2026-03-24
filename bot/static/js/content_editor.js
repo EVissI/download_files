@@ -15,7 +15,7 @@ class ContentEditor {
         this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
         this.cardData = null; // Сохраняем данные карточки для таблиц
         this.presetColors = [ // Сохраняем предустановленные цвета
-            '#ffffff', '#f8f9fa', '#e9ecef', '#dee2e6', 
+            '#ffffff', '#f8f9fa', '#e9ecef', '#dee2e6',
             '#ced4da', '#f8f8f8', '#333333', '#1a1a1a'
         ];
         // Сохранённое выделение в contenteditable для Word-like форматирования
@@ -171,7 +171,7 @@ class ContentEditor {
                     </div>
                 </div>
             `;
-            
+
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             this.modal = document.getElementById('contentEditorModal');
         }
@@ -217,7 +217,7 @@ class ContentEditor {
             `);
         }
         this.cardPreviewModal = document.getElementById('cardPreviewModal');
-        
+
         this.canvas = document.getElementById('canvas');
         this.toolsList = document.getElementById('toolsList');
         this.propertiesContent = document.getElementById('propertiesContent');
@@ -242,11 +242,11 @@ class ContentEditor {
         if (this.modal) {
             this.modal.setAttribute('data-cache-timestamp', timestamp);
         }
-        
+
         this.modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         this.loadTools(); // Обновляем инструменты при открытии
-        
+
         // Force refresh of all dynamic content
         this.forceRefreshContent();
     }
@@ -270,14 +270,14 @@ class ContentEditor {
         if (this.modal) {
             this.modal.setAttribute('data-cache-timestamp', timestamp);
         }
-        
+
         this.modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         this.loadTools(); // Обновляем инструменты при открытии
-        
+
         // Сохраняем данные карточки для использования при выборе инструмента таблицы
         this.cardData = cardData;
-        
+
         // Force refresh of all dynamic content
         this.forceRefreshContent();
     }
@@ -286,23 +286,23 @@ class ContentEditor {
         // Add cache-busting timestamp
         const timestamp = Date.now();
         element.setAttribute('data-content-timestamp', timestamp);
-        
+
         // Устанавливаем стандартный тип таблицы - "ход"
         element.dataset.tableType = 'hints';
-        
+
         // Preserve existing positioning styles and only update content-related styles
         const existingTop = element.style.top;
         const existingLeft = element.style.left;
         const existingWidth = element.style.width;
         const existingHeight = element.style.height;
-        
+
         // Update only content-related styles without affecting positioning
         element.style.margin = '0';
         element.style.padding = '0';
         element.style.border = 'none';
         element.style.boxSizing = 'border-box';
         element.style.minHeight = '100px';
-        
+
         if (this.cardData) {
             // Создаем таблицу на основе данных карточки
             this.updateTableContent(element, 'hints');
@@ -332,9 +332,9 @@ class ContentEditor {
                 </table>
             `;
         }
-        
+
         element.classList.add('table-element');
-        
+
         // Debug: Log position preservation
         console.log('Table position after createTableElement:', {
             top: element.style.top,
@@ -352,10 +352,10 @@ class ContentEditor {
             width: element.style.width,
             height: element.style.height
         });
-        
+
         element.dataset.tableType = tableType;
         element.innerHTML = '';
-        
+
         if (!this.cardData) {
             // Если нет данных, показываем заглушку
             element.innerHTML = `
@@ -379,7 +379,7 @@ class ContentEditor {
                 `;
             }
         }
-        
+
         // Debug: Log position after update
         console.log('updateTableContent - after:', {
             top: element.style.top,
@@ -405,7 +405,7 @@ class ContentEditor {
         const header = table.createTHead();
         const headerRow = header.insertRow();
         const headers = ['Ход', '%', '%', 'Эквити'];
-        
+
         headers.forEach(text => {
             const th = document.createElement('th');
             th.textContent = text;
@@ -423,22 +423,22 @@ class ContentEditor {
         const tbody = table.createTBody();
         hints.forEach((hint, index) => {
             const row = tbody.insertRow();
-            
+
             // Ход
             const moveCell = row.insertCell();
             moveCell.textContent = hint.move || 'N/A';
             moveCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
-            
+
             // Win%
             const winCell = row.insertCell();
             winCell.textContent = hint.probs && hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : 'N/A';
             winCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
-            
+
             // Wg%
             const wgCell = row.insertCell();
             wgCell.textContent = hint.probs && hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : 'N/A';
             wgCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
-            
+
             // Эквити
             const eqCell = row.insertCell();
             eqCell.textContent = hint.eq ? hint.eq.toFixed(3) : 'N/A';
@@ -464,7 +464,7 @@ class ContentEditor {
         const header = table.createTHead();
         const headerRow = header.insertRow();
         const headers = ['Действие', 'Эквити'];
-        
+
         headers.forEach(text => {
             const th = document.createElement('th');
             th.textContent = text;
@@ -483,7 +483,7 @@ class ContentEditor {
         if (cubeHints[0] && cubeHints[0].cubeful_equities) {
             cubeHints[0].cubeful_equities.forEach(eq => {
                 const row = tbody.insertRow();
-                
+
                 // Действие
                 const actionCell = row.insertCell();
                 const action = eq.action_1 || '';
@@ -493,7 +493,7 @@ class ContentEditor {
                     actionCell.textContent = action;
                 }
                 actionCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
-                
+
                 // Эквити
                 const eqCell = row.insertCell();
                 eqCell.textContent = eq.eq ? eq.eq.toFixed(3) : 'N/A';
@@ -514,21 +514,21 @@ class ContentEditor {
         // Добавляем обработчики для перемещения (drag and drop)
         element.addEventListener('mousedown', (e) => {
             if (e.target.classList.contains('control-btn')) return;
-            
+
             const startX = e.clientX - element.offsetLeft;
             const startY = e.clientY - element.offsetTop;
 
             const handleMouseMove = (e) => {
                 const newX = e.clientX - startX;
                 const newY = e.clientY - startY;
-                
+
                 // Ограничиваем перемещение в пределах canvas
                 const canvasRect = this.canvas.getBoundingClientRect();
                 const elementRect = element.getBoundingClientRect();
-                
+
                 const maxX = canvasRect.width - elementRect.width;
                 const maxY = canvasRect.height - elementRect.height;
-                
+
                 element.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
                 element.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
             };
@@ -555,14 +555,14 @@ class ContentEditor {
                 el.style.transform = '';
             });
         }
-        
+
         // Refresh tools list
         if (this.toolsList) {
             this.toolsList.style.transform = 'translateZ(0)';
             this.toolsList.offsetHeight; // Force reflow
             this.toolsList.style.transform = '';
         }
-        
+
         // Refresh properties panel
         if (this.propertiesContent) {
             const currentContent = this.propertiesContent.innerHTML;
@@ -697,7 +697,7 @@ class ContentEditor {
         fileInput.type = 'file';
         fileInput.accept = 'image/*';
         fileInput.style.display = 'none';
-        
+
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.type.startsWith('image/')) {
@@ -706,7 +706,7 @@ class ContentEditor {
             // Удаляем временный input
             document.body.removeChild(fileInput);
         });
-        
+
         // Добавляем input в DOM и вызываем клик
         document.body.appendChild(fileInput);
         fileInput.click();
@@ -714,19 +714,19 @@ class ContentEditor {
 
     uploadImageDirectly(file) {
         const reader = new FileReader();
-        
+
         reader.onload = (e) => {
             const imageUrl = e.target.result;
-            
+
             // Создаем элемент на канвасе с изображением
             this.addImageElementToCanvas(imageUrl, file.name);
         };
-        
+
         reader.onerror = () => {
             console.error('Ошибка при чтении файла изображения');
             alert('Не удалось прочитать файл изображения');
         };
-        
+
         reader.readAsDataURL(file);
     }
 
@@ -736,7 +736,7 @@ class ContentEditor {
         fileInput.type = 'file';
         fileInput.accept = 'audio/*';
         fileInput.style.display = 'none';
-        
+
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.type.startsWith('audio/')) {
@@ -745,7 +745,7 @@ class ContentEditor {
             // Удаляем временный input
             document.body.removeChild(fileInput);
         });
-        
+
         // Добавляем input в DOM и вызываем клик
         document.body.appendChild(fileInput);
         fileInput.click();
@@ -753,19 +753,19 @@ class ContentEditor {
 
     uploadAudioDirectly(file) {
         const reader = new FileReader();
-        
+
         reader.onload = (e) => {
             const audioUrl = e.target.result;
-            
+
             // Создаем элемент на канвасе с аудио
             this.addAudioElementToCanvas(audioUrl, file.name, file);
         };
-        
+
         reader.onerror = () => {
             console.error('Ошибка при чтении файла аудио');
             alert('Не удалось прочитать файл аудио');
         };
-        
+
         reader.readAsDataURL(file);
     }
 
@@ -777,20 +777,20 @@ class ContentEditor {
         element.dataset.toolId = 'audio-file';
         element.dataset.audioUrl = audioUrl;
         element.dataset.audioName = fileName;
-        
+
         // Get canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
         const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
-        
+
         // Calculate position for audio element
         const position = this.calculateVerticalPosition(canvasRect.width, 80); // Default height 80px
-        
+
         element.style.left = position.x + 'px';
         element.style.top = position.y + 'px';
         element.style.width = position.width + 'px';
         element.style.height = '80px'; // Default height
-        
+
         // Add messenger-style audio content
         element.innerHTML = `
             <div class="audio-message" style="display: flex; align-items: center; padding: 12px; height: 100%; background: #f0f0f0; border-radius: 8px;">
@@ -804,33 +804,29 @@ class ContentEditor {
                 </div>
             </div>
         `;
-        
+
         // Add controls
         this.addElementControls(element);
-        
+
         // Add to canvas
         this.canvas.appendChild(element);
-        
-        if (this.shouldPinQuestionBelowBoard()) {
-            this.recalculateAllElementPositions();
-        }
-        
+
         // Expand canvas if needed for the audio element
         setTimeout(() => {
             const elementBottom = parseInt(element.style.top) + element.offsetHeight;
             this.expandCanvasIfNeeded(elementBottom);
         }, 100);
-        
+
         // Setup audio functionality
         this.setupAudioElement(element, audioUrl, file);
-        
+
         // Save to elements array
         this.elements.push({
             id: elementId,
             toolId: 'audio-file',
             element: element
         });
-        
+
         // Select element
         this.selectElement(element);
     }
@@ -838,13 +834,13 @@ class ContentEditor {
     setupAudioElement(element, audioUrl, file) {
         const playBtn = element.querySelector('.audio-play-btn');
         const durationEl = element.querySelector('.audio-duration');
-        
+
         // Create audio element (hidden)
         const audio = document.createElement('audio');
         audio.src = audioUrl;
         audio.preload = 'metadata';
         element.appendChild(audio);
-        
+
         // Get audio duration
         audio.addEventListener('loadedmetadata', () => {
             const duration = audio.duration;
@@ -852,12 +848,12 @@ class ContentEditor {
             const seconds = Math.floor(duration % 60);
             durationEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
         });
-        
+
         // Play/pause functionality
         let isPlaying = false;
         playBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            
+
             if (isPlaying) {
                 audio.pause();
                 playBtn.textContent = '▶';
@@ -868,7 +864,7 @@ class ContentEditor {
                 isPlaying = true;
             }
         });
-        
+
         // Reset play button when audio ends
         audio.addEventListener('ended', () => {
             playBtn.textContent = '▶';
@@ -883,62 +879,62 @@ class ContentEditor {
         element.className = 'canvas-element image-element';
         element.dataset.toolId = 'upload-image';
         element.dataset.imageUrl = imageUrl;
-        
+
         // Get canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
         const canvasWidth = canvasRect.width;
-        
+
         // Create image to get natural dimensions
         const img = new Image();
         img.onload = () => {
             // Calculate smart height based on aspect ratio
             const aspectRatio = img.naturalHeight / img.naturalWidth;
             const smartHeight = Math.max(100, Math.min(600, canvasWidth * aspectRatio));
-            
+
             // Calculate position for image element
             const position = this.calculateVerticalPosition(canvasWidth, smartHeight);
-            
+
             element.style.left = position.x + 'px';
             element.style.top = position.y + 'px';
             element.style.width = position.width + 'px';
             element.style.height = smartHeight + 'px';
-            
+
             // Add image content with proper styling
             element.innerHTML = `
                 <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: contain;" />
             `;
-            
+
             // Add controls
             this.addElementControls(element);
-            
+
             // Add to canvas
             this.canvas.appendChild(element);
-            
+
             // Expand canvas if needed for the image
             setTimeout(() => {
                 const elementBottom = parseInt(element.style.top) + element.offsetHeight;
                 this.expandCanvasIfNeeded(elementBottom);
             }, 100);
-            
+
             // Save to elements array
             this.elements.push({
                 id: elementId,
                 toolId: 'upload-image',
                 element: element
             });
-            
+
             // Reposition elements below the new image
             this.repositionElementsBelow(elementId);
-            
+
             // Select element
             this.selectElement(element);
         };
-        
+
         img.onerror = () => {
             console.error('Ошибка загрузки изображения');
             alert('Не удалось загрузить изображение');
         };
-        
+
         // Start loading the image
         img.src = imageUrl;
     }
@@ -959,20 +955,16 @@ class ContentEditor {
                 // Включаем "горит" состояние
                 toolElement.classList.add('toggle-active');
                 toolElement.classList.remove('selected');
-                
+
                 // Показываем уведомление или выполняем действие
                 this.showToggleNotification(toolId, true);
             } else {
                 // Выключаем "горит" состояние
                 toolElement.classList.remove('toggle-active');
-                
+
                 // Скрываем уведомление
                 this.showToggleNotification(toolId, false);
             }
-        }
-
-        if (toolId === 'boardCanvas' && this.canvas) {
-            requestAnimationFrame(() => this.recalculateAllElementPositions());
         }
     }
 
@@ -987,62 +979,37 @@ class ContentEditor {
         // console.log(`Canvas content bottom at ${requiredHeight}px`);
     }
 
-    /** Доска включена, на кадре есть иллюстрация доски и блок вопроса — вопрос всегда сразу под доской */
-    shouldPinQuestionBelowBoard() {
-        if (!this.canvas) return false;
-        if (!this.toggleStates['boardCanvas']) return false;
-        if (!this.canvas.querySelector('.canvas-element[data-tool-id="board-illustration"]')) return false;
-        if (!this.canvas.querySelector('.canvas-element[data-tool-id="question-text"]')) return false;
-        return true;
-    }
-
-    getStackLayoutHeight(element) {
-        const tid = element.dataset.toolId;
-        if (element.classList.contains('table-element')) {
-            let h = element.offsetHeight;
-            if (h < 50) h = 100;
-            return h;
-        }
-        if (tid === 'upload-image') {
-            return parseInt(element.style.height, 10) || element.offsetHeight || 200;
-        }
-        if (tid === 'board-illustration') {
-            return element.offsetHeight || parseInt(element.style.height, 10) || 120;
-        }
-        return parseInt(element.style.height, 10) || element.offsetHeight || 150;
-    }
-
     calculateVerticalPosition(elementWidth, elementHeight) {
         const canvasRect = this.canvas.getBoundingClientRect();
         const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
-        
+
         // Get existing elements sorted by their top position
         const existingElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
             .filter(el => !el.id.includes('boardLabel')) // Исключаем boardLabel
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
-        
+
         // All elements now occupy actual canvas width without margins
         const centerX = 0;
         // Use actual canvas width for proper scaling on mobile
         const fullWidth = canvasRect.width;
-        
+
         // Calculate vertical position with no spacing
         const startY = 0; // No top margin for first element
         const elementSpacing = 0; // No spacing between elements
-        
+
         let nextY = startY;
-        
+
         // Find the next available vertical position
         for (const existingEl of existingElements) {
             const existingTop = parseInt(existingEl.style.top);
             let existingHeight;
-            
+
             // Get actual height of existing element
             if (existingEl.classList.contains('table-element')) {
                 // For table elements, get the actual rendered height
                 existingHeight = existingEl.offsetHeight;
-                
+
                 // Force a reflow to ensure we have the correct height
                 if (existingHeight < 50) {
                     // Force reflow to get accurate table height
@@ -1051,7 +1018,7 @@ class ContentEditor {
                     existingHeight = existingEl.offsetHeight;
                     existingEl.style.display = '';
                 }
-                
+
                 // If table still has very small height, estimate based on content
                 if (existingHeight < 50) {
                     const table = existingEl.querySelector('table');
@@ -1067,7 +1034,7 @@ class ContentEditor {
                         }
                     }
                 }
-                
+
                 // Debug: Log table height calculation
                 console.log(`Table height calculation for element at top=${existingTop}: final height=${existingHeight}`);
             } else {
@@ -1075,7 +1042,7 @@ class ContentEditor {
                 const styledHeight = parseInt(existingEl.style.height);
                 existingHeight = styledHeight || existingEl.offsetHeight || 150;
             }
-            
+
             // Check if the current element fits before this existing element
             let currentElementHeight;
             if (elementHeight === 'auto') {
@@ -1084,15 +1051,15 @@ class ContentEditor {
             } else {
                 currentElementHeight = elementHeight;
             }
-            
+
             if (nextY + currentElementHeight + elementSpacing <= existingTop) {
                 break; // Found a gap
             }
-            
+
             // Move to the next position after this element with no spacing
             nextY = existingTop + existingHeight + elementSpacing;
         }
-        
+
         // Ensure the element doesn't go beyond canvas bounds - expand canvas instead
         let currentElementHeight;
         if (elementHeight === 'auto') {
@@ -1100,16 +1067,16 @@ class ContentEditor {
         } else {
             currentElementHeight = elementHeight;
         }
-        
+
         // Calculate where the element would end
         const elementBottom = nextY + currentElementHeight;
-        
+
         // Expand canvas if needed instead of restricting element placement
         this.expandCanvasIfNeeded(elementBottom);
-        
+
         // Debug: Log final calculation
         console.log(`Final position calculation: y=${nextY}, elementHeight=${currentElementHeight}, elementBottom=${elementBottom}`);
-        
+
         return {
             x: centerX,
             y: Math.max(startY, nextY),
@@ -1118,37 +1085,32 @@ class ContentEditor {
     }
 
     repositionElementsBelow(elementId) {
-        if (this.shouldPinQuestionBelowBoard()) {
-            this.recalculateAllElementPositions();
-            return;
-        }
-
         const changedElement = document.getElementById(elementId);
         if (!changedElement) return;
-        
+
         const changedTop = parseInt(changedElement.style.top);
         const changedHeight = changedElement.offsetHeight;
         const changedBottom = changedTop + changedHeight;
-        
+
         // Get all elements sorted by their top position
         const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
             .filter(el => el.id !== elementId && !el.id.includes('boardLabel'))
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
-        
+
         // Find elements that need to be repositioned (those below the changed element)
         const elementsBelow = allElements.filter(el => {
             const elementTop = parseInt(el.style.top);
             return elementTop >= changedTop;
         });
-        
+
         // Reposition elements below
         let nextY = changedBottom;
         const elementSpacing = 0; // No spacing between elements
-        
+
         elementsBelow.forEach(element => {
             const currentTop = parseInt(element.style.top);
             let elementHeight;
-            
+
             // Get actual height of element
             if (element.classList.contains('table-element')) {
                 elementHeight = element.offsetHeight;
@@ -1158,14 +1120,14 @@ class ContentEditor {
             } else {
                 elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
             }
-            
+
             // Only reposition if this element was actually below
             if (currentTop >= changedTop) {
                 element.style.top = nextY + 'px';
                 nextY += elementHeight + elementSpacing;
             }
         });
-        
+
         // Expand canvas if needed after repositioning
         this.expandCanvasIfNeeded(nextY);
     }
@@ -1176,12 +1138,12 @@ class ContentEditor {
         element.id = elementId;
         element.className = 'canvas-element';
         element.dataset.toolId = toolId;
-        
+
         // Get canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
         const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
-        
+
         // All elements now occupy actual canvas width without margins
         let defaultHeight;
         if (toolId === 'moveHintsTable') {
@@ -1191,7 +1153,7 @@ class ContentEditor {
             // Other elements have fixed height based on mobile/desktop
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
         }
-        
+
         // For non-table elements, add a small delay to ensure any existing tables have rendered
         const calculatePosition = () => {
             // Debug: Log existing elements before positioning
@@ -1203,46 +1165,42 @@ class ContentEditor {
                     console.log(`Element ${index}: top=${el.style.top}, height=${el.offsetHeight}, class=${el.className}`);
                 });
             }
-            
+
             // Position elements in vertical blocks with actual canvas width
             const position = this.calculateVerticalPosition(canvasRect.width, defaultHeight);
-            
+
             // Debug: Log calculated position
             if (toolId !== 'moveHintsTable') {
                 console.log(`Calculated position for ${toolId}:`, position);
             }
-            
+
             element.style.left = position.x + 'px';
             element.style.top = position.y + 'px';
-            
+
             // Set width to actual canvas width without margins and height
             element.style.width = position.width + 'px';
-            
+
             if (defaultHeight === 'auto') {
                 element.style.height = 'auto';
             } else {
                 element.style.height = defaultHeight + 'px';
             }
-            
+
             // Добавляем контент в элемент
             this.populateElementContent(element, toolId);
-            
+
             // Добавляем контролы
             this.addElementControls(element);
-            
+
             // Добавляем на холст
             this.canvas.appendChild(element);
-            
-            if (this.shouldPinQuestionBelowBoard()) {
-                this.recalculateAllElementPositions();
-            }
-            
+
             // Expand canvas if needed for the new element
             setTimeout(() => {
                 const elementBottom = parseInt(element.style.top) + element.offsetHeight;
                 this.expandCanvasIfNeeded(elementBottom);
             }, 100);
-            
+
             // Debug: Log final position for non-table elements
             if (toolId !== 'moveHintsTable') {
                 setTimeout(() => {
@@ -1253,18 +1211,18 @@ class ContentEditor {
                     });
                 }, 100);
             }
-            
+
             // Сохраняем в массив элементов
             this.elements.push({
                 id: elementId,
                 toolId: toolId,
                 element: element
             });
-            
+
             // Выделяем элемент
             this.selectElement(element);
         };
-        
+
         if (toolId === 'moveHintsTable') {
             // For tables, calculate position immediately
             calculatePosition();
@@ -1278,12 +1236,12 @@ class ContentEditor {
         // Очищаем элемент и убираем все кешированные данные
         element.innerHTML = '';
         element.removeAttribute('data-cached');
-        
+
         // Add cache-busting timestamp
         const timestamp = Date.now();
         element.setAttribute('data-content-timestamp', timestamp);
-        
-        switch(toolId) {
+
+        switch (toolId) {
             case 'boardCanvas':
                 // Доска с параметрами - временно отключена
                 element.innerHTML = `
@@ -1293,7 +1251,7 @@ class ContentEditor {
                     </div>
                 `;
                 break;
-                
+
             case 'question-text': {
                 element.innerHTML = `
                     <div class="text-content" contenteditable="true" placeholder="Введите текст вопроса...">Текст вопроса</div>
@@ -1304,12 +1262,12 @@ class ContentEditor {
                 this.setupTextEditing(element);
                 break;
             }
-                
+
             case 'moveHintsTable':
                 // Таблица - создаем на основе сохраненных данных
                 this.createTableElement(element);
                 break;
-                
+
             case 'board-illustration':
                 // Иллюстрация (изображение доски)
                 const canvasForImage = document.getElementById('boardCanvas');
@@ -1317,7 +1275,7 @@ class ContentEditor {
                     // Создаем изображение из canvas с cache-busting
                     const img = document.createElement('img');
                     img.src = canvasForImage.toDataURL() + '?t=' + timestamp;
-                    
+
                     // Apply mobile width constraints
                     const maxWidth = this.getMaxCanvasWidth();
                     img.style.maxWidth = maxWidth + 'px';
@@ -1335,7 +1293,7 @@ class ContentEditor {
                     `;
                 }
                 break;
-                
+
             case 'answer-text': {
                 element.innerHTML = `
                     <div class="text-content" contenteditable="true" placeholder="Введите текст ответа...">Текст ответа</div>
@@ -1346,7 +1304,7 @@ class ContentEditor {
                 this.setupTextEditing(element);
                 break;
             }
-                
+
             case 'support-link': {
                 element.innerHTML = `
                     <div class="link-content">
@@ -1360,7 +1318,7 @@ class ContentEditor {
                 this.setupLinkEditing(element);
                 break;
             }
-                
+
             default:
                 element.innerHTML = `
                     <div style=" text-align: center; color: #666;">
@@ -1673,27 +1631,27 @@ class ContentEditor {
         document.querySelectorAll('.canvas-element').forEach(el => {
             el.classList.remove('selected');
         });
-        
+
         // Выделяем новый элемент
         element.classList.add('selected');
         this.selectedElement = element;
-        
+
         // Показываем свойства элемента
         this.showElementProperties(element);
     }
 
     showElementProperties(element) {
         const computedStyle = window.getComputedStyle(element);
-        
+
         // Get mobile-aware card dimensions
         const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
         const maxElementWidth = this.isMobile() ? maxCanvasWidth - 40 : 750;
         const maxElementHeight = this.isMobile() ? maxCanvasHeight - 40 : 600;
-        
+
         // Check if this is a table element
         const isTableElement = element.classList.contains('table-element') || element.dataset.toolId === 'moveHintsTable';
-        
+
         const textContentEl = element.querySelector('.text-content');
         const linkTextEl = element.querySelector('.link-text');
         const currentTextNode = textContentEl || linkTextEl;
@@ -1826,8 +1784,8 @@ class ContentEditor {
 
     updateElementProperty(property, value) {
         if (!this.selectedElement) return;
-        
-        switch(property) {
+
+        switch (property) {
             case 'audioName':
                 this.selectedElement.dataset.audioName = value;
                 const audioNameEl = this.selectedElement.querySelector('.audio-name');
@@ -1938,7 +1896,7 @@ class ContentEditor {
         if (element && element.classList.contains('audio-element')) {
             const audio = element.querySelector('audio');
             const playBtn = element.querySelector('.audio-play-btn');
-            
+
             if (audio) {
                 audio.play();
                 if (playBtn) {
@@ -1953,7 +1911,7 @@ class ContentEditor {
         if (element && element.classList.contains('audio-element')) {
             const audio = element.querySelector('audio');
             const playBtn = element.querySelector('.audio-play-btn');
-            
+
             if (audio) {
                 audio.pause();
                 if (playBtn) {
@@ -1970,10 +1928,10 @@ class ContentEditor {
 
         // Проверяем, является ли элемент текстовым
         if (!element.classList.contains('text-element')) return;
-        
+
         // Только обеспечиваем правильный перенос текста
         // Высота элемента управляется вручную через панель свойств
-        
+
         // Ничего не делаем - перенос уже работает через CSS
         // Автоматическое изменение высоты отключено
     }
@@ -1981,11 +1939,11 @@ class ContentEditor {
     duplicateElement(elementId) {
         const element = document.getElementById(elementId);
         if (!element) return;
-        
+
         const newElement = element.cloneNode(true);
         const newId = `element_${this.elementIdCounter++}`;
         newElement.id = newId;
-        
+
         // Get appropriate dimensions for positioning - all elements now use actual canvas width
         let elementHeight;
         if (element.classList.contains('table-element')) {
@@ -2005,17 +1963,17 @@ class ContentEditor {
             // For other elements, use styled height or default
             elementHeight = parseInt(element.style.height) || 150;
         }
-        
+
         // Get actual canvas width for proper mobile scaling
         const canvasRect = this.canvas.getBoundingClientRect();
-        
+
         // Use new logic for positioning with actual canvas width
         const position = this.calculateVerticalPosition(canvasRect.width, elementHeight);
-        
+
         newElement.style.left = position.x + 'px';
         newElement.style.top = position.y + 'px';
         newElement.style.width = position.width + 'px';
-        
+
         // Обновляем контролы
         const controls = newElement.querySelector('.element-controls');
         if (controls) {
@@ -2024,7 +1982,7 @@ class ContentEditor {
                 <button class="control-btn delete" onclick="contentEditor.deleteElement('${newId}')" title="Удалить">🗑️</button>
             `;
         }
-        
+
         this.canvas.appendChild(newElement);
         this.addElementControls(newElement);
         this.elements.push({
@@ -2032,11 +1990,7 @@ class ContentEditor {
             toolId: element.dataset.toolId,
             element: newElement
         });
-        
-        if (this.shouldPinQuestionBelowBoard()) {
-            this.recalculateAllElementPositions();
-        }
-        
+
         this.selectElement(newElement);
     }
 
@@ -2046,26 +2000,22 @@ class ContentEditor {
             // Get position of deleted element before removing
             const deletedTop = parseInt(element.style.top);
             const deletedHeight = element.offsetHeight;
-            
+
             // Remove the element
             element.remove();
             this.elements = this.elements.filter(el => el.id !== elementId);
-            
+
             // Clear selection if deleted element was selected
             if (this.selectedElement && this.selectedElement.id === elementId) {
                 this.selectedElement = null;
                 this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
             }
-            
+
             // Move elements below the deleted element up
             this.moveElementsUpAfterDeletion(deletedTop, deletedHeight);
-            
+
             // Adjust canvas height if needed
             this.adjustCanvasHeightAfterDeletion();
-
-            if (this.shouldPinQuestionBelowBoard()) {
-                this.recalculateAllElementPositions();
-            }
         }
     }
 
@@ -2074,11 +2024,11 @@ class ContentEditor {
         const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
             .filter(el => !el.id.includes('boardLabel'))
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
-        
+
         // Find elements that were below the deleted element and move them up
         allElements.forEach(element => {
             const elementTop = parseInt(element.style.top);
-            
+
             // If this element was below the deleted element, move it up
             if (elementTop > deletedTop) {
                 const newTop = elementTop - deletedHeight;
@@ -2100,7 +2050,7 @@ class ContentEditor {
                 this.deselectAll();
             }
         });
-        
+
         // Handle window resize for mobile responsiveness
         window.addEventListener('resize', () => {
             this.handleWindowResize();
@@ -2950,7 +2900,7 @@ class ContentEditor {
 
     /**
      * Дети предпросмотра — position:absolute; без min-height у inner в потоке height≈0 и ломается высота скролла.
-     * (В развёрнутой доске доска absolute и не участвует в высоте — место задаёт только inner.)
+     * Высота обёртки предпросмотра учитывает доску в потоке (см. refreshCardPreviewScale).
      */
     updateCardPreviewInnerMinHeight(inner) {
         if (!inner) return;
@@ -2980,8 +2930,7 @@ class ContentEditor {
         inner.style.transform = 'none';
         this.updateCardPreviewInnerMinHeight(inner);
         const boardEl = wrap.querySelector('.card-preview-board-overlay');
-        const boardCollapsed = boardEl && boardEl.classList.contains('card-preview-board-overlay--collapsed');
-        const boardH = boardEl && boardCollapsed ? Math.ceil(boardEl.offsetHeight) : 0;
+        const boardH = boardEl ? Math.ceil(boardEl.offsetHeight) : 0;
         const innerH = Math.ceil(inner.offsetHeight);
         wrap.style.minHeight = `${boardH + innerH}px`;
     }
@@ -3356,22 +3305,22 @@ class ContentEditor {
             }, { passive: false });
         });
     }
-    
+
     handleWindowResize() {
         // Get current canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
         const maxCanvasWidth = this.getMaxCanvasWidth();
         // Use actual canvas width for proper mobile scaling
         const fullWidth = canvasRect.width;
-        
+
         // Update all canvas elements to match new canvas width
         const canvasElements = this.canvas.querySelectorAll('.canvas-element');
         canvasElements.forEach(element => {
             // Update width for all elements to actual canvas width
             element.style.width = fullWidth + 'px';
-            
+
             const toolId = element.dataset.toolId;
-            
+
             // Special handling for canvas/image elements
             if (toolId === 'boardCanvas' || toolId === 'board-illustration') {
                 const canvasOrImg = element.querySelector('canvas, img');
@@ -3381,29 +3330,29 @@ class ContentEditor {
                     canvasOrImg.style.height = 'auto';
                 }
             }
-            
+
             // Special handling for uploaded images - recalculate smart height
             if (toolId === 'upload-image') {
                 const img = element.querySelector('img');
                 if (img && img.naturalWidth && img.naturalHeight) {
                     const oldHeight = parseInt(element.style.height);
-                    
+
                     // Recalculate smart height based on new canvas width
                     const aspectRatio = img.naturalHeight / img.naturalWidth;
                     const smartHeight = Math.max(100, Math.min(600, fullWidth * aspectRatio));
-                    
+
                     element.style.height = smartHeight + 'px';
                     img.style.width = '100%';
                     img.style.height = '100%';
                     img.style.objectFit = 'contain';
-                    
+
                     // If height changed, reposition elements below
                     if (oldHeight !== smartHeight) {
                         this.repositionElementsBelow(element.id);
                     }
                 }
             }
-            
+
             // Special handling for tables
             if (element.classList.contains('table-element') || toolId === 'moveHintsTable') {
                 const table = element.querySelector('table');
@@ -3412,10 +3361,10 @@ class ContentEditor {
                 }
             }
         });
-        
+
         // After updating all element sizes, recalculate positions for all elements
         this.recalculateAllElementPositions();
-        
+
         // Ensure canvas height is appropriate after resize
         const allElements = this.canvas.querySelectorAll('.canvas-element');
         if (allElements.length > 0) {
@@ -3424,54 +3373,49 @@ class ContentEditor {
                 const currentBottom = parseInt(current.style.top) + current.offsetHeight;
                 return currentBottom > lastBottom ? current : last;
             });
-            
+
             const maxBottom = parseInt(lastElement.style.top) + lastElement.offsetHeight;
             this.expandCanvasIfNeeded(maxBottom);
         }
     }
 
     recalculateAllElementPositions() {
-        if (!this.canvas) return;
-
-        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element')).filter(
-            (el) => !el.id.includes('boardLabel')
-        );
+        // Get all elements sorted by their current top position
+        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
+            .filter(el => !el.id.includes('boardLabel'))
+            .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
 
         const canvasRect = this.canvas.getBoundingClientRect();
-        const elementSpacing = 0;
-        let nextY = 0;
+        const elementSpacing = 0; // No spacing between elements
+        let nextY = 0; // Start from top
 
-        const place = (el) => {
-            el.style.top = nextY + 'px';
-            el.style.left = '0px';
-            el.style.width = canvasRect.width + 'px';
-            nextY += this.getStackLayoutHeight(el) + elementSpacing;
-        };
+        // Recalculate positions for all elements
+        allElements.forEach(element => {
+            let elementHeight;
 
-        if (this.shouldPinQuestionBelowBoard()) {
-            const question = this.canvas.querySelector('.canvas-element[data-tool-id="question-text"]');
-            const boardBlocks = allElements
-                .filter((el) => el.dataset.toolId === 'board-illustration')
-                .sort((a, b) => parseInt(a.style.top, 10) - parseInt(b.style.top, 10));
-            const rest = allElements
-                .filter(
-                    (el) =>
-                        el.dataset.toolId !== 'board-illustration' &&
-                        el !== question
-                )
-                .sort((a, b) => parseInt(a.style.top, 10) - parseInt(b.style.top, 10));
+            // Get actual height of element
+            if (element.classList.contains('table-element')) {
+                elementHeight = element.offsetHeight;
+                if (elementHeight < 50) {
+                    elementHeight = 100; // Default for empty tables
+                }
+            } else if (element.dataset.toolId === 'upload-image') {
+                // For images, use the current styled height
+                elementHeight = parseInt(element.style.height) || 200;
+            } else {
+                elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
+            }
 
-            boardBlocks.forEach(place);
-            if (question) place(question);
-            rest.forEach(place);
-            this.expandCanvasIfNeeded(nextY);
-            return;
-        }
+            // Update position
+            element.style.top = nextY + 'px';
+            element.style.left = '0px'; // Always align to left
+            element.style.width = canvasRect.width + 'px'; // Full canvas width
 
-        allElements
-            .sort((a, b) => parseInt(a.style.top, 10) - parseInt(b.style.top, 10))
-            .forEach(place);
+            // Move to next position
+            nextY += elementHeight + elementSpacing;
+        });
 
+        // Expand canvas if needed after recalculating all positions
         this.expandCanvasIfNeeded(nextY);
     }
 
@@ -3757,7 +3701,7 @@ class ContentEditor {
 
     setupPresetColorHandlers() {
         const deleteModeCheckbox = document.getElementById('deleteModeCheckbox');
-        
+
         document.querySelectorAll('.preset-color').forEach(preset => {
             preset.addEventListener('click', (e) => {
                 if (deleteModeCheckbox.checked) {
@@ -3772,7 +3716,7 @@ class ContentEditor {
                 }
             });
         });
-        
+
         // Добавляем обработчик для чекбокса режима удаления
         deleteModeCheckbox.addEventListener('change', (e) => {
             // Обновляем стиль цветов в зависимости от режима
@@ -3788,18 +3732,18 @@ class ContentEditor {
 
     addPresetColor() {
         const color = document.getElementById('canvasBackgroundColor').value;
-        
+
         // Проверяем, что цвет еще не добавлен
         if (!this.presetColors.includes(color)) {
             this.presetColors.push(color);
-            
+
             // Обновляем контейнер с предустановленными цветами
             const container = document.getElementById('presetColorsContainer');
             container.innerHTML = this.renderPresetColors();
-            
+
             // Обновляем обработчики
             this.setupPresetColorHandlers();
-            
+
             // Показать уведомление
             this.showNotification('Цвет добавлен в предустановленные', 'success');
         } else {
@@ -3810,14 +3754,14 @@ class ContentEditor {
     deletePresetColor(index) {
         const color = this.presetColors[index];
         this.presetColors.splice(index, 1);
-        
+
         // Обновляем контейнер с предустановленными цветами
         const container = document.getElementById('presetColorsContainer');
         container.innerHTML = this.renderPresetColors();
-        
+
         // Обновляем обработчики
         this.setupPresetColorHandlers();
-        
+
         // Показать уведомление
         this.showNotification(`Цвет ${color} удален`, 'info');
     }
@@ -3832,13 +3776,13 @@ class ContentEditor {
                 <span>${message}</span>
             </div>
         `;
-        
+
         // Добавляем в DOM
         document.body.appendChild(notification);
-        
+
         // Показываем уведомление
         setTimeout(() => notification.classList.add('show'), 10);
-        
+
         // Автоматически скрываем через 3 секунды
         setTimeout(() => {
             notification.classList.remove('show');
@@ -3874,16 +3818,16 @@ class ContentEditor {
         if (rgb.startsWith('#')) {
             return rgb;
         }
-        
+
         const result = rgb.match(/\d+/g);
         if (!result || result.length < 3) {
             return '#ffffff';
         }
-        
+
         const r = parseInt(result[0]);
         const g = parseInt(result[1]);
         const b = parseInt(result[2]);
-        
+
         return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     }
 
@@ -3895,19 +3839,19 @@ class ContentEditor {
         if (this.canvas) {
             this.canvas.innerHTML = '';
         }
-        
+
         // Reset properties
         this.selectedElement = null;
         if (this.propertiesContent) {
             this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
         }
-        
+
         // Reset toggle states
         this.toggleStates = {};
-        
+
         // Reload tools
         this.loadTools();
-        
+
         // Force refresh
         this.forceRefreshContent();
     }
@@ -3947,6 +3891,6 @@ clearContentEditorLocalStorage();
 clearContentEditorIndexedDB();
 
 // Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     contentEditor = new ContentEditor();
 });
