@@ -603,9 +603,127 @@
 }
 
 .card-preview-surface-wrap {
+    position: relative;
     width: 100%;
     min-height: 120px;
     box-sizing: border-box;
+}
+
+/* Оверлей доски в предпросмотре (как в hint_viewer: канвас + подписи, поверх контента кадра) */
+.card-preview-board-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    pointer-events: none;
+    box-sizing: border-box;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.card-preview-board-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 8px 8px;
+    pointer-events: auto;
+    background: linear-gradient(to bottom, rgba(30, 30, 30, 0.97), rgba(30, 30, 30, 0.85));
+    border-radius: 8px 8px 0 0;
+}
+
+.card-preview-board-toggle-btn {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #3a3a3a;
+    color: #eee;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.card-preview-board-toggle-btn:hover {
+    background: #4a4a4a;
+    border-color: #777;
+}
+
+.card-preview-board-toolbar-pips {
+    display: flex;
+    justify-content: flex-end;
+    flex: 1;
+    min-width: 0;
+}
+
+.card-preview-board-body {
+    pointer-events: none;
+}
+
+.card-preview-board-overlay--collapsed .card-preview-board-body {
+    display: none;
+}
+
+.card-preview-board-canvas-wrap {
+    background: #1a1a1a;
+    line-height: 0;
+}
+
+.card-preview-board-canvas {
+    display: block;
+    width: 100%;
+    max-width: 800px;
+    height: auto;
+    margin: 0 auto;
+}
+
+.card-preview-board-footer {
+    position: relative;
+    margin-top: -12px;
+    padding-bottom: 8px;
+    pointer-events: none;
+}
+
+.card-preview-move-info {
+    font-size: 16px;
+    font-weight: bold;
+    color: #60a5fa;
+    text-align: center;
+    padding: 4px 8px;
+}
+
+.card-preview-pips-above {
+    background-color: #000000;
+    color: #ffffff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: right;
+}
+
+.card-preview-pips-above--inv {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.card-preview-pips-below {
+    position: absolute;
+    right: 0;
+    top: 0;
+    background-color: #ffffff;
+    color: #000000;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.card-preview-pips-below--inv {
+    background-color: #000000;
+    color: #ffffff;
 }
 
 .card-preview-surface-inner {

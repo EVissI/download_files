@@ -35,6 +35,9 @@ class ContentEditor {
         /** После сохранения из предпросмотра-редактора — открыть предпросмотр на этом кадре */
         this._resumePreviewStorageKey = null;
 
+        /** Кэш загрузки PNG для оверлея доски в предпросмотре */
+        this._boardPreviewAssetsPromise = null;
+
         this.init();
     }
 
@@ -2385,6 +2388,348 @@ class ContentEditor {
         });
     }
 
+    shouldShowBoardInCardPreview(payload) {
+        return !!(payload && payload.editor && payload.editor.boardCanvasToggle);
+    }
+
+    loadBoardPreviewImages() {
+        if (this._boardPreviewAssetsPromise) return this._boardPreviewAssetsPromise;
+        const bust = () => `?t=${Date.now()}`;
+        const loadOne = (src) => new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error(src));
+            img.src = src + bust();
+        });
+        const paths = {
+            board: '/static/board.png',
+            black: '/static/black_checker.png',
+            white: '/static/white_checker.png',
+            double64: '/static/Double64.png'
+        };
+        for (let i = 1; i <= 6; i++) {
+            paths[`d${i}w`] = `/static/${i}w.png`;
+            paths[`d${i}b`] = `/static/${i}b.png`;
+        }
+        this._boardPreviewAssetsPromise = Promise.all(
+            Object.entries(paths).map(([key, url]) => loadOne(url).then((img) => [key, img]))
+        ).then((pairs) => Object.fromEntries(pairs));
+        return this._boardPreviewAssetsPromise;
+    }
+
+    getBoardPreviewPointX(point) {
+        if (point >= 13 && point <= 18) {
+            const baseX = 50 + (point - 13) * 60;
+            return baseX - (point === 13 ? 8 : 0);
+        }
+        if (point >= 19 && point <= 24) {
+            return 450 + (point - 19) * 60;
+        }
+        if (point >= 7 && point <= 12) {
+            const baseX = 50 + (12 - point) * 60;
+            return baseX - (point === 12 ? 4 : 0);
+        }
+        if (point >= 1 && point <= 6) {
+            return 450 + (6 - point) * 60;
+        }
+        return 0;
+    }
+
+    getBoardPreviewBaseY(point) {
+        return (point > 12) ? 70 : 690;
+    }
+
+    getBoardPreviewDy(point) {
+        return (point > 12) ? 55 : -55;
+    }
+
+    calculateBoardPreviewPips(positions, player, invertColors) {
+        let totalPips = 0;
+        for (const pointStr in positions) {
+            if (pointStr === 'bar') {
+                totalPips += Math.abs(positions[pointStr]) * 25;
+            } else if (pointStr === 'off') {
+                /* skip */
+            } else {
+                const point = parseInt(pointStr, 10);
+                const count = positions[pointStr];
+                let effectivePoint = point;
+                if (invertColors) {
+                    if (player === 'red') {
+                        effectivePoint = 25 - point;
+                    } else if (player === 'black') {
+                        effectivePoint = point;
+                    }
+                } else if (player === 'black') {
+                    effectivePoint = 25 - point;
+                } else {
+                    effectivePoint = point;
+                }
+                totalPips += count * effectivePoint;
+            }
+        }
+        return totalPips;
+    }
+
+    drawBoardPreviewCheckers(ctx, player, img, positions, currentPlayer, invertColors) {
+        ctx.font = 'bold 30px Arial';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        if (player === currentPlayer) {
+            for (let point = 1; point <= 24; point++) {
+                const x = this.getBoardPreviewPointX(point);
+                let y = this.getBoardPreviewBaseY(point);
+                const dy = this.getBoardPreviewDy(point);
+                let displayPoint = point;
+                if (invertColors) {
+                    if (player === 'red') {
+                        displayPoint = 25 - point;
+                    }
+                } else if (player === 'black') {
+                    displayPoint = 25 - point;
+                }
+                let numberY;
+                if (point > 12) {
+                    numberY = y - 50;
+                } else {
+                    numberY = y + 60;
+                }
+                ctx.fillText(String(displayPoint), x, numberY);
+            }
+        }
+
+        for (const pointStr in positions) {
+            if (pointStr === 'bar' || pointStr === 'off') continue;
+            const point = parseInt(pointStr, 10);
+            const count = positions[pointStr];
+            const x = this.getBoardPreviewPointX(point);
+            const y = this.getBoardPreviewBaseY(point);
+            const dy = this.getBoardPreviewDy(point);
+            for (let i = 0; i < Math.min(count, 6); i++) {
+                ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
+            }
+            if (count > 6) {
+                const lastCheckerY = y + (5 * dy);
+                ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
+            }
+        }
+
+        const barX = 400;
+        let barY = (player === 'black') ? 220 : 520;
+        if (invertColors) {
+            barY = (player === 'black') ? 520 : 220;
+        }
+        if (positions.bar && positions.bar !== 0) {
+            let y = barY;
+            const dyBar = (player === 'black') ? 55 : -55;
+            for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
+                ctx.drawImage(img, barX - 31.25, y + (i * dyBar) - 31.25, 62.5, 62.5);
+            }
+            if (Math.abs(positions.bar) > 6) {
+                const lastCheckerY = y + (5 * dyBar);
+                ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
+            }
+        }
+
+        let offX = 783;
+        let offY;
+        if (invertColors) {
+            offY = (player === 'black') ? 440 : 340;
+        } else {
+            offY = (player === 'black') ? 340 : 440;
+        }
+        if (positions.off && positions.off !== 0) {
+            const originalFont = ctx.font;
+            ctx.font = 'bold 32px Arial';
+            ctx.fillText(`${positions.off}`, offX, offY);
+            ctx.font = originalFont;
+        }
+    }
+
+    resolveBoardPositionsFromSnapshot(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') return null;
+        if (snapshot.error === 'no_game_data') return null;
+        const inv = !!snapshot.invertColors;
+        const pos = snapshot.positions;
+        if (pos && typeof pos === 'object' && pos.red && pos.black) {
+            return { redPositions: pos.red, blackPositions: pos.black };
+        }
+        const fi = snapshot.frameIndex;
+        if (fi === 0 || fi === null || fi === undefined) {
+            if (inv) {
+                return {
+                    redPositions: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
+                    blackPositions: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
+                };
+            }
+            return {
+                redPositions: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
+                blackPositions: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
+            };
+        }
+        return null;
+    }
+
+    formatBoardPreviewMoveLine(snapshot) {
+        if (!snapshot) return '';
+        if (snapshot.error) {
+            return snapshot.error === 'no_game_data' ? 'Нет данных партии для доски' : String(snapshot.error);
+        }
+        const row = snapshot.turn;
+        if (!row) return '';
+        if (row.action === 'double') {
+            return `Double (${row.cube != null ? row.cube : '?'})`;
+        }
+        if (row.action === 'take') return 'Take';
+        if (row.action === 'win') return 'Победа';
+        const who = row.player_name || row.player || '';
+        const dice = row.dice && row.dice.length >= 2 ? `${row.dice[0]}-${row.dice[1]}` : '';
+        return [who, dice].filter(Boolean).join(' · ') || (row.action || '');
+    }
+
+    paintBoardPreviewCanvas(canvas, snapshot, imgs) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        if (!imgs.board || !imgs.board.complete) return;
+        ctx.drawImage(imgs.board, 0, 0, w, h);
+
+        const invertColors = !!snapshot.invertColors;
+        const resolved = this.resolveBoardPositionsFromSnapshot(snapshot);
+        const turnRow = snapshot.turn;
+        const currentPlayer = (turnRow && turnRow.player) ? String(turnRow.player).toLowerCase() : 'red';
+
+        if (resolved) {
+            this.drawBoardPreviewCheckers(ctx, 'red', imgs.white, resolved.redPositions, currentPlayer, invertColors);
+            this.drawBoardPreviewCheckers(ctx, 'black', imgs.black, resolved.blackPositions, currentPlayer, invertColors);
+        }
+
+        const diceImagesWhite = {
+            1: imgs.d1w, 2: imgs.d2w, 3: imgs.d3w, 4: imgs.d4w, 5: imgs.d5w, 6: imgs.d6w
+        };
+        const diceImagesBlack = {
+            1: imgs.d1b, 2: imgs.d2b, 3: imgs.d3b, 4: imgs.d4b, 5: imgs.d5b, 6: imgs.d6b
+        };
+
+        if (turnRow && turnRow.dice && turnRow.dice.length >= 2 && !['double', 'take', 'win'].includes(turnRow.action)) {
+            const [d1, d2] = turnRow.dice;
+            const diceY = 350;
+            let diceX1;
+            let diceX2;
+            let diceSet;
+            const isRedPlayer = String(turnRow.player || '').toLowerCase() === 'red';
+            if (invertColors) {
+                if (isRedPlayer) {
+                    diceX1 = 130;
+                    diceX2 = 220;
+                    diceSet = diceImagesWhite;
+                } else {
+                    diceX1 = 530;
+                    diceX2 = 620;
+                    diceSet = diceImagesBlack;
+                }
+            } else if (isRedPlayer) {
+                diceX1 = 530;
+                diceX2 = 620;
+                diceSet = diceImagesWhite;
+            } else {
+                diceX1 = 130;
+                diceX2 = 220;
+                diceSet = diceImagesBlack;
+            }
+            if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+            if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+        }
+
+        if (turnRow && turnRow.action === 'win' && imgs.double64) {
+            ctx.drawImage(imgs.double64, 375, 350, 50, 50);
+        }
+    }
+
+    updateBoardPreviewPipsDom(overlay, snapshot, resolved) {
+        const pipTop = overlay.querySelector('.card-preview-pips-above');
+        const pipBot = overlay.querySelector('.card-preview-pips-below');
+        if (!pipTop || !pipBot) return;
+        const invertColors = !!snapshot.invertColors;
+        if (!resolved) {
+            pipTop.textContent = '';
+            pipBot.textContent = '';
+            pipTop.className = 'card-preview-pips-above';
+            pipBot.className = 'card-preview-pips-below';
+            pipTop.style.display = 'none';
+            pipBot.style.display = 'none';
+            return;
+        }
+        pipTop.style.display = '';
+        pipBot.style.display = '';
+        const redPips = this.calculateBoardPreviewPips(resolved.redPositions, 'red', invertColors);
+        const blackPips = this.calculateBoardPreviewPips(resolved.blackPositions, 'black', invertColors);
+        if (invertColors) {
+            pipTop.textContent = `${redPips}`;
+            pipBot.textContent = `${blackPips}`;
+            pipTop.className = 'card-preview-pips-above card-preview-pips-above--inv';
+            pipBot.className = 'card-preview-pips-below card-preview-pips-below--inv';
+        } else {
+            pipTop.textContent = `${blackPips}`;
+            pipBot.textContent = `${redPips}`;
+            pipTop.className = 'card-preview-pips-above';
+            pipBot.className = 'card-preview-pips-below';
+        }
+    }
+
+    appendCardPreviewBoardOverlay(wrap, payload) {
+        const snapshot = payload.board && typeof payload.board === 'object' ? payload.board : {};
+        const overlay = document.createElement('div');
+        overlay.className = 'card-preview-board-overlay';
+        overlay.innerHTML = `
+            <div class="card-preview-board-toolbar">
+                <button type="button" class="card-preview-board-toggle-btn">Свернуть доску</button>
+                <div class="card-preview-board-toolbar-pips">
+                    <span class="card-preview-pips-above"></span>
+                </div>
+            </div>
+            <div class="card-preview-board-body">
+                <div class="card-preview-board-canvas-wrap">
+                    <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
+                </div>
+                <div class="card-preview-board-footer">
+                    <div class="card-preview-move-info"></div>
+                    <span class="card-preview-pips-below"></span>
+                </div>
+            </div>
+        `;
+        const btn = overlay.querySelector('.card-preview-board-toggle-btn');
+        btn.addEventListener('click', () => {
+            overlay.classList.toggle('card-preview-board-overlay--collapsed');
+            const collapsed = overlay.classList.contains('card-preview-board-overlay--collapsed');
+            btn.textContent = collapsed ? 'Показать доску' : 'Свернуть доску';
+        });
+
+        const moveEl = overlay.querySelector('.card-preview-move-info');
+        if (moveEl) {
+            moveEl.textContent = this.formatBoardPreviewMoveLine(snapshot);
+        }
+
+        const resolved = this.resolveBoardPositionsFromSnapshot(snapshot);
+        this.updateBoardPreviewPipsDom(overlay, snapshot, resolved);
+
+        wrap.appendChild(overlay);
+
+        const canvas = overlay.querySelector('.card-preview-board-canvas');
+        this.loadBoardPreviewImages()
+            .then((imgs) => {
+                if (!canvas.isConnected) return;
+                this.paintBoardPreviewCanvas(canvas, snapshot, imgs);
+            })
+            .catch((err) => {
+                console.error('appendCardPreviewBoardOverlay:', err);
+                if (moveEl) moveEl.textContent = 'Не удалось загрузить изображения доски';
+            });
+    }
+
     renderCardPreviewSurface(payload) {
         const host = document.getElementById('cardPreviewFrameHost');
         if (!host) return;
@@ -2430,6 +2775,10 @@ class ContentEditor {
 
         wrap.appendChild(inner);
         host.appendChild(wrap);
+
+        if (this.shouldShowBoardInCardPreview(payload)) {
+            this.appendCardPreviewBoardOverlay(wrap, payload);
+        }
 
         inner.querySelectorAll('img').forEach((img) => {
             img.addEventListener('load', () => this.refreshCardPreviewScale());
