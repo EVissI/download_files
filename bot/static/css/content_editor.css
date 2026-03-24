@@ -731,6 +731,11 @@
     user-select: none;
 }
 
+/* Предпросмотр: прослушивание аудио (inner с pointer-events: none иначе не доходит до ▶) */
+.card-preview-surface-inner .canvas-element.audio-element.card-preview-canvas-clone {
+    pointer-events: auto;
+}
+
 .card-preview-canvas-clone {
     box-sizing: border-box;
 }

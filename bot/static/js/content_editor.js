@@ -3078,7 +3078,7 @@ class ContentEditor {
                             <div class="audio-name" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px;">${this.escapeHtml(item.audioName || 'Аудио')}</div>
                             <div class="audio-duration" style="font-size: 12px; color: #666;">—</div>
                         </div>
-                        <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: ${previewMode ? 'default' : 'pointer'}; display: flex; align-items: center; justify-content: center; font-size: 16px; opacity: ${previewMode ? '0.5' : '1'};">▶</div>
+                        <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">▶</div>
                     </div>`;
                 if (item.audioStorageId) {
                     this.hydrateAudioElementFromIDB(element).catch((e) => console.error('hydrateAudioElementFromIDB:', e));
