@@ -2443,34 +2443,6 @@ class ContentEditor {
         return (point > 12) ? 55 : -55;
     }
 
-    calculateBoardPreviewPips(positions, player, invertColors) {
-        let totalPips = 0;
-        for (const pointStr in positions) {
-            if (pointStr === 'bar') {
-                totalPips += Math.abs(positions[pointStr]) * 25;
-            } else if (pointStr === 'off') {
-                /* skip */
-            } else {
-                const point = parseInt(pointStr, 10);
-                const count = positions[pointStr];
-                let effectivePoint = point;
-                if (invertColors) {
-                    if (player === 'red') {
-                        effectivePoint = 25 - point;
-                    } else if (player === 'black') {
-                        effectivePoint = point;
-                    }
-                } else if (player === 'black') {
-                    effectivePoint = 25 - point;
-                } else {
-                    effectivePoint = point;
-                }
-                totalPips += count * effectivePoint;
-            }
-        }
-        return totalPips;
-    }
-
     drawBoardPreviewCheckers(ctx, player, img, positions, currentPlayer, invertColors) {
         ctx.font = 'bold 30px Arial';
         ctx.fillStyle = '#ffffff';
@@ -2572,23 +2544,6 @@ class ContentEditor {
         return null;
     }
 
-    formatBoardPreviewMoveLine(snapshot) {
-        if (!snapshot) return '';
-        if (snapshot.error) {
-            return snapshot.error === 'no_game_data' ? 'Нет данных партии для доски' : String(snapshot.error);
-        }
-        const row = snapshot.turn;
-        if (!row) return '';
-        if (row.action === 'double') {
-            return `Double (${row.cube != null ? row.cube : '?'})`;
-        }
-        if (row.action === 'take') return 'Take';
-        if (row.action === 'win') return 'Победа';
-        const who = row.player_name || row.player || '';
-        const dice = row.dice && row.dice.length >= 2 ? `${row.dice[0]}-${row.dice[1]}` : '';
-        return [who, dice].filter(Boolean).join(' · ') || (row.action || '');
-    }
-
     paintBoardPreviewCanvas(canvas, snapshot, imgs) {
         const ctx = canvas.getContext('2d');
         const w = canvas.width;
@@ -2649,72 +2604,39 @@ class ContentEditor {
         }
     }
 
-    updateBoardPreviewPipsDom(overlay, snapshot, resolved) {
-        const pipTop = overlay.querySelector('.card-preview-pips-above');
-        const pipBot = overlay.querySelector('.card-preview-pips-below');
-        if (!pipTop || !pipBot) return;
-        const invertColors = !!snapshot.invertColors;
-        if (!resolved) {
-            pipTop.textContent = '';
-            pipBot.textContent = '';
-            pipTop.className = 'card-preview-pips-above';
-            pipBot.className = 'card-preview-pips-below';
-            pipTop.style.display = 'none';
-            pipBot.style.display = 'none';
-            return;
-        }
-        pipTop.style.display = '';
-        pipBot.style.display = '';
-        const redPips = this.calculateBoardPreviewPips(resolved.redPositions, 'red', invertColors);
-        const blackPips = this.calculateBoardPreviewPips(resolved.blackPositions, 'black', invertColors);
-        if (invertColors) {
-            pipTop.textContent = `${redPips}`;
-            pipBot.textContent = `${blackPips}`;
-            pipTop.className = 'card-preview-pips-above card-preview-pips-above--inv';
-            pipBot.className = 'card-preview-pips-below card-preview-pips-below--inv';
-        } else {
-            pipTop.textContent = `${blackPips}`;
-            pipBot.textContent = `${redPips}`;
-            pipTop.className = 'card-preview-pips-above';
-            pipBot.className = 'card-preview-pips-below';
-        }
-    }
-
     appendCardPreviewBoardOverlay(wrap, payload) {
         const snapshot = payload.board && typeof payload.board === 'object' ? payload.board : {};
         const overlay = document.createElement('div');
         overlay.className = 'card-preview-board-overlay';
         overlay.innerHTML = `
-            <div class="card-preview-board-toolbar">
-                <button type="button" class="card-preview-board-toggle-btn">Свернуть доску</button>
-                <div class="card-preview-board-toolbar-pips">
-                    <span class="card-preview-pips-above"></span>
-                </div>
-            </div>
             <div class="card-preview-board-body">
                 <div class="card-preview-board-canvas-wrap">
                     <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
                 </div>
-                <div class="card-preview-board-footer">
-                    <div class="card-preview-move-info"></div>
-                    <span class="card-preview-pips-below"></span>
-                </div>
             </div>
+            <button type="button" class="card-preview-board-seagull" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
+                <span class="card-preview-board-seagull-icon" aria-hidden="true">
+                    <svg class="card-preview-board-seagull-svg" viewBox="0 0 100 44" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                        <path fill="currentColor" d="M4 30 Q26 8 48 18 Q62 4 88 14 Q96 16 98 22 L90 26 Q70 18 52 22 Q36 14 18 22 Q10 26 6 34 Z" opacity="0.92"/>
+                        <ellipse fill="currentColor" cx="78" cy="16" rx="9" ry="7"/>
+                        <path fill="#fbbf24" d="M86 15 L100 18 L88 24 Z"/>
+                    </svg>
+                </span>
+            </button>
         `;
-        const btn = overlay.querySelector('.card-preview-board-toggle-btn');
-        btn.addEventListener('click', () => {
+        const seagull = overlay.querySelector('.card-preview-board-seagull');
+        const toggleBoardCollapsed = () => {
             overlay.classList.toggle('card-preview-board-overlay--collapsed');
             const collapsed = overlay.classList.contains('card-preview-board-overlay--collapsed');
-            btn.textContent = collapsed ? 'Показать доску' : 'Свернуть доску';
+            seagull.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        };
+        seagull.addEventListener('click', toggleBoardCollapsed);
+        seagull.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleBoardCollapsed();
+            }
         });
-
-        const moveEl = overlay.querySelector('.card-preview-move-info');
-        if (moveEl) {
-            moveEl.textContent = this.formatBoardPreviewMoveLine(snapshot);
-        }
-
-        const resolved = this.resolveBoardPositionsFromSnapshot(snapshot);
-        this.updateBoardPreviewPipsDom(overlay, snapshot, resolved);
 
         wrap.appendChild(overlay);
 
@@ -2726,7 +2648,6 @@ class ContentEditor {
             })
             .catch((err) => {
                 console.error('appendCardPreviewBoardOverlay:', err);
-                if (moveEl) moveEl.textContent = 'Не удалось загрузить изображения доски';
             });
     }
 

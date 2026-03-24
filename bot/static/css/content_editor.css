@@ -609,7 +609,7 @@
     box-sizing: border-box;
 }
 
-/* Оверлей доски в предпросмотре (как в hint_viewer: канвас + подписи, поверх контента кадра) */
+/* Оверлей доски в предпросмотре: канвас поверх кадра; «чайка» внизу сворачивает блок */
 .card-preview-board-overlay {
     position: absolute;
     top: 0;
@@ -623,41 +623,6 @@
     margin-right: auto;
 }
 
-.card-preview-board-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 6px 8px 8px;
-    pointer-events: auto;
-    background: linear-gradient(to bottom, rgba(30, 30, 30, 0.97), rgba(30, 30, 30, 0.85));
-    border-radius: 8px 8px 0 0;
-}
-
-.card-preview-board-toggle-btn {
-    flex-shrink: 0;
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid #555;
-    background: #3a3a3a;
-    color: #eee;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.card-preview-board-toggle-btn:hover {
-    background: #4a4a4a;
-    border-color: #777;
-}
-
-.card-preview-board-toolbar-pips {
-    display: flex;
-    justify-content: flex-end;
-    flex: 1;
-    min-width: 0;
-}
-
 .card-preview-board-body {
     pointer-events: none;
 }
@@ -666,9 +631,15 @@
     display: none;
 }
 
+.card-preview-board-overlay--collapsed {
+    border-radius: 0 0 12px 12px;
+    overflow: hidden;
+}
+
 .card-preview-board-canvas-wrap {
     background: #1a1a1a;
     line-height: 0;
+    border-radius: 0 0 0 0;
 }
 
 .card-preview-board-canvas {
@@ -679,51 +650,49 @@
     margin: 0 auto;
 }
 
-.card-preview-board-footer {
-    position: relative;
-    margin-top: -12px;
-    padding-bottom: 8px;
-    pointer-events: none;
+.card-preview-board-seagull {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px 12px;
+    margin: 0;
+    border: none;
+    border-radius: 0 0 12px 12px;
+    cursor: pointer;
+    color: #cbd5e1;
+    background: linear-gradient(to top, #1a1a1e 0%, #2d2d32 100%);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    transition: color 0.15s ease, background 0.15s ease, filter 0.15s ease;
 }
 
-.card-preview-move-info {
-    font-size: 16px;
-    font-weight: bold;
-    color: #60a5fa;
-    text-align: center;
-    padding: 4px 8px;
+.card-preview-board-seagull:hover {
+    color: #f8fafc;
+    filter: brightness(1.08);
 }
 
-.card-preview-pips-above {
-    background-color: #000000;
-    color: #ffffff;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 16px;
-    font-weight: bold;
-    text-align: right;
+.card-preview-board-seagull:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
 }
 
-.card-preview-pips-above--inv {
-    background-color: #ffffff;
-    color: #000000;
+.card-preview-board-seagull-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.22s ease;
 }
 
-.card-preview-pips-below {
-    position: absolute;
-    right: 0;
-    top: 0;
-    background-color: #ffffff;
-    color: #000000;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 16px;
-    font-weight: bold;
+.card-preview-board-overlay--collapsed .card-preview-board-seagull-icon {
+    transform: rotate(180deg);
 }
 
-.card-preview-pips-below--inv {
-    background-color: #000000;
-    color: #ffffff;
+.card-preview-board-seagull-svg {
+    width: 64px;
+    height: 32px;
+    display: block;
 }
 
 .card-preview-surface-inner {
