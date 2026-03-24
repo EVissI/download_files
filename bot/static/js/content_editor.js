@@ -2627,6 +2627,7 @@ class ContentEditor {
             overlay.classList.toggle('card-preview-board-overlay--collapsed');
             const collapsed = overlay.classList.contains('card-preview-board-overlay--collapsed');
             handleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            requestAnimationFrame(() => this.refreshCardPreviewScale());
         };
         handleBtn.addEventListener('click', toggleBoardCollapsed);
         handleBtn.addEventListener('keydown', (e) => {
@@ -2643,6 +2644,7 @@ class ContentEditor {
             .then((imgs) => {
                 if (!canvas.isConnected) return;
                 this.paintBoardPreviewCanvas(canvas, snapshot, imgs);
+                requestAnimationFrame(() => this.refreshCardPreviewScale());
             })
             .catch((err) => {
                 console.error('appendCardPreviewBoardOverlay:', err);
@@ -2692,12 +2694,11 @@ class ContentEditor {
 
         this.normalizePreviewStackTops(inner);
 
-        wrap.appendChild(inner);
-        host.appendChild(wrap);
-
         if (this.shouldShowBoardInCardPreview(payload)) {
             this.appendCardPreviewBoardOverlay(wrap, payload);
         }
+        wrap.appendChild(inner);
+        host.appendChild(wrap);
 
         inner.querySelectorAll('img').forEach((img) => {
             img.addEventListener('load', () => this.refreshCardPreviewScale());
@@ -2716,7 +2717,10 @@ class ContentEditor {
         if (!inner || !wrap) return;
 
         inner.style.transform = 'none';
-        wrap.style.minHeight = `${Math.ceil(inner.offsetHeight)}px`;
+        const boardEl = wrap.querySelector('.card-preview-board-overlay');
+        const boardH = boardEl ? Math.ceil(boardEl.offsetHeight) : 0;
+        const innerH = Math.ceil(inner.offsetHeight);
+        wrap.style.minHeight = `${boardH + innerH}px`;
     }
 
     escapeHtml(s) {

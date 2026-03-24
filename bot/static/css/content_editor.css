@@ -604,23 +604,24 @@
 
 .card-preview-surface-wrap {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     width: 100%;
     min-height: 120px;
     box-sizing: border-box;
 }
 
-/* Оверлей доски в предпросмотре: внизу компактная ручка (^ = развёрнуто, ∨ после поворота = свёрнуто) */
+/* Блок доски в потоке предпросмотра: занимает место сверху, не перекрывает кадр; ручка внизу блока */
 .card-preview-board-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 30;
-    pointer-events: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 100%;
     box-sizing: border-box;
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
+    margin-bottom: 0;
 }
 
 .card-preview-board-body {
@@ -703,8 +704,10 @@
 
 .card-preview-surface-inner {
     position: relative;
+    flex: 0 1 auto;
     width: 100%;
     max-width: 100%;
+    min-width: 0;
     box-sizing: border-box;
     pointer-events: none;
     user-select: none;
