@@ -3158,18 +3158,19 @@ class ContentEditor {
 
     /**
      * Сохранение из редактора, открытого из предпросмотра: перезапись кадра в localStorage.
-     * Редактор остаётся открытым, очищается и переходит в обычный режим (кнопки «Сохранить кадр» / «Предпросмотр»).
-     * Предпросмотр можно открыть снова вручную; после его закрытия снова виден этот же редактор.
+     * Редактор остаётся открытым под модалкой, очищается и переходит в обычный режим.
+     * Предпросмотр сразу открывается на том же кадре; после закрытия предпросмотра снова виден редактор.
      */
     async confirmSaveFromPreviewEditor() {
         if (!this.editorOpenedFromPreview || !this.previewEditStorageKey || this.previewEditFrameId == null) {
             this.showNotification('Нет привязки к кадру предпросмотра', 'warning');
             return;
         }
+        const resumeKey = this.previewEditStorageKey;
         try {
             const slot = this.previewEditSaveSlotIndex != null ? this.previewEditSaveSlotIndex : 0;
             const payload = await this.buildFrameSavePayload(this.previewEditFrameId, slot);
-            localStorage.setItem(this.previewEditStorageKey, JSON.stringify(payload));
+            localStorage.setItem(resumeKey, JSON.stringify(payload));
             this.showNotification('Кадр обновлён', 'success');
         } catch (err) {
             console.error('confirmSaveFromPreviewEditor:', err);
@@ -3178,6 +3179,8 @@ class ContentEditor {
         }
         this.clearPreviewEditSession();
         this.resetEditorAfterSave();
+        this._resumePreviewStorageKey = resumeKey;
+        this.openCardPreviewModal();
     }
 
     restoreCanvasFromPayload(payload) {
