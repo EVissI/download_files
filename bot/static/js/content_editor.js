@@ -2616,8 +2616,8 @@ class ContentEditor {
             </div>
             <button type="button" class="card-preview-board-handle" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
                 <span class="card-preview-board-handle-icon" aria-hidden="true">
-                    <svg class="card-preview-board-caret-svg" viewBox="0 0 48 20" xmlns="http://www.w3.org/2000/svg" focusable="false">
-                        <path fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M6 6 L24 16 L42 6"/>
+                    <svg class="card-preview-board-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                        <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
                     </svg>
                 </span>
             </button>
