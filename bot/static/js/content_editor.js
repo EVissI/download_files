@@ -3374,75 +3374,261 @@ class ContentEditor {
     }
 
     openCanvasSettingsModal() {
-        // Создаем модальное окно настроек фона канваса
+        this.closeCanvasSettingsModal();
+        const sample = this.canvas ? this.canvas.querySelector('.text-content, .link-text') : null;
+        const cs = sample ? window.getComputedStyle(sample) : null;
+        const textSize = cs ? (parseInt(cs.fontSize, 10) || 16) : 16;
+        const textColorHex = cs ? this.rgbToHex(cs.color || '#333333') : '#333333';
+        const textAlign = cs && cs.textAlign ? cs.textAlign : 'left';
+        let lineH = 20;
+        if (cs && cs.lineHeight && cs.lineHeight !== 'normal') {
+            const n = parseFloat(cs.lineHeight);
+            if (!Number.isNaN(n)) lineH = Math.round(n);
+        }
+        const fontBold = cs ? (parseInt(cs.fontWeight, 10) >= 600 || cs.fontWeight === 'bold') : false;
+        const fontItalic = cs ? cs.fontStyle === 'italic' : false;
+        const fontUnderline = cs ? String(cs.textDecorationLine || cs.textDecoration).includes('underline') : false;
+        const fontFamilyOptions = [
+            { value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', label: 'Системный' },
+            { value: 'Arial, Helvetica, sans-serif', label: 'Arial' },
+            { value: 'Georgia, "Times New Roman", serif', label: 'Georgia' },
+            { value: '"Times New Roman", Times, serif', label: 'Times New Roman' },
+            { value: 'Verdana, Geneva, sans-serif', label: 'Verdana' },
+            { value: '"Courier New", Courier, monospace', label: 'Courier New' },
+            { value: 'Tahoma, Geneva, sans-serif', label: 'Tahoma' }
+        ];
+        const firstFam = cs ? cs.fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '') : '';
+        const fontSelectHtml = fontFamilyOptions.map((o) => {
+            const v = String(o.value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            return `<option value="${v}">${this.escapeHtml(o.label)}</option>`;
+        }).join('');
+
         const modalHTML = `
             <div id="canvasSettingsModal" class="canvas-settings-modal" style="display: flex;">
                 <div class="canvas-settings-overlay" onclick="contentEditor.closeCanvasSettingsModal()"></div>
                 <div class="canvas-settings-container">
                     <div class="canvas-settings-header">
-                        <h3>Настройки фона канваса</h3>
-                        <button class="close-btn" onclick="contentEditor.closeCanvasSettingsModal()">&times;</button>
+                        <h3>Настройки канваса</h3>
+                        <button type="button" class="close-btn" onclick="contentEditor.closeCanvasSettingsModal()">&times;</button>
+                    </div>
+                    <div class="canvas-settings-tabs">
+                        <button type="button" class="canvas-settings-tab-btn active" data-tab="background"
+                            onclick="contentEditor.switchCanvasSettingsTab('background')">Фон</button>
+                        <button type="button" class="canvas-settings-tab-btn" data-tab="text"
+                            onclick="contentEditor.switchCanvasSettingsTab('text')">Текст</button>
                     </div>
                     <div class="canvas-settings-body">
-                        <div class="setting-group">
-                            <label for="canvasBackgroundColor">Цвет фона:</label>
-                            <div class="color-input-group">
-                                <input type="color" id="canvasBackgroundColor" value="#ffffff">
-                                <input type="text" id="canvasBackgroundText" value="#ffffff" placeholder="#ffffff">
+                        <div id="canvasSettingsPanelBg" class="canvas-settings-tab-panel">
+                            <div class="setting-group">
+                                <label for="canvasBackgroundColor">Цвет фона:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="canvasBackgroundColor" value="#ffffff">
+                                    <input type="text" id="canvasBackgroundText" value="#ffffff" placeholder="#ffffff">
+                                </div>
+                            </div>
+                            <div class="setting-group">
+                                <label>Предустановленные цвета:</label>
+                                <div class="preset-colors" id="presetColorsContainer">
+                                    ${this.renderPresetColors()}
+                                </div>
+                                <div class="preset-controls">
+                                    <div class="preset-mode-toggle">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="deleteModeCheckbox">
+                                            <span class="checkbox-custom"></span>
+                                            <span class="checkbox-text">Режим удаления</span>
+                                        </label>
+                                    </div>
+                                    <button type="button" class="add-preset-btn" onclick="contentEditor.addPresetColor()">
+                                        <i class="fa fa-plus"></i> Добавить цвет
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="setting-group">
-                            <label>Предустановленные цвета:</label>
-                            <div class="preset-colors" id="presetColorsContainer">
-                                ${this.renderPresetColors()}
+                        <div id="canvasSettingsPanelText" class="canvas-settings-tab-panel" style="display: none;">
+                            <p class="canvas-settings-tab-hint">Параметры применяются ко всем текстовым блокам и подписям ссылок на кадре.</p>
+                            <div class="setting-group">
+                                <label for="globalTextFontSize">Размер шрифта: <span id="globalTextFontSizeLabel">${textSize}</span>px</label>
+                                <input type="range" id="globalTextFontSize" min="10" max="72" value="${textSize}">
                             </div>
-                            <div class="preset-controls">
-                                <div class="preset-mode-toggle">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="deleteModeCheckbox">
-                                        <span class="checkbox-custom"></span>
-                                        <span class="checkbox-text">Режим удаления</span>
-                                    </label>
+                            <div class="setting-group">
+                                <label for="globalTextColor">Цвет текста:</label>
+                                <div class="color-input-group">
+                                    <input type="color" id="globalTextColor" value="${textColorHex}">
+                                    <input type="text" id="globalTextColorText" value="${textColorHex}" placeholder="#333333">
                                 </div>
-                                <button class="add-preset-btn" onclick="contentEditor.addPresetColor()">
-                                    <i class="fa fa-plus"></i> Добавить цвет
-                                </button>
+                            </div>
+                            <div class="setting-group">
+                                <label for="globalTextAlign">Выравнивание:</label>
+                                <select id="globalTextAlign">
+                                    <option value="left" ${(textAlign === 'left' || textAlign === 'start') ? 'selected' : ''}>Слева</option>
+                                    <option value="center" ${textAlign === 'center' ? 'selected' : ''}>По центру</option>
+                                    <option value="right" ${(textAlign === 'right' || textAlign === 'end') ? 'selected' : ''}>Справа</option>
+                                    <option value="justify" ${textAlign === 'justify' ? 'selected' : ''}>По ширине</option>
+                                </select>
+                            </div>
+                            <div class="setting-group">
+                                <label for="globalTextLineHeight">Межстрочный интервал: <span id="globalTextLineHeightLabel">${lineH}</span>px</label>
+                                <input type="range" id="globalTextLineHeight" min="10" max="36" value="${lineH}">
+                            </div>
+                            <div class="setting-group">
+                                <label for="globalTextFontFamily">Шрифт:</label>
+                                <select id="globalTextFontFamily">${fontSelectHtml}</select>
+                            </div>
+                            <div class="setting-group canvas-settings-text-toggles">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="globalTextBold" ${fontBold ? 'checked' : ''}>
+                                    <span class="checkbox-custom"></span>
+                                    <span class="checkbox-text"><strong>Жирный</strong></span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="globalTextItalic" ${fontItalic ? 'checked' : ''}>
+                                    <span class="checkbox-custom"></span>
+                                    <span class="checkbox-text"><em>Курсив</em></span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="globalTextUnderline" ${fontUnderline ? 'checked' : ''}>
+                                    <span class="checkbox-custom"></span>
+                                    <span class="checkbox-text"><u>Подчёркивание</u></span>
+                                </label>
                             </div>
                         </div>
                     </div>
                     <div class="canvas-settings-footer">
-                        <button class="cancel-btn" onclick="contentEditor.closeCanvasSettingsModal()">Отмена</button>
-                        <button class="apply-btn" onclick="contentEditor.applyCanvasBackground()">Применить</button>
+                        <button type="button" class="cancel-btn" onclick="contentEditor.closeCanvasSettingsModal()">Отмена</button>
+                        <button type="button" class="apply-btn" onclick="contentEditor.applyCanvasSettingsActiveTab()">Применить</button>
                     </div>
                 </div>
             </div>
         `;
-        
-        // Добавляем модальное окно в DOM
+
         document.body.insertAdjacentHTML('beforeend', modalHTML);
-        
-        // Устанавливаем текущий цвет фона
+
         const currentBg = window.getComputedStyle(this.canvas).backgroundColor;
-        const hexColor = this.rgbToHex(currentBg);
-        document.getElementById('canvasBackgroundColor').value = hexColor;
-        document.getElementById('canvasBackgroundText').value = hexColor;
-        
-        // Добавляем обработчики для предустановленных цветов
+        const hexBg = this.rgbToHex(currentBg);
+        document.getElementById('canvasBackgroundColor').value = hexBg;
+        document.getElementById('canvasBackgroundText').value = hexBg;
+
+        const ffSel = document.getElementById('globalTextFontFamily');
+        if (ffSel && firstFam) {
+            let matched = false;
+            for (let i = 0; i < ffSel.options.length; i++) {
+                const v = ffSel.options[i].value;
+                if (firstFam.toLowerCase().includes(v.split(',')[0].trim().toLowerCase().replace(/["']/g, ''))
+                    || v.toLowerCase().includes(firstFam.toLowerCase())) {
+                    ffSel.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                const opt = document.createElement('option');
+                opt.value = cs.fontFamily;
+                opt.textContent = `Текущий (${firstFam})`;
+                opt.selected = true;
+                ffSel.insertBefore(opt, ffSel.firstChild);
+            }
+        }
+
         this.setupPresetColorHandlers();
-        
-        // Синхронизация color picker и текстового поля
+
         const colorPicker = document.getElementById('canvasBackgroundColor');
         const colorText = document.getElementById('canvasBackgroundText');
-        
         colorPicker.addEventListener('input', (e) => {
             colorText.value = e.target.value;
         });
-        
         colorText.addEventListener('input', (e) => {
             if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
                 colorPicker.value = e.target.value;
             }
         });
+
+        const gSize = document.getElementById('globalTextFontSize');
+        const gSizeLabel = document.getElementById('globalTextFontSizeLabel');
+        if (gSize && gSizeLabel) {
+            gSize.addEventListener('input', () => { gSizeLabel.textContent = gSize.value; });
+        }
+        const gLh = document.getElementById('globalTextLineHeight');
+        const gLhLabel = document.getElementById('globalTextLineHeightLabel');
+        if (gLh && gLhLabel) {
+            gLh.addEventListener('input', () => { gLhLabel.textContent = gLh.value; });
+        }
+        const gCol = document.getElementById('globalTextColor');
+        const gColTxt = document.getElementById('globalTextColorText');
+        if (gCol && gColTxt) {
+            gCol.addEventListener('input', () => { gColTxt.value = gCol.value; });
+            gColTxt.addEventListener('input', (e) => {
+                if (/^#[0-9A-F]{6}$/i.test(e.target.value)) gCol.value = e.target.value;
+            });
+        }
+    }
+
+    switchCanvasSettingsTab(tab) {
+        const modal = document.getElementById('canvasSettingsModal');
+        if (!modal) return;
+        modal.querySelectorAll('.canvas-settings-tab-btn').forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+        const bg = document.getElementById('canvasSettingsPanelBg');
+        const tx = document.getElementById('canvasSettingsPanelText');
+        if (bg) bg.style.display = tab === 'background' ? 'block' : 'none';
+        if (tx) tx.style.display = tab === 'text' ? 'block' : 'none';
+    }
+
+    applyCanvasSettingsActiveTab() {
+        const modal = document.getElementById('canvasSettingsModal');
+        const active = modal && modal.querySelector('.canvas-settings-tab-btn.active');
+        const tab = active ? active.dataset.tab : 'background';
+        if (tab === 'text') {
+            this.applyGlobalCanvasTextSettings();
+        } else {
+            this.applyCanvasBackground();
+        }
+    }
+
+    applyGlobalCanvasTextSettings() {
+        if (!this.canvas) {
+            this.closeCanvasSettingsModal();
+            return;
+        }
+        const nodes = this.canvas.querySelectorAll('.text-content, .link-text');
+        if (!nodes.length) {
+            this.showNotification('На кадре нет текстовых элементов', 'warning');
+            this.closeCanvasSettingsModal();
+            return;
+        }
+        const sizeEl = document.getElementById('globalTextFontSize');
+        const colorEl = document.getElementById('globalTextColor');
+        const alignEl = document.getElementById('globalTextAlign');
+        const lhEl = document.getElementById('globalTextLineHeight');
+        const famEl = document.getElementById('globalTextFontFamily');
+        const boldEl = document.getElementById('globalTextBold');
+        const italicEl = document.getElementById('globalTextItalic');
+        const underEl = document.getElementById('globalTextUnderline');
+        if (!sizeEl || !colorEl || !alignEl || !lhEl || !famEl) {
+            this.closeCanvasSettingsModal();
+            return;
+        }
+        const size = `${sizeEl.value}px`;
+        const color = colorEl.value;
+        const align = alignEl.value;
+        const lh = `${lhEl.value}px`;
+        const family = famEl.value;
+        const bold = boldEl && boldEl.checked;
+        const italic = italicEl && italicEl.checked;
+        const underline = underEl && underEl.checked;
+        nodes.forEach((node) => {
+            node.style.fontSize = size;
+            node.style.color = color;
+            node.style.textAlign = align;
+            node.style.lineHeight = lh;
+            node.style.fontFamily = family;
+            node.style.fontWeight = bold ? 'bold' : 'normal';
+            node.style.fontStyle = italic ? 'italic' : 'normal';
+            node.style.textDecoration = underline ? 'underline' : 'none';
+        });
+        this.showNotification('Стиль текста применён ко всем текстовым блокам', 'success');
+        this.closeCanvasSettingsModal();
     }
 
     renderPresetColors() {
