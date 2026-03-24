@@ -811,6 +811,10 @@ class ContentEditor {
         // Add to canvas
         this.canvas.appendChild(element);
         
+        if (this.shouldPinQuestionBelowBoard()) {
+            this.recalculateAllElementPositions();
+        }
+        
         // Expand canvas if needed for the audio element
         setTimeout(() => {
             const elementBottom = parseInt(element.style.top) + element.offsetHeight;
@@ -966,6 +970,10 @@ class ContentEditor {
                 this.showToggleNotification(toolId, false);
             }
         }
+
+        if (toolId === 'boardCanvas' && this.canvas) {
+            requestAnimationFrame(() => this.recalculateAllElementPositions());
+        }
     }
 
     showToggleNotification(toolId, isActive) {
@@ -977,6 +985,31 @@ class ContentEditor {
         // фиксированную область и скроллится внутри. Здесь оставляем только лог при отладке.
         // const requiredHeight = elementBottom + 40;
         // console.log(`Canvas content bottom at ${requiredHeight}px`);
+    }
+
+    /** Доска включена, на кадре есть иллюстрация доски и блок вопроса — вопрос всегда сразу под доской */
+    shouldPinQuestionBelowBoard() {
+        if (!this.canvas) return false;
+        if (!this.toggleStates['boardCanvas']) return false;
+        if (!this.canvas.querySelector('.canvas-element[data-tool-id="board-illustration"]')) return false;
+        if (!this.canvas.querySelector('.canvas-element[data-tool-id="question-text"]')) return false;
+        return true;
+    }
+
+    getStackLayoutHeight(element) {
+        const tid = element.dataset.toolId;
+        if (element.classList.contains('table-element')) {
+            let h = element.offsetHeight;
+            if (h < 50) h = 100;
+            return h;
+        }
+        if (tid === 'upload-image') {
+            return parseInt(element.style.height, 10) || element.offsetHeight || 200;
+        }
+        if (tid === 'board-illustration') {
+            return element.offsetHeight || parseInt(element.style.height, 10) || 120;
+        }
+        return parseInt(element.style.height, 10) || element.offsetHeight || 150;
     }
 
     calculateVerticalPosition(elementWidth, elementHeight) {
@@ -1085,6 +1118,11 @@ class ContentEditor {
     }
 
     repositionElementsBelow(elementId) {
+        if (this.shouldPinQuestionBelowBoard()) {
+            this.recalculateAllElementPositions();
+            return;
+        }
+
         const changedElement = document.getElementById(elementId);
         if (!changedElement) return;
         
@@ -1194,6 +1232,10 @@ class ContentEditor {
             
             // Добавляем на холст
             this.canvas.appendChild(element);
+            
+            if (this.shouldPinQuestionBelowBoard()) {
+                this.recalculateAllElementPositions();
+            }
             
             // Expand canvas if needed for the new element
             setTimeout(() => {
@@ -1991,6 +2033,10 @@ class ContentEditor {
             element: newElement
         });
         
+        if (this.shouldPinQuestionBelowBoard()) {
+            this.recalculateAllElementPositions();
+        }
+        
         this.selectElement(newElement);
     }
 
@@ -2016,6 +2062,10 @@ class ContentEditor {
             
             // Adjust canvas height if needed
             this.adjustCanvasHeightAfterDeletion();
+
+            if (this.shouldPinQuestionBelowBoard()) {
+                this.recalculateAllElementPositions();
+            }
         }
     }
 
@@ -3381,42 +3431,47 @@ class ContentEditor {
     }
 
     recalculateAllElementPositions() {
-        // Get all elements sorted by their current top position
-        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
-            .filter(el => !el.id.includes('boardLabel'))
-            .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
-        
+        if (!this.canvas) return;
+
+        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element')).filter(
+            (el) => !el.id.includes('boardLabel')
+        );
+
         const canvasRect = this.canvas.getBoundingClientRect();
-        const elementSpacing = 0; // No spacing between elements
-        let nextY = 0; // Start from top
-        
-        // Recalculate positions for all elements
-        allElements.forEach(element => {
-            let elementHeight;
-            
-            // Get actual height of element
-            if (element.classList.contains('table-element')) {
-                elementHeight = element.offsetHeight;
-                if (elementHeight < 50) {
-                    elementHeight = 100; // Default for empty tables
-                }
-            } else if (element.dataset.toolId === 'upload-image') {
-                // For images, use the current styled height
-                elementHeight = parseInt(element.style.height) || 200;
-            } else {
-                elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
-            }
-            
-            // Update position
-            element.style.top = nextY + 'px';
-            element.style.left = '0px'; // Always align to left
-            element.style.width = canvasRect.width + 'px'; // Full canvas width
-            
-            // Move to next position
-            nextY += elementHeight + elementSpacing;
-        });
-        
-        // Expand canvas if needed after recalculating all positions
+        const elementSpacing = 0;
+        let nextY = 0;
+
+        const place = (el) => {
+            el.style.top = nextY + 'px';
+            el.style.left = '0px';
+            el.style.width = canvasRect.width + 'px';
+            nextY += this.getStackLayoutHeight(el) + elementSpacing;
+        };
+
+        if (this.shouldPinQuestionBelowBoard()) {
+            const question = this.canvas.querySelector('.canvas-element[data-tool-id="question-text"]');
+            const boardBlocks = allElements
+                .filter((el) => el.dataset.toolId === 'board-illustration')
+                .sort((a, b) => parseInt(a.style.top, 10) - parseInt(b.style.top, 10));
+            const rest = allElements
+                .filter(
+                    (el) =>
+                        el.dataset.toolId !== 'board-illustration' &&
+                        el !== question
+                )
+                .sort((a, b) => parseInt(a.style.top, 10) - parseInt(b.style.top, 10));
+
+            boardBlocks.forEach(place);
+            if (question) place(question);
+            rest.forEach(place);
+            this.expandCanvasIfNeeded(nextY);
+            return;
+        }
+
+        allElements
+            .sort((a, b) => parseInt(a.style.top, 10) - parseInt(b.style.top, 10))
+            .forEach(place);
+
         this.expandCanvasIfNeeded(nextY);
     }
 
