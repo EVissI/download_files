@@ -38,6 +38,9 @@ class ContentEditor {
         /** Кэш загрузки PNG для оверлея доски в предпросмотре */
         this._boardPreviewAssetsPromise = null;
 
+        /** Кэш открытой IndexedDB для больших аудио (вне квоты localStorage JSON) */
+        this._contentEditorMediaDbPromise = null;
+
         this.init();
     }
 
@@ -159,7 +162,7 @@ class ContentEditor {
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewPrevBtn" onclick="contentEditor.cardPreviewPrev()">←</button>
                             <span class="card-preview-counter" id="cardPreviewCounter">0 / 0</span>
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewNextBtn" onclick="contentEditor.cardPreviewNext()">→</button>
-                            <button type="button" class="card-preview-approve" id="cardPreviewApproveBtn" onclick="contentEditor.cardPreviewApprove()">Апрув</button>
+                            <button type="button" class="card-preview-approve" id="cardPreviewApproveBtn" onclick="contentEditor.cardPreviewApprove()">Продолжить</button>
                         </div>
                         <div class="card-preview-meta" id="cardPreviewMeta"></div>
                         <div class="card-preview-frame-host" id="cardPreviewFrameHost"></div>
@@ -1986,11 +1989,11 @@ class ContentEditor {
         return (board && board.frameId) ? board.frameId : `editor_${Date.now()}`;
     }
 
-    confirmSaveFrame() {
+    async confirmSaveFrame() {
         try {
             const frameId = this.getFrameIdForSave();
             const saveSlotIndex = this.allocateNextSaveSlotIndex(frameId);
-            const payload = this.buildFrameSavePayload(frameId, saveSlotIndex);
+            const payload = await this.buildFrameSavePayload(frameId, saveSlotIndex);
             const key = this.frameStorageKey(frameId, saveSlotIndex);
             localStorage.setItem(key, JSON.stringify(payload));
             this.showNotification(`Кадр сохранён №${saveSlotIndex + 1}`, 'success');
@@ -2004,7 +2007,7 @@ class ContentEditor {
         this.resetEditorAfterSave();
     }
 
-    buildFrameSavePayload(frameId, saveSlotIndex) {
+    async buildFrameSavePayload(frameId, saveSlotIndex) {
         const board = typeof window.getHintViewerBoardSnapshot === 'function'
             ? window.getHintViewerBoardSnapshot()
             : null;
@@ -2029,7 +2032,7 @@ class ContentEditor {
                 boardCanvasToggle: !!this.toggleStates['boardCanvas'],
                 canvasBackground: this.getCanvasBackgroundForSave()
             },
-            elements: this.serializeCanvasElements()
+            elements: await this.serializeCanvasElementsForSave()
         };
     }
 
@@ -2108,9 +2111,93 @@ class ContentEditor {
         });
     }
 
-    serializeCanvasElements() {
+    /** Имя БД совпадает с очисткой в clearContentEditorIndexedDB */
+    static get CONTENT_EDITOR_MEDIA_DB() {
+        return 'contentEditorMedia';
+    }
+
+    static get CONTENT_EDITOR_AUDIO_STORE() {
+        return 'audio';
+    }
+
+    openContentEditorMediaDB() {
+        if (this._contentEditorMediaDbPromise) return this._contentEditorMediaDbPromise;
+        const dbName = ContentEditor.CONTENT_EDITOR_MEDIA_DB;
+        this._contentEditorMediaDbPromise = new Promise((resolve, reject) => {
+            if (typeof indexedDB === 'undefined') {
+                this._contentEditorMediaDbPromise = null;
+                reject(new Error('IndexedDB недоступен'));
+                return;
+            }
+            const req = indexedDB.open(dbName, 1);
+            req.onerror = () => {
+                this._contentEditorMediaDbPromise = null;
+                reject(req.error || new Error('IDB open failed'));
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(ContentEditor.CONTENT_EDITOR_AUDIO_STORE)) {
+                    db.createObjectStore(ContentEditor.CONTENT_EDITOR_AUDIO_STORE, { keyPath: 'id' });
+                }
+            };
+        });
+        return this._contentEditorMediaDbPromise;
+    }
+
+    generateAudioStorageId() {
+        return `ceaud_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+    }
+
+    async putAudioBlobToIDB(id, blob) {
+        const db = await this.openContentEditorMediaDB();
+        const storeName = ContentEditor.CONTENT_EDITOR_AUDIO_STORE;
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, 'readwrite');
+            tx.onerror = () => reject(tx.error || new Error('IDB write'));
+            tx.oncomplete = () => resolve();
+            tx.objectStore(storeName).put({ id, blob });
+        });
+    }
+
+    async getAudioBlobFromIDB(id) {
+        if (!id) return null;
+        try {
+            const db = await this.openContentEditorMediaDB();
+            const storeName = ContentEditor.CONTENT_EDITOR_AUDIO_STORE;
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readonly');
+                const r = tx.objectStore(storeName).get(id);
+                r.onerror = () => reject(r.error);
+                r.onsuccess = () => {
+                    const row = r.result;
+                    resolve(row && row.blob instanceof Blob ? row.blob : null);
+                };
+            });
+        } catch (e) {
+            console.warn('getAudioBlobFromIDB:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Подставляет blob из IndexedDB и вешает плеер (data: URL не кладём в localStorage — квота).
+     */
+    async hydrateAudioElementFromIDB(element) {
+        const id = element.dataset.audioStorageId;
+        if (!id) return;
+        const blob = await this.getAudioBlobFromIDB(id);
+        if (!blob || !element.isConnected) return;
+        const url = URL.createObjectURL(blob);
+        element.dataset.audioUrl = url;
+        this.setupAudioElement(element, url, null);
+    }
+
+    async serializeCanvasElementsForSave() {
+        if (!this.canvas) return [];
         const out = [];
-        this.canvas.querySelectorAll('.canvas-element').forEach(el => {
+        const nodes = this.canvas.querySelectorAll('.canvas-element');
+        for (const el of nodes) {
             const toolId = el.dataset.toolId || '';
             const item = {
                 id: el.id,
@@ -2149,8 +2236,42 @@ class ContentEditor {
                     break;
                 }
                 case 'audio-file': {
-                    item.audioUrl = el.dataset.audioUrl || '';
-                    item.audioName = el.dataset.audioName || '';
+                    const url = el.dataset.audioUrl || '';
+                    let sid = el.dataset.audioStorageId || '';
+                    if (url.startsWith('data:')) {
+                        sid = sid || this.generateAudioStorageId();
+                        const blob = await (await fetch(url)).blob();
+                        await this.putAudioBlobToIDB(sid, blob);
+                        el.dataset.audioStorageId = sid;
+                        item.audioStorageId = sid;
+                        item.audioName = el.dataset.audioName || '';
+                        item.audioUrl = '';
+                    } else if (url.startsWith('blob:')) {
+                        if (!sid) {
+                            try {
+                                const blob = await (await fetch(url)).blob();
+                                sid = this.generateAudioStorageId();
+                                await this.putAudioBlobToIDB(sid, blob);
+                                el.dataset.audioStorageId = sid;
+                            } catch (err) {
+                                console.warn('serializeCanvasElementsForSave audio blob:', err);
+                            }
+                        }
+                        item.audioStorageId = sid || '';
+                        item.audioName = el.dataset.audioName || '';
+                        item.audioUrl = '';
+                    } else if (/^https?:\/\//i.test(url)) {
+                        item.audioUrl = url;
+                        item.audioName = el.dataset.audioName || '';
+                        item.audioStorageId = '';
+                    } else {
+                        item.audioStorageId = sid;
+                        item.audioName = el.dataset.audioName || '';
+                        item.audioUrl = url || '';
+                    }
+                    delete item.dataset.audioUrl;
+                    if (item.audioStorageId) item.dataset.audioStorageId = item.audioStorageId;
+                    else delete item.dataset.audioStorageId;
                     break;
                 }
                 case 'board-illustration': {
@@ -2170,7 +2291,7 @@ class ContentEditor {
             }
 
             out.push(item);
-        });
+        }
         return out;
     }
 
@@ -2270,11 +2391,11 @@ class ContentEditor {
         return `contentEditor_card_${safe}`;
     }
 
-    confirmSaveCard() {
+    async confirmSaveCard() {
         try {
             const frameId = this.getFrameIdForSave();
             const saveSlotIndex = this.allocateNextSaveSlotIndex(frameId);
-            const currentPayload = this.buildFrameSavePayload(frameId, saveSlotIndex);
+            const currentPayload = await this.buildFrameSavePayload(frameId, saveSlotIndex);
             localStorage.setItem(this.frameStorageKey(frameId, saveSlotIndex), JSON.stringify(currentPayload));
 
             const refs = this.collectSavedFrameRefsForCurrentGame();
@@ -2806,14 +2927,14 @@ class ContentEditor {
     }
 
     /** Сохранение из редактора, открытого из предпросмотра: перезапись того же кадра и возврат в предпросмотр */
-    confirmSaveFromPreviewEditor() {
+    async confirmSaveFromPreviewEditor() {
         if (!this.editorOpenedFromPreview || !this.previewEditStorageKey || this.previewEditFrameId == null) {
             this.showNotification('Нет привязки к кадру предпросмотра', 'warning');
             return;
         }
         try {
             const slot = this.previewEditSaveSlotIndex != null ? this.previewEditSaveSlotIndex : 0;
-            const payload = this.buildFrameSavePayload(this.previewEditFrameId, slot);
+            const payload = await this.buildFrameSavePayload(this.previewEditFrameId, slot);
             localStorage.setItem(this.previewEditStorageKey, JSON.stringify(payload));
             this.showNotification('Кадр обновлён', 'success');
         } catch (err) {
@@ -2947,8 +3068,9 @@ class ContentEditor {
                 break;
             case 'audio-file':
                 element.classList.add('audio-element');
-                if (item.audioUrl) element.dataset.audioUrl = item.audioUrl;
+                if (item.audioStorageId) element.dataset.audioStorageId = item.audioStorageId;
                 if (item.audioName) element.dataset.audioName = item.audioName;
+                if (item.audioUrl) element.dataset.audioUrl = item.audioUrl;
                 element.innerHTML = `
                     <div class="audio-message" style="display: flex; align-items: center; padding: 12px; height: 100%; background: #f0f0f0; border-radius: 8px;">
                         <div class="audio-icon" style="font-size: 24px; margin-right: 12px; color: #667eea;">🎵</div>
@@ -2958,7 +3080,9 @@ class ContentEditor {
                         </div>
                         <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: ${previewMode ? 'default' : 'pointer'}; display: flex; align-items: center; justify-content: center; font-size: 16px; opacity: ${previewMode ? '0.5' : '1'};">▶</div>
                     </div>`;
-                if (item.audioUrl && !previewMode) {
+                if (item.audioStorageId) {
+                    this.hydrateAudioElementFromIDB(element).catch((e) => console.error('hydrateAudioElementFromIDB:', e));
+                } else if (item.audioUrl) {
                     this.setupAudioElement(element, item.audioUrl, null);
                 }
                 break;
@@ -3505,7 +3629,19 @@ function clearContentEditorLocalStorage() {
     toRemove.forEach((k) => localStorage.removeItem(k));
 }
 
+/** Большие аудио лежат в IndexedDB под тем же именем, что и в ContentEditor.CONTENT_EDITOR_MEDIA_DB */
+function clearContentEditorIndexedDB() {
+    try {
+        if (typeof indexedDB !== 'undefined') {
+            indexedDB.deleteDatabase('contentEditorMedia');
+        }
+    } catch (e) {
+        /* ignore */
+    }
+}
+
 clearContentEditorLocalStorage();
+clearContentEditorIndexedDB();
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
