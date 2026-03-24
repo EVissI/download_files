@@ -612,17 +612,33 @@
     box-sizing: border-box;
 }
 
-/* Блок доски в потоке предпросмотра: сверху колонки; z-index ниже кадра — при малейшем пересечении контент не уходит под доску */
+/*
+ * Доска в предпросмотре:
+ * развёрнута — absolute поверх кадра (наслоение);
+ * свёрнута — только ручка в потоке, контент под ней без перекрытия.
+ */
 .card-preview-board-overlay {
-    position: relative;
-    flex-shrink: 0;
-    z-index: 1;
     width: 100%;
     box-sizing: border-box;
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
-    margin-bottom: 0;
+}
+
+.card-preview-board-overlay:not(.card-preview-board-overlay--collapsed) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.card-preview-board-overlay.card-preview-board-overlay--collapsed {
+    position: relative;
+    z-index: auto;
+    flex-shrink: 0;
+    pointer-events: none;
 }
 
 .card-preview-board-body {
@@ -705,7 +721,7 @@
 
 .card-preview-surface-inner {
     position: relative;
-    z-index: 2;
+    z-index: 0;
     flex: 0 1 auto;
     width: 100%;
     max-width: 100%;

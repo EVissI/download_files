@@ -2710,8 +2710,8 @@ class ContentEditor {
     }
 
     /**
-     * Дети предпросмотра — position:absolute, без них inner в потоке даёт height≈0 и ломается колонка с доской.
-     * Считаем нижнюю границу стека и задаём min-height, чтобы кадр занимал место под доской, а не наезжал на неё.
+     * Дети предпросмотра — position:absolute; без min-height у inner в потоке height≈0 и ломается высота скролла.
+     * (В развёрнутой доске доска absolute и не участвует в высоте — место задаёт только inner.)
      */
     updateCardPreviewInnerMinHeight(inner) {
         if (!inner) return;
@@ -2741,7 +2741,8 @@ class ContentEditor {
         inner.style.transform = 'none';
         this.updateCardPreviewInnerMinHeight(inner);
         const boardEl = wrap.querySelector('.card-preview-board-overlay');
-        const boardH = boardEl ? Math.ceil(boardEl.offsetHeight) : 0;
+        const boardCollapsed = boardEl && boardEl.classList.contains('card-preview-board-overlay--collapsed');
+        const boardH = boardEl && boardCollapsed ? Math.ceil(boardEl.offsetHeight) : 0;
         const innerH = Math.ceil(inner.offsetHeight);
         wrap.style.minHeight = `${boardH + innerH}px`;
     }
