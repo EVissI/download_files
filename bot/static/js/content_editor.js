@@ -226,6 +226,27 @@ class ContentEditor {
         this.toolbarPanel = this.modal.querySelector('.toolbar');
         this.workspacePanel = this.modal.querySelector('.workspace');
         this.propertiesPanel = this.modal.querySelector('.properties-panel');
+        this.applyPropertiesEmptyState();
+    }
+
+    /** Кнопки «Сохранить кадр» / «Предпросмотр» или «Сохранить» из режима предпросмотра (без обёртки). */
+    getPropertiesFrameActionsInnerHtml() {
+        if (this.editorOpenedFromPreview) {
+            return `<button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()">Сохранить</button>`;
+        }
+        return `<button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
+                <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openCardPreviewModal()">Предпросмотр</button>`;
+    }
+
+    getPropertiesEmptyStateHtml() {
+        return `<p>Выберите элемент для редактирования</p>
+            <div class="action-buttons action-buttons-col">${this.getPropertiesFrameActionsInnerHtml()}</div>`;
+    }
+
+    applyPropertiesEmptyState() {
+        if (this.propertiesContent) {
+            this.propertiesContent.innerHTML = this.getPropertiesEmptyStateHtml();
+        }
     }
 
     clearPreviewEditSession() {
@@ -1772,12 +1793,7 @@ class ContentEditor {
             
             <div class="action-buttons action-buttons-col">
                 <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')">Удалить</button>
-                ${this.editorOpenedFromPreview ? `
-                <button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()">Сохранить</button>
-                ` : `
-                <button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
-                <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openCardPreviewModal()">Предпросмотр</button>
-                `}
+                ${this.getPropertiesFrameActionsInnerHtml()}
             </div>
         `;
     }
@@ -2008,7 +2024,7 @@ class ContentEditor {
             // Clear selection if deleted element was selected
             if (this.selectedElement && this.selectedElement.id === elementId) {
                 this.selectedElement = null;
-                this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
+                this.applyPropertiesEmptyState();
             }
 
             // Move elements below the deleted element up
@@ -2419,9 +2435,7 @@ class ContentEditor {
             this.canvas.style.backgroundColor = '#ffffff';
         }
         this.selectedElement = null;
-        if (this.propertiesContent) {
-            this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
-        }
+        this.applyPropertiesEmptyState();
         this.toggleStates = {};
         this.cardData = null;
         this.elementIdCounter = 0;
@@ -3051,9 +3065,7 @@ class ContentEditor {
 
         this.canvas.querySelectorAll('.canvas-element').forEach((el) => this.addElementControls(el));
 
-        if (this.propertiesContent) {
-            this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
-        }
+        this.applyPropertiesEmptyState();
 
         this.loadTools();
         this.syncBoardToolToggleFromState();
@@ -3461,7 +3473,7 @@ class ContentEditor {
             el.classList.remove('selected');
         });
         this.selectedElement = null;
-        this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
+        this.applyPropertiesEmptyState();
     }
 
     openCanvasSettingsModal() {
@@ -3842,9 +3854,7 @@ class ContentEditor {
 
         // Reset properties
         this.selectedElement = null;
-        if (this.propertiesContent) {
-            this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
-        }
+        this.applyPropertiesEmptyState();
 
         // Reset toggle states
         this.toggleStates = {};
