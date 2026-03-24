@@ -3156,7 +3156,11 @@ class ContentEditor {
         this.restoreCanvasFromPayload(payload);
     }
 
-    /** Сохранение из редактора, открытого из предпросмотра: перезапись того же кадра и возврат в предпросмотр */
+    /**
+     * Сохранение из редактора, открытого из предпросмотра: перезапись кадра в localStorage.
+     * Редактор остаётся открытым, очищается и переходит в обычный режим (кнопки «Сохранить кадр» / «Предпросмотр»).
+     * Предпросмотр можно открыть снова вручную; после его закрытия снова виден этот же редактор.
+     */
     async confirmSaveFromPreviewEditor() {
         if (!this.editorOpenedFromPreview || !this.previewEditStorageKey || this.previewEditFrameId == null) {
             this.showNotification('Нет привязки к кадру предпросмотра', 'warning');
@@ -3172,11 +3176,8 @@ class ContentEditor {
             this.showNotification('Не удалось сохранить: ' + (err.message || err), 'error');
             return;
         }
-        const resumeKey = this.previewEditStorageKey;
-        this.closeModal();
+        this.clearPreviewEditSession();
         this.resetEditorAfterSave();
-        this._resumePreviewStorageKey = resumeKey;
-        this.openCardPreviewModal();
     }
 
     restoreCanvasFromPayload(payload) {
