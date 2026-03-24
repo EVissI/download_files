@@ -2709,6 +2709,28 @@ class ContentEditor {
         });
     }
 
+    /**
+     * Дети предпросмотра — position:absolute, без них inner в потоке даёт height≈0 и ломается колонка с доской.
+     * Считаем нижнюю границу стека и задаём min-height, чтобы кадр занимал место под доской, а не наезжал на неё.
+     */
+    updateCardPreviewInnerMinHeight(inner) {
+        if (!inner) return;
+        const nodes = inner.querySelectorAll('.canvas-element');
+        if (!nodes.length) {
+            inner.style.minHeight = '';
+            return;
+        }
+        let maxBottom = 0;
+        nodes.forEach((el) => {
+            const top = parseInt(el.style.top, 10);
+            const t = Number.isNaN(top) ? 0 : top;
+            const bottom = t + (el.offsetHeight || 0);
+            maxBottom = Math.max(maxBottom, bottom);
+        });
+        const pad = 8;
+        inner.style.minHeight = maxBottom > 0 ? `${Math.ceil(maxBottom + pad)}px` : '';
+    }
+
     refreshCardPreviewScale() {
         const host = document.getElementById('cardPreviewFrameHost');
         if (!host) return;
@@ -2717,6 +2739,7 @@ class ContentEditor {
         if (!inner || !wrap) return;
 
         inner.style.transform = 'none';
+        this.updateCardPreviewInnerMinHeight(inner);
         const boardEl = wrap.querySelector('.card-preview-board-overlay');
         const boardH = boardEl ? Math.ceil(boardEl.offsetHeight) : 0;
         const innerH = Math.ceil(inner.offsetHeight);

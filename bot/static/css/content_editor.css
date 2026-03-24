@@ -612,10 +612,11 @@
     box-sizing: border-box;
 }
 
-/* Блок доски в потоке предпросмотра: занимает место сверху, не перекрывает кадр; ручка внизу блока */
+/* Блок доски в потоке предпросмотра: сверху колонки; z-index ниже кадра — при малейшем пересечении контент не уходит под доску */
 .card-preview-board-overlay {
     position: relative;
     flex-shrink: 0;
+    z-index: 1;
     width: 100%;
     box-sizing: border-box;
     max-width: 800px;
@@ -704,6 +705,7 @@
 
 .card-preview-surface-inner {
     position: relative;
+    z-index: 2;
     flex: 0 1 auto;
     width: 100%;
     max-width: 100%;
