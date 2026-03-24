@@ -762,6 +762,10 @@
     outline: none !important;
 }
 
+.card-preview-surface-inner .text-block-resize-handle {
+    display: none !important;
+}
+
 .card-preview-footer {
     display: flex;
     justify-content: stretch;
@@ -905,6 +909,9 @@
     min-width: 100px;
     min-height: 30px;
     cursor: text;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
 }
 
 .canvas-element.text-element.selected {
@@ -919,6 +926,9 @@
     min-width: 100px;
     min-height: 30px;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
 }
 
 .canvas-element.link-element.selected {
@@ -928,11 +938,13 @@
 
 .link-content {
     width: 100%;
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
 }
 
 .link-text {
@@ -975,7 +987,8 @@
 
 .text-content {
     width: 100%;
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 8px;
     font-family: 'Arial', sans-serif;
     font-size: 16px;
@@ -1000,6 +1013,38 @@
 
 .text-content:focus {
     cursor: text;
+}
+
+/* Ручка изменения высоты текстового блока и блока ссылки */
+.text-block-resize-handle {
+    flex-shrink: 0;
+    height: 10px;
+    margin: 0 6px 3px;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(
+        180deg,
+        rgba(102, 126, 234, 0.15) 0%,
+        rgba(102, 126, 234, 0.45) 100%
+    );
+    cursor: ns-resize;
+    box-sizing: border-box;
+    opacity: 0.55;
+    transition: opacity 0.15s ease;
+    pointer-events: auto;
+}
+
+.canvas-element.link-element .text-block-resize-handle {
+    background: linear-gradient(
+        180deg,
+        rgba(0, 123, 255, 0.12) 0%,
+        rgba(0, 123, 255, 0.42) 100%
+    );
+}
+
+.canvas-element.text-element:hover .text-block-resize-handle,
+.canvas-element.link-element:hover .text-block-resize-handle,
+.canvas-element.selected .text-block-resize-handle {
+    opacity: 1;
 }
 
 .canvas-element.selected {

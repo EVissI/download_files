@@ -1456,8 +1456,54 @@ class ContentEditor {
     }
 
     addElementControls(element) {
-        // Remove mini menu - no controls added
-        // Elements will be managed through other means
+        const tid = element.dataset.toolId;
+        if (!['question-text', 'answer-text', 'support-link'].includes(tid)) return;
+        if (element.querySelector('.text-block-resize-handle')) return;
+        const h = document.createElement('div');
+        h.className = 'text-block-resize-handle';
+        h.title = 'Потяните, чтобы изменить высоту';
+        h.setAttribute('aria-hidden', 'true');
+        element.appendChild(h);
+    }
+
+    beginTextBlockHeightDrag(element, startClientY) {
+        const startH = element.offsetHeight;
+        const minH = 36;
+        const maxH = this.canvas
+            ? Math.max(this.canvas.scrollHeight, this.canvas.clientHeight) + 400
+            : 2400;
+        const prevUserSelect = document.body.style.userSelect;
+        document.body.style.userSelect = 'none';
+
+        const apply = (clientY) => {
+            let nh = Math.round(startH + (clientY - startClientY));
+            nh = Math.max(minH, Math.min(maxH, nh));
+            element.style.height = nh + 'px';
+        };
+
+        const onMouseMove = (ev) => apply(ev.clientY);
+        const onMouseUp = () => cleanup();
+
+        const onTouchMove = (ev) => {
+            if (ev.cancelable) ev.preventDefault();
+            if (ev.touches.length) apply(ev.touches[0].clientY);
+        };
+        const onTouchEnd = () => cleanup();
+
+        const cleanup = () => {
+            document.body.style.userSelect = prevUserSelect;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', onTouchEnd);
+            document.removeEventListener('touchcancel', onTouchEnd);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', onTouchEnd);
+        document.addEventListener('touchcancel', onTouchEnd);
     }
 
     // --- Word-like: сохранение/восстановление выделения и форматирование по выделению ---
@@ -1928,6 +1974,7 @@ class ContentEditor {
         }
         
         this.canvas.appendChild(newElement);
+        this.addElementControls(newElement);
         this.elements.push({
             id: newId,
             toolId: element.dataset.toolId,
@@ -3047,6 +3094,8 @@ class ContentEditor {
             }
         });
 
+        this.canvas.querySelectorAll('.canvas-element').forEach((el) => this.addElementControls(el));
+
         if (this.propertiesContent) {
             this.propertiesContent.innerHTML = '<p>Выберите элемент для редактирования</p>';
         }
@@ -3416,17 +3465,39 @@ class ContentEditor {
     }
 
     setupCanvasEvents() {
-        // Клик по элементу для выделения и открытия свойств
+        // Клик по элементу для выделения и открытия свойств; ресайз высоты текстовых блоков
         this.canvas.addEventListener('mousedown', (e) => {
-            // Ищем ближайший родительский элемент canvas-element
+            const resizeHandle = e.target.closest('.text-block-resize-handle');
+            if (resizeHandle) {
+                const canvasElement = resizeHandle.closest('.canvas-element');
+                if (canvasElement) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.selectElement(canvasElement);
+                    this.beginTextBlockHeightDrag(canvasElement, e.clientY);
+                }
+                return;
+            }
+
             const canvasElement = e.target.closest('.canvas-element');
-            
-            if (canvasElement && 
-                !e.target.classList.contains('control-btn')) {
+            if (canvasElement && !e.target.classList.contains('control-btn')) {
                 this.selectElement(canvasElement);
             }
         });
 
+        this.canvas.addEventListener(
+            'touchstart',
+            (e) => {
+                const resizeHandle = e.target.closest('.text-block-resize-handle');
+                if (!resizeHandle) return;
+                const canvasElement = resizeHandle.closest('.canvas-element');
+                if (!canvasElement) return;
+                e.preventDefault();
+                this.selectElement(canvasElement);
+                this.beginTextBlockHeightDrag(canvasElement, e.touches[0].clientY);
+            },
+            { passive: false }
+        );
     }
 
 
