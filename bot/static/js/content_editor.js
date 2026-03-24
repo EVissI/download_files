@@ -2583,12 +2583,7 @@ class ContentEditor {
             payload = null;
         }
 
-        const fm = String(ref.frameId).match(/_f(\d+)$/);
-        const displayFrame = fm ? parseInt(fm[1], 10) + 1 : this.cardPreviewIndex + 1;
-
-        meta.innerHTML = `
-            <div class="card-preview-meta-line">Кадр ${displayFrame}</div>
-        `;
+        meta.innerHTML = '';
         this.renderCardPreviewSurface(payload);
     }
 
