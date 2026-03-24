@@ -205,7 +205,7 @@ class ContentEditor {
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewPrevBtn" onclick="contentEditor.cardPreviewPrev()">←</button>
                             <span class="card-preview-counter" id="cardPreviewCounter">0 / 0</span>
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewNextBtn" onclick="contentEditor.cardPreviewNext()">→</button>
-                            <button type="button" class="card-preview-approve" id="cardPreviewApproveBtn" onclick="contentEditor.cardPreviewApprove()">Продолжить</button>
+                            <button type="button" class="card-preview-approve" id="cardPreviewApproveBtn" onclick="contentEditor.cardPreviewApprove()">Сохранить</button>
                         </div>
                         <div class="card-preview-meta" id="cardPreviewMeta"></div>
                         <div class="card-preview-frame-host" id="cardPreviewFrameHost"></div>
