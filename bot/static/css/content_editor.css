@@ -609,7 +609,7 @@
     box-sizing: border-box;
 }
 
-/* Оверлей доски в предпросмотре: канвас поверх кадра; «чайка» внизу сворачивает блок */
+/* Оверлей доски в предпросмотре: канвас поверх кадра; внизу ручка (∨ перевернутый ^) сворачивает блок */
 .card-preview-board-overlay {
     position: absolute;
     top: 0;
@@ -650,7 +650,7 @@
     margin: 0 auto;
 }
 
-.card-preview-board-seagull {
+.card-preview-board-handle {
     pointer-events: auto;
     display: flex;
     align-items: center;
@@ -668,30 +668,30 @@
     transition: color 0.15s ease, background 0.15s ease, filter 0.15s ease;
 }
 
-.card-preview-board-seagull:hover {
+.card-preview-board-handle:hover {
     color: #f8fafc;
     filter: brightness(1.08);
 }
 
-.card-preview-board-seagull:focus-visible {
+.card-preview-board-handle:focus-visible {
     outline: 2px solid #60a5fa;
     outline-offset: 2px;
 }
 
-.card-preview-board-seagull-icon {
+.card-preview-board-handle-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     transition: transform 0.22s ease;
 }
 
-.card-preview-board-overlay--collapsed .card-preview-board-seagull-icon {
+.card-preview-board-overlay--collapsed .card-preview-board-handle-icon {
     transform: rotate(180deg);
 }
 
-.card-preview-board-seagull-svg {
-    width: 64px;
-    height: 32px;
+.card-preview-board-caret-svg {
+    width: 48px;
+    height: 20px;
     display: block;
 }
 

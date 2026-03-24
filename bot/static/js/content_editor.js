@@ -2614,24 +2614,22 @@ class ContentEditor {
                     <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
                 </div>
             </div>
-            <button type="button" class="card-preview-board-seagull" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
-                <span class="card-preview-board-seagull-icon" aria-hidden="true">
-                    <svg class="card-preview-board-seagull-svg" viewBox="0 0 100 44" xmlns="http://www.w3.org/2000/svg" focusable="false">
-                        <path fill="currentColor" d="M4 30 Q26 8 48 18 Q62 4 88 14 Q96 16 98 22 L90 26 Q70 18 52 22 Q36 14 18 22 Q10 26 6 34 Z" opacity="0.92"/>
-                        <ellipse fill="currentColor" cx="78" cy="16" rx="9" ry="7"/>
-                        <path fill="#fbbf24" d="M86 15 L100 18 L88 24 Z"/>
+            <button type="button" class="card-preview-board-handle" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
+                <span class="card-preview-board-handle-icon" aria-hidden="true">
+                    <svg class="card-preview-board-caret-svg" viewBox="0 0 48 20" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                        <path fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M6 6 L24 16 L42 6"/>
                     </svg>
                 </span>
             </button>
         `;
-        const seagull = overlay.querySelector('.card-preview-board-seagull');
+        const handleBtn = overlay.querySelector('.card-preview-board-handle');
         const toggleBoardCollapsed = () => {
             overlay.classList.toggle('card-preview-board-overlay--collapsed');
             const collapsed = overlay.classList.contains('card-preview-board-overlay--collapsed');
-            seagull.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            handleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
         };
-        seagull.addEventListener('click', toggleBoardCollapsed);
-        seagull.addEventListener('keydown', (e) => {
+        handleBtn.addEventListener('click', toggleBoardCollapsed);
+        handleBtn.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 toggleBoardCollapsed();
