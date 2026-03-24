@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram import Bot, Dispatcher
 from apscheduler.triggers.cron import CronTrigger
@@ -8,6 +8,10 @@ from bot.common.middlewares.database_middleware import (
     DatabaseMiddlewareWithoutCommit,
 )
 from bot.common.middlewares.i18n import TranslatorRunnerMiddleware
+from bot.common.middlewares.minimum_update_process_time import (
+    MinimumUpdateProcessTimeMiddleware,
+) 
+MIN_UPDATE_PROCESS_SECONDS = 0.3 #сек
 from bot.common.tasks.deactivate import expire_analiz_balances
 from bot.common.tasks.cleanup_screenshots import cleanup_screenshots
 from bot.db.pg_backup import backup_postgres_to_yandex_disk
@@ -81,6 +85,9 @@ async def main():
     dp = Dispatcher(storage=storage)
     dp.startup.register(start_bot)
     dp.shutdown.register(stop_bot)
+    dp.update.middleware.register(
+        MinimumUpdateProcessTimeMiddleware(MIN_UPDATE_PROCESS_SECONDS)
+    )
     dp.update.middleware.register(DatabaseMiddlewareWithoutCommit())
     dp.update.middleware.register(DatabaseMiddlewareWithCommit())
     dp.update.middleware.register(TranslatorRunnerMiddleware())
