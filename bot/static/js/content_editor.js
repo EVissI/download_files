@@ -1467,7 +1467,7 @@ class ContentEditor {
     }
 
     beginTextBlockHeightDrag(element, startClientY) {
-        const startH = element.offsetHeight;
+        const startH = element.getBoundingClientRect().height;
         const minH = 36;
         const maxH = this.canvas
             ? Math.max(this.canvas.scrollHeight, this.canvas.clientHeight) + 400
@@ -1475,22 +1475,48 @@ class ContentEditor {
         const prevUserSelect = document.body.style.userSelect;
         document.body.style.userSelect = 'none';
 
-        const apply = (clientY) => {
-            let nh = Math.round(startH + (clientY - startClientY));
+        element.classList.add('is-text-height-resizing');
+        if (this.canvas) this.canvas.classList.add('ce-text-resize-active');
+
+        let rafId = 0;
+        let latestClientY = startClientY;
+
+        const applyFrame = () => {
+            rafId = 0;
+            let nh = startH + (latestClientY - startClientY);
             nh = Math.max(minH, Math.min(maxH, nh));
-            element.style.height = nh + 'px';
+            element.style.height = `${nh}px`;
+            if (element.id) this.repositionElementsBelow(element.id);
         };
 
-        const onMouseMove = (ev) => apply(ev.clientY);
+        const scheduleFrame = (clientY) => {
+            latestClientY = clientY;
+            if (!rafId) {
+                rafId = requestAnimationFrame(applyFrame);
+            }
+        };
+
+        const onMouseMove = (ev) => scheduleFrame(ev.clientY);
         const onMouseUp = () => cleanup();
 
         const onTouchMove = (ev) => {
             if (ev.cancelable) ev.preventDefault();
-            if (ev.touches.length) apply(ev.touches[0].clientY);
+            if (ev.touches.length) scheduleFrame(ev.touches[0].clientY);
         };
         const onTouchEnd = () => cleanup();
 
         const cleanup = () => {
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = 0;
+            }
+            applyFrame();
+            element.style.height = `${Math.round(parseFloat(element.style.height) || element.offsetHeight)}px`;
+            if (element.id) this.repositionElementsBelow(element.id);
+
+            element.classList.remove('is-text-height-resizing');
+            if (this.canvas) this.canvas.classList.remove('ce-text-resize-active');
+
             document.body.style.userSelect = prevUserSelect;
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);

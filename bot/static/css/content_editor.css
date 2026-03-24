@@ -1047,6 +1047,17 @@
     opacity: 1;
 }
 
+/* Ресайз высоты: без transition у контента (иначе рывки), лёгкая оптимизация слоя */
+.canvas-element.is-text-height-resizing {
+    will-change: height;
+}
+
+.canvas-element.is-text-height-resizing .text-content,
+.canvas-element.is-text-height-resizing .link-content,
+.canvas-element.is-text-height-resizing .link-text {
+    transition: none !important;
+}
+
 .canvas-element.selected {
     border-color: #667eea;
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
