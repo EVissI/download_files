@@ -3963,12 +3963,30 @@
             }
         };
 
+        /**
+         * Текущая строка кадра (как при openCardEditor): таблица ходов / cube_hints и т.д.
+         * После «Сохранить кадр» редактор снова подтягивает это из страницы.
+         */
+        window.getHintViewerCurrentCardData = function() {
+            try {
+                if (typeof dataLoaded === 'undefined' || !dataLoaded || !data || current === undefined) {
+                    return null;
+                }
+                return data.length > 0 ? data[current] : null;
+            } catch (e) {
+                console.error('getHintViewerCurrentCardData:', e);
+                return null;
+            }
+        };
+
         // Функция открытия редактора контента
         function openCardEditor() {
             if (typeof contentEditor !== 'undefined') {
-                // Передаем текущие данные в редактор
-                const currentData = data.length > 0 ? data[current] : null;
-                contentEditor.openModalWithData(currentData);
+                contentEditor.openModalWithData(
+                    typeof window.getHintViewerCurrentCardData === 'function'
+                        ? window.getHintViewerCurrentCardData()
+                        : (data.length > 0 ? data[current] : null)
+                );
             } else {
                 console.error('ContentEditor не инициализирован');
             }

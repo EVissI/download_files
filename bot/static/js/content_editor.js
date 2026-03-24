@@ -2437,10 +2437,27 @@ class ContentEditor {
         this.selectedElement = null;
         this.applyPropertiesEmptyState();
         this.toggleStates = {};
-        this.cardData = null;
+        this.syncCardDataFromHintViewerPage();
         this.elementIdCounter = 0;
         this.loadTools();
         this.forceRefreshContent();
+    }
+
+    /**
+     * Те же данные таблицы/кадра, что при входе из hint_viewer (data[current]).
+     * Доска не хранится в редакторе — снимается через getHintViewerBoardSnapshot() при каждом сохранении.
+     */
+    syncCardDataFromHintViewerPage() {
+        if (typeof window.getHintViewerCurrentCardData !== 'function') {
+            this.cardData = null;
+            return;
+        }
+        try {
+            this.cardData = window.getHintViewerCurrentCardData();
+        } catch (e) {
+            console.warn('syncCardDataFromHintViewerPage:', e);
+            this.cardData = null;
+        }
     }
 
     getGameContextForCard() {
@@ -3040,6 +3057,14 @@ class ContentEditor {
 
         if (payload.editor && payload.editor.boardCanvasToggle) {
             this.toggleStates['boardCanvas'] = true;
+        }
+        this.cardData = null;
+        if (payload.cardData && typeof payload.cardData === 'object') {
+            try {
+                this.cardData = JSON.parse(JSON.stringify(payload.cardData));
+            } catch (e) {
+                this.cardData = null;
+            }
         }
         this.canvas.style.backgroundColor = this.resolveSavedCanvasBackground(payload);
 
