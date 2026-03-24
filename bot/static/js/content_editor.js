@@ -525,43 +525,174 @@ class ContentEditor {
         return table;
     }
 
-    setupElementInteractions(element) {
-        // Добавляем обработчики для выделения элемента
-        element.addEventListener('click', (e) => {
-            e.stopPropagation();
+    /** Высота блока при пересчёте вертикального стека (как в recalculateAllElementPositions). */
+    getElementStackHeight(element) {
+        if (element.classList.contains('table-element')) {
+            let h = element.offsetHeight;
+            if (h < 50) h = 100;
+            return h;
+        }
+        if (element.dataset.toolId === 'upload-image') {
+            return parseInt(element.style.height, 10) || element.offsetHeight || 200;
+        }
+        return parseInt(element.style.height, 10) || element.offsetHeight || 150;
+    }
+
+    getStackedCanvasElements() {
+        if (!this.canvas) return [];
+        return Array.from(this.canvas.querySelectorAll('.canvas-element'))
+            .filter((el) => !el.id.includes('boardLabel'))
+            .sort((a, b) => (parseInt(a.style.top, 10) || 0) - (parseInt(b.style.top, 10) || 0));
+    }
+
+    clientYToCanvasScrollY(clientY) {
+        if (!this.canvas) return 0;
+        const rect = this.canvas.getBoundingClientRect();
+        return clientY - rect.top + this.canvas.scrollTop;
+    }
+
+    /**
+     * Новый порядок блоков после отпускания: вставка по вертикали относительно центров остальных.
+     */
+    computeStackOrderAfterDrop(dragEl, canvasY) {
+        const sorted = this.getStackedCanvasElements();
+        const from = sorted.indexOf(dragEl);
+        if (from < 0) return sorted;
+        sorted.splice(from, 1);
+        let insert = 0;
+        for (let i = 0; i < sorted.length; i++) {
+            const el = sorted[i];
+            const t = parseInt(el.style.top, 10) || 0;
+            const mid = t + el.offsetHeight / 2;
+            if (canvasY < mid) {
+                insert = i;
+                break;
+            }
+            insert = i + 1;
+        }
+        sorted.splice(insert, 0, dragEl);
+        return sorted;
+    }
+
+    /** Применить порядок: стопка сверху вниз, left=0, ширина канваса, порядок узлов в DOM. */
+    applyVerticalStackFromOrder(ordered) {
+        if (!this.canvas || !ordered || !ordered.length) return;
+        const canvas = this.canvas;
+        const w = canvas.getBoundingClientRect().width;
+        let nextY = 0;
+        ordered.forEach((el) => {
+            const h = this.getElementStackHeight(el);
+            el.style.left = '0px';
+            el.style.top = `${nextY}px`;
+            el.style.width = `${w}px`;
+            el.style.transform = '';
+            canvas.appendChild(el);
+            nextY += h;
+        });
+        this.expandCanvasIfNeeded(nextY);
+    }
+
+    ensureBlockDragHandle(element) {
+        if (!element || element.querySelector(':scope > .ce-block-drag-handle')) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ce-block-drag-handle';
+        btn.title = 'Перетащить блок (порядок в стопке)';
+        btn.setAttribute('aria-label', 'Перетащить блок');
+        element.insertBefore(btn, element.firstChild);
+    }
+
+    stripBlockDragHandlesFromClone(clone) {
+        clone.querySelectorAll('.ce-block-drag-handle').forEach((n) => n.remove());
+    }
+
+    elementInnerHtmlForSave(el) {
+        const clone = el.cloneNode(true);
+        this.stripBlockDragHandlesFromClone(clone);
+        return clone.innerHTML;
+    }
+
+    /**
+     * Перестановка блоков только по вертикали: тянуть за ручку слева, отпустить — новая позиция в стопке.
+     */
+    attachBlockReorderInteractions(element) {
+        if (!this.canvas || !element) return;
+        if (element.dataset.ceBlockReorderBound === '1') return;
+        if (element.id && element.id.includes('boardLabel')) return;
+
+        this.ensureBlockDragHandle(element);
+        const handle = element.querySelector(':scope > .ce-block-drag-handle');
+        if (!handle) return;
+
+        const DRAG_THRESHOLD_PX = 8;
+
+        const onDown = (ev) => {
+            const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+            if (ev.type === 'mousedown' && ev.button !== 0) return;
+            ev.preventDefault();
+            ev.stopPropagation();
             this.selectElement(element);
-        });
 
-        // Добавляем обработчики для перемещения (drag and drop)
-        element.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('control-btn')) return;
+            const startY = clientY;
+            let dragging = false;
+            const prevTransition = element.style.transition;
+            const prevZ = element.style.zIndex;
+            const prevTransform = element.style.transform;
 
-            const startX = e.clientX - element.offsetLeft;
-            const startY = e.clientY - element.offsetTop;
-
-            const handleMouseMove = (e) => {
-                const newX = e.clientX - startX;
-                const newY = e.clientY - startY;
-
-                // Ограничиваем перемещение в пределах canvas
-                const canvasRect = this.canvas.getBoundingClientRect();
-                const elementRect = element.getBoundingClientRect();
-
-                const maxX = canvasRect.width - elementRect.width;
-                const maxY = canvasRect.height - elementRect.height;
-
-                element.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
-                element.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
+            const onMove = (moveEv) => {
+                const cy = moveEv.touches ? moveEv.touches[0].clientY : moveEv.clientY;
+                const dy = cy - startY;
+                if (!dragging) {
+                    if (Math.abs(dy) < DRAG_THRESHOLD_PX) return;
+                    dragging = true;
+                    element.classList.add('ce-block-dragging');
+                    this.canvas.classList.add('ce-stack-drag-active');
+                    document.body.style.userSelect = 'none';
+                    element.style.transition = 'none';
+                    element.style.zIndex = '1000';
+                }
+                element.style.transform = `translateY(${dy}px)`;
             };
 
-            const handleMouseUp = () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
+            const cleanupListeners = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onUp);
+                document.removeEventListener('touchcancel', onUp);
             };
 
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        });
+            const onUp = (upEv) => {
+                const cy = upEv.changedTouches ? upEv.changedTouches[0].clientY : upEv.clientY;
+                cleanupListeners();
+                document.body.style.userSelect = '';
+                element.style.transition = prevTransition;
+                element.style.zIndex = prevZ;
+                element.style.transform = prevTransform || '';
+                element.classList.remove('ce-block-dragging');
+                this.canvas.classList.remove('ce-stack-drag-active');
+
+                if (!dragging) return;
+                const canvasY = this.clientYToCanvasScrollY(cy);
+                const newOrder = this.computeStackOrderAfterDrop(element, canvasY);
+                this.applyVerticalStackFromOrder(newOrder);
+            };
+
+            const onTouchMove = (te) => {
+                if (te.cancelable) te.preventDefault();
+                onMove(te);
+            };
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', onUp);
+            document.addEventListener('touchcancel', onUp);
+        };
+
+        handle.addEventListener('mousedown', onDown);
+        handle.addEventListener('touchstart', onDown, { passive: false });
+        element.dataset.ceBlockReorderBound = '1';
     }
 
     forceRefreshContent() {
@@ -828,6 +959,7 @@ class ContentEditor {
 
         // Add controls
         this.addElementControls(element);
+        this.attachBlockReorderInteractions(element);
 
         // Add to canvas
         this.canvas.appendChild(element);
@@ -927,6 +1059,7 @@ class ContentEditor {
 
             // Add controls
             this.addElementControls(element);
+            this.attachBlockReorderInteractions(element);
 
             // Add to canvas
             this.canvas.appendChild(element);
@@ -1212,6 +1345,7 @@ class ContentEditor {
 
             // Добавляем контролы
             this.addElementControls(element);
+            this.attachBlockReorderInteractions(element);
 
             // Добавляем на холст
             this.canvas.appendChild(element);
@@ -1959,6 +2093,7 @@ class ContentEditor {
         const newElement = element.cloneNode(true);
         const newId = `element_${this.elementIdCounter++}`;
         newElement.id = newId;
+        delete newElement.dataset.ceBlockReorderBound;
 
         // Get appropriate dimensions for positioning - all elements now use actual canvas width
         let elementHeight;
@@ -2001,6 +2136,7 @@ class ContentEditor {
 
         this.canvas.appendChild(newElement);
         this.addElementControls(newElement);
+        this.attachBlockReorderInteractions(newElement);
         this.elements.push({
             id: newId,
             toolId: element.dataset.toolId,
@@ -2343,6 +2479,7 @@ class ContentEditor {
                 },
                 dataset: { ...el.dataset }
             };
+            delete item.dataset.ceBlockReorderBound;
 
             switch (toolId) {
                 case 'question-text':
@@ -2361,7 +2498,7 @@ class ContentEditor {
                 case 'moveHintsTable': {
                     const tbl = el.querySelector('table');
                     item.tableType = el.dataset.tableType || 'hints';
-                    item.tableHtml = tbl ? tbl.outerHTML : el.innerHTML;
+                    item.tableHtml = tbl ? tbl.outerHTML : this.elementInnerHtmlForSave(el);
                     break;
                 }
                 case 'upload-image': {
@@ -2413,7 +2550,7 @@ class ContentEditor {
                     break;
                 }
                 default:
-                    item.innerHtml = el.innerHTML;
+                    item.innerHtml = this.elementInnerHtmlForSave(el);
             }
 
             const bs = this.collectBlockStyle(el);
@@ -3083,7 +3220,10 @@ class ContentEditor {
             }
         });
 
-        this.canvas.querySelectorAll('.canvas-element').forEach((el) => this.addElementControls(el));
+        this.canvas.querySelectorAll('.canvas-element').forEach((el) => {
+            this.addElementControls(el);
+            this.attachBlockReorderInteractions(el);
+        });
 
         this.applyPropertiesEmptyState();
 
