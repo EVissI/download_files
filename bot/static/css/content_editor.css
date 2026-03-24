@@ -1282,6 +1282,9 @@
 
 .canvas-settings-container {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    max-height: min(92vh, 720px);
     background: #2a2a2a;
     border-radius: 12px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
@@ -1303,6 +1306,7 @@
 }
 
 .canvas-settings-header {
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1340,11 +1344,21 @@
 }
 
 .canvas-settings-tabs {
+    flex-shrink: 0;
     display: flex;
     gap: 0;
     padding: 0 16px;
     background: #2a2a2a;
     border-bottom: 1px solid #444;
+}
+
+.canvas-settings-body-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .canvas-settings-tab-btn {
@@ -1407,7 +1421,8 @@
 }
 
 .canvas-settings-body {
-    padding: 25px;
+    padding: 20px 25px 28px;
+    box-sizing: border-box;
 }
 
 .setting-group {
@@ -1682,10 +1697,11 @@
 }
 
 .canvas-settings-footer {
+    flex-shrink: 0;
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    padding: 20px 25px;
+    padding: 16px 20px 20px;
     background: #333333;
     border-top: 1px solid #444444;
 }

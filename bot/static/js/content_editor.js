@@ -41,7 +41,66 @@ class ContentEditor {
         /** Кэш открытой IndexedDB для больших аудио (вне квоты localStorage JSON) */
         this._contentEditorMediaDbPromise = null;
 
+        /** Глобальный стиль текста: новые блоки + значения вкладки «Текст» в настройках */
+        this.globalTextStyleDefaults = { ...ContentEditor.DEFAULT_GLOBAL_TEXT_STYLE };
+
         this.init();
+    }
+
+    static get DEFAULT_GLOBAL_TEXT_STYLE() {
+        return {
+            fontSize: '16px',
+            color: '#333333',
+            textAlign: 'left',
+            lineHeight: '20px',
+            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            fontWeight: 'normal',
+            fontStyle: 'normal',
+            textDecoration: 'none'
+        };
+    }
+
+    /** Применить сохранённые глобальные стили к узлу .text-content / .link-text */
+    applyGlobalTextStyleDefaultsToTextNode(node) {
+        if (!node || !this.globalTextStyleDefaults) return;
+        const s = this.globalTextStyleDefaults;
+        node.style.fontSize = s.fontSize;
+        node.style.color = s.color;
+        node.style.textAlign = s.textAlign;
+        node.style.lineHeight = s.lineHeight;
+        node.style.fontFamily = s.fontFamily;
+        node.style.fontWeight = s.fontWeight;
+        node.style.fontStyle = s.fontStyle;
+        node.style.textDecoration = s.textDecoration;
+    }
+
+    /** Обновить объект дефолтов из полей модалки и раздать по всем текстовым узлам на канвасе */
+    syncGlobalTextStyleDefaultsFromFormAndApplyAll() {
+        const sizeEl = document.getElementById('globalTextFontSize');
+        const colorEl = document.getElementById('globalTextColor');
+        const alignEl = document.getElementById('globalTextAlign');
+        const lhEl = document.getElementById('globalTextLineHeight');
+        const famEl = document.getElementById('globalTextFontFamily');
+        const boldEl = document.getElementById('globalTextBold');
+        const italicEl = document.getElementById('globalTextItalic');
+        const underEl = document.getElementById('globalTextUnderline');
+        if (!sizeEl || !colorEl || !alignEl || !lhEl || !famEl) return false;
+        this.globalTextStyleDefaults = {
+            fontSize: `${sizeEl.value}px`,
+            color: colorEl.value,
+            textAlign: alignEl.value,
+            lineHeight: `${lhEl.value}px`,
+            fontFamily: famEl.value,
+            fontWeight: boldEl && boldEl.checked ? 'bold' : 'normal',
+            fontStyle: italicEl && italicEl.checked ? 'italic' : 'normal',
+            textDecoration: underEl && underEl.checked ? 'underline' : 'none'
+        };
+        if (this.canvas) {
+            this.canvas.querySelectorAll('.text-content, .link-text').forEach((n) => {
+                this.applyGlobalTextStyleDefaultsToTextNode(n);
+            });
+        }
+        return true;
     }
 
     // Check if mobile device and get max canvas width
@@ -1209,14 +1268,16 @@ class ContentEditor {
                 `;
                 break;
                 
-            case 'question-text':
-                // Текст вопроса в стиле Photoshop
+            case 'question-text': {
                 element.innerHTML = `
                     <div class="text-content" contenteditable="true" placeholder="Введите текст вопроса...">Текст вопроса</div>
                 `;
                 element.classList.add('text-element');
+                const qtc = element.querySelector('.text-content');
+                if (qtc) this.applyGlobalTextStyleDefaultsToTextNode(qtc);
                 this.setupTextEditing(element);
                 break;
+            }
                 
             case 'moveHintsTable':
                 // Таблица - создаем на основе сохраненных данных
@@ -1249,17 +1310,18 @@ class ContentEditor {
                 }
                 break;
                 
-            case 'answer-text':
-                // Текст ответа в стиле Photoshop
+            case 'answer-text': {
                 element.innerHTML = `
                     <div class="text-content" contenteditable="true" placeholder="Введите текст ответа...">Текст ответа</div>
                 `;
                 element.classList.add('text-element');
+                const atc = element.querySelector('.text-content');
+                if (atc) this.applyGlobalTextStyleDefaultsToTextNode(atc);
                 this.setupTextEditing(element);
                 break;
+            }
                 
-            case 'support-link':
-                // Ссылка с текстовым контентом
+            case 'support-link': {
                 element.innerHTML = `
                     <div class="link-content">
                         <div class="link-text" contenteditable="true" placeholder="Введите текст ссылки...">Ссылка</div>
@@ -1267,8 +1329,11 @@ class ContentEditor {
                     </div>
                 `;
                 element.classList.add('link-element');
+                const ltx = element.querySelector('.link-text');
+                if (ltx) this.applyGlobalTextStyleDefaultsToTextNode(ltx);
                 this.setupLinkEditing(element);
                 break;
+            }
                 
             default:
                 element.innerHTML = `
@@ -3375,19 +3440,19 @@ class ContentEditor {
 
     openCanvasSettingsModal() {
         this.closeCanvasSettingsModal();
-        const sample = this.canvas ? this.canvas.querySelector('.text-content, .link-text') : null;
-        const cs = sample ? window.getComputedStyle(sample) : null;
-        const textSize = cs ? (parseInt(cs.fontSize, 10) || 16) : 16;
-        const textColorHex = cs ? this.rgbToHex(cs.color || '#333333') : '#333333';
-        const textAlign = cs && cs.textAlign ? cs.textAlign : 'left';
-        let lineH = 20;
-        if (cs && cs.lineHeight && cs.lineHeight !== 'normal') {
-            const n = parseFloat(cs.lineHeight);
-            if (!Number.isNaN(n)) lineH = Math.round(n);
+        const d = this.globalTextStyleDefaults || ContentEditor.DEFAULT_GLOBAL_TEXT_STYLE;
+        const textSize = parseInt(String(d.fontSize).replace(/px\s*$/i, ''), 10) || 16;
+        let textColorHex = d.color || '#333333';
+        if (textColorHex && !/^#[0-9A-F]{6}$/i.test(textColorHex)) {
+            textColorHex = this.rgbToHex(textColorHex) || '#333333';
         }
-        const fontBold = cs ? (parseInt(cs.fontWeight, 10) >= 600 || cs.fontWeight === 'bold') : false;
-        const fontItalic = cs ? cs.fontStyle === 'italic' : false;
-        const fontUnderline = cs ? String(cs.textDecorationLine || cs.textDecoration).includes('underline') : false;
+        const textAlign = d.textAlign || 'left';
+        let lineH = parseInt(String(d.lineHeight).replace(/px\s*$/i, ''), 10);
+        if (Number.isNaN(lineH)) lineH = 20;
+        const fontBold = d.fontWeight === 'bold' || parseInt(d.fontWeight, 10) >= 600;
+        const fontItalic = d.fontStyle === 'italic';
+        const fontUnderline = String(d.textDecoration || '').includes('underline');
+        const firstFam = d.fontFamily ? d.fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '') : '';
         const fontFamilyOptions = [
             { value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', label: 'Системный' },
             { value: 'Arial, Helvetica, sans-serif', label: 'Arial' },
@@ -3397,7 +3462,6 @@ class ContentEditor {
             { value: '"Courier New", Courier, monospace', label: 'Courier New' },
             { value: 'Tahoma, Geneva, sans-serif', label: 'Tahoma' }
         ];
-        const firstFam = cs ? cs.fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '') : '';
         const fontSelectHtml = fontFamilyOptions.map((o) => {
             const v = String(o.value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
             return `<option value="${v}">${this.escapeHtml(o.label)}</option>`;
@@ -3417,6 +3481,7 @@ class ContentEditor {
                         <button type="button" class="canvas-settings-tab-btn" data-tab="text"
                             onclick="contentEditor.switchCanvasSettingsTab('text')">Текст</button>
                     </div>
+                    <div class="canvas-settings-body-scroll">
                     <div class="canvas-settings-body">
                         <div id="canvasSettingsPanelBg" class="canvas-settings-tab-panel">
                             <div class="setting-group">
@@ -3446,7 +3511,7 @@ class ContentEditor {
                             </div>
                         </div>
                         <div id="canvasSettingsPanelText" class="canvas-settings-tab-panel" style="display: none;">
-                            <p class="canvas-settings-tab-hint">Параметры применяются ко всем текстовым блокам и подписям ссылок на кадре.</p>
+                            <p class="canvas-settings-tab-hint">Применяется ко всем текстовым блокам и подписям ссылок на кадре; после «Применить» те же настройки получают и новые блоки.</p>
                             <div class="setting-group">
                                 <label for="globalTextFontSize">Размер шрифта: <span id="globalTextFontSizeLabel">${textSize}</span>px</label>
                                 <input type="range" id="globalTextFontSize" min="10" max="72" value="${textSize}">
@@ -3494,6 +3559,7 @@ class ContentEditor {
                             </div>
                         </div>
                     </div>
+                    </div>
                     <div class="canvas-settings-footer">
                         <button type="button" class="cancel-btn" onclick="contentEditor.closeCanvasSettingsModal()">Отмена</button>
                         <button type="button" class="apply-btn" onclick="contentEditor.applyCanvasSettingsActiveTab()">Применить</button>
@@ -3521,9 +3587,9 @@ class ContentEditor {
                     break;
                 }
             }
-            if (!matched) {
+            if (!matched && d.fontFamily) {
                 const opt = document.createElement('option');
-                opt.value = cs.fontFamily;
+                opt.value = d.fontFamily;
                 opt.textContent = `Текущий (${firstFam})`;
                 opt.selected = true;
                 ffSel.insertBefore(opt, ffSel.firstChild);
@@ -3587,47 +3653,16 @@ class ContentEditor {
     }
 
     applyGlobalCanvasTextSettings() {
-        if (!this.canvas) {
+        if (!this.syncGlobalTextStyleDefaultsFromFormAndApplyAll()) {
             this.closeCanvasSettingsModal();
             return;
         }
-        const nodes = this.canvas.querySelectorAll('.text-content, .link-text');
-        if (!nodes.length) {
-            this.showNotification('На кадре нет текстовых элементов', 'warning');
-            this.closeCanvasSettingsModal();
-            return;
+        const n = this.canvas ? this.canvas.querySelectorAll('.text-content, .link-text').length : 0;
+        if (n > 0) {
+            this.showNotification('Стиль текста применён ко всем текстовым блокам', 'success');
+        } else {
+            this.showNotification('Настройки сохранены — такой текст получат новые блоки', 'success');
         }
-        const sizeEl = document.getElementById('globalTextFontSize');
-        const colorEl = document.getElementById('globalTextColor');
-        const alignEl = document.getElementById('globalTextAlign');
-        const lhEl = document.getElementById('globalTextLineHeight');
-        const famEl = document.getElementById('globalTextFontFamily');
-        const boldEl = document.getElementById('globalTextBold');
-        const italicEl = document.getElementById('globalTextItalic');
-        const underEl = document.getElementById('globalTextUnderline');
-        if (!sizeEl || !colorEl || !alignEl || !lhEl || !famEl) {
-            this.closeCanvasSettingsModal();
-            return;
-        }
-        const size = `${sizeEl.value}px`;
-        const color = colorEl.value;
-        const align = alignEl.value;
-        const lh = `${lhEl.value}px`;
-        const family = famEl.value;
-        const bold = boldEl && boldEl.checked;
-        const italic = italicEl && italicEl.checked;
-        const underline = underEl && underEl.checked;
-        nodes.forEach((node) => {
-            node.style.fontSize = size;
-            node.style.color = color;
-            node.style.textAlign = align;
-            node.style.lineHeight = lh;
-            node.style.fontFamily = family;
-            node.style.fontWeight = bold ? 'bold' : 'normal';
-            node.style.fontStyle = italic ? 'italic' : 'normal';
-            node.style.textDecoration = underline ? 'underline' : 'none';
-        });
-        this.showNotification('Стиль текста применён ко всем текстовым блокам', 'success');
         this.closeCanvasSettingsModal();
     }
 
