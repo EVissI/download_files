@@ -718,6 +718,12 @@
     pointer-events: auto;
 }
 
+/* Предпросмотр: клики по ссылке и диплинкам внутри текста */
+.card-preview-surface-inner .canvas-element.link-element.card-preview-canvas-clone {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
 .card-preview-canvas-clone {
     box-sizing: border-box;
 }

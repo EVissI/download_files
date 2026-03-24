@@ -1484,10 +1484,105 @@ class ContentEditor {
         }
     }
 
+    /** Обрезка хвостовой пунктуации у распознанного URL для корректного href. */
+    normalizeHrefFromRecognizedUrl(raw) {
+        let u = String(raw || '').trim().replace(/[.,;:!?)]+$/g, '');
+        if (/^www\./i.test(u)) u = `https://${u}`;
+        return u;
+    }
+
+    _linkifySingleTextNodeIfUrl(textNode) {
+        const text = textNode.textContent;
+        if (!text) return;
+        const re = /(https?:\/\/[^\s<>"']+|tg:\/\/[^\s<>"']+|www\.[^\s<>"']+)/gi;
+        const parts = [];
+        let last = 0;
+        let m;
+        re.lastIndex = 0;
+        while ((m = re.exec(text)) !== null) {
+            if (m.index > last) parts.push({ t: 'text', v: text.slice(last, m.index) });
+            parts.push({ t: 'link', v: m[0] });
+            last = m.index + m[0].length;
+        }
+        if (!parts.some((p) => p.t === 'link')) return;
+        if (last < text.length) parts.push({ t: 'text', v: text.slice(last) });
+
+        const parent = textNode.parentNode;
+        if (!parent) return;
+        const frag = document.createDocumentFragment();
+        for (const p of parts) {
+            if (p.t === 'text') frag.appendChild(document.createTextNode(p.v));
+            else {
+                const href = this.normalizeHrefFromRecognizedUrl(p.v);
+                if (!href) continue;
+                const a = document.createElement('a');
+                a.href = href;
+                a.textContent = p.v;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                frag.appendChild(a);
+            }
+        }
+        while (frag.firstChild) parent.insertBefore(frag.firstChild, textNode);
+        parent.removeChild(textNode);
+    }
+
+    /**
+     * В contenteditable .link-text оборачивает «голые» URL (http(s), tg://, www…) в <a>.
+     * Не трогает текст уже внутри существующих <a>.
+     */
+    linkifyPlainUrlsInLinkTextRoot(root) {
+        if (!root) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+        const textNodes = [];
+        let n;
+        while ((n = walker.nextNode())) {
+            if (!n.textContent) continue;
+            let el = n.parentElement;
+            let underAnchor = false;
+            while (el && el !== root) {
+                if (el.tagName === 'A') {
+                    underAnchor = true;
+                    break;
+                }
+                el = el.parentElement;
+            }
+            if (!underAnchor) textNodes.push(n);
+        }
+        for (let i = textNodes.length - 1; i >= 0; i--) {
+            this._linkifySingleTextNodeIfUrl(textNodes[i]);
+        }
+    }
+
+    linkifyPlainUrlsUnderLinkElement(element) {
+        const linkText = element.querySelector('.link-text');
+        const linkUrl = element.querySelector('.link-url');
+        if (!linkText || !linkUrl) return;
+        this.linkifyPlainUrlsInLinkTextRoot(linkText);
+        const first = linkText.querySelector('a[href]');
+        if (first) {
+            const href = first.getAttribute('href');
+            if (href && !String(linkUrl.value || '').trim()) {
+                linkUrl.value = href;
+                const prop = document.getElementById('propLinkUrl');
+                if (prop && this.selectedElement === element) prop.value = href;
+            }
+        }
+    }
+
     setupLinkEditing(element) {
         const linkText = element.querySelector('.link-text');
         const linkUrl = element.querySelector('.link-url');
         if (!linkText || !linkUrl) return;
+
+        let linkifyDebounce = null;
+        const scheduleLinkify = () => {
+            clearTimeout(linkifyDebounce);
+            linkifyDebounce = setTimeout(() => {
+                linkifyDebounce = null;
+                this.linkifyPlainUrlsUnderLinkElement(element);
+            }, 180);
+        };
 
         // Предотвращаем всплытие события клика, чтобы не выделять элемент при редактировании ссылки
         linkText.addEventListener('mousedown', (e) => {
@@ -1504,20 +1599,39 @@ class ContentEditor {
 
         // Обработка окончания редактирования и сохранение выделения
         linkText.addEventListener('blur', () => {
+            clearTimeout(linkifyDebounce);
+            this.linkifyPlainUrlsUnderLinkElement(element);
             this.saveSelectionForEditable(linkText);
             if (linkText.textContent.trim() === '') {
                 linkText.textContent = 'Ссылка';
             }
         });
 
+        linkText.addEventListener('input', scheduleLinkify);
+        linkText.addEventListener('paste', () => {
+            requestAnimationFrame(() => this.linkifyPlainUrlsUnderLinkElement(element));
+        });
+
         // Обработка клика по ссылке для перехода (только если не в режиме редактирования)
         element.addEventListener('click', (e) => {
-            // Если не в режиме редактирования текста и клик не по текстовому полю
+            const anchor = e.target.closest('a[href]');
+            if (anchor && linkText.contains(anchor)) {
+                if (document.activeElement === linkText) return;
+                let href = anchor.getAttribute('href');
+                if (href) {
+                    href = href.trim();
+                    if (href && !/^\s*javascript:/i.test(href)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.open(href, '_blank', 'noopener,noreferrer');
+                    }
+                }
+                return;
+            }
             if (!linkText.contains(e.target) || document.activeElement !== linkText) {
                 const url = linkUrl.value;
                 if (url && url.trim() !== '') {
-                    // Открываем ссылку в новой вкладке
-                    window.open(url, '_blank');
+                    window.open(url, '_blank', 'noopener,noreferrer');
                 }
             }
         });
@@ -1535,6 +1649,44 @@ class ContentEditor {
                     e.preventDefault();
                     linkText.blur();
                 }
+            }
+        });
+    }
+
+    /**
+     * Предпросмотр карточки: открытие URL из поля ссылки и диплинков внутри HTML текста (tg:// и т.д.).
+     * В режиме предпросмотра setupLinkEditing не вызывается — события до блока не доходили из‑за pointer-events.
+     */
+    attachPreviewLinkNavigation(element) {
+        const linkUrl = element.querySelector('.link-url');
+        const linkText = element.querySelector('.link-text');
+        if (!linkUrl) return;
+        element.addEventListener('click', (e) => {
+            const anchor = e.target.closest('a[href]');
+            if (anchor && linkText && linkText.contains(anchor)) {
+                let href = anchor.getAttribute('href');
+                if (href) {
+                    href = href.trim();
+                    if (href && !/^\s*javascript:/i.test(href)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        try {
+                            window.open(href, '_blank', 'noopener,noreferrer');
+                        } catch (err) {
+                            window.location.assign(href);
+                        }
+                    }
+                }
+                return;
+            }
+            const url = (linkUrl.value || '').trim();
+            if (!url) return;
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                window.open(url, '_blank', 'noopener,noreferrer');
+            } catch (err) {
+                window.location.assign(url);
             }
         });
     }
@@ -3298,7 +3450,11 @@ class ContentEditor {
                         <div class="link-text" contenteditable="${ce}" placeholder="Введите текст ссылки...">${item.linkTextHtml || ''}</div>
                         <input type="hidden" class="link-url" value="${urlAttr}">
                     </div>`;
-                if (!previewMode) this.setupLinkEditing(element);
+                if (!previewMode) {
+                    this.setupLinkEditing(element);
+                } else {
+                    this.attachPreviewLinkNavigation(element);
+                }
                 break;
             }
             case 'moveHintsTable':
