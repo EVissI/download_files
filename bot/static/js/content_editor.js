@@ -192,22 +192,6 @@ class ContentEditor {
         }
         this.saveFrameConfirmModal = document.getElementById('saveFrameConfirmModal');
 
-        if (!document.getElementById('saveCardConfirmModal')) {
-            document.body.insertAdjacentHTML('beforeend', `
-                <div id="saveCardConfirmModal" class="save-frame-confirm-modal" style="display: none;" aria-hidden="true">
-                    <div class="save-frame-confirm-overlay" onclick="contentEditor.cancelSaveCard()"></div>
-                    <div class="save-frame-confirm-box" role="dialog" aria-modal="true">
-                        <h3 class="save-frame-confirm-title">Сохранить карточку</h3>
-                        <div class="save-frame-confirm-actions">
-                            <button type="button" class="save-frame-cancel-btn" onclick="contentEditor.cancelSaveCard()">Отмена</button>
-                            <button type="button" class="save-frame-ok-btn save-card-ok-btn" onclick="contentEditor.confirmSaveCard()">Сохранить</button>
-                        </div>
-                    </div>
-                </div>
-            `);
-        }
-        this.saveCardConfirmModal = document.getElementById('saveCardConfirmModal');
-
         if (!document.getElementById('cardPreviewModal')) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="cardPreviewModal" class="card-preview-modal card-preview-modal--fullscreen" style="display: none;" aria-hidden="true">
@@ -1792,7 +1776,7 @@ class ContentEditor {
                 <button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()">Сохранить</button>
                 ` : `
                 <button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
-                <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openSaveCardConfirm()">Сохранить карточку</button>
+                <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openCardPreviewModal()">Предпросмотр</button>
                 `}
             </div>
         `;
@@ -2078,10 +2062,6 @@ class ContentEditor {
                 this.cancelSaveFrame();
                 return;
             }
-            if (this.saveCardConfirmModal && this.saveCardConfirmModal.style.display === 'flex') {
-                this.cancelSaveCard();
-                return;
-            }
             if (this.cardPreviewModal && this.cardPreviewModal.style.display === 'flex') {
                 this.closeCardPreviewModal();
             }
@@ -2141,7 +2121,6 @@ class ContentEditor {
             return;
         }
         this.cancelSaveFrame();
-        this.closeModal();
         this.resetEditorAfterSave();
     }
 
@@ -2450,18 +2429,6 @@ class ContentEditor {
         this.forceRefreshContent();
     }
 
-    openSaveCardConfirm() {
-        if (!this.saveCardConfirmModal) return;
-        this.saveCardConfirmModal.style.display = 'flex';
-        this.saveCardConfirmModal.setAttribute('aria-hidden', 'false');
-    }
-
-    cancelSaveCard() {
-        if (!this.saveCardConfirmModal) return;
-        this.saveCardConfirmModal.style.display = 'none';
-        this.saveCardConfirmModal.setAttribute('aria-hidden', 'true');
-    }
-
     getGameContextForCard() {
         const b = typeof window.getHintViewerBoardSnapshot === 'function'
             ? window.getHintViewerBoardSnapshot()
@@ -2524,44 +2491,6 @@ class ContentEditor {
         return m ? parseInt(m[1], 10) : 0;
     }
 
-    cardManifestStorageKey(gameId, gameNum) {
-        const safe = this.sanitizeFrameIdForStorageKey(`${gameId}_g${gameNum != null ? gameNum : 'na'}`);
-        return `contentEditor_card_${safe}`;
-    }
-
-    async confirmSaveCard() {
-        try {
-            const frameId = this.getFrameIdForSave();
-            const saveSlotIndex = this.allocateNextSaveSlotIndex(frameId);
-            const currentPayload = await this.buildFrameSavePayload(frameId, saveSlotIndex);
-            localStorage.setItem(this.frameStorageKey(frameId, saveSlotIndex), JSON.stringify(currentPayload));
-
-            const refs = this.collectSavedFrameRefsForCurrentGame();
-            const { gameId, gameNum } = this.getGameContextForCard();
-            const manifest = {
-                version: 1,
-                savedAt: new Date().toISOString(),
-                gameId,
-                currentGameNum: gameNum,
-                frameRefs: refs.map(r => ({
-                    storageKey: r.storageKey,
-                    frameId: r.frameId,
-                    saveSlotIndex: r.saveSlotIndex
-                }))
-            };
-            localStorage.setItem(this.cardManifestStorageKey(gameId, gameNum), JSON.stringify(manifest));
-            this.showNotification('Карточка и текущий кадр сохранены', 'success');
-        } catch (err) {
-            console.error('confirmSaveCard:', err);
-            this.showNotification('Не удалось сохранить карточку: ' + (err.message || err), 'error');
-            return;
-        }
-        this.cancelSaveCard();
-        this.closeModal();
-        this.resetEditorAfterSave();
-        this.openCardPreviewModal();
-    }
-
     openCardPreviewModal() {
         if (!this.cardPreviewModal) return;
         this.cardPreviewRefs = this.collectSavedFrameRefsForCurrentGame();
@@ -2585,7 +2514,8 @@ class ContentEditor {
         window.removeEventListener('resize', this._onCardPreviewResize);
         this.cardPreviewModal.style.display = 'none';
         this.cardPreviewModal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = 'auto';
+        const editorStillOpen = this.modal && this.modal.style.display === 'flex';
+        document.body.style.overflow = editorStillOpen ? 'hidden' : 'auto';
         const host = document.getElementById('cardPreviewFrameHost');
         if (host) host.innerHTML = '';
     }

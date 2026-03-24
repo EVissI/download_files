@@ -409,16 +409,6 @@
     background: #15803d;
 }
 
-.save-card-ok-btn {
-    background: #1e3a5f;
-    border-color: #3b82f6;
-}
-
-.save-card-ok-btn:hover {
-    background: #1d4ed8;
-    border-color: #60a5fa;
-}
-
 /* Предпросмотр сохранённой карточки */
 .card-preview-modal {
     position: fixed;
