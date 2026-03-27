@@ -2,37 +2,29 @@ import os
 import sys
 import logging
 import json
-import asyncio
+import tempfile
 import requests
-import time
 from redis import Redis
-from rq import Worker, Queue  # ✅ БЕЗ Connection
+from rq import Worker, Queue
 from bot.common.func.hint_viewer import process_mat_file
-from bot.common.service.sync_folder_service import SyncthingSync
+from bot.common.service.hint_s3_service import HintS3Storage
 from bot.config import settings
 from bot.common.func.hint_viewer import extract_player_names
 from bot.routers.hint_viewer_router import remove_active_job
 
 from bot.db.redis import sync_redis_client
 
-# Логирование
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-syncthing_sync = SyncthingSync()
-
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
 
-# Два варианта подключения:
-# 1. Если используешь ACL-пользователя
 REDIS_USER = os.getenv("REDIS_USER")
 REDIS_USER_PASSWORD = os.getenv("REDIS_USER_PASSWORD")
-
-# 2. Если используешь default пароль
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
 text = {
     "hint_viewer_finished": {
@@ -58,104 +50,96 @@ text = {
     },
 }
 if REDIS_USER and REDIS_USER_PASSWORD:
-    # С ACL-пользователем
     redis_url = f"redis://{REDIS_USER}:{REDIS_USER_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
     logger.info(f"Connecting to Redis with ACL user: {REDIS_USER}")
 else:
-    # С default пользователем (только пароль)
     redis_url = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-    logger.info(f"Connecting to Redis with default user")
+    logger.info("Connecting to Redis with default user")
 
 logger.info(f"Redis URL: redis://<user>:<pass>@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
 
 redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 
-def analyze_backgammon_job(
-    mat_path: str, json_path: str, user_id: str, game_id: str = None
-):
-    """
-    Анализирует один .mat файл (запускается в worker-е).
+def _upload_hint_results(
+    s3: HintS3Storage,
+    game_id: str,
+    local_mat: str,
+    local_json: str,
+) -> tuple[str, bool]:
+    """Загружает .mat, сводный JSON и каталог игр в S3. Возвращает ключ .mat и has_games."""
+    dest_mat_key = s3.mat_key(game_id)
+    s3.upload_file(local_mat, dest_mat_key)
+    s3.upload_file(
+        local_json,
+        s3.summary_json_key(game_id),
+        content_type="application/json",
+    )
+    games_dir = local_json.rsplit(".", 1)[0] + "_games"
+    if os.path.isdir(games_dir):
+        s3.upload_tree(games_dir, s3.games_prefix(game_id))
+    has_games = s3.games_have_any_json(game_id)
+    return dest_mat_key, has_games
 
-    Args:
-        mat_path: Путь к исходному .mat файлу
-        json_path: Путь для сохранения результата .json
-        user_id: ID пользователя (для логирования)
 
-    Returns:
-        dict: Результат анализа (success/error)
+def analyze_backgammon_job(game_id: str, user_id: str, job_id: str = None):
     """
+    Анализирует один .mat: источник в S3 hints/{game_id}.mat, результат туда же.
+    """
+    s3 = HintS3Storage.from_settings()
+    src_key = s3.mat_key(game_id)
     try:
-        logger.info(f"[Job Start] mat_path={mat_path}, user_id={user_id}")
+        logger.info(f"[Job Start] game_id={game_id}, s3_key={src_key}, user_id={user_id}")
 
-        # Воркер может быть на другой машине — надёжное ожидание синхронизации (Events API + проверка файла)
-        if not asyncio.run(syncthing_sync.wait_for_file_sync(mat_path, max_wait=120)):
-            raise FileNotFoundError(
-                f"Файл не найден на воркере после синхронизации: {mat_path}"
-            )
+        with tempfile.TemporaryDirectory() as tmp:
+            local_mat = os.path.join(tmp, "source.mat")
+            s3.download_file(src_key, local_mat)
+            local_json = os.path.join(tmp, f"{game_id}.json")
+            process_mat_file(local_mat, local_json, user_id)
 
-        process_mat_file(mat_path, json_path, user_id)
+            mat_key, has_games = _upload_hint_results(s3, game_id, local_mat, local_json)
 
-        if game_id:
-            from bot.db.redis import sync_redis_client
-
-            sync_redis_client.set(f"mat_path:{game_id}", mat_path, ex=86400)
-
-        # Проверяем что результат создан
-        games_dir = json_path.rsplit(".", 1)[0] + "_games"
-        has_games = os.path.exists(games_dir) and any(
-            f.endswith(".json") for f in os.listdir(games_dir)
-        )
+        sync_redis_client.set(f"mat_path:{game_id}", mat_key, ex=86400)
 
         logger.info(
-            f"[Job Completed] {mat_path} -> {json_path} (has_games={has_games})"
+            f"[Job Completed] game_id={game_id} -> {mat_key} (has_games={has_games})"
         )
-        if not asyncio.run(syncthing_sync.sync_and_wait(max_wait=30)):
-            logger.warning("Ошибка синхронизации Syncthing")
-        time.sleep(3)
         return {
             "status": "success",
-            "mat_path": mat_path,
-            "json_path": json_path,
-            "games_dir": games_dir,
+            "mat_path": mat_key,
             "has_games": has_games,
+            "game_id": game_id,
         }
 
     except Exception as e:
-        logger.exception(f"[Job Failed] {mat_path}")
-        return {"status": "error", "error": str(e), "mat_path": mat_path}
+        logger.exception(f"[Job Failed] game_id={game_id}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "mat_path": src_key,
+            "game_id": game_id,
+        }
 
 
 def analyze_backgammon_batch_job(
-    file_paths: list,
+    mat_s3_keys: list,
     user_id: str,
     batch_id: str,
     job_id: str = None,
     lang_code: str = "en",
 ):
     """
-    Анализирует пакет .mat файлов последовательно (запускается в worker-е).
-    Отправляет результаты по мере обработки каждого файла.
-
-    Args:
-        file_paths: Список путей к .mat файлам
-        user_id: ID пользователя
-        batch_id: ID батча для группировки
-        chat_id: ID чата для отправки сообщений
-        bot_token: Токен бота для Telegram API
-
-    Returns:
-        dict: Результаты анализа для каждого файла
+    mat_s3_keys: ключи входных .mat в S3 (например hints/batch_in/...).
     """
     results = []
-    total_files = len(file_paths)
+    total_files = len(mat_s3_keys)
+    s3 = HintS3Storage.from_settings()
 
     logger.info(
         f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
     )
 
     def send_telegram_message(text, parse_mode="Markdown"):
-        """Отправляет сообщение в Telegram через API"""
         try:
             url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
             data = {"chat_id": int(user_id), "text": text, "parse_mode": parse_mode}
@@ -165,46 +149,39 @@ def analyze_backgammon_batch_job(
         except Exception as e:
             logger.warning(f"Error sending Telegram message: {e}")
 
-    for idx, mat_path in enumerate(file_paths):
-        fname = os.path.basename(mat_path)
+    for idx, input_mat_key in enumerate(mat_s3_keys):
+        fname = os.path.basename(input_mat_key)
         logger.info(f"[Batch Processing] {idx + 1}/{total_files}: {fname}")
 
         try:
-            # Воркер может быть на другой машине — надёжное ожидание синхронизации
-            if not asyncio.run(
-                syncthing_sync.wait_for_file_sync(mat_path, max_wait=120)
-            ):
-                raise FileNotFoundError(f"Файл не найден на воркере: {mat_path}")
-
-            # Генерируем уникальный ID для файла
             game_id = f"{batch_id}_{idx}"
-            json_path = f"files/{game_id}.json"
 
-            # Обрабатываем файл
-            process_mat_file(mat_path, json_path, user_id)
+            with tempfile.TemporaryDirectory() as tmp:
+                local_mat = os.path.join(tmp, "source.mat")
+                s3.download_file(input_mat_key, local_mat)
+                local_json = os.path.join(tmp, f"{game_id}.json")
+                process_mat_file(local_mat, local_json, user_id)
 
-            # Проверяем результат
-            games_dir = json_path.rsplit(".", 1)[0] + "_games"
-            has_games = os.path.exists(games_dir) and any(
-                f.endswith(".json") for f in os.listdir(games_dir)
-            )
+                mat_key, has_games = _upload_hint_results(
+                    s3, game_id, local_mat, local_json
+                )
 
-            logger.info(
-                f"[Batch File Completed] {fname} -> {json_path} (has_games={has_games})"
-            )
-
-            # Отправляем результат пользователю
-            if has_games:
-                # Извлекаем имена игроков
-                try:
-                    with open(mat_path, "r", encoding="utf-8") as f:
-                        content = f.read()
-
-                    red_player, black_player = extract_player_names(content)
-                except Exception:
+                if has_games:
+                    try:
+                        with open(local_mat, "r", encoding="utf-8") as f:
+                            content = f.read()
+                        red_player, black_player = extract_player_names(content)
+                    except Exception:
+                        red_player, black_player = "Red", "Black"
+                else:
                     red_player, black_player = "Red", "Black"
 
-                # Создаем inline клавиатуру (упрощенная версия)
+            logger.info(
+                f"[Batch File Completed] {fname} -> {mat_key} (has_games={has_games})"
+            )
+
+            if has_games:
+
                 keyboard = {
                     "inline_keyboard": [
                         [
@@ -251,14 +228,10 @@ def analyze_backgammon_batch_job(
                         ],
                     ]
                 }
-                if not asyncio.run(syncthing_sync.sync_and_wait(max_wait=30)):
-                    logger.warning("Ошибка синхронизации Syncthing")
-                time.sleep(3)
                 send_telegram_message(
                     f"✅ <b>{fname}</b> обработан!\n{red_player} vs {black_player}",
                     parse_mode="HTML",
                 )
-                # Отправляем клавиатуру отдельно (упрощенная версия)
                 try:
                     url = (
                         f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
@@ -282,14 +255,12 @@ def analyze_backgammon_batch_job(
             results.append(
                 {
                     "file_index": idx + 1,
-                    "mat_path": mat_path,
-                    "json_path": json_path,
-                    "games_dir": games_dir,
+                    "mat_path": mat_key,
                     "has_games": has_games,
                     "status": "success",
                 }
             )
-            sync_redis_client.set(f"mat_path:{game_id}", mat_path, ex=7200)
+            sync_redis_client.set(f"mat_path:{game_id}", mat_key, ex=7200)
 
         except Exception as e:
             logger.exception(f"[Batch File Failed] {fname}")
@@ -299,7 +270,7 @@ def analyze_backgammon_batch_job(
             results.append(
                 {
                     "file_index": idx + 1,
-                    "mat_path": mat_path,
+                    "mat_path": input_mat_key,
                     "status": "error",
                     "error": str(e),
                 }
@@ -309,9 +280,6 @@ def analyze_backgammon_batch_job(
         f"[Batch Job Completed] batch_id={batch_id}, processed={len(results)}/{total_files}"
     )
 
-    # Отправляем итоговое сообщение
-    successful = sum(1 for r in results if r["status"] == "success")
-    failed = len(results) - successful
     logger.info(f"Removing active job: user_id={user_id}, job_id={job_id or batch_id}")
     remove_active_job(user_id, job_id or batch_id)
     return {
@@ -330,13 +298,12 @@ if __name__ == "__main__":
         logger.error(f"❌ Failed to connect to Redis: {e}")
         sys.exit(1)
 
-    # Queue и Worker используют тот же connection с decode_responses=False
     try:
         queue_analysis = Queue("backgammon_analysis", connection=redis_conn)
         queue_batch = Queue("backgammon_batch_analysis", connection=redis_conn)
         worker = Worker([queue_analysis, queue_batch], connection=redis_conn)
         logger.info(
-            f"🚀 Starting Worker on queues 'backgammon_analysis' and 'backgammon_batch_analysis'..."
+            "🚀 Starting Worker on queues 'backgammon_analysis' and 'backgammon_batch_analysis'..."
         )
         worker.work()
     except Exception as e:

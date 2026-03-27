@@ -20,6 +20,7 @@ import zipfile
 import io
 import shutil
 import uuid
+import tempfile
 import requests
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -53,7 +54,7 @@ from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.kbds.inline.autoanalize import get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.routers.autoanalize.autoanaliz import analyze_file_by_path
-from bot.common.service.sync_folder_service import SyncthingSync
+from bot.common.service.hint_s3_service import HintS3Storage
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.general_states import GeneralStates
@@ -97,9 +98,25 @@ class HintViewerStates(StatesGroup):
     stats_player_selection = State()
 
 
+def _upload_mat_to_s3(local_path: str, key: str) -> None:
+    HintS3Storage.from_settings().upload_file(local_path, key)
 
 
-syncthing_sync = SyncthingSync()
+def load_analysis_json_from_s3(game_id: str, game_num: str | None = None):
+    """Синхронно: читает JSON анализа из S3 (для asyncio.to_thread)."""
+    s3 = HintS3Storage.from_settings()
+    if game_num:
+        key = HintS3Storage.game_json_key(game_id, game_num)
+        if not s3.exists(key):
+            raise FileNotFoundError(
+                f"JSON файл для игры {game_num} в {game_id} не найден"
+            )
+        return json.loads(s3.download_bytes(key).decode("utf-8"))
+    key = s3.summary_json_key(game_id)
+    if not s3.exists(key):
+        raise FileNotFoundError(f"JSON файл для {game_id} не найден")
+    return json.loads(s3.download_bytes(key).decode("utf-8"))
+
 
 WORKER_COUNT_CACHE_KEY = "cache:worker_count"
 WORKER_CACHE_TTL = 10
@@ -197,30 +214,57 @@ def remove_active_job(user_id: int, job_id: str):
     ),
     UserInfo(),
 )
-async def hint_viewer_start(message: Message, state: FSMContext, user_info: User, session_without_commit: AsyncSession):
+async def hint_viewer_start(
+    message: Message,
+    state: FSMContext,
+    user_info: User,
+    session_without_commit: AsyncSession,
+):
     message_dao = MessagesTextsDAO(session_without_commit)
     await state.set_state(HintViewerStates.choose_type)
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text=await message_dao.get_text("button_error_single", user_info.lang_code), callback_data="hint_type:single")
-    keyboard.button(text=await message_dao.get_text("button_error_batch", user_info.lang_code), callback_data="hint_type:batch")
+    keyboard.button(
+        text=await message_dao.get_text("button_error_single", user_info.lang_code),
+        callback_data="hint_type:single",
+    )
+    keyboard.button(
+        text=await message_dao.get_text("button_error_batch", user_info.lang_code),
+        callback_data="hint_type:batch",
+    )
     keyboard.adjust(1)
-    await message.answer(await message_dao.get_text("hint_viewer_start", user_info.lang_code), reply_markup=keyboard.as_markup())
+    await message.answer(
+        await message_dao.get_text("hint_viewer_start", user_info.lang_code),
+        reply_markup=keyboard.as_markup(),
+    )
 
 
 @hint_viewer_router.callback_query(
-    F.data.startswith("hint_type:"), StateFilter(HintViewerStates.choose_type), UserInfo()
+    F.data.startswith("hint_type:"),
+    StateFilter(HintViewerStates.choose_type),
+    UserInfo(),
 )
-async def handle_hint_type_selection(callback: CallbackQuery, state: FSMContext, user_info: User, session_without_commit: AsyncSession):
+async def handle_hint_type_selection(
+    callback: CallbackQuery,
+    state: FSMContext,
+    user_info: User,
+    session_without_commit: AsyncSession,
+):
     message_dao = MessagesTextsDAO(session_without_commit)
     hint_type = callback.data.split(":")[1]
     if hint_type == "single":
         await state.set_state(HintViewerStates.waiting_file)
-        await callback.message.answer(await message_dao.get_text("hint_viewer_single_upload", user_info.lang_code))
+        await callback.message.answer(
+            await message_dao.get_text("hint_viewer_single_upload", user_info.lang_code)
+        )
     else:
         await state.set_state(HintViewerStates.uploading_sequential)
         await state.update_data(file_paths=[])
         keyboard = ReplyKeyboardBuilder()
-        keyboard.button(text=await message_dao.get_text("hint_viewer_batch_upload_stop", user_info.lang_code))
+        keyboard.button(
+            text=await message_dao.get_text(
+                "hint_viewer_batch_upload_stop", user_info.lang_code
+            )
+        )
         await callback.message.answer(
             await message_dao.get_text("hint_viewer_batch_upload", user_info.lang_code),
             reply_markup=keyboard.as_markup(resize_keyboard=True),
@@ -242,7 +286,9 @@ async def handle_batch_stop(
     file_paths = data.get("file_paths", [])
     if not file_paths:
         await message.answer(
-            await message_dao.get_text("hint_viewer_batch_no_file", user_info.lang_code),
+            await message_dao.get_text(
+                "hint_viewer_batch_no_file", user_info.lang_code
+            ),
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
         await state.clear()
@@ -265,13 +311,22 @@ async def handle_batch_stop(
 @hint_viewer_router.message(
     F.document, StateFilter(HintViewerStates.uploading_sequential), UserInfo()
 )
-async def handle_sequential_hint_file(message: Message, state: FSMContext, user_info: User, session_without_commit: AsyncSession):
+async def handle_sequential_hint_file(
+    message: Message,
+    state: FSMContext,
+    user_info: User,
+    session_without_commit: AsyncSession,
+):
     message_dao = MessagesTextsDAO(session_without_commit)
     async with message_lock:
         doc = message.document
         fname = doc.file_name
         if not (fname.lower().endswith(".mat") or fname.lower().endswith(".zip")):
-            await message.reply(await message_dao.get_text("hint_viewer_batch_file_extension_error", user_info.lang_code),)
+            await message.reply(
+                await message_dao.get_text(
+                    "hint_viewer_batch_file_extension_error", user_info.lang_code
+                ),
+            )
             return
 
         # Скачиваем файл
@@ -298,22 +353,40 @@ async def handle_sequential_hint_file(message: Message, state: FSMContext, user_
                 # Удаляем временный ZIP файл
                 os.remove(temp_path)
                 await message.answer(
-                    await message_dao.get_text("hint_viewer_batch_file_extracted", user_info.lang_code, zip_size=len([p for p in file_paths if p.endswith('.mat')])),
+                    await message_dao.get_text(
+                        "hint_viewer_batch_file_extracted",
+                        user_info.lang_code,
+                        zip_size=len([p for p in file_paths if p.endswith(".mat")]),
+                    ),
                 )
             except Exception as e:
                 logger.error(f"Error extracting ZIP: {e}")
-                await message.reply(await message_dao.get_text("hint_viewer_batch_file_extracted_error", user_info.lang_code))
+                await message.reply(
+                    await message_dao.get_text(
+                        "hint_viewer_batch_file_extracted_error", user_info.lang_code
+                    )
+                )
                 os.remove(temp_path)
                 return
         else:
             # Обычный .mat файл
             file_paths.append(temp_path)
-            await message.answer(await message_dao.get_text("hint_viewer_batch_file_added", user_info.lang_code, file_count=len(file_paths)))
+            await message.answer(
+                await message_dao.get_text(
+                    "hint_viewer_batch_file_added",
+                    user_info.lang_code,
+                    file_count=len(file_paths),
+                )
+            )
 
         await state.update_data(file_paths=file_paths)
 
 
-@hint_viewer_router.message(F.document, StateFilter(HintViewerStates.waiting_file), UserInfo(),)
+@hint_viewer_router.message(
+    F.document,
+    StateFilter(HintViewerStates.waiting_file),
+    UserInfo(),
+)
 async def hint_viewer_menu(
     message: Message, state: FSMContext, user_info: User, i18n, session_without_commit
 ):
@@ -323,19 +396,25 @@ async def hint_viewer_menu(
     fname = doc.file_name
 
     if not fname.lower().endswith(".mat"):
-        await message.reply(await message_dao.get_text("hint_viewer_sin_file_ext_error", user_info.lang_code))
+        await message.reply(
+            await message_dao.get_text(
+                "hint_viewer_sin_file_ext_error", user_info.lang_code
+            )
+        )
         return
 
     # === Генерируем уникальный ID для этой задачи ===
     game_id = random_filename(ext="")
-    mat_path = f"files/{fname}"
-    json_path = f"files/{game_id}.json"
+    local_mat = os.path.join("files", f"{game_id}_{fname}")
+    mat_s3_key = HintS3Storage.mat_key(game_id)
     job_id = f"hint_{message.from_user.id}_{uuid.uuid4().hex[:8]}"
 
     try:
         if not can_enqueue_job(message.from_user.id):
             await message.answer(
-                await message_dao.get_text("hint_viewer_sin_active_job_err", user_info.lang_code)
+                await message_dao.get_text(
+                    "hint_viewer_sin_active_job_err", user_info.lang_code
+                )
             )
             await state.clear()
             return
@@ -343,29 +422,25 @@ async def hint_viewer_menu(
         file = await message.bot.get_file(doc.file_id)
         os.makedirs("files", exist_ok=True)
 
-        with open(mat_path, "wb") as f:
+        with open(local_mat, "wb") as f:
             await message.bot.download_file(file.file_path, f)
 
-        logger.info(f"Файл скачан локально: {mat_path}")
+        logger.info(f"Файл скачан локально: {local_mat}")
 
-        # Триггер scan — Syncthing сразу заметит файл и начнёт отправку на воркеры
-        await syncthing_sync.trigger_scan()
-
-        with open(mat_path, "r", encoding="utf-8") as f:
+        with open(local_mat, "r", encoding="utf-8") as f:
             content = f.read()
         red_player, black_player = extract_player_names(content)
-        estimated_time = estimate_processing_time(mat_path)
+        estimated_time = estimate_processing_time(local_mat)
+        await asyncio.to_thread(_upload_mat_to_s3, local_mat, mat_s3_key)
+
         job = task_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_job",
-            mat_path,
-            json_path,
+            game_id,
             str(message.from_user.id),
             job_id=job_id,
-            game_id=game_id,
         )
 
-        # Сохраняем mat_path сразу
-        await redis_client.set(f"mat_path:{game_id}", mat_path, expire=86400)
+        await redis_client.set(f"mat_path:{game_id}", mat_s3_key, expire=86400)
 
         add_active_job(message.from_user.id, job_id)
         logger.info(
@@ -378,8 +453,7 @@ async def hint_viewer_menu(
             json.dumps(
                 {
                     "game_id": game_id,
-                    "mat_path": mat_path,
-                    "json_path": json_path,
+                    "mat_s3_key": mat_s3_key,
                     "red_player": red_player,
                     "black_player": black_player,
                     "user_id": message.from_user.id,
@@ -388,7 +462,10 @@ async def hint_viewer_menu(
             expire=3600,
         )
         queue_warning = await get_queue_position_message(
-            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"], session_without_commit, user_info
+            redis_rq,
+            ["backgammon_analysis", "backgammon_batch_analysis"],
+            session_without_commit,
+            user_info,
         )
         if queue_warning:
             user_dao = UserDAO(session_without_commit)
@@ -405,22 +482,27 @@ async def hint_viewer_menu(
                     )
             await message.answer(queue_warning)
 
-        status_text = await message_dao.get_text("hint_viewer_sin_file_accepted", user_info.lang_code, estimated_time=estimated_time)
+        status_text = await message_dao.get_text(
+            "hint_viewer_sin_file_accepted",
+            user_info.lang_code,
+            estimated_time=estimated_time,
+        )
         await message.answer(status_text, parse_mode="Markdown")
 
         # === Сохраняем данные в состояние для проверки статуса ===
         await state.update_data(
             job_id=job_id,
             game_id=game_id,
-            mat_path=mat_path,
-            json_path=json_path,
+            mat_s3_key=mat_s3_key,
             red_player=red_player,
             black_player=black_player,
         )
 
         # === Запускаем фоновую проверку статуса ===
         asyncio.create_task(
-            check_job_status(message, job_id, state, i18n, session_without_commit, user_info)
+            check_job_status(
+                message, job_id, state, i18n, session_without_commit, user_info
+            )
         )
 
     except Exception as e:
@@ -438,15 +520,25 @@ async def handle_show_stats(
     session_without_commit: AsyncSession,
 ):
     game_id = callback.data.split(":")[1]
-    mat_path = await redis_client.get(f"mat_path:{game_id}")
+    mat_ref = await redis_client.get(f"mat_path:{game_id}")
 
-    if not mat_path:
+    if not mat_ref:
         await callback.answer("Файл не найден.")
         return
     waiting_manager = WaitingMessageManager(callback.from_user.id, callback.bot, i18n)
+    temp_mat: str | None = None
     try:
         await waiting_manager.start()
-        with open(mat_path, "r", encoding="utf-8") as f:
+        if os.path.isfile(mat_ref):
+            path_for_mat = mat_ref
+        else:
+            fd, temp_mat = tempfile.mkstemp(suffix=".mat")
+            os.close(fd)
+            s3 = HintS3Storage.from_settings()
+            await asyncio.to_thread(s3.download_file, mat_ref, temp_mat)
+            path_for_mat = temp_mat
+
+        with open(path_for_mat, "r", encoding="utf-8") as f:
             content = f.read()
         match_length = extract_match_length(content)
         dao = UserDAO(session_without_commit)
@@ -470,7 +562,7 @@ async def handle_show_stats(
         await callback.answer()
 
         result = await analyze_file_by_path(
-            mat_path,
+            path_for_mat,
             "mat",
             user_info,
             session_without_commit,
@@ -482,7 +574,7 @@ async def handle_show_stats(
 
         if isinstance(result, tuple) and len(result) == 4:
             # Multiple players
-            analysis_data, new_file_path, player_names,duration = result
+            analysis_data, new_file_path, player_names, duration = result
             await state.update_data(
                 analysis_data=analysis_data,
                 file_name=os.path.basename(new_file_path),
@@ -521,6 +613,11 @@ async def handle_show_stats(
         logger.error(f"Ошибка при показе статистики: {e}")
         await callback.answer("Ошибка при обработке статистики.")
     finally:
+        if temp_mat and os.path.isfile(temp_mat):
+            try:
+                os.remove(temp_mat)
+            except OSError:
+                pass
         await waiting_manager.stop()
 
 
@@ -589,32 +686,6 @@ async def handle_hint_player_selection(
 # --- FastAPI часть ---
 
 
-def take_json_info(game_id: str, game_num: str = None):
-    """
-    Загружает и возвращает JSON с анализом для указанного game_id и номера игры.
-    """
-    if game_num:
-        # Ищем файл конкретной игры
-        games_dir = f"files/{game_id}_games"
-        game_file = f"{games_dir}/game_{game_num}.json"
-        if os.path.exists(game_file):
-            with open(game_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        else:
-            raise FileNotFoundError(
-                f"JSON файл для игры {game_num} в {game_id} не найден"
-            )
-    else:
-        path = f"files/{game_id}.json"
-        if not os.path.exists(path):
-            raise FileNotFoundError(f"JSON файл для {game_id} не найден")
-
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        return data
-
-
 @hint_viewer_api_router.get("/hint-viewer")
 async def get_hint_viewer_web(request: Request, game_id: str = None):
     """
@@ -625,21 +696,19 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
 
     # Add timestamp for cache-busting
     import time
+
     cache_timestamp = int(time.time())
-    
+
     response = templates.TemplateResponse(
-        "hint_viewer.html", {
-            "request": request, 
-            "game_id": game_id,
-            "cache_timestamp": cache_timestamp
-        }
+        "hint_viewer.html",
+        {"request": request, "game_id": game_id, "cache_timestamp": cache_timestamp},
     )
-    
+
     # Add cache-busting headers to prevent HTML caching
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    
+
     return response
 
 
@@ -650,7 +719,7 @@ async def get_analysis_data(game_id: str, game_num: str = None):
     Если game_num не указан, возвращает список всех игр.
     """
     try:
-        data = take_json_info(game_id, game_num)
+        data = await asyncio.to_thread(load_analysis_json_from_s3, game_id, game_num)
         return data
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Game {game_id} not found")
@@ -835,8 +904,6 @@ async def send_to_support(request: Request):
         raise HTTPException(status_code=500, detail="Error sending support request")
 
 
-
-
 @hint_viewer_api_router.post("/api/save_screenshot")
 async def save_screenshot(request: Request):
     """
@@ -974,9 +1041,7 @@ async def upload_screenshots(request: Request):
         # Очищаем буфер
         shutil.rmtree(buffer_dir)
 
-        logger.info(
-            f"Screenshots ZIP sent to chat_id: {chat_id}, {file_count} files"
-        )
+        logger.info(f"Screenshots ZIP sent to chat_id: {chat_id}, {file_count} files")
         return {"status": "success"}
 
     except HTTPException:
@@ -1008,20 +1073,37 @@ async def process_batch_hint_files(
         # Проверяем, может ли пользователь добавить задачу
         if not can_enqueue_job(message.from_user.id):
             await message.answer(
-                await message_dao.get_text("hint_viewer_batch_active_job_err", user_info.lang_code)
+                await message_dao.get_text(
+                    "hint_viewer_batch_active_job_err", user_info.lang_code
+                )
             )
             await state.clear()
             return
 
         total_files = len(file_paths)
-        await message.answer(await message_dao.get_text("hint_viewer_files_accepted", user_info.lang_code, total_files=total_files))
+        await message.answer(
+            await message_dao.get_text(
+                "hint_viewer_files_accepted",
+                user_info.lang_code,
+                total_files=total_files,
+            )
+        )
 
-        # Триггер scan — Syncthing заметит все файлы и начнёт отправку на воркеры
-        await syncthing_sync.trigger_scan()
+        s3 = HintS3Storage.from_settings()
+
+        def upload_batch_inputs():
+            keys = []
+            for i, local_path in enumerate(file_paths):
+                key = s3.batch_input_key(batch_id, i)
+                s3.upload_file(local_path, key)
+                keys.append(key)
+            return keys
+
+        mat_s3_keys = await asyncio.to_thread(upload_batch_inputs)
 
         job = batch_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_batch_job",
-            file_paths,
+            mat_s3_keys,
             str(message.from_user.id),
             batch_id,
             job_id,
@@ -1035,7 +1117,7 @@ async def process_batch_hint_files(
         batch_info = {
             "batch_id": batch_id,
             "job_id": job_id,
-            "file_paths": file_paths,
+            "mat_s3_keys": mat_s3_keys,
             "user_id": message.from_user.id,
             "total_files": total_files,
             "status": "queued",
@@ -1046,7 +1128,10 @@ async def process_batch_hint_files(
             expire=3600,  # 1 час
         )
         queue_warning = await get_queue_position_message(
-            redis_rq, ["backgammon_analysis", "backgammon_batch_analysis"], session_without_commit, user_info
+            redis_rq,
+            ["backgammon_analysis", "backgammon_batch_analysis"],
+            session_without_commit,
+            user_info,
         )
         if queue_warning:
             user_dao = UserDAO(session_without_commit)
@@ -1066,7 +1151,12 @@ async def process_batch_hint_files(
             f"Batch {batch_id} queued with {total_files} files (job_id={job_id})"
         )
 
-        summary = await message_dao.get_text("hint_viewer_batch_summary", user_info.lang_code, batch_id=batch_id, total_files=total_files)
+        summary = await message_dao.get_text(
+            "hint_viewer_batch_summary",
+            user_info.lang_code,
+            batch_id=batch_id,
+            total_files=total_files,
+        )
         await message.answer(summary, parse_mode="HTML")
 
         await state.clear()
@@ -1078,7 +1168,12 @@ async def process_batch_hint_files(
 
 
 async def check_job_status(
-    message: Message, job_id: str, state: FSMContext, i18n, session_without_commit, user_info
+    message: Message,
+    job_id: str,
+    state: FSMContext,
+    i18n,
+    session_without_commit,
+    user_info,
 ):
     """
     Фоновая задача для проверки статуса анализа.
@@ -1109,28 +1204,14 @@ async def check_job_status(
                         await UserDAO(session_without_commit).decrease_analiz_balance(
                             user_id=message.from_user.id, service_type="HINTS"
                         )
-                        
+
                         # Сохраняем mat_path для статистики
                         game_id = job_info["game_id"]
                         await redis_client.set(
                             f"mat_path:{game_id}", result["mat_path"], expire=7200
                         )
 
-                        # Создаём ZIP архив если есть игры
-                        games_dir = result["games_dir"]
-                        if os.path.exists(games_dir) and result["has_games"]:
-                            # Создаём ZIP
-                            zip_buffer = io.BytesIO()
-                            with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-                                for root, _, files in os.walk(games_dir):
-                                    for file in files:
-                                        file_path = os.path.join(root, file)
-                                        arcname = os.path.relpath(file_path, games_dir)
-                                        zip_file.write(file_path, arcname)
-
-                            zip_buffer.seek(0)
-
-                            # Отправляем кнопки для просмотра
+                        if result["has_games"]:
                             red_player = job_info["red_player"]
                             black_player = job_info["black_player"]
 
@@ -1143,13 +1224,19 @@ async def check_job_status(
                                 inline_keyboard=[
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text("hint_viewer_all_moves_b", user_info.lang_code),
+                                            text=await message_dao.get_text(
+                                                "hint_viewer_all_moves_b",
+                                                user_info.lang_code,
+                                            ),
                                             web_app=WebAppInfo(url=mini_app_url_all),
                                         ),
                                     ],
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text("hint_viewer_both_errors_b", user_info.lang_code),
+                                            text=await message_dao.get_text(
+                                                "hint_viewer_both_errors_b",
+                                                user_info.lang_code,
+                                            ),
                                             web_app=WebAppInfo(
                                                 url=mini_app_url_both_errors
                                             ),
@@ -1157,7 +1244,11 @@ async def check_job_status(
                                     ],
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text("hint_viewer_player_error_b", user_info.lang_code, player=red_player),
+                                            text=await message_dao.get_text(
+                                                "hint_viewer_player_error_b",
+                                                user_info.lang_code,
+                                                player=red_player,
+                                            ),
                                             web_app=WebAppInfo(
                                                 url=mini_app_url_red_errors
                                             ),
@@ -1165,7 +1256,11 @@ async def check_job_status(
                                     ],
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text("hint_viewer_player_error_b", user_info.lang_code, player=black_player),
+                                            text=await message_dao.get_text(
+                                                "hint_viewer_player_error_b",
+                                                user_info.lang_code,
+                                                player=black_player,
+                                            ),
                                             web_app=WebAppInfo(
                                                 url=mini_app_url_black_errors
                                             ),
@@ -1173,7 +1268,10 @@ async def check_job_status(
                                     ],
                                     [
                                         InlineKeyboardButton(
-                                            text=await message_dao.get_text("hint_viewer_show_stat", user_info.lang_code),
+                                            text=await message_dao.get_text(
+                                                "hint_viewer_show_stat",
+                                                user_info.lang_code,
+                                            ),
                                             callback_data=f"show_stats:{game_id}",
                                         ),
                                     ],
@@ -1181,8 +1279,23 @@ async def check_job_status(
                             )
 
                             await message.answer(
-                                text = await message_dao.get_text("hint_viewer_finished", user_info.lang_code, red_player=red_player, black_player=black_player),
+                                text=await message_dao.get_text(
+                                    "hint_viewer_finished",
+                                    user_info.lang_code,
+                                    red_player=red_player,
+                                    black_player=black_player,
+                                ),
                                 reply_markup=keyboard,
+                            )
+                            await session_without_commit.commit()
+                        else:
+                            await message.answer(
+                                await message_dao.get_text(
+                                    "hint_viewer_finished",
+                                    user_info.lang_code,
+                                    red_player=job_info["red_player"],
+                                    black_player=job_info["black_player"],
+                                )
                             )
                             await session_without_commit.commit()
                     else:
@@ -1231,22 +1344,22 @@ async def check_admin_status(request: Request):
     try:
         data = await request.json()
         init_data = data.get("initData")
-        
+
         if not init_data:
             raise HTTPException(status_code=400, detail="Missing initData")
-        
+
         user_data = verify_telegram_webapp_data(init_data)
         if not user_data:
             raise HTTPException(status_code=401, detail="Invalid Telegram data")
-        
+
         user_id = user_data.get("user", {}).get("id")
         if not user_id:
             raise HTTPException(status_code=400, detail="Invalid user data")
-        
+
         is_admin = user_id in settings.ROOT_ADMIN_IDS
-        
+
         return {"is_admin": is_admin, "user_id": user_id}
-        
+
     except HTTPException:
         raise
     except Exception as e:

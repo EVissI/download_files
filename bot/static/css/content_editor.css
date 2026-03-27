@@ -104,9 +104,6 @@
     overflow: hidden;
 }
 
-/* Левый тулбар с инструментами (для возможной отдельной стилизации) */
-.toolbar-tools {}
-
 .toolbar h3 {
     padding: 15px;
     background: #383838;
@@ -321,9 +318,6 @@
     flex-direction: column;
     overflow: hidden;
 }
-
-/* Правый тулбар свойств (для возможной отдельной стилизации) */
-.toolbar-properties {}
 
 .properties-panel h3 {
     padding: 15px;
