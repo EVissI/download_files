@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     BACKET_NAME: str
     S3_ACCESS_KEY: str
     S3_SECRET_ACESS_KEY: str
-    S3_REGION: str = "us-east-1"
+    S3_REGION: str = "ru"
     S3_ADDRESSING_STYLE: str = "path"
 
     SYNCTHING_API_KEY: str = ""
