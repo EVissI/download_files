@@ -58,6 +58,12 @@ class HintS3Storage:
     def game_json_key(game_id: str, game_num: str) -> str:
         return f"{HintS3Storage.PREFIX}/{game_id}_games/game_{game_num}.json"
 
+    def put_source_mat(self, game_id: str, local_path: str) -> str:
+        """Загружает локальный .mat в hints/{game_id}.mat, возвращает ключ объекта."""
+        key = self.mat_key(game_id)
+        self.upload_file(local_path, key)
+        return key
+
     def upload_file(
         self, local_path: str, key: str, content_type: str | None = None
     ) -> None:

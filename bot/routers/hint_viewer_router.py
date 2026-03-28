@@ -98,10 +98,6 @@ class HintViewerStates(StatesGroup):
     stats_player_selection = State()
 
 
-def _upload_mat_to_s3(local_path: str, key: str) -> None:
-    HintS3Storage.from_settings().upload_file(local_path, key)
-
-
 def load_analysis_json_from_s3(game_id: str, game_num: str | None = None):
     """Синхронно: читает JSON анализа из S3 (для asyncio.to_thread)."""
     s3 = HintS3Storage.from_settings()
@@ -406,7 +402,6 @@ async def hint_viewer_menu(
     # === Генерируем уникальный ID для этой задачи ===
     game_id = random_filename(ext="")
     local_mat = os.path.join("files", f"{game_id}_{fname}")
-    mat_s3_key = HintS3Storage.mat_key(game_id)
     job_id = f"hint_{message.from_user.id}_{uuid.uuid4().hex[:8]}"
 
     try:
@@ -431,7 +426,11 @@ async def hint_viewer_menu(
             content = f.read()
         red_player, black_player = extract_player_names(content)
         estimated_time = estimate_processing_time(local_mat)
-        await asyncio.to_thread(_upload_mat_to_s3, local_mat, mat_s3_key)
+
+        def _put_mat():
+            return HintS3Storage.from_settings().put_source_mat(game_id, local_mat)
+
+        mat_s3_key = await asyncio.to_thread(_put_mat)
 
         job = task_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_job",

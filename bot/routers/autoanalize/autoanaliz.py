@@ -39,7 +39,7 @@ from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import translator_hub, settings
 from typing import TYPE_CHECKING
 from fluentogram import TranslatorRunner
-from bot.common.service.sync_folder_service import SyncthingSync
+from bot.common.service.hint_s3_service import HintS3Storage
 
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -606,7 +606,6 @@ async def handle_send_to_hint_viewer(
         try:
             # Генерируем уникальный ID для задачи
             game_id = random_filename(ext="")
-            json_path = f"files/{game_id}.json"
             job_id = f"hint_{user_info.id}_{uuid.uuid4().hex[:8]}"
             
             # Проверяем возможность добавления задачи
@@ -617,41 +616,33 @@ async def handle_send_to_hint_viewer(
                 await state.clear()
                 return
             
-            syncthing_sync = SyncthingSync()
             logger.info(f"Файл готов к обработке: {file_path}")
-            
-            # Синхронизация с Syncthing (если нужно)
-            if not await syncthing_sync.sync_and_wait(max_wait=30):
-                logger.warning("Ошибка синхронизации Syncthing")
-            
-            if not await syncthing_sync.wait_for_file(file_path, max_wait=30):
-                await callback.message.answer("❌ Файл не найден после синхронизации")
-                await state.clear()
-                return
-            
+
             # Читаем содержимое файла
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            
+
             red_player, black_player = extract_player_names(content)
             estimated_time = estimate_processing_time(file_path)
-            
-            # Добавляем задачу в очередь
+
+            def _upload_mat():
+                return HintS3Storage.from_settings().put_source_mat(game_id, file_path)
+
+            mat_s3_key = await asyncio.to_thread(_upload_mat)
+
+            # Добавляем задачу в очередь (воркер забирает .mat из S3)
             job = task_queue.enqueue(
                 "bot.workers.hint_worker.analyze_backgammon_job",
-                file_path,
-                json_path,
+                game_id,
                 str(user_info.id),
                 job_id=job_id,
-                game_id=game_id,
             )
-            
+
             # Используем реальный ID job
             actual_job_id = job.id if hasattr(job, 'id') and job.id else job_id
             logger.info(f"Job created: requested_job_id={job_id}, actual_job_id={actual_job_id}")
-            
-            # Сохраняем mat_path
-            await redis_client.set(f"mat_path:{game_id}", file_path, expire=86400)
+
+            await redis_client.set(f"mat_path:{game_id}", mat_s3_key, expire=86400)
             
             add_active_job(user_info.id, actual_job_id)
             logger.info(f"Added active job: user_id={user_info.id}, job_id={actual_job_id}")
@@ -661,8 +652,7 @@ async def handle_send_to_hint_viewer(
                 f"job_info:{actual_job_id}",
                 json.dumps({
                     "game_id": game_id,
-                    "mat_path": file_path,
-                    "json_path": json_path,
+                    "mat_s3_key": mat_s3_key,
                     "red_player": red_player,
                     "black_player": black_player,
                     "user_id": user_info.id,
@@ -696,8 +686,7 @@ async def handle_send_to_hint_viewer(
             await state.update_data(
                 job_id=actual_job_id,
                 game_id=game_id,
-                mat_path=file_path,
-                json_path=json_path,
+                mat_s3_key=mat_s3_key,
                 red_player=red_player,
                 black_player=black_player,
             )

@@ -722,7 +722,6 @@ async def handle_send_batch_to_hint_viewer(
     """Обрабатывает отправку batch файлов на анализ ошибок после автоанализа"""
     # Ленивый импорт для избежания циклического импорта
     from bot.routers.hint_viewer_router import (
-        HintViewerStates,
         process_batch_hint_files,
         can_enqueue_job,
     )
@@ -756,12 +755,8 @@ async def handle_send_batch_to_hint_viewer(
         
         # Удаляем ключ из Redis
         await redis_client.delete(f"batch_analyze_file_paths:{user_info.id}")
-        
-        # Устанавливаем состояние для batch hint_viewer
-        await state.set_state(HintViewerStates.uploading_sequential)
-        await state.update_data(file_paths=existing_file_paths)
-        
-        # Вызываем обработчик batch hint files
+
+        # Локальные .mat заливаются в S3 и ставятся в RQ внутри process_batch_hint_files
         try:
             await process_batch_hint_files(
                 callback.message,
