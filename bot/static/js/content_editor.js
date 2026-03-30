@@ -38,6 +38,11 @@ class ContentEditor {
         /** Кэш загрузки PNG для оверлея доски в предпросмотре */
         this._boardPreviewAssetsPromise = null;
 
+        /** Шаг меток после предпросмотра: ref кадра и черновик списка строк */
+        this.cardLabelsModal = null;
+        this._labelsStepStorageRef = null;
+        this.cardLabelsDraft = [];
+
         /** Кэш открытой IndexedDB для больших аудио (вне квоты localStorage JSON) */
         this._contentEditorMediaDbPromise = null;
 
@@ -129,10 +134,115 @@ class ContentEditor {
     }
 
     init() {
+        if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__) {
+            this.initContentCardViewOnly();
+            return;
+        }
         this.createModal();
         this.loadTools();
         this.setupEventListeners();
         this.setupCanvasEvents();
+    }
+
+    /** Только просмотр сохранённой карточки (страница /content-card-view), без редактора. */
+    initContentCardViewOnly() {
+        this._contentCardTopLabels = [];
+        this._contentCardViewFileName = '';
+        if (!document.getElementById('contentCardViewRoot')) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="contentCardViewRoot" class="card-preview-modal card-preview-modal--fullscreen" style="display: none; min-height: 100vh;" aria-hidden="true">
+                    <div class="card-preview-box" style="width: 100%; max-width: 100%; box-sizing: border-box;">
+                        <div class="card-preview-header">
+                            <h3 class="card-preview-title" id="contentCardViewTitle">Карточка</h3>
+                        </div>
+                        <div class="card-preview-nav">
+                            <button type="button" class="card-preview-nav-btn" id="cardPreviewPrevBtn" onclick="contentEditor.cardPreviewPrev()">←</button>
+                            <span class="card-preview-counter" id="cardPreviewCounter">0 / 0</span>
+                            <button type="button" class="card-preview-nav-btn" id="cardPreviewNextBtn" onclick="contentEditor.cardPreviewNext()">→</button>
+                        </div>
+                        <div class="card-preview-meta" id="cardPreviewMeta"></div>
+                        <div class="card-preview-frame-host" id="cardPreviewFrameHost"></div>
+                    </div>
+                </div>
+            `);
+        }
+        this.cardPreviewModal = document.getElementById('contentCardViewRoot');
+        this.cardLabelsModal = null;
+        this.modal = null;
+        this.canvas = null;
+        this.toolsList = null;
+        this.propertiesContent = null;
+    }
+
+    async bootstrapContentCardViewPage() {
+        const params = new URLSearchParams(window.location.search);
+        const cardId = params.get('content_card_id');
+        const metaHost = document.getElementById('cardPreviewMeta');
+        const showErr = (msg) => {
+            const t = this.escapeHtml(msg);
+            if (metaHost) {
+                metaHost.innerHTML = `<span class="card-preview-meta-empty">${t}</span>`;
+            }
+            if (this.cardPreviewModal) {
+                this.cardPreviewModal.style.display = 'flex';
+                this.cardPreviewModal.setAttribute('aria-hidden', 'false');
+            }
+        };
+        if (!cardId) {
+            showErr('Не указан content_card_id в адресе страницы');
+            return;
+        }
+        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        if (!initData) {
+            showErr('Откройте страницу из Telegram (нужен initData)');
+            return;
+        }
+        try {
+            const r = await fetch('/api/content_cards/fetch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    init_data: initData,
+                    content_card_id: parseInt(cardId, 10),
+                }),
+            });
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) {
+                let msg = data.detail;
+                if (Array.isArray(msg)) {
+                    msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
+                } else if (msg && typeof msg === 'object') {
+                    msg = JSON.stringify(msg);
+                }
+                throw new Error(msg || `Ошибка ${r.status}`);
+            }
+            const titleEl = document.getElementById('contentCardViewTitle');
+            if (titleEl && data.file_name) {
+                titleEl.textContent = data.file_name;
+            }
+            this._contentCardViewFileName = data.file_name || '';
+            this._contentCardTopLabels = Array.isArray(data.labels) ? data.labels : [];
+            const fw = data.frames || {};
+            const framesArr = Array.isArray(fw.frames) ? fw.frames.slice() : [];
+            framesArr.sort((a, b) => (a.order != null ? a.order : 0) - (b.order != null ? b.order : 0));
+            this.cardPreviewRefs = framesArr.map((f) => ({
+                frameId: f.frameId,
+                saveSlotIndex: f.saveSlotIndex != null ? f.saveSlotIndex : 0,
+                payload: f.payload,
+                storageKey: null,
+            }));
+            this.cardPreviewIndex = 0;
+            if (this.cardPreviewModal) {
+                this.cardPreviewModal.style.display = 'flex';
+                this.cardPreviewModal.setAttribute('aria-hidden', 'false');
+            }
+            document.body.style.overflow = 'hidden';
+            window.addEventListener('resize', this._onCardPreviewResize);
+            this.refreshCardPreviewUI();
+        } catch (e) {
+            console.error('bootstrapContentCardViewPage:', e);
+            showErr(e.message || String(e));
+        }
     }
 
     createModal() {
@@ -199,13 +309,16 @@ class ContentEditor {
                     <div class="card-preview-box" role="dialog" aria-modal="true">
                         <div class="card-preview-header">
                             <h3 class="card-preview-title">Предпросмотр карточки</h3>
-                            <button type="button" class="card-preview-close" onclick="contentEditor.closeCardPreviewModal()" aria-label="Закрыть">&times;</button>
+                            <div class="card-preview-header-right">
+                                <button type="button" class="card-preview-cloud-btn" onclick="contentEditor.saveCardToCloud()" title="Сохранить все кадры на сервер">На сервер</button>
+                                <button type="button" class="card-preview-close" onclick="contentEditor.closeCardPreviewModal()" aria-label="Закрыть">&times;</button>
+                            </div>
                         </div>
                         <div class="card-preview-nav">
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewPrevBtn" onclick="contentEditor.cardPreviewPrev()">←</button>
                             <span class="card-preview-counter" id="cardPreviewCounter">0 / 0</span>
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewNextBtn" onclick="contentEditor.cardPreviewNext()">→</button>
-                            <button type="button" class="card-preview-approve" id="cardPreviewApproveBtn" onclick="contentEditor.cardPreviewApprove()">Сохранить</button>
+                            <button type="button" class="card-preview-approve" id="cardPreviewApproveBtn" onclick="contentEditor.cardPreviewApprove()">Далее</button>
                         </div>
                         <div class="card-preview-meta" id="cardPreviewMeta"></div>
                         <div class="card-preview-frame-host" id="cardPreviewFrameHost"></div>
@@ -217,6 +330,37 @@ class ContentEditor {
             `);
         }
         this.cardPreviewModal = document.getElementById('cardPreviewModal');
+
+        if (!document.getElementById('cardLabelsModal')) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="cardLabelsModal" class="card-labels-modal" style="display: none;" aria-hidden="true">
+                    <div class="card-labels-overlay" onclick="contentEditor.cancelCardLabelsStep()"></div>
+                    <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="cardLabelsModalTitle">
+                        <h3 id="cardLabelsModalTitle" class="card-labels-title">Метки карточки</h3>
+                        <p class="card-labels-hint">Добавьте любые метки (текст). Их может быть сколько угодно.</p>
+                        <div class="card-labels-input-row">
+                            <input type="text" id="cardLabelsInput" class="card-labels-input" maxlength="500" placeholder="Введите метку и нажмите Enter или «Добавить»" autocomplete="off" />
+                            <button type="button" class="card-labels-add-btn" onclick="contentEditor.addCardLabelFromInput()">Добавить</button>
+                        </div>
+                        <div id="cardLabelsList" class="card-labels-list" aria-live="polite"></div>
+                        <div class="card-labels-actions">
+                            <button type="button" class="card-labels-back-btn" onclick="contentEditor.cancelCardLabelsStep()">К предпросмотру</button>
+                            <button type="button" class="card-labels-save-btn" onclick="contentEditor.confirmCardLabels()">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+        this.cardLabelsModal = document.getElementById('cardLabelsModal');
+        const labelsInput = document.getElementById('cardLabelsInput');
+        if (labelsInput) {
+            labelsInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.addCardLabelFromInput();
+                }
+            });
+        }
 
         this.canvas = document.getElementById('canvas');
         this.toolsList = document.getElementById('toolsList');
@@ -2366,6 +2510,10 @@ class ContentEditor {
                 this.cancelSaveFrame();
                 return;
             }
+            if (this.cardLabelsModal && this.cardLabelsModal.style.display === 'flex') {
+                this.cancelCardLabelsStep();
+                return;
+            }
             if (this.cardPreviewModal && this.cardPreviewModal.style.display === 'flex') {
                 this.closeCardPreviewModal();
             }
@@ -2416,6 +2564,7 @@ class ContentEditor {
             const frameId = this.getFrameIdForSave();
             const saveSlotIndex = this.allocateNextSaveSlotIndex(frameId);
             const payload = await this.buildFrameSavePayload(frameId, saveSlotIndex);
+            await this.uploadPayloadMediaToS3(payload);
             const key = this.frameStorageKey(frameId, saveSlotIndex);
             localStorage.setItem(key, JSON.stringify(payload));
             this.showNotification(`Кадр сохранён №${saveSlotIndex + 1}`, 'success');
@@ -2654,10 +2803,31 @@ class ContentEditor {
                     break;
                 }
                 case 'upload-image': {
-                    item.imageUrl = el.dataset.imageUrl || '';
+                    const s3k = el.dataset.imageS3Key || '';
+                    if (s3k) {
+                        item.imageS3Key = s3k;
+                        if (el.dataset.imageContentType) {
+                            item.imageContentType = el.dataset.imageContentType;
+                        }
+                        item.imageUrl = '';
+                        delete item.dataset.imageUrl;
+                    } else {
+                        item.imageUrl = el.dataset.imageUrl || '';
+                    }
                     break;
                 }
                 case 'audio-file': {
+                    const s3a = el.dataset.audioS3Key || '';
+                    if (s3a) {
+                        item.audioS3Key = s3a;
+                        item.audioName = el.dataset.audioName || '';
+                        item.audioUrl = '';
+                        item.audioStorageId = '';
+                        item.dataset.audioS3Key = s3a;
+                        delete item.dataset.audioUrl;
+                        delete item.dataset.audioStorageId;
+                        break;
+                    }
                     const url = el.dataset.audioUrl || '';
                     let sid = el.dataset.audioStorageId || '';
                     if (url.startsWith('data:')) {
@@ -2697,8 +2867,14 @@ class ContentEditor {
                     break;
                 }
                 case 'board-illustration': {
+                    const s3b = el.dataset.boardImageS3Key || '';
                     const img = el.querySelector('img');
-                    item.imageDataUrl = img ? img.src : '';
+                    if (s3b) {
+                        item.boardImageS3Key = s3b;
+                        item.imageDataUrl = '';
+                    } else {
+                        item.imageDataUrl = img ? img.src : '';
+                    }
                     break;
                 }
                 default:
@@ -2756,6 +2932,280 @@ class ContentEditor {
         const gameId = (b && b.gameId) ? b.gameId : 'default';
         const gameNum = b && b.currentGameNum != null ? b.currentGameNum : null;
         return { gameId, gameNum, board: b };
+    }
+
+    /**
+     * chat_id для API (глобальный chatId из hint_viewer или query-параметр).
+     */
+    getHintViewerChatIdForApi() {
+        try {
+            const w = typeof window !== 'undefined' ? window : undefined;
+            const cid = w && (w.hintViewerChatId != null ? w.hintViewerChatId : w.chatId);
+            if (cid != null && String(cid).length) {
+                return String(cid);
+            }
+        } catch (e) {
+            /* ignore */
+        }
+        try {
+            return new URLSearchParams(window.location.search).get('chat_id') || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    buildContentCardFileNameForCloud() {
+        const rawMat =
+            typeof window !== 'undefined' && window.hintViewerMatFileName
+                ? String(window.hintViewerMatFileName)
+                : '';
+        const mat = rawMat.replace(/[\\/]/g, '_').trim() || 'card';
+        const { gameId, gameNum } = this.getGameContextForCard();
+        const g = gameNum != null ? `_g${gameNum}` : '';
+        let base = `${mat}_${gameId}${g}`;
+        if (base.length > 255) {
+            base = base.slice(0, 255);
+        }
+        return base;
+    }
+
+    collectUnifiedLabelsFromFrameRefs(refs) {
+        const seen = new Set();
+        const out = [];
+        for (const ref of refs) {
+            try {
+                const raw = localStorage.getItem(ref.storageKey);
+                const p = raw ? JSON.parse(raw) : null;
+                if (p && Array.isArray(p.labels)) {
+                    for (const x of p.labels) {
+                        if (typeof x !== 'string') continue;
+                        const t = x.trim().slice(0, 255);
+                        if (t && !seen.has(t)) {
+                            seen.add(t);
+                            out.push(t);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('collectUnifiedLabelsFromFrameRefs:', ref.storageKey, e);
+            }
+        }
+        return out;
+    }
+
+    buildFramesPayloadForCloudSave(refs) {
+        const frames = refs.map((ref, order) => {
+            const raw = localStorage.getItem(ref.storageKey);
+            let payload = null;
+            try {
+                payload = raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                throw new Error('Некорректный JSON кадра: ' + ref.storageKey);
+            }
+            if (!payload || !payload.frameId) {
+                throw new Error('Повреждённый кадр: ' + ref.storageKey);
+            }
+            return {
+                frameId: ref.frameId,
+                saveSlotIndex: ref.saveSlotIndex != null ? ref.saveSlotIndex : 0,
+                order,
+                payload,
+            };
+        });
+        return { version: 1, frames };
+    }
+
+    /**
+     * URL медиа карточки: GET без привязки к владельцу (доступ по знанию s3_key из JSON карточки).
+     */
+    buildContentCardMediaUrl(s3Key) {
+        if (!s3Key) {
+            return '';
+        }
+        return `/api/content_cards/media?${new URLSearchParams({ key: s3Key }).toString()}`;
+    }
+
+    _guessExtFromMime(mime, fallbackName) {
+        const m = (mime || '').split(';')[0].trim().toLowerCase();
+        const map = {
+            'image/png': 'png',
+            'image/jpeg': 'jpg',
+            'image/webp': 'webp',
+            'image/gif': 'gif',
+            'audio/mpeg': 'mp3',
+            'audio/mp4': 'm4a',
+            'audio/webm': 'webm',
+            'audio/ogg': 'ogg',
+            'audio/wav': 'wav',
+            'audio/x-wav': 'wav',
+        };
+        if (map[m]) return map[m];
+        if (fallbackName && fallbackName.includes('.')) {
+            return fallbackName.split('.').pop().slice(0, 8) || 'bin';
+        }
+        return 'bin';
+    }
+
+    async uploadBinaryToContentCardMedia(blob, filenameHint, contentType) {
+        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        if (!initData) {
+            throw new Error('Нет init_data для загрузки файла');
+        }
+        const ext = this._guessExtFromMime(blob.type || contentType, filenameHint);
+        const fname = (filenameHint && filenameHint.replace(/[\\/]/g, '_')) || `file.${ext}`;
+        const fd = new FormData();
+        fd.append('init_data', initData);
+        fd.append('file', blob, fname.includes('.') ? fname : `${fname}.${ext}`);
+        const r = await fetch('/api/content_cards/media/upload', { method: 'POST', body: fd });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+            const d = data.detail;
+            throw new Error(typeof d === 'string' ? d : `upload ${r.status}`);
+        }
+        if (!data.s3_key) {
+            throw new Error('Нет s3_key в ответе');
+        }
+        return { s3_key: data.s3_key, content_type: data.content_type || blob.type || '' };
+    }
+
+    /**
+     * Перед сохранением кадра/карточки: заливает тяжёлые медиа в S3, в JSON остаются s3_key.
+     */
+    async uploadPayloadMediaToS3(payload) {
+        if (!payload || !Array.isArray(payload.elements)) {
+            return;
+        }
+        if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.initData) {
+            return;
+        }
+        for (const item of payload.elements) {
+            const toolId = item.toolId || '';
+            if (toolId === 'upload-image' && !item.imageS3Key) {
+                const url = item.imageUrl || '';
+                if (url.startsWith('data:') || url.startsWith('blob:')) {
+                    const blob = await (await fetch(url)).blob();
+                    const up = await this.uploadBinaryToContentCardMedia(blob, 'frame.png', blob.type);
+                    item.imageS3Key = up.s3_key;
+                    item.imageContentType = up.content_type || blob.type || '';
+                    delete item.imageUrl;
+                }
+            } else if (toolId === 'board-illustration' && !item.boardImageS3Key) {
+                const d = item.imageDataUrl || '';
+                if (d.startsWith('data:image')) {
+                    const blob = await (await fetch(d)).blob();
+                    const up = await this.uploadBinaryToContentCardMedia(blob, 'board.png', blob.type);
+                    item.boardImageS3Key = up.s3_key;
+                    delete item.imageDataUrl;
+                }
+            } else if (toolId === 'audio-file' && !item.audioS3Key) {
+                let blob = null;
+                if (item.audioStorageId) {
+                    blob = await this.getAudioBlobFromIDB(item.audioStorageId);
+                } else {
+                    const au = item.audioUrl || '';
+                    if (au.startsWith('blob:') || au.startsWith('data:')) {
+                        blob = await (await fetch(au)).blob();
+                    }
+                }
+                if (blob) {
+                    const name = (item.audioName && String(item.audioName).replace(/[\\/]/g, '_')) || 'audio.webm';
+                    const up = await this.uploadBinaryToContentCardMedia(blob, name, blob.type);
+                    item.audioS3Key = up.s3_key;
+                    item.audioUrl = '';
+                    item.audioStorageId = '';
+                }
+            }
+        }
+    }
+
+    async saveCardToCloud() {
+        const refs = this.collectSavedFrameRefsForCurrentGame();
+        if (!refs.length) {
+            this.showNotification('Нет сохранённых кадров для этой игры', 'warning');
+            return;
+        }
+        let initData = '';
+        if (window.Telegram && window.Telegram.WebApp) {
+            initData = window.Telegram.WebApp.initData || '';
+        }
+        if (!initData) {
+            this.showNotification('Откройте страницу из Telegram, чтобы сохранить на сервер', 'warning');
+            return;
+        }
+        const chatIdStr = this.getHintViewerChatIdForApi();
+        if (!chatIdStr) {
+            this.showNotification('Не найден идентификатор пользователя (chat_id)', 'warning');
+            return;
+        }
+        let framesWrapper;
+        try {
+            const frames = [];
+            for (let order = 0; order < refs.length; order++) {
+                const ref = refs[order];
+                const raw = localStorage.getItem(ref.storageKey);
+                let payload = null;
+                try {
+                    payload = raw ? JSON.parse(raw) : null;
+                } catch (e) {
+                    throw new Error('Некорректный JSON кадра: ' + ref.storageKey);
+                }
+                if (!payload || !payload.frameId) {
+                    throw new Error('Повреждённый кадр: ' + ref.storageKey);
+                }
+                await this.uploadPayloadMediaToS3(payload);
+                localStorage.setItem(ref.storageKey, JSON.stringify(payload));
+                frames.push({
+                    frameId: ref.frameId,
+                    saveSlotIndex: ref.saveSlotIndex != null ? ref.saveSlotIndex : 0,
+                    order,
+                    payload,
+                });
+            }
+            framesWrapper = { version: 1, frames };
+        } catch (e) {
+            this.showNotification(e.message || String(e), 'error');
+            return;
+        }
+        const labels = this.collectUnifiedLabelsFromFrameRefs(refs);
+        const file_name = this.buildContentCardFileNameForCloud();
+        const chat_id = parseInt(chatIdStr, 10);
+        if (Number.isNaN(chat_id)) {
+            this.showNotification('Некорректный chat_id', 'error');
+            return;
+        }
+        try {
+            const response = await fetch('/api/content_cards/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    init_data: initData,
+                    file_name,
+                    frames: framesWrapper,
+                    labels: labels.length ? labels : null,
+                    chat_id,
+                }),
+            });
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (e) {
+                data = {};
+            }
+            if (!response.ok) {
+                let msg = data.detail;
+                if (Array.isArray(msg)) {
+                    msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
+                } else if (msg && typeof msg === 'object') {
+                    msg = JSON.stringify(msg);
+                }
+                throw new Error(msg || `Ошибка ${response.status}`);
+            }
+            const hint = data.updated ? ' (обновлено)' : '';
+            this.showNotification('Карточка сохранена на сервере' + hint, 'success');
+        } catch (e) {
+            console.error('saveCardToCloud:', e);
+            this.showNotification(e.message || String(e), 'error');
+        }
     }
 
     /**
@@ -2865,15 +3315,44 @@ class ContentEditor {
 
         const ref = this.cardPreviewRefs[this.cardPreviewIndex];
         let payload = null;
-        try {
-            const raw = localStorage.getItem(ref.storageKey);
-            payload = raw ? JSON.parse(raw) : null;
-        } catch (e) {
-            payload = null;
+        if (ref && ref.payload != null && typeof ref.payload === 'object') {
+            payload = ref.payload;
+        } else if (ref && ref.storageKey) {
+            try {
+                const raw = localStorage.getItem(ref.storageKey);
+                payload = raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                payload = null;
+            }
         }
 
         meta.innerHTML = '';
+        if (this._contentCardTopLabels && this._contentCardTopLabels.length) {
+            const topParts = this._contentCardTopLabels
+                .filter((t) => typeof t === 'string' && t.trim())
+                .map((t) => `<span class="card-preview-label-chip">${this.escapeHtml(t.trim())}</span>`)
+                .join(' ');
+            if (topParts) {
+                meta.insertAdjacentHTML(
+                    'beforeend',
+                    `<div class="card-preview-meta-line card-preview-meta-labels">Метки карточки: ${topParts}</div>`
+                );
+            }
+        }
         this.renderCardPreviewSurface(payload);
+
+        if (payload && Array.isArray(payload.labels) && payload.labels.length) {
+            const parts = payload.labels
+                .filter((t) => typeof t === 'string' && t.trim())
+                .map((t) => `<span class="card-preview-label-chip">${this.escapeHtml(t.trim())}</span>`)
+                .join(' ');
+            if (parts) {
+                meta.insertAdjacentHTML(
+                    'beforeend',
+                    `<div class="card-preview-meta-line card-preview-meta-labels">Метки: ${parts}</div>`
+                );
+            }
+        }
     }
 
     /** В предпросмотре убираем пустой верх: сдвигаем все блоки так, чтобы верхний был у top: 0 */
@@ -3278,10 +3757,112 @@ class ContentEditor {
             this.showNotification('Нет выбранного кадра', 'warning');
             return;
         }
-        this.showNotification(`Апрув (заглушка): ${ref.frameId}`, 'info');
+        this._labelsStepStorageRef = ref;
+        let labels = [];
+        try {
+            const raw = localStorage.getItem(ref.storageKey);
+            const payload = raw ? JSON.parse(raw) : null;
+            if (payload && Array.isArray(payload.labels)) {
+                labels = payload.labels.filter((x) => typeof x === 'string' && x.trim());
+            }
+        } catch (err) {
+            console.warn('cardPreviewApprove read labels:', err);
+        }
+        this.cardLabelsDraft = labels.map((s) => s.trim());
+        this.openCardLabelsModal();
     }
 
-    openEditorFromSelectedPreview() {
+    openCardLabelsModal() {
+        if (!this.cardLabelsModal) return;
+        this.renderCardLabelsList();
+        const input = document.getElementById('cardLabelsInput');
+        if (input) input.value = '';
+        this.cardLabelsModal.style.display = 'flex';
+        this.cardLabelsModal.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => {
+            if (input) input.focus();
+        });
+    }
+
+    closeCardLabelsModal() {
+        if (!this.cardLabelsModal) return;
+        this.cardLabelsModal.style.display = 'none';
+        this.cardLabelsModal.setAttribute('aria-hidden', 'true');
+    }
+
+    cancelCardLabelsStep() {
+        this._labelsStepStorageRef = null;
+        this.cardLabelsDraft = [];
+        this.closeCardLabelsModal();
+    }
+
+    addCardLabelFromInput() {
+        const input = document.getElementById('cardLabelsInput');
+        if (!input) return;
+        const text = String(input.value || '').trim();
+        if (!text) return;
+        this.cardLabelsDraft.push(text);
+        input.value = '';
+        this.renderCardLabelsList();
+        input.focus();
+    }
+
+    removeCardLabelAt(index) {
+        if (index < 0 || index >= this.cardLabelsDraft.length) return;
+        this.cardLabelsDraft.splice(index, 1);
+        this.renderCardLabelsList();
+    }
+
+    renderCardLabelsList() {
+        const list = document.getElementById('cardLabelsList');
+        if (!list) return;
+        if (!this.cardLabelsDraft.length) {
+            list.innerHTML = '<span class="card-labels-empty">Пока нет меток</span>';
+            return;
+        }
+        list.innerHTML = this.cardLabelsDraft
+            .map(
+                (label, i) =>
+                    `<span class="card-labels-chip">${this.escapeHtml(label)}` +
+                    `<button type="button" class="card-labels-chip-remove" onclick="contentEditor.removeCardLabelAt(${i})" aria-label="Удалить метку">&times;</button></span>`
+            )
+            .join('');
+    }
+
+    confirmCardLabels() {
+        const ref = this._labelsStepStorageRef;
+        if (!ref || !ref.storageKey) {
+            this.showNotification('Нет данных кадра', 'warning');
+            return;
+        }
+        let payload;
+        try {
+            const raw = localStorage.getItem(ref.storageKey);
+            payload = raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            this.showNotification('Не удалось прочитать кадр', 'error');
+            return;
+        }
+        if (!payload || !payload.frameId) {
+            this.showNotification('Повреждённые данные кадра', 'error');
+            return;
+        }
+        payload.labels = this.cardLabelsDraft.map((s) => String(s).trim()).filter(Boolean);
+        try {
+            localStorage.setItem(ref.storageKey, JSON.stringify(payload));
+        } catch (err) {
+            console.error('confirmCardLabels:', err);
+            this.showNotification('Не удалось сохранить метки', 'error');
+            return;
+        }
+        this.showNotification('Метки сохранены', 'success');
+        this._labelsStepStorageRef = null;
+        this.cardLabelsDraft = [];
+        this.closeCardLabelsModal();
+        this.closeCardPreviewModal();
+    }
+
+    async openEditorFromSelectedPreview() {
         const ref = this.cardPreviewRefs[this.cardPreviewIndex];
         if (!ref) {
             this.showNotification('Нет кадра для редактора', 'warning');
@@ -3305,7 +3886,7 @@ class ContentEditor {
         this.previewEditFrameId = ref.frameId;
         this.previewEditSaveSlotIndex = ref.saveSlotIndex;
         this.openModalWithData(payload.cardData || null, { fromPreviewRestore: true });
-        this.restoreCanvasFromPayload(payload);
+        await this.restoreCanvasFromPayload(payload);
     }
 
     /**
@@ -3321,7 +3902,19 @@ class ContentEditor {
         const resumeKey = this.previewEditStorageKey;
         try {
             const slot = this.previewEditSaveSlotIndex != null ? this.previewEditSaveSlotIndex : 0;
+            let prevLabels = null;
+            try {
+                const prevRaw = localStorage.getItem(resumeKey);
+                if (prevRaw) {
+                    const prev = JSON.parse(prevRaw);
+                    if (prev && Array.isArray(prev.labels)) prevLabels = prev.labels;
+                }
+            } catch (e) {
+                /* ignore */
+            }
             const payload = await this.buildFrameSavePayload(this.previewEditFrameId, slot);
+            if (prevLabels != null) payload.labels = prevLabels;
+            await this.uploadPayloadMediaToS3(payload);
             localStorage.setItem(resumeKey, JSON.stringify(payload));
             this.showNotification('Кадр обновлён', 'success');
         } catch (err) {
@@ -3335,7 +3928,7 @@ class ContentEditor {
         this.openCardPreviewModal();
     }
 
-    restoreCanvasFromPayload(payload) {
+    async restoreCanvasFromPayload(payload) {
         if (!this.canvas) return;
 
         this.elements = [];
@@ -3462,13 +4055,29 @@ class ContentEditor {
                 element.dataset.tableType = item.tableType || 'hints';
                 element.innerHTML = item.tableHtml || '';
                 break;
-            case 'upload-image':
+            case 'upload-image': {
                 element.classList.add('image-element');
-                if (item.imageUrl) element.dataset.imageUrl = item.imageUrl;
-                element.innerHTML = `<img src="${item.imageUrl || ''}" style="width: 100%; height: 100%; object-fit: contain;" alt="" />`;
+                const s3img = item.imageS3Key || '';
+                if (s3img) {
+                    element.dataset.imageS3Key = s3img;
+                    if (item.imageContentType) element.dataset.imageContentType = item.imageContentType;
+                } else if (item.imageUrl) {
+                    element.dataset.imageUrl = item.imageUrl;
+                }
+                const imgUp = document.createElement('img');
+                imgUp.src = s3img ? this.buildContentCardMediaUrl(s3img) : (item.imageUrl || '');
+                imgUp.style.width = '100%';
+                imgUp.style.height = '100%';
+                imgUp.style.objectFit = 'contain';
+                imgUp.alt = '';
+                element.appendChild(imgUp);
                 break;
+            }
             case 'audio-file':
                 element.classList.add('audio-element');
+                if (item.audioS3Key) {
+                    element.dataset.audioS3Key = item.audioS3Key;
+                }
                 if (item.audioStorageId) element.dataset.audioStorageId = item.audioStorageId;
                 if (item.audioName) element.dataset.audioName = item.audioName;
                 if (item.audioUrl) element.dataset.audioUrl = item.audioUrl;
@@ -3481,7 +4090,11 @@ class ContentEditor {
                         </div>
                         <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">▶</div>
                     </div>`;
-                if (item.audioStorageId) {
+                if (item.audioS3Key) {
+                    const mediaUrl = this.buildContentCardMediaUrl(item.audioS3Key);
+                    element.dataset.audioUrl = mediaUrl;
+                    this.setupAudioElement(element, mediaUrl, null);
+                } else if (item.audioStorageId) {
                     this.hydrateAudioElementFromIDB(element).catch((e) => console.error('hydrateAudioElementFromIDB:', e));
                 } else if (item.audioUrl) {
                     this.setupAudioElement(element, item.audioUrl, null);
@@ -3489,7 +4102,13 @@ class ContentEditor {
                 break;
             case 'board-illustration': {
                 const img = document.createElement('img');
-                img.src = item.imageDataUrl || '';
+                const s3b = item.boardImageS3Key || '';
+                if (s3b) {
+                    element.dataset.boardImageS3Key = s3b;
+                    img.src = this.buildContentCardMediaUrl(s3b);
+                } else {
+                    img.src = item.imageDataUrl || '';
+                }
                 img.style.maxWidth = this.getMaxCanvasWidth() + 'px';
                 img.style.width = '100%';
                 img.style.height = 'auto';
@@ -4217,10 +4836,19 @@ function clearContentEditorIndexedDB() {
     }
 }
 
-clearContentEditorLocalStorage();
-clearContentEditorIndexedDB();
+if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) {
+    clearContentEditorLocalStorage();
+    clearContentEditorIndexedDB();
+}
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function () {
+    if (window.__CONTENT_CARD_VIEW_ONLY__) {
+        contentEditor = new ContentEditor();
+        contentEditor.bootstrapContentCardViewPage().catch((e) => {
+            console.error('content card view bootstrap:', e);
+        });
+        return;
+    }
     contentEditor = new ContentEditor();
 });

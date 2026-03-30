@@ -6,6 +6,7 @@ from bot.db.models import (
     Broadcast,
     BroadcastStatus,
     BroadcastUser,
+    ContentCard,
     MessagesTexts,
     ServiceType,
     User,
@@ -14,6 +15,7 @@ from bot.db.models import (
     Promocode,
     UserAnalizePayment,
     UserAnalizePaymentService,
+    UserContentCard,
     UserGroup,
     UserInGroup,
     UserPromocode,
@@ -1022,6 +1024,116 @@ class UserPromocodeDAO(BaseDAO[UserPromocode]):
         except SQLAlchemyError as e:
             logger.error(
                 f"Ошибка при получении UserPromocode для пользователя {user_id}: {e}"
+            )
+            raise
+
+
+class ContentCardDAO(BaseDAO[ContentCard]):
+    model = ContentCard
+
+    async def find_one_by_file_name(self, file_name: str) -> ContentCard | None:
+        """Первая карточка с данным file_name (в БД нет unique на поле)."""
+        try:
+            query = (
+                select(self.model)
+                .where(self.model.file_name == file_name)
+                .limit(1)
+            )
+            result = await self._session.execute(query)
+            return result.scalars().first()
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при поиске ContentCard по file_name={file_name!r}: {e}"
+            )
+            raise
+
+    async def find_for_user_by_file_name(
+        self, user_id: int, file_name: str
+    ) -> ContentCard | None:
+        """Карточка с данным file_name, связанная с пользователем (для upsert)."""
+        try:
+            query = (
+                select(self.model)
+                .join(
+                    UserContentCard,
+                    UserContentCard.content_card_id == self.model.id,
+                )
+                .where(
+                    UserContentCard.user_id == user_id,
+                    self.model.file_name == file_name,
+                )
+                .limit(1)
+            )
+            result = await self._session.execute(query)
+            return result.scalars().first()
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при поиске ContentCard для user_id={user_id} "
+                f"file_name={file_name!r}: {e}"
+            )
+            raise
+
+    async def find_one_by_id_with_users(self, card_id: int) -> ContentCard | None:
+        """Карточка по id со связями user_content_cards (без вложенного user)."""
+        try:
+            query = (
+                select(self.model)
+                .where(self.model.id == card_id)
+                .options(selectinload(self.model.users))
+            )
+            result = await self._session.execute(query)
+            return result.scalar_one_or_none()
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при загрузке ContentCard id={card_id} с users: {e}"
+            )
+            raise
+
+
+class UserContentCardDAO(BaseDAO[UserContentCard]):
+    model = UserContentCard
+
+    async def get_all_with_content_card(self) -> list[UserContentCard]:
+        """Все связи пользователь–карточка с подгруженным ContentCard."""
+        try:
+            query = select(self.model).options(selectinload(self.model.content_card))
+            result = await self._session.execute(query)
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении UserContentCard с карточками: {e}")
+            raise
+
+    async def get_all_by_user(self, user_id: int) -> list[UserContentCard]:
+        """Связи пользователя с подгруженными карточками."""
+        try:
+            query = (
+                select(self.model)
+                .where(self.model.user_id == user_id)
+                .options(selectinload(self.model.content_card))
+            )
+            result = await self._session.execute(query)
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при получении UserContentCard для user_id={user_id}: {e}"
+            )
+            raise
+
+    async def find_one_by_user_and_card(
+        self, user_id: int, content_card_id: int
+    ) -> UserContentCard | None:
+        """Одна связь по паре (user_id, content_card_id), удобно перед созданием."""
+        try:
+            query = select(self.model).where(
+                self.model.user_id == user_id,
+                self.model.content_card_id == content_card_id,
+            )
+            result = await self._session.execute(query)
+            return result.scalar_one_or_none()
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при поиске UserContentCard user_id={user_id} "
+                f"content_card_id={content_card_id}: {e}"
             )
             raise
 

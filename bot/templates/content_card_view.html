@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сохранённая карточка</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
+    <style>
+        html, body {
+            margin: 0;
+            min-height: 100%;
+            background: #1a1a1a;
+        }
+    </style>
+    <script>
+        window.__CONTENT_CARD_VIEW_ONLY__ = true;
+    </script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="/static/js/content_editor.js?t={{ cache_timestamp }}"></script>
+</head>
+
+<body>
+    <script>
+        if (window.Telegram && window.Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+        }
+    </script>
+</body>
+
+</html>

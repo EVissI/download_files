@@ -491,6 +491,30 @@
     color: #f0f0f0;
 }
 
+.card-preview-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.card-preview-cloud-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #4a6fff;
+    background: #2d3d6b;
+    color: #e8ecff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.card-preview-cloud-btn:hover {
+    background: #35467d;
+    border-color: #6b84ff;
+}
+
 .card-preview-close {
     background: transparent;
     border: none;
@@ -577,6 +601,190 @@
 .card-preview-approve:disabled {
     opacity: 0.35;
     cursor: not-allowed;
+}
+
+/* Метки после предпросмотра */
+.card-labels-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 21000;
+}
+
+.card-labels-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.card-labels-box {
+    position: relative;
+    width: min(420px, calc(100vw - 32px));
+    max-height: min(85vh, 560px);
+    margin: 16px;
+    padding: 20px 22px;
+    background: #2d2d2d;
+    border: 1px solid #505050;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.card-labels-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: #f0f0f0;
+    text-align: center;
+}
+
+.card-labels-hint {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #b0b0b0;
+}
+
+.card-labels-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.card-labels-input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #505050;
+    background: #1e1e1e;
+    color: #f0f0f0;
+    font-size: 14px;
+}
+
+.card-labels-input:focus {
+    outline: none;
+    border-color: #ca8a04;
+}
+
+.card-labels-add-btn {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #ca8a04;
+    background: #713f12;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.card-labels-add-btn:hover {
+    background: #854d0e;
+}
+
+.card-labels-list {
+    min-height: 48px;
+    max-height: 220px;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-content: flex-start;
+    padding: 4px 0;
+}
+
+.card-labels-empty {
+    font-size: 13px;
+    color: #888;
+    font-style: italic;
+}
+
+.card-labels-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    padding: 6px 8px 6px 10px;
+    background: #3d3d3d;
+    border: 1px solid #555;
+    border-radius: 999px;
+    font-size: 13px;
+    color: #e8e8e8;
+    word-break: break-word;
+}
+
+.card-labels-chip-remove {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    line-height: 1;
+    border: none;
+    border-radius: 50%;
+    background: #555;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.card-labels-chip-remove:hover {
+    background: #b91c1c;
+}
+
+.card-labels-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #444;
+}
+
+.card-labels-back-btn,
+.card-labels-save-btn {
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid #505050;
+}
+
+.card-labels-back-btn {
+    background: #3a3a3a;
+    color: #e0e0e0;
+}
+
+.card-labels-back-btn:hover {
+    background: #454545;
+}
+
+.card-labels-save-btn {
+    background: #713f12;
+    border-color: #ca8a04;
+    color: #fff;
+}
+
+.card-labels-save-btn:hover {
+    background: #854d0e;
+}
+
+.card-preview-meta-labels {
+    margin-top: 8px;
+}
+
+.card-preview-label-chip {
+    display: inline-block;
+    margin: 2px 4px 2px 0;
+    padding: 2px 8px;
+    background: rgba(202, 138, 4, 0.2);
+    border: 1px solid rgba(202, 138, 4, 0.45);
+    border-radius: 999px;
+    font-size: 12px;
+    color: #fde68a;
 }
 
 .card-preview-frame-host {

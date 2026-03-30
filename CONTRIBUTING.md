@@ -224,7 +224,6 @@ class MyModel(Base):
 ```
 
 **Создание миграции:**
-
 ```bash
 alembic revision --autogenerate -m "add my_model table"
 alembic upgrade head

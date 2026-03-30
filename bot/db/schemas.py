@@ -1,6 +1,6 @@
-﻿from datetime import datetime
-from pydantic import BaseModel
-from typing import List
+from datetime import datetime
+from pydantic import BaseModel, Field
+from typing import Any, List, Optional
 
 
 class SUser(BaseModel):
@@ -135,6 +135,17 @@ class SBroadcast(BaseModel):
     created_by: int | None = None
     class Config:
         from_attributes = True
+
+class SContentCardCreate(BaseModel):
+    file_name: str = Field(max_length=255)
+    frames: dict[str, Any]
+    labels: Optional[list[str]] = None
+
+
+class SUserContentCardCreate(BaseModel):
+    user_id: int
+    content_card_id: int
+
 
 class SGroup(BaseModel):
     id: int | None = None

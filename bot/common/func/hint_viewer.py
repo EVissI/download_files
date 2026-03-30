@@ -1836,6 +1836,7 @@ def process_mat_file(input_file, output_file, chat_id):
                     logger.error(f"Failed to process game {game_number}: {e}")
 
         # Создаем общий результат
+        mat_basename = os.path.basename(input_file)
         game_info = {
             "red_player": red_player,
             "black_player": black_player,
@@ -1848,6 +1849,7 @@ def process_mat_file(input_file, output_file, chat_id):
             "chat_id": str(chat_id),
             "total_games": len(games),
             "processed_games": len(game_results),
+            "mat_file_name": mat_basename,
         }
 
         output_data = {"game_info": game_info, "games": game_results}

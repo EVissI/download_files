@@ -1125,6 +1125,7 @@
         let gameRedScore = 0;
         let gameBlackScore = 0;
         let enable_crawford_game_number = null;
+        let matFileName = '';
         let animating = false;
         let skipAnimation = false;
         let animationSpeed = 1.0;
@@ -1165,6 +1166,9 @@
                 const redScore = scores.Red || 0;
                 const blackScore = scores.Black || 0;
                 chatId = gameInfo.chat_id || chatId;
+                try { window.hintViewerChatId = chatId; } catch (e) {}
+                matFileName = gameInfo.mat_file_name || '';
+                try { window.hintViewerMatFileName = matFileName; } catch (e) {}
                 hasErrorsInMatch = false;
 
                 // Создаем выпадающий список для выбора игры только если это матч
@@ -3893,7 +3897,6 @@
                 }
             } catch (error) {
                 console.error('Error checking admin status:', error);
-                showMessageModal('Ошибка при проверке статуса администратора: ' + error.message, 'error');
             }
         }
 

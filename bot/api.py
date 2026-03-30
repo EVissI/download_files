@@ -1,16 +1,22 @@
-from fastapi import FastAPI, Request, Response, HTTPException
+import mimetypes
+import uuid
+
+from fastapi import FastAPI, Request, Response, HTTPException, File, Form, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.wsgi import WSGIMiddleware
-from typing import Optional
+from typing import Any, Optional
 import secrets
+
+from pydantic import BaseModel, Field
 
 from bot.routers.hint_viewer_router import hint_viewer_api_router
 from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
+from bot.common.service.hint_s3_service import HintS3Storage
 from bot.config import settings
 from bot.config import bot, SUPPORT_TG_ID, translator_hub
 from bot.common.utils.i18n import get_text_for_locale
@@ -18,16 +24,25 @@ from bot.db.redis import redis_client
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.func.pokaz_func import get_hints_for_xgid
 from bot.db.database import async_session_maker
-from bot.db.dao import UserDAO, MessagesTextsDAO
+from bot.db.dao import (
+    UserDAO,
+    MessagesTextsDAO,
+    ContentCardDAO,
+    UserContentCardDAO,
+)
 from bot.db.models import ServiceType
+from bot.db.schemas import SContentCardCreate, SUserContentCardCreate
 from loguru import logger
 import traceback
 import json
 import os
+import time
 from pathlib import Path
 from aiogram.types import BufferedInputFile, InlineKeyboardMarkup, InlineKeyboardButton
 
 BASE_DIR = Path(__file__).parent.parent
+
+CC_MEDIA_MAX_BYTES = 30 * 1024 * 1024
 
 static_dir = BASE_DIR / "bot" / "static"
 templates_dir = BASE_DIR / "bot" / "templates"
@@ -215,6 +230,20 @@ async def get_pokaz(
             "i18n": translations,
         },
     )
+
+
+@app.get("/content-card-view")
+async def content_card_view_page(request: Request):
+    """Просмотр сохранённой карточки контента (кадры, только переключение)."""
+    cache_timestamp = int(time.time())
+    response = templates.TemplateResponse(
+        "content_card_view.html",
+        {"request": request, "cache_timestamp": cache_timestamp},
+    )
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.get("/pokaz/hints")
@@ -442,6 +471,286 @@ async def send_to_admin(request: Request):
     except Exception as e:
         logger.error(f"Error sending admin comment: {e}")
         raise HTTPException(status_code=500, detail="Error sending admin comment")
+
+
+def _is_public_content_card_media_key(key: str) -> bool:
+    """
+    Допустимый ключ для публичного чтения: content_cards/media/{user_id}/{filename}.
+    Доступ по знанию полного ключа (в JSON карточки) — чтобы другие пользователи могли
+    открыть карточку после шаринга; перебор ключей не предполагается (случайное имя файла).
+    """
+    parts = key.split("/")
+    if len(parts) != 4:
+        return False
+    if parts[0] != "content_cards" or parts[1] != "media":
+        return False
+    if not parts[2].isdigit():
+        return False
+    name = parts[3]
+    if not name or len(name) > 220 or ".." in name:
+        return False
+    return all(c.isalnum() or c in "._-" for c in name)
+
+
+def _guess_content_upload_extension(filename: str | None, content_type: str | None) -> str:
+    if filename and "." in filename:
+        ext = filename.rsplit(".", 1)[-1].lower()
+        if ext.isalnum() and len(ext) <= 8:
+            return f".{ext}"
+    ct = (content_type or "").split(";")[0].strip().lower()
+    if ct:
+        ext = mimetypes.guess_extension(ct)
+        if ext:
+            return ".jpg" if ext == ".jpe" else ext
+    return ".bin"
+
+
+def _require_content_card_admin(user_id: int) -> None:
+    """Карточки контента и медиа к ним — только для ROOT_ADMIN_IDS."""
+    if user_id not in settings.ROOT_ADMIN_IDS:
+        raise HTTPException(
+            status_code=403,
+            detail="Загрузка карточек доступна только администраторам",
+        )
+
+
+def _normalize_content_card_labels(raw: list[str] | None) -> list[str] | None:
+    if not raw:
+        return None
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in raw[:200]:
+        t = str(item).strip()[:255]
+        if t and t not in seen:
+            seen.add(t)
+            out.append(t)
+    return out or None
+
+
+class ContentCardSaveBody(BaseModel):
+    """Сохранение карточки редактора (hint viewer): проверка через Telegram init_data."""
+
+    init_data: str = Field(..., min_length=1)
+    file_name: str = Field(..., max_length=255)
+    frames: dict[str, Any]
+    labels: list[str] | None = None
+    chat_id: int | None = None
+
+
+class ContentCardFetchBody(BaseModel):
+    """Загрузка сохранённой карточки для просмотра (Telegram WebApp)."""
+
+    init_data: str = Field(..., min_length=1)
+    content_card_id: int = Field(..., ge=1)
+
+
+@app.post("/api/content_cards/save")
+async def save_content_card(body: ContentCardSaveBody):
+    """
+    Сохраняет карточку (JSON кадров). Доступно только Telegram-пользователям из ROOT_ADMIN_IDS.
+    Повтор с тем же file_name для того же пользователя обновляет запись.
+    """
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
+
+    tg_user = user_data.get("user") or {}
+    user_id = tg_user.get("id")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+
+    user_id = int(user_id)
+    _require_content_card_admin(user_id)
+    if body.chat_id is not None and int(body.chat_id) != user_id:
+        raise HTTPException(status_code=403, detail="chat_id не совпадает с пользователем")
+
+    frames_inner = body.frames.get("frames")
+    if not isinstance(frames_inner, list) or len(frames_inner) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Поле frames.frames должно быть непустым массивом",
+        )
+
+    safe_name = os.path.basename(body.file_name.strip())[:255] or "card"
+    labels = _normalize_content_card_labels(body.labels)
+
+    async with async_session_maker() as session:
+        user_dao = UserDAO(session)
+        user = await user_dao.find_one_or_none_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="Пользователь не найден в базе. Откройте бота хотя бы раз.",
+            )
+
+        card_dao = ContentCardDAO(session)
+        ucc_dao = UserContentCardDAO(session)
+
+        existing = await card_dao.find_for_user_by_file_name(user_id, safe_name)
+        if existing:
+            await card_dao.update(
+                existing.id,
+                {"frames": body.frames, "labels": labels},
+            )
+            await session.commit()
+            saved_id = existing.id
+            # --- TEST_ONLY: уведомление в Telegram со ссылкой на просмотр (удалить после тестов) ---
+            try:
+                _view_url = (
+                    f"{settings.MINI_APP_URL.rstrip('/')}"
+                    f"/content-card-view?content_card_id={saved_id}"
+                )
+                await bot.send_message(
+                    chat_id=user_id,
+                    text=f"Карточка обновлена.\nОткрыть: {_view_url}",
+                )
+            except Exception as _e:
+                logger.warning(
+                    "TEST_ONLY content_card TG notify (update) skipped: {}",
+                    _e,
+                )
+            # --- /TEST_ONLY ---
+            return {
+                "ok": True,
+                "content_card_id": saved_id,
+                "updated": True,
+            }
+
+        new_card = await card_dao.add(
+            SContentCardCreate(
+                file_name=safe_name,
+                frames=body.frames,
+                labels=labels,
+            )
+        )
+        await ucc_dao.add(
+            SUserContentCardCreate(
+                user_id=user_id,
+                content_card_id=new_card.id,
+            )
+        )
+        await session.commit()
+        saved_id = new_card.id
+        # --- TEST_ONLY: уведомление в Telegram со ссылкой на просмотр (удалить после тестов) ---
+        try:
+            _view_url = (
+                f"{settings.MINI_APP_URL.rstrip('/')}"
+                f"/content-card-view?content_card_id={saved_id}"
+            )
+            await bot.send_message(
+                chat_id=user_id,
+                text=f"Карточка сохранена.\nОткрыть: {_view_url}",
+            )
+        except Exception as _e:
+            logger.warning(
+                "TEST_ONLY content_card TG notify (create) skipped: {}",
+                _e,
+            )
+        # --- /TEST_ONLY ---
+        return {
+            "ok": True,
+            "content_card_id": saved_id,
+            "updated": False,
+        }
+
+
+@app.post("/api/content_cards/fetch")
+async def fetch_content_card(body: ContentCardFetchBody):
+    """
+    Данные карточки для страницы просмотра: есть связь user_content_cards
+    или пользователь в ROOT_ADMIN_IDS.
+    """
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(
+            status_code=401, detail="Недействительные данные Telegram"
+        )
+    uid = (user_data.get("user") or {}).get("id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(uid)
+
+    async with async_session_maker() as session:
+        ucc_dao = UserContentCardDAO(session)
+        link = await ucc_dao.find_one_by_user_and_card(
+            user_id, body.content_card_id
+        )
+        if not link and user_id not in settings.ROOT_ADMIN_IDS:
+            raise HTTPException(
+                status_code=403, detail="Нет доступа к этой карточке"
+            )
+
+        card_dao = ContentCardDAO(session)
+        card = await card_dao.find_one_or_none_by_id(body.content_card_id)
+        if not card:
+            raise HTTPException(status_code=404, detail="Карточка не найдена")
+
+        labels = card.labels
+        if labels is not None:
+            labels = list(labels)
+
+        return {
+            "file_name": card.file_name,
+            "frames": card.frames,
+            "labels": labels,
+        }
+
+
+@app.post("/api/content_cards/media/upload")
+async def content_card_media_upload(
+    init_data: str = Form(...),
+    file: UploadFile = File(...),
+):
+    """Загрузка медиа карточки в S3; только пользователи из ROOT_ADMIN_IDS."""
+    user_data = verify_telegram_webapp_data(init_data)
+    if not user_data:
+        raise HTTPException(
+            status_code=401, detail="Недействительные данные Telegram"
+        )
+    uid = (user_data.get("user") or {}).get("id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    uid = int(uid)
+    _require_content_card_admin(uid)
+    raw = await file.read()
+    if len(raw) > CC_MEDIA_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Файл слишком большой")
+    ext = _guess_content_upload_extension(file.filename, file.content_type)
+    unique_name = f"{uuid.uuid4().hex}{ext}"
+    key = HintS3Storage.content_card_media_key(uid, unique_name)
+    ct = file.content_type or mimetypes.guess_type(unique_name)[0] or "application/octet-stream"
+    if ";" in str(ct):
+        ct = str(ct).split(";")[0].strip()
+    s3 = HintS3Storage.from_settings()
+    s3.upload_bytes(key, raw, content_type=ct)
+    logger.info(
+        f"Content card media uploaded: key={key} user_id={uid} bytes={len(raw)}"
+    )
+    return {"s3_key": key, "content_type": ct}
+
+
+@app.get("/api/content_cards/media")
+async def content_card_media_proxy(key: str):
+    """
+    Отдаёт файл из S3 по ключу. Доступ не привязан к владельцу: любой, кто знает key
+    (обычно из JSON карточки), может отобразить медиа — для будущего шаринга карточек.
+    Загрузка: POST .../upload с Telegram init_data и id из ROOT_ADMIN_IDS.
+    """
+    if not key:
+        raise HTTPException(status_code=400, detail="Параметр key обязателен")
+    if not _is_public_content_card_media_key(key):
+        raise HTTPException(status_code=400, detail="Некорректный key")
+    s3 = HintS3Storage.from_settings()
+    if not s3.exists(key):
+        raise HTTPException(status_code=404, detail="Файл не найден")
+    blob = s3.download_bytes(key)
+    fname = key.rsplit("/", 1)[-1]
+    media_type = mimetypes.guess_type(fname)[0] or "application/octet-stream"
+    return Response(
+        content=blob,
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
 
 
 flask_app, _ = create_app()

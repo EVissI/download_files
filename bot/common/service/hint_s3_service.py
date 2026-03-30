@@ -16,6 +16,7 @@ class HintS3Storage:
     """Ключи: hints/{game_id}.mat, hints/{game_id}.json, hints/{game_id}_games/..."""
 
     PREFIX = "hints"
+    CONTENT_CARDS_MEDIA_PREFIX = "content_cards/media"
 
     def __init__(self):
         addressing = settings.S3_ADDRESSING_STYLE.lower().strip()
@@ -57,6 +58,17 @@ class HintS3Storage:
     @staticmethod
     def game_json_key(game_id: str, game_num: str) -> str:
         return f"{HintS3Storage.PREFIX}/{game_id}_games/game_{game_num}.json"
+
+    @staticmethod
+    def content_card_media_key(user_id: int, filename: str) -> str:
+        """
+        Медиа карточек контента (изображения, аудио).
+        filename — только имя файла, например ``{uuid}.png`` (без каталогов).
+        """
+        fn = filename.replace("\\", "/").split("/")[-1].strip()
+        if not fn or ".." in fn or "/" in fn:
+            fn = "file.bin"
+        return f"{HintS3Storage.CONTENT_CARDS_MEDIA_PREFIX}/{user_id}/{fn}"
 
     def put_source_mat(self, game_id: str, local_path: str) -> str:
         """Загружает локальный .mat в hints/{game_id}.mat, возвращает ключ объекта."""

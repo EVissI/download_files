@@ -1,18 +1,20 @@
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 import enum
-from typing import Optional
+from typing import Any, Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import (
     BigInteger,
     Boolean,
     DateTime,
+    Enum,
     ForeignKey,
     Integer,
-    Enum,
     String,
     Text,
+    UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from bot.db.database import Base
 from flask_appbuilder.models.decorators import renders
 
@@ -60,6 +62,11 @@ class User(Base):
     )
     broadcast_recipients: Mapped[list["Broadcast"]] = relationship(
         "Broadcast", secondary="broadcast_users", back_populates="recipients"
+    )
+    user_content_cards: Mapped[list["UserContentCard"]] = relationship(
+        "UserContentCard",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     @property
@@ -551,3 +558,62 @@ class MessagesTexts(Base):
     code: Mapped[str] = mapped_column(String(30), nullable=False)
     text_ru: Mapped[str] = mapped_column(String(1000))
     text_en: Mapped[str] = mapped_column(String(1000))
+
+
+class ContentCard(Base):
+    """
+    Сохранённая карточка редактора контента (hint viewer и т.п.).
+    Привязка к пользователям — только через таблицу user_content_cards (many-to-many).
+
+    frames — JSONB со структурой кадров, например:
+      {"version": 1, "frames": [
+        {"frameId": "...", "saveSlotIndex": 0, "order": 0,
+         "payload": {"elements": [
+           {"toolId": "upload-image", "imageS3Key": "content_cards/media/{user_id}/{uuid}.png"},
+           {"toolId": "audio-file", "audioS3Key": "content_cards/media/..."},
+           {"toolId": "board-illustration", "boardImageS3Key": "..."}
+         ], ...}}
+      ]}
+      Медиа в S3; отображение GET /api/content_cards/media?key= (доступ по ключу из JSON карточки, в т.ч. для других пользователей после шаринга).
+    labels — нативный PostgreSQL-массив строк (TEXT[]).
+    """
+
+    __tablename__ = "content_cards"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    frames: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    labels: Mapped[list[str] | None] = mapped_column(ARRAY[str](String(255)), nullable=True)
+
+    users: Mapped[list["UserContentCard"]] = relationship(
+        "UserContentCard",
+        back_populates="content_card",
+        cascade="all, delete-orphan",
+    )
+
+
+class UserContentCard(Base):
+    """Связь пользователь ↔ карточка (many-to-many), по аналогии с UserPromocode."""
+
+    __tablename__ = "user_content_cards"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "content_card_id",
+            name="uq_user_content_cards_user_id_content_card_id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    content_card_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("content_cards.id", ondelete="CASCADE"), nullable=False
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="user_content_cards")
+    content_card: Mapped["ContentCard"] = relationship(
+        "ContentCard", back_populates="users"
+    )
