@@ -498,23 +498,6 @@
     flex-shrink: 0;
 }
 
-.card-preview-cloud-btn {
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid #4a6fff;
-    background: #2d3d6b;
-    color: #e8ecff;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.card-preview-cloud-btn:hover {
-    background: #35467d;
-    border-color: #6b84ff;
-}
-
 .card-preview-close {
     background: transparent;
     border: none;

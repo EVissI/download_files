@@ -38,9 +38,8 @@ class ContentEditor {
         /** Кэш загрузки PNG для оверлея доски в предпросмотре */
         this._boardPreviewAssetsPromise = null;
 
-        /** Шаг меток после предпросмотра: ref кадра и черновик списка строк */
+        /** Модалка меток карточки (целиком, не на отдельный кадр) */
         this.cardLabelsModal = null;
-        this._labelsStepStorageRef = null;
         this.cardLabelsDraft = [];
 
         /** Кэш открытой IndexedDB для больших аудио (вне квоты localStorage JSON) */
@@ -310,7 +309,6 @@ class ContentEditor {
                         <div class="card-preview-header">
                             <h3 class="card-preview-title">Предпросмотр карточки</h3>
                             <div class="card-preview-header-right">
-                                <button type="button" class="card-preview-cloud-btn" onclick="contentEditor.saveCardToCloud()" title="Сохранить все кадры на сервер">На сервер</button>
                                 <button type="button" class="card-preview-close" onclick="contentEditor.closeCardPreviewModal()" aria-label="Закрыть">&times;</button>
                             </div>
                         </div>
@@ -337,7 +335,7 @@ class ContentEditor {
                     <div class="card-labels-overlay" onclick="contentEditor.cancelCardLabelsStep()"></div>
                     <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="cardLabelsModalTitle">
                         <h3 id="cardLabelsModalTitle" class="card-labels-title">Метки карточки</h3>
-                        <p class="card-labels-hint">Добавьте любые метки (текст). Их может быть сколько угодно.</p>
+                        <p class="card-labels-hint">Метки относятся ко всей карточке (ко всем кадрам). После «Сохранить» карточка отправится на сервер.</p>
                         <div class="card-labels-input-row">
                             <input type="text" id="cardLabelsInput" class="card-labels-input" maxlength="500" placeholder="Введите метку и нажмите Enter или «Добавить»" autocomplete="off" />
                             <button type="button" class="card-labels-add-btn" onclick="contentEditor.addCardLabelFromInput()">Добавить</button>
@@ -2934,6 +2932,49 @@ class ContentEditor {
         return { gameId, gameNum, board: b };
     }
 
+    getCardLabelsStorageKey() {
+        const { gameId, gameNum } = this.getGameContextForCard();
+        const g = gameNum != null ? `_g${gameNum}` : '';
+        return `contentEditor_card_labels_${gameId}${g}`;
+    }
+
+    loadCardLabelsFromStorage() {
+        try {
+            const raw = localStorage.getItem(this.getCardLabelsStorageKey());
+            if (!raw) return [];
+            const arr = JSON.parse(raw);
+            if (!Array.isArray(arr)) return [];
+            const seen = new Set();
+            const out = [];
+            for (const x of arr) {
+                if (typeof x !== 'string') continue;
+                const t = x.trim().slice(0, 255);
+                if (t && !seen.has(t)) {
+                    seen.add(t);
+                    out.push(t);
+                }
+            }
+            return out;
+        } catch (e) {
+            console.warn('loadCardLabelsFromStorage:', e);
+            return [];
+        }
+    }
+
+    saveCardLabelsToStorage(labels) {
+        const seen = new Set();
+        const out = [];
+        for (const x of Array.isArray(labels) ? labels : []) {
+            if (typeof x !== 'string') continue;
+            const t = x.trim().slice(0, 255);
+            if (t && !seen.has(t)) {
+                seen.add(t);
+                out.push(t);
+            }
+        }
+        localStorage.setItem(this.getCardLabelsStorageKey(), JSON.stringify(out));
+    }
+
     /**
      * chat_id для API (глобальный chatId из hint_viewer или query-параметр).
      */
@@ -3122,7 +3163,7 @@ class ContentEditor {
         const refs = this.collectSavedFrameRefsForCurrentGame();
         if (!refs.length) {
             this.showNotification('Нет сохранённых кадров для этой игры', 'warning');
-            return;
+            return false;
         }
         let initData = '';
         if (window.Telegram && window.Telegram.WebApp) {
@@ -3130,12 +3171,12 @@ class ContentEditor {
         }
         if (!initData) {
             this.showNotification('Откройте страницу из Telegram, чтобы сохранить на сервер', 'warning');
-            return;
+            return false;
         }
         const chatIdStr = this.getHintViewerChatIdForApi();
         if (!chatIdStr) {
             this.showNotification('Не найден идентификатор пользователя (chat_id)', 'warning');
-            return;
+            return false;
         }
         let framesWrapper;
         try {
@@ -3153,6 +3194,7 @@ class ContentEditor {
                     throw new Error('Повреждённый кадр: ' + ref.storageKey);
                 }
                 await this.uploadPayloadMediaToS3(payload);
+                delete payload.labels;
                 localStorage.setItem(ref.storageKey, JSON.stringify(payload));
                 frames.push({
                     frameId: ref.frameId,
@@ -3164,14 +3206,14 @@ class ContentEditor {
             framesWrapper = { version: 1, frames };
         } catch (e) {
             this.showNotification(e.message || String(e), 'error');
-            return;
+            return false;
         }
-        const labels = this.collectUnifiedLabelsFromFrameRefs(refs);
+        const labels = this.loadCardLabelsFromStorage();
         const file_name = this.buildContentCardFileNameForCloud();
         const chat_id = parseInt(chatIdStr, 10);
         if (Number.isNaN(chat_id)) {
             this.showNotification('Некорректный chat_id', 'error');
-            return;
+            return false;
         }
         try {
             const response = await fetch('/api/content_cards/save', {
@@ -3202,9 +3244,11 @@ class ContentEditor {
             }
             const hint = data.updated ? ' (обновлено)' : '';
             this.showNotification('Карточка сохранена на сервере' + hint, 'success');
+            return true;
         } catch (e) {
             console.error('saveCardToCloud:', e);
             this.showNotification(e.message || String(e), 'error');
+            return false;
         }
     }
 
@@ -3327,8 +3371,15 @@ class ContentEditor {
         }
 
         meta.innerHTML = '';
-        if (this._contentCardTopLabels && this._contentCardTopLabels.length) {
-            const topParts = this._contentCardTopLabels
+        const labelsKey = this.getCardLabelsStorageKey();
+        const hasStoredLabelsKey = localStorage.getItem(labelsKey) !== null;
+        const storedLabels = hasStoredLabelsKey ? this.loadCardLabelsFromStorage() : null;
+        const fallbackLabels = this._contentCardTopLabels && this._contentCardTopLabels.length
+            ? this._contentCardTopLabels
+            : [];
+        const labelsToShow = hasStoredLabelsKey ? storedLabels : fallbackLabels;
+        if (labelsToShow.length) {
+            const topParts = labelsToShow
                 .filter((t) => typeof t === 'string' && t.trim())
                 .map((t) => `<span class="card-preview-label-chip">${this.escapeHtml(t.trim())}</span>`)
                 .join(' ');
@@ -3340,19 +3391,6 @@ class ContentEditor {
             }
         }
         this.renderCardPreviewSurface(payload);
-
-        if (payload && Array.isArray(payload.labels) && payload.labels.length) {
-            const parts = payload.labels
-                .filter((t) => typeof t === 'string' && t.trim())
-                .map((t) => `<span class="card-preview-label-chip">${this.escapeHtml(t.trim())}</span>`)
-                .join(' ');
-            if (parts) {
-                meta.insertAdjacentHTML(
-                    'beforeend',
-                    `<div class="card-preview-meta-line card-preview-meta-labels">Метки: ${parts}</div>`
-                );
-            }
-        }
     }
 
     /** В предпросмотре убираем пустой верх: сдвигаем все блоки так, чтобы верхний был у top: 0 */
@@ -3752,23 +3790,28 @@ class ContentEditor {
     }
 
     cardPreviewApprove() {
-        const ref = this.cardPreviewRefs[this.cardPreviewIndex];
-        if (!ref) {
-            this.showNotification('Нет выбранного кадра', 'warning');
+        if (!this.cardPreviewRefs.length) {
+            this.showNotification('Нет сохранённых кадров для этой игры', 'warning');
             return;
         }
-        this._labelsStepStorageRef = ref;
-        let labels = [];
-        try {
-            const raw = localStorage.getItem(ref.storageKey);
-            const payload = raw ? JSON.parse(raw) : null;
-            if (payload && Array.isArray(payload.labels)) {
-                labels = payload.labels.filter((x) => typeof x === 'string' && x.trim());
-            }
-        } catch (err) {
-            console.warn('cardPreviewApprove read labels:', err);
+        let labels = this.loadCardLabelsFromStorage();
+        if (!labels.length && this._contentCardTopLabels && this._contentCardTopLabels.length) {
+            labels = this._contentCardTopLabels.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim());
         }
-        this.cardLabelsDraft = labels.map((s) => s.trim());
+        if (!labels.length) {
+            const withKeys = this.cardPreviewRefs.filter((r) => r.storageKey);
+            if (withKeys.length) {
+                labels = this.collectUnifiedLabelsFromFrameRefs(withKeys);
+                if (labels.length) {
+                    try {
+                        this.saveCardLabelsToStorage(labels);
+                    } catch (e) {
+                        console.warn('cardPreviewApprove migrate labels:', e);
+                    }
+                }
+            }
+        }
+        this.cardLabelsDraft = labels.slice();
         this.openCardLabelsModal();
     }
 
@@ -3791,7 +3834,6 @@ class ContentEditor {
     }
 
     cancelCardLabelsStep() {
-        this._labelsStepStorageRef = null;
         this.cardLabelsDraft = [];
         this.closeCardLabelsModal();
     }
@@ -3829,37 +3871,21 @@ class ContentEditor {
             .join('');
     }
 
-    confirmCardLabels() {
-        const ref = this._labelsStepStorageRef;
-        if (!ref || !ref.storageKey) {
-            this.showNotification('Нет данных кадра', 'warning');
-            return;
-        }
-        let payload;
+    async confirmCardLabels() {
+        const normalized = this.cardLabelsDraft.map((s) => String(s).trim()).filter(Boolean);
         try {
-            const raw = localStorage.getItem(ref.storageKey);
-            payload = raw ? JSON.parse(raw) : null;
-        } catch (e) {
-            this.showNotification('Не удалось прочитать кадр', 'error');
-            return;
-        }
-        if (!payload || !payload.frameId) {
-            this.showNotification('Повреждённые данные кадра', 'error');
-            return;
-        }
-        payload.labels = this.cardLabelsDraft.map((s) => String(s).trim()).filter(Boolean);
-        try {
-            localStorage.setItem(ref.storageKey, JSON.stringify(payload));
+            this.saveCardLabelsToStorage(normalized);
         } catch (err) {
             console.error('confirmCardLabels:', err);
             this.showNotification('Не удалось сохранить метки', 'error');
             return;
         }
-        this.showNotification('Метки сохранены', 'success');
-        this._labelsStepStorageRef = null;
         this.cardLabelsDraft = [];
         this.closeCardLabelsModal();
-        this.closeCardPreviewModal();
+        const ok = await this.saveCardToCloud();
+        if (ok) {
+            this.closeCardPreviewModal();
+        }
     }
 
     async openEditorFromSelectedPreview() {
@@ -3902,18 +3928,7 @@ class ContentEditor {
         const resumeKey = this.previewEditStorageKey;
         try {
             const slot = this.previewEditSaveSlotIndex != null ? this.previewEditSaveSlotIndex : 0;
-            let prevLabels = null;
-            try {
-                const prevRaw = localStorage.getItem(resumeKey);
-                if (prevRaw) {
-                    const prev = JSON.parse(prevRaw);
-                    if (prev && Array.isArray(prev.labels)) prevLabels = prev.labels;
-                }
-            } catch (e) {
-                /* ignore */
-            }
             const payload = await this.buildFrameSavePayload(this.previewEditFrameId, slot);
-            if (prevLabels != null) payload.labels = prevLabels;
             await this.uploadPayloadMediaToS3(payload);
             localStorage.setItem(resumeKey, JSON.stringify(payload));
             this.showNotification('Кадр обновлён', 'success');
