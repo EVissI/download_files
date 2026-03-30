@@ -700,22 +700,37 @@
     word-break: break-word;
 }
 
-.card-labels-chip-remove {
+/* Специфичность выше глобальных `button` из hint_viewer.html (в т.ч. min-width/padding в media queries) */
+#cardLabelsModal button.ce-card-label-remove-btn {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
     width: 22px;
     height: 22px;
+    min-width: 22px;
+    margin: 0;
     padding: 0;
     line-height: 1;
     border: none;
     border-radius: 50%;
-    background: #555;
+    background-color: #555;
     color: #fff;
     font-size: 16px;
+    font-family: inherit;
     cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
-.card-labels-chip-remove:hover {
-    background: #b91c1c;
+#cardLabelsModal button.ce-card-label-remove-btn:hover {
+    background-color: #b91c1c;
+}
+
+#cardLabelsModal button.ce-card-label-remove-btn:disabled {
+    background-color: #6c757d;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .card-labels-actions {

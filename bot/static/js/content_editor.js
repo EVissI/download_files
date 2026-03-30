@@ -335,7 +335,6 @@ class ContentEditor {
                     <div class="card-labels-overlay" onclick="contentEditor.cancelCardLabelsStep()"></div>
                     <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="cardLabelsModalTitle">
                         <h3 id="cardLabelsModalTitle" class="card-labels-title">Метки карточки</h3>
-                        <p class="card-labels-hint">Метки относятся ко всей карточке (ко всем кадрам). После «Сохранить» карточка отправится на сервер.</p>
                         <div class="card-labels-input-row">
                             <input type="text" id="cardLabelsInput" class="card-labels-input" maxlength="500" placeholder="Введите метку и нажмите Enter или «Добавить»" autocomplete="off" />
                             <button type="button" class="card-labels-add-btn" onclick="contentEditor.addCardLabelFromInput()">Добавить</button>
@@ -3866,7 +3865,7 @@ class ContentEditor {
             .map(
                 (label, i) =>
                     `<span class="card-labels-chip">${this.escapeHtml(label)}` +
-                    `<button type="button" class="card-labels-chip-remove" onclick="contentEditor.removeCardLabelAt(${i})" aria-label="Удалить метку">&times;</button></span>`
+                    `<button type="button" class="ce-card-label-remove-btn" onclick="contentEditor.removeCardLabelAt(${i})" aria-label="Удалить метку">&times;</button></span>`
             )
             .join('');
     }
