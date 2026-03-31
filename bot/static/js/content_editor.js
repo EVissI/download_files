@@ -164,6 +164,9 @@ class ContentEditor {
                                 <button type="button" id="contentCardViewEditFrameBtn" class="content-card-view-edit-btn" style="display: none;" onclick="contentEditor.openEditorFromContentCardView()" title="Редактировать текущий кадр">
                                     <i class="fa fa-pencil" aria-hidden="true"></i><span class="content-card-view-edit-label"> Редактировать кадр</span>
                                 </button>
+                                <button type="button" id="contentCardViewDeleteFrameBtn" class="content-card-view-delete-frame-btn" style="display: none;" onclick="contentEditor.deleteCurrentContentCardFrame()" title="Удалить текущий кадр" aria-label="Удалить кадр">
+                                    <i class="fa fa-trash" aria-hidden="true"></i><span class="content-card-view-delete-frame-label"> Удалить кадр</span>
+                                </button>
                                 <button type="button" id="contentCardViewInfoBtn" class="content-card-view-info-btn" style="display: none;" onclick="contentEditor.openContentCardAdminInfoModal()" aria-label="Информация о карточке" title="Информация">
                                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                                 </button>
@@ -247,33 +250,7 @@ class ContentEditor {
             this._contentCardViewFileName = '';
             this._contentCardTopLabels = [];
             this._contentCardViewCardId = parseInt(cardId, 10);
-            const infoBtn = document.getElementById('contentCardViewInfoBtn');
-            const editBtn = document.getElementById('contentCardViewEditFrameBtn');
-            if (data.is_content_card_admin && infoBtn && editBtn) {
-                this._contentCardAdminMeta = {
-                    file_name: data.file_name != null ? String(data.file_name) : '',
-                    labels: Array.isArray(data.labels) ? data.labels : [],
-                };
-                infoBtn.style.display = '';
-                editBtn.style.display = 'inline-flex';
-            } else {
-                this._contentCardAdminMeta = null;
-                if (infoBtn) {
-                    infoBtn.style.display = 'none';
-                }
-                if (editBtn) {
-                    editBtn.style.display = 'none';
-                }
-            }
-            const fw = data.frames || {};
-            const framesArr = Array.isArray(fw.frames) ? fw.frames.slice() : [];
-            framesArr.sort((a, b) => (a.order != null ? a.order : 0) - (b.order != null ? b.order : 0));
-            this.cardPreviewRefs = framesArr.map((f) => ({
-                frameId: f.frameId,
-                saveSlotIndex: f.saveSlotIndex != null ? f.saveSlotIndex : 0,
-                payload: f.payload,
-                storageKey: null,
-            }));
+            this._applyContentCardFetchPayload(data);
             this.cardPreviewIndex = 0;
             if (this.cardPreviewModal) {
                 this.cardPreviewModal.style.display = 'flex';
@@ -285,6 +262,108 @@ class ContentEditor {
         } catch (e) {
             console.error('bootstrapContentCardViewPage:', e);
             showErr(e.message || String(e));
+        }
+    }
+
+    /** Обновляет метаданные админа и cardPreviewRefs из ответа /api/content_cards/fetch. */
+    _applyContentCardFetchPayload(data) {
+        const infoBtn = document.getElementById('contentCardViewInfoBtn');
+        const editBtn = document.getElementById('contentCardViewEditFrameBtn');
+        const deleteFrameBtn = document.getElementById('contentCardViewDeleteFrameBtn');
+        if (data.is_content_card_admin && infoBtn && editBtn) {
+            this._contentCardAdminMeta = {
+                file_name: data.file_name != null ? String(data.file_name) : '',
+                labels: Array.isArray(data.labels) ? data.labels : [],
+            };
+            infoBtn.style.display = '';
+            editBtn.style.display = 'inline-flex';
+            if (deleteFrameBtn) deleteFrameBtn.style.display = 'inline-flex';
+        } else {
+            this._contentCardAdminMeta = null;
+            if (infoBtn) infoBtn.style.display = 'none';
+            if (editBtn) editBtn.style.display = 'none';
+            if (deleteFrameBtn) deleteFrameBtn.style.display = 'none';
+        }
+        const fw = data.frames || {};
+        const framesArr = Array.isArray(fw.frames) ? fw.frames.slice() : [];
+        framesArr.sort((a, b) => (a.order != null ? a.order : 0) - (b.order != null ? b.order : 0));
+        this.cardPreviewRefs = framesArr.map((f) => ({
+            frameId: f.frameId,
+            saveSlotIndex: f.saveSlotIndex != null ? f.saveSlotIndex : 0,
+            payload: f.payload,
+            storageKey: null,
+        }));
+    }
+
+    /** Удаление текущего кадра (только ROOT-админ, только если кадров больше одного). */
+    async deleteCurrentContentCardFrame() {
+        if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) return;
+        if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
+        if (this.cardPreviewRefs.length <= 1) return;
+        if (!confirm('Удалить текущий кадр? Действие нельзя отменить.')) return;
+
+        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        if (!initData) {
+            this.showNotification('Нет init_data для сохранения', 'warning');
+            return;
+        }
+
+        const idx = this.cardPreviewIndex;
+        const nextRefs = this.cardPreviewRefs.filter((_, i) => i !== idx);
+        const nextIndex = Math.min(idx, nextRefs.length - 1);
+        const framesWrapper = {
+            version: 1,
+            frames: nextRefs.map((r, order) => ({
+                frameId: r.frameId,
+                saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
+                order,
+                payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
+            })),
+        };
+
+        const deleteBtn = document.getElementById('contentCardViewDeleteFrameBtn');
+        if (deleteBtn) deleteBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/content_cards/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    init_data: initData,
+                    content_card_id: this._contentCardViewCardId,
+                    frames: framesWrapper,
+                }),
+            });
+            let respData = {};
+            try {
+                respData = await response.json();
+            } catch (e) {
+                respData = {};
+            }
+            if (!response.ok) {
+                let msg = respData.detail;
+                if (Array.isArray(msg)) {
+                    msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
+                } else if (msg && typeof msg === 'object') {
+                    msg = JSON.stringify(msg);
+                }
+                throw new Error(msg || `Ошибка ${response.status}`);
+            }
+            this.cardPreviewRefs = nextRefs.map((r) => ({
+                frameId: r.frameId,
+                saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
+                payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
+                storageKey: null,
+            }));
+            this.cardPreviewIndex = nextIndex;
+            this.refreshCardPreviewUI();
+            this.showNotification('Кадр удалён', 'success');
+        } catch (err) {
+            console.error('deleteCurrentContentCardFrame:', err);
+            this.showNotification('Не удалось удалить кадр: ' + (err.message || err), 'error');
+        } finally {
+            if (deleteBtn) deleteBtn.disabled = false;
+            this.refreshCardPreviewUI();
         }
     }
 
@@ -3445,6 +3524,11 @@ class ContentEditor {
         if (prevBtn) prevBtn.disabled = total === 0 || this.cardPreviewIndex <= 0;
         if (nextBtn) nextBtn.disabled = total === 0 || this.cardPreviewIndex >= total - 1;
         if (approveBtn) approveBtn.disabled = total === 0;
+
+        const deleteFrameBtn = document.getElementById('contentCardViewDeleteFrameBtn');
+        if (deleteFrameBtn && typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ && this._contentCardAdminMeta) {
+            deleteFrameBtn.disabled = total <= 1;
+        }
 
         if (!meta) return;
 

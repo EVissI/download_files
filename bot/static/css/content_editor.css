@@ -563,12 +563,54 @@
     color: #d4f0c4;
 }
 
+.content-card-view-delete-frame-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid #6b2d2d;
+    border-radius: 8px;
+    background: #3d2525;
+    color: #f0a8a8;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.content-card-view-delete-frame-btn .fa {
+    font-size: 16px;
+}
+
+.content-card-view-delete-frame-btn:hover:not(:disabled) {
+    background: #4a2e2e;
+    border-color: #8a4a4a;
+    color: #ffc8c8;
+}
+
+.content-card-view-delete-frame-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 @media (max-width: 420px) {
     .content-card-view-edit-label {
         display: none;
     }
 
     .content-card-view-edit-btn {
+        min-width: 40px;
+        padding: 0 10px;
+    }
+
+    .content-card-view-delete-frame-label {
+        display: none;
+    }
+
+    .content-card-view-delete-frame-btn {
         min-width: 40px;
         padding: 0 10px;
     }
