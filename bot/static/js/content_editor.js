@@ -44,6 +44,9 @@ class ContentEditor {
         /** Кэш загрузки PNG для оверлея доски в предпросмотре */
         this._boardPreviewAssetsPromise = null;
 
+        /** Снимок доски из открытого payload (content-card-view / предпросмотр), если нет hint_viewer */
+        this._editorSessionBoardSnapshot = null;
+
         /** Модалка меток карточки (целиком, не на отдельный кадр) */
         this.cardLabelsModal = null;
         this.cardLabelsDraft = [];
@@ -795,6 +798,41 @@ class ContentEditor {
         this.previewEditFrameId = null;
         this.previewEditSaveSlotIndex = null;
         this._contentCardEditFrameIndex = null;
+        this._editorSessionBoardSnapshot = null;
+    }
+
+    /**
+     * Объединение cardData при сохранении кадра с content-card-view: новые поля из редактора,
+     * hints / cube_hints и прочее из оригинала, если в сессии не пришли.
+     */
+    mergeCardDataForContentCardSave(fresh, orig) {
+        if (!orig || typeof orig !== 'object') {
+            return fresh && typeof fresh === 'object' ? JSON.parse(JSON.stringify(fresh)) : null;
+        }
+        const o = JSON.parse(JSON.stringify(orig));
+        if (!fresh || typeof fresh !== 'object') {
+            return Object.keys(o).length ? o : null;
+        }
+        const f = JSON.parse(JSON.stringify(fresh));
+        for (const [k, v] of Object.entries(f)) {
+            if (v !== undefined && v !== null) {
+                o[k] = v;
+            }
+        }
+        return Object.keys(o).length ? o : null;
+    }
+
+    /** Пересобрать таблицы хода/куба из payload.cardData (если в JSON есть hints / cube_hints). */
+    refreshTableElementsFromCardData() {
+        if (!this.canvas || !this.cardData) return;
+        this.canvas.querySelectorAll('.canvas-element.table-element').forEach((el) => {
+            const t = el.dataset.tableType === 'cube' ? 'cube' : 'hints';
+            if (t === 'hints' && this.cardData.hints) {
+                this.updateTableContent(el, 'hints');
+            } else if (t === 'cube' && this.cardData.cube_hints) {
+                this.updateTableContent(el, 'cube');
+            }
+        });
     }
 
     openModal() {
@@ -2942,9 +2980,25 @@ class ContentEditor {
     }
 
     async buildFrameSavePayload(frameId, saveSlotIndex) {
-        const board = typeof window.getHintViewerBoardSnapshot === 'function'
-            ? window.getHintViewerBoardSnapshot()
-            : null;
+        if (
+            !this.editorOpenedFromContentCardView &&
+            !this.editorOpenedFromPreview &&
+            typeof window.getHintViewerCurrentCardData === 'function'
+        ) {
+            this.syncCardDataFromHintViewerPage();
+        }
+
+        let board =
+            typeof window.getHintViewerBoardSnapshot === 'function'
+                ? window.getHintViewerBoardSnapshot()
+                : null;
+        if (board == null && this._editorSessionBoardSnapshot != null) {
+            try {
+                board = JSON.parse(JSON.stringify(this._editorSessionBoardSnapshot));
+            } catch (e) {
+                board = this._editorSessionBoardSnapshot;
+            }
+        }
 
         let cardDataCopy = null;
         if (this.cardData) {
@@ -3266,6 +3320,7 @@ class ContentEditor {
         this.selectedElement = null;
         this.applyPropertiesEmptyState();
         this.toggleStates = {};
+        this._editorSessionBoardSnapshot = null;
         this.syncCardDataFromHintViewerPage();
         this.elementIdCounter = 0;
         this.loadTools();
@@ -4310,7 +4365,8 @@ class ContentEditor {
                 let payload = await this.buildFrameSavePayload(this.previewEditFrameId, slot);
                 await this.uploadPayloadMediaToS3(payload);
                 const orig = this.cardPreviewRefs[idx].payload;
-                if (orig && orig.board != null) {
+                payload.cardData = this.mergeCardDataForContentCardSave(payload.cardData, orig && orig.cardData);
+                if (payload.board == null && orig && orig.board != null) {
                     try {
                         payload.board = JSON.parse(JSON.stringify(orig.board));
                     } catch (e) {
@@ -4417,6 +4473,16 @@ class ContentEditor {
                 this.cardData = null;
             }
         }
+
+        this._editorSessionBoardSnapshot = null;
+        if (payload.board != null && typeof payload.board === 'object') {
+            try {
+                this._editorSessionBoardSnapshot = JSON.parse(JSON.stringify(payload.board));
+            } catch (e) {
+                this._editorSessionBoardSnapshot = payload.board;
+            }
+        }
+
         this.canvas.style.backgroundColor = this.resolveSavedCanvasBackground(payload);
 
         const items = payload.elements || [];
@@ -4448,6 +4514,8 @@ class ContentEditor {
 
         this.loadTools();
         this.syncBoardToolToggleFromState();
+        this.refreshTableElementsFromCardData();
+
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 if (this.canvas && this.canvas.getBoundingClientRect().width > 0) {
