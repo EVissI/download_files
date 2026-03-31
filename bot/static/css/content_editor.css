@@ -3,7 +3,7 @@
  * Редактор контента в стиле Photoshop (Модальное окно)
  */
 
-* {
+ * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -44,8 +44,6 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    /* Явный цвет: на страницах без тёмного body (напр. content-card-view) иначе наследуется чёрный */
-    color: #e0e0e0;
 }
 
 .content-editor-header {
@@ -329,7 +327,6 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #e8e8e8;
 }
 
 #propertiesContent {
@@ -337,11 +334,6 @@
     padding: 15px;
     overflow-y: auto;
     min-height: 0;
-    color: #e0e0e0;
-}
-
-#propertiesContent > p {
-    color: #e0e0e0;
 }
 
 /* Подтверждение сохранения кадра */
@@ -1249,36 +1241,11 @@
 .property-item input[type="range"],
 .property-item input[type="number"],
 .property-item input[type="color"],
-.property-item input[type="text"],
-.property-item input[type="url"],
-.property-item input[type="search"],
-.property-item input[type="email"],
 .property-item select {
     width: 100%;
     background: #3a3a3a;
     border: 1px solid #505050;
     border-radius: 4px;
-    color: #e0e0e0;
-}
-
-.property-item input[type="text"],
-.property-item input[type="url"],
-.property-item input[type="search"],
-.property-item input[type="email"] {
-    padding: 6px 8px;
-    font-size: 13px;
-    box-sizing: border-box;
-}
-
-.property-item input[type="text"]::placeholder,
-.property-item input[type="url"]::placeholder,
-.property-item input[type="search"]::placeholder,
-.property-item input[type="email"]::placeholder {
-    color: #909090;
-}
-
-.property-item select option {
-    background: #3a3a3a;
     color: #e0e0e0;
 }
 
@@ -1815,7 +1782,6 @@
     display: none;
     align-items: center;
     justify-content: center;
-    color: #e0e0e0;
 }
 
 .canvas-settings-overlay {
