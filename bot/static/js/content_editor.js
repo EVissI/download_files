@@ -432,6 +432,26 @@ class ContentEditor {
         };
     }
 
+    /**
+     * Новый кадр с тем же содержимым, что у шаблона, но с новым frameId (для вставки после существующего).
+     */
+    cloneContentCardFramePayloadFromTemplate(templatePayload) {
+        const emptyMeta = this.buildEmptyContentCardFramePayload();
+        if (!templatePayload || typeof templatePayload !== 'object') {
+            return emptyMeta;
+        }
+        try {
+            const p = JSON.parse(JSON.stringify(templatePayload));
+            p.version = p.version != null ? p.version : 1;
+            p.frameId = emptyMeta.frameId;
+            p.saveSlotIndex = 0;
+            p.savedAt = emptyMeta.savedAt;
+            return p;
+        } catch (e) {
+            return emptyMeta;
+        }
+    }
+
     openContentCardAddFrameModal() {
         if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) return;
         if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
@@ -488,11 +508,16 @@ class ContentEditor {
         }
         const insertIndex = pos - 1;
 
-        const emptyPayload = this.buildEmptyContentCardFramePayload();
+        let newPayload;
+        if (insertIndex > 0 && this.cardPreviewRefs[insertIndex - 1] && this.cardPreviewRefs[insertIndex - 1].payload) {
+            newPayload = this.cloneContentCardFramePayloadFromTemplate(this.cardPreviewRefs[insertIndex - 1].payload);
+        } else {
+            newPayload = this.buildEmptyContentCardFramePayload();
+        }
         const newRef = {
-            frameId: emptyPayload.frameId,
+            frameId: newPayload.frameId,
             saveSlotIndex: 0,
-            payload: emptyPayload,
+            payload: newPayload,
             storageKey: null,
         };
 
@@ -516,7 +541,7 @@ class ContentEditor {
 
         if (confirmBtn) confirmBtn.disabled = true;
         try {
-            await this.uploadPayloadMediaToS3(emptyPayload);
+            await this.uploadPayloadMediaToS3(newPayload);
             const response = await fetch('/api/content_cards/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -835,6 +860,28 @@ class ContentEditor {
         });
     }
 
+    /** Предпросмотр карточки: как в редакторе, пересобрать таблицы из payload.cardData поверх разметки из elements. */
+    refreshPreviewTableElementsFromCardData(inner, payload) {
+        if (!inner || !payload || !payload.cardData || typeof payload.cardData !== 'object') return;
+        let cd;
+        try {
+            cd = JSON.parse(JSON.stringify(payload.cardData));
+        } catch (e) {
+            return;
+        }
+        if (!cd.hints && !cd.cube_hints) return;
+        inner.querySelectorAll('.canvas-element.table-element').forEach((el) => {
+            const t = el.dataset.tableType === 'cube' ? 'cube' : 'hints';
+            if (t === 'hints' && cd.hints) {
+                this.updateTableContent(el, 'hints', cd);
+                this.applyContentTableMarkupClasses(el);
+            } else if (t === 'cube' && cd.cube_hints) {
+                this.updateTableContent(el, 'cube', cd);
+                this.applyContentTableMarkupClasses(el);
+            }
+        });
+    }
+
     openModal() {
         this.clearPreviewEditSession();
         // Force cache-busting by adding timestamp to modal
@@ -957,7 +1004,8 @@ class ContentEditor {
         });
     }
 
-    updateTableContent(element, tableType) {
+    updateTableContent(element, tableType, cardDataOverride) {
+        const cardData = cardDataOverride !== undefined ? cardDataOverride : this.cardData;
         // Debug: Log position before update
         console.log('updateTableContent - before:', {
             top: element.style.top,
@@ -969,7 +1017,7 @@ class ContentEditor {
         element.dataset.tableType = tableType;
         element.innerHTML = '';
 
-        if (!this.cardData) {
+        if (!cardData) {
             // Если нет данных, показываем заглушку
             element.innerHTML = `
                 <div style="padding: 20px; text-align: center; color: #666;">
@@ -977,11 +1025,11 @@ class ContentEditor {
                 </div>
             `;
         } else {
-            if (tableType === 'hints' && this.cardData.hints) {
-                const table = this.createHintsTable(this.cardData.hints);
+            if (tableType === 'hints' && cardData.hints) {
+                const table = this.createHintsTable(cardData.hints);
                 element.appendChild(table);
-            } else if (tableType === 'cube' && this.cardData.cube_hints) {
-                const table = this.createCubeTable(this.cardData.cube_hints);
+            } else if (tableType === 'cube' && cardData.cube_hints) {
+                const table = this.createCubeTable(cardData.cube_hints);
                 element.appendChild(table);
             } else {
                 // Если для выбранного типа нет данных
@@ -3838,7 +3886,12 @@ class ContentEditor {
     }
 
     shouldShowBoardInCardPreview(payload) {
-        return !!(payload && payload.editor && payload.editor.boardCanvasToggle);
+        if (!payload) return false;
+        if (payload.editor && payload.editor.boardCanvasToggle) return true;
+        const b = payload.board;
+        if (b == null || typeof b !== 'object') return false;
+        if (b.error === 'no_game_data') return false;
+        return true;
     }
 
     loadBoardPreviewImages() {
@@ -4142,6 +4195,7 @@ class ContentEditor {
         this.elementIdCounter = savedCounter;
 
         this.normalizePreviewStackTops(inner);
+        this.refreshPreviewTableElementsFromCardData(inner, payload);
 
         if (this.shouldShowBoardInCardPreview(payload)) {
             this.appendCardPreviewBoardOverlay(wrap, payload);
