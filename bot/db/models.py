@@ -566,7 +566,9 @@ class ContentCard(Base):
     Привязка к пользователям — только через таблицу user_content_cards (many-to-many).
 
     frames — JSONB со структурой кадров, например:
-      {"version": 1, "frames": [
+      {"version": 1,
+       "sharedContext": {"board": {...}, "cardData": {...}},
+       "frames": [
         {"frameId": "...", "saveSlotIndex": 0, "order": 0,
          "payload": {"elements": [
            {"toolId": "upload-image", "imageS3Key": "content_cards/media/{user_id}/{uuid}.png"},
@@ -574,6 +576,8 @@ class ContentCard(Base):
            {"toolId": "board-illustration", "boardImageS3Key": "..."}
          ], ...}}
       ]}
+      sharedContext — опционально: общие для всех кадров снимок доски и данные таблиц (hint viewer);
+      подставляются в редактор пустого кадра на /content-card-view без дублирования в каждом payload.
       Медиа в S3; отображение GET /api/content_cards/media?key= (доступ по ключу из JSON карточки, в т.ч. для других пользователей после шаринга).
     labels — нативный PostgreSQL-массив строк (TEXT[]).
     """

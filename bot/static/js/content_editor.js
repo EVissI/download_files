@@ -157,6 +157,8 @@ class ContentEditor {
         this._contentCardTopLabels = [];
         this._contentCardViewFileName = '';
         this._contentCardAdminMeta = null;
+        /** Общие для всех кадров карточки данные hint viewer (доска, hints) — из JSON sharedContext или вывод из кадров. */
+        this._contentCardSharedContext = null;
         if (!document.getElementById('contentCardViewRoot')) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="contentCardViewRoot" class="card-preview-modal card-preview-modal--fullscreen" style="display: none; min-height: 100vh;" aria-hidden="true">
@@ -331,6 +333,7 @@ class ContentEditor {
             if (deleteFrameBtn) deleteFrameBtn.style.display = 'none';
         }
         const fw = data.frames || {};
+        this._assignContentCardSharedContextFromWrapper(fw);
         const framesArr = Array.isArray(fw.frames) ? fw.frames.slice() : [];
         framesArr.sort((a, b) => (a.order != null ? a.order : 0) - (b.order != null ? b.order : 0));
         this.cardPreviewRefs = framesArr.map((f) => ({
@@ -339,6 +342,136 @@ class ContentEditor {
             payload: f.payload,
             storageKey: null,
         }));
+    }
+
+    /**
+     * Общий контекст карточки: явный `sharedContext` в JSON или первый кадр с board / cardData (hints).
+     * Не показывается в предпросмотре пустого кадра — подмешивается только при открытии редактора.
+     */
+    _assignContentCardSharedContextFromWrapper(fw) {
+        this._contentCardSharedContext = null;
+        if (!fw || typeof fw !== 'object') return;
+        const raw = fw.sharedContext;
+        if (raw && typeof raw === 'object') {
+            let board = null;
+            let cardData = null;
+            if (raw.board != null && typeof raw.board === 'object' && raw.board.error !== 'no_game_data') {
+                try {
+                    board = JSON.parse(JSON.stringify(raw.board));
+                } catch (e) {
+                    board = raw.board;
+                }
+            }
+            if (raw.cardData != null && typeof raw.cardData === 'object') {
+                try {
+                    cardData = JSON.parse(JSON.stringify(raw.cardData));
+                } catch (e) {
+                    cardData = raw.cardData;
+                }
+            }
+            if (board || cardData) {
+                this._contentCardSharedContext = { board, cardData };
+            }
+            return;
+        }
+        const framesArr = Array.isArray(fw.frames) ? fw.frames : [];
+        this._contentCardSharedContext = this._deriveContentCardSharedContextFromFrames(framesArr);
+    }
+
+    _deriveContentCardSharedContextFromFrames(framesArr) {
+        let board = null;
+        let cardData = null;
+        for (const f of framesArr) {
+            const p = f && f.payload;
+            if (!p || typeof p !== 'object') continue;
+            if (
+                board == null &&
+                p.board != null &&
+                typeof p.board === 'object' &&
+                p.board.error !== 'no_game_data'
+            ) {
+                try {
+                    board = JSON.parse(JSON.stringify(p.board));
+                } catch (e) {
+                    board = p.board;
+                }
+            }
+            if (cardData == null && p.cardData && typeof p.cardData === 'object') {
+                const h = p.cardData.hints;
+                const ch = p.cardData.cube_hints;
+                const hasHints = Array.isArray(h) && h.length > 0;
+                const hasCube = Array.isArray(ch) && ch.length > 0;
+                if (hasHints || hasCube) {
+                    try {
+                        cardData = JSON.parse(JSON.stringify(p.cardData));
+                    } catch (e) {
+                        cardData = p.cardData;
+                    }
+                }
+            }
+            if (board && cardData) break;
+        }
+        if (!board && !cardData) return null;
+        return { board, cardData };
+    }
+
+    /** Слой кадра поверх общего контекста: непустые поля кадра перекрывают shared. */
+    mergeSharedUnderFrameCardData(sharedCd, frameCd) {
+        if (!sharedCd || typeof sharedCd !== 'object') {
+            if (!frameCd || typeof frameCd !== 'object') return null;
+            try {
+                return JSON.parse(JSON.stringify(frameCd));
+            } catch (e) {
+                return null;
+            }
+        }
+        let o;
+        try {
+            o = JSON.parse(JSON.stringify(sharedCd));
+        } catch (e) {
+            return null;
+        }
+        if (!frameCd || typeof frameCd !== 'object') return Object.keys(o).length ? o : null;
+        let f;
+        try {
+            f = JSON.parse(JSON.stringify(frameCd));
+        } catch (e) {
+            return Object.keys(o).length ? o : null;
+        }
+        for (const [k, v] of Object.entries(f)) {
+            if (v !== undefined && v !== null) o[k] = v;
+        }
+        return Object.keys(o).length ? o : null;
+    }
+
+    /** Подставить shared board/cardData в клон payload перед restore (пустой новый кадр). */
+    applyContentCardSharedToEditorPayload(payload) {
+        const sc = this._contentCardSharedContext;
+        if (!sc || typeof sc !== 'object' || !payload || typeof payload !== 'object') return payload;
+        if (payload.board == null && sc.board != null && typeof sc.board === 'object') {
+            try {
+                payload.board = JSON.parse(JSON.stringify(sc.board));
+            } catch (e) {
+                payload.board = sc.board;
+            }
+        }
+        if (sc.cardData && typeof sc.cardData === 'object') {
+            payload.cardData = this.mergeSharedUnderFrameCardData(sc.cardData, payload.cardData);
+        }
+        return payload;
+    }
+
+    /** Обёртка кадров для POST /api/content_cards/update — сохраняет sharedContext карточки. */
+    wrapContentCardFramesWithShared(framesArray) {
+        const w = { version: 1, frames: framesArray };
+        const sc = this._contentCardSharedContext;
+        if (sc && typeof sc === 'object' && (sc.board || sc.cardData)) {
+            w.sharedContext = {
+                board: sc.board ? JSON.parse(JSON.stringify(sc.board)) : null,
+                cardData: sc.cardData ? JSON.parse(JSON.stringify(sc.cardData)) : null,
+            };
+        }
+        return w;
     }
 
     /** Удаление текущего кадра (только ROOT-админ, только если кадров больше одного). */
@@ -357,15 +490,13 @@ class ContentEditor {
         const idx = this.cardPreviewIndex;
         const nextRefs = this.cardPreviewRefs.filter((_, i) => i !== idx);
         const nextIndex = Math.min(idx, nextRefs.length - 1);
-        const framesWrapper = {
-            version: 1,
-            frames: nextRefs.map((r, order) => ({
-                frameId: r.frameId,
-                saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
-                order,
-                payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
-            })),
-        };
+        const framesList = nextRefs.map((r, order) => ({
+            frameId: r.frameId,
+            saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
+            order,
+            payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
+        }));
+        const framesWrapper = this.wrapContentCardFramesWithShared(framesList);
 
         const deleteBtn = document.getElementById('contentCardViewDeleteFrameBtn');
         if (deleteBtn) deleteBtn.disabled = true;
@@ -432,26 +563,6 @@ class ContentEditor {
         };
     }
 
-    /**
-     * Новый кадр с тем же содержимым, что у шаблона, но с новым frameId (для вставки после существующего).
-     */
-    cloneContentCardFramePayloadFromTemplate(templatePayload) {
-        const emptyMeta = this.buildEmptyContentCardFramePayload();
-        if (!templatePayload || typeof templatePayload !== 'object') {
-            return emptyMeta;
-        }
-        try {
-            const p = JSON.parse(JSON.stringify(templatePayload));
-            p.version = p.version != null ? p.version : 1;
-            p.frameId = emptyMeta.frameId;
-            p.saveSlotIndex = 0;
-            p.savedAt = emptyMeta.savedAt;
-            return p;
-        } catch (e) {
-            return emptyMeta;
-        }
-    }
-
     openContentCardAddFrameModal() {
         if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) return;
         if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
@@ -508,12 +619,7 @@ class ContentEditor {
         }
         const insertIndex = pos - 1;
 
-        let newPayload;
-        if (insertIndex > 0 && this.cardPreviewRefs[insertIndex - 1] && this.cardPreviewRefs[insertIndex - 1].payload) {
-            newPayload = this.cloneContentCardFramePayloadFromTemplate(this.cardPreviewRefs[insertIndex - 1].payload);
-        } else {
-            newPayload = this.buildEmptyContentCardFramePayload();
-        }
+        const newPayload = this.buildEmptyContentCardFramePayload();
         const newRef = {
             frameId: newPayload.frameId,
             saveSlotIndex: 0,
@@ -529,15 +635,13 @@ class ContentEditor {
         }));
         refs.splice(insertIndex, 0, newRef);
 
-        const framesWrapper = {
-            version: 1,
-            frames: refs.map((r, order) => ({
-                frameId: r.frameId,
-                saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
-                order,
-                payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
-            })),
-        };
+        const framesList = refs.map((r, order) => ({
+            frameId: r.frameId,
+            saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
+            order,
+            payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
+        }));
+        const framesWrapper = this.wrapContentCardFramesWithShared(framesList);
 
         if (confirmBtn) confirmBtn.disabled = true;
         try {
@@ -654,6 +758,7 @@ class ContentEditor {
             this.showNotification('Не удалось загрузить кадр', 'error');
             return;
         }
+        this.applyContentCardSharedToEditorPayload(payload);
         this.closeCardPreviewModal();
         this.editorOpenedFromContentCardView = true;
         this.editorOpenedFromPreview = true;
@@ -3673,6 +3778,30 @@ class ContentEditor {
                 });
             }
             framesWrapper = { version: 1, frames };
+            let shBoard = null;
+            let shCardData = null;
+            if (typeof window.getHintViewerBoardSnapshot === 'function') {
+                try {
+                    shBoard = window.getHintViewerBoardSnapshot();
+                    if (shBoard != null) shBoard = JSON.parse(JSON.stringify(shBoard));
+                } catch (e) {
+                    shBoard = null;
+                }
+            }
+            if (typeof window.getHintViewerCurrentCardData === 'function') {
+                try {
+                    shCardData = window.getHintViewerCurrentCardData();
+                    if (shCardData != null) shCardData = JSON.parse(JSON.stringify(shCardData));
+                } catch (e) {
+                    shCardData = null;
+                }
+            }
+            if (shBoard != null || shCardData != null) {
+                framesWrapper.sharedContext = {
+                    board: shBoard,
+                    cardData: shCardData,
+                };
+            }
         } catch (e) {
             this.showNotification(e.message || String(e), 'error');
             return false;
@@ -4439,7 +4568,7 @@ class ContentEditor {
                               ? JSON.parse(JSON.stringify(r.payload))
                               : null,
                 }));
-                const framesWrapper = { version: 1, frames };
+                const framesWrapper = this.wrapContentCardFramesWithShared(frames);
                 const response = await fetch('/api/content_cards/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
