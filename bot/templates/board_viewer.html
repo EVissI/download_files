@@ -514,51 +514,6 @@
             width: fit-content;
         }
 
-        /* Снежинки */
-        .snowflake {
-            position: fixed;
-            top: -50px;
-            z-index: -1;
-            user-select: none;
-            pointer-events: none;
-            font-size: 1.5em;
-            color: #ffffff;
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
-            opacity: 0.8;
-        }
-
-        @keyframes snowfall {
-            0% {
-                transform: translateY(0) translateX(0) rotate(0deg);
-                opacity: 0.8;
-            }
-
-            50% {
-                opacity: 0.9;
-            }
-
-            100% {
-                transform: translateY(100vh) translateX(100px) rotate(360deg);
-                opacity: 0.3;
-            }
-        }
-
-        @keyframes snowfall-left {
-            0% {
-                transform: translateY(0) translateX(0) rotate(0deg);
-                opacity: 0.8;
-            }
-
-            50% {
-                opacity: 0.9;
-            }
-
-            100% {
-                transform: translateY(100vh) translateX(-100px) rotate(360deg);
-                opacity: 0.3;
-            }
-        }
-
         /* Support Button and Modal */
         .support-container {
             display: flex;
@@ -1815,9 +1770,7 @@
             const animationControls = document.querySelector('.animation-controls');
             const blackPips = document.getElementById('black-pips');
             const redPips = document.getElementById('red-pips');
-            const snowflakes = document.querySelectorAll('.snowflake');
             const supportContainer = document.querySelector('.support-container');
-            const originalSnowflakeDisplay = Array.from(snowflakes).map(s => s.style.display);
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
@@ -1842,7 +1795,6 @@
             if (checkboxes) checkboxes.style.display = 'none';
             if (animationControls) animationControls.style.display = 'none';
             if (supportContainer) supportContainer.style.display = 'none';
-            snowflakes.forEach(flake => flake.style.display = 'none');
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfoDiv) {
@@ -1878,7 +1830,6 @@
                 height: screenshotHeight
             }).then(canvas => {
                 // Restore after screenshot
-                snowflakes.forEach((flake, index) => flake.style.display = originalSnowflakeDisplay[index]);
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (screenshotBtn) screenshotBtn.style.display = originalScreenshotDisplay;
@@ -1929,7 +1880,6 @@
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
-                snowflakes.forEach((flake, index) => flake.style.display = originalSnowflakeDisplay[index]);
                 controls.style.display = originalControlsDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
@@ -1977,9 +1927,7 @@
             const animationControls = document.querySelector('.animation-controls');
             const blackPips = document.getElementById('black-pips');
             const redPips = document.getElementById('red-pips');
-            const snowflakes = document.querySelectorAll('.snowflake');
             const supportContainer = document.querySelector('.support-container');
-            const originalSnowflakeDisplay = Array.from(snowflakes).map(s => s.style.display);
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
@@ -2004,7 +1952,6 @@
             if (checkboxes) checkboxes.style.display = 'none';
             if (animationControls) animationControls.style.display = 'none';
             if (supportContainer) supportContainer.style.display = 'none';
-            snowflakes.forEach(flake => flake.style.display = 'none');
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfoDiv) {
@@ -2034,7 +1981,6 @@
                 height: screenshotHeight
             }).then(canvas => {
                 // Restore after screenshot
-                snowflakes.forEach((flake, index) => flake.style.display = originalSnowflakeDisplay[index]);
                 controls.style.display = originalControlsDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
@@ -2073,7 +2019,6 @@
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
-                snowflakes.forEach((flake, index) => flake.style.display = originalSnowflakeDisplay[index]);
                 controls.style.display = originalControlsDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
@@ -2181,36 +2126,6 @@
         Double16.onload = imageLoaded;
         Double32.onload = imageLoaded;
         Double64.onload = imageLoaded;
-
-        // Функция для создания снежинок
-        function createSnowflakes() {
-            const snowflakesCount = 15;
-            const snowflakes = ['❄', '☃', '❅', '❆'];
-
-            for (let i = 0; i < snowflakesCount; i++) {
-                const snowflake = document.createElement('div');
-                snowflake.classList.add('snowflake');
-                snowflake.textContent = snowflakes[Math.floor(Math.random() * snowflakes.length)];
-
-                const randomX = Math.random() * 100;
-                const randomDuration = 8 + Math.random() * 8;
-                const randomDelay = Math.random() * 5;
-                const animationDirection = Math.random() > 0.5 ? 'snowfall' : 'snowfall-left';
-
-                snowflake.style.left = randomX + '%';
-                snowflake.style.animation = `${animationDirection} ${randomDuration}s linear ${randomDelay}s infinite`;
-                snowflake.style.fontSize = (0.8 + Math.random() * 0.8) + 'em';
-
-                document.body.appendChild(snowflake);
-            }
-        }
-
-        // Запускаем снежинки при загрузке страницы
-        window.addEventListener('load', createSnowflakes);
-        // Если документ уже загружен
-        if (document.readyState === 'complete') {
-            createSnowflakes();
-        }
 
         function openSupportModal() {
             document.getElementById('supportModal').style.display = 'block';
