@@ -35,6 +35,12 @@ class ContentEditor {
         /** После сохранения из предпросмотра-редактора — открыть предпросмотр на этом кадре */
         this._resumePreviewStorageKey = null;
 
+        /** Редактор открыт со страницы /content-card-view (root-админ): сохранение кадра на сервер */
+        this.editorOpenedFromContentCardView = false;
+        this._contentCardEditFrameIndex = null;
+        this._contentCardViewCardId = null;
+        this._viewOnlyEditorMounted = false;
+
         /** Кэш загрузки PNG для оверлея доски в предпросмотре */
         this._boardPreviewAssetsPromise = null;
 
@@ -147,12 +153,21 @@ class ContentEditor {
     initContentCardViewOnly() {
         this._contentCardTopLabels = [];
         this._contentCardViewFileName = '';
+        this._contentCardAdminMeta = null;
         if (!document.getElementById('contentCardViewRoot')) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="contentCardViewRoot" class="card-preview-modal card-preview-modal--fullscreen" style="display: none; min-height: 100vh;" aria-hidden="true">
                     <div class="card-preview-box" style="width: 100%; max-width: 100%; box-sizing: border-box;">
                         <div class="card-preview-header">
                             <h3 class="card-preview-title" id="contentCardViewTitle">Карточка</h3>
+                            <div class="card-preview-header-right">
+                                <button type="button" id="contentCardViewEditFrameBtn" class="content-card-view-edit-btn" style="display: none;" onclick="contentEditor.openEditorFromContentCardView()" title="Редактировать текущий кадр">
+                                    <i class="fa fa-pencil" aria-hidden="true"></i><span class="content-card-view-edit-label"> Редактировать кадр</span>
+                                </button>
+                                <button type="button" id="contentCardViewInfoBtn" class="content-card-view-info-btn" style="display: none;" onclick="contentEditor.openContentCardAdminInfoModal()" aria-label="Информация о карточке" title="Информация">
+                                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="card-preview-nav">
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewPrevBtn" onclick="contentEditor.cardPreviewPrev()">←</button>
@@ -161,6 +176,16 @@ class ContentEditor {
                         </div>
                         <div class="card-preview-meta" id="cardPreviewMeta"></div>
                         <div class="card-preview-frame-host" id="cardPreviewFrameHost"></div>
+                    </div>
+                </div>
+                <div id="contentCardAdminInfoModal" class="content-card-admin-info-modal" style="display: none;" aria-hidden="true">
+                    <div class="content-card-admin-info-overlay" onclick="contentEditor.closeContentCardAdminInfoModal()"></div>
+                    <div class="content-card-admin-info-box" role="dialog" aria-modal="true" aria-labelledby="contentCardAdminInfoTitle">
+                        <h3 id="contentCardAdminInfoTitle" class="content-card-admin-info-title">Информация о карточке</h3>
+                        <div id="contentCardAdminInfoBody" class="content-card-admin-info-body"></div>
+                        <div class="content-card-admin-info-actions">
+                            <button type="button" class="content-card-admin-info-close-btn" onclick="contentEditor.closeContentCardAdminInfoModal()">Закрыть</button>
+                        </div>
                     </div>
                 </div>
             `);
@@ -216,11 +241,30 @@ class ContentEditor {
                 throw new Error(msg || `Ошибка ${r.status}`);
             }
             const titleEl = document.getElementById('contentCardViewTitle');
-            if (titleEl && data.file_name) {
-                titleEl.textContent = data.file_name;
+            if (titleEl) {
+                titleEl.textContent = 'Карточка';
             }
-            this._contentCardViewFileName = data.file_name || '';
-            this._contentCardTopLabels = Array.isArray(data.labels) ? data.labels : [];
+            this._contentCardViewFileName = '';
+            this._contentCardTopLabels = [];
+            this._contentCardViewCardId = parseInt(cardId, 10);
+            const infoBtn = document.getElementById('contentCardViewInfoBtn');
+            const editBtn = document.getElementById('contentCardViewEditFrameBtn');
+            if (data.is_content_card_admin && infoBtn && editBtn) {
+                this._contentCardAdminMeta = {
+                    file_name: data.file_name != null ? String(data.file_name) : '',
+                    labels: Array.isArray(data.labels) ? data.labels : [],
+                };
+                infoBtn.style.display = '';
+                editBtn.style.display = 'inline-flex';
+            } else {
+                this._contentCardAdminMeta = null;
+                if (infoBtn) {
+                    infoBtn.style.display = 'none';
+                }
+                if (editBtn) {
+                    editBtn.style.display = 'none';
+                }
+            }
             const fw = data.frames || {};
             const framesArr = Array.isArray(fw.frames) ? fw.frames.slice() : [];
             framesArr.sort((a, b) => (a.order != null ? a.order : 0) - (b.order != null ? b.order : 0));
@@ -242,6 +286,87 @@ class ContentEditor {
             console.error('bootstrapContentCardViewPage:', e);
             showErr(e.message || String(e));
         }
+    }
+
+    openContentCardAdminInfoModal() {
+        if (!this._contentCardAdminMeta) return;
+        const modal = document.getElementById('contentCardAdminInfoModal');
+        const body = document.getElementById('contentCardAdminInfoBody');
+        if (!modal || !body) return;
+        const fn = this.escapeHtml(this._contentCardAdminMeta.file_name || '—');
+        const labels = Array.isArray(this._contentCardAdminMeta.labels) ? this._contentCardAdminMeta.labels : [];
+        const parts = labels
+            .map((x) => (typeof x === 'string' ? x.trim() : String(x)))
+            .filter(Boolean);
+        let labelsBlock;
+        if (parts.length) {
+            labelsBlock =
+                '<ul class="content-card-admin-info-labels">' +
+                parts.map((t) => `<li>${this.escapeHtml(t)}</li>`).join('') +
+                '</ul>';
+        } else {
+            labelsBlock = '<p class="content-card-admin-info-empty">Нет меток</p>';
+        }
+        body.innerHTML =
+            `<dl class="content-card-admin-info-dl">` +
+            `<dt>Файл</dt><dd>${fn}</dd>` +
+            `<dt>Метки</dt><dd>${labelsBlock}</dd>` +
+            `</dl>`;
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    closeContentCardAdminInfoModal() {
+        const modal = document.getElementById('contentCardAdminInfoModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    ensureViewOnlyEditorMounted() {
+        if (!window.__CONTENT_CARD_VIEW_ONLY__ || this._viewOnlyEditorMounted) {
+            return;
+        }
+        this.createModal();
+        this.setupEventListeners();
+        this.setupCanvasEvents();
+        this._viewOnlyEditorMounted = true;
+    }
+
+    async openEditorFromContentCardView() {
+        if (!window.__CONTENT_CARD_VIEW_ONLY__ || !this._contentCardViewCardId) {
+            return;
+        }
+        if (!this._contentCardAdminMeta) {
+            this.showNotification('Редактирование доступно только администраторам', 'warning');
+            return;
+        }
+        const ref = this.cardPreviewRefs[this.cardPreviewIndex];
+        if (!ref || !ref.payload) {
+            this.showNotification('Нет данных кадра', 'warning');
+            return;
+        }
+        this.ensureViewOnlyEditorMounted();
+        if (!this.modal || !this.canvas) {
+            this.showNotification('Не удалось открыть редактор', 'error');
+            return;
+        }
+        let payload;
+        try {
+            payload = JSON.parse(JSON.stringify(ref.payload));
+        } catch (e) {
+            this.showNotification('Не удалось загрузить кадр', 'error');
+            return;
+        }
+        this.closeCardPreviewModal();
+        this.editorOpenedFromContentCardView = true;
+        this.editorOpenedFromPreview = true;
+        this.previewEditStorageKey = '__content_card_view__';
+        this.previewEditFrameId = ref.frameId;
+        this.previewEditSaveSlotIndex = ref.saveSlotIndex != null ? ref.saveSlotIndex : 0;
+        this._contentCardEditFrameIndex = this.cardPreviewIndex;
+        this.openModalWithData(payload.cardData || null, { fromPreviewRestore: true });
+        await this.restoreCanvasFromPayload(payload);
     }
 
     createModal() {
@@ -301,8 +426,9 @@ class ContentEditor {
         }
         this.saveFrameConfirmModal = document.getElementById('saveFrameConfirmModal');
 
-        if (!document.getElementById('cardPreviewModal')) {
-            document.body.insertAdjacentHTML('beforeend', `
+        if (!window.__CONTENT_CARD_VIEW_ONLY__) {
+            if (!document.getElementById('cardPreviewModal')) {
+                document.body.insertAdjacentHTML('beforeend', `
                 <div id="cardPreviewModal" class="card-preview-modal card-preview-modal--fullscreen" style="display: none;" aria-hidden="true">
                     <div class="card-preview-overlay" onclick="contentEditor.closeCardPreviewModal()"></div>
                     <div class="card-preview-box" role="dialog" aria-modal="true">
@@ -326,11 +452,11 @@ class ContentEditor {
                     </div>
                 </div>
             `);
-        }
-        this.cardPreviewModal = document.getElementById('cardPreviewModal');
+            }
+            this.cardPreviewModal = document.getElementById('cardPreviewModal');
 
-        if (!document.getElementById('cardLabelsModal')) {
-            document.body.insertAdjacentHTML('beforeend', `
+            if (!document.getElementById('cardLabelsModal')) {
+                document.body.insertAdjacentHTML('beforeend', `
                 <div id="cardLabelsModal" class="card-labels-modal" style="display: none;" aria-hidden="true">
                     <div class="card-labels-overlay" onclick="contentEditor.cancelCardLabelsStep()"></div>
                     <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="cardLabelsModalTitle">
@@ -347,16 +473,20 @@ class ContentEditor {
                     </div>
                 </div>
             `);
-        }
-        this.cardLabelsModal = document.getElementById('cardLabelsModal');
-        const labelsInput = document.getElementById('cardLabelsInput');
-        if (labelsInput) {
-            labelsInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    this.addCardLabelFromInput();
-                }
-            });
+            }
+            this.cardLabelsModal = document.getElementById('cardLabelsModal');
+            const labelsInput = document.getElementById('cardLabelsInput');
+            if (labelsInput) {
+                labelsInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.addCardLabelFromInput();
+                    }
+                });
+            }
+        } else {
+            this.cardPreviewModal = document.getElementById('contentCardViewRoot');
+            this.cardLabelsModal = null;
         }
 
         this.canvas = document.getElementById('canvas');
@@ -372,7 +502,7 @@ class ContentEditor {
 
     /** Кнопки «Сохранить кадр» / «Предпросмотр» или «Сохранить» из режима предпросмотра (без обёртки). */
     getPropertiesFrameActionsInnerHtml() {
-        if (this.editorOpenedFromPreview) {
+        if (this.editorOpenedFromPreview || this.editorOpenedFromContentCardView) {
             return `<button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()">Сохранить</button>`;
         }
         return `<button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
@@ -392,9 +522,11 @@ class ContentEditor {
 
     clearPreviewEditSession() {
         this.editorOpenedFromPreview = false;
+        this.editorOpenedFromContentCardView = false;
         this.previewEditStorageKey = null;
         this.previewEditFrameId = null;
         this.previewEditSaveSlotIndex = null;
+        this._contentCardEditFrameIndex = null;
     }
 
     openModal() {
@@ -414,9 +546,22 @@ class ContentEditor {
     }
 
     closeModal() {
+        if (!this.modal) return;
+        const fromContentCardView = this.editorOpenedFromContentCardView;
         this.modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        this.clearPreviewEditSession();
+        if (fromContentCardView) {
+            this.clearPreviewEditSession();
+            document.body.style.overflow = 'hidden';
+            if (this.cardPreviewModal) {
+                this.cardPreviewModal.style.display = 'flex';
+                this.cardPreviewModal.setAttribute('aria-hidden', 'false');
+                window.addEventListener('resize', this._onCardPreviewResize);
+                this.refreshCardPreviewUI();
+            }
+        } else {
+            document.body.style.overflow = 'auto';
+            this.clearPreviewEditSession();
+        }
     }
 
     /**
@@ -3241,8 +3386,7 @@ class ContentEditor {
                 }
                 throw new Error(msg || `Ошибка ${response.status}`);
             }
-            const hint = data.updated ? ' (обновлено)' : '';
-            this.showNotification('Карточка сохранена на сервере' + hint, 'success');
+            this.showNotification('Карточка сохранена на сервере', 'success');
             return true;
         } catch (e) {
             console.error('saveCardToCloud:', e);
@@ -3370,23 +3514,26 @@ class ContentEditor {
         }
 
         meta.innerHTML = '';
-        const labelsKey = this.getCardLabelsStorageKey();
-        const hasStoredLabelsKey = localStorage.getItem(labelsKey) !== null;
-        const storedLabels = hasStoredLabelsKey ? this.loadCardLabelsFromStorage() : null;
-        const fallbackLabels = this._contentCardTopLabels && this._contentCardTopLabels.length
-            ? this._contentCardTopLabels
-            : [];
-        const labelsToShow = hasStoredLabelsKey ? storedLabels : fallbackLabels;
-        if (labelsToShow.length) {
-            const topParts = labelsToShow
-                .filter((t) => typeof t === 'string' && t.trim())
-                .map((t) => `<span class="card-preview-label-chip">${this.escapeHtml(t.trim())}</span>`)
-                .join(' ');
-            if (topParts) {
-                meta.insertAdjacentHTML(
-                    'beforeend',
-                    `<div class="card-preview-meta-line card-preview-meta-labels">Метки карточки: ${topParts}</div>`
-                );
+        const viewOnlyPage = typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__;
+        if (!viewOnlyPage) {
+            const labelsKey = this.getCardLabelsStorageKey();
+            const hasStoredLabelsKey = localStorage.getItem(labelsKey) !== null;
+            const storedLabels = hasStoredLabelsKey ? this.loadCardLabelsFromStorage() : null;
+            const fallbackLabels = this._contentCardTopLabels && this._contentCardTopLabels.length
+                ? this._contentCardTopLabels
+                : [];
+            const labelsToShow = hasStoredLabelsKey ? storedLabels : fallbackLabels;
+            if (labelsToShow.length) {
+                const topParts = labelsToShow
+                    .filter((t) => typeof t === 'string' && t.trim())
+                    .map((t) => `<span class="card-preview-label-chip">${this.escapeHtml(t.trim())}</span>`)
+                    .join(' ');
+                if (topParts) {
+                    meta.insertAdjacentHTML(
+                        'beforeend',
+                        `<div class="card-preview-meta-line card-preview-meta-labels">Метки карточки: ${topParts}</div>`
+                    );
+                }
             }
         }
         this.renderCardPreviewSurface(payload);
@@ -3920,6 +4067,88 @@ class ContentEditor {
      * Предпросмотр сразу открывается на том же кадре; после закрытия предпросмотра снова виден редактор.
      */
     async confirmSaveFromPreviewEditor() {
+        if (this.editorOpenedFromContentCardView && this._contentCardViewCardId != null) {
+            const idx = this._contentCardEditFrameIndex;
+            if (idx == null || idx < 0 || idx >= this.cardPreviewRefs.length) {
+                this.showNotification('Нет привязки к кадру', 'warning');
+                return;
+            }
+            const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+            if (!initData) {
+                this.showNotification('Нет init_data для сохранения', 'warning');
+                return;
+            }
+            try {
+                const slot = this.previewEditSaveSlotIndex != null ? this.previewEditSaveSlotIndex : 0;
+                let payload = await this.buildFrameSavePayload(this.previewEditFrameId, slot);
+                await this.uploadPayloadMediaToS3(payload);
+                const orig = this.cardPreviewRefs[idx].payload;
+                if (orig && orig.board != null) {
+                    try {
+                        payload.board = JSON.parse(JSON.stringify(orig.board));
+                    } catch (e) {
+                        payload.board = orig.board;
+                    }
+                }
+                delete payload.labels;
+                const frames = this.cardPreviewRefs.map((r, order) => ({
+                    frameId: r.frameId,
+                    saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
+                    order,
+                    payload:
+                        order === idx
+                            ? payload
+                            : r.payload
+                              ? JSON.parse(JSON.stringify(r.payload))
+                              : null,
+                }));
+                const framesWrapper = { version: 1, frames };
+                const response = await fetch('/api/content_cards/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        init_data: initData,
+                        content_card_id: this._contentCardViewCardId,
+                        frames: framesWrapper,
+                    }),
+                });
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = {};
+                }
+                if (!response.ok) {
+                    let msg = data.detail;
+                    if (Array.isArray(msg)) {
+                        msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
+                    } else if (msg && typeof msg === 'object') {
+                        msg = JSON.stringify(msg);
+                    }
+                    throw new Error(msg || `Ошибка ${response.status}`);
+                }
+                this.cardPreviewRefs[idx].payload = JSON.parse(JSON.stringify(payload));
+                this.showNotification('Кадр сохранён на сервере', 'success');
+            } catch (err) {
+                console.error('confirmSaveFromPreviewEditor (content card):', err);
+                this.showNotification('Не удалось сохранить: ' + (err.message || err), 'error');
+                return;
+            }
+            this.clearPreviewEditSession();
+            this.resetEditorAfterSave();
+            if (this.modal) {
+                this.modal.style.display = 'none';
+            }
+            document.body.style.overflow = 'hidden';
+            if (this.cardPreviewModal) {
+                this.cardPreviewModal.style.display = 'flex';
+                this.cardPreviewModal.setAttribute('aria-hidden', 'false');
+                window.addEventListener('resize', this._onCardPreviewResize);
+                this.refreshCardPreviewUI();
+            }
+            return;
+        }
+
         if (!this.editorOpenedFromPreview || !this.previewEditStorageKey || this.previewEditFrameId == null) {
             this.showNotification('Нет привязки к кадру предпросмотра', 'warning');
             return;

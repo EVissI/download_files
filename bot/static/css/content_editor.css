@@ -512,6 +512,164 @@
     color: #fff;
 }
 
+/* Просмотр карточки /content-card-view: info только для ROOT_ADMIN_IDS (данные с API) */
+.content-card-view-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #505050;
+    border-radius: 8px;
+    background: #3a3a3a;
+    color: #8ab4ff;
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.content-card-view-info-btn:hover {
+    background: #454545;
+    border-color: #667eea;
+    color: #b8c9ff;
+}
+
+.content-card-view-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid #3d5a2d;
+    border-radius: 8px;
+    background: #2d3d28;
+    color: #b8e0a8;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.content-card-view-edit-btn .fa {
+    font-size: 16px;
+}
+
+.content-card-view-edit-btn:hover {
+    background: #354a30;
+    border-color: #5a8a4a;
+    color: #d4f0c4;
+}
+
+@media (max-width: 420px) {
+    .content-card-view-edit-label {
+        display: none;
+    }
+
+    .content-card-view-edit-btn {
+        min-width: 40px;
+        padding: 0 10px;
+    }
+}
+
+.content-card-admin-info-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.content-card-admin-info-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.content-card-admin-info-box {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    max-height: min(85vh, 560px);
+    overflow: auto;
+    background: #2d2d2d;
+    border: 1px solid #505050;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.content-card-admin-info-title {
+    margin: 0 0 14px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #f0f0f0;
+}
+
+.content-card-admin-info-body {
+    font-size: 14px;
+    color: #ddd;
+}
+
+.content-card-admin-info-dl {
+    margin: 0;
+}
+
+.content-card-admin-info-dl dt {
+    margin-top: 12px;
+    font-weight: 600;
+    color: #aaa;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.content-card-admin-info-dl dt:first-child {
+    margin-top: 0;
+}
+
+.content-card-admin-info-dl dd {
+    margin: 6px 0 0;
+}
+
+.content-card-admin-info-labels {
+    margin: 0;
+    padding-left: 1.2em;
+}
+
+.content-card-admin-info-empty {
+    margin: 0;
+    color: #888;
+    font-style: italic;
+}
+
+.content-card-admin-info-actions {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #444;
+    text-align: right;
+}
+
+.content-card-admin-info-close-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid #505050;
+    background: #3a3a3a;
+    color: #e0e0e0;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.content-card-admin-info-close-btn:hover {
+    background: #454545;
+}
+
 .card-preview-nav {
     display: flex;
     flex-wrap: wrap;

@@ -558,11 +558,18 @@ class ContentCardFetchBody(BaseModel):
     content_card_id: int = Field(..., ge=1)
 
 
+class ContentCardUpdateBody(BaseModel):
+    """Обновление JSON кадров существующей карточки (только ROOT_ADMIN_IDS)."""
+
+    init_data: str = Field(..., min_length=1)
+    content_card_id: int = Field(..., ge=1)
+    frames: dict[str, Any]
+
+
 @app.post("/api/content_cards/save")
 async def save_content_card(body: ContentCardSaveBody):
     """
-    Сохраняет карточку (JSON кадров). Доступно только Telegram-пользователям из ROOT_ADMIN_IDS.
-    Повтор с тем же file_name для того же пользователя обновляет запись.
+    Создаёт новую карточку (JSON кадров). Доступно только Telegram-пользователям из ROOT_ADMIN_IDS.
     """
     user_data = verify_telegram_webapp_data(body.init_data)
     if not user_data:
@@ -600,37 +607,6 @@ async def save_content_card(body: ContentCardSaveBody):
         card_dao = ContentCardDAO(session)
         ucc_dao = UserContentCardDAO(session)
 
-        existing = await card_dao.find_for_user_by_file_name(user_id, safe_name)
-        if existing:
-            saved_id = existing.id
-            await card_dao.update(
-                saved_id,
-                {"frames": body.frames, "labels": labels},
-            )
-            await session.commit()
-            # --- TEST_ONLY: уведомление в Telegram со ссылкой на просмотр (удалить после тестов) ---
-            try:
-                _view_url = (
-                    f"{settings.MINI_APP_URL.rstrip('/')}"
-                    f"/content-card-view?content_card_id={saved_id}"
-                )
-                await bot.send_message(
-                    chat_id=user_id,
-                    text="Карточка обновлена.",
-                    reply_markup=_content_card_view_webapp_markup(_view_url),
-                )
-            except Exception as _e:
-                logger.warning(
-                    "TEST_ONLY content_card TG notify (update) skipped: {}",
-                    _e,
-                )
-            # --- /TEST_ONLY ---
-            return {
-                "ok": True,
-                "content_card_id": saved_id,
-                "updated": True,
-            }
-
         new_card = await card_dao.add(
             SContentCardCreate(
                 file_name=safe_name,
@@ -666,8 +642,40 @@ async def save_content_card(body: ContentCardSaveBody):
         return {
             "ok": True,
             "content_card_id": saved_id,
-            "updated": False,
         }
+
+
+@app.post("/api/content_cards/update")
+async def update_content_card(body: ContentCardUpdateBody):
+    """
+    Обновляет frames у существующей карточки. Только пользователи из ROOT_ADMIN_IDS.
+    """
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
+    tg_user = user_data.get("user") or {}
+    user_id = tg_user.get("id")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(user_id)
+    _require_content_card_admin(user_id)
+
+    frames_inner = body.frames.get("frames")
+    if not isinstance(frames_inner, list) or len(frames_inner) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Поле frames.frames должно быть непустым массивом",
+        )
+
+    async with async_session_maker() as session:
+        card_dao = ContentCardDAO(session)
+        card = await card_dao.find_one_or_none_by_id(body.content_card_id)
+        if not card:
+            raise HTTPException(status_code=404, detail="Карточка не найдена")
+        await card_dao.update(body.content_card_id, {"frames": body.frames})
+        await session.commit()
+
+    return {"ok": True, "content_card_id": body.content_card_id}
 
 
 @app.post("/api/content_cards/fetch")
@@ -675,6 +683,7 @@ async def fetch_content_card(body: ContentCardFetchBody):
     """
     Данные карточки для страницы просмотра: есть связь user_content_cards
     или пользователь в ROOT_ADMIN_IDS.
+    Поля file_name и labels отдаются только если user_id в ROOT_ADMIN_IDS.
     """
     user_data = verify_telegram_webapp_data(body.init_data)
     if not user_data:
@@ -701,15 +710,16 @@ async def fetch_content_card(body: ContentCardFetchBody):
         if not card:
             raise HTTPException(status_code=404, detail="Карточка не найдена")
 
-        labels = card.labels
-        if labels is not None:
-            labels = list(labels)
-
-        return {
-            "file_name": card.file_name,
+        is_root_admin = user_id in settings.ROOT_ADMIN_IDS
+        out: dict[str, Any] = {
             "frames": card.frames,
-            "labels": labels,
+            "is_content_card_admin": is_root_admin,
         }
+        if is_root_admin:
+            raw_labels = card.labels
+            out["file_name"] = card.file_name
+            out["labels"] = list(raw_labels) if raw_labels is not None else []
+        return out
 
 
 @app.post("/api/content_cards/media/upload")
