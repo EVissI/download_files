@@ -38,7 +38,13 @@ import json
 import os
 import time
 from pathlib import Path
-from aiogram.types import BufferedInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    BufferedInputFile,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    WebAppInfo,
+)
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 BASE_DIR = Path(__file__).parent.parent
 
@@ -527,6 +533,14 @@ def _normalize_content_card_labels(raw: list[str] | None) -> list[str] | None:
     return out or None
 
 
+def _content_card_view_webapp_markup(view_url: str) -> InlineKeyboardMarkup:
+    """Кнопка Web App — иначе при открытии ссылки из чата init_data в Telegram не передаётся."""
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Открыть карточку", web_app=WebAppInfo(url=view_url))
+    kb.adjust(1)
+    return kb.as_markup()
+
+
 class ContentCardSaveBody(BaseModel):
     """Сохранение карточки редактора (hint viewer): проверка через Telegram init_data."""
 
@@ -602,7 +616,8 @@ async def save_content_card(body: ContentCardSaveBody):
                 )
                 await bot.send_message(
                     chat_id=user_id,
-                    text=f"Карточка обновлена.\nОткрыть: {_view_url}",
+                    text="Карточка обновлена.",
+                    reply_markup=_content_card_view_webapp_markup(_view_url),
                 )
             except Exception as _e:
                 logger.warning(
@@ -639,7 +654,8 @@ async def save_content_card(body: ContentCardSaveBody):
             )
             await bot.send_message(
                 chat_id=user_id,
-                text=f"Карточка сохранена.\nОткрыть: {_view_url}",
+                text="Карточка сохранена.",
+                reply_markup=_content_card_view_webapp_markup(_view_url),
             )
         except Exception as _e:
             logger.warning(
