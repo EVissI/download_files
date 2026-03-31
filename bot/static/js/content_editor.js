@@ -615,26 +615,25 @@ class ContentEditor {
             this.updateTableContent(element, 'hints');
         } else {
             // Создаем пример таблицу если нет данных
-            const b = '1px solid rgba(255,255,255,0.35)';
             element.innerHTML = `
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; margin: 0; padding: 0; border-spacing: 0; color: #fff; font-family: Arial, sans-serif;">
+                <table class="ce-content-table">
                     <thead>
                         <tr>
-                            <th style="background: #4CAF50; color: #fff; border: ${b}; padding: 6px; font-weight: bold; text-align: left;">Ход</th>
-                            <th style="background: #4CAF50; color: #fff; border: ${b}; padding: 6px; font-weight: bold; text-align: center;">Вероятность</th>
-                            <th style="background: #4CAF50; color: #fff; border: ${b}; padding: 6px; font-weight: bold; text-align: center;">Результат</th>
+                            <th>Ход</th>
+                            <th>Вероятность</th>
+                            <th>Результат</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: left;">8/6</td>
-                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: center;">0.654</td>
-                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: center;">+0.123</td>
+                            <td>8/6</td>
+                            <td>0.654</td>
+                            <td>+0.123</td>
                         </tr>
                         <tr>
-                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: left;">13/9</td>
-                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: center;">0.598</td>
-                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: center;">-0.045</td>
+                            <td>13/9</td>
+                            <td>0.598</td>
+                            <td>-0.045</td>
                         </tr>
                     </tbody>
                 </table>
@@ -698,122 +697,72 @@ class ContentEditor {
     }
 
     createHintsTable(hints) {
-        const cellBorder = '1px solid rgba(255, 255, 255, 0.35)';
-        const tdBase = `padding: 6px; border: ${cellBorder}; font-weight: bold; background: #252525; color: #fff; font-family: Arial, sans-serif;`;
-
         const table = document.createElement('table');
-        table.style.cssText = `
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            table-layout: fixed;
-            margin: 0;
-            padding: 0;
-            border-spacing: 0;
-            color: #fff;
-            font-family: Arial, sans-serif;
-        `;
+        table.className = 'ce-content-table';
 
         const header = table.createTHead();
         const headerRow = header.insertRow();
         const headers = ['Ход', '%', '%', 'Эквити'];
-
-        headers.forEach((text, col) => {
+        headers.forEach((text) => {
             const th = document.createElement('th');
             th.textContent = text;
-            th.style.cssText = `
-                background: #4CAF50;
-                color: #fff;
-                text-align: ${col === 0 ? 'left' : 'center'};
-                border: ${cellBorder};
-                font-weight: bold;
-                padding: 6px;
-                font-family: Arial, sans-serif;
-            `;
             headerRow.appendChild(th);
         });
 
         const tbody = table.createTBody();
-        hints.forEach((hint, index) => {
+        hints.forEach((hint) => {
             const row = tbody.insertRow();
-
             const moveCell = row.insertCell();
             moveCell.textContent = hint.move || 'N/A';
-            moveCell.style.cssText = `${tdBase} text-align: left;`;
-
             const winCell = row.insertCell();
             winCell.textContent = hint.probs && hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : 'N/A';
-            winCell.style.cssText = `${tdBase} text-align: center;`;
-
             const wgCell = row.insertCell();
             wgCell.textContent = hint.probs && hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : 'N/A';
-            wgCell.style.cssText = `${tdBase} text-align: center;`;
-
             const eqCell = row.insertCell();
             eqCell.textContent = hint.eq ? hint.eq.toFixed(3) : 'N/A';
-            eqCell.style.cssText = `${tdBase} text-align: center;`;
         });
 
         return table;
     }
 
     createCubeTable(cubeHints) {
-        const cellBorder = '1px solid rgba(255, 255, 255, 0.35)';
-        const tdBase = `padding: 6px; border: ${cellBorder}; font-weight: bold; background: #252525; color: #fff; font-family: Arial, sans-serif;`;
-
         const table = document.createElement('table');
-        table.style.cssText = `
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            table-layout: fixed;
-            margin: 0;
-            padding: 0;
-            border-spacing: 0;
-            color: #fff;
-            font-family: Arial, sans-serif;
-        `;
+        table.className = 'ce-content-table ce-content-table--cube';
 
         const header = table.createTHead();
         const headerRow = header.insertRow();
-        const headers = ['Действие', 'Эквити'];
-
-        headers.forEach((text, col) => {
+        ['Действие', 'Эквити'].forEach((text) => {
             const th = document.createElement('th');
             th.textContent = text;
-            th.style.cssText = `
-                background: #FF9800;
-                color: #fff;
-                text-align: ${col === 0 ? 'left' : 'center'};
-                border: ${cellBorder};
-                font-weight: bold;
-                padding: 6px;
-                font-family: Arial, sans-serif;
-            `;
             headerRow.appendChild(th);
         });
 
         const tbody = table.createTBody();
         if (cubeHints[0] && cubeHints[0].cubeful_equities) {
-            cubeHints[0].cubeful_equities.forEach(eq => {
+            cubeHints[0].cubeful_equities.forEach((eq) => {
                 const row = tbody.insertRow();
-
                 const actionCell = row.insertCell();
                 const action = eq.action_1 || '';
-                if (eq.action_2) {
-                    actionCell.textContent = `${action} / ${eq.action_2}`;
-                } else {
-                    actionCell.textContent = action;
-                }
-                actionCell.style.cssText = `${tdBase} text-align: left;`;
-
+                actionCell.textContent = eq.action_2 ? `${action} / ${eq.action_2}` : action;
                 const eqCell = row.insertCell();
                 eqCell.textContent = eq.eq ? eq.eq.toFixed(3) : 'N/A';
-                eqCell.style.cssText = `${tdBase} text-align: center;`;
             });
         }
 
         return table;
+    }
+
+    /** Классы `ce-content-table` — единые стили в редакторе и в предпросмотре/content-card-view (см. content_editor.css). */
+    applyContentTableMarkupClasses(wrapperEl) {
+        const first = wrapperEl.firstElementChild;
+        const tbl = first && first.tagName === 'TABLE' ? first : wrapperEl.querySelector('table');
+        if (!tbl) return;
+        tbl.classList.add('ce-content-table');
+        if (wrapperEl.dataset.tableType === 'cube') {
+            tbl.classList.add('ce-content-table--cube');
+        } else {
+            tbl.classList.remove('ce-content-table--cube');
+        }
     }
 
     /** Высота блока при пересчёте вертикального стека (как в recalculateAllElementPositions). */
@@ -4302,6 +4251,7 @@ class ContentEditor {
                 element.classList.add('table-element');
                 element.dataset.tableType = item.tableType || 'hints';
                 element.innerHTML = item.tableHtml || '';
+                this.applyContentTableMarkupClasses(element);
                 break;
             case 'upload-image': {
                 element.classList.add('image-element');
@@ -4557,6 +4507,7 @@ class ContentEditor {
                 const table = element.querySelector('table');
                 if (table) {
                     table.style.width = '100%';
+                    this.applyContentTableMarkupClasses(element);
                 }
             }
         });
