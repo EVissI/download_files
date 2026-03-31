@@ -615,25 +615,26 @@ class ContentEditor {
             this.updateTableContent(element, 'hints');
         } else {
             // Создаем пример таблицу если нет данных
+            const b = '1px solid rgba(255,255,255,0.35)';
             element.innerHTML = `
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; margin: 0; padding: 0; border-spacing: 0;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; margin: 0; padding: 0; border-spacing: 0; color: #fff; font-family: Arial, sans-serif;">
                     <thead>
-                        <tr style="background: #f0f0f0;">
-                            <th style="border: 1px solid #ddd; padding: 4px;">Ход</th>
-                            <th style="border: 1px solid #ddd; padding: 4px;">Вероятность</th>
-                            <th style="border: 1px solid #ddd; padding: 4px;">Результат</th>
+                        <tr>
+                            <th style="background: #4CAF50; color: #fff; border: ${b}; padding: 6px; font-weight: bold; text-align: left;">Ход</th>
+                            <th style="background: #4CAF50; color: #fff; border: ${b}; padding: 6px; font-weight: bold; text-align: center;">Вероятность</th>
+                            <th style="background: #4CAF50; color: #fff; border: ${b}; padding: 6px; font-weight: bold; text-align: center;">Результат</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td style="border: 1px solid #ddd; padding: 4px;">8/6</td>
-                            <td style="border: 1px solid #ddd; padding: 4px;">0.654</td>
-                            <td style="border: 1px solid #ddd; padding: 4px;">+0.123</td>
+                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: left;">8/6</td>
+                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: center;">0.654</td>
+                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: center;">+0.123</td>
                         </tr>
                         <tr>
-                            <td style="border: 1px solid #ddd; padding: 4px;">13/9</td>
-                            <td style="border: 1px solid #ddd; padding: 4px;">0.598</td>
-                            <td style="border: 1px solid #ddd; padding: 4px;">-0.045</td>
+                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: left;">13/9</td>
+                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: center;">0.598</td>
+                            <td style="border: ${b}; padding: 6px; background: #252525; color: #fff; font-weight: bold; text-align: center;">-0.045</td>
                         </tr>
                     </tbody>
                 </table>
@@ -697,6 +698,9 @@ class ContentEditor {
     }
 
     createHintsTable(hints) {
+        const cellBorder = '1px solid rgba(255, 255, 255, 0.35)';
+        const tdBase = `padding: 6px; border: ${cellBorder}; font-weight: bold; background: #252525; color: #fff; font-family: Arial, sans-serif;`;
+
         const table = document.createElement('table');
         table.style.cssText = `
             width: 100%;
@@ -706,56 +710,57 @@ class ContentEditor {
             margin: 0;
             padding: 0;
             border-spacing: 0;
+            color: #fff;
+            font-family: Arial, sans-serif;
         `;
 
-        // Заголовок таблицы
         const header = table.createTHead();
         const headerRow = header.insertRow();
         const headers = ['Ход', '%', '%', 'Эквити'];
 
-        headers.forEach(text => {
+        headers.forEach((text, col) => {
             const th = document.createElement('th');
             th.textContent = text;
             th.style.cssText = `
                 background: #4CAF50;
-                color: white;
-                text-align: left;
-                border: 1px solid #ddd;
+                color: #fff;
+                text-align: ${col === 0 ? 'left' : 'center'};
+                border: ${cellBorder};
                 font-weight: bold;
+                padding: 6px;
+                font-family: Arial, sans-serif;
             `;
             headerRow.appendChild(th);
         });
 
-        // Тело таблицы
         const tbody = table.createTBody();
         hints.forEach((hint, index) => {
             const row = tbody.insertRow();
 
-            // Ход
             const moveCell = row.insertCell();
             moveCell.textContent = hint.move || 'N/A';
-            moveCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
+            moveCell.style.cssText = `${tdBase} text-align: left;`;
 
-            // Win%
             const winCell = row.insertCell();
             winCell.textContent = hint.probs && hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : 'N/A';
-            winCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
+            winCell.style.cssText = `${tdBase} text-align: center;`;
 
-            // Wg%
             const wgCell = row.insertCell();
             wgCell.textContent = hint.probs && hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : 'N/A';
-            wgCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center;';
+            wgCell.style.cssText = `${tdBase} text-align: center;`;
 
-            // Эквити
             const eqCell = row.insertCell();
             eqCell.textContent = hint.eq ? hint.eq.toFixed(3) : 'N/A';
-            eqCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center; font-weight: bold;';
+            eqCell.style.cssText = `${tdBase} text-align: center;`;
         });
 
         return table;
     }
 
     createCubeTable(cubeHints) {
+        const cellBorder = '1px solid rgba(255, 255, 255, 0.35)';
+        const tdBase = `padding: 6px; border: ${cellBorder}; font-weight: bold; background: #252525; color: #fff; font-family: Arial, sans-serif;`;
+
         const table = document.createElement('table');
         table.style.cssText = `
             width: 100%;
@@ -765,33 +770,34 @@ class ContentEditor {
             margin: 0;
             padding: 0;
             border-spacing: 0;
+            color: #fff;
+            font-family: Arial, sans-serif;
         `;
 
-        // Заголовок таблицы
         const header = table.createTHead();
         const headerRow = header.insertRow();
         const headers = ['Действие', 'Эквити'];
 
-        headers.forEach(text => {
+        headers.forEach((text, col) => {
             const th = document.createElement('th');
             th.textContent = text;
             th.style.cssText = `
                 background: #FF9800;
-                color: white;
-                text-align: left;
-                border: 1px solid #ddd;
+                color: #fff;
+                text-align: ${col === 0 ? 'left' : 'center'};
+                border: ${cellBorder};
                 font-weight: bold;
+                padding: 6px;
+                font-family: Arial, sans-serif;
             `;
             headerRow.appendChild(th);
         });
 
-        // Тело таблицы
         const tbody = table.createTBody();
         if (cubeHints[0] && cubeHints[0].cubeful_equities) {
             cubeHints[0].cubeful_equities.forEach(eq => {
                 const row = tbody.insertRow();
 
-                // Действие
                 const actionCell = row.insertCell();
                 const action = eq.action_1 || '';
                 if (eq.action_2) {
@@ -799,12 +805,11 @@ class ContentEditor {
                 } else {
                     actionCell.textContent = action;
                 }
-                actionCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-weight: bold;';
+                actionCell.style.cssText = `${tdBase} text-align: left;`;
 
-                // Эквити
                 const eqCell = row.insertCell();
                 eqCell.textContent = eq.eq ? eq.eq.toFixed(3) : 'N/A';
-                eqCell.style.cssText = 'padding: 6px; border: 1px solid #ddd; text-align: center; font-weight: bold;';
+                eqCell.style.cssText = `${tdBase} text-align: center;`;
             });
         }
 
