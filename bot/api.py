@@ -588,12 +588,12 @@ async def save_content_card(body: ContentCardSaveBody):
 
         existing = await card_dao.find_for_user_by_file_name(user_id, safe_name)
         if existing:
+            saved_id = existing.id
             await card_dao.update(
-                existing.id,
+                saved_id,
                 {"frames": body.frames, "labels": labels},
             )
             await session.commit()
-            saved_id = existing.id
             # --- TEST_ONLY: уведомление в Telegram со ссылкой на просмотр (удалить после тестов) ---
             try:
                 _view_url = (
@@ -623,14 +623,14 @@ async def save_content_card(body: ContentCardSaveBody):
                 labels=labels,
             )
         )
+        saved_id = new_card.id
         await ucc_dao.add(
             SUserContentCardCreate(
                 user_id=user_id,
-                content_card_id=new_card.id,
+                content_card_id=saved_id,
             )
         )
         await session.commit()
-        saved_id = new_card.id
         # --- TEST_ONLY: уведомление в Telegram со ссылкой на просмотр (удалить после тестов) ---
         try:
             _view_url = (
