@@ -47,6 +47,9 @@ class ContentEditor {
         /** Снимок доски из открытого payload (content-card-view / предпросмотр), если нет hint_viewer */
         this._editorSessionBoardSnapshot = null;
 
+        /** Сохранённый style у #boardCanvas до «плавающего» показа поверх модалки редактора */
+        this._liveBoardCanvasStyleBackup = null;
+
         /** Модалка меток карточки (целиком, не на отдельный кадр) */
         this.cardLabelsModal = null;
         this.cardLabelsDraft = [];
@@ -164,7 +167,6 @@ class ContentEditor {
                 <div id="contentCardViewRoot" class="card-preview-modal card-preview-modal--fullscreen" style="display: none; min-height: 100vh;" aria-hidden="true">
                     <div class="card-preview-box" style="width: 100%; max-width: 100%; box-sizing: border-box;">
                         <div class="card-preview-header">
-                            <h3 class="card-preview-title" id="contentCardViewTitle">Карточка</h3>
                             <div class="card-preview-header-right">
                                 <button type="button" id="contentCardViewEditFrameBtn" class="content-card-view-edit-btn" style="display: none;" onclick="contentEditor.openEditorFromContentCardView()" title="Редактировать текущий кадр">
                                     <i class="fa fa-pencil" aria-hidden="true"></i><span class="content-card-view-edit-label"> Редактировать кадр</span>
@@ -1005,6 +1007,7 @@ class ContentEditor {
 
     closeModal() {
         if (!this.modal) return;
+        this._restoreLiveHintBoardCanvasIfNeeded();
         const fromContentCardView = this.editorOpenedFromContentCardView;
         this.modal.style.display = 'none';
         if (fromContentCardView) {
@@ -1818,6 +1821,46 @@ class ContentEditor {
                 // Скрываем уведомление
                 this.showToggleNotification(toolId, false);
             }
+        }
+
+        this.syncLiveHintBoardCanvasOverlay();
+    }
+
+    /**
+     * На hint_viewer / pokaz страничный #boardCanvas поднимается поверх модалки редактора при включённом тумблере.
+     * При выключении — возвращается обычная вёрстка.
+     */
+    syncLiveHintBoardCanvasOverlay() {
+        const el = document.getElementById('boardCanvas');
+        const modalOpen = this.modal && this.modal.style.display !== 'none';
+        if (!modalOpen) {
+            this._restoreLiveHintBoardCanvasIfNeeded();
+            return;
+        }
+        if (!el) {
+            return;
+        }
+        const show = !!this.toggleStates['boardCanvas'];
+        if (!show) {
+            this._restoreLiveHintBoardCanvasIfNeeded();
+            return;
+        }
+        if (this._liveBoardCanvasStyleBackup === null) {
+            this._liveBoardCanvasStyleBackup = el.getAttribute('style') || '';
+        }
+        el.classList.add('content-editor-live-board-overlay');
+    }
+
+    _restoreLiveHintBoardCanvasIfNeeded() {
+        const el = document.getElementById('boardCanvas');
+        if (el) {
+            el.classList.remove('content-editor-live-board-overlay');
+            if (this._liveBoardCanvasStyleBackup !== null) {
+                el.setAttribute('style', this._liveBoardCanvasStyleBackup);
+                this._liveBoardCanvasStyleBackup = null;
+            }
+        } else {
+            this._liveBoardCanvasStyleBackup = null;
         }
     }
 
@@ -3153,6 +3196,10 @@ class ContentEditor {
             }
         }
 
+        if (!this.toggleStates['boardCanvas']) {
+            board = null;
+        }
+
         let cardDataCopy = null;
         if (this.cardData) {
             try {
@@ -4017,6 +4064,7 @@ class ContentEditor {
     shouldShowBoardInCardPreview(payload) {
         if (!payload) return false;
         if (payload.editor && payload.editor.boardCanvasToggle) return true;
+        if (payload.editor && payload.editor.boardCanvasToggle === false) return false;
         const b = payload.board;
         if (b == null || typeof b !== 'object') return false;
         if (b.error === 'no_game_data') return false;
@@ -4549,7 +4597,12 @@ class ContentEditor {
                 await this.uploadPayloadMediaToS3(payload);
                 const orig = this.cardPreviewRefs[idx].payload;
                 payload.cardData = this.mergeCardDataForContentCardSave(payload.cardData, orig && orig.cardData);
-                if (payload.board == null && orig && orig.board != null) {
+                if (
+                    this.toggleStates['boardCanvas'] &&
+                    payload.board == null &&
+                    orig &&
+                    orig.board != null
+                ) {
                     try {
                         payload.board = JSON.parse(JSON.stringify(orig.board));
                     } catch (e) {
@@ -4697,6 +4750,7 @@ class ContentEditor {
 
         this.loadTools();
         this.syncBoardToolToggleFromState();
+        this.syncLiveHintBoardCanvasOverlay();
         this.refreshTableElementsFromCardData();
 
         requestAnimationFrame(() => {

@@ -22,6 +22,24 @@
     justify-content: center;
 }
 
+/*
+ * Страничный #boardCanvas (hint_viewer, pokaz): при включённом тумблере «Доска» показывается поверх модалки;
+ * при выключении класс снимается в syncLiveHintBoardCanvasOverlay / closeModal.
+ */
+#boardCanvas.content-editor-live-board-overlay {
+    position: fixed !important;
+    z-index: 10050 !important;
+    left: 50% !important;
+    top: 42% !important;
+    transform: translate(-50%, -50%) !important;
+    max-width: min(92vw, 820px) !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+}
+
 .content-editor-overlay {
     position: absolute;
     top: 0;
