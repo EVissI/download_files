@@ -22,7 +22,7 @@
 </head>
 
 <body>
-    <!-- Кнопки админа (в т.ч. «Удалить кадр») вставляются в DOM из content_editor.js (initContentCardViewOnly). -->
+    <!-- Кнопки админа (добавление/удаление кадра и т.д.) — content_editor.js (initContentCardViewOnly + _ensureContentCardAddFrameUi). -->
     <script>
         if (window.Telegram && window.Telegram.WebApp) {
             Telegram.WebApp.ready();

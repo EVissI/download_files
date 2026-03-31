@@ -164,6 +164,9 @@ class ContentEditor {
                                 <button type="button" id="contentCardViewEditFrameBtn" class="content-card-view-edit-btn" style="display: none;" onclick="contentEditor.openEditorFromContentCardView()" title="Редактировать текущий кадр">
                                     <i class="fa fa-pencil" aria-hidden="true"></i><span class="content-card-view-edit-label"> Редактировать кадр</span>
                                 </button>
+                                <button type="button" id="contentCardViewAddFrameBtn" class="content-card-view-add-frame-btn" style="display: none;" onclick="contentEditor.openContentCardAddFrameModal()" title="Добавить кадр" aria-label="Добавить кадр">
+                                    <i class="fa fa-plus" aria-hidden="true"></i><span class="content-card-view-add-frame-label"> Добавить кадр</span>
+                                </button>
                                 <button type="button" id="contentCardViewDeleteFrameBtn" class="content-card-view-delete-frame-btn" style="display: none;" onclick="contentEditor.deleteCurrentContentCardFrame()" title="Удалить текущий кадр" aria-label="Удалить кадр">
                                     <i class="fa fa-trash" aria-hidden="true"></i><span class="content-card-view-delete-frame-label"> Удалить кадр</span>
                                 </button>
@@ -199,6 +202,43 @@ class ContentEditor {
         this.canvas = null;
         this.toolsList = null;
         this.propertiesContent = null;
+        this._ensureContentCardAddFrameUi();
+    }
+
+    /** Кнопка «Добавить кадр» и модалка (для старых встраиваний DOM без них). */
+    _ensureContentCardAddFrameUi() {
+        if (!document.getElementById('contentCardAddFrameModal')) {
+            document.body.insertAdjacentHTML(
+                'beforeend',
+                `
+                <div id="contentCardAddFrameModal" class="content-card-admin-info-modal" style="display: none;" aria-hidden="true">
+                    <div class="content-card-admin-info-overlay" onclick="contentEditor.closeContentCardAddFrameModal()"></div>
+                    <div class="content-card-admin-info-box content-card-add-frame-box" role="dialog" aria-modal="true" aria-labelledby="contentCardAddFrameTitle">
+                        <h3 id="contentCardAddFrameTitle" class="content-card-admin-info-title">Добавить кадр</h3>
+                        <p class="content-card-add-frame-hint">Пустой кадр можно затем заполнить через «Редактировать кадр».</p>
+                        <label class="content-card-add-frame-label" for="contentCardAddFramePositionSelect">Позиция в списке</label>
+                        <select id="contentCardAddFramePositionSelect" class="content-card-add-frame-select" aria-describedby="contentCardAddFrameTitle"></select>
+                        <div class="content-card-admin-info-actions content-card-add-frame-actions">
+                            <button type="button" class="content-card-admin-info-close-btn" onclick="contentEditor.closeContentCardAddFrameModal()">Отмена</button>
+                            <button type="button" id="contentCardAddFrameConfirmBtn" class="content-card-add-frame-confirm-btn" onclick="contentEditor.confirmContentCardAddFrame()">Добавить</button>
+                        </div>
+                    </div>
+                </div>
+                `
+            );
+        }
+        const right = document.querySelector('#contentCardViewRoot .card-preview-header-right');
+        if (right && !document.getElementById('contentCardViewAddFrameBtn')) {
+            const del = document.getElementById('contentCardViewDeleteFrameBtn');
+            if (del) {
+                del.insertAdjacentHTML(
+                    'beforebegin',
+                    `<button type="button" id="contentCardViewAddFrameBtn" class="content-card-view-add-frame-btn" style="display: none;" onclick="contentEditor.openContentCardAddFrameModal()" title="Добавить кадр" aria-label="Добавить кадр">
+                        <i class="fa fa-plus" aria-hidden="true"></i><span class="content-card-view-add-frame-label"> Добавить кадр</span>
+                    </button>`
+                );
+            }
+        }
     }
 
     async bootstrapContentCardViewPage() {
@@ -269,6 +309,7 @@ class ContentEditor {
     _applyContentCardFetchPayload(data) {
         const infoBtn = document.getElementById('contentCardViewInfoBtn');
         const editBtn = document.getElementById('contentCardViewEditFrameBtn');
+        const addFrameBtn = document.getElementById('contentCardViewAddFrameBtn');
         const deleteFrameBtn = document.getElementById('contentCardViewDeleteFrameBtn');
         if (data.is_content_card_admin && infoBtn && editBtn) {
             this._contentCardAdminMeta = {
@@ -277,11 +318,13 @@ class ContentEditor {
             };
             infoBtn.style.display = '';
             editBtn.style.display = 'inline-flex';
+            if (addFrameBtn) addFrameBtn.style.display = 'inline-flex';
             if (deleteFrameBtn) deleteFrameBtn.style.display = 'inline-flex';
         } else {
             this._contentCardAdminMeta = null;
             if (infoBtn) infoBtn.style.display = 'none';
             if (editBtn) editBtn.style.display = 'none';
+            if (addFrameBtn) addFrameBtn.style.display = 'none';
             if (deleteFrameBtn) deleteFrameBtn.style.display = 'none';
         }
         const fw = data.frames || {};
@@ -364,6 +407,152 @@ class ContentEditor {
         } finally {
             if (deleteBtn) deleteBtn.disabled = false;
             this.refreshCardPreviewUI();
+        }
+    }
+
+    /** Пустой payload кадра для новой записи в карточке (content-card-view). */
+    buildEmptyContentCardFramePayload() {
+        const cid = this._contentCardViewCardId != null ? this._contentCardViewCardId : 0;
+        const frameId = `cc_${cid}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        return {
+            version: 1,
+            frameId,
+            saveSlotIndex: 0,
+            savedAt: new Date().toISOString(),
+            board: null,
+            cardData: null,
+            editor: {
+                boardCanvasToggle: false,
+                canvasBackground: '#ffffff',
+            },
+            elements: [],
+        };
+    }
+
+    openContentCardAddFrameModal() {
+        if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) return;
+        if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
+        const modal = document.getElementById('contentCardAddFrameModal');
+        const sel = document.getElementById('contentCardAddFramePositionSelect');
+        if (!modal || !sel) return;
+        const n = this.cardPreviewRefs.length;
+        sel.innerHTML = '';
+        for (let pos = 1; pos <= n + 1; pos++) {
+            const opt = document.createElement('option');
+            opt.value = String(pos);
+            if (n === 0) {
+                opt.textContent = 'Позиция 1';
+            } else if (pos === n + 1) {
+                opt.textContent = `В конец (${n + 1}-й кадр)`;
+            } else {
+                opt.textContent = `Позиция ${pos} (${pos}-й кадр)`;
+            }
+            sel.appendChild(opt);
+        }
+        const defaultPos = n === 0 ? 1 : Math.min(this.cardPreviewIndex + 2, n + 1);
+        sel.value = String(defaultPos);
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => sel.focus());
+    }
+
+    closeContentCardAddFrameModal() {
+        const modal = document.getElementById('contentCardAddFrameModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    async confirmContentCardAddFrame() {
+        if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) return;
+        if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
+
+        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        if (!initData) {
+            this.showNotification('Нет init_data для сохранения', 'warning');
+            return;
+        }
+
+        const sel = document.getElementById('contentCardAddFramePositionSelect');
+        const confirmBtn = document.getElementById('contentCardAddFrameConfirmBtn');
+        if (!sel) return;
+
+        const n = this.cardPreviewRefs.length;
+        const pos = parseInt(sel.value, 10);
+        if (!Number.isFinite(pos) || pos < 1 || pos > n + 1) {
+            this.showNotification('Некорректная позиция', 'warning');
+            return;
+        }
+        const insertIndex = pos - 1;
+
+        const emptyPayload = this.buildEmptyContentCardFramePayload();
+        const newRef = {
+            frameId: emptyPayload.frameId,
+            saveSlotIndex: 0,
+            payload: emptyPayload,
+            storageKey: null,
+        };
+
+        const refs = this.cardPreviewRefs.map((r) => ({
+            frameId: r.frameId,
+            saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
+            payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
+            storageKey: null,
+        }));
+        refs.splice(insertIndex, 0, newRef);
+
+        const framesWrapper = {
+            version: 1,
+            frames: refs.map((r, order) => ({
+                frameId: r.frameId,
+                saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
+                order,
+                payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
+            })),
+        };
+
+        if (confirmBtn) confirmBtn.disabled = true;
+        try {
+            await this.uploadPayloadMediaToS3(emptyPayload);
+            const response = await fetch('/api/content_cards/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    init_data: initData,
+                    content_card_id: this._contentCardViewCardId,
+                    frames: framesWrapper,
+                }),
+            });
+            let respData = {};
+            try {
+                respData = await response.json();
+            } catch (e) {
+                respData = {};
+            }
+            if (!response.ok) {
+                let msg = respData.detail;
+                if (Array.isArray(msg)) {
+                    msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
+                } else if (msg && typeof msg === 'object') {
+                    msg = JSON.stringify(msg);
+                }
+                throw new Error(msg || `Ошибка ${response.status}`);
+            }
+            this.cardPreviewRefs = refs.map((r) => ({
+                frameId: r.frameId,
+                saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
+                payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
+                storageKey: null,
+            }));
+            this.cardPreviewIndex = insertIndex;
+            this.closeContentCardAddFrameModal();
+            this.refreshCardPreviewUI();
+            this.showNotification('Кадр добавлен', 'success');
+        } catch (err) {
+            console.error('confirmContentCardAddFrame:', err);
+            this.showNotification('Не удалось добавить кадр: ' + (err.message || err), 'error');
+        } finally {
+            if (confirmBtn) confirmBtn.disabled = false;
         }
     }
 

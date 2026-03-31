@@ -563,6 +563,34 @@
     color: #d4f0c4;
 }
 
+.content-card-view-add-frame-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid #2d4a6e;
+    border-radius: 8px;
+    background: #283848;
+    color: #9ec5f0;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.content-card-view-add-frame-btn .fa {
+    font-size: 16px;
+}
+
+.content-card-view-add-frame-btn:hover {
+    background: #314a62;
+    border-color: #3d6a9e;
+    color: #c8e0ff;
+}
+
 .content-card-view-delete-frame-btn {
     display: inline-flex;
     align-items: center;
@@ -596,12 +624,76 @@
     cursor: not-allowed;
 }
 
+.content-card-add-frame-hint {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #aaa;
+}
+
+.content-card-add-frame-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ccc;
+}
+
+.content-card-add-frame-select {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    border: 1px solid #505050;
+    background: #1e1e1e;
+    color: #f0f0f0;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.content-card-add-frame-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.content-card-add-frame-confirm-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid #3d6a3d;
+    background: #2d4a2d;
+    color: #c8f0c8;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.content-card-add-frame-confirm-btn:hover:not(:disabled) {
+    background: #355a35;
+    border-color: #4a8a4a;
+}
+
+.content-card-add-frame-confirm-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 @media (max-width: 420px) {
     .content-card-view-edit-label {
         display: none;
     }
 
     .content-card-view-edit-btn {
+        min-width: 40px;
+        padding: 0 10px;
+    }
+
+    .content-card-view-add-frame-label {
+        display: none;
+    }
+
+    .content-card-view-add-frame-btn {
         min-width: 40px;
         padding: 0 10px;
     }
