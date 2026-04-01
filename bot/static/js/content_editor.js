@@ -2795,7 +2795,7 @@ class ContentEditor {
             case 'support-link': {
                 element.innerHTML = `
                     <div class="link-content">
-                        <div class="link-text" contenteditable="true" placeholder="Введите текст ссылки...">Ссылка</div>
+                        <div class="link-text" contenteditable="true" placeholder="Текст и выделенная ссылка…">Текст: ссылка</div>
                         <input type="hidden" class="link-url" value="">
                     </div>
                 `;
@@ -2891,6 +2891,7 @@ class ContentEditor {
         const linkUrl = element.querySelector('.link-url');
         if (!linkText || !linkUrl) return;
         this.linkifyPlainUrlsInLinkTextRoot(linkText);
+        this._normalizeAnchorsInLinkTextRoot(linkText);
         const first = linkText.querySelector('a[href]');
         if (first) {
             const href = first.getAttribute('href');
@@ -2933,9 +2934,10 @@ class ContentEditor {
         linkText.addEventListener('blur', () => {
             clearTimeout(linkifyDebounce);
             this.linkifyPlainUrlsUnderLinkElement(element);
+            this._normalizeAnchorsInLinkTextRoot(linkText);
             this.saveSelectionForEditable(linkText);
             if (linkText.textContent.trim() === '') {
-                linkText.textContent = 'Ссылка';
+                linkText.textContent = 'Текст и ссылка';
             }
         });
 
@@ -2957,13 +2959,6 @@ class ContentEditor {
                         e.stopPropagation();
                         window.open(href, '_blank', 'noopener,noreferrer');
                     }
-                }
-                return;
-            }
-            if (!linkText.contains(e.target) || document.activeElement !== linkText) {
-                const url = linkUrl.value;
-                if (url && url.trim() !== '') {
-                    window.open(url, '_blank', 'noopener,noreferrer');
                 }
             }
         });
@@ -3009,6 +3004,10 @@ class ContentEditor {
                         }
                     }
                 }
+                return;
+            }
+            const hasInline = linkText && linkText.querySelector('a[href]');
+            if (hasInline) {
                 return;
             }
             const url = (linkUrl.value || '').trim();
@@ -3249,6 +3248,61 @@ class ContentEditor {
         }
     }
 
+    /**
+     * Блок «Ссылка»: скрытое поле link-url синхронизируется с полем свойств;
+     * при applyToDom — createLink на выделение или обновление единственного <a>.
+     */
+    updateLinkBlockUrlFromProperties(value, applyToDom) {
+        if (!this.selectedElement || !this.selectedElement.classList.contains('link-element')) {
+            return;
+        }
+        const linkText = this.selectedElement.querySelector('.link-text');
+        const linkUrlHidden = this.selectedElement.querySelector('.link-url');
+        if (!linkText || !linkUrlHidden) return;
+        const v = String(value != null ? value : '').trim();
+        linkUrlHidden.value = v;
+        if (!applyToDom || !v) {
+            return;
+        }
+        linkText.focus();
+        if (this.hasValidSelectionForFormat(linkText)) {
+            this.restoreSelectionForEditable(linkText);
+            document.execCommand('createLink', false, v);
+        } else {
+            const anchors = linkText.querySelectorAll('a[href]');
+            if (anchors.length === 1) {
+                anchors[0].setAttribute('href', v);
+            }
+        }
+        this._normalizeAnchorsInLinkTextRoot(linkText);
+        const prop = document.getElementById('propLinkUrl');
+        if (prop && this.selectedElement) {
+            prop.value = this._getLinkBlockUrlRaw(this.selectedElement);
+        }
+    }
+
+    _normalizeAnchorsInLinkTextRoot(root) {
+        if (!root) return;
+        root.querySelectorAll('a[href]').forEach((a) => {
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+        });
+    }
+
+    /** Сырой URL для поля свойств / синхронизации (первый <a> или скрытое поле). */
+    _getLinkBlockUrlRaw(element) {
+        const lt = element && element.querySelector('.link-text');
+        const lu = element && element.querySelector('.link-url');
+        const first = lt && lt.querySelector('a[href]');
+        const fromA = first && first.getAttribute('href');
+        return fromA ? String(fromA) : lu ? String(lu.value || '') : '';
+    }
+
+    /** URL для подстановки в HTML шаблон панели свойств. */
+    _getLinkBlockUrlForProperties(element) {
+        return this.escapeHtml(this._getLinkBlockUrlRaw(element));
+    }
+
     applyStyleToSelection(editableEl, styleObj) {
         this.restoreSelectionForEditable(editableEl);
         const sel = window.getSelection();
@@ -3300,8 +3354,8 @@ class ContentEditor {
             ? this.rgbToHex(window.getComputedStyle(textContentEl).color || '#333333')
             : '#333333';
         const linkColorValue = linkTextEl
-            ? this.rgbToHex(window.getComputedStyle(linkTextEl).color || '#007bff')
-            : '#007bff';
+            ? this.rgbToHex(window.getComputedStyle(linkTextEl).color || '#333333')
+            : '#333333';
 
         this.propertiesContent.innerHTML = `
             <div class="property-group">
@@ -3382,9 +3436,12 @@ class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>URL ссылки:</label>
-                    <input type="url" id="propLinkUrl" value="${element.querySelector('.link-url').value}" 
+                    <input type="url" id="propLinkUrl" value="${this._getLinkBlockUrlForProperties(element)}" 
                            placeholder="https://example.com"
-                           oninput="contentEditor.updateElementProperty('linkUrl', this.value)">
+                           oninput="contentEditor.updateLinkBlockUrlFromProperties(this.value, false)"
+                           onchange="contentEditor.updateLinkBlockUrlFromProperties(this.value, true)"
+                           onkeydown="if(event.key==='Enter'){ event.preventDefault(); this.blur(); }">
+                    <p class="property-hint ce-link-url-hint">Выделите в блоке слова или фразу, введите адрес и нажмите Enter или уйдите с поля — ссылка появится только на выделении. Если в блоке одна ссылка, URL обновит её.</p>
                 </div>
                 ` : ''}
                 ${element.classList.contains('audio-element') ? `
@@ -3474,10 +3531,7 @@ class ContentEditor {
                 break;
             }
             case 'linkUrl':
-                const linkUrl = this.selectedElement.querySelector('.link-url');
-                if (linkUrl) {
-                    linkUrl.value = value;
-                }
+                this.updateLinkBlockUrlFromProperties(value, false);
                 break;
             case 'tableType':
                 this.selectedElement.dataset.tableType = value;
@@ -5463,9 +5517,15 @@ class ContentEditor {
                 element.classList.add('link-element');
                 const rawUrl = item.linkUrl != null ? String(item.linkUrl) : '';
                 const urlAttr = rawUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+                let linkInner = item.linkTextHtml || '';
+                const hasAnchor = /<a\s/i.test(String(linkInner));
+                if (rawUrl.trim() && !hasAnchor) {
+                    const inner = String(linkInner).trim() || 'Ссылка';
+                    linkInner = `<a href="${urlAttr}" target="_blank" rel="noopener noreferrer">${inner}</a>`;
+                }
                 element.innerHTML = `
                     <div class="link-content">
-                        <div class="link-text" contenteditable="${ce}" placeholder="Введите текст ссылки...">${item.linkTextHtml || ''}</div>
+                        <div class="link-text" contenteditable="${ce}" placeholder="Текст и выделенная ссылка…">${linkInner}</div>
                         <input type="hidden" class="link-url" value="${urlAttr}">
                     </div>`;
                 if (!previewMode) {

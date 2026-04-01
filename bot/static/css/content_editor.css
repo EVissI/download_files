@@ -1405,7 +1405,7 @@ button.content-card-admin-info-file-link:hover {
 /* Предпросмотр: клики по ссылке и диплинкам внутри текста */
 .card-preview-surface-inner .canvas-element.link-element.card-preview-canvas-clone {
     pointer-events: auto;
-    cursor: pointer;
+    cursor: default;
 }
 
 /* Предпросмотр / опубликованная карточка: кнопка «Скачать» у вложения (attach-file) */
@@ -1437,6 +1437,19 @@ button.content-card-admin-info-file-link:hover {
 .card-preview-surface-inner .text-content,
 .card-preview-surface-inner .link-text {
     outline: none !important;
+}
+
+/* Предпросмотр: тёмный фон — обычный текст светлый, ссылка отдельным цветом */
+.card-preview-surface-inner .link-text {
+    color: #f0f0f0 !important;
+}
+
+.card-preview-surface-inner .link-text a[href] {
+    color: #8b9cff !important;
+}
+
+.card-preview-surface-inner .link-text a[href]:hover {
+    color: #b4c0ff !important;
 }
 
 .card-preview-surface-inner .text-block-resize-handle {
@@ -1567,6 +1580,13 @@ button.content-card-admin-info-file-link:hover {
 }
 
 .property-hint.ce-attach-file-editor-hint {
+    font-size: 12px;
+    color: #a8a8a8;
+    line-height: 1.4;
+    margin: 8px 0 0;
+}
+
+.property-hint.ce-link-url-hint {
     font-size: 12px;
     color: #a8a8a8;
     line-height: 1.4;
@@ -1714,7 +1734,7 @@ button.content-card-admin-info-file-link:hover {
     border: 1px dashed #007bff;
     min-width: 100px;
     min-height: 30px;
-    cursor: pointer;
+    cursor: default;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -1822,7 +1842,7 @@ button.content-card-admin-info-file-link:hover {
     font-family: 'Arial', sans-serif;
     font-size: 16px;
     line-height: 1.4;
-    color: #007bff;
+    color: #333;
     outline: none;
     border: none;
     background: transparent;
@@ -1831,10 +1851,21 @@ button.content-card-admin-info-file-link:hover {
     word-wrap: break-word;
     overflow-wrap: break-word;
     min-height: 20px;
-    transition: all 0.2s ease;
-    cursor: pointer;
+    transition: color 0.2s ease;
+    cursor: text;
+    text-decoration: none;
+    text-align: left;
+}
+
+/* Ссылкой выглядит только выделенный фрагмент (<a>) */
+.link-text a[href] {
+    color: #007bff;
     text-decoration: underline;
-    text-align: center;
+    cursor: pointer;
+}
+
+.link-text a[href]:hover {
+    color: #0056b3;
 }
 
 .link-text:empty:before {
@@ -1846,12 +1877,6 @@ button.content-card-admin-info-file-link:hover {
 
 .link-text:focus {
     cursor: text;
-    text-decoration: none;
-}
-
-.link-text:hover:not(:focus) {
-    color: #0056b3;
-    text-decoration: underline;
 }
 
 .text-content {
