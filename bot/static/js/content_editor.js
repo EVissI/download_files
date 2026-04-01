@@ -57,6 +57,14 @@ class ContentEditor {
         /** Кэш открытой IndexedDB для больших аудио (вне квоты localStorage JSON) */
         this._contentEditorMediaDbPromise = null;
 
+        /** Запись голосового (MediaRecorder) */
+        this._voiceRecordStream = null;
+        this._voiceRecordRecorder = null;
+        this._voiceRecordChunks = [];
+        this._voiceRecordTimerId = null;
+        this._voiceRecordDiscardOnStop = false;
+        this._audioModalKeepOpenAfterDiscard = false;
+
         /** Глобальный стиль текста: новые блоки + значения вкладки «Текст» в настройках */
         this.globalTextStyleDefaults = { ...ContentEditor.DEFAULT_GLOBAL_TEXT_STYLE };
 
@@ -832,6 +840,47 @@ class ContentEditor {
         }
         this.saveFrameConfirmModal = document.getElementById('saveFrameConfirmModal');
 
+        if (!document.getElementById('audioSourceModal')) {
+            document.body.insertAdjacentHTML(
+                'beforeend',
+                `
+                <div id="audioSourceModal" class="ce-audio-source-modal" style="display: none;" aria-hidden="true">
+                    <div class="ce-audio-source-overlay" onclick="contentEditor.closeAudioSourceModal()"></div>
+                    <div class="ce-audio-source-box" role="dialog" aria-modal="true" aria-labelledby="audioSourceModalTitle">
+                        <h3 id="audioSourceModalTitle" class="ce-audio-source-title">Аудио</h3>
+                        <div id="audioSourceStepPick" class="ce-audio-source-step ce-audio-source-step--pick">
+                            <button type="button" class="ce-audio-source-btn ce-audio-source-btn--primary" onclick="contentEditor.audioModalPickFile()">
+                                Прикрепить аудио
+                            </button>
+                            <button type="button" class="ce-audio-source-btn ce-audio-source-btn--primary" onclick="contentEditor.audioModalStartRecord()">
+                                Записать аудио
+                            </button>
+                            <button type="button" class="ce-audio-source-btn ce-audio-source-btn--ghost" onclick="contentEditor.closeAudioSourceModal()">
+                                Отмена
+                            </button>
+                        </div>
+                        <div id="audioSourceStepRecord" class="ce-audio-source-step ce-audio-source-step--record" style="display: none;">
+                            <div class="ce-audio-record-row">
+                                <span class="ce-audio-record-dot" aria-hidden="true"></span>
+                                <span class="ce-audio-record-label">Идёт запись…</span>
+                            </div>
+                            <div id="audioRecordTimer" class="ce-audio-record-timer">0:00</div>
+                            <p class="ce-audio-record-hint">Говорите в микрофон. Нажмите «Стоп», когда закончите.</p>
+                            <div class="ce-audio-source-actions-row">
+                                <button type="button" class="ce-audio-source-btn ce-audio-source-btn--stop" onclick="contentEditor.audioModalStopRecord()">
+                                    Стоп
+                                </button>
+                                <button type="button" class="ce-audio-source-btn ce-audio-source-btn--ghost" onclick="contentEditor.audioModalCancelRecord()">
+                                    Отмена
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `
+            );
+        }
+
         if (!window.__CONTENT_CARD_VIEW_ONLY__) {
             if (!document.getElementById('cardPreviewModal')) {
                 document.body.insertAdjacentHTML('beforeend', `
@@ -1531,9 +1580,9 @@ class ContentEditor {
             return;
         }
 
-        // Особое поведение для audio-file - прямая загрузка файла
+        // Особое поведение для audio-file — модалка: файл или запись
         if (toolId === 'audio-file') {
-            this.handleDirectAudioUpload();
+            this.openAudioSourceModal();
             return;
         }
 
@@ -1600,6 +1649,222 @@ class ContentEditor {
         };
 
         reader.readAsDataURL(file);
+    }
+
+    openAudioSourceModal() {
+        const modal = document.getElementById('audioSourceModal');
+        if (!modal) {
+            this.showNotification('Модальное окно аудио не найдено', 'error');
+            return;
+        }
+        this._resetAudioSourceModalToPick();
+        this._voiceRecordDiscardOnStop = false;
+        this._audioModalKeepOpenAfterDiscard = false;
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    closeAudioSourceModal() {
+        if (this._voiceRecordRecorder && this._voiceRecordRecorder.state === 'recording') {
+            this._voiceRecordDiscardOnStop = true;
+            this._audioModalKeepOpenAfterDiscard = false;
+            try {
+                this._voiceRecordRecorder.stop();
+            } catch (e) {
+                this._syncCleanupVoiceRecording();
+                this._finishAudioSourceModalHidden();
+                this._resetAudioSourceModalToPick();
+            }
+            return;
+        }
+        this._syncCleanupVoiceRecording();
+        this._finishAudioSourceModalHidden();
+        this._resetAudioSourceModalToPick();
+    }
+
+    _finishAudioSourceModalHidden() {
+        const modal = document.getElementById('audioSourceModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    _resetAudioSourceModalToPick() {
+        const pick = document.getElementById('audioSourceStepPick');
+        const rec = document.getElementById('audioSourceStepRecord');
+        const timerEl = document.getElementById('audioRecordTimer');
+        if (timerEl) timerEl.textContent = '0:00';
+        if (pick) pick.style.display = 'flex';
+        if (rec) rec.style.display = 'none';
+    }
+
+    _syncCleanupVoiceRecording() {
+        clearInterval(this._voiceRecordTimerId);
+        this._voiceRecordTimerId = null;
+        this._voiceRecordChunks = [];
+        this._voiceRecordRecorder = null;
+        if (this._voiceRecordStream) {
+            this._voiceRecordStream.getTracks().forEach((t) => t.stop());
+            this._voiceRecordStream = null;
+        }
+    }
+
+    audioModalPickFile() {
+        this.closeAudioSourceModal();
+        this.handleDirectAudioUpload();
+    }
+
+    _preferredAudioRecorderMime() {
+        if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) {
+            return '';
+        }
+        const types = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/ogg;codecs=opus',
+            'audio/mp4',
+        ];
+        for (const t of types) {
+            if (MediaRecorder.isTypeSupported(t)) return t;
+        }
+        return '';
+    }
+
+    async audioModalStartRecord() {
+        if (typeof MediaRecorder === 'undefined') {
+            this.showNotification('Запись аудио не поддерживается в этом браузере', 'error');
+            return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            this.showNotification('Доступ к микрофону недоступен', 'error');
+            return;
+        }
+        const pick = document.getElementById('audioSourceStepPick');
+        const rec = document.getElementById('audioSourceStepRecord');
+        const timerEl = document.getElementById('audioRecordTimer');
+        if (!pick || !rec) return;
+
+        const mime = this._preferredAudioRecorderMime();
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                },
+            });
+            this._voiceRecordStream = stream;
+            const opts = mime ? { mimeType: mime } : {};
+            const mr = new MediaRecorder(stream, opts);
+            this._voiceRecordChunks = [];
+            mr.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) this._voiceRecordChunks.push(e.data);
+            };
+            mr.onstop = () => this._onVoiceMediaRecorderStop(mr);
+            this._voiceRecordRecorder = mr;
+            this._voiceRecordDiscardOnStop = false;
+            this._audioModalKeepOpenAfterDiscard = false;
+            mr.start(200);
+
+            pick.style.display = 'none';
+            rec.style.display = 'flex';
+            if (timerEl) timerEl.textContent = '0:00';
+            const startMs = Date.now();
+            this._voiceRecordTimerId = setInterval(() => {
+                const s = Math.floor((Date.now() - startMs) / 1000);
+                const m = Math.floor(s / 60);
+                const sec = s % 60;
+                if (timerEl) {
+                    timerEl.textContent = `${m}:${String(sec).padStart(2, '0')}`;
+                }
+            }, 400);
+        } catch (err) {
+            console.error('audioModalStartRecord:', err);
+            this.showNotification(
+                err && err.name === 'NotAllowedError'
+                    ? 'Разрешите доступ к микрофону'
+                    : 'Не удалось начать запись',
+                'error'
+            );
+            this._syncCleanupVoiceRecording();
+        }
+    }
+
+    _onVoiceMediaRecorderStop(mr) {
+        clearInterval(this._voiceRecordTimerId);
+        this._voiceRecordTimerId = null;
+        const discard = this._voiceRecordDiscardOnStop;
+        const keepOpen = this._audioModalKeepOpenAfterDiscard;
+        this._voiceRecordDiscardOnStop = false;
+        this._audioModalKeepOpenAfterDiscard = false;
+
+        const mimeType = (mr && mr.mimeType) || 'audio/webm';
+        const chunks = this._voiceRecordChunks.slice();
+        this._voiceRecordChunks = [];
+        this._voiceRecordRecorder = null;
+        if (this._voiceRecordStream) {
+            this._voiceRecordStream.getTracks().forEach((t) => t.stop());
+            this._voiceRecordStream = null;
+        }
+
+        if (discard) {
+            if (keepOpen) {
+                this._resetAudioSourceModalToPick();
+            } else {
+                this._finishAudioSourceModalHidden();
+                this._resetAudioSourceModalToPick();
+            }
+            return;
+        }
+
+        const blob = new Blob(chunks, { type: mimeType });
+        if (blob.size < 64) {
+            this.showNotification('Слишком короткая запись', 'warning');
+            this._finishAudioSourceModalHidden();
+            this._resetAudioSourceModalToPick();
+            return;
+        }
+
+        let ext = 'webm';
+        if (mimeType.includes('mp4') || mimeType.includes('mpeg') || mimeType.includes('m4a')) ext = 'm4a';
+        else if (mimeType.includes('ogg')) ext = 'ogg';
+        else if (mimeType.includes('webm')) ext = 'webm';
+
+        const name = `voice_${Date.now()}.${ext}`;
+        const file = new File([blob], name, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        this._finishAudioSourceModalHidden();
+        this._resetAudioSourceModalToPick();
+        this.addAudioElementToCanvas(url, name, file);
+    }
+
+    audioModalStopRecord() {
+        this._voiceRecordDiscardOnStop = false;
+        this._audioModalKeepOpenAfterDiscard = false;
+        if (this._voiceRecordRecorder && this._voiceRecordRecorder.state === 'recording') {
+            try {
+                this._voiceRecordRecorder.stop();
+            } catch (e) {
+                console.error('audioModalStopRecord:', e);
+                this.showNotification('Не удалось завершить запись', 'error');
+                this.closeAudioSourceModal();
+            }
+        }
+    }
+
+    audioModalCancelRecord() {
+        if (this._voiceRecordRecorder && this._voiceRecordRecorder.state === 'recording') {
+            this._voiceRecordDiscardOnStop = true;
+            this._audioModalKeepOpenAfterDiscard = true;
+            try {
+                this._voiceRecordRecorder.stop();
+            } catch (e) {
+                this._syncCleanupVoiceRecording();
+                this._resetAudioSourceModalToPick();
+            }
+        } else {
+            this._resetAudioSourceModalToPick();
+        }
     }
 
     handleDirectAudioUpload() {
