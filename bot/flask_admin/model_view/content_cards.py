@@ -4,6 +4,7 @@ from flask_appbuilder.models.sqla.filters import SQLAFilterConverter, get_field_
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
 from sqlalchemy import func
+from wtforms import StringField, validators
 
 from bot.db.models import ContentCard
 
@@ -80,6 +81,18 @@ class ContentCardModelView(ModelView):
     show_columns = ["id", "file_name", "labels", "created_at", "updated_at"]
     search_columns = ["id", "file_name", "labels"]
     order_columns = ["id", "file_name", "created_at", "updated_at"]
+
+    # ARRAY не конвертируется в поле поиска автоматически — явное поле, иначе KeyError в SearchWidget
+    search_form_extra_fields = {
+        "labels": StringField(
+            _("Метки"),
+            description=_(
+                "Массив PostgreSQL TEXT[]. «Подстрока в метке» — вхождение в любую метку; "
+                "«Точная метка» — элемент массива целиком."
+            ),
+            validators=[validators.Optional()],
+        ),
+    }
 
     label_columns = {
         "id": _("ID"),
