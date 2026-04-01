@@ -4157,7 +4157,7 @@ class ContentEditor {
                 ? String(window.hintViewerMatFileName)
                 : '';
         const normalized = rawMat.replace(/[\\/]/g, '_').trim();
-        const { gameId: rawGid, gameNum } = this.getGameContextForCard();
+        const { gameId: rawGid } = this.getGameContextForCard();
         const gameId = String(rawGid != null ? rawGid : 'default')
             .replace(/[\\/]/g, '_')
             .trim() || 'default';
@@ -4182,8 +4182,8 @@ class ContentEditor {
             stem = gameId;
         }
 
-        const g = gameNum != null ? `_g${gameNum}` : '';
-        let base = `${stem}${g}${ext}`;
+        // Имя файла карточки в облаке: только стем + расширение (без _gN — совпадает с id матча/анализа)
+        let base = `${stem}${ext}`;
         if (base.length > 255) {
             base = base.slice(0, 255);
         }
