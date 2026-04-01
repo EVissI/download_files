@@ -36,6 +36,7 @@ from loguru import logger
 import traceback
 import json
 import os
+import re
 import time
 from pathlib import Path
 from aiogram.types import (
@@ -566,6 +567,13 @@ class ContentCardFetchBody(BaseModel):
     content_card_id: int = Field(..., ge=1)
 
 
+class ContentCardHintMatBody(BaseModel):
+    """Скачивание исходного .mat из S3 (hints/{game_id}.mat) по имени файла карточки."""
+
+    init_data: str = Field(..., min_length=1)
+    content_card_id: int = Field(..., ge=1)
+
+
 class ContentCardUpdateBody(BaseModel):
     """Обновление JSON кадров существующей карточки (только ROOT_ADMIN_IDS)."""
 
@@ -728,6 +736,67 @@ async def fetch_content_card(body: ContentCardFetchBody):
             out["file_name"] = card.file_name
             out["labels"] = list(raw_labels) if raw_labels is not None else []
         return out
+
+
+@app.post("/api/content_cards/hint_mat_download")
+async def download_content_card_hint_mat(body: ContentCardHintMatBody):
+    """
+    Исходный .mat анализа в S3 по ключу hints/{game_id}.mat.
+    Имя файла карточки (file_name) должно быть вида {game_id}.mat — как при сохранении из hint viewer.
+    Только ROOT_ADMIN_IDS (тот же контур, что и поле «Файл» в информации о карточке).
+    """
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(
+            status_code=401, detail="Недействительные данные Telegram"
+        )
+    uid = (user_data.get("user") or {}).get("id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(uid)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        card_dao = ContentCardDAO(session)
+        card = await card_dao.find_one_or_none_by_id(body.content_card_id)
+        if not card:
+            raise HTTPException(status_code=404, detail="Карточка не найдена")
+
+    fname = os.path.basename((card.file_name or "").strip())[:255]
+    if not fname:
+        raise HTTPException(
+            status_code=400, detail="У карточки не задано имя файла"
+        )
+    stem, _, ext = fname.rpartition(".")
+    if ext.lower() != "mat" or not stem:
+        raise HTTPException(
+            status_code=400,
+            detail="Ожидается имя вида {game_id}.mat для скачивания из hints/",
+        )
+    game_id = stem
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,220}", game_id):
+        raise HTTPException(
+            status_code=400, detail="Некорректный game_id в имени файла"
+        )
+
+    key = HintS3Storage.mat_key(game_id)
+    s3 = HintS3Storage.from_settings()
+    if not s3.exists(key):
+        raise HTTPException(
+            status_code=404, detail="Файл .mat не найден в хранилище"
+        )
+    blob = s3.download_bytes(key)
+    disp = _safe_content_disposition_filename(fname, f"{game_id}.mat")
+    headers: dict[str, str] = {
+        "Content-Disposition": f'attachment; filename="{disp}"',
+        "Cache-Control": "private, no-store",
+        "Access-Control-Allow-Origin": "https://web.telegram.org",
+    }
+    return Response(
+        content=blob,
+        media_type="application/octet-stream",
+        headers=headers,
+    )
 
 
 @app.post("/api/content_cards/media/upload")

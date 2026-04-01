@@ -944,6 +944,26 @@
     margin: 6px 0 0;
 }
 
+button.content-card-admin-info-file-link {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: #8b9cff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    text-align: left;
+    max-width: 100%;
+    word-break: break-all;
+}
+
+button.content-card-admin-info-file-link:hover {
+    color: #b4c0ff;
+}
+
 .content-card-admin-info-labels {
     margin: 0;
     padding-left: 1.2em;

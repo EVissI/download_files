@@ -707,7 +707,15 @@ class ContentEditor {
         const modal = document.getElementById('contentCardAdminInfoModal');
         const body = document.getElementById('contentCardAdminInfoBody');
         if (!modal || !body) return;
-        const fn = this.escapeHtml(this._contentCardAdminMeta.file_name || '—');
+        const rawFn = String(this._contentCardAdminMeta.file_name || '').trim();
+        const fnEsc = this.escapeHtml(rawFn || '—');
+        const canDownloadMat =
+            rawFn &&
+            rawFn.toLowerCase().endsWith('.mat') &&
+            this._contentCardViewCardId != null;
+        const fileDd = canDownloadMat
+            ? `<dd><button type="button" class="content-card-admin-info-file-link">${fnEsc}</button></dd>`
+            : `<dd>${fnEsc}</dd>`;
         const labels = Array.isArray(this._contentCardAdminMeta.labels) ? this._contentCardAdminMeta.labels : [];
         const parts = labels
             .map((x) => (typeof x === 'string' ? x.trim() : String(x)))
@@ -723,11 +731,94 @@ class ContentEditor {
         }
         body.innerHTML =
             `<dl class="content-card-admin-info-dl">` +
-            `<dt>Файл</dt><dd>${fn}</dd>` +
+            `<dt>Файл</dt>${fileDd}` +
             `<dt>Метки</dt><dd>${labelsBlock}</dd>` +
             `</dl>`;
+        const fileBtn = body.querySelector('.content-card-admin-info-file-link');
+        if (fileBtn) {
+            fileBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.downloadContentCardHintMat();
+            });
+        }
         modal.style.display = 'flex';
         modal.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Скачивание исходного .mat из S3 (hints/{game_id}.mat) по имени файла карточки; только WebApp + админ.
+     */
+    async downloadContentCardHintMat() {
+        const initData = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
+        if (!initData) {
+            this.showNotification('Скачивание доступно в Telegram WebApp', 'warning');
+            return;
+        }
+        const cid = this._contentCardViewCardId;
+        if (cid == null || Number.isNaN(Number(cid))) {
+            this.showNotification('Не удалось определить карточку', 'error');
+            return;
+        }
+        try {
+            const res = await fetch('/api/content_cards/hint_mat_download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    init_data: initData,
+                    content_card_id: Number(cid),
+                }),
+            });
+            if (!res.ok) {
+                let detail = 'Ошибка скачивания';
+                try {
+                    const j = await res.json();
+                    if (j.detail) {
+                        detail =
+                            typeof j.detail === 'string'
+                                ? j.detail
+                                : Array.isArray(j.detail)
+                                  ? j.detail.map((x) => x.msg || JSON.stringify(x)).join('; ')
+                                  : JSON.stringify(j.detail);
+                    }
+                } catch (e) {
+                    /* ignore */
+                }
+                throw new Error(detail);
+            }
+            const blob = await res.blob();
+            const fn =
+                (this._contentCardAdminMeta &&
+                    String(this._contentCardAdminMeta.file_name || '')
+                        .replace(/[\\/]/g, '_')
+                        .trim()) ||
+                'source.mat';
+            const url = URL.createObjectURL(blob);
+            const tw = window.Telegram && window.Telegram.WebApp;
+            if (tw && typeof tw.downloadFile === 'function') {
+                try {
+                    tw.downloadFile({ url, file_name: fn }, (accepted) => {
+                        setTimeout(() => URL.revokeObjectURL(url), 120000);
+                        if (accepted === false) {
+                            this.showNotification('Скачивание отменено', 'info');
+                        }
+                    });
+                    return;
+                } catch (err) {
+                    console.warn('Telegram.WebApp.downloadFile:', err);
+                }
+            }
+            const a = document.createElement('a');
+            a.href = url;
+            a.setAttribute('download', fn);
+            a.rel = 'noopener noreferrer';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        } catch (e) {
+            console.error('downloadContentCardHintMat:', e);
+            this.showNotification(e.message || String(e), 'error');
+        }
     }
 
     closeContentCardAdminInfoModal() {
