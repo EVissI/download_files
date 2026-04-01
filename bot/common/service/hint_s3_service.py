@@ -4,6 +4,7 @@ S3 для hint viewer: обмен .mat и JSON между ботом и ворк
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 
 import boto3
 from botocore.client import Config
@@ -129,3 +130,62 @@ class HintS3Storage:
             Bucket=self._bucket, Prefix=p, MaxKeys=1
         )
         return bool(resp.get("Contents"))
+
+    _IMAGE_SUFFIXES = (
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+        ".bmp",
+        ".svg",
+    )
+
+    def list_content_card_media_for_user(
+        self,
+        user_id: int,
+        *,
+        max_keys: int = 48,
+        continuation_token: str | None = None,
+        image_only: bool = True,
+    ) -> tuple[list[dict], str | None]:
+        """
+        Объекты в ``content_cards/media/{user_id}/``.
+        Возвращает (items, next_continuation_token).
+        """
+        prefix = f"{self.CONTENT_CARDS_MEDIA_PREFIX}/{int(user_id)}/"
+        kw: dict = {
+            "Bucket": self._bucket,
+            "Prefix": prefix,
+            "MaxKeys": min(max(1, max_keys), 200),
+        }
+        if continuation_token:
+            kw["ContinuationToken"] = continuation_token
+        resp = self._client.list_objects_v2(**kw)
+        raw = resp.get("Contents") or []
+        next_tok = resp.get("NextContinuationToken")
+        items: list[dict] = []
+        for obj in raw:
+            key = (obj.get("Key") or "").strip()
+            if not key or key.endswith("/"):
+                continue
+            name = key.rsplit("/", 1)[-1].lower()
+            if image_only:
+                if not any(name.endswith(s) for s in self._IMAGE_SUFFIXES):
+                    continue
+            lm = obj.get("LastModified")
+            if isinstance(lm, datetime):
+                if lm.tzinfo is None:
+                    lm = lm.replace(tzinfo=timezone.utc)
+                lm_iso = lm.astimezone(timezone.utc).isoformat()
+            else:
+                lm_iso = None
+            items.append(
+                {
+                    "key": key,
+                    "filename": key.rsplit("/", 1)[-1],
+                    "size": int(obj.get("Size") or 0),
+                    "last_modified": lm_iso,
+                }
+            )
+        return items, next_tok

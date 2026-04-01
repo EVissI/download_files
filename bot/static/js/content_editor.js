@@ -982,6 +982,50 @@ class ContentEditor {
             );
         }
 
+        if (!document.getElementById('imageSourceModal')) {
+            document.body.insertAdjacentHTML(
+                'beforeend',
+                `
+                <div id="imageSourceModal" class="ce-image-source-modal" style="display: none;" aria-hidden="true">
+                    <div class="ce-image-source-overlay" onclick="contentEditor.closeImageSourceModal()"></div>
+                    <div class="ce-image-source-box" role="dialog" aria-modal="true" aria-labelledby="imageSourceModalTitle">
+                        <h3 id="imageSourceModalTitle" class="ce-image-source-title">Изображение</h3>
+                        <p class="ce-image-source-lead">Выберите источник файла для блока на кадре.</p>
+                        <div class="ce-image-source-step">
+                            <button type="button" class="ce-image-source-btn ce-image-source-btn--primary" onclick="contentEditor.imageModalPickFromDevice()">
+                                Файл с устройства
+                            </button>
+                            <button type="button" class="ce-image-source-btn ce-image-source-btn--primary" onclick="contentEditor.imageModalOpenLibrary()">
+                                Медиатека карточек
+                            </button>
+                            <p class="ce-image-source-caption">Медиатека — изображения, которые вы уже загружали в карточки (хранилище S3, только для администраторов).</p>
+                            <button type="button" class="ce-image-source-btn ce-image-source-btn--ghost" onclick="contentEditor.closeImageSourceModal()">
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="imageLibraryModal" class="ce-image-library-modal" style="display: none;" aria-hidden="true">
+                    <div class="ce-image-library-overlay" onclick="contentEditor.closeImageLibraryModal()"></div>
+                    <div class="ce-image-library-box" role="dialog" aria-modal="true" aria-labelledby="imageLibraryModalTitle">
+                        <h3 id="imageLibraryModalTitle" class="ce-image-library-title">Медиатека изображений</h3>
+                        <p class="ce-image-library-hint">Файлы из вашего каталога медиа карточек. Нажмите миниатюру, чтобы вставить на кадр (повторная загрузка не нужна).</p>
+                        <div id="imageLibraryStatus" class="ce-image-library-status" aria-live="polite"></div>
+                        <div id="imageLibraryGrid" class="ce-image-library-grid"></div>
+                        <div class="ce-image-library-actions">
+                            <button type="button" id="imageLibraryLoadMore" class="ce-image-source-btn ce-image-source-btn--ghost" style="display: none;" onclick="contentEditor.imageLibraryLoadMore()">
+                                Показать ещё
+                            </button>
+                            <button type="button" class="ce-image-source-btn ce-image-source-btn--ghost" onclick="contentEditor.closeImageLibraryModal()">
+                                Назад
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `
+            );
+        }
+
         if (!window.__CONTENT_CARD_VIEW_ONLY__) {
             if (!document.getElementById('cardPreviewModal')) {
                 document.body.insertAdjacentHTML('beforeend', `
@@ -1620,9 +1664,9 @@ class ContentEditor {
             },
             {
                 id: 'upload-image',
-                name: 'Загрузить изображение',
+                name: 'Изображение',
                 type: 'image',
-                description: 'Загрузить изображение с локального хранилища',
+                description: 'Файл с устройства или медиатека загрузок карточек',
                 icon: 'fa fa-image'
             },
             {
@@ -1680,9 +1724,9 @@ class ContentEditor {
             return;
         }
 
-        // Особое поведение для upload-image - прямая загрузка файла
+        // Особое поведение для upload-image — модалка: устройство или медиатека S3
         if (toolId === 'upload-image') {
-            this.handleDirectImageUpload();
+            this.openImageSourceModal();
             return;
         }
 
@@ -1718,8 +1762,31 @@ class ContentEditor {
         this.addElementToCanvas(toolId);
     }
 
-    handleDirectImageUpload() {
-        // Создаем временный input для выбора файла
+    openImageSourceModal() {
+        const modal = document.getElementById('imageSourceModal');
+        if (!modal) {
+            this._triggerLocalImageFilePicker();
+            return;
+        }
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    closeImageSourceModal() {
+        const modal = document.getElementById('imageSourceModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    imageModalPickFromDevice() {
+        this.closeImageSourceModal();
+        setTimeout(() => this._triggerLocalImageFilePicker(), 0);
+    }
+
+    /** Выбор файла с диска (прежнее поведение без модалки выбора источника). */
+    _triggerLocalImageFilePicker() {
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = 'image/*';
@@ -1730,13 +1797,231 @@ class ContentEditor {
             if (file && file.type.startsWith('image/')) {
                 this.uploadImageDirectly(file);
             }
-            // Удаляем временный input
             document.body.removeChild(fileInput);
         });
 
-        // Добавляем input в DOM и вызываем клик
         document.body.appendChild(fileInput);
         fileInput.click();
+    }
+
+    imageModalOpenLibrary() {
+        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        if (!initData) {
+            this.showNotification('Медиатека доступна в Telegram WebApp (нужен init_data)', 'warning');
+            return;
+        }
+        const src = document.getElementById('imageSourceModal');
+        const lib = document.getElementById('imageLibraryModal');
+        if (!lib) {
+            this.showNotification('Окно медиатеки не найдено', 'error');
+            return;
+        }
+        if (src) {
+            src.style.display = 'none';
+            src.setAttribute('aria-hidden', 'true');
+        }
+        lib.style.display = 'flex';
+        lib.setAttribute('aria-hidden', 'false');
+        this._imageLibraryNextToken = null;
+        const grid = document.getElementById('imageLibraryGrid');
+        const st = document.getElementById('imageLibraryStatus');
+        const more = document.getElementById('imageLibraryLoadMore');
+        if (grid) grid.innerHTML = '';
+        if (st) st.textContent = '';
+        if (more) more.style.display = 'none';
+        this._fetchImageLibraryPage(null);
+    }
+
+    closeImageLibraryModal() {
+        const lib = document.getElementById('imageLibraryModal');
+        const src = document.getElementById('imageSourceModal');
+        if (lib) {
+            lib.style.display = 'none';
+            lib.setAttribute('aria-hidden', 'true');
+        }
+        if (src) {
+            src.style.display = 'flex';
+            src.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    _closeAllImageModals() {
+        const lib = document.getElementById('imageLibraryModal');
+        const src = document.getElementById('imageSourceModal');
+        if (lib) {
+            lib.style.display = 'none';
+            lib.setAttribute('aria-hidden', 'true');
+        }
+        if (src) {
+            src.style.display = 'none';
+            src.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    imageLibraryLoadMore() {
+        if (this._imageLibraryNextToken) {
+            this._fetchImageLibraryPage(this._imageLibraryNextToken);
+        }
+    }
+
+    async _fetchImageLibraryPage(continuationToken) {
+        const grid = document.getElementById('imageLibraryGrid');
+        const st = document.getElementById('imageLibraryStatus');
+        const more = document.getElementById('imageLibraryLoadMore');
+        if (!grid) return;
+        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        if (!initData) {
+            if (st) st.textContent = 'Нет доступа: откройте редактор из Telegram.';
+            return;
+        }
+        if (st && !continuationToken) st.textContent = 'Загрузка…';
+        if (more) more.disabled = true;
+        try {
+            const r = await fetch('/api/content_cards/media/list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    init_data: initData,
+                    continuation_token: continuationToken || null,
+                    limit: 48,
+                }),
+            });
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) {
+                const d = data.detail;
+                const msg =
+                    typeof d === 'string'
+                        ? d
+                        : Array.isArray(d)
+                          ? d.map((x) => x.msg || JSON.stringify(x)).join('; ')
+                          : `Ошибка ${r.status}`;
+                if (st) st.textContent = msg;
+                return;
+            }
+            let items = Array.isArray(data.items) ? data.items.slice() : [];
+            items.sort((a, b) => {
+                const ta = a && a.last_modified ? Date.parse(a.last_modified) : 0;
+                const tb = b && b.last_modified ? Date.parse(b.last_modified) : 0;
+                return tb - ta;
+            });
+            this._imageLibraryNextToken = data.continuation_token || null;
+            if (!continuationToken && items.length === 0) {
+                if (st) st.textContent = 'Пока нет изображений в медиатеке. Сначала загрузите файл с устройства.';
+            } else if (st) {
+                st.textContent = '';
+            }
+            items.forEach((it) => {
+                if (!it || !it.key) return;
+                const cell = document.createElement('button');
+                cell.type = 'button';
+                cell.className = 'ce-image-library-cell';
+                cell.title = it.filename || it.key;
+                const url = this.buildContentCardMediaUrl(it.key);
+                const thumb = document.createElement('img');
+                thumb.alt = '';
+                thumb.loading = 'lazy';
+                thumb.src = url;
+                thumb.className = 'ce-image-library-thumb';
+                const cap = document.createElement('span');
+                cap.className = 'ce-image-library-caption';
+                cap.textContent = this._shortenImageLibraryFilename(it.filename || it.key);
+                cell.appendChild(thumb);
+                cell.appendChild(cap);
+                cell.addEventListener('click', () => {
+                    this._selectImageFromLibrary(it.key, it.filename || '');
+                });
+                grid.appendChild(cell);
+            });
+            if (more) {
+                more.style.display = this._imageLibraryNextToken ? 'block' : 'none';
+                more.disabled = false;
+            }
+        } catch (e) {
+            console.error('_fetchImageLibraryPage:', e);
+            if (st) st.textContent = 'Не удалось загрузить список файлов.';
+        }
+        if (more) more.disabled = false;
+    }
+
+    _shortenImageLibraryFilename(name, maxLen = 22) {
+        const s = String(name || '').trim() || '—';
+        if (s.length <= maxLen) return s;
+        const ext = s.includes('.') ? s.slice(s.lastIndexOf('.')) : '';
+        const base = ext ? s.slice(0, s.length - ext.length) : s;
+        const keep = maxLen - ext.length - 1;
+        if (keep < 4) return s.slice(0, maxLen - 1) + '…';
+        return `${base.slice(0, Math.ceil(keep / 2))}…${base.slice(-Math.floor(keep / 2))}${ext}`;
+    }
+
+    _selectImageFromLibrary(s3Key, filename) {
+        this._closeAllImageModals();
+        this.addImageElementFromS3Key(s3Key, filename);
+    }
+
+    /** Вставка картинки по уже существующему ключу S3 (без повторной загрузки при сохранении кадра). */
+    addImageElementFromS3Key(s3Key, displayName) {
+        const imageUrl = this.buildContentCardMediaUrl(s3Key);
+        if (!imageUrl) {
+            this.showNotification('Некорректный ключ файла', 'error');
+            return;
+        }
+        const elementId = `element_${this.elementIdCounter++}`;
+        const element = document.createElement('div');
+        element.id = elementId;
+        element.className = 'canvas-element image-element';
+        element.dataset.toolId = 'upload-image';
+        element.dataset.imageS3Key = s3Key;
+        if (displayName) {
+            element.dataset.imageSourceName = String(displayName).slice(0, 240);
+        }
+
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const canvasWidth = canvasRect.width;
+
+        const img = new Image();
+        img.onload = () => {
+            const aspectRatio = img.naturalHeight / img.naturalWidth;
+            const smartHeight = Math.max(100, Math.min(600, canvasWidth * aspectRatio));
+            const position = this.calculateVerticalPosition(canvasWidth, smartHeight);
+
+            element.style.left = position.x + 'px';
+            element.style.top = position.y + 'px';
+            element.style.width = position.width + 'px';
+            element.style.height = smartHeight + 'px';
+
+            const imEl = document.createElement('img');
+            imEl.src = imageUrl;
+            imEl.alt = '';
+            imEl.style.width = '100%';
+            imEl.style.height = '100%';
+            imEl.style.objectFit = 'contain';
+            element.appendChild(imEl);
+
+            this.addElementControls(element);
+            this.attachBlockReorderInteractions(element);
+            this.canvas.appendChild(element);
+
+            setTimeout(() => {
+                const elementBottom = parseInt(element.style.top, 10) + element.offsetHeight;
+                this.expandCanvasIfNeeded(elementBottom);
+            }, 100);
+
+            this.elements.push({
+                id: elementId,
+                toolId: 'upload-image',
+                element,
+            });
+
+            this.repositionElementsBelow(elementId);
+            this.selectElement(element);
+        };
+
+        img.onerror = () => {
+            console.error('Ошибка загрузки изображения из медиатеки');
+            this.showNotification('Не удалось открыть файл из медиатеки', 'error');
+        };
+
+        img.src = imageUrl;
     }
 
     uploadImageDirectly(file) {
@@ -3772,6 +4057,16 @@ class ContentEditor {
             }
             if (this.cardLabelsModal && this.cardLabelsModal.style.display === 'flex') {
                 this.cancelCardLabelsStep();
+                return;
+            }
+            const imgLib = document.getElementById('imageLibraryModal');
+            if (imgLib && imgLib.style.display === 'flex') {
+                this.closeImageLibraryModal();
+                return;
+            }
+            const imgSrc = document.getElementById('imageSourceModal');
+            if (imgSrc && imgSrc.style.display === 'flex') {
+                this.closeImageSourceModal();
                 return;
             }
             if (this.cardPreviewModal && this.cardPreviewModal.style.display === 'flex') {
