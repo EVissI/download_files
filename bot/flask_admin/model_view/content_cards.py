@@ -2,6 +2,9 @@ import asyncio
 import os
 import re
 
+from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.types import BufferedInputFile, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from flask import flash, redirect, url_for
@@ -15,7 +18,7 @@ from sqlalchemy import func
 from wtforms import StringField, validators
 
 from bot.common.service.hint_s3_service import HintS3Storage
-from bot.config import SUPPORT_TG_ID, bot, settings
+from bot.config import SUPPORT_TG_ID, settings
 from bot.db.models import ContentCard
 
 # Разделитель для array_to_string: непечатный символ, чтобы не сливать реальные метки
@@ -26,13 +29,25 @@ def _escape_ilike_pattern(s: str) -> str:
     return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _run_async(coro):
-    """Flask WSGI: отдельный event loop на запрос (aiogram 3)."""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+def _run_telegram_sync(action):
+    """
+    Flask/Starlette WSGI в отдельном потоке: нельзя использовать глобальный bot из config —
+    его aiohttp-сессия привязана к другому (уже закрытому) event loop.
+    На каждый вызов — свой Bot, asyncio.run() и явное закрытие сессии.
+    action: async (Bot) -> None
+    """
+
+    async def _runner() -> None:
+        tg_bot = Bot(
+            token=settings.BOT_TOKEN,
+            default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        )
+        try:
+            await action(tg_bot)
+        finally:
+            await tg_bot.session.close()
+
+    asyncio.run(_runner())
 
 
 def _content_card_view_webapp_markup(view_url: str):
@@ -154,16 +169,16 @@ class ContentCardModelView(ModelView):
         )
         text = f"Карточка (id={pk}, файл: {item.file_name})."
 
-        async def _send():
-            await bot.send_message(
+        async def _send(tg_bot: Bot) -> None:
+            await tg_bot.send_message(
                 chat_id=SUPPORT_TG_ID,
                 text=text,
                 reply_markup=_content_card_view_webapp_markup(view_url),
             )
 
         try:
-            _run_async(_send())
-            flash(_("Ссылка на карточку отправлена в чат SUPPORT."), "success")
+            _run_telegram_sync(_send)
+            flash(_("Ссылка на карточку отправлена в чат"), "success")
         except Exception as e:
             logger.exception("send_card_to_support: {}", e)
             flash(f"Ошибка отправки в Telegram: {e}", "danger")
@@ -218,16 +233,16 @@ class ContentCardModelView(ModelView):
 
         caption = f"Исходный .mat карточки id={pk}, game_id={game_id}"
 
-        async def _send():
-            await bot.send_document(
+        async def _send(tg_bot: Bot) -> None:
+            await tg_bot.send_document(
                 chat_id=SUPPORT_TG_ID,
                 document=BufferedInputFile(blob, filename=fname),
                 caption=caption,
             )
 
         try:
-            _run_async(_send())
-            flash(_("Файл .mat отправлен в чат SUPPORT."), "success")
+            _run_telegram_sync(_send)
+            flash(_("Файл .mat отправлен в чат."), "success")
         except Exception as e:
             logger.exception("send_mat_to_support Telegram: {}", e)
             flash(f"Ошибка отправки в Telegram: {e}", "danger")

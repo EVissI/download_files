@@ -3,7 +3,7 @@
 {% block show_form %}
 {{ super() }}
 <div class="well" style="margin-top: 1em;">
-    <h4>Отправка в Telegram (SUPPORT)</h4>
+    <h4>Отправка в Telegram</h4>
     <a href="{{ url_for(cc_fab_endpoint ~ '.send_card_to_support', pk=pk) }}" class="btn btn-primary" style="margin-right: 8px;">
         Отправить карточку
     </a>
