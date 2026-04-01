@@ -203,7 +203,7 @@ class ContentCardModelView(ModelView):
             flash(_("У карточки не задано имя файла."), "warning")
             return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
-        stem, _, ext = fname.rpartition(".")
+        stem, _dot, ext = fname.rpartition(".")
         if ext.lower() != "mat" or not stem:
             flash(
                 _(
