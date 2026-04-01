@@ -71,16 +71,16 @@ class ContentCardModelView(ModelView):
     """Карточки редактора контента — только просмотр и список."""
 
     datamodel = ContentCardSQLAInterface(ContentCard)
-    base_permissions = ["can_list", "can_show"]
+    base_permissions = ["can_list", "can_show", "can_delete"]
 
     list_title = _("Карточки")
     show_title = _("Карточка")
 
     page_size = 30
-    list_columns = ["id", "file_name", "labels", "created_at", "updated_at"]
-    show_columns = ["id", "file_name", "labels", "created_at", "updated_at"]
+    list_columns = ["id", "file_name", "labels"]
+    show_columns = ["id", "file_name", "labels"]
     search_columns = ["id", "file_name", "labels"]
-    order_columns = ["id", "file_name", "created_at", "updated_at"]
+    order_columns = ["id", "file_name"]
 
     # ARRAY не конвертируется в поле поиска автоматически — явное поле, иначе KeyError в SearchWidget
     search_form_extra_fields = {
@@ -98,9 +98,6 @@ class ContentCardModelView(ModelView):
         "id": _("ID"),
         "file_name": _("Имя файла"),
         "labels": _("Метки"),
-        "frames": _("Кадры (JSON)"),
-        "created_at": _("Создано"),
-        "updated_at": _("Обновлено"),
     }
 
     description_columns = {
