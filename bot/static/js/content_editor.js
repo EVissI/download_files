@@ -998,6 +998,9 @@ class ContentEditor {
                             <button type="button" class="ce-image-source-btn ce-image-source-btn--primary" onclick="contentEditor.imageModalOpenLibrary()">
                                 Медиатека карточек
                             </button>
+                            <button type="button" class="ce-image-source-btn ce-image-source-btn--primary" onclick="contentEditor.imageModalPasteFromClipboard()">
+                                Буфер обмена
+                            </button>
                             <button type="button" class="ce-image-source-btn ce-image-source-btn--ghost" onclick="contentEditor.closeImageSourceModal()">
                                 Отмена
                             </button>
@@ -1801,6 +1804,43 @@ class ContentEditor {
 
         document.body.appendChild(fileInput);
         fileInput.click();
+    }
+
+    /** Вставка картинки из системного буфера обмена (Clipboard API). */
+    async imageModalPasteFromClipboard() {
+        try {
+            if (!navigator.clipboard || typeof navigator.clipboard.read !== 'function') {
+                this.showNotification(
+                    'В этом окружении нельзя прочитать буфер обмена. Скопируйте изображение и используйте «Файл с устройства», сохранив скриншот.',
+                    'warning'
+                );
+                return;
+            }
+            const items = await navigator.clipboard.read();
+            for (const clipItem of items) {
+                const types = clipItem.types || [];
+                for (const type of types) {
+                    if (!type || !type.startsWith('image/')) continue;
+                    const blob = await clipItem.getType(type);
+                    if (blob && blob.size > 0) {
+                        let ext = (type.split('/')[1] || 'png').toLowerCase();
+                        if (ext === 'jpeg') ext = 'jpg';
+                        const mime = blob.type && blob.type.startsWith('image/') ? blob.type : type;
+                        const file = new File([blob], `clipboard.${ext}`, { type: mime });
+                        this.closeImageSourceModal();
+                        this.uploadImageDirectly(file);
+                        return;
+                    }
+                }
+            }
+            this.showNotification('В буфере обмена нет изображения. Скопируйте картинку (например, скриншот) и нажмите снова.', 'warning');
+        } catch (e) {
+            console.warn('imageModalPasteFromClipboard:', e);
+            this.showNotification(
+                'Не удалось прочитать буфер: разрешите доступ в браузере или вставьте через «Файл с устройства».',
+                'warning'
+            );
+        }
     }
 
     imageModalOpenLibrary() {
