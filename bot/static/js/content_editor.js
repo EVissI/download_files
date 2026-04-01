@@ -62,6 +62,7 @@ class ContentEditor {
         this._voiceRecordRecorder = null;
         this._voiceRecordChunks = [];
         this._voiceRecordTimerId = null;
+        this._voiceRecordStartedAt = 0;
         this._voiceRecordDiscardOnStop = false;
         this._audioModalKeepOpenAfterDiscard = false;
 
@@ -1702,12 +1703,29 @@ class ContentEditor {
     _syncCleanupVoiceRecording() {
         clearInterval(this._voiceRecordTimerId);
         this._voiceRecordTimerId = null;
+        this._voiceRecordStartedAt = 0;
         this._voiceRecordChunks = [];
         this._voiceRecordRecorder = null;
         if (this._voiceRecordStream) {
             this._voiceRecordStream.getTracks().forEach((t) => t.stop());
             this._voiceRecordStream = null;
         }
+    }
+
+    /** Длительность для подписи под аудио (целые секунды). */
+    _formatAudioDurationLabel(totalSec) {
+        if (!Number.isFinite(totalSec) || totalSec < 0) return '';
+        const s = Math.floor(totalSec);
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${m}:${String(sec).padStart(2, '0')}`;
+    }
+
+    /** Текст заголовка аудио на холсте: подпись или имя файла. */
+    _audioElementDisplayTitle(el) {
+        const t = (el.dataset && el.dataset.audioTitle) || '';
+        const n = (el.dataset && el.dataset.audioName) || '';
+        return (t && String(t).trim()) || n || 'Аудио';
     }
 
     audioModalPickFile() {
@@ -1765,11 +1783,12 @@ class ContentEditor {
             this._voiceRecordDiscardOnStop = false;
             this._audioModalKeepOpenAfterDiscard = false;
             mr.start(200);
+            this._voiceRecordStartedAt = Date.now();
 
             pick.style.display = 'none';
             rec.style.display = 'flex';
             if (timerEl) timerEl.textContent = '0:00';
-            const startMs = Date.now();
+            const startMs = this._voiceRecordStartedAt;
             this._voiceRecordTimerId = setInterval(() => {
                 const s = Math.floor((Date.now() - startMs) / 1000);
                 const m = Math.floor(s / 60);
@@ -1793,6 +1812,11 @@ class ContentEditor {
     _onVoiceMediaRecorderStop(mr) {
         clearInterval(this._voiceRecordTimerId);
         this._voiceRecordTimerId = null;
+        const recordedSec =
+            this._voiceRecordStartedAt > 0
+                ? Math.max(0, Math.round((Date.now() - this._voiceRecordStartedAt) / 1000))
+                : null;
+        this._voiceRecordStartedAt = 0;
         const discard = this._voiceRecordDiscardOnStop;
         const keepOpen = this._audioModalKeepOpenAfterDiscard;
         this._voiceRecordDiscardOnStop = false;
@@ -1835,7 +1859,10 @@ class ContentEditor {
         const url = URL.createObjectURL(blob);
         this._finishAudioSourceModalHidden();
         this._resetAudioSourceModalToPick();
-        this.addAudioElementToCanvas(url, name, file);
+        this.addAudioElementToCanvas(url, name, file, {
+            audioTitle: 'Голосовое сообщение',
+            knownDurationSec: recordedSec,
+        });
     }
 
     audioModalStopRecord() {
@@ -2069,7 +2096,7 @@ class ContentEditor {
         return `/api/content_cards/media?${params.toString()}`;
     }
 
-    addAudioElementToCanvas(audioUrl, fileName, file) {
+    addAudioElementToCanvas(audioUrl, fileName, file, opts = {}) {
         const elementId = `element_${this.elementIdCounter++}`;
         const element = document.createElement('div');
         element.id = elementId;
@@ -2077,6 +2104,14 @@ class ContentEditor {
         element.dataset.toolId = 'audio-file';
         element.dataset.audioUrl = audioUrl;
         element.dataset.audioName = fileName;
+        if (opts.audioTitle) {
+            element.dataset.audioTitle = String(opts.audioTitle);
+        }
+        if (opts.knownDurationSec != null && Number.isFinite(Number(opts.knownDurationSec))) {
+            element.dataset.audioKnownDurationSec = String(Math.max(0, Number(opts.knownDurationSec)));
+        }
+
+        const displayTitle = opts.audioTitle ? String(opts.audioTitle) : fileName;
 
         // Get canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
@@ -2096,7 +2131,7 @@ class ContentEditor {
             <div class="audio-message" style="display: flex; align-items: center; padding: 12px; height: 100%; background: #f0f0f0; border-radius: 8px;">
                 <div class="audio-icon" style="font-size: 24px; margin-right: 12px; color: #667eea;">🎵</div>
                 <div class="audio-info" style="flex: 1;">
-                    <div class="audio-name" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px;">${fileName}</div>
+                    <div class="audio-name" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px;">${this.escapeHtml(displayTitle)}</div>
                     <div class="audio-duration" style="font-size: 12px; color: #666;">Загрузка...</div>
                 </div>
                 <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">
@@ -2142,12 +2177,30 @@ class ContentEditor {
         audio.preload = 'metadata';
         element.appendChild(audio);
 
-        // Get audio duration
+        const knownRaw = element.dataset.audioKnownDurationSec;
+        if (knownRaw !== undefined && knownRaw !== '') {
+            const ks = Number(knownRaw);
+            if (Number.isFinite(ks)) {
+                const lbl = this._formatAudioDurationLabel(ks);
+                if (lbl) durationEl.textContent = lbl;
+            }
+            delete element.dataset.audioKnownDurationSec;
+        }
+
+        // Get audio duration (blob/WebM часто даёт Infinity до полной загрузки — не показываем)
         audio.addEventListener('loadedmetadata', () => {
             const duration = audio.duration;
-            const minutes = Math.floor(duration / 60);
-            const seconds = Math.floor(duration % 60);
-            durationEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            if (Number.isFinite(duration) && duration > 0 && duration < 86400) {
+                durationEl.textContent = this._formatAudioDurationLabel(duration);
+                durationEl.style.display = '';
+                return;
+            }
+            const cur = (durationEl.textContent || '').trim();
+            if (cur && cur !== 'Загрузка...') {
+                return;
+            }
+            durationEl.textContent = '';
+            durationEl.style.display = 'none';
         });
 
         // Play/pause functionality
@@ -3245,9 +3298,9 @@ class ContentEditor {
                 ` : ''}
                 ${element.classList.contains('audio-element') ? `
                 <div class="property-item">
-                    <label>Имя файла:</label>
-                    <input type="text" id="propAudioName" value="${element.dataset.audioName || 'Аудио файл'}" 
-                           oninput="contentEditor.updateElementProperty('audioName', this.value)">
+                    <label>Заголовок:</label>
+                    <input type="text" id="propAudioName" value="${this.escapeHtml(this._audioElementDisplayTitle(element))}" 
+                           oninput="contentEditor.updateElementProperty('audioTitle', this.value)">
                 </div>
                 <div class="property-item">
                     <label>Управление воспроизведением:</label>
@@ -3292,11 +3345,13 @@ class ContentEditor {
                     if (nm) nm.textContent = value.trim() ? value : 'Файл';
                 }
                 break;
-            case 'audioName':
-                this.selectedElement.dataset.audioName = value;
-                const audioNameEl = this.selectedElement.querySelector('.audio-name');
-                if (audioNameEl) {
-                    audioNameEl.textContent = value;
+            case 'audioTitle':
+                this.selectedElement.dataset.audioTitle = value;
+                {
+                    const audioNameEl = this.selectedElement.querySelector('.audio-name');
+                    if (audioNameEl) {
+                        audioNameEl.textContent = this._audioElementDisplayTitle(this.selectedElement);
+                    }
                 }
                 break;
             case 'audioVolume':
@@ -3899,6 +3954,11 @@ class ContentEditor {
                     break;
                 }
                 case 'audio-file': {
+                    const applySerializedAudioTitle = () => {
+                        const tit = (el.dataset.audioTitle && String(el.dataset.audioTitle).trim()) || '';
+                        if (tit) item.audioTitle = tit;
+                        else delete item.audioTitle;
+                    };
                     const s3a = el.dataset.audioS3Key || '';
                     if (s3a) {
                         item.audioS3Key = s3a;
@@ -3908,6 +3968,7 @@ class ContentEditor {
                         item.dataset.audioS3Key = s3a;
                         delete item.dataset.audioUrl;
                         delete item.dataset.audioStorageId;
+                        applySerializedAudioTitle();
                         break;
                     }
                     const url = el.dataset.audioUrl || '';
@@ -3943,6 +4004,7 @@ class ContentEditor {
                         item.audioName = el.dataset.audioName || '';
                         item.audioUrl = url || '';
                     }
+                    applySerializedAudioTitle();
                     delete item.dataset.audioUrl;
                     if (item.audioStorageId) item.dataset.audioStorageId = item.audioStorageId;
                     else delete item.dataset.audioStorageId;
@@ -5339,16 +5401,22 @@ class ContentEditor {
                 }
                 if (item.audioStorageId) element.dataset.audioStorageId = item.audioStorageId;
                 if (item.audioName) element.dataset.audioName = item.audioName;
+                if (item.audioTitle) element.dataset.audioTitle = item.audioTitle;
                 if (item.audioUrl) element.dataset.audioUrl = item.audioUrl;
-                element.innerHTML = `
+                {
+                    const audioHead = this.escapeHtml(
+                        (item.audioTitle && String(item.audioTitle).trim()) || item.audioName || 'Аудио'
+                    );
+                    element.innerHTML = `
                     <div class="audio-message" style="display: flex; align-items: center; padding: 12px; height: 100%; background: #f0f0f0; border-radius: 8px;">
                         <div class="audio-icon" style="font-size: 24px; margin-right: 12px; color: #667eea;">🎵</div>
                         <div class="audio-info" style="flex: 1;">
-                            <div class="audio-name" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px;">${this.escapeHtml(item.audioName || 'Аудио')}</div>
+                            <div class="audio-name" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px;">${audioHead}</div>
                             <div class="audio-duration" style="font-size: 12px; color: #666;">—</div>
                         </div>
                         <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">▶</div>
                     </div>`;
+                }
                 if (item.audioS3Key) {
                     const mediaUrl = this.buildContentCardMediaUrl(item.audioS3Key);
                     element.dataset.audioUrl = mediaUrl;
