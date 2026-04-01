@@ -167,7 +167,6 @@ class ContentEditor {
                 <div id="contentCardViewRoot" class="card-preview-modal card-preview-modal--fullscreen" style="display: none; min-height: 100vh;" aria-hidden="true">
                     <div class="card-preview-box" style="width: 100%; max-width: 100%; box-sizing: border-box;">
                         <div class="card-preview-header">
-                            <div class="card-preview-header-right">
                                 <button type="button" id="contentCardViewEditFrameBtn" class="content-card-view-edit-btn" style="display: none;" onclick="contentEditor.openEditorFromContentCardView()" title="Редактировать текущий кадр">
                                     <i class="fa fa-pencil" aria-hidden="true"></i><span class="content-card-view-edit-label"> Редактировать кадр</span>
                                 </button>
@@ -180,7 +179,6 @@ class ContentEditor {
                                 <button type="button" id="contentCardViewInfoBtn" class="content-card-view-info-btn" style="display: none;" onclick="contentEditor.openContentCardAdminInfoModal()" aria-label="Информация о карточке" title="Информация">
                                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                                 </button>
-                            </div>
                         </div>
                         <div class="card-preview-nav">
                             <button type="button" class="card-preview-nav-btn" id="cardPreviewPrevBtn" onclick="contentEditor.cardPreviewPrev()">←</button>
