@@ -13,6 +13,8 @@ class ContentEditor {
         this.elements = [];
         this.elementIdCounter = 0;
         this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
+        /** Показывать строку «матч / манигейм» над доской в предпросмотре (сохраняется в payload.editor.showBoardMatchBanner). */
+        this.boardMatchBannerEnabled = false;
         this.cardData = null; // Сохраняем данные карточки для таблиц
         this.presetColors = [ // Сохраняем предустановленные цвета
             '#ffffff', '#f8f9fa', '#e9ecef', '#dee2e6',
@@ -572,6 +574,7 @@ class ContentEditor {
             editor: {
                 boardCanvasToggle: false,
                 canvasBackground: '#ffffff',
+                showBoardMatchBanner: false,
             },
             elements: [],
         };
@@ -893,6 +896,12 @@ class ContentEditor {
                                 <div class="tools-list" id="toolsList">
                                     <!-- Динамический список инструментов -->
                                 </div>
+                                <div class="toolbar-board-extra" id="toolbarBoardMatchBannerRow" hidden>
+                                    <label class="toolbar-board-match-label">
+                                        <input type="checkbox" id="boardMatchBannerCheckbox" />
+                                        <span>Инфо о матче над доской</span>
+                                    </label>
+                                </div>
                             </div>
                             <div class="editor-resizer editor-resizer-vertical" data-resize-target="toolbar"></div>
                             <div class="workspace">
@@ -1045,6 +1054,7 @@ class ContentEditor {
         this.workspacePanel = this.modal.querySelector('.workspace');
         this.propertiesPanel = this.modal.querySelector('.properties-panel');
         this.applyPropertiesEmptyState();
+        this.wireBoardMatchBannerToolbar();
     }
 
     /** Кнопки «Сохранить кадр» / «Предпросмотр» или «Сохранить» из режима предпросмотра (без обёртки). */
@@ -1144,6 +1154,8 @@ class ContentEditor {
         this.modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         this.loadTools(); // Обновляем инструменты при открытии
+        this.syncBoardToolToggleFromState();
+        this.syncBoardMatchBannerToolbarVisibility();
 
         // Force refresh of all dynamic content
         this.forceRefreshContent();
@@ -1186,6 +1198,8 @@ class ContentEditor {
         this.modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         this.loadTools(); // Обновляем инструменты при открытии
+        this.syncBoardToolToggleFromState();
+        this.syncBoardMatchBannerToolbarVisibility();
 
         // Сохраняем данные карточки для использования при выборе инструмента таблицы
         this.cardData = cardData;
@@ -2414,6 +2428,7 @@ class ContentEditor {
         }
 
         this.syncLiveHintBoardCanvasOverlay();
+        this.syncBoardMatchBannerToolbarVisibility();
     }
 
     /**
@@ -3865,7 +3880,8 @@ class ContentEditor {
             cardData: cardDataCopy,
             editor: {
                 boardCanvasToggle: !!this.toggleStates['boardCanvas'],
-                canvasBackground: this.getCanvasBackgroundForSave()
+                canvasBackground: this.getCanvasBackgroundForSave(),
+                showBoardMatchBanner: !!this.boardMatchBannerEnabled,
             },
             elements: await this.serializeCanvasElementsForSave()
         };
@@ -5016,12 +5032,33 @@ class ContentEditor {
         }
     }
 
+    /** Текст строки над доской (как в hint_viewer: матч до n и счёт, либо манигейм). */
+    formatBoardMatchBannerText(snapshot) {
+        const s = snapshot && snapshot.scores;
+        if (!s || typeof s !== 'object' || s.matchLength == null) {
+            return '';
+        }
+        const ml = Number(s.matchLength);
+        if (!Number.isFinite(ml) || ml <= 0) {
+            return 'Манигейм';
+        }
+        const r = s.gameRedScore != null && s.gameRedScore !== '' ? s.gameRedScore : '—';
+        const b = s.gameBlackScore != null && s.gameBlackScore !== '' ? s.gameBlackScore : '—';
+        return `Матч до ${ml} · Счёт: ${r} — ${b}`;
+    }
+
     appendCardPreviewBoardOverlay(wrap, payload) {
         const snapshot = payload.board && typeof payload.board === 'object' ? payload.board : {};
+        const showMatchBanner = !!(payload && payload.editor && payload.editor.showBoardMatchBanner);
+        let bannerText = showMatchBanner ? this.formatBoardMatchBannerText(snapshot) : '';
+        if (showMatchBanner && !bannerText) {
+            bannerText = 'Данные матча недоступны';
+        }
         const overlay = document.createElement('div');
         overlay.className = 'card-preview-board-overlay';
         overlay.innerHTML = `
             <div class="card-preview-board-body">
+                <div class="card-preview-board-match-banner" ${showMatchBanner ? '' : 'hidden'}>${this.escapeHtml(bannerText)}</div>
                 <div class="card-preview-board-canvas-wrap">
                     <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
                 </div>
@@ -5434,6 +5471,7 @@ class ContentEditor {
         if (payload.editor && payload.editor.boardCanvasToggle) {
             this.toggleStates['boardCanvas'] = true;
         }
+        this.boardMatchBannerEnabled = !!(payload.editor && payload.editor.showBoardMatchBanner);
         this.cardData = null;
         if (payload.cardData && typeof payload.cardData === 'object') {
             try {
@@ -5483,6 +5521,7 @@ class ContentEditor {
 
         this.loadTools();
         this.syncBoardToolToggleFromState();
+        this.syncBoardMatchBannerToolbarVisibility();
         this.syncLiveHintBoardCanvasOverlay();
         this.refreshTableElementsFromCardData();
 
@@ -5494,6 +5533,25 @@ class ContentEditor {
                 this.forceRefreshContent();
             });
         });
+    }
+
+    wireBoardMatchBannerToolbar() {
+        const cb = document.getElementById('boardMatchBannerCheckbox');
+        if (!cb || cb.dataset.ceWired === '1') return;
+        cb.dataset.ceWired = '1';
+        cb.addEventListener('change', () => {
+            this.boardMatchBannerEnabled = cb.checked;
+        });
+    }
+
+    syncBoardMatchBannerToolbarVisibility() {
+        const row = document.getElementById('toolbarBoardMatchBannerRow');
+        const cb = document.getElementById('boardMatchBannerCheckbox');
+        if (!row || !cb) return;
+        const boardOn = !!this.toggleStates['boardCanvas'];
+        row.hidden = !boardOn;
+        row.style.display = boardOn ? 'block' : 'none';
+        cb.checked = !!this.boardMatchBannerEnabled;
     }
 
     syncBoardToolToggleFromState() {

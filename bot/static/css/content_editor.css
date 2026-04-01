@@ -1320,6 +1320,63 @@ button.content-card-admin-info-file-link:hover {
     display: none;
 }
 
+.card-preview-board-match-banner {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 10px 14px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
+    text-align: center;
+    color: #e2e8f0;
+    background: linear-gradient(180deg, rgba(45, 55, 72, 0.98) 0%, rgba(30, 36, 48, 0.96) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px 10px 0 0;
+}
+
+.card-preview-board-match-banner[hidden] {
+    display: none !important;
+    padding: 0;
+    margin: 0;
+    border: none;
+    min-height: 0;
+}
+
+.toolbar-board-extra {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 8px 10px 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(20, 20, 24, 0.55);
+}
+
+.toolbar-board-extra[hidden] {
+    display: none !important;
+    padding: 0;
+    border: none;
+}
+
+.toolbar-board-match-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 12px;
+    color: #cbd5e1;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toolbar-board-match-label input {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
 .card-preview-board-canvas-wrap {
     background: #1a1a1a;
     line-height: 0;
