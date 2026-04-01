@@ -1,0 +1,15 @@
+{% extends "appbuilder/general/model/show.html" %}
+
+{% block show_form %}
+{{ super() }}
+<div class="well" style="margin-top: 1em;">
+    <h4>Отправка в Telegram (SUPPORT)</h4>
+    <p class="help-block">Сообщения уходят пользователю с ID из настройки <code>SUPPORT_TG_ID</code> в <code>bot/config.py</code>.</p>
+    <a href="{{ url_for(cc_fab_endpoint ~ '.send_card_to_support', pk=item.id) }}" class="btn btn-primary" style="margin-right: 8px;">
+        Отправить карточку
+    </a>
+    <a href="{{ url_for(cc_fab_endpoint ~ '.send_mat_to_support', pk=item.id) }}" class="btn btn-default">
+        Отправить исходный файл
+    </a>
+</div>
+{% endblock %}
