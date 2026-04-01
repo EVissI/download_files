@@ -3862,6 +3862,47 @@
                 }
 
                 const row = data[idx] || null;
+
+                /** Как на доске в render(): куб до первого double, на стороне при double, на баре после take. */
+                let cubeVisual = null;
+                if (row) {
+                    if (row.action === 'win') {
+                        cubeVisual = { mode: 'center', value: 64 };
+                    } else if (firstDoubleIndex >= 0 && idx < firstDoubleIndex) {
+                        cubeVisual = { mode: 'center', value: 64 };
+                    } else if (doubleTurns && doubleTurns.indexOf(idx) !== -1) {
+                        const v = row.cube;
+                        if ([2, 4, 8, 16, 32, 64].indexOf(v) !== -1) {
+                            cubeVisual = { mode: 'side', value: v, player: row.player };
+                        } else {
+                            cubeVisual = { mode: 'center', value: 64 };
+                        }
+                    } else {
+                        let lastDoubleIndex = -1;
+                        if (doubleTurns) {
+                            for (let i = 0; i < doubleTurns.length; i++) {
+                                if (doubleTurns[i] <= idx) {
+                                    lastDoubleIndex = doubleTurns[i];
+                                }
+                            }
+                        }
+                        if (lastDoubleIndex === -1) {
+                            if (firstDoubleIndex < 0) {
+                                cubeVisual = { mode: 'center', value: 64 };
+                            }
+                        } else if (
+                            idx > firstDoubleIndex &&
+                            (!doubleTurns || doubleTurns.indexOf(idx) === -1) &&
+                            row.action !== 'win'
+                        ) {
+                            const dr = data[lastDoubleIndex];
+                            if (dr && dr.cube && dr.player) {
+                                cubeVisual = { mode: 'bar', value: dr.cube, player: dr.player };
+                            }
+                        }
+                    }
+                }
+
                 return {
                     frameId,
                     gameId: gid,
@@ -3870,6 +3911,7 @@
                     invertColors: !!invertColors,
                     xgid,
                     positions,
+                    cubeVisual,
                     scores: typeof matchLength !== 'undefined' ? {
                         matchLength,
                         gameRedScore: typeof gameRedScore !== 'undefined' ? gameRedScore : null,

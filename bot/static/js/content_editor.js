@@ -4771,6 +4771,11 @@ class ContentEditor {
             board: '/static/board.png',
             black: '/static/black_checker.png',
             white: '/static/white_checker.png',
+            double2: '/static/Double2.png',
+            double4: '/static/Double4.png',
+            double8: '/static/Double8.png',
+            double16: '/static/Double16.png',
+            double32: '/static/Double32.png',
             double64: '/static/Double64.png'
         };
         for (let i = 1; i <= 6; i++) {
@@ -4886,6 +4891,45 @@ class ContentEditor {
         }
     }
 
+    /** Соответствует геометрии куба в hint_viewer (cubeVisual из getHintViewerBoardSnapshot). */
+    drawDoublingCubePreview(ctx, cubeVisual, invertColors, imgs) {
+        if (!cubeVisual || !cubeVisual.mode || !ctx) return;
+        const v = Number(cubeVisual.value) || 64;
+        const cubeKey = `double${v}`;
+        let img = imgs[cubeKey];
+        if (!img || !img.complete) img = imgs.double64;
+        if (!img || !img.complete) return;
+        const pl = cubeVisual.player ? String(cubeVisual.player).toLowerCase() : '';
+        const isRed = pl === 'red';
+
+        if (cubeVisual.mode === 'center') {
+            ctx.drawImage(img, 375, 350, 50, 50);
+            return;
+        }
+        if (cubeVisual.mode === 'side') {
+            let cubeX;
+            if (invertColors) {
+                cubeX = isRed ? 175 : 575;
+            } else {
+                cubeX = isRed ? 575 : 175;
+            }
+            ctx.drawImage(img, cubeX, 350, 50, 50);
+            return;
+        }
+        if (cubeVisual.mode === 'bar') {
+            let cubeY = 350;
+            if (invertColors) {
+                if (isRed) cubeY = 600;
+                else if (pl === 'black') cubeY = 100;
+            } else if (pl === 'black') {
+                cubeY = 600;
+            } else if (isRed) {
+                cubeY = 100;
+            }
+            ctx.drawImage(img, 375, cubeY, 50, 50);
+        }
+    }
+
     resolveBoardPositionsFromSnapshot(snapshot) {
         if (!snapshot || typeof snapshot !== 'object') return null;
         if (snapshot.error === 'no_game_data') return null;
@@ -4965,7 +5009,9 @@ class ContentEditor {
             if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
         }
 
-        if (turnRow && turnRow.action === 'win' && imgs.double64) {
+        if (snapshot.cubeVisual) {
+            this.drawDoublingCubePreview(ctx, snapshot.cubeVisual, invertColors, imgs);
+        } else if (turnRow && turnRow.action === 'win' && imgs.double64) {
             ctx.drawImage(imgs.double64, 375, 350, 50, 50);
         }
     }
