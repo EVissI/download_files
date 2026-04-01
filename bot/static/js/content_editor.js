@@ -4156,10 +4156,34 @@ class ContentEditor {
             typeof window !== 'undefined' && window.hintViewerMatFileName
                 ? String(window.hintViewerMatFileName)
                 : '';
-        const mat = rawMat.replace(/[\\/]/g, '_').trim() || 'card';
-        const { gameId, gameNum } = this.getGameContextForCard();
+        const normalized = rawMat.replace(/[\\/]/g, '_').trim();
+        const { gameId: rawGid, gameNum } = this.getGameContextForCard();
+        const gameId = String(rawGid != null ? rawGid : 'default')
+            .replace(/[\\/]/g, '_')
+            .trim() || 'default';
+
+        // Имена вроде source.mat с бэка — не уникальны; для карточки нужен стем gameId и реальное расширение (.mat)
+        const PLACEHOLDER_STEMS = new Set(['source', 'file', 'game', 'card', 'default']);
+        let stem = '';
+        let ext = '.mat';
+        if (normalized) {
+            const dot = normalized.lastIndexOf('.');
+            if (dot > 0 && dot < normalized.length - 1) {
+                ext = normalized.slice(dot);
+                if (ext.length > 16) {
+                    ext = ext.slice(0, 16);
+                }
+                stem = normalized.slice(0, dot);
+            } else {
+                stem = normalized;
+            }
+        }
+        if (!stem || PLACEHOLDER_STEMS.has(stem.toLowerCase())) {
+            stem = gameId;
+        }
+
         const g = gameNum != null ? `_g${gameNum}` : '';
-        let base = `${mat}_${gameId}${g}`;
+        let base = `${stem}${g}${ext}`;
         if (base.length > 255) {
             base = base.slice(0, 255);
         }
