@@ -5,7 +5,7 @@ import re
 from aiogram.types import BufferedInputFile, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from flask import flash, redirect, url_for
-from flask_appbuilder import ModelView, expose, has_access
+from flask_appbuilder import ModelView, expose, has_access, permission_name
 from flask_appbuilder.models.filters import BaseFilter
 from flask_appbuilder.models.sqla.filters import SQLAFilterConverter, get_field_setup_query
 from flask_appbuilder.models.sqla.interface import SQLAInterface
@@ -142,6 +142,7 @@ class ContentCardModelView(ModelView):
 
     @expose("/send_card_to_support/<int:pk>")
     @has_access
+    @permission_name("show")
     def send_card_to_support(self, pk: int):
         """Отправить в SUPPORT_TG_ID сообщение со ссылкой на Web App карточки (как notify после save в api.py)."""
         item = self.datamodel.get(pk)
@@ -171,6 +172,7 @@ class ContentCardModelView(ModelView):
 
     @expose("/send_mat_to_support/<int:pk>")
     @has_access
+    @permission_name("show")
     def send_mat_to_support(self, pk: int):
         """
         По file_name карточки (формат {game_id}.mat) взять hints/{game_id}.mat из S3 и отправить документ в SUPPORT_TG_ID.
