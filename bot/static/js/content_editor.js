@@ -1720,7 +1720,7 @@ class ContentEditor {
         const s3Key = element.dataset.attachmentS3Key || '';
         element.innerHTML = '';
         const wrap = document.createElement('div');
-        wrap.className = 'ce-attach-file-inner';
+        wrap.className = previewMode ? 'ce-attach-file-inner' : 'ce-attach-file-inner ce-attach-file-inner--editor';
         const icon = document.createElement('span');
         icon.className = 'ce-attach-file-icon';
         icon.setAttribute('aria-hidden', 'true');
@@ -1728,21 +1728,23 @@ class ContentEditor {
         const label = document.createElement('span');
         label.className = 'ce-attach-file-name';
         label.textContent = name;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'ce-attach-file-download-btn';
-        btn.textContent = 'Скачать';
-        if (previewMode) {
-            btn.setAttribute('aria-label', `Скачать ${name}`);
-        }
         wrap.appendChild(icon);
         wrap.appendChild(label);
-        wrap.appendChild(btn);
-        element.appendChild(wrap);
-        this.wireAttachFileDownloadButton(element, btn, s3Key, name);
+        if (previewMode) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ce-attach-file-download-btn';
+            btn.textContent = 'Скачать';
+            btn.setAttribute('aria-label', `Скачать ${name}`);
+            wrap.appendChild(btn);
+            element.appendChild(wrap);
+            this.wireAttachFileDownloadButton(btn, s3Key, name);
+        } else {
+            element.appendChild(wrap);
+        }
     }
 
-    wireAttachFileDownloadButton(element, btn, s3Key, fileName) {
+    wireAttachFileDownloadButton(btn, s3Key, fileName) {
         if (!btn) return;
         if (!s3Key) {
             btn.disabled = true;
@@ -3003,9 +3005,7 @@ class ContentEditor {
                            placeholder="Имя файла"
                            oninput="contentEditor.updateElementProperty('attachFileDisplayName', this.value)">
                 </div>
-                <div class="property-item">
-                    <button type="button" class="action-btn" onclick="contentEditor.downloadSelectedAttachment()">Скачать файл</button>
-                </div>
+                <p class="property-hint ce-attach-file-editor-hint">Скачивание файла доступно в предпросмотре и у получателей карточки, не в редакторе.</p>
                 ` : ''}
             </div>
             
@@ -3014,12 +3014,6 @@ class ContentEditor {
                 ${this.getPropertiesFrameActionsInnerHtml()}
             </div>
         `;
-    }
-
-    downloadSelectedAttachment() {
-        const el = this.selectedElement;
-        if (!el || el.dataset.toolId !== 'attach-file') return;
-        this.requestAttachmentDownload(el.dataset.attachmentS3Key, el.dataset.attachmentFileName);
     }
 
     updateElementProperty(property, value) {
@@ -3236,14 +3230,6 @@ class ContentEditor {
         this.canvas.appendChild(newElement);
         this.addElementControls(newElement);
         this.attachBlockReorderInteractions(newElement);
-        if (newElement.dataset.toolId === 'attach-file') {
-            const btn = newElement.querySelector('.ce-attach-file-download-btn');
-            const sk = newElement.dataset.attachmentS3Key || '';
-            const fn = newElement.dataset.attachmentFileName || 'file';
-            if (btn && sk) {
-                this.wireAttachFileDownloadButton(newElement, btn, sk, fn);
-            }
-        }
         this.elements.push({
             id: newId,
             toolId: element.dataset.toolId,
