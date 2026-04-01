@@ -573,6 +573,7 @@ class ContentCard(Base):
          "payload": {"elements": [
            {"toolId": "upload-image", "imageS3Key": "content_cards/media/{user_id}/{uuid}.png"},
            {"toolId": "audio-file", "audioS3Key": "content_cards/media/..."},
+           {"toolId": "attach-file", "attachmentS3Key": "...", "attachmentFileName": "..."},
            {"toolId": "board-illustration", "boardImageS3Key": "..."}
          ], ...}}
       ]}

@@ -1,7 +1,7 @@
 import mimetypes
 import uuid
 
-from fastapi import FastAPI, Request, Response, HTTPException, File, Form, UploadFile
+from fastapi import FastAPI, Request, Response, HTTPException, File, Form, UploadFile, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -49,6 +49,14 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 BASE_DIR = Path(__file__).parent.parent
 
 CC_MEDIA_MAX_BYTES = 30 * 1024 * 1024
+
+
+def _safe_content_disposition_filename(name: str | None, fallback: str) -> str:
+    raw = (name or fallback or "file").replace("\\", "/").split("/")[-1].strip() or "file"
+    forbidden = {'"', "\\"}
+    safe = "".join(c if c.isascii() and c not in forbidden else "_" for c in raw)[:200]
+    return safe or "download"
+
 
 static_dir = BASE_DIR / "bot" / "static"
 templates_dir = BASE_DIR / "bot" / "templates"
@@ -756,11 +764,16 @@ async def content_card_media_upload(
 
 
 @app.get("/api/content_cards/media")
-async def content_card_media_proxy(key: str):
+async def content_card_media_proxy(
+    key: str,
+    download: int | None = Query(None, description="1 — Content-Disposition: attachment (скачивание)"),
+    filename: str | None = Query(None, description="Имя файла для заголовка attachment"),
+):
     """
     Отдаёт файл из S3 по ключу. Доступ не привязан к владельцу: любой, кто знает key
     (обычно из JSON карточки), может отобразить медиа — для будущего шаринга карточек.
     Загрузка: POST .../upload с Telegram init_data и id из ROOT_ADMIN_IDS.
+    При download=1 добавляется Content-Disposition: attachment (Telegram WebApp downloadFile и браузеры).
     """
     if not key:
         raise HTTPException(status_code=400, detail="Параметр key обязателен")
@@ -772,10 +785,16 @@ async def content_card_media_proxy(key: str):
     blob = s3.download_bytes(key)
     fname = key.rsplit("/", 1)[-1]
     media_type = mimetypes.guess_type(fname)[0] or "application/octet-stream"
+    headers: dict[str, str] = {"Cache-Control": "public, max-age=3600"}
+    if download == 1:
+        disp_name = _safe_content_disposition_filename(filename, fname)
+        headers["Content-Disposition"] = f'attachment; filename="{disp_name}"'
+        # Рекомендация Telegram для WebApp.downloadFile на web.telegram.org
+        headers["Access-Control-Allow-Origin"] = "https://web.telegram.org"
     return Response(
         content=blob,
         media_type=media_type,
-        headers={"Cache-Control": "public, max-age=3600"},
+        headers=headers,
     )
 
 

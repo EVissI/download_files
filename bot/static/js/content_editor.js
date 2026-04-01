@@ -76,6 +76,11 @@ class ContentEditor {
         };
     }
 
+    /** Лимит размера вложения (как CC_MEDIA_MAX_BYTES на сервере). */
+    static get ATTACH_FILE_MAX_BYTES() {
+        return 30 * 1024 * 1024;
+    }
+
     /** Применить сохранённые глобальные стили к узлу .text-content / .link-text */
     applyGlobalTextStyleDefaultsToTextNode(node) {
         if (!node || !this.globalTextStyleDefaults) return;
@@ -1235,6 +1240,9 @@ class ContentEditor {
         if (element.dataset.toolId === 'upload-image') {
             return parseInt(element.style.height, 10) || element.offsetHeight || 200;
         }
+        if (element.dataset.toolId === 'attach-file') {
+            return parseInt(element.style.height, 10) || element.offsetHeight || 72;
+        }
         return parseInt(element.style.height, 10) || element.offsetHeight || 150;
     }
 
@@ -1470,6 +1478,13 @@ class ContentEditor {
                 icon: 'fa fa-volume-up'
             },
             {
+                id: 'attach-file',
+                name: 'Файл',
+                type: 'file',
+                description: 'Прикрепить файл до 30 МБ (S3), скачивание для пользователя',
+                icon: 'fa fa-paperclip'
+            },
+            {
                 id: 'support-link',
                 name: 'Ссылка',
                 type: 'link',
@@ -1519,6 +1534,11 @@ class ContentEditor {
         // Особое поведение для audio-file - прямая загрузка файла
         if (toolId === 'audio-file') {
             this.handleDirectAudioUpload();
+            return;
+        }
+
+        if (toolId === 'attach-file') {
+            this.handleDirectAttachFileUpload();
             return;
         }
 
@@ -1619,6 +1639,167 @@ class ContentEditor {
         };
 
         reader.readAsDataURL(file);
+    }
+
+    handleDirectAttachFileUpload() {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.style.display = 'none';
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                await this.importAttachFileFromFile(file);
+            }
+            if (fileInput.parentNode) {
+                document.body.removeChild(fileInput);
+            }
+        });
+
+        document.body.appendChild(fileInput);
+        fileInput.click();
+    }
+
+    async importAttachFileFromFile(file) {
+        if (!file) return;
+        if (file.size > ContentEditor.ATTACH_FILE_MAX_BYTES) {
+            this.showNotification('Файл больше 30 МБ', 'error');
+            return;
+        }
+        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        if (!initData) {
+            this.showNotification('Загрузка доступна из Telegram WebApp (нужен init_data)', 'warning');
+            return;
+        }
+        try {
+            this.showNotification('Загрузка файла…', 'info');
+            const up = await this.uploadBinaryToContentCardMedia(
+                file,
+                file.name,
+                file.type || 'application/octet-stream'
+            );
+            this.addAttachFileElementToCanvas(up.s3_key, file.name, up.content_type || file.type || '');
+            this.showNotification('Файл прикреплён', 'success');
+        } catch (err) {
+            console.error('importAttachFileFromFile:', err);
+            this.showNotification('Не удалось загрузить: ' + (err.message || err), 'error');
+        }
+    }
+
+    addAttachFileElementToCanvas(s3Key, fileName, contentType) {
+        const elementId = `element_${this.elementIdCounter++}`;
+        const element = document.createElement('div');
+        element.id = elementId;
+        element.className = 'canvas-element ce-attach-file-element';
+        element.dataset.toolId = 'attach-file';
+        element.dataset.attachmentS3Key = s3Key;
+        element.dataset.attachmentFileName = fileName || 'file';
+        element.dataset.attachmentContentType = contentType || '';
+
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const position = this.calculateVerticalPosition(canvasRect.width, 72);
+        element.style.left = position.x + 'px';
+        element.style.top = position.y + 'px';
+        element.style.width = position.width + 'px';
+        element.style.height = '72px';
+
+        this.buildAttachFileElementInner(element, false);
+        this.canvas.appendChild(element);
+        this.addElementControls(element);
+        this.attachBlockReorderInteractions(element);
+        this.elements.push({
+            id: elementId,
+            toolId: 'attach-file',
+            element,
+        });
+        this.selectElement(element);
+    }
+
+    buildAttachFileElementInner(element, previewMode) {
+        const name = element.dataset.attachmentFileName || 'Файл';
+        const s3Key = element.dataset.attachmentS3Key || '';
+        element.innerHTML = '';
+        const wrap = document.createElement('div');
+        wrap.className = 'ce-attach-file-inner';
+        const icon = document.createElement('span');
+        icon.className = 'ce-attach-file-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '📎';
+        const label = document.createElement('span');
+        label.className = 'ce-attach-file-name';
+        label.textContent = name;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ce-attach-file-download-btn';
+        btn.textContent = 'Скачать';
+        if (previewMode) {
+            btn.setAttribute('aria-label', `Скачать ${name}`);
+        }
+        wrap.appendChild(icon);
+        wrap.appendChild(label);
+        wrap.appendChild(btn);
+        element.appendChild(wrap);
+        this.wireAttachFileDownloadButton(element, btn, s3Key, name);
+    }
+
+    wireAttachFileDownloadButton(element, btn, s3Key, fileName) {
+        if (!btn) return;
+        if (!s3Key) {
+            btn.disabled = true;
+            btn.textContent = 'Файл недоступен';
+            return;
+        }
+        const handler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.requestAttachmentDownload(s3Key, fileName);
+        };
+        btn.addEventListener('click', handler);
+    }
+
+    /**
+     * Скачивание: Telegram.WebApp.downloadFile при наличии, иначе открытие URL с attachment.
+     */
+    requestAttachmentDownload(s3Key, fileName) {
+        if (!s3Key) return;
+        const safeName = (fileName && String(fileName).replace(/[\\/]/g, '_').trim()) || 'file';
+        const path = this.buildContentCardMediaDownloadUrl(s3Key, safeName);
+        let absUrl;
+        try {
+            absUrl = new URL(path, window.location.href).href;
+        } catch (e) {
+            absUrl = path;
+        }
+        const tw = window.Telegram && window.Telegram.WebApp;
+        if (tw && typeof tw.downloadFile === 'function') {
+            try {
+                tw.downloadFile({ url: absUrl, file_name: safeName }, (accepted) => {
+                    if (accepted === false) {
+                        this.showNotification('Скачивание отменено', 'info');
+                    }
+                });
+                return;
+            } catch (err) {
+                console.warn('Telegram.WebApp.downloadFile:', err);
+            }
+        }
+        const a = document.createElement('a');
+        a.href = absUrl;
+        a.setAttribute('download', safeName);
+        a.rel = 'noopener noreferrer';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    buildContentCardMediaDownloadUrl(s3Key, displayFileName) {
+        if (!s3Key) return '';
+        const params = new URLSearchParams({ key: s3Key, download: '1' });
+        if (displayFileName) {
+            params.set('filename', String(displayFileName).slice(0, 240));
+        }
+        return `/api/content_cards/media?${params.toString()}`;
     }
 
     addAudioElementToCanvas(audioUrl, fileName, file) {
@@ -2815,6 +2996,17 @@ class ContentEditor {
                     <div class="property-value">100%</div>
                 </div>
                 ` : ''}
+                ${element.dataset.toolId === 'attach-file' ? `
+                <div class="property-item">
+                    <label>Имя для отображения:</label>
+                    <input type="text" id="propAttachFileName" value="${this.escapeHtml(element.dataset.attachmentFileName || '')}" 
+                           placeholder="Имя файла"
+                           oninput="contentEditor.updateElementProperty('attachFileDisplayName', this.value)">
+                </div>
+                <div class="property-item">
+                    <button type="button" class="action-btn" onclick="contentEditor.downloadSelectedAttachment()">Скачать файл</button>
+                </div>
+                ` : ''}
             </div>
             
             <div class="action-buttons action-buttons-col">
@@ -2824,10 +3016,23 @@ class ContentEditor {
         `;
     }
 
+    downloadSelectedAttachment() {
+        const el = this.selectedElement;
+        if (!el || el.dataset.toolId !== 'attach-file') return;
+        this.requestAttachmentDownload(el.dataset.attachmentS3Key, el.dataset.attachmentFileName);
+    }
+
     updateElementProperty(property, value) {
         if (!this.selectedElement) return;
 
         switch (property) {
+            case 'attachFileDisplayName':
+                this.selectedElement.dataset.attachmentFileName = value;
+                {
+                    const nm = this.selectedElement.querySelector('.ce-attach-file-name');
+                    if (nm) nm.textContent = value.trim() ? value : 'Файл';
+                }
+                break;
             case 'audioName':
                 this.selectedElement.dataset.audioName = value;
                 const audioNameEl = this.selectedElement.querySelector('.audio-name');
@@ -3002,6 +3207,8 @@ class ContentEditor {
             } else {
                 elementHeight = parseInt(element.style.height) || 200;
             }
+        } else if (element.dataset.toolId === 'attach-file') {
+            elementHeight = parseInt(element.style.height, 10) || 72;
         } else {
             // For other elements, use styled height or default
             elementHeight = parseInt(element.style.height) || 150;
@@ -3029,6 +3236,14 @@ class ContentEditor {
         this.canvas.appendChild(newElement);
         this.addElementControls(newElement);
         this.attachBlockReorderInteractions(newElement);
+        if (newElement.dataset.toolId === 'attach-file') {
+            const btn = newElement.querySelector('.ce-attach-file-download-btn');
+            const sk = newElement.dataset.attachmentS3Key || '';
+            const fn = newElement.dataset.attachmentFileName || 'file';
+            if (btn && sk) {
+                this.wireAttachFileDownloadButton(newElement, btn, sk, fn);
+            }
+        }
         this.elements.push({
             id: newId,
             toolId: element.dataset.toolId,
@@ -3480,6 +3695,15 @@ class ContentEditor {
                     delete item.dataset.audioUrl;
                     if (item.audioStorageId) item.dataset.audioStorageId = item.audioStorageId;
                     else delete item.dataset.audioStorageId;
+                    break;
+                }
+                case 'attach-file': {
+                    const ask = el.dataset.attachmentS3Key || '';
+                    if (ask) {
+                        item.attachmentS3Key = ask;
+                        item.attachmentFileName = el.dataset.attachmentFileName || '';
+                        item.attachmentContentType = el.dataset.attachmentContentType || '';
+                    }
                     break;
                 }
                 case 'board-illustration': {
@@ -4847,6 +5071,16 @@ class ContentEditor {
                 element.appendChild(imgUp);
                 break;
             }
+            case 'attach-file': {
+                element.classList.add('ce-attach-file-element');
+                if (item.attachmentS3Key) {
+                    element.dataset.attachmentS3Key = item.attachmentS3Key;
+                    element.dataset.attachmentFileName = item.attachmentFileName || 'file';
+                    element.dataset.attachmentContentType = item.attachmentContentType || '';
+                }
+                this.buildAttachFileElementInner(element, previewMode);
+                break;
+            }
             case 'audio-file':
                 element.classList.add('audio-element');
                 if (item.audioS3Key) {
@@ -5078,6 +5312,10 @@ class ContentEditor {
                 }
             }
 
+            if (toolId === 'attach-file') {
+                element.style.height = '72px';
+            }
+
             // Special handling for tables
             if (element.classList.contains('table-element') || toolId === 'moveHintsTable') {
                 const table = element.querySelector('table');
@@ -5128,6 +5366,8 @@ class ContentEditor {
             } else if (element.dataset.toolId === 'upload-image') {
                 // For images, use the current styled height
                 elementHeight = parseInt(element.style.height) || 200;
+            } else if (element.dataset.toolId === 'attach-file') {
+                elementHeight = parseInt(element.style.height, 10) || 72;
             } else {
                 elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
             }

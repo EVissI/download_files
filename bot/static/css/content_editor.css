@@ -1366,6 +1366,65 @@
     margin-top: 2px;
 }
 
+/* Вложение произвольного файла (S3, до 30 МБ) */
+.ce-attach-file-element {
+    min-height: 56px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.ce-attach-file-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 100%;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, #f5f6ff 0%, #eef0fc 100%);
+}
+
+.card-preview-surface-inner .ce-attach-file-inner {
+    background: #2a2d3a;
+}
+
+.ce-attach-file-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.ce-attach-file-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+
+.card-preview-surface-inner .ce-attach-file-name {
+    color: #e8e8ee;
+}
+
+.ce-attach-file-download-btn {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: #667eea;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.ce-attach-file-download-btn:hover {
+    background: #5568d8;
+}
+
 /* Элементы на холсте */
 .canvas-element {
     position: absolute;
