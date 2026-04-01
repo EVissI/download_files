@@ -23,8 +23,8 @@
 }
 
 /*
- * Страничный #boardCanvas (hint_viewer, pokaz): при включённом тумблере «Доска» показывается поверх модалки;
- * при выключении класс снимается в syncLiveHintBoardCanvasOverlay / closeModal.
+ * Резерв: оверлей страничной доски над модалкой редактора отключён (доска — только предпросмотр / карточка).
+ * Класс снимается в syncLiveHintBoardCanvasOverlay / closeModal.
  */
 #boardCanvas.content-editor-live-board-overlay {
     position: fixed !important;

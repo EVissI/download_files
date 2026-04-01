@@ -2417,28 +2417,11 @@ class ContentEditor {
     }
 
     /**
-     * На hint_viewer / pokaz страничный #boardCanvas поднимается поверх модалки редактора при включённом тумблере.
-     * При выключении — возвращается обычная вёрстка.
+     * Раньше при открытой модалке и включённом тумблере «Доска» страничный #boardCanvas поднимался поверх редактора.
+     * Сейчас доска в редакторе не показывается — только в предпросмотре и у опубликованной карточки; метод снимает оверлей, если остался.
      */
     syncLiveHintBoardCanvasOverlay() {
-        const el = document.getElementById('boardCanvas');
-        const modalOpen = this.modal && this.modal.style.display !== 'none';
-        if (!modalOpen) {
-            this._restoreLiveHintBoardCanvasIfNeeded();
-            return;
-        }
-        if (!el) {
-            return;
-        }
-        const show = !!this.toggleStates['boardCanvas'];
-        if (!show) {
-            this._restoreLiveHintBoardCanvasIfNeeded();
-            return;
-        }
-        if (this._liveBoardCanvasStyleBackup === null) {
-            this._liveBoardCanvasStyleBackup = el.getAttribute('style') || '';
-        }
-        el.classList.add('content-editor-live-board-overlay');
+        this._restoreLiveHintBoardCanvasIfNeeded();
     }
 
     _restoreLiveHintBoardCanvasIfNeeded() {
