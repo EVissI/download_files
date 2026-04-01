@@ -1,10 +1,11 @@
-﻿from flask import Flask
+from flask import Flask
 from flask_appbuilder import AppBuilder, IndexView, ModelView
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
 import logging
 
+from bot.flask_admin.model_view.content_cards import ContentCardModelView
 from bot.flask_admin.model_view.message_for_new import MessageForNewModelView
 from bot.flask_admin.model_view.message_texts import MessagesTextsModelView
 from bot.flask_admin.model_view.payment import (
@@ -90,6 +91,7 @@ def register_models(appbuilder, db):
         MessageForNewModelView, "Сообщения для новеньких", icon="fa-calendar-o"
     )
     appbuilder.add_view(MessagesTextsModelView, "Текстовки", icon="fa-comment")
+    appbuilder.add_view(ContentCardModelView, "Карточки", icon="fa-clone")
 
 
 def create_app_for_flask_cli():
