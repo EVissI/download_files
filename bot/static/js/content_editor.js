@@ -998,7 +998,6 @@ class ContentEditor {
                             <button type="button" class="ce-image-source-btn ce-image-source-btn--primary" onclick="contentEditor.imageModalOpenLibrary()">
                                 Медиатека карточек
                             </button>
-                            <p class="ce-image-source-caption">Медиатека — изображения, которые вы уже загружали в карточки (хранилище S3, только для администраторов).</p>
                             <button type="button" class="ce-image-source-btn ce-image-source-btn--ghost" onclick="contentEditor.closeImageSourceModal()">
                                 Отмена
                             </button>
