@@ -1496,17 +1496,21 @@ button.content-card-admin-info-file-link:hover {
     outline: none !important;
 }
 
-/* Предпросмотр: тёмный фон — обычный текст светлый, ссылка отдельным цветом */
+/*
+ * Предпросмотр / карточка: те же дефолты, что у блока ссылки в редакторе (.link-text / a),
+ * без !important — иначе перебивается inline color из сохранённого textStyle и текст
+ * выглядит «белым», хотя в редакторе был другой цвет.
+ */
 .card-preview-surface-inner .link-text {
-    color: #f0f0f0 !important;
+    color: #333;
 }
 
 .card-preview-surface-inner .link-text a[href] {
-    color: #8b9cff !important;
+    color: #007bff;
 }
 
 .card-preview-surface-inner .link-text a[href]:hover {
-    color: #b4c0ff !important;
+    color: #0056b3;
 }
 
 .card-preview-surface-inner .text-block-resize-handle {

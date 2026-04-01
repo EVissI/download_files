@@ -3938,8 +3938,7 @@ class ContentEditor {
             return (i && String(i).trim()) ? i : cs[prop];
         };
         const td = pick('textDecoration');
-        return {
-            color: pick('color'),
+        const out = {
             fontSize: pick('fontSize'),
             lineHeight: pick('lineHeight'),
             textAlign: pick('textAlign'),
@@ -3948,6 +3947,14 @@ class ContentEditor {
             textDecoration: td && String(td).trim() ? td : cs.textDecoration,
             fontFamily: pick('fontFamily')
         };
+        /* Цвет только если задан inline (панель свойств / глобальные стили текста).
+           Иначе getComputedStyle мог унаследовать «чужой» цвет (например белый с родителя),
+           и после сохранения текст переставал совпадать с видом в редакторе. */
+        const inlineColor = node.style.color && String(node.style.color).trim();
+        if (inlineColor) {
+            out.color = inlineColor;
+        }
+        return out;
     }
 
     applyStyleSnapshot(domEl, snap) {
