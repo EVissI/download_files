@@ -1671,7 +1671,7 @@ button.content-card-admin-info-file-link:hover {
 }
 
 /* Предпросмотр: без белой заливки редактора; без рамок и теней; inline blockStyle перебивает фон */
-.card-preview-surface-inner .canvas-element.card-preview-canvas-clone,
+.card-preview-surface-inner .canvas-element.card-preview-canvas-clone:not(.table-element),
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone.text-element,
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone.link-element {
     background: transparent;
@@ -2002,13 +2002,16 @@ button.content-card-admin-info-file-link:hover {
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
 }
 
-/* Таблица хода/куба: обёртка на холсте (тот же фон, что и ячейки тела) */
+/*
+ * Таблица подсказок: как .hints-table + table в hint_viewer.html
+ * (!important — перебить сохранённый tableHtml и стили WebView)
+ */
 .canvas-element.table-element {
-    background: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 4px;
-    padding: 0;
-    overflow: hidden;
+    background-color: #2d2d2d !important;
+    border-radius: 8px !important;
+    border: 1px solid #444 !important;
+    overflow-x: auto !important;
+    padding: 0 !important;
     cursor: default;
 }
 
@@ -2018,68 +2021,83 @@ button.content-card-admin-info-file-link:hover {
 }
 
 .canvas-element.table-element.selected {
-    border-color: rgba(102, 126, 234, 0.85);
+    border-color: rgba(102, 126, 234, 0.85) !important;
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.45);
 }
 
-/*
- * Единый вид таблицы: редактор, предпросмотр, content-card-view (один stylesheet).
- * !important перебивает старый inline в сохранённом tableHtml и шрифт WebView (serif).
- */
 .canvas-element.table-element > table.ce-content-table {
-    width: 100% !important;
+    margin: 0 auto !important;
     border-collapse: collapse !important;
-    font-size: 12px !important;
+    width: 100% !important;
+    max-width: 800px !important;
+    background-color: #333 !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
     table-layout: fixed !important;
-    margin: 0 !important;
-    padding: 0 !important;
     border-spacing: 0 !important;
+    padding: 0 !important;
     font-family: Arial, Helvetica, sans-serif !important;
-    font-weight: bold !important;
+    font-size: 14px !important;
     color: #fff !important;
-    background-color: #1e1e1e !important;
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
     box-sizing: border-box !important;
+}
+
+.canvas-element.table-element > table.ce-content-table thead th,
+.canvas-element.table-element > table.ce-content-table tbody td {
+    border: 1px solid #555 !important;
+    padding: 12px 16px !important;
+    text-align: left !important;
+    color: #fff !important;
+    word-spacing: 16px !important;
+    font-weight: normal !important;
+    box-sizing: border-box !important;
+}
+
+.canvas-element.table-element > table.ce-content-table tbody td:nth-child(2),
+.canvas-element.table-element > table.ce-content-table tbody td:nth-child(3),
+.canvas-element.table-element > table.ce-content-table tbody td:nth-child(4) {
+    text-align: center !important;
 }
 
 .canvas-element.table-element > table.ce-content-table thead th {
-    background-color: #4CAF50 !important;
-    color: #fff !important;
+    background-color: #444 !important;
     font-weight: bold !important;
-    font-family: Arial, Helvetica, sans-serif !important;
-    padding: 6px !important;
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
-    box-sizing: border-box !important;
-}
-
-.canvas-element.table-element > table.ce-content-table--cube thead th {
-    background-color: #FF9800 !important;
-}
-
-.canvas-element.table-element > table.ce-content-table thead th:first-child {
-    text-align: left !important;
-}
-
-.canvas-element.table-element > table.ce-content-table thead th:not(:first-child) {
     text-align: center !important;
 }
 
-.canvas-element.table-element > table.ce-content-table tbody td {
-    background-color: #1e1e1e !important;
+.canvas-element.table-element > table.ce-content-table tbody tr:nth-child(even) td {
+    background-color: #2a2a2a !important;
+}
+
+.canvas-element.table-element > table.ce-content-table tbody tr:hover td {
+    background-color: #3a3a3a !important;
+}
+
+.canvas-element.table-element > table.ce-content-table tbody tr.hint-best td {
+    background-color: #2e7d32 !important;
     color: #fff !important;
-    font-weight: bold !important;
-    font-family: Arial, Helvetica, sans-serif !important;
-    padding: 6px !important;
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
-    box-sizing: border-box !important;
 }
 
-.canvas-element.table-element > table.ce-content-table tbody td:first-child {
-    text-align: left !important;
+.canvas-element.table-element > table.ce-content-table tbody tr.hint-good td {
+    background-color: #fbc02d !important;
+    color: #1a1a1a !important;
 }
 
-.canvas-element.table-element > table.ce-content-table tbody td:not(:first-child) {
-    text-align: center !important;
+.canvas-element.table-element > table.ce-content-table tbody tr.hint-poor td {
+    background-color: #d32f2f !important;
+    color: #fff !important;
+}
+
+@media (max-width: 768px) {
+    .canvas-element.table-element > table.ce-content-table {
+        font-size: 16px !important;
+    }
+
+    .canvas-element.table-element > table.ce-content-table thead th,
+    .canvas-element.table-element > table.ce-content-table tbody td {
+        padding: 8px 12px !important;
+        word-spacing: 12px !important;
+    }
 }
 
 .link-content {

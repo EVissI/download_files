@@ -1285,19 +1285,22 @@ class ContentEditor {
                     <thead>
                         <tr>
                             <th>Ход</th>
-                            <th>Вероятность</th>
-                            <th>Результат</th>
+                            <th>%</th>
+                            <th>%</th>
+                            <th>Эквити</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td>8/6</td>
-                            <td>0.654</td>
-                            <td>+0.123</td>
+                            <td>65.4</td>
+                            <td>34.6</td>
+                            <td>0.123</td>
                         </tr>
                         <tr>
                             <td>13/9</td>
-                            <td>0.598</td>
+                            <td>59.8</td>
+                            <td>40.2</td>
                             <td>-0.045</td>
                         </tr>
                     </tbody>
@@ -1338,10 +1341,10 @@ class ContentEditor {
             `;
         } else {
             if (tableType === 'hints' && cardData.hints) {
-                const table = this.createHintsTable(cardData.hints);
+                const table = this.createHintsTable(cardData.hints, cardData);
                 element.appendChild(table);
             } else if (tableType === 'cube' && cardData.cube_hints) {
-                const table = this.createCubeTable(cardData.cube_hints);
+                const table = this.createCubeTable(cardData.cube_hints, cardData);
                 element.appendChild(table);
             } else {
                 // Если для выбранного типа нет данных
@@ -1362,36 +1365,109 @@ class ContentEditor {
         });
     }
 
-    createHintsTable(hints) {
+    /** Порог эквити как в hint_viewer (select #eqThreshold / localStorage). */
+    _getEqThresholdForHintsTable() {
+        let eqThreshold = 0.03;
+        try {
+            const s = typeof localStorage !== 'undefined' ? localStorage.getItem('eqThreshold') : null;
+            if (s != null && s !== '') {
+                const p = parseFloat(s, 10);
+                if (!Number.isNaN(p)) eqThreshold = p;
+            }
+        } catch (e) { /* ignore */ }
+        return eqThreshold;
+    }
+
+    /** Следующий gnu_move (как data[turn+1] в hint_viewer), если страница — hint viewer. */
+    _getHintViewerNextGnuMove() {
+        try {
+            const d = typeof window !== 'undefined' ? window.data : null;
+            const cur = typeof window !== 'undefined' ? window.current : undefined;
+            if (d && typeof cur === 'number' && d[cur + 1] && d[cur + 1].gnu_move != null) {
+                return String(d[cur + 1].gnu_move).trim();
+            }
+        } catch (e) { /* ignore */ }
+        return 'pass';
+    }
+
+    /**
+     * Таблица ходов: разметка и классы строк как в hint_viewer.html (render / moveTableHtml).
+     * @param {Array} hints
+     * @param {object|null} item — строка кадра (gnu_move, action, player_name, points …)
+     */
+    createHintsTable(hints, item) {
         const table = document.createElement('table');
         table.className = 'ce-content-table';
 
         const header = table.createTHead();
         const headerRow = header.insertRow();
-        const headers = ['Ход', '%', '%', 'Эквити'];
-        headers.forEach((text) => {
+        ['Ход', '%', '%', 'Эквити'].forEach((text) => {
             const th = document.createElement('th');
             th.textContent = text;
             headerRow.appendChild(th);
         });
 
         const tbody = table.createTBody();
-        hints.forEach((hint) => {
+        if (!hints || !Array.isArray(hints)) {
+            return table;
+        }
+
+        if (item && item.action === 'win') {
             const row = tbody.insertRow();
-            const moveCell = row.insertCell();
-            moveCell.textContent = hint.move || 'N/A';
-            const winCell = row.insertCell();
-            winCell.textContent = hint.probs && hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : 'N/A';
-            const wgCell = row.insertCell();
-            wgCell.textContent = hint.probs && hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : 'N/A';
-            const eqCell = row.insertCell();
-            eqCell.textContent = hint.eq ? hint.eq.toFixed(3) : 'N/A';
+            row.className = 'hint-best';
+            const name = item.player_name != null ? item.player_name : (item.player || '');
+            const pts = item.points != null ? item.points : '';
+            [`Победа ${name} (${pts} очков)`, '-', '-', '-'].forEach((txt) => {
+                const c = row.insertCell();
+                c.textContent = txt;
+            });
+            return table;
+        }
+
+        const eqThreshold = this._getEqThresholdForHintsTable();
+        const firstEq = hints.length > 0 && hints[0].eq != null ? hints[0].eq : null;
+        const gnuNorm = item && item.gnu_move ? String(item.gnu_move).trim().replace(/\*/g, '') : '';
+
+        hints.forEach((hint, index) => {
+            if (!hint.probs || hint.probs.length < 2) return;
+            const row = tbody.insertRow();
+            const prob1 = hint.probs[0] != null ? (hint.probs[0] * 100).toFixed(1) : '-';
+            const prob2 = hint.probs[1] != null ? (hint.probs[1] * 100).toFixed(1) : '-';
+            const eq = hint.eq != null ? hint.eq.toFixed(3) : '-';
+            const displayEq =
+                firstEq !== null && hint.eq !== undefined && index > 0 && typeof hint.eq === 'number'
+                    ? (hint.eq - firstEq).toFixed(3)
+                    : eq;
+            const move = hint.move || '-';
+
+            let rowClass = '';
+            if (gnuNorm && hint.move && String(hint.move).replace(/\*/g, '') === gnuNorm) {
+                const diff = firstEq != null && hint.eq != null ? firstEq - hint.eq : 0;
+                if (diff < eqThreshold) {
+                    rowClass = 'hint-best';
+                } else if (index >= 1 && index <= 4) {
+                    rowClass = 'hint-good';
+                } else {
+                    rowClass = 'hint-poor';
+                }
+            }
+            if (rowClass) row.className = rowClass;
+
+            [move, prob1, prob2, displayEq].forEach((txt) => {
+                const c = row.insertCell();
+                c.textContent = txt;
+            });
         });
 
         return table;
     }
 
-    createCubeTable(cubeHints) {
+    /**
+     * Таблица куба: как cubeTableHtml в hint_viewer.html.
+     * @param {Array} cubeHints
+     * @param {object|null} item — строка кадра
+     */
+    createCubeTable(cubeHints, item) {
         const table = document.createElement('table');
         table.className = 'ce-content-table ce-content-table--cube';
 
@@ -1404,16 +1480,60 @@ class ContentEditor {
         });
 
         const tbody = table.createTBody();
-        if (cubeHints[0] && cubeHints[0].cubeful_equities) {
-            cubeHints[0].cubeful_equities.forEach((eq) => {
-                const row = tbody.insertRow();
-                const actionCell = row.insertCell();
-                const action = eq.action_1 || '';
-                actionCell.textContent = eq.action_2 ? `${action} / ${eq.action_2}` : action;
-                const eqCell = row.insertCell();
-                eqCell.textContent = eq.eq ? eq.eq.toFixed(3) : 'N/A';
-            });
+        const ch0 = cubeHints && cubeHints[0];
+        if (!ch0 || !ch0.cubeful_equities) {
+            return table;
         }
+
+        const nextGnuMove = this._getHintViewerNextGnuMove();
+        const noDoubleHint = ch0.cubeful_equities.find((h) => h.action_1 === 'No double');
+        const passHint = ch0.cubeful_equities.find(
+            (h) => h.action_1 === 'Double' && h.action_2 === 'pass'
+        );
+        const noDoubleEq = noDoubleHint && noDoubleHint.eq != null ? noDoubleHint.eq : null;
+        const passHintEq = passHint && passHint.eq != null ? passHint.eq : null;
+        const gnuTrim = item && item.gnu_move ? String(item.gnu_move).trim() : '';
+
+        ch0.cubeful_equities.forEach((hint, index) => {
+            const row = tbody.insertRow();
+            const eqVal = hint.eq != null ? hint.eq.toFixed(3) : '-';
+            const displayEq = eqVal;
+            let displayAction = hint.action_1 || '';
+            if (hint.action_2) {
+                displayAction += `, ${hint.action_2}`;
+            }
+
+            let rowClass = '';
+            if (
+                gnuTrim === 'Double' &&
+                hint.action_1 === 'Double' &&
+                hint.action_2 === nextGnuMove
+            ) {
+                if (noDoubleEq !== null && hint.eq !== undefined) {
+                    rowClass = hint.eq > noDoubleEq ? 'hint-best' : 'hint-good';
+                }
+            } else if (gnuTrim === 'take' && hint.action_2 === 'take') {
+                if (passHintEq !== null && hint.eq !== undefined) {
+                    rowClass = hint.eq > passHintEq ? 'hint-best' : 'hint-good';
+                }
+            } else if (
+                gnuTrim &&
+                gnuTrim !== 'take' &&
+                gnuTrim !== 'Double' &&
+                hint.action_1 === 'No double'
+            ) {
+                if (index === 0) rowClass = 'hint-best';
+                else if (index === 1) rowClass = 'hint-good';
+                else if (index === 2) rowClass = 'hint-poor';
+            }
+
+            if (rowClass) row.className = rowClass;
+
+            const a = row.insertCell();
+            a.textContent = displayAction;
+            const e = row.insertCell();
+            e.textContent = displayEq;
+        });
 
         return table;
     }
