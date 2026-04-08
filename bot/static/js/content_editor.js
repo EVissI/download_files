@@ -5229,20 +5229,20 @@ class ContentEditor {
         this.renderCardPreviewSurface(payload);
     }
 
-    /** В предпросмотре убираем пустой верх: сдвигаем все блоки так, чтобы верхний был у top: 0 */
-    normalizePreviewStackTops(inner) {
-        const children = Array.from(inner.querySelectorAll('.canvas-element'));
-        if (!children.length) return;
-        let minTop = Infinity;
-        children.forEach((el) => {
+    /**
+     * Порядок блоков в предпросмотре по сохранённому top с холста (перед flex-колонкой top сбрасывается).
+     */
+    reorderCardPreviewElementsBySavedTop(inner) {
+        const elems = Array.from(inner.querySelectorAll('.canvas-element'));
+        if (elems.length <= 1) return;
+        const meta = elems.map((el, i) => {
             const t = parseInt(el.style.top, 10);
-            if (!Number.isNaN(t)) minTop = Math.min(minTop, t);
+            return { el, top: Number.isNaN(t) ? 0 : t, i };
         });
-        if (!Number.isFinite(minTop) || minTop <= 0) return;
-        children.forEach((el) => {
-            const t = parseInt(el.style.top, 10);
-            if (!Number.isNaN(t)) el.style.top = `${t - minTop}px`;
-        });
+        meta.sort((a, b) => (a.top !== b.top ? a.top - b.top : a.i - b.i));
+        const frag = document.createDocumentFragment();
+        meta.forEach(({ el }) => frag.appendChild(el));
+        inner.appendChild(frag);
     }
 
     shouldShowBoardInCardPreview(payload) {
@@ -5560,19 +5560,19 @@ class ContentEditor {
             const collapsed = tableEl.classList.contains('card-preview-table--collapsed');
             toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
         };
-        toggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        const onToggle = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             tableEl.classList.toggle('card-preview-table--collapsed');
             syncA11y();
             requestAnimationFrame(() => this.refreshCardPreviewScale());
-        });
+        };
+        toggle.addEventListener('click', onToggle);
         toggle.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                tableEl.classList.toggle('card-preview-table--collapsed');
-                syncA11y();
-                requestAnimationFrame(() => this.refreshCardPreviewScale());
+                onToggle(e);
             }
         });
         syncA11y();
@@ -5627,7 +5627,7 @@ class ContentEditor {
         wrap.className = 'card-preview-surface-wrap';
         wrap.style.backgroundColor = canvasBg;
         const inner = document.createElement('div');
-        inner.className = 'card-preview-surface-inner';
+        inner.className = 'card-preview-surface-inner card-preview-surface-inner--flex-stack';
         inner.style.width = '100%';
         inner.style.position = 'relative';
         inner.style.boxSizing = 'border-box';
@@ -5651,7 +5651,18 @@ class ContentEditor {
         });
         this.elementIdCounter = savedCounter;
 
-        this.normalizePreviewStackTops(inner);
+        this.reorderCardPreviewElementsBySavedTop(inner);
+        const rawTops = Array.from(inner.querySelectorAll('.canvas-element')).map((el) => {
+            const t = parseInt(el.style.top, 10);
+            return Number.isNaN(t) ? 0 : t;
+        });
+        const minTop = rawTops.length ? Math.min(...rawTops) : 0;
+        inner.dataset.previewStackTops = JSON.stringify(rawTops.map((t) => t - minTop));
+        inner.style.paddingTop = minTop > 0 ? `${minTop}px` : '';
+        inner.querySelectorAll('.canvas-element').forEach((el) => {
+            el.style.top = '';
+            el.style.left = '';
+        });
         this.refreshPreviewTableElementsFromCardData(inner, payload);
         inner
             .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
@@ -5673,11 +5684,14 @@ class ContentEditor {
     }
 
     /**
-     * Дети предпросмотра — position:absolute; без min-height у inner в потоке height≈0 и ломается высота скролла.
-     * Высота обёртки предпросмотра учитывает доску в потоке (см. refreshCardPreviewScale).
+     * Для предпросмотра с flex-колонкой высота inner считается из потока; иначе — из absolute top + height.
      */
     updateCardPreviewInnerMinHeight(inner) {
         if (!inner) return;
+        if (inner.classList.contains('card-preview-surface-inner--flex-stack')) {
+            inner.style.minHeight = '';
+            return;
+        }
         const nodes = inner.querySelectorAll('.canvas-element');
         if (!nodes.length) {
             inner.style.minHeight = '';
@@ -5694,6 +5708,33 @@ class ContentEditor {
         inner.style.minHeight = maxBottom > 0 ? `${Math.ceil(maxBottom + pad)}px` : '';
     }
 
+    /**
+     * Восстанавливает вертикальные промежутки между блоками предпросмотра по сохранённым top с холста.
+     */
+    applyCardPreviewFlexSpacingFromSavedTops(inner) {
+        if (!inner || !inner.classList.contains('card-preview-surface-inner--flex-stack')) return;
+        let tops;
+        try {
+            tops = JSON.parse(inner.dataset.previewStackTops || '[]');
+        } catch (e) {
+            return;
+        }
+        if (!Array.isArray(tops) || !tops.length) return;
+        const ordered = Array.from(inner.querySelectorAll('.canvas-element'));
+        if (tops.length !== ordered.length) return;
+        for (let i = 0; i < ordered.length; i++) {
+            const el = ordered[i];
+            if (i < ordered.length - 1) {
+                const h = el.offsetHeight || 0;
+                const rawGap = tops[i + 1] - tops[i] - h;
+                const mb = Math.max(8, Math.round(rawGap));
+                el.style.marginBottom = `${mb}px`;
+            } else {
+                el.style.marginBottom = '';
+            }
+        }
+    }
+
     refreshCardPreviewScale() {
         const host = document.getElementById('cardPreviewFrameHost');
         if (!host) return;
@@ -5702,6 +5743,7 @@ class ContentEditor {
         if (!inner || !wrap) return;
 
         inner.style.transform = 'none';
+        this.applyCardPreviewFlexSpacingFromSavedTops(inner);
         this.updateCardPreviewInnerMinHeight(inner);
         const boardEl = wrap.querySelector('.card-preview-board-overlay');
         const boardH = boardEl ? Math.ceil(boardEl.offsetHeight) : 0;
