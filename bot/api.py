@@ -560,6 +560,13 @@ class ContentCardSaveBody(BaseModel):
     chat_id: int | None = None
 
 
+class ContentCardFileNameCheckBody(BaseModel):
+    """Проверка, есть ли уже карточка с тем же исходным именем файла (file_name)."""
+
+    init_data: str = Field(..., min_length=1)
+    file_name: str = Field(..., max_length=255)
+
+
 class ContentCardFetchBody(BaseModel):
     """Загрузка сохранённой карточки для просмотра (Telegram WebApp)."""
 
@@ -588,6 +595,30 @@ class ContentCardMediaListBody(BaseModel):
     init_data: str = Field(..., min_length=1)
     continuation_token: str | None = None
     limit: int = Field(48, ge=1, le=100)
+
+
+@app.post("/api/content_cards/check_file_name")
+async def check_content_card_file_name(body: ContentCardFileNameCheckBody):
+    """
+    Возвращает, существует ли карточка с таким же file_name (как при сохранении — basename, обрезка).
+    """
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
+    tg_user = user_data.get("user") or {}
+    user_id = tg_user.get("id")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(user_id)
+    _require_content_card_admin(user_id)
+
+    safe_name = os.path.basename(body.file_name.strip())[:255] or "card"
+    async with async_session_maker() as session:
+        card_dao = ContentCardDAO(session)
+        existing = await card_dao.find_one_by_file_name(safe_name)
+        if existing:
+            return {"exists": True, "content_card_id": existing.id}
+        return {"exists": False, "content_card_id": None}
 
 
 @app.post("/api/content_cards/save")

@@ -1076,6 +1076,24 @@ class ContentEditor {
                 </div>
             `);
             }
+            if (!document.getElementById('contentCardDuplicateSourceModal')) {
+                document.body.insertAdjacentHTML(
+                    'beforeend',
+                    `
+                <div id="contentCardDuplicateSourceModal" class="card-labels-modal" style="display: none;" aria-hidden="true">
+                    <div class="card-labels-overlay" onclick="contentEditor.closeContentCardDuplicateSourceModal()"></div>
+                    <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="contentCardDuplicateSourceTitle">
+                        <h3 id="contentCardDuplicateSourceTitle" class="card-labels-title">Карточка с таким исходником уже есть</h3>
+                        <p id="contentCardDuplicateSourceMessage" class="content-card-duplicate-source-msg"></p>
+                        <div class="card-labels-actions">
+                            <button type="button" class="card-labels-back-btn" onclick="contentEditor.closeContentCardDuplicateSourceModal()">Отмена</button>
+                            <button type="button" class="card-labels-save-btn" onclick="contentEditor.confirmSaveDespiteDuplicateSource()">Всё равно сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            `
+                );
+            }
             this.cardLabelsModal = document.getElementById('cardLabelsModal');
             const labelsInput = document.getElementById('cardLabelsInput');
             if (labelsInput) {
@@ -1365,33 +1383,8 @@ class ContentEditor {
         });
     }
 
-    /** Порог эквити как в hint_viewer (select #eqThreshold / localStorage). */
-    _getEqThresholdForHintsTable() {
-        let eqThreshold = 0.03;
-        try {
-            const s = typeof localStorage !== 'undefined' ? localStorage.getItem('eqThreshold') : null;
-            if (s != null && s !== '') {
-                const p = parseFloat(s, 10);
-                if (!Number.isNaN(p)) eqThreshold = p;
-            }
-        } catch (e) { /* ignore */ }
-        return eqThreshold;
-    }
-
-    /** Следующий gnu_move (как data[turn+1] в hint_viewer), если страница — hint viewer. */
-    _getHintViewerNextGnuMove() {
-        try {
-            const d = typeof window !== 'undefined' ? window.data : null;
-            const cur = typeof window !== 'undefined' ? window.current : undefined;
-            if (d && typeof cur === 'number' && d[cur + 1] && d[cur + 1].gnu_move != null) {
-                return String(d[cur + 1].gnu_move).trim();
-            }
-        } catch (e) { /* ignore */ }
-        return 'pass';
-    }
-
     /**
-     * Таблица ходов: разметка и классы строк как в hint_viewer.html (render / moveTableHtml).
+     * Таблица ходов (как moveTableHtml в hint_viewer.html, без цветовой подсветки строк).
      * @param {Array} hints
      * @param {object|null} item — строка кадра (gnu_move, action, player_name, points …)
      */
@@ -1414,7 +1407,6 @@ class ContentEditor {
 
         if (item && item.action === 'win') {
             const row = tbody.insertRow();
-            row.className = 'hint-best';
             const name = item.player_name != null ? item.player_name : (item.player || '');
             const pts = item.points != null ? item.points : '';
             [`Победа ${name} (${pts} очков)`, '-', '-', '-'].forEach((txt) => {
@@ -1424,9 +1416,7 @@ class ContentEditor {
             return table;
         }
 
-        const eqThreshold = this._getEqThresholdForHintsTable();
         const firstEq = hints.length > 0 && hints[0].eq != null ? hints[0].eq : null;
-        const gnuNorm = item && item.gnu_move ? String(item.gnu_move).trim().replace(/\*/g, '') : '';
 
         hints.forEach((hint, index) => {
             if (!hint.probs || hint.probs.length < 2) return;
@@ -1440,19 +1430,6 @@ class ContentEditor {
                     : eq;
             const move = hint.move || '-';
 
-            let rowClass = '';
-            if (gnuNorm && hint.move && String(hint.move).replace(/\*/g, '') === gnuNorm) {
-                const diff = firstEq != null && hint.eq != null ? firstEq - hint.eq : 0;
-                if (diff < eqThreshold) {
-                    rowClass = 'hint-best';
-                } else if (index >= 1 && index <= 4) {
-                    rowClass = 'hint-good';
-                } else {
-                    rowClass = 'hint-poor';
-                }
-            }
-            if (rowClass) row.className = rowClass;
-
             [move, prob1, prob2, displayEq].forEach((txt) => {
                 const c = row.insertCell();
                 c.textContent = txt;
@@ -1463,11 +1440,11 @@ class ContentEditor {
     }
 
     /**
-     * Таблица куба: как cubeTableHtml в hint_viewer.html.
+     * Таблица куба (как cubeTableHtml в hint_viewer.html, без цветовой подсветки строк).
      * @param {Array} cubeHints
-     * @param {object|null} item — строка кадра
+     * @param {object|null} _item — строка кадра (оставлен для совместимости вызовов)
      */
-    createCubeTable(cubeHints, item) {
+    createCubeTable(cubeHints, _item) {
         const table = document.createElement('table');
         table.className = 'ce-content-table ce-content-table--cube';
 
@@ -1485,16 +1462,7 @@ class ContentEditor {
             return table;
         }
 
-        const nextGnuMove = this._getHintViewerNextGnuMove();
-        const noDoubleHint = ch0.cubeful_equities.find((h) => h.action_1 === 'No double');
-        const passHint = ch0.cubeful_equities.find(
-            (h) => h.action_1 === 'Double' && h.action_2 === 'pass'
-        );
-        const noDoubleEq = noDoubleHint && noDoubleHint.eq != null ? noDoubleHint.eq : null;
-        const passHintEq = passHint && passHint.eq != null ? passHint.eq : null;
-        const gnuTrim = item && item.gnu_move ? String(item.gnu_move).trim() : '';
-
-        ch0.cubeful_equities.forEach((hint, index) => {
+        ch0.cubeful_equities.forEach((hint) => {
             const row = tbody.insertRow();
             const eqVal = hint.eq != null ? hint.eq.toFixed(3) : '-';
             const displayEq = eqVal;
@@ -1502,32 +1470,6 @@ class ContentEditor {
             if (hint.action_2) {
                 displayAction += `, ${hint.action_2}`;
             }
-
-            let rowClass = '';
-            if (
-                gnuTrim === 'Double' &&
-                hint.action_1 === 'Double' &&
-                hint.action_2 === nextGnuMove
-            ) {
-                if (noDoubleEq !== null && hint.eq !== undefined) {
-                    rowClass = hint.eq > noDoubleEq ? 'hint-best' : 'hint-good';
-                }
-            } else if (gnuTrim === 'take' && hint.action_2 === 'take') {
-                if (passHintEq !== null && hint.eq !== undefined) {
-                    rowClass = hint.eq > passHintEq ? 'hint-best' : 'hint-good';
-                }
-            } else if (
-                gnuTrim &&
-                gnuTrim !== 'take' &&
-                gnuTrim !== 'Double' &&
-                hint.action_1 === 'No double'
-            ) {
-                if (index === 0) rowClass = 'hint-best';
-                else if (index === 1) rowClass = 'hint-good';
-                else if (index === 2) rowClass = 'hint-poor';
-            }
-
-            if (rowClass) row.className = rowClass;
 
             const a = row.insertCell();
             a.textContent = displayAction;
@@ -4214,6 +4156,11 @@ class ContentEditor {
                 this.cancelSaveFrame();
                 return;
             }
+            const dupModal = document.getElementById('contentCardDuplicateSourceModal');
+            if (dupModal && dupModal.style.display === 'flex') {
+                this.closeContentCardDuplicateSourceModal();
+                return;
+            }
             if (this.cardLabelsModal && this.cardLabelsModal.style.display === 'flex') {
                 this.cancelCardLabelsStep();
                 return;
@@ -4944,7 +4891,42 @@ class ContentEditor {
         }
     }
 
-    async saveCardToCloud() {
+    openContentCardDuplicateSourceModal(fileName, existingCardId) {
+        const modal = document.getElementById('contentCardDuplicateSourceModal');
+        const msgEl = document.getElementById('contentCardDuplicateSourceMessage');
+        if (!modal || !msgEl) {
+            this.showNotification('Не удалось показать диалог подтверждения', 'error');
+            return;
+        }
+        const fnEsc = this.escapeHtml(String(fileName || ''));
+        const idPart =
+            existingCardId != null && !Number.isNaN(Number(existingCardId))
+                ? ` (карточка №${this.escapeHtml(String(existingCardId))})`
+                : '';
+        msgEl.innerHTML =
+            `Исходный файл «${fnEsc}» уже используется${idPart}. ` +
+            'Создать ещё одну карточку с тем же исходником?';
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    closeContentCardDuplicateSourceModal() {
+        const modal = document.getElementById('contentCardDuplicateSourceModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    async confirmSaveDespiteDuplicateSource() {
+        this.closeContentCardDuplicateSourceModal();
+        const ok = await this.saveCardToCloud({ skipDuplicateCheck: true });
+        if (ok) {
+            this.closeCardPreviewModal();
+        }
+    }
+
+    async saveCardToCloud(options) {
+        const skipDuplicateCheck = options && options.skipDuplicateCheck === true;
         const refs = this.collectSavedFrameRefsForCurrentGame();
         if (!refs.length) {
             this.showNotification('Нет сохранённых кадров для этой игры', 'warning');
@@ -4962,6 +4944,45 @@ class ContentEditor {
         if (!chatIdStr) {
             this.showNotification('Не найден идентификатор пользователя (chat_id)', 'warning');
             return false;
+        }
+        const file_name = this.buildContentCardFileNameForCloud();
+        if (!skipDuplicateCheck) {
+            try {
+                const checkRes = await fetch('/api/content_cards/check_file_name', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ init_data: initData, file_name }),
+                });
+                let checkData = {};
+                try {
+                    checkData = await checkRes.json();
+                } catch (e) {
+                    checkData = {};
+                }
+                if (!checkRes.ok) {
+                    let msg = checkData.detail;
+                    if (Array.isArray(msg)) {
+                        msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
+                    } else if (msg && typeof msg === 'object') {
+                        msg = JSON.stringify(msg);
+                    }
+                    throw new Error(msg || `Ошибка ${checkRes.status}`);
+                }
+                if (checkData.exists) {
+                    this.openContentCardDuplicateSourceModal(
+                        file_name,
+                        checkData.content_card_id
+                    );
+                    return false;
+                }
+            } catch (e) {
+                console.error('saveCardToCloud duplicate check:', e);
+                this.showNotification(
+                    e.message || 'Не удалось проверить, нет ли карточки с таким файлом',
+                    'error'
+                );
+                return false;
+            }
         }
         let framesWrapper;
         try {
@@ -5018,7 +5039,6 @@ class ContentEditor {
             return false;
         }
         const labels = this.loadCardLabelsFromStorage();
-        const file_name = this.buildContentCardFileNameForCloud();
         const chat_id = parseInt(chatIdStr, 10);
         if (Number.isNaN(chat_id)) {
             this.showNotification('Некорректный chat_id', 'error');
@@ -5508,6 +5528,56 @@ class ContentEditor {
         return `Матч до ${ml} · Счёт: ${r} — ${b}`;
     }
 
+    /**
+     * Предпросмотр карточки: кнопка сворачивания блока таблицы (ход/куб).
+     */
+    setupCardPreviewTableCollapse(tableEl) {
+        if (!tableEl || !tableEl.classList.contains('card-preview-canvas-clone')) return;
+        if (tableEl.querySelector(':scope > .card-preview-table-toggle')) return;
+        const kids = Array.from(tableEl.children);
+        if (!kids.length) return;
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'card-preview-table-toggle';
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-label', 'Свернуть или развернуть таблицу');
+        toggle.title = 'Свернуть или развернуть таблицу';
+        toggle.innerHTML = `
+            <span class="card-preview-table-toggle-icon" aria-hidden="true">
+                <svg class="card-preview-table-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                    <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
+                </svg>
+            </span>`;
+
+        const body = document.createElement('div');
+        body.className = 'card-preview-table-collapse-body';
+        kids.forEach((k) => body.appendChild(k));
+        tableEl.appendChild(toggle);
+        tableEl.appendChild(body);
+
+        const syncA11y = () => {
+            const collapsed = tableEl.classList.contains('card-preview-table--collapsed');
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        };
+        toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            tableEl.classList.toggle('card-preview-table--collapsed');
+            syncA11y();
+            requestAnimationFrame(() => this.refreshCardPreviewScale());
+        });
+        toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                tableEl.classList.toggle('card-preview-table--collapsed');
+                syncA11y();
+                requestAnimationFrame(() => this.refreshCardPreviewScale());
+            }
+        });
+        syncA11y();
+    }
+
     appendCardPreviewBoardOverlay(wrap, payload) {
         const snapshot = payload.board && typeof payload.board === 'object' ? payload.board : {};
         const showMatchBanner = !!(payload && payload.editor && payload.editor.showBoardMatchBanner);
@@ -5524,28 +5594,7 @@ class ContentEditor {
                     <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
                 </div>
             </div>
-            <button type="button" class="card-preview-board-handle" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
-                <span class="card-preview-board-handle-icon" aria-hidden="true">
-                    <svg class="card-preview-board-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
-                        <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
-                    </svg>
-                </span>
-            </button>
         `;
-        const handleBtn = overlay.querySelector('.card-preview-board-handle');
-        const toggleBoardCollapsed = () => {
-            overlay.classList.toggle('card-preview-board-overlay--collapsed');
-            const collapsed = overlay.classList.contains('card-preview-board-overlay--collapsed');
-            handleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-            requestAnimationFrame(() => this.refreshCardPreviewScale());
-        };
-        handleBtn.addEventListener('click', toggleBoardCollapsed);
-        handleBtn.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                toggleBoardCollapsed();
-            }
-        });
 
         wrap.appendChild(overlay);
 
@@ -5604,6 +5653,9 @@ class ContentEditor {
 
         this.normalizePreviewStackTops(inner);
         this.refreshPreviewTableElementsFromCardData(inner, payload);
+        inner
+            .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
+            .forEach((el) => this.setupCardPreviewTableCollapse(el));
 
         if (this.shouldShowBoardInCardPreview(payload)) {
             this.appendCardPreviewBoardOverlay(wrap, payload);

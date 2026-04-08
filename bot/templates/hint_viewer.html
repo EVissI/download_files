@@ -134,22 +134,6 @@
             background-color: #3a3a3a;
         }
 
-        .hint-best {
-            background-color: #2e7d32 !important;
-        }
-
-        .hint-good {
-            background-color: #fbc02d !important;
-        }
-
-        .hint-good td {
-            color: #1a1a1a !important;
-        }
-
-        .hint-poor {
-            background-color: #d32f2f !important;
-        }
-
         #top-row {
             margin: 0px 0 10px 0;
             display: flex;
@@ -2363,48 +2347,14 @@
             // Generate cube hints table
             let cubeTableHtml = '<table><tr><th>Действие</th><th>Эквити</th></tr>';
             if (item.cube_hints && item.cube_hints.length > 0) {
-                const bestAction = item.cube_hints[0].cubeful_equities.find(eq => eq.idx === 1);
-                const bestAction1 = bestAction ? bestAction.action_1 : '';
-                const bestAction2 = bestAction ? bestAction.action_2 : '';
-                let nextGnuMove = (data[turn + 1] && data[turn + 1].gnu_move) ? data[turn + 1].gnu_move.trim() : 'pass';
-                const noDoubleHint = (item.cube_hints[0].cubeful_equities || []).find(h => h.action_1 === 'No double');
-                const PassHint = (item.cube_hints[0].cubeful_equities || []).find(h => h.action_1 === 'Double' && h.action_2 === 'pass');
-                const noDoubleEq = noDoubleHint && noDoubleHint.eq ? noDoubleHint.eq : null;
-                const PassHintEq = PassHint && PassHint.eq ? PassHint.eq : null;
-                (item.cube_hints[0].cubeful_equities || []).forEach((hint, index) => {
+                (item.cube_hints[0].cubeful_equities || []).forEach((hint) => {
                     const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                     const displayEq = eq;
                     let displayAction = hint.action_1;
                     if (hint.action_2) {
                         displayAction += `, ${hint.action_2}`;
                     }
-                    let rowClass = '';
-                    if (item.gnu_move && item.gnu_move.trim() === 'Double' && hint.action_1 === 'Double' && hint.action_2 === nextGnuMove) {
-                        if (noDoubleEq !== null && hint.eq !== undefined) {
-                            if (hint.eq > noDoubleEq) {
-                                rowClass = 'hint-best';
-                            } else {
-                                rowClass = 'hint-good';
-                            }
-                        }
-                    } else if (item.gnu_move && item.gnu_move.trim() === 'take' && hint.action_2 === 'take') {
-                        if (PassHintEq !== null && hint.eq !== undefined) {
-                            if (hint.eq > PassHintEq) {
-                                rowClass = 'hint-best';
-                            } else {
-                                rowClass = 'hint-good';
-                            }
-                        }
-                    } else if (item.gnu_move && item.gnu_move.trim() !== 'take' && item.gnu_move.trim() !== 'Double' && hint.action_1 === 'No double') {
-                        if (index === 0) {
-                            rowClass = 'hint-best';
-                        } else if (index === 1) {
-                            rowClass = 'hint-good';
-                        } else if (index === 2) {
-                            rowClass = 'hint-poor';
-                        }
-                    }
-                    cubeTableHtml += `<tr class="${rowClass}"><td>${displayAction}</td><td>${displayEq}</td></tr>`;
+                    cubeTableHtml += `<tr><td>${displayAction}</td><td>${displayEq}</td></tr>`;
                 });
             }
             cubeTableHtml += '</table>';
@@ -2415,7 +2365,7 @@
             // Generate move hints table
             let moveTableHtml = '<table><tr><th>Ход</th><th>%</th><th>%</th><th>Эквити</th></tr>';
             if (item.action === 'win') {
-                moveTableHtml += `<tr class="hint-best"><td>Победа ${item.player_name} (${item.points} очков)</td><td>-</td><td>-</td><td>-</td></tr>`;
+                moveTableHtml += `<tr><td>Победа ${item.player_name} (${item.points} очков)</td><td>-</td><td>-</td><td>-</td></tr>`;
             } else {
                 const firstEq = item.hints && item.hints.length > 0 ? item.hints[0].eq : null;
                 (item.hints || []).forEach((hint, index) => {
@@ -2425,18 +2375,7 @@
                         const eq = hint.eq ? hint.eq.toFixed(3) : '-';
                         const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
                         let move = hint.move || '-';
-                        let rowClass = '';
-                        if (item.gnu_move && hint.move.replace(/\*/g, '') === item.gnu_move.trim().replace(/\*/g, '')) {
-                            const diff = firstEq - hint.eq; // положительная разница, насколько хуже
-                            if (diff < eqThreshold) {
-                                rowClass = 'hint-best';
-                            } else if (index >= 1 && index <= 4) {
-                                rowClass = 'hint-good';
-                            } else {
-                                rowClass = 'hint-poor';
-                            }
-                        }
-                        moveTableHtml += `<tr class="${rowClass}"><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
+                        moveTableHtml += `<tr><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td></tr>`;
                     }
                 });
             }

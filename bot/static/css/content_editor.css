@@ -1305,6 +1305,14 @@ button.content-card-admin-info-file-link:hover {
     text-align: center;
 }
 
+.content-card-duplicate-source-msg {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #c8c8c8;
+    text-align: center;
+}
+
 .card-labels-hint {
     margin: 0;
     font-size: 13px;
@@ -1503,17 +1511,8 @@ button.content-card-admin-info-file-link:hover {
     pointer-events: none;
 }
 
-.card-preview-board-overlay.card-preview-board-overlay--collapsed {
-    border-radius: 0 0 12px 12px;
-    overflow: hidden;
-}
-
 .card-preview-board-body {
     pointer-events: none;
-}
-
-.card-preview-board-overlay--collapsed .card-preview-board-body {
-    display: none;
 }
 
 .card-preview-board-match-banner {
@@ -1576,7 +1575,8 @@ button.content-card-admin-info-file-link:hover {
 .card-preview-board-canvas-wrap {
     background: #1a1a1a;
     line-height: 0;
-    border-radius: 0 0 0 0;
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
 }
 
 .card-preview-board-canvas {
@@ -1585,57 +1585,6 @@ button.content-card-admin-info-file-link:hover {
     max-width: 800px;
     height: auto;
     margin: 0 auto;
-}
-
-.card-preview-board-handle {
-    pointer-events: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 0;
-    padding: 3px 8px 5px;
-    margin: 0;
-    border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 0 0 8px 8px;
-    cursor: pointer;
-    color: #94a3b8;
-    background: rgba(26, 26, 30, 0.92);
-    box-shadow: none;
-    transition: color 0.12s ease, background 0.12s ease;
-}
-
-.card-preview-board-handle:hover {
-    color: #e2e8f0;
-    background: rgba(36, 36, 42, 0.95);
-}
-
-.card-preview-board-handle:focus-visible {
-    outline: 2px solid #60a5fa;
-    outline-offset: 1px;
-}
-
-.card-preview-board-handle-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s ease;
-}
-
-.card-preview-board-overlay--collapsed .card-preview-board-handle-icon {
-    transform: rotate(180deg);
-}
-
-.card-preview-board-caret-svg {
-    width: 28px;
-    height: 13px;
-    display: block;
-    opacity: 0.9;
-}
-
-.card-preview-board-handle:hover .card-preview-board-caret-svg {
-    opacity: 1;
 }
 
 .card-preview-surface-inner {
@@ -1664,6 +1613,73 @@ button.content-card-admin-info-file-link:hover {
 /* Предпросмотр / опубликованная карточка: кнопка «Скачать» у вложения (attach-file) */
 .card-preview-surface-inner .canvas-element.ce-attach-file-element.card-preview-canvas-clone {
     pointer-events: auto;
+}
+
+/* Предпросмотр карточки: сворачивание блока таблицы (ход/куб) */
+.card-preview-surface-inner .canvas-element.table-element.card-preview-canvas-clone {
+    pointer-events: auto;
+    position: relative;
+}
+
+.card-preview-table-toggle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px 0 6px 0;
+    background: #444;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.card-preview-table-toggle:hover {
+    background: #555;
+}
+
+.card-preview-table-toggle:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 1px;
+}
+
+.card-preview-table-toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease;
+}
+
+.card-preview-table-caret-svg {
+    width: 18px;
+    height: 9px;
+    display: block;
+    opacity: 0.95;
+}
+
+.card-preview-table--collapsed .card-preview-table-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.card-preview-table-collapse-body {
+    padding-top: 30px;
+    overflow: hidden;
+    max-height: 2500px;
+    opacity: 1;
+    transition: max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease;
+}
+
+.card-preview-table--collapsed .card-preview-table-collapse-body {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    pointer-events: none;
 }
 
 .card-preview-canvas-clone {
@@ -2071,21 +2087,6 @@ button.content-card-admin-info-file-link:hover {
 
 .canvas-element.table-element > table.ce-content-table tbody tr:hover td {
     background-color: #3a3a3a !important;
-}
-
-.canvas-element.table-element > table.ce-content-table tbody tr.hint-best td {
-    background-color: #2e7d32 !important;
-    color: #fff !important;
-}
-
-.canvas-element.table-element > table.ce-content-table tbody tr.hint-good td {
-    background-color: #fbc02d !important;
-    color: #1a1a1a !important;
-}
-
-.canvas-element.table-element > table.ce-content-table tbody tr.hint-poor td {
-    background-color: #d32f2f !important;
-    color: #fff !important;
 }
 
 @media (max-width: 768px) {
