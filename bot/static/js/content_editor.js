@@ -5657,7 +5657,6 @@ class ContentEditor {
             return Number.isNaN(t) ? 0 : t;
         });
         const minTop = rawTops.length ? Math.min(...rawTops) : 0;
-        inner.dataset.previewStackTops = JSON.stringify(rawTops.map((t) => t - minTop));
         inner.style.paddingTop = minTop > 0 ? `${minTop}px` : '';
         inner.querySelectorAll('.canvas-element').forEach((el) => {
             el.style.top = '';
@@ -5708,33 +5707,6 @@ class ContentEditor {
         inner.style.minHeight = maxBottom > 0 ? `${Math.ceil(maxBottom + pad)}px` : '';
     }
 
-    /**
-     * Восстанавливает вертикальные промежутки между блоками предпросмотра по сохранённым top с холста.
-     */
-    applyCardPreviewFlexSpacingFromSavedTops(inner) {
-        if (!inner || !inner.classList.contains('card-preview-surface-inner--flex-stack')) return;
-        let tops;
-        try {
-            tops = JSON.parse(inner.dataset.previewStackTops || '[]');
-        } catch (e) {
-            return;
-        }
-        if (!Array.isArray(tops) || !tops.length) return;
-        const ordered = Array.from(inner.querySelectorAll('.canvas-element'));
-        if (tops.length !== ordered.length) return;
-        for (let i = 0; i < ordered.length; i++) {
-            const el = ordered[i];
-            if (i < ordered.length - 1) {
-                const h = el.offsetHeight || 0;
-                const rawGap = tops[i + 1] - tops[i] - h;
-                const mb = Math.max(8, Math.round(rawGap));
-                el.style.marginBottom = `${mb}px`;
-            } else {
-                el.style.marginBottom = '';
-            }
-        }
-    }
-
     refreshCardPreviewScale() {
         const host = document.getElementById('cardPreviewFrameHost');
         if (!host) return;
@@ -5743,7 +5715,11 @@ class ContentEditor {
         if (!inner || !wrap) return;
 
         inner.style.transform = 'none';
-        this.applyCardPreviewFlexSpacingFromSavedTops(inner);
+        if (inner.classList.contains('card-preview-surface-inner--flex-stack')) {
+            inner.querySelectorAll('.canvas-element').forEach((el) => {
+                el.style.marginBottom = '';
+            });
+        }
         this.updateCardPreviewInnerMinHeight(inner);
         const boardEl = wrap.querySelector('.card-preview-board-overlay');
         const boardH = boardEl ? Math.ceil(boardEl.offsetHeight) : 0;
