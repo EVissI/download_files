@@ -460,6 +460,35 @@ class ContentEditor {
         return Object.keys(o).length ? o : null;
     }
 
+    /**
+     * Payload кадра для предпросмотра / просмотра сохранённой карточки: board и cardData из sharedContext,
+     * если в самом кадре их нет (как в JSON после сохранения с общим контекстом).
+     */
+    getPayloadForCardPreviewRender(payload) {
+        if (!payload || typeof payload !== 'object') return payload;
+        const sc = this._contentCardSharedContext;
+        if (!sc || typeof sc !== 'object' || (!sc.board && !sc.cardData)) {
+            return payload;
+        }
+        let p;
+        try {
+            p = JSON.parse(JSON.stringify(payload));
+        } catch (e) {
+            return payload;
+        }
+        if (p.board == null && sc.board != null && typeof sc.board === 'object') {
+            try {
+                p.board = JSON.parse(JSON.stringify(sc.board));
+            } catch (e) {
+                p.board = sc.board;
+            }
+        }
+        if (sc.cardData && typeof sc.cardData === 'object') {
+            p.cardData = this.mergeSharedUnderFrameCardData(sc.cardData, p.cardData);
+        }
+        return p;
+    }
+
     /** Подставить shared board/cardData в клон payload перед restore (пустой новый кадр). */
     applyContentCardSharedToEditorPayload(payload) {
         const sc = this._contentCardSharedContext;
@@ -5619,8 +5648,9 @@ class ContentEditor {
             return;
         }
 
-        const list = Array.isArray(payload.elements) ? payload.elements : [];
-        const canvasBg = this.resolveSavedCanvasBackground(payload);
+        const effectivePayload = this.getPayloadForCardPreviewRender(payload);
+        const list = Array.isArray(effectivePayload.elements) ? effectivePayload.elements : [];
+        const canvasBg = this.resolveSavedCanvasBackground(effectivePayload);
         host.style.backgroundColor = canvasBg;
 
         const wrap = document.createElement('div');
@@ -5662,13 +5692,13 @@ class ContentEditor {
             el.style.top = '';
             el.style.left = '';
         });
-        this.refreshPreviewTableElementsFromCardData(inner, payload);
+        this.refreshPreviewTableElementsFromCardData(inner, effectivePayload);
         inner
             .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
             .forEach((el) => this.setupCardPreviewTableCollapse(el));
 
-        if (this.shouldShowBoardInCardPreview(payload)) {
-            this.appendCardPreviewBoardOverlay(wrap, payload);
+        if (this.shouldShowBoardInCardPreview(effectivePayload)) {
+            this.appendCardPreviewBoardOverlay(wrap, effectivePayload);
         }
         wrap.appendChild(inner);
         host.appendChild(wrap);

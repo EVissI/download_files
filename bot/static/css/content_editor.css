@@ -2061,7 +2061,7 @@ button.content-card-admin-info-file-link:hover {
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.45);
 }
 
-.canvas-element.table-element > table.ce-content-table {
+.canvas-element.table-element table.ce-content-table {
     margin: 0 auto !important;
     border-collapse: collapse !important;
     width: 100% !important;
@@ -2078,8 +2078,8 @@ button.content-card-admin-info-file-link:hover {
     box-sizing: border-box !important;
 }
 
-.canvas-element.table-element > table.ce-content-table thead th,
-.canvas-element.table-element > table.ce-content-table tbody td {
+.canvas-element.table-element table.ce-content-table thead th,
+.canvas-element.table-element table.ce-content-table tbody td {
     border: 1px solid #555 !important;
     padding: 12px 16px !important;
     text-align: left !important;
@@ -2089,33 +2089,33 @@ button.content-card-admin-info-file-link:hover {
     box-sizing: border-box !important;
 }
 
-.canvas-element.table-element > table.ce-content-table tbody td:nth-child(2),
-.canvas-element.table-element > table.ce-content-table tbody td:nth-child(3),
-.canvas-element.table-element > table.ce-content-table tbody td:nth-child(4) {
+.canvas-element.table-element table.ce-content-table tbody td:nth-child(2),
+.canvas-element.table-element table.ce-content-table tbody td:nth-child(3),
+.canvas-element.table-element table.ce-content-table tbody td:nth-child(4) {
     text-align: center !important;
 }
 
-.canvas-element.table-element > table.ce-content-table thead th {
+.canvas-element.table-element table.ce-content-table thead th {
     background-color: #444 !important;
     font-weight: bold !important;
     text-align: center !important;
 }
 
-.canvas-element.table-element > table.ce-content-table tbody tr:nth-child(even) td {
+.canvas-element.table-element table.ce-content-table tbody tr:nth-child(even) td {
     background-color: #2a2a2a !important;
 }
 
-.canvas-element.table-element > table.ce-content-table tbody tr:hover td {
+.canvas-element.table-element table.ce-content-table tbody tr:hover td {
     background-color: #3a3a3a !important;
 }
 
 @media (max-width: 768px) {
-    .canvas-element.table-element > table.ce-content-table {
+    .canvas-element.table-element table.ce-content-table {
         font-size: 16px !important;
     }
 
-    .canvas-element.table-element > table.ce-content-table thead th,
-    .canvas-element.table-element > table.ce-content-table tbody td {
+    .canvas-element.table-element table.ce-content-table thead th,
+    .canvas-element.table-element table.ce-content-table tbody td {
         padding: 8px 12px !important;
         word-spacing: 12px !important;
     }
