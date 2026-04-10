@@ -3,7 +3,6 @@ import os
 import re
 
 from aiogram import Bot
-from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import BufferedInputFile, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -18,7 +17,7 @@ from sqlalchemy import func
 from wtforms import StringField, validators
 
 from bot.common.service.hint_s3_service import HintS3Storage
-from bot.config import SUPPORT_TG_ID, settings
+from bot.config import SUPPORT_TG_ID, create_bot_for_sync_context, settings
 from bot.db.models import ContentCard
 
 # Разделитель для array_to_string: непечатный символ, чтобы не сливать реальные метки
@@ -38,10 +37,7 @@ def _run_telegram_sync(action):
     """
 
     async def _runner() -> None:
-        tg_bot = Bot(
-            token=settings.BOT_TOKEN,
-            default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-        )
+        tg_bot = create_bot_for_sync_context()
         try:
             await action(tg_bot)
         finally:

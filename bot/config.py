@@ -3,10 +3,12 @@ from loguru import logger
 from bot.common.utils.i18n import create_translator_hub
 from fluentogram import TranslatorHub
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
+from typing import List, Optional
+
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.enums import ParseMode
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from pytz import timezone
@@ -52,6 +54,10 @@ class Settings(BaseSettings):
     REMOTE_REDIS_HOST: str = "localhost"
     WORKERS_COUNT: int = 1
 
+    # HTTP/SOCKS прокси для запросов к api.telegram.org (нужен пакет aiohttp-socks).
+    # Пример: http://user:pass@host:8080 или socks5://host:1080
+    TELEGRAM_PROXY: Optional[str] = None
+
     @property
     def DB_URL(self):
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:5432/{self.POSTGRES_DB}"
@@ -71,9 +77,23 @@ class Settings(BaseSettings):
 settings = Settings()
 translator_hub: TranslatorHub = create_translator_hub()
 
-bot = Bot(
-    token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
+
+def _build_bot() -> Bot:
+    kwargs = dict(
+        token=settings.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    if settings.TELEGRAM_PROXY:
+        kwargs["session"] = AiohttpSession(proxy=settings.TELEGRAM_PROXY)
+    return Bot(**kwargs)
+
+
+def create_bot_for_sync_context() -> Bot:
+    """Отдельный Bot для asyncio.run() из синхронного кода (иный event loop)."""
+    return _build_bot()
+
+
+bot = _build_bot()
 admins = settings.ROOT_ADMIN_IDS
 SUPPORT_TG_ID = 826161194
 
