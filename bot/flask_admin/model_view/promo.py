@@ -135,6 +135,9 @@ class PromocodeModelView(ModelView):
             item.max_usage = None
         if item.duration_days == 0:
             item.duration_days = None
+        if item.promocode_type == PromocodeType.CARDS:
+            # Карточечные промокоды не должны истекать по времени.
+            item.duration_days = None
         if item.promocode_type == PromocodeType.REGULAR:
             item.cards_issue_quantity = None
         elif not item.cards_issue_quantity or item.cards_issue_quantity <= 0:

@@ -12,4 +12,37 @@
 
 {% block head_js %}
 {{ super() }}
+<script>
+    (function () {
+        function closestGroup(el) {
+            if (!el || !el.closest) return null;
+            return el.closest(".form-group, .control-group, .field-box");
+        }
+
+        function togglePromoDuration() {
+            var promoType = document.querySelector('[name="promocode_type"]');
+            var duration = document.querySelector('[name="duration_days"]');
+            if (!promoType || !duration) return;
+
+            var group = closestGroup(duration);
+            if (!group) return;
+
+            var value = String(promoType.value || "").toLowerCase();
+            var isCards = value === "cards";
+            group.style.display = isCards ? "none" : "";
+            if (isCards) {
+                duration.value = "";
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            var promoType = document.querySelector('[name="promocode_type"]');
+            var duration = document.querySelector('[name="duration_days"]');
+            if (!promoType || !duration) return;
+
+            togglePromoDuration();
+            promoType.addEventListener("change", togglePromoDuration);
+        });
+    })();
+</script>
 {% endblock %}
