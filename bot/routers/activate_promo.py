@@ -51,10 +51,11 @@ async def cancel_promo_activation(
     i18n: TranslatorRunner,
     user_info: User
 ):
+    user_role = user_info.role
     await state.clear()
     await message.answer(
         message.text,
-        reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
+        reply_markup=MainKeyboard.build(user_role=user_role, i18n=i18n)
     )
 
 @activate_promo_router.message(StateFilter(ActivatePromoState.promo_code), F.text, UserInfo())
@@ -70,6 +71,12 @@ async def handle_promo_code_input(
     """
     promo_code = message.text.strip()
     user_id = message.from_user.id
+    # Копируем нужные значения заранее, чтобы не обращаться к ORM-объекту
+    # после commit/expire (иначе возможен MissingGreenlet).
+    user_role = user_info.role
+    user_username = user_info.username
+    user_first_name = user_info.first_name
+    user_db_id = user_info.id
 
     try:
         promo_dao = PromoCodeDAO(session_without_commit)
@@ -80,10 +87,14 @@ async def handle_promo_code_input(
             if is_activate:
                 text = i18n.user.static.promo_activated()
                 try:
-                    link = f'@{user_info.username}' if user_info.username else f"tg://user?id={user_info.id}"
+                    link = (
+                        f"@{user_username}"
+                        if user_username
+                        else f"tg://user?id={user_db_id}"
+                    )
                     await message.bot.send_message(
                         settings.CHAT_GROUP_ID,
-                        f"<b>Пользователь: {user_info.first_name} ({link})\nПромокод: {promo_code}\n\n</b>",
+                        f"<b>Пользователь: {user_first_name} ({link})\nПромокод: {promo_code}\n\n</b>",
                         parse_mode="HTML",
                     )
                 except Exception as e:
@@ -97,5 +108,5 @@ async def handle_promo_code_input(
         text = i18n.user.static.error_processing_promo()
     finally:
         await session_without_commit.commit()
-        await message.answer(text, reply_markup=MainKeyboard.build(user_info.role, i18n))
+        await message.answer(text, reply_markup=MainKeyboard.build(user_role, i18n))
         await state.clear()
