@@ -1,0 +1,77 @@
+<script>
+    (function () {
+        function findPromoTypeField(root) {
+            var field =
+                root.querySelector('[name="promocode_type"]') ||
+                root.querySelector('[id$="promocode_type"]');
+            if (field) return field;
+
+            var selects = root.querySelectorAll("select");
+            for (var i = 0; i < selects.length; i++) {
+                var s = selects[i];
+                var values = Array.prototype.map.call(s.options || [], function (o) {
+                    return String(o.value || "").toLowerCase();
+                });
+                var hasCards = values.some(function (v) { return v.indexOf("cards") !== -1; });
+                var hasRegular = values.some(function (v) { return v.indexOf("regular") !== -1; });
+                if (hasCards && hasRegular) return s;
+            }
+            return null;
+        }
+
+        function findDurationField(root) {
+            return (
+                root.querySelector('[name="duration_days"]') ||
+                root.querySelector('[id$="duration_days"]')
+            );
+        }
+
+        function fieldGroup(el) {
+            return el && el.closest
+                ? el.closest(".form-group, .control-group, .field-box, .formField")
+                : null;
+        }
+
+        function isCards(value) {
+            return String(value || "").toLowerCase().indexOf("cards") !== -1;
+        }
+
+        function applyToggle(root) {
+            root = root || document;
+            var promoType = findPromoTypeField(root);
+            var duration = findDurationField(root);
+            if (!promoType || !duration) return;
+
+            var group = fieldGroup(duration);
+            if (!group) return;
+
+            var hide = isCards(promoType.value);
+            group.style.display = hide ? "none" : "";
+            if (hide) duration.value = "";
+        }
+
+        function init() {
+            applyToggle(document);
+
+            document.addEventListener("change", function (e) {
+                var t = e.target;
+                if (!t) return;
+                var idOrName = String(t.name || t.id || "").toLowerCase();
+                if (idOrName.indexOf("promocode_type") !== -1 || t.tagName === "SELECT") {
+                    applyToggle(document);
+                }
+            });
+
+            var observer = new MutationObserver(function () {
+                applyToggle(document);
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", init);
+        } else {
+            init();
+        }
+    })();
+</script>

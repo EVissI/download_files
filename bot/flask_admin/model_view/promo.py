@@ -61,6 +61,8 @@ class PromocodeContentCardInline(ModelView, CompactCRUDMixin):
 
 class PromocodeModelView(ModelView):
     datamodel = SQLAInterface(Promocode)
+    add_template = "promocode_add.html"
+    edit_template = "promocode_edit.html"
 
     list_columns = [
         "code",
