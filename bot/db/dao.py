@@ -820,19 +820,26 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             logger.error(f"Ошибка при загрузке активных промокодов: {e}")
             raise
 
-    async def validate_promo_code(self, code: str, user_id: int) -> bool:
+    async def validate_promo_code(self, code: str, user_id: int) -> tuple[bool, str]:
         """
         Проверяет, можно ли активировать промокод для пользователя.
+        Возвращает (is_valid, reason_code).
         """
         try:
-            promocode = await self.find_by_code(code)
+            query = (
+                select(Promocode)
+                .where(Promocode.code == code)
+                .options(selectinload(Promocode.content_cards))
+            )
+            result = await self._session.execute(query)
+            promocode = result.scalar_one_or_none()
             if not promocode:
-                return False
+                return False, "not_found"
             if not promocode.is_active:
-                return False
+                return False, "inactive"
             if promocode.max_usage is not None and promocode.activate_count is not None:
                 if promocode.activate_count >= promocode.max_usage:
-                    return False
+                    return False, "limit_reached"
 
             query = select(UserPromocode).where(
                 UserPromocode.user_id == user_id,
@@ -841,11 +848,36 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             result = await self._session.execute(query)
             user_promo = result.scalar_one_or_none()
             if user_promo:
-                return False
-            return True
+                return False, "already_used"
+
+            if promocode.promocode_type == PromocodeType.CARDS:
+                cards_to_issue = max(0, promocode.cards_issue_quantity or 0)
+                if cards_to_issue <= 0:
+                    return False, "cards_quantity_invalid"
+                if not promocode.content_cards:
+                    return False, "cards_not_configured"
+
+                existing_card_ids_query = select(UserContentCard.content_card_id).where(
+                    UserContentCard.user_id == user_id
+                )
+                existing_card_ids_result = await self._session.execute(
+                    existing_card_ids_query
+                )
+                existing_card_ids = {
+                    row[0] for row in existing_card_ids_result.all() if row[0] is not None
+                }
+                available_cards = [
+                    promo_card
+                    for promo_card in promocode.content_cards
+                    if promo_card.content_card_id not in existing_card_ids
+                ]
+                if not available_cards:
+                    return False, "no_new_cards"
+
+            return True, "ok"
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при валидации промокода '{code}': {e}")
-            return False
+            return False, "db_error"
 
     async def activate_promo_code(self, code: str, user_id: int) -> bool:
         """

@@ -23,6 +23,24 @@ class ActivatePromoState(StatesGroup):
 
 activate_promo_router = Router()
 
+
+def _promo_validation_error_text(reason: str, i18n: TranslatorRunner) -> str:
+    """Понятный текст причины, почему промокод не активирован."""
+    reason_to_text = {
+        "not_found": "Промокод не найден.",
+        "inactive": "Этот промокод неактивен.",
+        "limit_reached": "Лимит активаций этого промокода исчерпан.",
+        "already_used": "Вы уже использовали этот промокод.",
+        "cards_quantity_invalid": (
+            "Этот промокод настроен некорректно: не указано количество карточек для выдачи."
+        ),
+        "cards_not_configured": (
+            "Этот промокод настроен некорректно: к нему не привязаны карточки."
+        ),
+        "no_new_cards": "По этому промокоду для вас больше нет новых карточек.",
+    }
+    return reason_to_text.get(reason, i18n.user.static.invalid_promo())
+
 @activate_promo_router.callback_query(PromoCallback.filter(F.action == "activate"))
 async def handle_activate_promo(
     callback: CallbackQuery,
@@ -80,7 +98,9 @@ async def handle_promo_code_input(
 
     try:
         promo_dao = PromoCodeDAO(session_without_commit)
-        is_valid = await promo_dao.validate_promo_code(promo_code, user_id)
+        is_valid, validation_reason = await promo_dao.validate_promo_code(
+            promo_code, user_id
+        )
 
         if is_valid:
             is_activate = await promo_dao.activate_promo_code(promo_code, user_id)
@@ -102,7 +122,7 @@ async def handle_promo_code_input(
             else:
                 text = i18n.user.static.invalid_promo()
         else:
-            text = i18n.user.static.invalid_promo()
+            text = _promo_validation_error_text(validation_reason, i18n)
     except Exception as e:
         logger.error(f"Error processing promo code: {e}")
         text = i18n.user.static.error_processing_promo()
