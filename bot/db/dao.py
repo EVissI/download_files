@@ -829,7 +829,6 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             query = (
                 select(Promocode)
                 .where(Promocode.code == code)
-                .options(selectinload(Promocode.content_cards))
             )
             result = await self._session.execute(query)
             promocode = result.scalar_one_or_none()
@@ -854,7 +853,15 @@ class PromoCodeDAO(BaseDAO[Promocode]):
                 cards_to_issue = max(0, promocode.cards_issue_quantity or 0)
                 if cards_to_issue <= 0:
                     return False, "cards_quantity_invalid"
-                if not promocode.content_cards:
+
+                promo_cards_query = (
+                    select(PromocodeContentCard)
+                    .where(PromocodeContentCard.promocode_id == promocode.id)
+                    .order_by(PromocodeContentCard.position.asc())
+                )
+                promo_cards_result = await self._session.execute(promo_cards_query)
+                promo_cards = list(promo_cards_result.scalars().all())
+                if not promo_cards:
                     return False, "cards_not_configured"
 
                 existing_card_ids_query = select(UserContentCard.content_card_id).where(
@@ -868,7 +875,7 @@ class PromoCodeDAO(BaseDAO[Promocode]):
                 }
                 available_cards = [
                     promo_card
-                    for promo_card in promocode.content_cards
+                    for promo_card in promo_cards
                     if promo_card.content_card_id not in existing_card_ids
                 ]
                 if not available_cards:
@@ -892,9 +899,6 @@ class PromoCodeDAO(BaseDAO[Promocode]):
                 .where(Promocode.code == code)
                 .options(
                     selectinload(Promocode.services),
-                    selectinload(Promocode.content_cards).selectinload(
-                        PromocodeContentCard.content_card
-                    ),
                 )
             )
             result = await self._session.execute(query)
@@ -918,6 +922,14 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             if promocode.promocode_type == PromocodeType.CARDS:
                 cards_to_issue = max(0, promocode.cards_issue_quantity or 0)
                 if cards_to_issue > 0:
+                    promo_cards_query = (
+                        select(PromocodeContentCard)
+                        .where(PromocodeContentCard.promocode_id == promocode.id)
+                        .order_by(PromocodeContentCard.position.asc())
+                    )
+                    promo_cards_result = await self._session.execute(promo_cards_query)
+                    promo_cards = list(promo_cards_result.scalars().all())
+
                     # Исключаем уже выданные пользователю карточки и сохраняем общий порядок.
                     existing_card_ids_query = select(UserContentCard.content_card_id).where(
                         UserContentCard.user_id == user_id
@@ -930,7 +942,7 @@ class PromoCodeDAO(BaseDAO[Promocode]):
                     }
 
                     issued_now = 0
-                    for promo_card in promocode.content_cards:
+                    for promo_card in promo_cards:
                         if promo_card.content_card_id in existing_card_ids:
                             continue
                         self._session.add(
