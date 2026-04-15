@@ -1,0 +1,11 @@
+{% extends "appbuilder/general/model/add_cascade.html" %}
+
+{% block head_js %}
+{{ super() }}
+{% include "_promocode_form_toggle_js.html" %}
+{% endblock %}
+
+{% block tail_js %}
+{{ super() }}
+{% include "_promocode_form_toggle_js.html" %}
+{% endblock %}
