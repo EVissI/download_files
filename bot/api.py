@@ -261,6 +261,20 @@ async def content_card_view_page(request: Request):
     return response
 
 
+@app.get("/cards-cabinet")
+async def cards_cabinet_page(request: Request):
+    """Личный кабинет: сетка карточек пользователя (Telegram WebApp)."""
+    cache_timestamp = int(time.time())
+    response = templates.TemplateResponse(
+        "cards_cabinet.html",
+        {"request": request, "cache_timestamp": cache_timestamp},
+    )
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 @app.get("/pokaz/hints")
 async def get_pokaz_hints(xgid: str, chat_id: Optional[int] = None):
     """
@@ -574,6 +588,12 @@ class ContentCardFetchBody(BaseModel):
     content_card_id: int = Field(..., ge=1)
 
 
+class ContentCardMyListBody(BaseModel):
+    """Список карточек пользователя для личного кабинета (Telegram WebApp)."""
+
+    init_data: str = Field(..., min_length=1)
+
+
 class ContentCardHintMatBody(BaseModel):
     """Скачивание исходного .mat из S3 (hints/{game_id}.mat) по имени файла карточки."""
 
@@ -731,6 +751,31 @@ async def update_content_card(body: ContentCardUpdateBody):
         await session.commit()
 
     return {"ok": True, "content_card_id": body.content_card_id}
+
+
+@app.post("/api/content_cards/my_list")
+async def content_cards_my_list(body: ContentCardMyListBody):
+    """
+    Список id карточек, доступных текущему пользователю (связи user_content_cards),
+    в стабильном порядке (по id связи).
+    """
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(
+            status_code=401, detail="Недействительные данные Telegram"
+        )
+    uid = (user_data.get("user") or {}).get("id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(uid)
+
+    async with async_session_maker() as session:
+        ucc_dao = UserContentCardDAO(session)
+        links = await ucc_dao.get_all_by_user(user_id)
+        links.sort(key=lambda row: row.id)
+        cards = [{"content_card_id": row.content_card_id} for row in links]
+
+    return {"cards": cards}
 
 
 @app.post("/api/content_cards/fetch")

@@ -177,6 +177,11 @@ class DetailedAnalysis(Base):
     user: Mapped["User"] = relationship("User", back_populates="detailed_analyzes")
 
 
+class PromocodeType(str, enum.Enum):
+    REGULAR = "regular"
+    CARDS = "cards"
+
+
 class Promocode(Base):
     __tablename__ = "promocode"
 
@@ -188,6 +193,12 @@ class Promocode(Base):
         Integer, default=0, server_default="0"
     )
     duration_days: Mapped[Optional[int]] = mapped_column(Integer, default=None)
+    promocode_type: Mapped["PromocodeType"] = mapped_column(
+        Enum(PromocodeType, name="promocodetype"),
+        default=PromocodeType.REGULAR,
+        nullable=False,
+    )
+    cards_issue_quantity: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     services: Mapped[list["PromocodeServiceQuantity"]] = relationship(
         "PromocodeServiceQuantity",
@@ -197,6 +208,12 @@ class Promocode(Base):
 
     users: Mapped[list["UserPromocode"]] = relationship(
         "UserPromocode", back_populates="promocode", cascade="all, delete-orphan"
+    )
+    content_cards: Mapped[list["PromocodeContentCard"]] = relationship(
+        "PromocodeContentCard",
+        back_populates="promocode",
+        cascade="all, delete-orphan",
+        order_by="PromocodeContentCard.position",
     )
 
     @property
@@ -264,6 +281,9 @@ class UserPromocode(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
     promocode_id: Mapped[int] = mapped_column(Integer, ForeignKey("promocode.id"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    issued_cards_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     remaining_services: Mapped[list["UserPromocodeService"]] = relationship(
         "UserPromocodeService",
@@ -273,6 +293,10 @@ class UserPromocode(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="used_promocodes")
     promocode: Mapped["Promocode"] = relationship("Promocode", back_populates="users")
+    issued_content_cards: Mapped[list["UserContentCard"]] = relationship(
+        "UserContentCard",
+        back_populates="source_user_promocode",
+    )
 
     @property
     @renders("promo_date_range")
@@ -596,6 +620,40 @@ class ContentCard(Base):
         back_populates="content_card",
         cascade="all, delete-orphan",
     )
+    promocodes: Mapped[list["PromocodeContentCard"]] = relationship(
+        "PromocodeContentCard",
+        back_populates="content_card",
+        cascade="all, delete-orphan",
+    )
+
+
+class PromocodeContentCard(Base):
+    """Связь промокода с карточками и порядком выдачи."""
+
+    __tablename__ = "promocode_content_cards"
+    __table_args__ = (
+        UniqueConstraint(
+            "promocode_id",
+            "position",
+            name="uq_promocode_content_cards_promocode_id_position",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    promocode_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("promocode.id", ondelete="CASCADE"), nullable=False
+    )
+    content_card_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("content_cards.id", ondelete="CASCADE"), nullable=False
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    promocode: Mapped["Promocode"] = relationship(
+        "Promocode", back_populates="content_cards"
+    )
+    content_card: Mapped["ContentCard"] = relationship(
+        "ContentCard", back_populates="promocodes"
+    )
 
 
 class UserContentCard(Base):
@@ -617,8 +675,14 @@ class UserContentCard(Base):
     content_card_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("content_cards.id", ondelete="CASCADE"), nullable=False
     )
+    source_user_promocode_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("user_promocode.id", ondelete="SET NULL"), nullable=True
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="user_content_cards")
     content_card: Mapped["ContentCard"] = relationship(
         "ContentCard", back_populates="users"
+    )
+    source_user_promocode: Mapped[Optional["UserPromocode"]] = relationship(
+        "UserPromocode", back_populates="issued_content_cards"
     )

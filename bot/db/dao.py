@@ -13,6 +13,8 @@ from bot.db.models import (
     Analysis,
     DetailedAnalysis,
     Promocode,
+    PromocodeContentCard,
+    PromocodeType,
     UserAnalizePayment,
     UserAnalizePaymentService,
     UserContentCard,
@@ -847,7 +849,9 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 
     async def activate_promo_code(self, code: str, user_id: int) -> bool:
         """
-        Активирует промокод для пользователя (добавляет запись в user_promocode, увеличивает activate_count и создает записи в user_promocode_service).
+        Активирует промокод для пользователя:
+        - regular: создаёт балансы в user_promocode_service;
+        - cards: привязывает N карточек к пользователю через user_content_cards.
         """
         try:
             # Находим промокод по коду с явной загрузкой связанных данных
@@ -855,8 +859,11 @@ class PromoCodeDAO(BaseDAO[Promocode]):
                 select(Promocode)
                 .where(Promocode.code == code)
                 .options(
-                    selectinload(Promocode.services)
-                )  # Явная загрузка связанных услуг
+                    selectinload(Promocode.services),
+                    selectinload(Promocode.content_cards).selectinload(
+                        PromocodeContentCard.content_card
+                    ),
+                )
             )
             result = await self._session.execute(query)
             promocode = result.scalar_one_or_none()
@@ -876,14 +883,45 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             )
             self._session.add(user_promo)
 
-            # Создаём записи в UserPromocodeService для каждой услуги, связанной с промокодом
-            for service in promocode.services:
-                user_promo_service = UserPromocodeService(
-                    user_promocode=user_promo,
-                    service_type=service.service_type,
-                    remaining_quantity=service.quantity,
-                )
-                self._session.add(user_promo_service)
+            if promocode.promocode_type == PromocodeType.CARDS:
+                cards_to_issue = max(0, promocode.cards_issue_quantity or 0)
+                if cards_to_issue > 0:
+                    # Исключаем уже выданные пользователю карточки и сохраняем общий порядок.
+                    existing_card_ids_query = select(UserContentCard.content_card_id).where(
+                        UserContentCard.user_id == user_id
+                    )
+                    existing_card_ids_result = await self._session.execute(
+                        existing_card_ids_query
+                    )
+                    existing_card_ids = {
+                        row[0] for row in existing_card_ids_result.all() if row[0] is not None
+                    }
+
+                    issued_now = 0
+                    for promo_card in promocode.content_cards:
+                        if promo_card.content_card_id in existing_card_ids:
+                            continue
+                        self._session.add(
+                            UserContentCard(
+                                user_id=user_id,
+                                content_card_id=promo_card.content_card_id,
+                                source_user_promocode=user_promo,
+                            )
+                        )
+                        existing_card_ids.add(promo_card.content_card_id)
+                        issued_now += 1
+                        if issued_now >= cards_to_issue:
+                            break
+                    user_promo.issued_cards_count = issued_now
+            else:
+                # Создаём записи в UserPromocodeService для каждой услуги regular-промокода.
+                for service in promocode.services:
+                    user_promo_service = UserPromocodeService(
+                        user_promocode=user_promo,
+                        service_type=service.service_type,
+                        remaining_quantity=service.quantity,
+                    )
+                    self._session.add(user_promo_service)
 
             # Увеличиваем счётчик активаций промокода
             promocode.activate_count = (promocode.activate_count or 0) + 1

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои карточки</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            background: #1a1a1a;
+            color: #e8e8e8;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .wrap {
+            padding: 16px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin: 0 0 12px;
+        }
+
+        .hint {
+            font-size: 0.85rem;
+            color: #9a9a9a;
+            margin-bottom: 16px;
+        }
+
+        .err {
+            color: #ff8a80;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+            gap: 10px;
+        }
+
+        .tile {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 10px;
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .tile:active {
+            background: #3d5a80;
+            border-color: #5a7aaa;
+        }
+
+        .empty {
+            color: #888;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h1>Мои карточки</h1>
+        <p class="hint">Нажмите на квадрат с номером, чтобы открыть просмотр.</p>
+        <div id="err" class="err" style="display:none;"></div>
+        <div id="grid" class="grid"></div>
+    </div>
+    <script>
+        (function () {
+            if (window.Telegram && window.Telegram.WebApp) {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
+            }
+            var initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+            var errEl = document.getElementById('err');
+            var gridEl = document.getElementById('grid');
+
+            function showErr(msg) {
+                errEl.textContent = msg;
+                errEl.style.display = 'block';
+            }
+
+            if (!initData) {
+                showErr('Откройте страницу из Telegram (нужен initData).');
+                return;
+            }
+
+            fetch('/api/content_cards/my_list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ init_data: initData }),
+            })
+                .then(function (r) {
+                    if (!r.ok) {
+                        return r.json().then(function (j) {
+                            throw new Error(j.detail || r.statusText);
+                        }).catch(function () {
+                            throw new Error('Ошибка загрузки списка');
+                        });
+                    }
+                    return r.json();
+                })
+                .then(function (data) {
+                    var cards = (data && data.cards) || [];
+                    if (!cards.length) {
+                        gridEl.innerHTML = '<p class="empty">У вас пока нет доступных карточек.</p>';
+                        return;
+                    }
+                    cards.forEach(function (row, index) {
+                        var id = row.content_card_id;
+                        var btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'tile';
+                        btn.textContent = String(index + 1);
+                        btn.title = 'Карточка #' + id;
+                        btn.addEventListener('click', function () {
+                            var path = '/content-card-view?content_card_id=' + encodeURIComponent(id);
+                            window.location.assign(path);
+                        });
+                        gridEl.appendChild(btn);
+                    });
+                })
+                .catch(function (e) {
+                    showErr(e.message || String(e));
+                });
+        })();
+    </script>
+</body>
+
+</html>

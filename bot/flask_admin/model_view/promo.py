@@ -2,9 +2,16 @@ from flask_appbuilder import ModelView, CompactCRUDMixin
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from wtforms import BooleanField
 from flask_babel import lazy_gettext as _
-from bot.db.models import Promocode, PromocodeServiceQuantity
+from bot.db.models import (
+    ContentCard,
+    Promocode,
+    PromocodeContentCard,
+    PromocodeServiceQuantity,
+    PromocodeType,
+)
 from flask import redirect, url_for
 from sqlalchemy.orm import joinedload
+
 
 class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     """Инлайн-вьюха для услуг — именно с CompactCRUDMixin для компактного CRUD на одной странице"""
@@ -28,6 +35,30 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
     show_columns = []
 
 
+class PromocodeContentCardInline(ModelView, CompactCRUDMixin):
+    """Инлайн-вьюха для карточек промокода в порядке выдачи."""
+
+    datamodel = SQLAInterface(PromocodeContentCard)
+    list_title = "Карточки"
+    can_create = True
+    can_edit = True
+    can_delete = True
+    can_show = False
+    can_list = True
+
+    list_columns = ["position", "content_card_id"]
+    form_columns = ["position", "content_card_id"]
+
+    label_columns = {
+        "position": "Порядок",
+        "content_card_id": "Карточка",
+    }
+    add_exclude_columns = ["created_at", "updated_at"]
+    edit_exclude_columns = ["created_at", "updated_at"]
+    page_size = 50
+    show_columns = []
+
+
 class PromocodeModelView(ModelView):
     datamodel = SQLAInterface(Promocode)
 
@@ -37,6 +68,8 @@ class PromocodeModelView(ModelView):
         "max_usage_display",
         "activate_count_display",
         "duration_days_display",
+        "promocode_type",
+        "cards_issue_quantity",
         "services_summary",
     ]
     title = "Промокод"
@@ -45,16 +78,21 @@ class PromocodeModelView(ModelView):
                      'max_usage_display':'Макс использований',
                      'activate_count_display':'Кол-во использований',
                      'duration_days_display':'Длительность',
+                     'promocode_type':'Тип промокода',
+                     'cards_issue_quantity':'Выдавать карточек',
                      'max_usage':'Макс использований',
                      'activate_count':'Кол-во использований',
                      'duration_days':'Длительность',
+                     'content_cards':'Карточки',
                      'services_summary':'Услуги',}
     
     add_columns = edit_columns = [
         "code",
         "is_active",
+        "promocode_type",
         "max_usage",           
-        "duration_days",       
+        "duration_days",
+        "cards_issue_quantity",
     ]
     order_columns = ['code', 'is_active']
     show_columns = [
@@ -63,6 +101,8 @@ class PromocodeModelView(ModelView):
         "max_usage_display",
         "activate_count_display",
         "duration_days_display",
+        "promocode_type",
+        "cards_issue_quantity",
         "services_summary",
     ]
 
@@ -77,10 +117,13 @@ class PromocodeModelView(ModelView):
         )
     }
     add_form_extra_fields = edit_form_extra_fields
-    related_views = [PromocodeServiceQuantityInline]
+    related_views = [PromocodeServiceQuantityInline, PromocodeContentCardInline]
 
     def get_query(self):
-        return super().get_query().options(joinedload(Promocode.services))
+        return super().get_query().options(
+            joinedload(Promocode.services),
+            joinedload(Promocode.content_cards).joinedload(PromocodeContentCard.content_card),
+        )
 
     def get_count_query(self):
         return super().get_count_query().options(joinedload(Promocode.services))
@@ -92,6 +135,10 @@ class PromocodeModelView(ModelView):
             item.max_usage = None
         if item.duration_days == 0:
             item.duration_days = None
+        if item.promocode_type == PromocodeType.REGULAR:
+            item.cards_issue_quantity = None
+        elif not item.cards_issue_quantity or item.cards_issue_quantity <= 0:
+            item.cards_issue_quantity = 1
 
     def pre_add(self, item):
         self._normalize_limits(item)
