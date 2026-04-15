@@ -20,7 +20,7 @@
                     var direct = root.querySelector("#" + CSS.escape(forId));
                     if (direct) return direct;
                 }
-                var wrap = rowFor(lbl) || lbl.parentElement;
+                var wrap = fieldContainerFor(lbl) || lbl.parentElement;
                 if (wrap) {
                     var input = wrap.querySelector("select, input");
                     if (input) return input;
@@ -29,9 +29,9 @@
             return null;
         }
 
-        function rowFor(el) {
+        function fieldContainerFor(el) {
             return el && el.closest
-                ? el.closest(".form-group, .control-group, .field-box, .formField, .row")
+                ? el.closest(".form-group, .control-group, .field-box, .formField")
                 : null;
         }
 
@@ -84,19 +84,13 @@
             return v.indexOf("cards") !== -1 || v.indexOf("карточ") !== -1;
         }
 
-        function setRowVisible(el, visible) {
-            var row = rowFor(el);
-            if (row) row.style.display = visible ? "" : "none";
-
-            if (el && el.id) {
-                var labels = document.querySelectorAll('label[for="' + el.id + '"]');
-                for (var i = 0; i < labels.length; i++) {
-                    var lblRow = rowFor(labels[i]);
-                    if (lblRow && lblRow !== row) {
-                        lblRow.style.display = visible ? "" : "none";
-                    }
-                }
+        function setFieldVisible(el, visible) {
+            var container = fieldContainerFor(el);
+            if (container) {
+                container.style.display = visible ? "" : "none";
+                return;
             }
+            el.style.display = visible ? "" : "none";
         }
 
         function applyToggle(root) {
@@ -106,7 +100,7 @@
             if (!promoType || !duration) return;
 
             var hide = isCards(currentPromoTypeToken(promoType));
-            setRowVisible(duration, !hide);
+            setFieldVisible(duration, !hide);
             if (hide) {
                 duration.value = "";
             }
