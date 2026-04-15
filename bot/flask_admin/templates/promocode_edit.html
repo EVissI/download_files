@@ -1,11 +1,6 @@
 {% extends "appbuilder/general/model/edit.html" %}
 
-{% block head_js %}
-{{ super() }}
-{% include "_promocode_form_toggle_js.html" %}
-{% endblock %}
-
-{% block tail_js %}
+{% block edit_form %}
 {{ super() }}
 {% include "_promocode_form_toggle_js.html" %}
 {% endblock %}
