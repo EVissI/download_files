@@ -67,6 +67,13 @@
             );
         }
 
+        function findCardsIssueQuantityField(root) {
+            return (
+                byNameOrId(root, "cards_issue_quantity") ||
+                byLabelText(root, "выдавать карточ")
+            );
+        }
+
         function currentPromoTypeToken(promoTypeField) {
             if (!promoTypeField) return "";
             if (promoTypeField.tagName === "SELECT") {
@@ -88,21 +95,43 @@
             var container = fieldContainerFor(el);
             if (container) {
                 container.style.display = visible ? "" : "none";
-                return;
             }
-            el.style.display = visible ? "" : "none";
+            if (el && !container) {
+                el.style.display = visible ? "" : "none";
+            }
+
+            // Иногда label находится отдельно от контейнера поля.
+            if (el && el.id) {
+                var labels = document.querySelectorAll('label[for="' + el.id + '"]');
+                for (var i = 0; i < labels.length; i++) {
+                    var label = labels[i];
+                    var labelContainer = fieldContainerFor(label);
+                    if (labelContainer && labelContainer !== container) {
+                        labelContainer.style.display = visible ? "" : "none";
+                    } else {
+                        label.style.display = visible ? "" : "none";
+                    }
+                }
+            }
         }
 
         function applyToggle(root) {
             root = root || document;
             var promoType = findPromoTypeField(root);
             var duration = findDurationField(root);
-            if (!promoType || !duration) return;
+            var cardsIssueQuantity = findCardsIssueQuantityField(root);
+            if (!promoType) return;
 
             var hide = isCards(currentPromoTypeToken(promoType));
-            setFieldVisible(duration, !hide);
-            if (hide) {
-                duration.value = "";
+            // cards -> скрываем длительность, regular -> скрываем количество карточек.
+            if (duration) {
+                setFieldVisible(duration, !hide);
+                if (hide) {
+                    duration.value = "";
+                }
+            }
+            if (cardsIssueQuantity) {
+                setFieldVisible(cardsIssueQuantity, hide);
             }
         }
 
