@@ -34,9 +34,7 @@ def _promo_validation_error_text(reason: str, i18n: TranslatorRunner) -> str:
         "cards_quantity_invalid": (
             "Этот промокод настроен некорректно: не указано количество карточек для выдачи."
         ),
-        "cards_not_configured": (
-            "Этот промокод настроен некорректно: к нему не привязаны карточки."
-        ),
+        "cards_not_configured": "В системе нет карточек для выдачи по этому промокоду.",
         "no_new_cards": "По этому промокоду для вас больше нет новых карточек.",
     }
     return reason_to_text.get(reason, i18n.user.static.invalid_promo())

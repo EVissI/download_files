@@ -3,9 +3,7 @@ from flask_appbuilder.models.sqla.interface import SQLAInterface
 from wtforms import BooleanField
 from flask_babel import lazy_gettext as _
 from bot.db.models import (
-    ContentCard,
     Promocode,
-    PromocodeContentCard,
     PromocodeServiceQuantity,
     PromocodeType,
 )
@@ -29,30 +27,6 @@ class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
 
     label_columns = {'service_type':'Сервис',
                      'quantity':'Кол-во',}
-    add_exclude_columns = ["created_at", "updated_at"]
-    edit_exclude_columns = ["created_at", "updated_at"]
-    page_size = 50
-    show_columns = []
-
-
-class PromocodeContentCardInline(ModelView, CompactCRUDMixin):
-    """Инлайн-вьюха для карточек промокода в порядке выдачи."""
-
-    datamodel = SQLAInterface(PromocodeContentCard)
-    list_title = "Карточки"
-    can_create = True
-    can_edit = True
-    can_delete = True
-    can_show = False
-    can_list = True
-
-    list_columns = ["position", "content_card_id"]
-    form_columns = ["position", "content_card_id"]
-
-    label_columns = {
-        "position": "Порядок",
-        "content_card_id": "Карточка",
-    }
     add_exclude_columns = ["created_at", "updated_at"]
     edit_exclude_columns = ["created_at", "updated_at"]
     page_size = 50
@@ -119,12 +93,11 @@ class PromocodeModelView(ModelView):
         )
     }
     add_form_extra_fields = edit_form_extra_fields
-    related_views = [PromocodeServiceQuantityInline, PromocodeContentCardInline]
+    related_views = [PromocodeServiceQuantityInline]
 
     def get_query(self):
         return super().get_query().options(
             joinedload(Promocode.services),
-            joinedload(Promocode.content_cards).joinedload(PromocodeContentCard.content_card),
         )
 
     def get_count_query(self):

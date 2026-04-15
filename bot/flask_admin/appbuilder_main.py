@@ -13,7 +13,6 @@ from bot.flask_admin.model_view.payment import (
     AnalizePaymentServiceQuantityInline,
 )
 from bot.flask_admin.model_view.promo import (
-    PromocodeContentCardInline,
     PromocodeModelView,
     PromocodeServiceQuantityInline,
 )
@@ -78,7 +77,6 @@ def register_models(appbuilder, db):
     """Регистрация моделей в админ-панели"""
 
     appbuilder.add_view_no_menu(PromocodeServiceQuantityInline)
-    appbuilder.add_view_no_menu(PromocodeContentCardInline)
     appbuilder.add_view(
         PromocodeModelView,
         "Промокоды",
