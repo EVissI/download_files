@@ -1,0 +1,49 @@
+{% extends "appbuilder/general/model/show_cascade.html" %}
+
+{% block show_form %}
+{{ super() }}
+<div class="well" style="margin-top: 1em;">
+    <h4>Карточки пользователя</h4>
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#grantCardsModal">
+        Выдать карточки
+    </button>
+</div>
+
+<div class="modal fade" id="grantCardsModal" tabindex="-1" role="dialog" aria-labelledby="grantCardsModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="post" action="{{ url_for(user_fab_endpoint ~ '.grant_cards', pk=pk) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="grantCardsModalLabel">Выдать карточки пользователю</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="cards_quantity">Сколько карточек выдать</label>
+                        <input
+                            id="cards_quantity"
+                            name="cards_quantity"
+                            type="number"
+                            min="1"
+                            step="1"
+                            class="form-control"
+                            required
+                            placeholder="Например, 10"
+                        >
+                    </div>
+                    <p class="text-muted" style="margin-bottom: 0;">
+                        Карточки выдаются по возрастанию ID, пропуская уже имеющиеся у пользователя.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Выдать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

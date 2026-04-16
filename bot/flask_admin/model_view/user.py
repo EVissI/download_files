@@ -1,8 +1,32 @@
-from flask_appbuilder import ModelView
+import asyncio
+
+from aiogram import Bot
+from flask import flash, redirect, request, url_for
+from flask_appbuilder import ModelView, expose, has_access, permission_name
 from flask_appbuilder.models.sqla.interface import SQLAInterface
-from bot.db.models import User, UserPromocode, UserAnalizePayment, Promocode
+from bot.db.models import (
+    ContentCard,
+    Promocode,
+    User,
+    UserAnalizePayment,
+    UserContentCard,
+    UserPromocode,
+)
+from bot.config import create_bot_for_sync_context
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
+
+
+def _run_telegram_sync(action):
+    async def _runner() -> None:
+        tg_bot = create_bot_for_sync_context()
+        try:
+            await action(tg_bot)
+        finally:
+            await tg_bot.session.close()
+
+    asyncio.run(_runner())
 
 
 class CustomUserSQLAInterface(SQLAInterface):
@@ -127,6 +151,7 @@ class UserModelView(ModelView):
     datamodel = CustomUserSQLAInterface(User)
     base_permissions = ['can_list', 'can_show']
     related_views = [UserPromocodeInline, UserAnalizePaymentInline]
+    show_template = "show_user.html"
 
     list_columns = [
         "id",
@@ -155,3 +180,92 @@ class UserModelView(ModelView):
     }
 
     search_columns = ["id", "username", "player_username", "admin_insert_name"]
+
+    def render_template(self, template, **kwargs):
+        kwargs.setdefault(
+            "user_fab_endpoint", getattr(self, "endpoint", self.__class__.__name__)
+        )
+        return super().render_template(template, **kwargs)
+
+    @expose("/grant_cards/<int:pk>", methods=["POST"])
+    @has_access
+    @permission_name("show")
+    def grant_cards(self, pk: int):
+        user = self.datamodel.get(pk)
+        if not user:
+            flash("Пользователь не найден", "danger")
+            return redirect(url_for(f"{self.endpoint}.list"))
+
+        raw_qty = (request.form.get("cards_quantity") or "").strip()
+        try:
+            cards_quantity = int(raw_qty)
+        except (TypeError, ValueError):
+            cards_quantity = 0
+
+        if cards_quantity <= 0:
+            flash("Введите корректное количество карточек (целое число > 0).", "warning")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        session = self.datamodel.session
+        issued_count = 0
+        try:
+            all_card_ids_result = session.execute(
+                select(ContentCard.id).order_by(ContentCard.id.asc())
+            )
+            all_card_ids = [
+                row[0] for row in all_card_ids_result.all() if row[0] is not None
+            ]
+            if not all_card_ids:
+                flash("В системе нет карточек для выдачи.", "warning")
+                return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+            existing_card_ids_result = session.execute(
+                select(UserContentCard.content_card_id).where(
+                    UserContentCard.user_id == pk
+                )
+            )
+            existing_card_ids = {
+                row[0] for row in existing_card_ids_result.all() if row[0] is not None
+            }
+
+            available_card_ids = [
+                card_id for card_id in all_card_ids if card_id not in existing_card_ids
+            ]
+            if not available_card_ids:
+                flash("У пользователя уже есть все доступные карточки.", "warning")
+                return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+            to_issue_ids = available_card_ids[:cards_quantity]
+            for card_id in to_issue_ids:
+                session.add(UserContentCard(user_id=pk, content_card_id=card_id))
+            session.commit()
+            issued_count = len(to_issue_ids)
+        except SQLAlchemyError as e:
+            session.rollback()
+            flash(f"Ошибка выдачи карточек: {e}", "danger")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        if issued_count > 0:
+            try:
+                async def _send(tg_bot: Bot) -> None:
+                    await tg_bot.send_message(
+                        chat_id=pk,
+                        text=(
+                            f"Вам зачислено {issued_count} карточек.\n"
+                            "Посмотрите их в личном кабинете по команде /cards."
+                        ),
+                    )
+
+                _run_telegram_sync(_send)
+            except Exception as e:
+                flash(f"Карточки выданы, но сообщение в Telegram не отправлено: {e}", "warning")
+
+        if issued_count < cards_quantity:
+            flash(
+                f"Выдано {issued_count} карточек из {cards_quantity}: больше доступных карточек нет.",
+                "warning",
+            )
+        else:
+            flash(f"Пользователю выдано {issued_count} карточек.", "success")
+
+        return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
