@@ -38,6 +38,8 @@
             margin-bottom: 14px;
             display: flex;
             justify-content: flex-start;
+            align-items: center;
+            gap: 10px;
         }
         .search-input {
             width: 70%;
@@ -50,6 +52,25 @@
             outline: none;
         }
         .search-input:focus {
+            border-color: #5f8fbd;
+        }
+        .status-filter-wrap {
+            width: 30%;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .status-filter-select {
+            width: min(100%, 140px);
+            background: #2b2b2b;
+            color: #f0f0f0;
+            border: 1px solid #454545;
+            border-radius: 10px;
+            padding: 10px 8px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+        .status-filter-select:focus {
             border-color: #5f8fbd;
         }
 
@@ -122,6 +143,16 @@
                 placeholder="Поиск по номеру карточки"
                 autocomplete="off"
             >
+            <div class="status-filter-wrap">
+                <select id="status-filter" class="status-filter-select" title="Фильтр по статусу">
+                    <option value="">Все статусы</option>
+                    <option value="UNVIEWED">Не просмотренные</option>
+                    <option value="VIEWED">Просмотренные</option>
+                    <option value="SOLVED">Решенная</option>
+                    <option value="FAVORITE">Избранная</option>
+                    <option value="HARD">Сложная</option>
+                </select>
+            </div>
         </div>
         <div id="err" class="err" style="display:none;"></div>
         <div id="grid" class="grid"></div>
@@ -136,6 +167,7 @@
             var errEl = document.getElementById('err');
             var gridEl = document.getElementById('grid');
             var searchInput = document.getElementById('card-search');
+            var statusFilter = document.getElementById('status-filter');
             var allCards = [];
 
             function showErr(msg) {
@@ -157,13 +189,20 @@
                     renderCards();
                 });
             }
+            if (statusFilter) {
+                statusFilter.addEventListener('change', renderCards);
+            }
 
             function renderCards() {
                 gridEl.innerHTML = '';
                 var filter = searchInput ? String(searchInput.value || '') : '';
+                var statusFilterValue = statusFilter ? String(statusFilter.value || '').toUpperCase() : '';
                 var cards = allCards.filter(function (row, index) {
                     var cardNumber = String(index + 1);
-                    return !filter || cardNumber.indexOf(filter) !== -1;
+                    var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
+                    var passNumber = !filter || cardNumber.indexOf(filter) !== -1;
+                    var passStatus = !statusFilterValue || status === statusFilterValue;
+                    return passNumber && passStatus;
                 });
 
                 if (!cards.length) {
