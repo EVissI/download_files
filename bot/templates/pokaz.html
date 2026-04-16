@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="{{ lang }}">
 
 <head>
@@ -2485,8 +2485,10 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="/static/js/content_editor.js?t={{ cache_timestamp }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Применяем переводы из Fluent (pokaz-i18n)
@@ -3143,6 +3145,22 @@
     </div>
 
     <div class="admin-comment-container">
+        <button id="openPokazCardEditorBtn" onclick="openPokazCardEditor()" style="
+            display: none;
+            margin-right: 10px;
+            padding: 8px 12px;
+            background-color: #2d7a4e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        " onmouseover="this.style.backgroundColor='#25643f'" onmouseout="this.style.backgroundColor='#2d7a4e'">
+            Редактор карточек
+        </button>
         <button id="adminCommentBtn" onclick="openAdminCommentModal()">
             <i class="fa fa-commenting-o"></i>
             <span data-i18n="comment_btn">Комментарий</span>
@@ -4420,10 +4438,48 @@
         let imagesLoaded = 0;
         const totalImages = 21;
         let upperPlayerColor = 'black'; // 'black' or 'white' - который игрок сверху (при 'black' нижний игрок — белые)
+        let pokazIsAdmin = false;
+        let latestHintsData = null;
 
         // XGID string from server (if provided) - read from hidden script element
         const initialXgidElement = document.getElementById('initial-xgid-data');
         const initialXgid = initialXgidElement ? JSON.parse(initialXgidElement.textContent) : null;
+
+        function currentChatIdForEditor() {
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const unsafe = window.Telegram.WebApp.initDataUnsafe;
+                    const id = unsafe && unsafe.user ? unsafe.user.id : null;
+                    if (id != null) return String(id);
+                }
+            } catch (_e) { /* ignore */ }
+            const qp = new URLSearchParams(window.location.search || '');
+            return String(qp.get('chat_id') || '');
+        }
+
+        async function checkPokazAdminStatus() {
+            try {
+                let initData = '';
+                if (window.Telegram && window.Telegram.WebApp) {
+                    initData = window.Telegram.WebApp.initData || '';
+                }
+                if (!initData) return;
+                const response = await fetch('/api/check_admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData: initData })
+                });
+                if (!response.ok) return;
+                const data = await response.json().catch(() => ({}));
+                if (data && data.is_admin) {
+                    pokazIsAdmin = true;
+                    const btn = document.getElementById('openPokazCardEditorBtn');
+                    if (btn) btn.style.display = 'inline-block';
+                }
+            } catch (e) {
+                console.error('checkPokazAdminStatus:', e);
+            }
+        }
 
         function imageLoaded() {
             imagesLoaded++;
@@ -6201,6 +6257,7 @@
                 })
                 .then(data => {
                     const hintsData = { hints: data.hints || [] };
+                    latestHintsData = hintsData;
                     if (moveHistory.length > 0) {
                         moveHistory[moveHistory.length - 1].hintsData = hintsData;
                     }
@@ -6231,6 +6288,7 @@
                 })
                 .catch(error => {
                     const hintsData = { error: error.message };
+                    latestHintsData = null;
                     if (moveHistory.length > 0) {
                         moveHistory[moveHistory.length - 1].hintsData = hintsData;
                     }
@@ -6818,6 +6876,98 @@
             }
         });
 
+        window.hintViewerChatId = currentChatIdForEditor();
+        window.hintViewerMatFileName = 'pokaz_position.mat';
+
+        window.getHintViewerBoardSnapshot = function () {
+            try {
+                const turnVal = document.getElementById('turn-select')?.value || 'white';
+                const d1 = parseInt(document.getElementById('dice1-select')?.value || '0', 10) || 0;
+                const d2 = parseInt(document.getElementById('dice2-select')?.value || '0', 10) || 0;
+                const cubeShown = parseInt(document.getElementById('cube-shown-select')?.value || '0', 10) || 0;
+                const cubeValue = parseInt(document.getElementById('cube-value-select')?.value || '0', 10) || 0;
+                const cubeOwner = document.getElementById('cube-owner-select')?.value || 'white';
+                const cubeDisplay = cubeShown !== 0 ? cubeShown : cubeValue;
+                const matchLength = currentGameType === 'матч'
+                    ? (parseInt(document.getElementById('match_lenght')?.value || '0', 10) || 0)
+                    : 0;
+
+                let cubeVisual = null;
+                if (cubeDisplay > 0) {
+                    if (cubeShown > 0) {
+                        cubeVisual = {
+                            mode: 'side',
+                            value: cubeDisplay,
+                            player: cubeOwner === 'white' ? 'red' : 'black'
+                        };
+                    } else {
+                        cubeVisual = { mode: 'center', value: cubeDisplay };
+                    }
+                }
+
+                return {
+                    frameId: `pokaz_${Date.now()}`,
+                    gameId: 'pokaz',
+                    currentGameNum: null,
+                    frameIndex: historyIndex || 0,
+                    invertColors: upperPlayerColor === 'white',
+                    xgid: typeof generateXGID === 'function' ? generateXGID() : '',
+                    positions: {
+                        red: JSON.parse(JSON.stringify(positions.first || {})),
+                        black: JSON.parse(JSON.stringify(positions.second || {}))
+                    },
+                    cubeVisual: cubeVisual,
+                    scores: {
+                        matchLength: matchLength,
+                        gameRedScore: parseInt(document.getElementById('lower-score')?.value || '0', 10) || 0,
+                        gameBlackScore: parseInt(document.getElementById('upper-score')?.value || '0', 10) || 0
+                    },
+                    turn: {
+                        turn: turnVal,
+                        action: null,
+                        player: turnVal === 'white' ? 'red' : 'black',
+                        player_name: turnVal,
+                        dice: [d1, d2],
+                        cube: cubeDisplay || null,
+                        gnu_move: null
+                    }
+                };
+            } catch (e) {
+                console.error('getHintViewerBoardSnapshot(pokaz):', e);
+                return { error: String(e.message || e) };
+            }
+        };
+
+        window.getHintViewerCurrentCardData = function () {
+            try {
+                if (!latestHintsData || !Array.isArray(latestHintsData.hints) || !latestHintsData.hints.length) {
+                    return null;
+                }
+                const first = latestHintsData.hints[0];
+                if (first && first.type === 'cube_hint') {
+                    return { cube_hints: latestHintsData.hints };
+                }
+                return { hints: latestHintsData.hints };
+            } catch (e) {
+                console.error('getHintViewerCurrentCardData(pokaz):', e);
+                return null;
+            }
+        };
+
+        window.openPokazCardEditor = function () {
+            if (!pokazIsAdmin) return;
+            if (typeof contentEditor === 'undefined') {
+                console.error('ContentEditor не инициализирован');
+                return;
+            }
+            contentEditor.openModalWithData(
+                typeof window.getHintViewerCurrentCardData === 'function'
+                    ? window.getHintViewerCurrentCardData()
+                    : null
+            );
+        };
+
+        checkPokazAdminStatus();
         window.addEventListener('resize', updateAllDropdownPositions);
     });
 
