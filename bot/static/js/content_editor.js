@@ -282,7 +282,7 @@ class ContentEditor {
         }
         const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
         if (!initData) {
-            showErr('Откройте страницу из Telegram (нужен initData)');
+            showErr('Откройте страницу из Telegram');
             return;
         }
         try {

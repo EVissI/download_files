@@ -340,11 +340,16 @@
                 }
             }
 
-            ensureNavButtons();
-            var observer = new MutationObserver(function () {
+            var attempts = 0;
+            var maxAttempts = 40;
+            var timer = setInterval(function () {
                 ensureNavButtons();
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
+                attempts += 1;
+                if (attempts >= maxAttempts) {
+                    clearInterval(timer);
+                }
+            }, 250);
+            ensureNavButtons();
         })();
     </script>
 </body>
