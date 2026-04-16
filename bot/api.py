@@ -912,7 +912,7 @@ async def content_cards_my_list(body: ContentCardMyListBody):
             for row in links
         ]
 
-    return {"cards": cards}
+    return {"cards": cards, "is_root_admin": is_root_admin}
 
 
 @app.post("/api/content_cards/all_labels")

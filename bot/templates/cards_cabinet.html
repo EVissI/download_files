@@ -25,8 +25,41 @@
         h1 {
             font-size: 1.15rem;
             font-weight: 600;
-            margin: 0 0 12px;
+            margin: 0;
             text-align: center;
+        }
+        .cabinet-header {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            margin: 0 0 12px;
+            min-height: 30px;
+            gap: 8px;
+        }
+        .cabinet-header-spacer {
+            width: 28px;
+            height: 28px;
+        }
+        .cabinet-admin-btn {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            background: #2d2d2d;
+            color: #ddd;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            line-height: 1;
+            text-decoration: none;
+        }
+        .cabinet-admin-btn.is-visible {
+            display: inline-flex;
+        }
+        .cabinet-admin-btn:active {
+            background: #3a3a3a;
         }
 
         .hint {
@@ -154,7 +187,11 @@
 
 <body>
     <div class="wrap">
-        <h1>Мои карточки</h1>
+        <div class="cabinet-header">
+            <span class="cabinet-header-spacer" aria-hidden="true"></span>
+            <h1>Мои карточки</h1>
+            <a id="admin-fab-btn" class="cabinet-admin-btn" href="/admin" title="Перейти в админку" aria-label="Перейти в админку">A</a>
+        </div>
         <div class="search-wrap">
             <input
                 id="card-search"
@@ -198,6 +235,7 @@
             var statusFilter = document.getElementById('status-filter');
             var labelFilterWrap = document.getElementById('label-filter-wrap');
             var labelFilter = document.getElementById('label-filter');
+            var adminFabBtn = document.getElementById('admin-fab-btn');
             var allCards = [];
 
             function showErr(msg) {
@@ -320,6 +358,10 @@
                     return r.json();
                 })
                 .then(function (data) {
+                    var isRootAdmin = !!(data && data.is_root_admin);
+                    if (isRootAdmin && adminFabBtn) {
+                        adminFabBtn.classList.add('is-visible');
+                    }
                     var cards = (data && data.cards) || [];
                     if (!cards.length) {
                         gridEl.innerHTML = '<p class="empty">У вас пока нет доступных карточек.</p>';
