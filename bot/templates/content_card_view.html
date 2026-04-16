@@ -23,29 +23,22 @@
         *, *::before, *::after {
             box-sizing: inherit;
         }
-        .cards-cabinet-topbar {
-            display: flex;
-            align-items: center;
-            min-height: 52px;
-            padding: max(8px, env(safe-area-inset-top, 0px)) 12px 8px;
-            background: #252525;
-            border-bottom: 1px solid #3a3a3a;
-        }
-        .cards-cabinet-back-link {
+        .content-card-view-back-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #2f2f2f;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #3d5a80;
             color: #fff;
             text-decoration: none;
-            border: 1px solid #4b4b4b;
+            border: 1px solid #5a7aaa;
             font-size: 18px;
+            margin-right: auto;
         }
-        .cards-cabinet-back-link:active {
-            background: #3b3b3b;
+        .content-card-view-back-btn:active {
+            opacity: 0.9;
         }
     </style>
     <script>
@@ -56,22 +49,39 @@
 </head>
 
 <body>
-    <div class="cards-cabinet-topbar" role="navigation">
-        <a
-            class="cards-cabinet-back-link"
-            href="/cards-cabinet"
-            aria-label="Назад в кабинет карточек"
-            title="Назад в кабинет"
-        >
-            <i class="fa fa-chevron-left" aria-hidden="true"></i>
-        </a>
-    </div>
     <!-- Кнопки админа (добавление/удаление кадра и т.д.) — content_editor.js (initContentCardViewOnly + _ensureContentCardAddFrameUi). -->
     <script>
         if (window.Telegram && window.Telegram.WebApp) {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
         }
+
+        (function () {
+            function ensureBackButton() {
+                var header = document.querySelector('#contentCardViewRoot .card-preview-header');
+                if (!header) return;
+                if (header.querySelector('.content-card-view-back-btn')) return;
+
+                var link = document.createElement('a');
+                link.className = 'content-card-view-back-btn';
+                link.href = '/cards-cabinet';
+                link.setAttribute('aria-label', 'Назад в кабинет карточек');
+                link.setAttribute('title', 'Назад в кабинет');
+                link.innerHTML = '<i class="fa fa-chevron-left" aria-hidden="true"></i>';
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    window.location.assign('/cards-cabinet');
+                });
+
+                header.insertBefore(link, header.firstChild);
+            }
+
+            ensureBackButton();
+            var observer = new MutationObserver(function () {
+                ensureBackButton();
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        })();
     </script>
 </body>
 
