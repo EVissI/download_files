@@ -6881,7 +6881,9 @@
         });
 
         window.hintViewerChatId = currentChatIdForEditor();
-        window.hintViewerMatFileName = 'pokaz_position.mat';
+        // Для конструктора позиций исходного .mat нет: сохраняем карточки с не-.mat именем,
+        // чтобы в инфо не предлагалось «скачать исходный mat» и не было путаницы.
+        window.hintViewerMatFileName = 'pokaz_position.json';
 
         window.getHintViewerBoardSnapshot = function () {
             try {

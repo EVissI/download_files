@@ -745,9 +745,17 @@ class ContentEditor {
         if (!modal || !body) return;
         const rawFn = String(this._contentCardAdminMeta.file_name || '').trim();
         const fnEsc = this.escapeHtml(rawFn || '—');
+        const sharedBoard = this._contentCardSharedContext && this._contentCardSharedContext.board
+            ? this._contentCardSharedContext.board
+            : null;
+        const isPokazSource =
+            sharedBoard &&
+            typeof sharedBoard === 'object' &&
+            String(sharedBoard.gameId || '').toLowerCase() === 'pokaz';
         const canDownloadMat =
             rawFn &&
             rawFn.toLowerCase().endsWith('.mat') &&
+            !isPokazSource &&
             this._contentCardViewCardId != null;
         const fileDd = canDownloadMat
             ? `<dd><button type="button" class="content-card-admin-info-file-link">${fnEsc}</button></dd>`
