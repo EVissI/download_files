@@ -6960,6 +6960,9 @@
                 console.error('ContentEditor не инициализирован');
                 return;
             }
+            // Для pokaz всегда включаем баннер «матч / манигейм» над доской,
+            // чтобы при сохранении кадра он попадал в payload.editor.showBoardMatchBanner.
+            contentEditor.boardMatchBannerEnabled = true;
             contentEditor.openModalWithData(
                 typeof window.getHintViewerCurrentCardData === 'function'
                     ? window.getHintViewerCurrentCardData()
