@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.wsgi import WSGIMiddleware
+from sqlalchemy import select
 from typing import Any, Optional
 import secrets
 
@@ -30,7 +31,7 @@ from bot.db.dao import (
     ContentCardDAO,
     UserContentCardDAO,
 )
-from bot.db.models import ServiceType, UserContentCardStatus
+from bot.db.models import ContentCard, ServiceType, UserContentCardStatus
 from bot.db.schemas import SContentCardCreate, SUserContentCardCreate
 from loguru import logger
 import traceback
@@ -783,6 +784,7 @@ async def content_cards_my_list(body: ContentCardMyListBody):
     if uid is None:
         raise HTTPException(status_code=401, detail="В init_data нет user")
     user_id = int(uid)
+    is_root_admin = user_id in settings.ROOT_ADMIN_IDS
 
     async with async_session_maker() as session:
         ucc_dao = UserContentCardDAO(session)
@@ -796,11 +798,46 @@ async def content_cards_my_list(body: ContentCardMyListBody):
                     if hasattr(row.card_status, "value")
                     else str(row.card_status)
                 ),
+                "labels": (
+                    list(row.content_card.labels)
+                    if is_root_admin and row.content_card and row.content_card.labels
+                    else []
+                ),
             }
             for row in links
         ]
 
     return {"cards": cards}
+
+
+@app.post("/api/content_cards/all_labels")
+async def content_cards_all_labels(body: ContentCardMyListBody):
+    """Все уникальные метки карточек (только ROOT_ADMIN_IDS)."""
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(
+            status_code=401, detail="Недействительные данные Telegram"
+        )
+    uid = (user_data.get("user") or {}).get("id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(uid)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        rows = await session.execute(select(ContentCard.labels))
+        labels_set: set[str] = set()
+        for (labels,) in rows.all():
+            if not labels:
+                continue
+            for item in labels:
+                if item is None:
+                    continue
+                text = str(item).strip()
+                if text:
+                    labels_set.add(text)
+
+    return {"labels": sorted(labels_set, key=lambda x: x.lower())}
 
 
 @app.post("/api/content_cards/mark_viewed")

@@ -40,6 +40,7 @@
             justify-content: flex-start;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
         .search-input {
             width: 60%;
@@ -71,6 +72,29 @@
             cursor: pointer;
         }
         .status-filter-select:focus {
+            border-color: #5f8fbd;
+        }
+        .label-filter-wrap {
+            width: 100%;
+            display: none;
+            justify-content: flex-start;
+            margin-top: 2px;
+        }
+        .label-filter-wrap.is-visible {
+            display: flex;
+        }
+        .label-filter-select {
+            width: 60%;
+            background: #2b2b2b;
+            color: #f0f0f0;
+            border: 1px solid #454545;
+            border-radius: 10px;
+            padding: 10px 8px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+        .label-filter-select:focus {
             border-color: #5f8fbd;
         }
 
@@ -153,6 +177,11 @@
                     <option value="HARD">Сложные</option>
                 </select>
             </div>
+            <div id="label-filter-wrap" class="label-filter-wrap">
+                <select id="label-filter" class="label-filter-select" title="Фильтр по метке">
+                    <option value="">Все метки</option>
+                </select>
+            </div>
         </div>
         <div id="err" class="err" style="display:none;"></div>
         <div id="grid" class="grid"></div>
@@ -168,6 +197,8 @@
             var gridEl = document.getElementById('grid');
             var searchInput = document.getElementById('card-search');
             var statusFilter = document.getElementById('status-filter');
+            var labelFilterWrap = document.getElementById('label-filter-wrap');
+            var labelFilter = document.getElementById('label-filter');
             var allCards = [];
 
             function showErr(msg) {
@@ -192,17 +223,23 @@
             if (statusFilter) {
                 statusFilter.addEventListener('change', renderCards);
             }
+            if (labelFilter) {
+                labelFilter.addEventListener('change', renderCards);
+            }
 
             function renderCards() {
                 gridEl.innerHTML = '';
                 var filter = searchInput ? String(searchInput.value || '') : '';
                 var statusFilterValue = statusFilter ? String(statusFilter.value || '').toUpperCase() : '';
+                var labelFilterValue = labelFilter ? String(labelFilter.value || '') : '';
                 var cards = allCards.filter(function (row, index) {
                     var cardNumber = String(index + 1);
                     var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
+                    var labels = Array.isArray(row && row.labels) ? row.labels : [];
                     var passNumber = !filter || cardNumber.indexOf(filter) !== -1;
                     var passStatus = !statusFilterValue || status === statusFilterValue;
-                    return passNumber && passStatus;
+                    var passLabel = !labelFilterValue || labels.indexOf(labelFilterValue) !== -1;
+                    return passNumber && passStatus && passLabel;
                 });
 
                 if (!cards.length) {
@@ -283,6 +320,34 @@
                 })
                 .catch(function (e) {
                     showErr(e.message || String(e));
+                });
+
+            fetch('/api/content_cards/all_labels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ init_data: initData }),
+            })
+                .then(function (r) {
+                    if (!r.ok) {
+                        throw new Error('Нет доступа к фильтру меток');
+                    }
+                    return r.json();
+                })
+                .then(function (data) {
+                    var labels = (data && data.labels) || [];
+                    if (!labels.length || !labelFilter || !labelFilterWrap) {
+                        return;
+                    }
+                    labels.forEach(function (label) {
+                        var opt = document.createElement('option');
+                        opt.value = label;
+                        opt.textContent = label;
+                        labelFilter.appendChild(opt);
+                    });
+                    labelFilterWrap.classList.add('is-visible');
+                })
+                .catch(function () {
+                    // Для не-админов фильтр меток просто скрыт.
                 });
         })();
     </script>
