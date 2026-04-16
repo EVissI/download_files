@@ -92,6 +92,11 @@ def register_models(appbuilder, db):
     )
     appbuilder.add_view(MessagesTextsModelView, "Текстовки", icon="fa-comment")
     appbuilder.add_view(ContentCardModelView, "Карточки", icon="fa-clone")
+    appbuilder.add_link(
+        "Кабинет карточек",
+        href="/admin/cards-cabinet",
+        icon="fa-th-large",
+    )
 
 
 def create_app_for_flask_cli():

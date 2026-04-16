@@ -191,6 +191,7 @@
                 Telegram.WebApp.expand();
             }
             var initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+            var fabToken = (new URLSearchParams(window.location.search || '')).get('fab_token') || '';
             var errEl = document.getElementById('err');
             var gridEl = document.getElementById('grid');
             var searchInput = document.getElementById('card-search');
@@ -204,9 +205,22 @@
                 errEl.style.display = 'block';
             }
 
-            if (!initData) {
-                showErr('Откройте страницу из Telegram.');
+            if (!initData && !fabToken) {
+                showErr('Откройте страницу из Telegram или через FAB-мост.');
                 return;
+            }
+
+            function authPayload(extra) {
+                var base = {};
+                if (initData) {
+                    base.init_data = initData;
+                } else if (fabToken) {
+                    base.fab_token = fabToken;
+                }
+                if (extra && typeof extra === 'object') {
+                    Object.keys(extra).forEach(function (k) { base[k] = extra[k]; });
+                }
+                return base;
             }
 
             if (searchInput) {
@@ -268,7 +282,8 @@
                         var openCard = function () {
                             var path =
                                 '/content-card-view?content_card_id=' + encodeURIComponent(id) +
-                                '&card_number=' + encodeURIComponent(cardNumber);
+                                '&card_number=' + encodeURIComponent(cardNumber) +
+                                (fabToken ? '&fab_token=' + encodeURIComponent(fabToken) : '');
                             window.location.assign(path);
                         };
                         if (status !== 'UNVIEWED') {
@@ -278,10 +293,9 @@
                         fetch('/api/content_cards/mark_viewed', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                init_data: initData,
-                                content_card_id: Number(id),
-                            }),
+                                body: JSON.stringify(
+                                    authPayload({ content_card_id: Number(id) })
+                                ),
                         }).catch(function () {
                             // Даже если отметка статуса не удалась, всё равно открываем карточку.
                         }).finally(openCard);
@@ -293,7 +307,7 @@
             fetch('/api/content_cards/my_list', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ init_data: initData }),
+                body: JSON.stringify(authPayload()),
             })
                 .then(function (r) {
                     if (!r.ok) {
@@ -323,7 +337,7 @@
             fetch('/api/content_cards/all_labels', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ init_data: initData }),
+                body: JSON.stringify(authPayload()),
             })
                 .then(function (r) {
                     if (!r.ok) {

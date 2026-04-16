@@ -2,7 +2,7 @@ import mimetypes
 import uuid
 
 from fastapi import FastAPI, Request, Response, HTTPException, File, Form, UploadFile, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -585,27 +585,31 @@ class ContentCardFileNameCheckBody(BaseModel):
 class ContentCardFetchBody(BaseModel):
     """Загрузка сохранённой карточки для просмотра (Telegram WebApp)."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
 
 
 class ContentCardMyListBody(BaseModel):
     """Список карточек пользователя для личного кабинета (Telegram WebApp)."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
 
 
 class ContentCardMarkViewedBody(BaseModel):
     """Отметка карточки как просмотренной для текущего пользователя."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
 
 
 class ContentCardSetStatusBody(BaseModel):
     """Ручная установка статуса карточки для текущего пользователя."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
     status: UserContentCardStatus
 
@@ -613,7 +617,8 @@ class ContentCardSetStatusBody(BaseModel):
 class ContentCardHintMatBody(BaseModel):
     """Скачивание исходного .mat из S3 (hints/{game_id}.mat) по имени файла карточки."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
 
 
@@ -628,7 +633,8 @@ class ContentCardUpdateBody(BaseModel):
 class ContentCardMetaUpdateBody(BaseModel):
     """Обновление метаданных карточки (метки/примечания) без изменения кадров."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
     labels: list[str] | None = None
     notes: str | None = None
@@ -640,6 +646,49 @@ class ContentCardMediaListBody(BaseModel):
     init_data: str = Field(..., min_length=1)
     continuation_token: str | None = None
     limit: int = Field(48, ge=1, le=100)
+
+
+async def _resolve_content_cards_user_id(
+    init_data: str | None, fab_token: str | None
+) -> int:
+    if init_data:
+        user_data = verify_telegram_webapp_data(init_data)
+        if not user_data:
+            raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
+        uid = (user_data.get("user") or {}).get("id")
+        if uid is None:
+            raise HTTPException(status_code=401, detail="В init_data нет user")
+        return int(uid)
+
+    if fab_token:
+        token_val = await redis_client.get(f"fab_cards_auth:{fab_token}")
+        if not token_val:
+            raise HTTPException(status_code=401, detail="Недействительный FAB-токен")
+        return int(token_val)
+
+    raise HTTPException(status_code=401, detail="Требуется init_data или fab_token")
+
+
+@app.get("/admin/cards-cabinet")
+async def admin_cards_cabinet_bridge(request: Request):
+    """
+    Мост FAB -> кабинет карточек: создаёт временный fab_token и редиректит в /cards-cabinet.
+    Доступно только авторизованному администратору FAB (cookie admin_session).
+    """
+    session_token = request.cookies.get("admin_session")
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    admin_id_raw = await redis_client.get(f"admin_session:{session_token}")
+    if not admin_id_raw:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    admin_id = int(admin_id_raw)
+    if admin_id not in settings.ROOT_ADMIN_IDS:
+        raise HTTPException(status_code=403, detail="Not an admin")
+
+    fab_token = secrets.token_urlsafe(24)
+    await redis_client.set(f"fab_cards_auth:{fab_token}", str(admin_id), expire=7200)
+    url = f"/cards-cabinet?fab_token={fab_token}"
+    return RedirectResponse(url=url, status_code=302)
 
 
 @app.post("/api/content_cards/check_file_name")
@@ -783,14 +832,7 @@ async def update_content_card_meta(body: ContentCardMetaUpdateBody):
     """
     Обновляет labels/notes у существующей карточки. Только ROOT_ADMIN_IDS.
     """
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
-    tg_user = user_data.get("user") or {}
-    user_id = tg_user.get("id")
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(user_id)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
 
     labels = _normalize_content_card_labels(body.labels)
@@ -820,15 +862,7 @@ async def content_cards_my_list(body: ContentCardMyListBody):
     Список id карточек, доступных текущему пользователю (связи user_content_cards),
     в стабильном порядке (по id связи).
     """
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(
-            status_code=401, detail="Недействительные данные Telegram"
-        )
-    uid = (user_data.get("user") or {}).get("id")
-    if uid is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(uid)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     is_root_admin = user_id in settings.ROOT_ADMIN_IDS
 
     async with async_session_maker() as session:
@@ -858,15 +892,7 @@ async def content_cards_my_list(body: ContentCardMyListBody):
 @app.post("/api/content_cards/all_labels")
 async def content_cards_all_labels(body: ContentCardMyListBody):
     """Все уникальные метки карточек (только ROOT_ADMIN_IDS)."""
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(
-            status_code=401, detail="Недействительные данные Telegram"
-        )
-    uid = (user_data.get("user") or {}).get("id")
-    if uid is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(uid)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
 
     async with async_session_maker() as session:
@@ -888,15 +914,7 @@ async def content_cards_all_labels(body: ContentCardMyListBody):
 @app.post("/api/content_cards/mark_viewed")
 async def content_cards_mark_viewed(body: ContentCardMarkViewedBody):
     """Помечает карточку как просмотренную (VIEWED) для текущего пользователя."""
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(
-            status_code=401, detail="Недействительные данные Telegram"
-        )
-    uid = (user_data.get("user") or {}).get("id")
-    if uid is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(uid)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
 
     async with async_session_maker() as session:
         ucc_dao = UserContentCardDAO(session)
@@ -914,15 +932,7 @@ async def content_cards_mark_viewed(body: ContentCardMarkViewedBody):
 @app.post("/api/content_cards/set_status")
 async def content_cards_set_status(body: ContentCardSetStatusBody):
     """Устанавливает статус карточки для текущего пользователя."""
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(
-            status_code=401, detail="Недействительные данные Telegram"
-        )
-    uid = (user_data.get("user") or {}).get("id")
-    if uid is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(uid)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
 
     if body.status in (UserContentCardStatus.UNVIEWED, UserContentCardStatus.VIEWED):
         raise HTTPException(
@@ -949,15 +959,7 @@ async def fetch_content_card(body: ContentCardFetchBody):
     или пользователь в ROOT_ADMIN_IDS.
     Поля file_name, labels и notes отдаются только если user_id в ROOT_ADMIN_IDS.
     """
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(
-            status_code=401, detail="Недействительные данные Telegram"
-        )
-    uid = (user_data.get("user") or {}).get("id")
-    if uid is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(uid)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
 
     async with async_session_maker() as session:
         ucc_dao = UserContentCardDAO(session)
@@ -995,15 +997,7 @@ async def download_content_card_hint_mat(body: ContentCardHintMatBody):
     Имя файла карточки (file_name) должно быть вида {game_id}.mat — как при сохранении из hint viewer.
     Только ROOT_ADMIN_IDS (тот же контур, что и поле «Файл» в информации о карточке).
     """
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(
-            status_code=401, detail="Недействительные данные Telegram"
-        )
-    uid = (user_data.get("user") or {}).get("id")
-    if uid is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(uid)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
 
     async with async_session_maker() as session:

@@ -266,6 +266,7 @@ class ContentEditor {
     async bootstrapContentCardViewPage() {
         const params = new URLSearchParams(window.location.search);
         const cardId = params.get('content_card_id');
+        const fabToken = String(params.get('fab_token') || '');
         const metaHost = document.getElementById('cardPreviewMeta');
         const showErr = (msg) => {
             const t = this.escapeHtml(msg);
@@ -282,16 +283,17 @@ class ContentEditor {
             return;
         }
         const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-        if (!initData) {
-            showErr('Откройте страницу из Telegram');
+        if (!initData && !fabToken) {
+            showErr('Откройте страницу из Telegram или через FAB-мост');
             return;
         }
         try {
+            const authPayload = initData ? { init_data: initData } : { fab_token: fabToken };
             const r = await fetch('/api/content_cards/fetch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    init_data: initData,
+                    ...authPayload,
                     content_card_id: parseInt(cardId, 10),
                 }),
             });
@@ -952,8 +954,10 @@ class ContentEditor {
 
     async _saveContentCardAdminMeta(labels, notes) {
         const initData = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
-        if (!initData) {
-            this.showNotification('Сохранение доступно в Telegram WebApp', 'warning');
+        const params = new URLSearchParams(window.location.search || '');
+        const fabToken = String(params.get('fab_token') || '');
+        if (!initData && !fabToken) {
+            this.showNotification('Сохранение доступно в Telegram WebApp или через FAB-мост', 'warning');
             return false;
         }
         if (this._contentCardViewCardId == null) {
@@ -965,7 +969,7 @@ class ContentEditor {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    init_data: initData,
+                    ...(initData ? { init_data: initData } : { fab_token: fabToken }),
                     content_card_id: Number(this._contentCardViewCardId),
                     labels: labels,
                     notes: notes,
@@ -1014,8 +1018,10 @@ class ContentEditor {
      */
     async downloadContentCardHintMat() {
         const initData = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
-        if (!initData) {
-            this.showNotification('Скачивание доступно в Telegram WebApp', 'warning');
+        const params = new URLSearchParams(window.location.search || '');
+        const fabToken = String(params.get('fab_token') || '');
+        if (!initData && !fabToken) {
+            this.showNotification('Скачивание доступно в Telegram WebApp или через FAB-мост', 'warning');
             return;
         }
         const cid = this._contentCardViewCardId;
@@ -1028,7 +1034,7 @@ class ContentEditor {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    init_data: initData,
+                    ...(initData ? { init_data: initData } : { fab_token: fabToken }),
                     content_card_id: Number(cid),
                 }),
             });
