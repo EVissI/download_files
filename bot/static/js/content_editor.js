@@ -55,6 +55,7 @@ class ContentEditor {
         /** Модалка меток карточки (целиком, не на отдельный кадр) */
         this.cardLabelsModal = null;
         this.cardLabelsDraft = [];
+        this._adminLabelsDraft = [];
 
         /** Кэш открытой IndexedDB для больших аудио (вне квоты localStorage JSON) */
         this._contentEditorMediaDbPromise = null;
@@ -763,13 +764,16 @@ class ContentEditor {
             labelsBlock = '<p class="content-card-admin-info-empty">Нет меток</p>';
         }
         const rawNotes = String(this._contentCardAdminMeta.notes || '').trim();
-        const notesBlock = rawNotes ? `<dd>${this.escapeHtml(rawNotes)}</dd>` : '';
-        const notesSection = rawNotes ? `<dt>Примечания</dt>${notesBlock}` : '';
+        const notesBlock = rawNotes
+            ? `<p>${this.escapeHtml(rawNotes)}</p>`
+            : '<p class="content-card-admin-info-empty">Нет примечаний</p>';
         body.innerHTML =
             `<dl class="content-card-admin-info-dl">` +
             `<dt>Файл</dt>${fileDd}` +
-            `<dt>Метки</dt><dd>${labelsBlock}</dd>` +
-            notesSection +
+            `<dt>Метки <button type="button" class="content-card-admin-info-edit-btn" id="contentCardEditLabelsBtn" style="margin-left:8px;"><i class="fa fa-pencil" aria-hidden="true"></i></button></dt>` +
+            `<dd>${labelsBlock}</dd>` +
+            `<dt>Примечания <button type="button" class="content-card-admin-info-edit-btn" id="contentCardEditNotesBtn" style="margin-left:8px;"><i class="fa fa-pencil" aria-hidden="true"></i></button></dt>` +
+            `<dd>${notesBlock}</dd>` +
             `</dl>`;
         const fileBtn = body.querySelector('.content-card-admin-info-file-link');
         if (fileBtn) {
@@ -778,8 +782,231 @@ class ContentEditor {
                 this.downloadContentCardHintMat();
             });
         }
+        const labelsBtn = body.querySelector('#contentCardEditLabelsBtn');
+        if (labelsBtn) {
+            labelsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.openContentCardAdminLabelsEditModal();
+            });
+        }
+        const notesBtn = body.querySelector('#contentCardEditNotesBtn');
+        if (notesBtn) {
+            notesBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.openContentCardAdminNotesEditModal();
+            });
+        }
         modal.style.display = 'flex';
         modal.setAttribute('aria-hidden', 'false');
+    }
+
+    ensureContentCardAdminLabelsEditModal() {
+        let modal = document.getElementById('contentCardAdminLabelsEditModal');
+        if (modal) return modal;
+        document.body.insertAdjacentHTML(
+            'beforeend',
+            `
+            <div id="contentCardAdminLabelsEditModal" class="card-labels-modal" style="display: none;" aria-hidden="true">
+                <div class="card-labels-overlay" id="contentCardAdminLabelsOverlay"></div>
+                <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="contentCardAdminLabelsTitle">
+                    <h3 id="contentCardAdminLabelsTitle" class="card-labels-title">Метки карточки</h3>
+                    <div class="card-labels-input-row">
+                        <input type="text" id="contentCardAdminLabelsInput" class="card-labels-input" maxlength="500" placeholder="Введите метку и нажмите Enter или «Добавить»" autocomplete="off" />
+                        <button type="button" class="card-labels-add-btn" id="contentCardAdminLabelsAddBtn">Добавить</button>
+                    </div>
+                    <div id="contentCardAdminLabelsList" class="card-labels-list" aria-live="polite"></div>
+                    <div class="card-labels-actions">
+                        <button type="button" class="card-labels-back-btn" id="contentCardAdminLabelsCancelBtn">Отмена</button>
+                        <button type="button" class="card-labels-save-btn" id="contentCardAdminLabelsSaveBtn">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+            `
+        );
+        modal = document.getElementById('contentCardAdminLabelsEditModal');
+        const input = document.getElementById('contentCardAdminLabelsInput');
+        const addBtn = document.getElementById('contentCardAdminLabelsAddBtn');
+        const saveBtn = document.getElementById('contentCardAdminLabelsSaveBtn');
+        const cancelBtn = document.getElementById('contentCardAdminLabelsCancelBtn');
+        const overlay = document.getElementById('contentCardAdminLabelsOverlay');
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.addContentCardAdminLabelFromInput();
+                }
+            });
+        }
+        if (addBtn) addBtn.addEventListener('click', () => this.addContentCardAdminLabelFromInput());
+        if (saveBtn) saveBtn.addEventListener('click', () => this.saveContentCardAdminLabels());
+        if (cancelBtn) cancelBtn.addEventListener('click', () => this.closeContentCardAdminLabelsEditModal());
+        if (overlay) overlay.addEventListener('click', () => this.closeContentCardAdminLabelsEditModal());
+        return modal;
+    }
+
+    openContentCardAdminLabelsEditModal() {
+        if (!this._contentCardAdminMeta) return;
+        const modal = this.ensureContentCardAdminLabelsEditModal();
+        this._adminLabelsDraft = Array.isArray(this._contentCardAdminMeta.labels)
+            ? this._contentCardAdminMeta.labels
+                .map((x) => (typeof x === 'string' ? x.trim() : String(x)))
+                .filter(Boolean)
+            : [];
+        this.renderContentCardAdminLabelsList();
+        const input = document.getElementById('contentCardAdminLabelsInput');
+        if (input) input.value = '';
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => {
+            if (input) input.focus();
+        });
+    }
+
+    closeContentCardAdminLabelsEditModal() {
+        const modal = document.getElementById('contentCardAdminLabelsEditModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    addContentCardAdminLabelFromInput() {
+        const input = document.getElementById('contentCardAdminLabelsInput');
+        if (!input) return;
+        const text = String(input.value || '').trim();
+        if (!text) return;
+        this._adminLabelsDraft.push(text);
+        input.value = '';
+        this.renderContentCardAdminLabelsList();
+        input.focus();
+    }
+
+    removeContentCardAdminLabelAt(index) {
+        if (index < 0 || index >= this._adminLabelsDraft.length) return;
+        this._adminLabelsDraft.splice(index, 1);
+        this.renderContentCardAdminLabelsList();
+    }
+
+    renderContentCardAdminLabelsList() {
+        const list = document.getElementById('contentCardAdminLabelsList');
+        if (!list) return;
+        if (!this._adminLabelsDraft.length) {
+            list.innerHTML = '<span class="card-labels-empty">Пока нет меток</span>';
+            return;
+        }
+        list.innerHTML = this._adminLabelsDraft
+            .map(
+                (label, i) =>
+                    `<span class="card-labels-chip">${this.escapeHtml(label)}` +
+                    `<button type="button" class="ce-card-label-remove-btn" onclick="contentEditor.removeContentCardAdminLabelAt(${i})" aria-label="Удалить метку">&times;</button></span>`
+            )
+            .join('');
+    }
+
+    ensureContentCardAdminNotesEditModal() {
+        let modal = document.getElementById('contentCardAdminNotesEditModal');
+        if (modal) return modal;
+        document.body.insertAdjacentHTML(
+            'beforeend',
+            `
+            <div id="contentCardAdminNotesEditModal" class="card-labels-modal" style="display: none;" aria-hidden="true">
+                <div class="card-labels-overlay" id="contentCardAdminNotesOverlay"></div>
+                <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="contentCardAdminNotesTitle">
+                    <h3 id="contentCardAdminNotesTitle" class="card-labels-title">Примечания карточки</h3>
+                    <textarea id="contentCardAdminNotesTextarea" class="card-labels-input" rows="5" maxlength="4000" placeholder="Введите примечания"></textarea>
+                    <div class="card-labels-actions">
+                        <button type="button" class="card-labels-back-btn" id="contentCardAdminNotesCancelBtn">Отмена</button>
+                        <button type="button" class="card-labels-save-btn" id="contentCardAdminNotesSaveBtn">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+            `
+        );
+        modal = document.getElementById('contentCardAdminNotesEditModal');
+        const saveBtn = document.getElementById('contentCardAdminNotesSaveBtn');
+        const cancelBtn = document.getElementById('contentCardAdminNotesCancelBtn');
+        const overlay = document.getElementById('contentCardAdminNotesOverlay');
+        if (saveBtn) saveBtn.addEventListener('click', () => this.saveContentCardAdminNotes());
+        if (cancelBtn) cancelBtn.addEventListener('click', () => this.closeContentCardAdminNotesEditModal());
+        if (overlay) overlay.addEventListener('click', () => this.closeContentCardAdminNotesEditModal());
+        return modal;
+    }
+
+    openContentCardAdminNotesEditModal() {
+        if (!this._contentCardAdminMeta) return;
+        const modal = this.ensureContentCardAdminNotesEditModal();
+        const textarea = document.getElementById('contentCardAdminNotesTextarea');
+        if (textarea) textarea.value = String(this._contentCardAdminMeta.notes || '');
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => {
+            if (textarea) textarea.focus();
+        });
+    }
+
+    closeContentCardAdminNotesEditModal() {
+        const modal = document.getElementById('contentCardAdminNotesEditModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    async _saveContentCardAdminMeta(labels, notes) {
+        const initData = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
+        if (!initData) {
+            this.showNotification('Сохранение доступно в Telegram WebApp', 'warning');
+            return false;
+        }
+        if (this._contentCardViewCardId == null) {
+            this.showNotification('Не удалось определить карточку', 'error');
+            return false;
+        }
+        try {
+            const res = await fetch('/api/content_cards/update_meta', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    init_data: initData,
+                    content_card_id: Number(this._contentCardViewCardId),
+                    labels: labels,
+                    notes: notes,
+                }),
+            });
+            if (!res.ok) {
+                let detail = 'Ошибка сохранения метаданных карточки';
+                try {
+                    const j = await res.json();
+                    if (j && j.detail) detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail);
+                } catch (_e) {}
+                throw new Error(detail);
+            }
+            return true;
+        } catch (e) {
+            this.showNotification(e.message || String(e), 'error');
+            return false;
+        }
+    }
+
+    async saveContentCardAdminLabels() {
+        if (!this._contentCardAdminMeta) return;
+        const normalized = this._adminLabelsDraft.map((s) => String(s).trim()).filter(Boolean);
+        const ok = await this._saveContentCardAdminMeta(normalized, this._contentCardAdminMeta.notes || '');
+        if (!ok) return;
+        this._contentCardAdminMeta.labels = normalized;
+        this.closeContentCardAdminLabelsEditModal();
+        this.openContentCardAdminInfoModal();
+        this.showNotification('Метки обновлены', 'success');
+    }
+
+    async saveContentCardAdminNotes() {
+        if (!this._contentCardAdminMeta) return;
+        const textarea = document.getElementById('contentCardAdminNotesTextarea');
+        const notes = textarea ? String(textarea.value || '').trim() : '';
+        const ok = await this._saveContentCardAdminMeta(this._contentCardAdminMeta.labels || [], notes);
+        if (!ok) return;
+        this._contentCardAdminMeta.notes = notes;
+        this.closeContentCardAdminNotesEditModal();
+        this.openContentCardAdminInfoModal();
+        this.showNotification('Примечания обновлены', 'success');
     }
 
     /**

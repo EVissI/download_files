@@ -625,6 +625,15 @@ class ContentCardUpdateBody(BaseModel):
     frames: dict[str, Any]
 
 
+class ContentCardMetaUpdateBody(BaseModel):
+    """Обновление метаданных карточки (метки/примечания) без изменения кадров."""
+
+    init_data: str = Field(..., min_length=1)
+    content_card_id: int = Field(..., ge=1)
+    labels: list[str] | None = None
+    notes: str | None = None
+
+
 class ContentCardMediaListBody(BaseModel):
     """Список объектов в S3 под префиксом медиа карточек текущего админа (для галереи в редакторе)."""
 
@@ -764,6 +773,42 @@ async def update_content_card(body: ContentCardUpdateBody):
         if not card:
             raise HTTPException(status_code=404, detail="Карточка не найдена")
         await card_dao.update(body.content_card_id, {"frames": body.frames})
+        await session.commit()
+
+    return {"ok": True, "content_card_id": body.content_card_id}
+
+
+@app.post("/api/content_cards/update_meta")
+async def update_content_card_meta(body: ContentCardMetaUpdateBody):
+    """
+    Обновляет labels/notes у существующей карточки. Только ROOT_ADMIN_IDS.
+    """
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
+    tg_user = user_data.get("user") or {}
+    user_id = tg_user.get("id")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(user_id)
+    _require_content_card_admin(user_id)
+
+    labels = _normalize_content_card_labels(body.labels)
+    notes = (str(body.notes).strip() if body.notes is not None else "").strip()
+    notes = notes[:4000] if notes else None
+
+    async with async_session_maker() as session:
+        card_dao = ContentCardDAO(session)
+        card = await card_dao.find_one_or_none_by_id(body.content_card_id)
+        if not card:
+            raise HTTPException(status_code=404, detail="Карточка не найдена")
+        await card_dao.update(
+            body.content_card_id,
+            {
+                "labels": labels,
+                "notes": notes,
+            },
+        )
         await session.commit()
 
     return {"ok": True, "content_card_id": body.content_card_id}
