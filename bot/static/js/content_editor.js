@@ -806,7 +806,7 @@ class ContentEditor {
         document.body.insertAdjacentHTML(
             'beforeend',
             `
-            <div id="contentCardAdminLabelsEditModal" class="card-labels-modal" style="display: none;" aria-hidden="true">
+            <div id="contentCardAdminLabelsEditModal" class="card-labels-modal" style="display: none; z-index: 100003;" aria-hidden="true">
                 <div class="card-labels-overlay" id="contentCardAdminLabelsOverlay"></div>
                 <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="contentCardAdminLabelsTitle">
                     <h3 id="contentCardAdminLabelsTitle" class="card-labels-title">Метки карточки</h3>
@@ -908,7 +908,7 @@ class ContentEditor {
         document.body.insertAdjacentHTML(
             'beforeend',
             `
-            <div id="contentCardAdminNotesEditModal" class="card-labels-modal" style="display: none;" aria-hidden="true">
+            <div id="contentCardAdminNotesEditModal" class="card-labels-modal" style="display: none; z-index: 100003;" aria-hidden="true">
                 <div class="card-labels-overlay" id="contentCardAdminNotesOverlay"></div>
                 <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="contentCardAdminNotesTitle">
                     <h3 id="contentCardAdminNotesTitle" class="card-labels-title">Примечания карточки</h3>
