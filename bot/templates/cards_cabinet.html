@@ -70,6 +70,18 @@
             background: #3e6f9f;
             border-color: #5f8fbd;
         }
+        .tile--solved {
+            background: #2f8f4f;
+            border-color: #58ba7a;
+        }
+        .tile--favorite {
+            background: #b7902a;
+            border-color: #dbb54f;
+        }
+        .tile--hard {
+            background: #a43b3b;
+            border-color: #cb6363;
+        }
 
         .empty {
             color: #888;
@@ -134,10 +146,24 @@
                         btn.className = 'tile';
                         if (status === 'VIEWED') {
                             btn.classList.add('tile--viewed');
+                        } else if (status === 'SOLVED') {
+                            btn.classList.add('tile--solved');
+                        } else if (status === 'FAVORITE') {
+                            btn.classList.add('tile--favorite');
+                        } else if (status === 'HARD') {
+                            btn.classList.add('tile--hard');
                         }
                         btn.textContent = String(index + 1);
                         btn.title = 'Карточка #' + id;
                         btn.addEventListener('click', function () {
+                            var openCard = function () {
+                                var path = '/content-card-view?content_card_id=' + encodeURIComponent(id);
+                                window.location.assign(path);
+                            };
+                            if (status !== 'UNVIEWED') {
+                                openCard();
+                                return;
+                            }
                             fetch('/api/content_cards/mark_viewed', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -147,10 +173,7 @@
                                 }),
                             }).catch(function () {
                                 // Даже если отметка статуса не удалась, всё равно открываем карточку.
-                            }).finally(function () {
-                                var path = '/content-card-view?content_card_id=' + encodeURIComponent(id);
-                                window.location.assign(path);
-                            });
+                            }).finally(openCard);
                         });
                         gridEl.appendChild(btn);
                     });

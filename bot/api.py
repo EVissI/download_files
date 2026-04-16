@@ -601,6 +601,14 @@ class ContentCardMarkViewedBody(BaseModel):
     content_card_id: int = Field(..., ge=1)
 
 
+class ContentCardSetStatusBody(BaseModel):
+    """Ручная установка статуса карточки для текущего пользователя."""
+
+    init_data: str = Field(..., min_length=1)
+    content_card_id: int = Field(..., ge=1)
+    status: UserContentCardStatus
+
+
 class ContentCardHintMatBody(BaseModel):
     """Скачивание исходного .mat из S3 (hints/{game_id}.mat) по имени файла карточки."""
 
@@ -821,6 +829,37 @@ async def content_cards_mark_viewed(body: ContentCardMarkViewedBody):
     return {"ok": True}
 
 
+@app.post("/api/content_cards/set_status")
+async def content_cards_set_status(body: ContentCardSetStatusBody):
+    """Устанавливает статус карточки для текущего пользователя."""
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(
+            status_code=401, detail="Недействительные данные Telegram"
+        )
+    uid = (user_data.get("user") or {}).get("id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(uid)
+
+    if body.status in (UserContentCardStatus.UNVIEWED, UserContentCardStatus.VIEWED):
+        raise HTTPException(
+            status_code=400,
+            detail="Статусы UNVIEWED/VIEWED системные и не могут устанавливаться вручную",
+        )
+
+    async with async_session_maker() as session:
+        ucc_dao = UserContentCardDAO(session)
+        link = await ucc_dao.find_one_by_user_and_card(user_id, body.content_card_id)
+        if not link:
+            raise HTTPException(status_code=403, detail="Нет доступа к этой карточке")
+
+        link.card_status = body.status
+        await session.commit()
+
+    return {"ok": True, "status": body.status.value}
+
+
 @app.post("/api/content_cards/fetch")
 async def fetch_content_card(body: ContentCardFetchBody):
     """
@@ -857,6 +896,7 @@ async def fetch_content_card(body: ContentCardFetchBody):
         out: dict[str, Any] = {
             "frames": card.frames,
             "is_content_card_admin": is_root_admin,
+            "user_card_status": link.card_status.value if link else None,
         }
         if is_root_admin:
             raw_labels = card.labels
