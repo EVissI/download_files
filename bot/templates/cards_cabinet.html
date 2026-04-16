@@ -40,6 +40,25 @@
             width: 28px;
             height: 28px;
         }
+        .cabinet-shuffle-btn {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            background: #2d2d2d;
+            color: #ddd;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            line-height: 1;
+            text-decoration: none;
+            padding: 0;
+        }
+        .cabinet-shuffle-btn:active {
+            background: #3a3a3a;
+        }
         .cabinet-admin-btn {
             width: 28px;
             height: 28px;
@@ -188,7 +207,7 @@
 <body>
     <div class="wrap">
         <div class="cabinet-header">
-            <span class="cabinet-header-spacer" aria-hidden="true"></span>
+            <button id="shuffle-cards-btn" class="cabinet-shuffle-btn" type="button" title="Перемешать карточки" aria-label="Перемешать карточки">⇄</button>
             <h1>Мои карточки</h1>
             <a id="admin-fab-btn" class="cabinet-admin-btn" href="/admin" title="Перейти в админку" aria-label="Перейти в админку">A</a>
         </div>
@@ -236,6 +255,7 @@
             var labelFilterWrap = document.getElementById('label-filter-wrap');
             var labelFilter = document.getElementById('label-filter');
             var adminFabBtn = document.getElementById('admin-fab-btn');
+            var shuffleCardsBtn = document.getElementById('shuffle-cards-btn');
             var allCards = [];
 
             function showErr(msg) {
@@ -282,8 +302,8 @@
                 var filter = searchInput ? String(searchInput.value || '') : '';
                 var statusFilterValue = statusFilter ? String(statusFilter.value || '').toUpperCase() : '';
                 var labelFilterValue = labelFilter ? String(labelFilter.value || '') : '';
-                var cards = allCards.filter(function (row, index) {
-                    var cardNumber = String(index + 1);
+                var cards = allCards.filter(function (row) {
+                    var cardNumber = String(((row && row.__index) || 0) + 1);
                     var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
                     var labels = Array.isArray(row && row.labels) ? row.labels : [];
                     var passNumber = !filter || cardNumber.indexOf(filter) !== -1;
@@ -339,6 +359,21 @@
                         }).finally(openCard);
                     });
                     gridEl.appendChild(btn);
+                });
+            }
+
+            if (shuffleCardsBtn) {
+                shuffleCardsBtn.addEventListener('click', function () {
+                    if (!allCards || allCards.length < 2) {
+                        return;
+                    }
+                    for (var i = allCards.length - 1; i > 0; i--) {
+                        var j = Math.floor(Math.random() * (i + 1));
+                        var tmp = allCards[i];
+                        allCards[i] = allCards[j];
+                        allCards[j] = tmp;
+                    }
+                    renderCards();
                 });
             }
 
