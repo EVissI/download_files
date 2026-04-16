@@ -60,6 +60,13 @@
         .content-card-view-status-btn:active {
             background: #3a3f47;
         }
+        .content-card-view-card-number {
+            text-align: center;
+            color: #e3e8ef;
+            font-size: 15px;
+            font-weight: 600;
+            margin: 6px 0 2px;
+        }
         .content-card-status-modal {
             position: fixed;
             inset: 0;
@@ -149,6 +156,12 @@
                 var params = new URLSearchParams(window.location.search || '');
                 var cardId = Number(params.get('content_card_id') || 0);
                 return Number.isFinite(cardId) && cardId > 0 ? cardId : 0;
+            }
+
+            function getCardNumber() {
+                var params = new URLSearchParams(window.location.search || '');
+                var cardNumber = Number(params.get('card_number') || 0);
+                return Number.isFinite(cardNumber) && cardNumber > 0 ? cardNumber : 0;
             }
 
             function getInitData() {
@@ -293,16 +306,33 @@
                 }
             }
 
+            function ensureCardNumberHeader() {
+                var cardNumber = getCardNumber();
+                if (!cardNumber) return;
+                var box = document.querySelector('#contentCardViewRoot .card-preview-box');
+                var nav = document.querySelector('#contentCardViewRoot .card-preview-nav');
+                if (!box || !nav) return;
+                var existing = box.querySelector('.content-card-view-card-number');
+                if (existing) return;
+
+                var header = document.createElement('div');
+                header.className = 'content-card-view-card-number';
+                header.textContent = 'Карточка № ' + cardNumber;
+                box.insertBefore(header, nav);
+            }
+
             var attempts = 0;
             var maxAttempts = 40;
             var timer = setInterval(function () {
                 ensureNavButtons();
+                ensureCardNumberHeader();
                 attempts += 1;
                 if (attempts >= maxAttempts) {
                     clearInterval(timer);
                 }
             }, 250);
             ensureNavButtons();
+            ensureCardNumberHeader();
         })();
     </script>
 </body>

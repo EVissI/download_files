@@ -156,8 +156,11 @@
                         btn.textContent = String(index + 1);
                         btn.title = 'Карточка #' + id;
                         btn.addEventListener('click', function () {
+                            var cardNumber = index + 1;
                             var openCard = function () {
-                                var path = '/content-card-view?content_card_id=' + encodeURIComponent(id);
+                                var path =
+                                    '/content-card-view?content_card_id=' + encodeURIComponent(id) +
+                                    '&card_number=' + encodeURIComponent(cardNumber);
                                 window.location.assign(path);
                             };
                             if (status !== 'UNVIEWED') {
