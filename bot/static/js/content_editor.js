@@ -1030,7 +1030,7 @@ class ContentEditor {
             return;
         }
         try {
-            const res = await fetch('/api/content_cards/hint_mat_download', {
+            const res = await fetch('/api/content_cards/hint_mat_download_link', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1055,36 +1055,21 @@ class ContentEditor {
                 }
                 throw new Error(detail);
             }
-            const blob = await res.blob();
-            const fn =
-                (this._contentCardAdminMeta &&
-                    String(this._contentCardAdminMeta.file_name || '')
-                        .replace(/[\\/]/g, '_')
-                        .trim()) ||
-                'source.mat';
-            const url = URL.createObjectURL(blob);
-            const tw = window.Telegram && window.Telegram.WebApp;
-            if (tw && typeof tw.downloadFile === 'function') {
-                try {
-                    tw.downloadFile({ url, file_name: fn }, (accepted) => {
-                        setTimeout(() => URL.revokeObjectURL(url), 120000);
-                        if (accepted === false) {
-                            this.showNotification('Скачивание отменено', 'info');
-                        }
-                    });
-                    return;
-                } catch (err) {
-                    console.warn('Telegram.WebApp.downloadFile:', err);
-                }
+            const data = await res.json().catch(() => ({}));
+            const downloadPath = data && data.url ? String(data.url) : '';
+            const fn = data && data.file_name
+                ? String(data.file_name)
+                : (
+                    (this._contentCardAdminMeta &&
+                        String(this._contentCardAdminMeta.file_name || '')
+                            .replace(/[\\/]/g, '_')
+                            .trim()) ||
+                    'source.mat'
+                );
+            if (!downloadPath) {
+                throw new Error('Сервер не вернул ссылку для скачивания');
             }
-            const a = document.createElement('a');
-            a.href = url;
-            a.setAttribute('download', fn);
-            a.rel = 'noopener noreferrer';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 5000);
+            this.requestDownloadByPath(downloadPath, fn);
         } catch (e) {
             console.error('downloadContentCardHintMat:', e);
             this.showNotification(e.message || String(e), 'error');
@@ -2816,12 +2801,22 @@ class ContentEditor {
         if (!s3Key) return;
         const safeName = (fileName && String(fileName).replace(/[\\/]/g, '_').trim()) || 'file';
         const path = this.buildContentCardMediaDownloadUrl(s3Key, safeName);
+        this.requestDownloadByPath(path, safeName);
+    }
+
+    requestDownloadByPath(path, fileName) {
+        if (!path) return;
         let absUrl;
         try {
             absUrl = new URL(path, window.location.href).href;
         } catch (e) {
             absUrl = path;
         }
+        this.requestDownloadByUrl(absUrl, fileName);
+    }
+
+    requestDownloadByUrl(absUrl, fileName) {
+        const safeName = (fileName && String(fileName).replace(/[\\/]/g, '_').trim()) || 'file';
         const tw = window.Telegram && window.Telegram.WebApp;
         if (tw && typeof tw.downloadFile === 'function') {
             try {

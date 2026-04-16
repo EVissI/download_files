@@ -622,6 +622,31 @@ class ContentCardHintMatBody(BaseModel):
     content_card_id: int = Field(..., ge=1)
 
 
+async def _resolve_hint_mat_location(content_card_id: int) -> tuple[str, str]:
+    async with async_session_maker() as session:
+        card_dao = ContentCardDAO(session)
+        card = await card_dao.find_one_or_none_by_id(content_card_id)
+        if not card:
+            raise HTTPException(status_code=404, detail="Карточка не найдена")
+
+    fname = os.path.basename((card.file_name or "").strip())[:255]
+    if not fname:
+        raise HTTPException(status_code=400, detail="У карточки не задано имя файла")
+    stem, _, ext = fname.rpartition(".")
+    if ext.lower() != "mat" or not stem:
+        raise HTTPException(
+            status_code=400,
+            detail="Ожидается имя вида {game_id}.mat для скачивания из hints/",
+        )
+    game_id = stem
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,220}", game_id):
+        raise HTTPException(
+            status_code=400, detail="Некорректный game_id в имени файла"
+        )
+
+    return HintS3Storage.mat_key(game_id), fname
+
+
 class ContentCardUpdateBody(BaseModel):
     """Обновление JSON кадров существующей карточки (только ROOT_ADMIN_IDS)."""
 
@@ -1026,37 +1051,76 @@ async def download_content_card_hint_mat(body: ContentCardHintMatBody):
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
 
-    async with async_session_maker() as session:
-        card_dao = ContentCardDAO(session)
-        card = await card_dao.find_one_or_none_by_id(body.content_card_id)
-        if not card:
-            raise HTTPException(status_code=404, detail="Карточка не найдена")
-
-    fname = os.path.basename((card.file_name or "").strip())[:255]
-    if not fname:
-        raise HTTPException(
-            status_code=400, detail="У карточки не задано имя файла"
-        )
-    stem, _, ext = fname.rpartition(".")
-    if ext.lower() != "mat" or not stem:
-        raise HTTPException(
-            status_code=400,
-            detail="Ожидается имя вида {game_id}.mat для скачивания из hints/",
-        )
-    game_id = stem
-    if not re.fullmatch(r"[A-Za-z0-9_-]{1,220}", game_id):
-        raise HTTPException(
-            status_code=400, detail="Некорректный game_id в имени файла"
-        )
-
-    key = HintS3Storage.mat_key(game_id)
+    key, fname = await _resolve_hint_mat_location(body.content_card_id)
     s3 = HintS3Storage.from_settings()
     if not s3.exists(key):
         raise HTTPException(
             status_code=404, detail="Файл .mat не найден в хранилище"
         )
     blob = s3.download_bytes(key)
-    disp = _safe_content_disposition_filename(fname, f"{game_id}.mat")
+    disp = _safe_content_disposition_filename(fname, "source.mat")
+    headers: dict[str, str] = {
+        "Content-Disposition": f'attachment; filename="{disp}"',
+        "Cache-Control": "private, no-store",
+        "Access-Control-Allow-Origin": "https://web.telegram.org",
+    }
+    return Response(
+        content=blob,
+        media_type="application/octet-stream",
+        headers=headers,
+    )
+
+
+@app.post("/api/content_cards/hint_mat_download_link")
+async def download_content_card_hint_mat_link(body: ContentCardHintMatBody):
+    """
+    Возвращает временную ссылку для скачивания .mat (TTL 5 минут).
+    Используется WebApp-клиентом для мобильного сценария.
+    """
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    key, fname = await _resolve_hint_mat_location(body.content_card_id)
+    s3 = HintS3Storage.from_settings()
+    if not s3.exists(key):
+        raise HTTPException(
+            status_code=404, detail="Файл .mat не найден в хранилище"
+        )
+
+    token = secrets.token_urlsafe(24)
+    payload = json.dumps({"key": key, "file_name": fname}, ensure_ascii=False)
+    await redis_client.set(f"hint_mat_dl:{token}", payload, expire=300)
+    return {"url": f"/api/content_cards/hint_mat_file?token={token}", "file_name": fname}
+
+
+@app.get("/api/content_cards/hint_mat_file")
+async def download_content_card_hint_mat_by_token(token: str):
+    """
+    Скачивание .mat по временному токену.
+    """
+    if not token:
+        raise HTTPException(status_code=400, detail="Параметр token обязателен")
+    raw = await redis_client.get(f"hint_mat_dl:{token}")
+    if not raw:
+        raise HTTPException(status_code=401, detail="Ссылка истекла или недействительна")
+    await redis_client.delete(f"hint_mat_dl:{token}")
+
+    try:
+        data = json.loads(raw)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Некорректные данные ссылки")
+
+    key = str((data or {}).get("key") or "")
+    fname = str((data or {}).get("file_name") or "source.mat")
+    if not key.startswith("hints/"):
+        raise HTTPException(status_code=400, detail="Некорректный ключ файла")
+
+    s3 = HintS3Storage.from_settings()
+    if not s3.exists(key):
+        raise HTTPException(status_code=404, detail="Файл .mat не найден в хранилище")
+
+    blob = s3.download_bytes(key)
+    disp = _safe_content_disposition_filename(fname, "source.mat")
     headers: dict[str, str] = {
         "Content-Disposition": f'attachment; filename="{disp}"',
         "Cache-Control": "private, no-store",
