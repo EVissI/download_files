@@ -3984,6 +3984,24 @@ class ContentEditor {
         this.showElementProperties(element);
     }
 
+    clampNumericValue(value, min, max, fallback) {
+        const n = parseInt(value, 10);
+        if (Number.isNaN(n)) return fallback;
+        return Math.max(min, Math.min(max, n));
+    }
+
+    renderNumericSelectOptions(min, max, current, step = 1, suffix = '') {
+        const safeStep = Math.max(1, parseInt(step, 10) || 1);
+        const safeCurrent = this.clampNumericValue(current, min, max, min);
+        const opts = [];
+        for (let v = min; v <= max; v += safeStep) {
+            opts.push(
+                `<option value="${v}" ${v === safeCurrent ? 'selected' : ''}>${v}${suffix}</option>`
+            );
+        }
+        return opts.join('');
+    }
+
     showElementProperties(element) {
         const computedStyle = window.getComputedStyle(element);
 
@@ -4023,8 +4041,15 @@ class ContentEditor {
                 ${element.classList.contains('text-element') ? `
                 <div class="property-item">
                     <label>Размер шрифта:</label>
-                    <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}" 
-                           oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
+                    <select id="propFontSize" onchange="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
+                        ${this.renderNumericSelectOptions(
+                            10,
+                            72,
+                            parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16,
+                            1,
+                            'px'
+                        )}
+                    </select>
                     <div class="property-value">${parseInt(window.getComputedStyle(element.querySelector('.text-content')).fontSize) || 16}px</div>
                 </div>
                 <div class="property-item">
@@ -4043,13 +4068,27 @@ class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Межстрочный интервал:</label>
-                    <input type="range" id="propLineHeight" min="10" max="30" value="${Math.round(parseFloat(window.getComputedStyle(element.querySelector('.text-content')).lineHeight) || 20)}"
-                           oninput="contentEditor.updateElementProperty('lineHeight', this.value + 'px')">
+                    <select id="propLineHeight" onchange="contentEditor.updateElementProperty('lineHeight', this.value + 'px')">
+                        ${this.renderNumericSelectOptions(
+                            10,
+                            30,
+                            Math.round(parseFloat(window.getComputedStyle(element.querySelector('.text-content')).lineHeight) || 20),
+                            1,
+                            'px'
+                        )}
+                    </select>
                 </div>
                 <div class="property-item">
                     <label>Отступ внутри блока:</label>
-                    <input type="range" id="propPadding" min="0" max="40" value="${parseInt(window.getComputedStyle(element).padding) || 8}"
-                           oninput="contentEditor.updateElementProperty('padding', this.value + 'px')">
+                    <select id="propPadding" onchange="contentEditor.updateElementProperty('padding', this.value + 'px')">
+                        ${this.renderNumericSelectOptions(
+                            0,
+                            40,
+                            parseInt(window.getComputedStyle(element).padding) || 8,
+                            1,
+                            'px'
+                        )}
+                    </select>
                 </div>
                 <div class="property-item">
                     <label>Цвет фона блока:</label>
@@ -4068,8 +4107,15 @@ class ContentEditor {
                 ${element.classList.contains('link-element') ? `
                 <div class="property-item">
                     <label>Размер шрифта:</label>
-                    <input type="range" id="propFontSize" min="10" max="72" value="${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}" 
-                           oninput="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
+                    <select id="propFontSize" onchange="contentEditor.updateElementProperty('fontSize', this.value + 'px')">
+                        ${this.renderNumericSelectOptions(
+                            10,
+                            72,
+                            parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16,
+                            1,
+                            'px'
+                        )}
+                    </select>
                     <div class="property-value">${parseInt(window.getComputedStyle(element.querySelector('.link-text')).fontSize) || 16}px</div>
                 </div>
                 <div class="property-item">
@@ -4110,8 +4156,9 @@ class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Громкость:</label>
-                    <input type="range" id="propAudioVolume" min="0" max="100" value="100" 
-                           oninput="contentEditor.updateElementProperty('audioVolume', this.value / 100)">
+                    <select id="propAudioVolume" onchange="contentEditor.updateElementProperty('audioVolume', this.value / 100)">
+                        ${this.renderNumericSelectOptions(0, 100, 100, 5, '%')}
+                    </select>
                     <div class="property-value">100%</div>
                 </div>
                 ` : ''}
@@ -6885,8 +6932,10 @@ class ContentEditor {
                         <div id="canvasSettingsPanelText" class="canvas-settings-tab-panel" style="display: none;">
                             <p class="canvas-settings-tab-hint">Применяется ко всем текстовым блокам и подписям ссылок на кадре; после «Применить» те же настройки получают и новые блоки.</p>
                             <div class="setting-group">
-                                <label for="globalTextFontSize">Размер шрифта: <span id="globalTextFontSizeLabel">${textSize}</span>px</label>
-                                <input type="range" id="globalTextFontSize" min="10" max="72" value="${textSize}">
+                                <label for="globalTextFontSize">Размер шрифта:</label>
+                                <select id="globalTextFontSize">
+                                    ${this.renderNumericSelectOptions(10, 72, textSize, 1, 'px')}
+                                </select>
                             </div>
                             <div class="setting-group">
                                 <label for="globalTextColor">Цвет текста:</label>
@@ -6905,8 +6954,10 @@ class ContentEditor {
                                 </select>
                             </div>
                             <div class="setting-group">
-                                <label for="globalTextLineHeight">Межстрочный интервал: <span id="globalTextLineHeightLabel">${lineH}</span>px</label>
-                                <input type="range" id="globalTextLineHeight" min="10" max="36" value="${lineH}">
+                                <label for="globalTextLineHeight">Межстрочный интервал:</label>
+                                <select id="globalTextLineHeight">
+                                    ${this.renderNumericSelectOptions(10, 36, lineH, 1, 'px')}
+                                </select>
                             </div>
                             <div class="setting-group">
                                 <label for="globalTextFontFamily">Шрифт:</label>
@@ -6981,16 +7032,6 @@ class ContentEditor {
             }
         });
 
-        const gSize = document.getElementById('globalTextFontSize');
-        const gSizeLabel = document.getElementById('globalTextFontSizeLabel');
-        if (gSize && gSizeLabel) {
-            gSize.addEventListener('input', () => { gSizeLabel.textContent = gSize.value; });
-        }
-        const gLh = document.getElementById('globalTextLineHeight');
-        const gLhLabel = document.getElementById('globalTextLineHeightLabel');
-        if (gLh && gLhLabel) {
-            gLh.addEventListener('input', () => { gLhLabel.textContent = gLh.value; });
-        }
         const gCol = document.getElementById('globalTextColor');
         const gColTxt = document.getElementById('globalTextColorText');
         if (gCol && gColTxt) {
