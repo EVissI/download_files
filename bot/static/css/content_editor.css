@@ -1500,14 +1500,16 @@ button.content-card-admin-info-file-link:hover {
 
 /* Доска в предпросмотре — в потоке, как остальной контент (без наслоения поверх кадра). */
 .card-preview-board-overlay {
-    position: relative;
-    z-index: auto;
+    position: sticky;
+    top: 0;
+    z-index: 5;
     flex-shrink: 0;
     width: 100%;
     box-sizing: border-box;
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
+    background: #1a1a1a;
     pointer-events: none;
 }
 
