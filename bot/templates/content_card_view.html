@@ -23,26 +23,6 @@
         *, *::before, *::after {
             box-sizing: inherit;
         }
-        .content-card-view-nav-layout {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            width: 100%;
-            gap: 8px;
-        }
-        .content-card-view-nav-left {
-            justify-self: start;
-            display: flex;
-            align-items: center;
-        }
-        .content-card-view-nav-center {
-            justify-self: center;
-        }
-        .content-card-view-nav-right {
-            justify-self: end;
-            display: flex;
-            align-items: center;
-        }
         .content-card-view-back-btn {
             display: inline-flex;
             align-items: center;
@@ -56,6 +36,7 @@
             border: 1px solid #484c55;
             font-size: 18px;
             flex-shrink: 0;
+            margin-right: 8px;
         }
         .content-card-view-back-btn:active {
             background: #3a3f47;
@@ -74,6 +55,7 @@
             font-size: 16px;
             flex-shrink: 0;
             cursor: pointer;
+            margin-left: 8px;
         }
         .content-card-view-status-btn:active {
             background: #3a3f47;
@@ -285,36 +267,7 @@
             function ensureNavButtons() {
                 var nav = document.querySelector('#contentCardViewRoot .card-preview-nav');
                 if (!nav) return;
-                var layout = nav.parentElement && nav.parentElement.classList.contains('content-card-view-nav-layout')
-                    ? nav.parentElement
-                    : null;
-                var leftHost;
-                var rightHost;
-                if (!layout) {
-                    layout = document.createElement('div');
-                    layout.className = 'content-card-view-nav-layout';
-
-                    leftHost = document.createElement('div');
-                    leftHost.className = 'content-card-view-nav-left';
-
-                    var centerHost = document.createElement('div');
-                    centerHost.className = 'content-card-view-nav-center';
-
-                    rightHost = document.createElement('div');
-                    rightHost.className = 'content-card-view-nav-right';
-
-                    nav.parentNode.insertBefore(layout, nav);
-                    layout.appendChild(leftHost);
-                    layout.appendChild(centerHost);
-                    layout.appendChild(rightHost);
-                    centerHost.appendChild(nav);
-                } else {
-                    leftHost = layout.querySelector('.content-card-view-nav-left');
-                    rightHost = layout.querySelector('.content-card-view-nav-right');
-                }
-                if (!leftHost || !rightHost) return;
-
-                if (!leftHost.querySelector('.content-card-view-back-btn')) {
+                if (!nav.querySelector('.content-card-view-back-btn')) {
                     var backLink = document.createElement('a');
                     backLink.className = 'content-card-view-back-btn';
                     backLink.href = '/cards-cabinet';
@@ -325,10 +278,10 @@
                         e.preventDefault();
                         window.location.assign('/cards-cabinet');
                     });
-                    leftHost.appendChild(backLink);
+                    nav.insertBefore(backLink, nav.firstChild);
                 }
 
-                if (!rightHost.querySelector('.content-card-view-status-btn')) {
+                if (!nav.querySelector('.content-card-view-status-btn')) {
                     var statusBtn = document.createElement('button');
                     statusBtn.type = 'button';
                     statusBtn.className = 'content-card-view-status-btn';
@@ -336,7 +289,7 @@
                     statusBtn.setAttribute('title', 'Изменить статус');
                     statusBtn.innerHTML = '<i class="fa fa-bookmark" aria-hidden="true"></i>';
                     statusBtn.addEventListener('click', openStatusModal);
-                    rightHost.appendChild(statusBtn);
+                    nav.appendChild(statusBtn);
                 }
             }
 
