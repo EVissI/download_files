@@ -3691,10 +3691,14 @@
                 const matchLength = document.getElementById('match_lenght')?.value || '5';
                 const lowerScore = parseInt(document.getElementById('lower-score')?.value || '0');
                 const upperScore = parseInt(document.getElementById('upper-score')?.value || '0');
-                const maxScore = Math.max(lowerScore, upperScore);
-                const minScore = Math.min(lowerScore, upperScore);
-                const tpl = i18n.match_to_tpl || 'Матч до __LENGTH__. Счет __MAX__-__MIN__';
-                gameTypeLabel.textContent = tpl.replace(/__LENGTH__/g, matchLength).replace(/__MAX__/g, maxScore).replace(/__MIN__/g, minScore);
+                const tpl = i18n.match_to_tpl || 'Матч до __LENGTH__. Счет __LOWER__-__UPPER__';
+                gameTypeLabel.textContent = tpl
+                    .replace(/__LENGTH__/g, matchLength)
+                    .replace(/__LOWER__/g, lowerScore)
+                    .replace(/__UPPER__/g, upperScore)
+                    // Обратная совместимость со старым шаблоном перевода.
+                    .replace(/__MAX__/g, lowerScore)
+                    .replace(/__MIN__/g, upperScore);
             } else {
                 gameTypeLabel.textContent = i18n.moneygame || 'Манигейм';
             }
