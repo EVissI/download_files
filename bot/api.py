@@ -902,7 +902,7 @@ async def fetch_content_card(body: ContentCardFetchBody):
     """
     Данные карточки для страницы просмотра: есть связь user_content_cards
     или пользователь в ROOT_ADMIN_IDS.
-    Поля file_name и labels отдаются только если user_id в ROOT_ADMIN_IDS.
+    Поля file_name, labels и notes отдаются только если user_id в ROOT_ADMIN_IDS.
     """
     user_data = verify_telegram_webapp_data(body.init_data)
     if not user_data:
@@ -939,6 +939,7 @@ async def fetch_content_card(body: ContentCardFetchBody):
             raw_labels = card.labels
             out["file_name"] = card.file_name
             out["labels"] = list(raw_labels) if raw_labels is not None else []
+            out["notes"] = card.notes
         return out
 
 

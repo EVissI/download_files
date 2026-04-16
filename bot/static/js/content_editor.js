@@ -336,6 +336,7 @@ class ContentEditor {
             this._contentCardAdminMeta = {
                 file_name: data.file_name != null ? String(data.file_name) : '',
                 labels: Array.isArray(data.labels) ? data.labels : [],
+                notes: data.notes != null ? String(data.notes) : '',
             };
             infoBtn.style.display = '';
             editBtn.style.display = 'inline-flex';
@@ -761,10 +762,14 @@ class ContentEditor {
         } else {
             labelsBlock = '<p class="content-card-admin-info-empty">Нет меток</p>';
         }
+        const rawNotes = String(this._contentCardAdminMeta.notes || '').trim();
+        const notesBlock = rawNotes ? `<dd>${this.escapeHtml(rawNotes)}</dd>` : '';
+        const notesSection = rawNotes ? `<dt>Примечания</dt>${notesBlock}` : '';
         body.innerHTML =
             `<dl class="content-card-admin-info-dl">` +
             `<dt>Файл</dt>${fileDd}` +
             `<dt>Метки</dt><dd>${labelsBlock}</dd>` +
+            notesSection +
             `</dl>`;
         const fileBtn = body.querySelector('.content-card-admin-info-file-link');
         if (fileBtn) {

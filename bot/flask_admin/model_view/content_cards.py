@@ -117,9 +117,9 @@ class ContentCardModelView(ModelView):
     show_template = "show_content_card.html"
 
     page_size = 30
-    list_columns = ["id", "file_name", "labels"]
-    show_columns = ["id", "file_name", "labels"]
-    search_columns = ["id", "file_name", "labels"]
+    list_columns = ["id", "file_name", "notes", "labels"]
+    show_columns = ["id", "file_name", "notes", "labels"]
+    search_columns = ["id", "file_name", "notes", "labels"]
     order_columns = ["id", "file_name"]
 
     # ARRAY не конвертируется в поле поиска автоматически — явное поле, иначе KeyError в SearchWidget
@@ -137,6 +137,7 @@ class ContentCardModelView(ModelView):
     label_columns = {
         "id": _("ID"),
         "file_name": _("Имя файла"),
+        "notes": _("Примечания"),
         "labels": _("Метки"),
     }
 

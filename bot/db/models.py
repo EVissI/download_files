@@ -611,6 +611,7 @@ class ContentCard(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     frames: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     labels: Mapped[list[str] | None] = mapped_column(ARRAY[str](String(255)), nullable=True)
