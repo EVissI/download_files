@@ -21,6 +21,7 @@ from bot.flask_admin.model_view.user import (
     UserPromocodeInline,
     UserAnalizePaymentInline,
 )
+from bot.flask_admin.model_view.users_with_cards import UsersWithCardsView
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,11 @@ def register_models(appbuilder, db):
     )
     appbuilder.add_view(MessagesTextsModelView, "Текстовки", icon="fa-comment")
     appbuilder.add_view(ContentCardModelView, "Карточки", icon="fa-clone")
+    appbuilder.add_view(
+        UsersWithCardsView,
+        "Пользователи с карточками",
+        icon="fa-table",
+    )
     appbuilder.add_link(
         "Кабинет карточек",
         href="/admin/cards-cabinet",
