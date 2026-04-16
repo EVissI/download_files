@@ -656,6 +656,14 @@ class PromocodeContentCard(Base):
     )
 
 
+class UserContentCardStatus(str, enum.Enum):
+    UNVIEWED = "UNVIEWED"
+    VIEWED = "VIEWED"
+    SOLVED = "SOLVED"
+    FAVORITE = "FAVORITE"
+    HARD = "HARD"
+
+
 class UserContentCard(Base):
     """Связь пользователь ↔ карточка (many-to-many), по аналогии с UserPromocode."""
 
@@ -674,6 +682,12 @@ class UserContentCard(Base):
     )
     content_card_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("content_cards.id", ondelete="CASCADE"), nullable=False
+    )
+    card_status: Mapped["UserContentCardStatus"] = mapped_column(
+        Enum(UserContentCardStatus, name="usercontentcardstatus"),
+        nullable=False,
+        default=UserContentCardStatus.UNVIEWED,
+        server_default=UserContentCardStatus.UNVIEWED.value,
     )
     source_user_promocode_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("user_promocode.id", ondelete="SET NULL"), nullable=True

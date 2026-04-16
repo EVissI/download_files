@@ -66,6 +66,10 @@
             background: #3d5a80;
             border-color: #5a7aaa;
         }
+        .tile--viewed {
+            background: #3e6f9f;
+            border-color: #5f8fbd;
+        }
 
         .empty {
             color: #888;
@@ -124,14 +128,29 @@
                     }
                     cards.forEach(function (row, index) {
                         var id = row.content_card_id;
+                        var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
                         var btn = document.createElement('button');
                         btn.type = 'button';
                         btn.className = 'tile';
+                        if (status === 'VIEWED') {
+                            btn.classList.add('tile--viewed');
+                        }
                         btn.textContent = String(index + 1);
                         btn.title = 'Карточка #' + id;
                         btn.addEventListener('click', function () {
-                            var path = '/content-card-view?content_card_id=' + encodeURIComponent(id);
-                            window.location.assign(path);
+                            fetch('/api/content_cards/mark_viewed', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    init_data: initData,
+                                    content_card_id: Number(id),
+                                }),
+                            }).catch(function () {
+                                // Даже если отметка статуса не удалась, всё равно открываем карточку.
+                            }).finally(function () {
+                                var path = '/content-card-view?content_card_id=' + encodeURIComponent(id);
+                                window.location.assign(path);
+                            });
                         });
                         gridEl.appendChild(btn);
                     });

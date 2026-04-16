@@ -30,7 +30,7 @@ from bot.db.dao import (
     ContentCardDAO,
     UserContentCardDAO,
 )
-from bot.db.models import ServiceType
+from bot.db.models import ServiceType, UserContentCardStatus
 from bot.db.schemas import SContentCardCreate, SUserContentCardCreate
 from loguru import logger
 import traceback
@@ -594,6 +594,13 @@ class ContentCardMyListBody(BaseModel):
     init_data: str = Field(..., min_length=1)
 
 
+class ContentCardMarkViewedBody(BaseModel):
+    """Отметка карточки как просмотренной для текущего пользователя."""
+
+    init_data: str = Field(..., min_length=1)
+    content_card_id: int = Field(..., ge=1)
+
+
 class ContentCardHintMatBody(BaseModel):
     """Скачивание исходного .mat из S3 (hints/{game_id}.mat) по имени файла карточки."""
 
@@ -773,9 +780,45 @@ async def content_cards_my_list(body: ContentCardMyListBody):
         ucc_dao = UserContentCardDAO(session)
         links = await ucc_dao.get_all_by_user(user_id)
         links.sort(key=lambda row: row.id)
-        cards = [{"content_card_id": row.content_card_id} for row in links]
+        cards = [
+            {
+                "content_card_id": row.content_card_id,
+                "status": (
+                    row.card_status.value
+                    if hasattr(row.card_status, "value")
+                    else str(row.card_status)
+                ),
+            }
+            for row in links
+        ]
 
     return {"cards": cards}
+
+
+@app.post("/api/content_cards/mark_viewed")
+async def content_cards_mark_viewed(body: ContentCardMarkViewedBody):
+    """Помечает карточку как просмотренную (VIEWED) для текущего пользователя."""
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(
+            status_code=401, detail="Недействительные данные Telegram"
+        )
+    uid = (user_data.get("user") or {}).get("id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(uid)
+
+    async with async_session_maker() as session:
+        ucc_dao = UserContentCardDAO(session)
+        link = await ucc_dao.find_one_by_user_and_card(user_id, body.content_card_id)
+        if not link:
+            raise HTTPException(status_code=403, detail="Нет доступа к этой карточке")
+
+        if link.card_status == UserContentCardStatus.UNVIEWED:
+            link.card_status = UserContentCardStatus.VIEWED
+            await session.commit()
+
+    return {"ok": True}
 
 
 @app.post("/api/content_cards/fetch")
