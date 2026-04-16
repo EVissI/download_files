@@ -1103,7 +1103,6 @@ async def download_content_card_hint_mat_by_token(token: str):
     raw = await redis_client.get(f"hint_mat_dl:{token}")
     if not raw:
         raise HTTPException(status_code=401, detail="Ссылка истекла или недействительна")
-    await redis_client.delete(f"hint_mat_dl:{token}")
 
     try:
         data = json.loads(raw)
