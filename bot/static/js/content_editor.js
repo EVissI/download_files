@@ -1665,6 +1665,7 @@ class ContentEditor {
                 const c = row.insertCell();
                 c.textContent = txt;
             });
+            this.highlightBestTableRow(row);
             return table;
         }
 
@@ -1686,6 +1687,9 @@ class ContentEditor {
                 const c = row.insertCell();
                 c.textContent = txt;
             });
+            if (index === 0) {
+                this.highlightBestTableRow(row);
+            }
         });
 
         return table;
@@ -1727,9 +1731,20 @@ class ContentEditor {
             a.textContent = displayAction;
             const e = row.insertCell();
             e.textContent = displayEq;
+            if (tbody.rows.length === 1) {
+                this.highlightBestTableRow(row);
+            }
         });
 
         return table;
+    }
+
+    highlightBestTableRow(row) {
+        if (!row) return;
+        const bestRowColor = '#2e7d32'; // как .hint-best в hint_viewer.html
+        Array.from(row.cells || []).forEach((cell) => {
+            cell.style.setProperty('background-color', bestRowColor, 'important');
+        });
     }
 
     /** Классы `ce-content-table` — единые стили в редакторе и в предпросмотре/content-card-view (см. content_editor.css). */
