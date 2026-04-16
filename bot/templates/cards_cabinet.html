@@ -33,6 +33,22 @@
             color: #9a9a9a;
             margin-bottom: 16px;
         }
+        .search-wrap {
+            margin-bottom: 14px;
+        }
+        .search-input {
+            width: 100%;
+            background: #232323;
+            color: #f0f0f0;
+            border: 1px solid #3c3c3c;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .search-input:focus {
+            border-color: #5f8fbd;
+        }
 
         .err {
             color: #ff8a80;
@@ -93,7 +109,17 @@
 <body>
     <div class="wrap">
         <h1>Мои карточки</h1>
-        <p class="hint">Нажмите на квадрат с номером, чтобы открыть просмотр.</p>
+        <div class="search-wrap">
+            <input
+                id="card-search"
+                class="search-input"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                placeholder="Поиск по номеру карточки"
+                autocomplete="off"
+            >
+        </div>
         <div id="err" class="err" style="display:none;"></div>
         <div id="grid" class="grid"></div>
     </div>
@@ -106,6 +132,8 @@
             var initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
             var errEl = document.getElementById('err');
             var gridEl = document.getElementById('grid');
+            var searchInput = document.getElementById('card-search');
+            var allCards = [];
 
             function showErr(msg) {
                 errEl.textContent = msg;
@@ -115,6 +143,74 @@
             if (!initData) {
                 showErr('Откройте страницу из Telegram.');
                 return;
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    var digitsOnly = this.value.replace(/\D+/g, '');
+                    if (this.value !== digitsOnly) {
+                        this.value = digitsOnly;
+                    }
+                    renderCards();
+                });
+            }
+
+            function renderCards() {
+                gridEl.innerHTML = '';
+                var filter = searchInput ? String(searchInput.value || '') : '';
+                var cards = allCards.filter(function (row, index) {
+                    var cardNumber = String(index + 1);
+                    return !filter || cardNumber.indexOf(filter) !== -1;
+                });
+
+                if (!cards.length) {
+                    gridEl.innerHTML = '<p class="empty">Карточки по вашему запросу не найдены.</p>';
+                    return;
+                }
+
+                cards.forEach(function (row) {
+                    var id = row.content_card_id;
+                    var index = row.__index;
+                    var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'tile';
+                    if (status === 'VIEWED') {
+                        btn.classList.add('tile--viewed');
+                    } else if (status === 'SOLVED') {
+                        btn.classList.add('tile--solved');
+                    } else if (status === 'FAVORITE') {
+                        btn.classList.add('tile--favorite');
+                    } else if (status === 'HARD') {
+                        btn.classList.add('tile--hard');
+                    }
+                    btn.textContent = String(index + 1);
+                    btn.title = 'Карточка #' + id;
+                    btn.addEventListener('click', function () {
+                        var cardNumber = index + 1;
+                        var openCard = function () {
+                            var path =
+                                '/content-card-view?content_card_id=' + encodeURIComponent(id) +
+                                '&card_number=' + encodeURIComponent(cardNumber);
+                            window.location.assign(path);
+                        };
+                        if (status !== 'UNVIEWED') {
+                            openCard();
+                            return;
+                        }
+                        fetch('/api/content_cards/mark_viewed', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                init_data: initData,
+                                content_card_id: Number(id),
+                            }),
+                        }).catch(function () {
+                            // Даже если отметка статуса не удалась, всё равно открываем карточку.
+                        }).finally(openCard);
+                    });
+                    gridEl.appendChild(btn);
+                });
             }
 
             fetch('/api/content_cards/my_list', {
@@ -138,48 +234,10 @@
                         gridEl.innerHTML = '<p class="empty">У вас пока нет доступных карточек.</p>';
                         return;
                     }
-                    cards.forEach(function (row, index) {
-                        var id = row.content_card_id;
-                        var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
-                        var btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.className = 'tile';
-                        if (status === 'VIEWED') {
-                            btn.classList.add('tile--viewed');
-                        } else if (status === 'SOLVED') {
-                            btn.classList.add('tile--solved');
-                        } else if (status === 'FAVORITE') {
-                            btn.classList.add('tile--favorite');
-                        } else if (status === 'HARD') {
-                            btn.classList.add('tile--hard');
-                        }
-                        btn.textContent = String(index + 1);
-                        btn.title = 'Карточка #' + id;
-                        btn.addEventListener('click', function () {
-                            var cardNumber = index + 1;
-                            var openCard = function () {
-                                var path =
-                                    '/content-card-view?content_card_id=' + encodeURIComponent(id) +
-                                    '&card_number=' + encodeURIComponent(cardNumber);
-                                window.location.assign(path);
-                            };
-                            if (status !== 'UNVIEWED') {
-                                openCard();
-                                return;
-                            }
-                            fetch('/api/content_cards/mark_viewed', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    init_data: initData,
-                                    content_card_id: Number(id),
-                                }),
-                            }).catch(function () {
-                                // Даже если отметка статуса не удалась, всё равно открываем карточку.
-                            }).finally(openCard);
-                        });
-                        gridEl.appendChild(btn);
+                    allCards = cards.map(function (row, index) {
+                        return Object.assign({}, row, { __index: index });
                     });
+                    renderCards();
                 })
                 .catch(function (e) {
                     showErr(e.message || String(e));
