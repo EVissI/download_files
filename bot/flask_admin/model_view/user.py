@@ -4,6 +4,7 @@ from aiogram import Bot
 from flask import flash, redirect, request, url_for
 from flask_appbuilder import ModelView, expose, has_access, permission_name
 from flask_appbuilder.models.sqla.interface import SQLAInterface
+from flask_wtf.csrf import generate_csrf
 from bot.db.models import (
     ContentCard,
     Promocode,
@@ -185,6 +186,7 @@ class UserModelView(ModelView):
         kwargs.setdefault(
             "user_fab_endpoint", getattr(self, "endpoint", self.__class__.__name__)
         )
+        kwargs.setdefault("csrf_token_value", generate_csrf())
         return super().render_template(template, **kwargs)
 
     @expose("/grant_cards/<int:pk>", methods=["POST"])
