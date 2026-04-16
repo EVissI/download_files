@@ -669,12 +669,7 @@ async def _resolve_content_cards_user_id(
     raise HTTPException(status_code=401, detail="Требуется init_data или fab_token")
 
 
-@app.get("/admin/cards-cabinet")
-async def admin_cards_cabinet_bridge(request: Request):
-    """
-    Мост FAB -> кабинет карточек: создаёт временный fab_token и редиректит в /cards-cabinet.
-    Доступно только авторизованному администратору FAB (cookie admin_session).
-    """
+async def _require_admin_session_user_id(request: Request) -> int:
     session_token = request.cookies.get("admin_session")
     if not session_token:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -684,10 +679,41 @@ async def admin_cards_cabinet_bridge(request: Request):
     admin_id = int(admin_id_raw)
     if admin_id not in settings.ROOT_ADMIN_IDS:
         raise HTTPException(status_code=403, detail="Not an admin")
+    return admin_id
 
+
+async def _issue_fab_cards_auth_token(user_id: int) -> str:
     fab_token = secrets.token_urlsafe(24)
-    await redis_client.set(f"fab_cards_auth:{fab_token}", str(admin_id), expire=7200)
+    await redis_client.set(f"fab_cards_auth:{fab_token}", str(user_id), expire=7200)
+    return fab_token
+
+
+@app.get("/admin/cards-cabinet")
+async def admin_cards_cabinet_bridge(request: Request):
+    """
+    Мост FAB -> кабинет карточек: создаёт временный fab_token и редиректит в /cards-cabinet.
+    Доступно только авторизованному администратору FAB (cookie admin_session).
+    """
+    admin_id = await _require_admin_session_user_id(request)
+    fab_token = await _issue_fab_cards_auth_token(admin_id)
     url = f"/cards-cabinet?fab_token={fab_token}"
+    return RedirectResponse(url=url, status_code=302)
+
+
+@app.get("/admin/content-card-view/{content_card_id}")
+async def admin_content_card_view_bridge(content_card_id: int, request: Request):
+    """
+    Мост FAB -> просмотр конкретной карточки в WebApp.
+    Доступно только авторизованному администратору FAB (cookie admin_session).
+    """
+    if content_card_id < 1:
+        raise HTTPException(status_code=400, detail="Некорректный content_card_id")
+    admin_id = await _require_admin_session_user_id(request)
+    fab_token = await _issue_fab_cards_auth_token(admin_id)
+    url = (
+        f"/content-card-view?content_card_id={content_card_id}"
+        f"&fab_token={fab_token}"
+    )
     return RedirectResponse(url=url, status_code=302)
 
 

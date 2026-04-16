@@ -3,9 +3,9 @@
 {% block show_form %}
 {{ super() }}
 <div class="well" style="margin-top: 1em;">
-    <h4>Отправка в Telegram</h4>
-    <a href="{{ url_for(cc_fab_endpoint ~ '.send_card_to_support', pk=pk) }}" class="btn btn-primary" style="margin-right: 8px;">
-        Отправить карточку
+    <h4>Действия</h4>
+    <a href="/admin/content-card-view/{{ pk }}" class="btn btn-primary" style="margin-right: 8px;">
+        Открыть карточку в WebApp
     </a>
     <a href="{{ url_for(cc_fab_endpoint ~ '.send_mat_to_support', pk=pk) }}" class="btn btn-default">
         Отправить исходный файл
