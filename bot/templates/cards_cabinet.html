@@ -219,12 +219,14 @@
         }
         .shuffle-modal__box {
             position: relative;
-            width: min(92vw, 380px);
+            width: 92%;
+            max-width: 420px;
             background: #262a30;
             border: 1px solid #3f4550;
             border-radius: 12px;
             padding: 14px;
             color: #fff;
+            box-sizing: border-box;
         }
         .shuffle-modal__title {
             margin: 0 0 12px;
@@ -246,6 +248,7 @@
             padding: 9px 10px;
             margin-bottom: 10px;
             outline: none;
+            box-sizing: border-box;
         }
         .shuffle-modal__statuses {
             display: grid;
