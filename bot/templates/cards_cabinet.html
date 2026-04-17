@@ -201,6 +201,89 @@
             color: #888;
             font-size: 0.95rem;
         }
+        .shuffle-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200000;
+        }
+        .shuffle-modal.is-open {
+            display: flex;
+        }
+        .shuffle-modal__overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+        }
+        .shuffle-modal__box {
+            position: relative;
+            width: min(92vw, 380px);
+            background: #262a30;
+            border: 1px solid #3f4550;
+            border-radius: 12px;
+            padding: 14px;
+            color: #fff;
+        }
+        .shuffle-modal__title {
+            margin: 0 0 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .shuffle-modal__label {
+            display: block;
+            margin: 0 0 6px;
+            font-size: 13px;
+            color: #cfd7e3;
+        }
+        .shuffle-modal__input {
+            width: 100%;
+            background: #1f2329;
+            color: #fff;
+            border: 1px solid #3f4550;
+            border-radius: 8px;
+            padding: 9px 10px;
+            margin-bottom: 10px;
+            outline: none;
+        }
+        .shuffle-modal__statuses {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px 10px;
+            margin-bottom: 10px;
+        }
+        .shuffle-modal__status-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #e7edf7;
+        }
+        .shuffle-modal__msg {
+            min-height: 18px;
+            margin: 0 0 10px;
+            font-size: 13px;
+            color: #f4b567;
+        }
+        .shuffle-modal__actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .shuffle-modal__btn {
+            border: 1px solid #4a505b;
+            background: #353b45;
+            color: #fff;
+            border-radius: 8px;
+            padding: 7px 12px;
+            cursor: pointer;
+        }
+        .shuffle-modal__btn--primary {
+            border-color: #5f8fbd;
+            background: #3e6f9f;
+        }
     </style>
 </head>
 
@@ -240,6 +323,28 @@
         <div id="err" class="err" style="display:none;"></div>
         <div id="grid" class="grid"></div>
     </div>
+    <div id="shuffleModal" class="shuffle-modal" aria-hidden="true">
+        <div class="shuffle-modal__overlay" id="shuffleModalOverlay"></div>
+        <div class="shuffle-modal__box" role="dialog" aria-modal="true" aria-labelledby="shuffleModalTitle">
+            <h3 id="shuffleModalTitle" class="shuffle-modal__title">Случайная выборка карточек</h3>
+            <label for="shuffleCountInput" class="shuffle-modal__label">Сколько карточек показать</label>
+            <input id="shuffleCountInput" class="shuffle-modal__input" type="number" min="1" step="1" inputmode="numeric" placeholder="Например, 20">
+            <div class="shuffle-modal__label">Статусы для выборки</div>
+            <div class="shuffle-modal__statuses">
+                <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="UNVIEWED" checked>Не просмотренные</label>
+                <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="VIEWED" checked>Просмотренные</label>
+                <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="SOLVED" checked>Решенные</label>
+                <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="FAVORITE" checked>Избранные</label>
+                <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="HARD" checked>Сложные</label>
+            </div>
+            <p id="shuffleModalMsg" class="shuffle-modal__msg"></p>
+            <div class="shuffle-modal__actions">
+                <button type="button" id="shuffleModalResetBtn" class="shuffle-modal__btn">Сбросить</button>
+                <button type="button" id="shuffleModalCancelBtn" class="shuffle-modal__btn">Отмена</button>
+                <button type="button" id="shuffleModalApplyBtn" class="shuffle-modal__btn shuffle-modal__btn--primary">Применить</button>
+            </div>
+        </div>
+    </div>
     <script>
         (function () {
             if (window.Telegram && window.Telegram.WebApp) {
@@ -256,7 +361,15 @@
             var labelFilter = document.getElementById('label-filter');
             var adminFabBtn = document.getElementById('admin-fab-btn');
             var shuffleCardsBtn = document.getElementById('shuffle-cards-btn');
+            var shuffleModal = document.getElementById('shuffleModal');
+            var shuffleModalOverlay = document.getElementById('shuffleModalOverlay');
+            var shuffleModalMsg = document.getElementById('shuffleModalMsg');
+            var shuffleCountInput = document.getElementById('shuffleCountInput');
+            var shuffleModalApplyBtn = document.getElementById('shuffleModalApplyBtn');
+            var shuffleModalCancelBtn = document.getElementById('shuffleModalCancelBtn');
+            var shuffleModalResetBtn = document.getElementById('shuffleModalResetBtn');
             var allCards = [];
+            var shuffledCards = null;
 
             function showErr(msg) {
                 errEl.textContent = msg;
@@ -302,7 +415,8 @@
                 var filter = searchInput ? String(searchInput.value || '') : '';
                 var statusFilterValue = statusFilter ? String(statusFilter.value || '').toUpperCase() : '';
                 var labelFilterValue = labelFilter ? String(labelFilter.value || '') : '';
-                var cards = allCards.filter(function (row) {
+                var sourceCards = shuffledCards && shuffledCards.length ? shuffledCards : allCards;
+                var cards = sourceCards.filter(function (row) {
                     var cardNumber = String(((row && row.__index) || 0) + 1);
                     var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
                     var labels = Array.isArray(row && row.labels) ? row.labels : [];
@@ -362,17 +476,95 @@
                 });
             }
 
+            function setShuffleModalMsg(msg) {
+                if (!shuffleModalMsg) return;
+                shuffleModalMsg.textContent = String(msg || '');
+            }
+
+            function closeShuffleModal() {
+                if (!shuffleModal) return;
+                shuffleModal.classList.remove('is-open');
+                shuffleModal.setAttribute('aria-hidden', 'true');
+                setShuffleModalMsg('');
+            }
+
+            function openShuffleModal() {
+                if (!shuffleModal) return;
+                if (shuffleCountInput) {
+                    shuffleCountInput.value = String(Math.min(allCards.length || 1, 20));
+                }
+                setShuffleModalMsg('');
+                shuffleModal.classList.add('is-open');
+                shuffleModal.setAttribute('aria-hidden', 'false');
+            }
+
+            function collectSelectedShuffleStatuses() {
+                if (!shuffleModal) return [];
+                var checks = shuffleModal.querySelectorAll('input[name="shuffle-status"]:checked');
+                var out = [];
+                checks.forEach(function (el) {
+                    var v = String((el && el.value) || '').toUpperCase();
+                    if (v) out.push(v);
+                });
+                return out;
+            }
+
+            function applyShuffleSelection() {
+                if (!allCards || !allCards.length) {
+                    setShuffleModalMsg('Нет карточек для выборки.');
+                    return;
+                }
+                var count = parseInt(shuffleCountInput ? shuffleCountInput.value : '', 10);
+                if (!Number.isFinite(count) || count <= 0) {
+                    setShuffleModalMsg('Введите корректное количество (> 0).');
+                    return;
+                }
+                var selectedStatuses = collectSelectedShuffleStatuses();
+                if (!selectedStatuses.length) {
+                    setShuffleModalMsg('Выберите хотя бы один статус.');
+                    return;
+                }
+
+                var candidates = allCards.filter(function (row) {
+                    var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
+                    return selectedStatuses.indexOf(status) !== -1;
+                });
+                if (!candidates.length) {
+                    setShuffleModalMsg('По выбранным статусам карточек нет.');
+                    return;
+                }
+
+                var pool = candidates.slice();
+                for (var i = pool.length - 1; i > 0; i--) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    var tmp = pool[i];
+                    pool[i] = pool[j];
+                    pool[j] = tmp;
+                }
+                var limit = Math.min(count, pool.length);
+                shuffledCards = pool.slice(0, limit);
+                closeShuffleModal();
+                renderCards();
+            }
+
             if (shuffleCardsBtn) {
                 shuffleCardsBtn.addEventListener('click', function () {
-                    if (!allCards || allCards.length < 2) {
-                        return;
-                    }
-                    for (var i = allCards.length - 1; i > 0; i--) {
-                        var j = Math.floor(Math.random() * (i + 1));
-                        var tmp = allCards[i];
-                        allCards[i] = allCards[j];
-                        allCards[j] = tmp;
-                    }
+                    openShuffleModal();
+                });
+            }
+            if (shuffleModalOverlay) {
+                shuffleModalOverlay.addEventListener('click', closeShuffleModal);
+            }
+            if (shuffleModalCancelBtn) {
+                shuffleModalCancelBtn.addEventListener('click', closeShuffleModal);
+            }
+            if (shuffleModalApplyBtn) {
+                shuffleModalApplyBtn.addEventListener('click', applyShuffleSelection);
+            }
+            if (shuffleModalResetBtn) {
+                shuffleModalResetBtn.addEventListener('click', function () {
+                    shuffledCards = null;
+                    closeShuffleModal();
                     renderCards();
                 });
             }
