@@ -11,6 +11,7 @@
                         <tr>
                             <th>ID пользователя</th>
                             <th>Telegram ник</th>
+                            <th>Присвоенный ник</th>
                             <th>Количество карточек</th>
                             <th style="width: 180px;">Действие</th>
                         </tr>
@@ -21,6 +22,7 @@
                             <tr>
                                 <td>{{ row.user_id }}</td>
                                 <td>{{ row.tg_username }}</td>
+                                <td>{{ row.admin_name }}</td>
                                 <td>{{ row.cards_count }}</td>
                                 <td>
                                     <a class="btn btn-sm btn-primary" href="{{ row.show_url }}">
@@ -31,7 +33,7 @@
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted">Пользователи с карточками не найдены</td>
+                                <td colspan="5" class="text-center text-muted">Пользователи с карточками не найдены</td>
                             </tr>
                         {% endif %}
                     </tbody>

@@ -24,16 +24,22 @@ class UsersWithCardsView(BaseView):
                 select(
                     User.id.label("user_id"),
                     User.username.label("username"),
+                    User.admin_insert_name.label("admin_insert_name"),
                     func.count(UserContentCard.id).label("cards_count"),
                 )
                 .join(UserContentCard, UserContentCard.user_id == User.id)
-                .group_by(User.id, User.username)
+                .group_by(User.id, User.username, User.admin_insert_name)
                 .order_by(func.count(UserContentCard.id).desc(), User.id.asc())
             )
             for item in self.appbuilder.session.execute(stmt).all():
                 user_id = int(item.user_id)
                 username = str(item.username).strip() if item.username else ""
                 tg_username = f"@{username}" if username else "—"
+                admin_name = (
+                    str(item.admin_insert_name).strip()
+                    if item.admin_insert_name
+                    else "—"
+                )
                 try:
                     show_url = url_for("UserModelView.show", pk=str(user_id))
                 except BuildError:
@@ -42,6 +48,7 @@ class UsersWithCardsView(BaseView):
                     {
                         "user_id": user_id,
                         "tg_username": tg_username,
+                        "admin_name": admin_name,
                         "cards_count": int(item.cards_count or 0),
                         "show_url": show_url,
                     }
