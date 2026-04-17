@@ -1715,7 +1715,7 @@ class ContentEditor {
             const eq = hint.eq != null ? hint.eq.toFixed(3) : '-';
             const displayEq =
                 firstEq !== null && hint.eq !== undefined && index > 0 && typeof hint.eq === 'number'
-                    ? (hint.eq - firstEq).toFixed(3)
+                    ? `(${(hint.eq - firstEq).toFixed(3)})`
                     : eq;
             const move = hint.move || '-';
 

@@ -2420,7 +2420,9 @@
                         const prob1 = hint.probs[0] ? (hint.probs[0] * 100).toFixed(1) : '-';
                         const prob2 = hint.probs[1] ? (hint.probs[1] * 100).toFixed(1) : '-';
                         const eq = hint.eq ? hint.eq.toFixed(3) : '-';
-                        const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0) ? (hint.eq - firstEq).toFixed(3) : eq;
+                        const displayEq = (firstEq !== null && hint.eq !== undefined && index > 0)
+                            ? '(' + (hint.eq - firstEq).toFixed(3) + ')'
+                            : eq;
                         let move = hint.move || '-';
                         let rowClass = '';
                         const moveNorm = (hint.move || '').replace(/\*/g, '');
