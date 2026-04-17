@@ -51,6 +51,20 @@ class CustomUserSQLAInterface(SQLAInterface):
                 return query.order_by(active_promocodes_count.asc())
             else:
                 return query.order_by(active_promocodes_count.desc())
+
+        # Сортировка по количеству карточек пользователя
+        if order_column == 'total_cards_count':
+            total_cards_count = (
+                select(func.count(UserContentCard.id))
+                .where(UserContentCard.user_id == User.id)
+                .correlate(User)
+                .scalar_subquery()
+            )
+
+            if order_direction == 'asc':
+                return query.order_by(total_cards_count.asc())
+            else:
+                return query.order_by(total_cards_count.desc())
         
         # Для остальных колонок используем стандартную логику
         return super().apply_order_by(query, order_column, order_direction, **kwargs)
@@ -166,7 +180,7 @@ class UserModelView(ModelView):
         "active_payments",
         "total_balance",
     ]
-    order_columns = ['id', 'username', 'role', 'active_promocodes']
+    order_columns = ['id', 'username', 'role', 'active_promocodes', 'total_cards_count']
     show_columns = list_columns
 
     label_columns = {
