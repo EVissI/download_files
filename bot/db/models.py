@@ -114,6 +114,12 @@ class User(Base):
             f"{service}: {count}" for service, count in service_totals.items()
         )
 
+    @property
+    @renders("total_cards_count")
+    def total_cards_count(self):
+        """Общее количество карточек пользователя."""
+        return str(len(self.user_content_cards or []))
+
 
 class Analysis(Base):
     __tablename__ = "analyzes"

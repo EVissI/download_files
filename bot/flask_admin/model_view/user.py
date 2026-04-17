@@ -161,6 +161,7 @@ class UserModelView(ModelView):
         "first_name",
         "last_name",
         "role",
+        "total_cards_count",
         "active_promocodes",
         "active_payments",
         "total_balance",
@@ -175,12 +176,20 @@ class UserModelView(ModelView):
         "first_name": "Имя",
         "last_name": "Фамилия",
         "role": "Роль",
+        "total_cards_count": "Всего карточек",
         "active_promocodes": "Активные промокоды",
         "active_payments": "Покупки",
         "total_balance": "Общий баланс",
     }
 
     search_columns = ["id", "username", "player_username", "admin_insert_name"]
+
+    def get_query(self):
+        return super().get_query().options(
+            joinedload(User.user_content_cards),
+            joinedload(User.used_promocodes).joinedload(UserPromocode.promocode),
+            joinedload(User.analize_payments_assoc).joinedload(UserAnalizePayment.analize_payment),
+        )
 
     def render_template(self, template, **kwargs):
         kwargs.setdefault(
