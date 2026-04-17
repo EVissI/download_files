@@ -56,6 +56,7 @@ class ContentEditor {
         this.cardLabelsModal = null;
         this.cardLabelsDraft = [];
         this._adminLabelsDraft = [];
+        this._duplicateSourceConfirmAction = null;
 
         /** Кэш открытой IndexedDB для больших аудио (вне квоты localStorage JSON) */
         this._contentEditorMediaDbPromise = null;
@@ -1530,6 +1531,33 @@ class ContentEditor {
 
         // Force refresh of all dynamic content
         this.forceRefreshContent();
+    }
+
+    async openModalWithDuplicateSourceCheck(cardData) {
+        if (!window || !window.Telegram || !window.Telegram.WebApp) {
+            this.openModalWithData(cardData);
+            return;
+        }
+        try {
+            const dup = await this.checkDuplicateSourceFileOnServer();
+            if (dup && dup.exists) {
+                this.openContentCardDuplicateSourceModal(
+                    dup.file_name,
+                    dup.content_card_id,
+                    () => this.openModalWithData(cardData),
+                    'Всё равно открыть редактор'
+                );
+                return;
+            }
+        } catch (e) {
+            console.error('openModalWithDuplicateSourceCheck:', e);
+            this.showNotification(
+                e.message || 'Не удалось проверить, нет ли карточки с таким файлом',
+                'error'
+            );
+            return;
+        }
+        this.openModalWithData(cardData);
     }
 
     createTableElement(element) {
@@ -5074,6 +5102,42 @@ class ContentEditor {
         return base;
     }
 
+    async checkDuplicateSourceFileOnServer() {
+        let initData = '';
+        if (window.Telegram && window.Telegram.WebApp) {
+            initData = window.Telegram.WebApp.initData || '';
+        }
+        if (!initData) {
+            return { exists: false, content_card_id: null, file_name: '' };
+        }
+        const file_name = this.buildContentCardFileNameForCloud();
+        const checkRes = await fetch('/api/content_cards/check_file_name', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: initData, file_name }),
+        });
+        let checkData = {};
+        try {
+            checkData = await checkRes.json();
+        } catch (e) {
+            checkData = {};
+        }
+        if (!checkRes.ok) {
+            let msg = checkData.detail;
+            if (Array.isArray(msg)) {
+                msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
+            } else if (msg && typeof msg === 'object') {
+                msg = JSON.stringify(msg);
+            }
+            throw new Error(msg || `Ошибка ${checkRes.status}`);
+        }
+        return {
+            exists: !!checkData.exists,
+            content_card_id: checkData.content_card_id != null ? checkData.content_card_id : null,
+            file_name: file_name,
+        };
+    }
+
     collectUnifiedLabelsFromFrameRefs(refs) {
         const seen = new Set();
         const out = [];
@@ -5223,12 +5287,18 @@ class ContentEditor {
         }
     }
 
-    openContentCardDuplicateSourceModal(fileName, existingCardId) {
+    openContentCardDuplicateSourceModal(fileName, existingCardId, onConfirm, confirmButtonText) {
         const modal = document.getElementById('contentCardDuplicateSourceModal');
         const msgEl = document.getElementById('contentCardDuplicateSourceMessage');
         if (!modal || !msgEl) {
             this.showNotification('Не удалось показать диалог подтверждения', 'error');
             return;
+        }
+        this._duplicateSourceConfirmAction =
+            typeof onConfirm === 'function' ? onConfirm : null;
+        const confirmBtn = modal.querySelector('.card-labels-save-btn');
+        if (confirmBtn) {
+            confirmBtn.textContent = confirmButtonText || 'Всё равно сохранить';
         }
         const fnEsc = this.escapeHtml(String(fileName || ''));
         const idPart =
@@ -5245,20 +5315,29 @@ class ContentEditor {
     closeContentCardDuplicateSourceModal() {
         const modal = document.getElementById('contentCardDuplicateSourceModal');
         if (!modal) return;
+        this._duplicateSourceConfirmAction = null;
+        const confirmBtn = modal.querySelector('.card-labels-save-btn');
+        if (confirmBtn) {
+            confirmBtn.textContent = 'Всё равно сохранить';
+        }
         modal.style.display = 'none';
         modal.setAttribute('aria-hidden', 'true');
     }
 
     async confirmSaveDespiteDuplicateSource() {
+        const confirmAction = this._duplicateSourceConfirmAction;
         this.closeContentCardDuplicateSourceModal();
-        const ok = await this.saveCardToCloud({ skipDuplicateCheck: true });
+        if (typeof confirmAction === 'function') {
+            await Promise.resolve(confirmAction());
+            return;
+        }
+        const ok = await this.saveCardToCloud();
         if (ok) {
             this.closeCardPreviewModal();
         }
     }
 
-    async saveCardToCloud(options) {
-        const skipDuplicateCheck = options && options.skipDuplicateCheck === true;
+    async saveCardToCloud() {
         const refs = this.collectSavedFrameRefsForCurrentGame();
         if (!refs.length) {
             this.showNotification('Нет сохранённых кадров для этой игры', 'warning');
@@ -5278,44 +5357,6 @@ class ContentEditor {
             return false;
         }
         const file_name = this.buildContentCardFileNameForCloud();
-        if (!skipDuplicateCheck) {
-            try {
-                const checkRes = await fetch('/api/content_cards/check_file_name', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ init_data: initData, file_name }),
-                });
-                let checkData = {};
-                try {
-                    checkData = await checkRes.json();
-                } catch (e) {
-                    checkData = {};
-                }
-                if (!checkRes.ok) {
-                    let msg = checkData.detail;
-                    if (Array.isArray(msg)) {
-                        msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
-                    } else if (msg && typeof msg === 'object') {
-                        msg = JSON.stringify(msg);
-                    }
-                    throw new Error(msg || `Ошибка ${checkRes.status}`);
-                }
-                if (checkData.exists) {
-                    this.openContentCardDuplicateSourceModal(
-                        file_name,
-                        checkData.content_card_id
-                    );
-                    return false;
-                }
-            } catch (e) {
-                console.error('saveCardToCloud duplicate check:', e);
-                this.showNotification(
-                    e.message || 'Не удалось проверить, нет ли карточки с таким файлом',
-                    'error'
-                );
-                return false;
-            }
-        }
         let framesWrapper;
         try {
             const frames = [];

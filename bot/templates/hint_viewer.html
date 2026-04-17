@@ -3949,9 +3949,9 @@
         };
 
         // Функция открытия редактора контента
-        function openCardEditor() {
+        async function openCardEditor() {
             if (typeof contentEditor !== 'undefined') {
-                contentEditor.openModalWithData(
+                await contentEditor.openModalWithDuplicateSourceCheck(
                     typeof window.getHintViewerCurrentCardData === 'function'
                         ? window.getHintViewerCurrentCardData()
                         : (data.length > 0 ? data[current] : null)
