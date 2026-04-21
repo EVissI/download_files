@@ -1298,6 +1298,9 @@ class ContentEditor {
                         <div class="card-preview-header">
                             <h3 class="card-preview-title">Предпросмотр карточки</h3>
                             <div class="card-preview-header-right">
+                                <button type="button" id="cardPreviewDeleteBtn" class="card-preview-open-editor" onclick="contentEditor.deleteCurrentPreviewFrame()" title="Удалить текущий кадр">
+                                    Удалить кадр
+                                </button>
                                 <button type="button" class="card-preview-close" onclick="contentEditor.closeCardPreviewModal()" aria-label="Закрыть">&times;</button>
                             </div>
                         </div>
@@ -5542,6 +5545,7 @@ class ContentEditor {
         const prevBtn = document.getElementById('cardPreviewPrevBtn');
         const nextBtn = document.getElementById('cardPreviewNextBtn');
         const approveBtn = document.getElementById('cardPreviewApproveBtn');
+        const deletePreviewBtn = document.getElementById('cardPreviewDeleteBtn');
 
         if (counter) {
             counter.textContent = total === 0 ? '0 / 0' : `${this.cardPreviewIndex + 1} / ${total}`;
@@ -5549,6 +5553,7 @@ class ContentEditor {
         if (prevBtn) prevBtn.disabled = total === 0 || this.cardPreviewIndex <= 0;
         if (nextBtn) nextBtn.disabled = total === 0 || this.cardPreviewIndex >= total - 1;
         if (approveBtn) approveBtn.disabled = total === 0;
+        if (deletePreviewBtn) deletePreviewBtn.disabled = total === 0;
 
         const deleteFrameBtn = document.getElementById('contentCardViewDeleteFrameBtn');
         if (deleteFrameBtn && typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ && this._contentCardAdminMeta) {
@@ -6121,6 +6126,33 @@ class ContentEditor {
             this.cardPreviewIndex++;
             this.refreshCardPreviewUI();
         }
+    }
+
+    deleteCurrentPreviewFrame() {
+        if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__) return;
+        const total = this.cardPreviewRefs.length;
+        if (total <= 0) {
+            this.showNotification('Нет кадров для удаления', 'warning');
+            return;
+        }
+        const ref = this.cardPreviewRefs[this.cardPreviewIndex];
+        if (!ref) return;
+
+        if (!confirm('Удалить текущий кадр из предпросмотра?')) return;
+
+        if (ref.storageKey) {
+            try {
+                localStorage.removeItem(ref.storageKey);
+            } catch (e) {
+                console.warn('deleteCurrentPreviewFrame removeItem:', e);
+            }
+        }
+        this.cardPreviewRefs.splice(this.cardPreviewIndex, 1);
+        if (this.cardPreviewIndex >= this.cardPreviewRefs.length) {
+            this.cardPreviewIndex = Math.max(this.cardPreviewRefs.length - 1, 0);
+        }
+        this.showNotification('Кадр удалён', 'success');
+        this.refreshCardPreviewUI();
     }
 
     cardPreviewApprove() {
