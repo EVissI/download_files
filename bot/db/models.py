@@ -625,7 +625,8 @@ class ContentCard(Base):
       sharedContext — опционально: общие для всех кадров снимок доски и данные таблиц (hint viewer);
       подставляются в редактор пустого кадра на /content-card-view без дублирования в каждом payload.
       Медиа в S3; отображение GET /api/content_cards/media?key= (доступ по ключу из JSON карточки, в т.ч. для других пользователей после шаринга).
-    labels — нативный PostgreSQL-массив строк (TEXT[]).
+      labels — нативный PostgreSQL-массив строк (TEXT[]).
+      board_xgid — строка позиции GNU/XGID из снимка доски (если в карточке есть доска с полем xgid).
     """
 
     __tablename__ = "content_cards"
@@ -635,6 +636,7 @@ class ContentCard(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     frames: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    board_xgid: Mapped[str | None] = mapped_column(Text, nullable=True)
     labels: Mapped[list[str] | None] = mapped_column(ARRAY[str](String(255)), nullable=True)
 
     users: Mapped[list["UserContentCard"]] = relationship(

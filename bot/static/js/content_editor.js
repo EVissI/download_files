@@ -5180,6 +5180,91 @@ class ContentEditor {
         };
     }
 
+    async checkDuplicateBoardXgidOnServer(boardXgid) {
+        let initData = '';
+        if (window.Telegram && window.Telegram.WebApp) {
+            initData = window.Telegram.WebApp.initData || '';
+        }
+        if (!initData) {
+            return { exists: false, content_card_id: null };
+        }
+        const s = String(boardXgid || '').trim();
+        if (!s) {
+            return { exists: false, content_card_id: null };
+        }
+        const checkRes = await fetch('/api/content_cards/check_board_xgid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: initData, board_xgid: s }),
+        });
+        let checkData = {};
+        try {
+            checkData = await checkRes.json();
+        } catch (e) {
+            checkData = {};
+        }
+        if (!checkRes.ok) {
+            let msg = checkData.detail;
+            if (Array.isArray(msg)) {
+                msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
+            } else if (msg && typeof msg === 'object') {
+                msg = JSON.stringify(msg);
+            }
+            throw new Error(msg || `Ошибка ${checkRes.status}`);
+        }
+        return {
+            exists: !!checkData.exists,
+            content_card_id: checkData.content_card_id != null ? checkData.content_card_id : null,
+        };
+    }
+
+    /**
+     * Проверка дубликата по строке позиции (XGID), как в колонке content_cards.board_xgid.
+     * Для конструктора позиций (pokaz), где нет исходного .mat-файла.
+     */
+    async openModalWithDuplicateBoardXgidCheck(cardData) {
+        if (!window || !window.Telegram || !window.Telegram.WebApp) {
+            this.openModalWithData(cardData);
+            return;
+        }
+        let boardXgid = '';
+        try {
+            if (typeof window.getHintViewerBoardSnapshot === 'function') {
+                const snap = window.getHintViewerBoardSnapshot();
+                if (snap && typeof snap.xgid === 'string') {
+                    boardXgid = snap.xgid.trim();
+                }
+            }
+        } catch (e) {
+            console.warn('openModalWithDuplicateBoardXgidCheck:', e);
+        }
+        if (!boardXgid) {
+            this.openModalWithData(cardData);
+            return;
+        }
+        try {
+            const dup = await this.checkDuplicateBoardXgidOnServer(boardXgid);
+            if (dup && dup.exists) {
+                this.openContentCardDuplicateSourceModal(
+                    boardXgid,
+                    dup.content_card_id,
+                    () => this.openModalWithData(cardData),
+                    'Всё равно открыть редактор',
+                    'board_xgid'
+                );
+                return;
+            }
+        } catch (e) {
+            console.error('openModalWithDuplicateBoardXgidCheck:', e);
+            this.showNotification(
+                e.message || 'Не удалось проверить, нет ли карточки с такой позицией',
+                'error'
+            );
+            return;
+        }
+        this.openModalWithData(cardData);
+    }
+
     collectUnifiedLabelsFromFrameRefs(refs) {
         const seen = new Set();
         const out = [];
@@ -5329,9 +5414,16 @@ class ContentEditor {
         }
     }
 
-    openContentCardDuplicateSourceModal(fileName, existingCardId, onConfirm, confirmButtonText) {
+    openContentCardDuplicateSourceModal(
+        fileNameOrXgid,
+        existingCardId,
+        onConfirm,
+        confirmButtonText,
+        duplicateKind = 'file'
+    ) {
         const modal = document.getElementById('contentCardDuplicateSourceModal');
         const msgEl = document.getElementById('contentCardDuplicateSourceMessage');
+        const titleEl = document.getElementById('contentCardDuplicateSourceTitle');
         if (!modal || !msgEl) {
             this.showNotification('Не удалось показать диалог подтверждения', 'error');
             return;
@@ -5342,14 +5434,32 @@ class ContentEditor {
         if (confirmBtn) {
             confirmBtn.textContent = confirmButtonText || 'Всё равно сохранить';
         }
-        const fnEsc = this.escapeHtml(String(fileName || ''));
         const idPart =
             existingCardId != null && !Number.isNaN(Number(existingCardId))
                 ? ` (карточка №${this.escapeHtml(String(existingCardId))})`
                 : '';
-        msgEl.innerHTML =
-            `Исходный файл «${fnEsc}» уже используется${idPart}. ` +
-            'Создать ещё одну карточку с тем же исходником?';
+        if (duplicateKind === 'board_xgid') {
+            if (titleEl) {
+                titleEl.textContent = 'Карточка с такой позицией уже есть';
+            }
+            const raw = String(fileNameOrXgid || '');
+            const preview =
+                raw.length > 140 ? `${this.escapeHtml(raw.slice(0, 140))}…` : this.escapeHtml(raw);
+            msgEl.innerHTML =
+                `Такая строка позиции (XGID) уже сохранена для другой карточки${idPart}.` +
+                (preview
+                    ? `<br/><span style="display:block;margin-top:8px;font-size:12px;opacity:0.85;word-break:break-all;">${preview}</span>`
+                    : '') +
+                '<br/><span style="display:block;margin-top:10px;">Открыть редактор всё равно?</span>';
+        } else {
+            if (titleEl) {
+                titleEl.textContent = 'Карточка с таким исходником уже есть';
+            }
+            const fnEsc = this.escapeHtml(String(fileNameOrXgid || ''));
+            msgEl.innerHTML =
+                `Исходный файл «${fnEsc}» уже используется${idPart}. ` +
+                'Создать ещё одну карточку с тем же исходником?';
+        }
         modal.style.display = 'flex';
         modal.setAttribute('aria-hidden', 'false');
     }
@@ -5361,6 +5471,10 @@ class ContentEditor {
         const confirmBtn = modal.querySelector('.card-labels-save-btn');
         if (confirmBtn) {
             confirmBtn.textContent = 'Всё равно сохранить';
+        }
+        const titleEl = document.getElementById('contentCardDuplicateSourceTitle');
+        if (titleEl) {
+            titleEl.textContent = 'Карточка с таким исходником уже есть';
         }
         modal.style.display = 'none';
         modal.setAttribute('aria-hidden', 'true');

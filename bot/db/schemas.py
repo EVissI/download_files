@@ -140,6 +140,7 @@ class SContentCardCreate(BaseModel):
     file_name: str = Field(max_length=255)
     frames: dict[str, Any]
     labels: Optional[list[str]] = None
+    board_xgid: Optional[str] = None
 
 
 class SUserContentCardCreate(BaseModel):

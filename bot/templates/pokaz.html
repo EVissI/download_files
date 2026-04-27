@@ -6962,7 +6962,7 @@
             }
         };
 
-        window.openPokazCardEditor = function () {
+        window.openPokazCardEditor = async function () {
             if (!pokazIsAdmin) return;
             if (typeof contentEditor === 'undefined') {
                 console.error('ContentEditor не инициализирован');
@@ -6971,7 +6971,7 @@
             // Для pokaz всегда включаем баннер «матч / манигейм» над доской,
             // чтобы при сохранении кадра он попадал в payload.editor.showBoardMatchBanner.
             contentEditor.boardMatchBannerEnabled = true;
-            contentEditor.openModalWithData(
+            await contentEditor.openModalWithDuplicateBoardXgidCheck(
                 typeof window.getHintViewerCurrentCardData === 'function'
                     ? window.getHintViewerCurrentCardData()
                     : null

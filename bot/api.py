@@ -558,6 +558,46 @@ def _normalize_content_card_labels(raw: list[str] | None) -> list[str] | None:
     return out or None
 
 
+def _board_xgid_from_board_snapshot(board: Any) -> str | None:
+    """Строка позиции из объекта доски сохранённого кадра (поле xgid как в hint_viewer)."""
+    if board is None or not isinstance(board, dict):
+        return None
+    if board.get("error") == "no_game_data":
+        return None
+    raw = board.get("xgid")
+    if isinstance(raw, str):
+        s = raw.strip()
+        if s:
+            return s[:8000]
+    return None
+
+
+def _extract_board_xgid_from_frames(frames: dict[str, Any] | None) -> str | None:
+    """
+    Если в JSON карточки есть доска со строкой позиции — сохраняем её в колонке board_xgid.
+    Смотрим sharedContext, затем по порядку payload каждого кадра.
+    """
+    if not frames or not isinstance(frames, dict):
+        return None
+    sc = frames.get("sharedContext")
+    if isinstance(sc, dict):
+        got = _board_xgid_from_board_snapshot(sc.get("board"))
+        if got:
+            return got
+    inner = frames.get("frames")
+    if not isinstance(inner, list):
+        return None
+    for item in inner:
+        if not isinstance(item, dict):
+            continue
+        payload = item.get("payload")
+        if isinstance(payload, dict):
+            got = _board_xgid_from_board_snapshot(payload.get("board"))
+            if got:
+                return got
+    return None
+
+
 def _content_card_view_webapp_markup(view_url: str) -> InlineKeyboardMarkup:
     """Кнопка Web App — иначе при открытии ссылки из чата init_data в Telegram не передаётся."""
     kb = InlineKeyboardBuilder()
@@ -581,6 +621,13 @@ class ContentCardFileNameCheckBody(BaseModel):
 
     init_data: str = Field(..., min_length=1)
     file_name: str = Field(..., max_length=255)
+
+
+class ContentCardBoardXgidCheckBody(BaseModel):
+    """Проверка, есть ли карточка с той же строкой позиции (board_xgid), что и у снимка доски."""
+
+    init_data: str = Field(..., min_length=1)
+    board_xgid: str = Field(..., min_length=1, max_length=8000)
 
 
 class ContentCardFetchBody(BaseModel):
@@ -779,6 +826,37 @@ async def check_content_card_file_name(body: ContentCardFileNameCheckBody):
         return {"exists": False, "content_card_id": None}
 
 
+@app.post("/api/content_cards/check_board_xgid")
+async def check_content_card_board_xgid(body: ContentCardBoardXgidCheckBody):
+    """
+    Есть ли карточка с таким же board_xgid (колонка в content_cards, из снимка доски).
+    """
+    user_data = verify_telegram_webapp_data(body.init_data)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
+    tg_user = user_data.get("user") or {}
+    user_id = tg_user.get("id")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="В init_data нет user")
+    user_id = int(user_id)
+    _require_content_card_admin(user_id)
+
+    normalized = str(body.board_xgid or "").strip()[:8000]
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Пустая строка позиции")
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(ContentCard.id)
+            .where(ContentCard.board_xgid == normalized)
+            .limit(1)
+        )
+        existing_id = result.scalar_one_or_none()
+        if existing_id is not None:
+            return {"exists": True, "content_card_id": int(existing_id)}
+        return {"exists": False, "content_card_id": None}
+
+
 @app.post("/api/content_cards/save")
 async def save_content_card(body: ContentCardSaveBody):
     """
@@ -807,6 +885,7 @@ async def save_content_card(body: ContentCardSaveBody):
 
     safe_name = os.path.basename(body.file_name.strip())[:255] or "card"
     labels = _normalize_content_card_labels(body.labels)
+    board_xgid = _extract_board_xgid_from_frames(body.frames)
 
     async with async_session_maker() as session:
         user_dao = UserDAO(session)
@@ -825,6 +904,7 @@ async def save_content_card(body: ContentCardSaveBody):
                 file_name=safe_name,
                 frames=body.frames,
                 labels=labels,
+                board_xgid=board_xgid,
             )
         )
         saved_id = new_card.id
@@ -885,7 +965,11 @@ async def update_content_card(body: ContentCardUpdateBody):
         card = await card_dao.find_one_or_none_by_id(body.content_card_id)
         if not card:
             raise HTTPException(status_code=404, detail="Карточка не найдена")
-        await card_dao.update(body.content_card_id, {"frames": body.frames})
+        board_xgid = _extract_board_xgid_from_frames(body.frames)
+        await card_dao.update(
+            body.content_card_id,
+            {"frames": body.frames, "board_xgid": board_xgid},
+        )
         await session.commit()
 
     return {"ok": True, "content_card_id": body.content_card_id}
@@ -1111,6 +1195,7 @@ async def fetch_content_card(body: ContentCardFetchBody):
             out["file_name"] = card.file_name
             out["labels"] = list(raw_labels) if raw_labels is not None else []
             out["notes"] = card.notes
+            out["board_xgid"] = card.board_xgid
         return out
 
 
