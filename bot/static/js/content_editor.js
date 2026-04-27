@@ -57,6 +57,7 @@ class ContentEditor {
         this.cardLabelsDraft = [];
         /** Пресеты меток с сервера (root-админ): { id, value }[] */
         this._labelPresetsList = [];
+        this.labelPresetsModal = null;
         this._adminLabelsDraft = [];
         this._duplicateSourceConfirmAction = null;
 
@@ -1328,15 +1329,9 @@ class ContentEditor {
                 <div id="cardLabelsModal" class="card-labels-modal" style="display: none;" aria-hidden="true">
                     <div class="card-labels-overlay" onclick="contentEditor.cancelCardLabelsStep()"></div>
                     <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="cardLabelsModalTitle">
-                        <h3 id="cardLabelsModalTitle" class="card-labels-title">Метки карточки</h3>
-                        <div id="cardLabelsPresetsWrap" class="card-labels-presets-wrap" style="display: none;">
-                            <p class="card-labels-presets-title">Пресеты</p>
-                            <p class="card-labels-presets-hint">Нажмите текст — добавить в метки карточки ниже.</p>
-                            <div id="cardLabelsPresetsList" class="card-labels-presets-list" aria-live="polite"></div>
-                            <div class="card-labels-preset-admin-row">
-                                <input type="text" id="cardLabelsPresetNewInput" class="card-labels-input" maxlength="255" placeholder="Новый пресет для всех" autocomplete="off" />
-                                <button type="button" class="card-labels-add-btn" onclick="contentEditor.createLabelPresetFromInput()">В пресеты</button>
-                            </div>
+                        <div class="card-labels-modal-header-row">
+                            <h3 id="cardLabelsModalTitle" class="card-labels-title">Метки карточки</h3>
+                            <button type="button" id="cardLabelsOpenPresetsBtn" class="card-labels-presets-open-btn" style="display: none;" onclick="contentEditor.openLabelPresetsModal()" title="Пресеты меток">Пресеты</button>
                         </div>
                         <div class="card-labels-input-row">
                             <input type="text" id="cardLabelsInput" class="card-labels-input" maxlength="500" placeholder="Введите метку и нажмите Enter или «Добавить»" autocomplete="off" />
@@ -1346,6 +1341,24 @@ class ContentEditor {
                         <div class="card-labels-actions">
                             <button type="button" class="card-labels-back-btn" onclick="contentEditor.cancelCardLabelsStep()">К предпросмотру</button>
                             <button type="button" class="card-labels-save-btn" onclick="contentEditor.confirmCardLabels()">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="labelPresetsModal" class="label-presets-modal" style="display: none;" aria-hidden="true">
+                    <div class="card-labels-overlay" onclick="contentEditor.closeLabelPresetsModal()"></div>
+                    <div class="card-labels-box label-presets-modal-box" role="dialog" aria-modal="true" aria-labelledby="labelPresetsModalTitle">
+                        <div class="label-presets-modal-header">
+                            <h3 id="labelPresetsModalTitle" class="card-labels-title">Пресеты меток</h3>
+                            <button type="button" class="label-presets-modal-close" onclick="contentEditor.closeLabelPresetsModal()" aria-label="Закрыть">&times;</button>
+                        </div>
+                        <p class="card-labels-presets-hint">Нажмите текст пресета — он добавится в список меток карточки (в окне ниже после возврата).</p>
+                        <div id="labelPresetsList" class="card-labels-presets-list" aria-live="polite"></div>
+                        <div class="card-labels-preset-admin-row">
+                            <input type="text" id="labelPresetNewInput" class="card-labels-input" maxlength="255" placeholder="Новый пресет для всех" autocomplete="off" />
+                            <button type="button" class="card-labels-add-btn" onclick="contentEditor.createLabelPresetFromInput()">Сохранить в пресеты</button>
+                        </div>
+                        <div class="card-labels-actions card-labels-actions--preset-footer">
+                            <button type="button" class="card-labels-save-btn" onclick="contentEditor.closeLabelPresetsModal()">Готово</button>
                         </div>
                     </div>
                 </div>
@@ -1370,6 +1383,7 @@ class ContentEditor {
                 );
             }
             this.cardLabelsModal = document.getElementById('cardLabelsModal');
+            this.labelPresetsModal = document.getElementById('labelPresetsModal');
             const labelsInput = document.getElementById('cardLabelsInput');
             if (labelsInput) {
                 labelsInput.addEventListener('keydown', (e) => {
@@ -1379,9 +1393,9 @@ class ContentEditor {
                     }
                 });
             }
-            const presetNewInput = document.getElementById('cardLabelsPresetNewInput');
-            if (presetNewInput) {
-                presetNewInput.addEventListener('keydown', (e) => {
+            const labelPresetNewInput = document.getElementById('labelPresetNewInput');
+            if (labelPresetNewInput) {
+                labelPresetNewInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         this.createLabelPresetFromInput();
@@ -1391,6 +1405,7 @@ class ContentEditor {
         } else {
             this.cardPreviewModal = document.getElementById('contentCardViewRoot');
             this.cardLabelsModal = null;
+            this.labelPresetsModal = null;
         }
 
         this.canvas = document.getElementById('canvas');
@@ -4544,6 +4559,10 @@ class ContentEditor {
                 this.closeContentCardDuplicateSourceModal();
                 return;
             }
+            if (this.labelPresetsModal && this.labelPresetsModal.style.display === 'flex') {
+                this.closeLabelPresetsModal();
+                return;
+            }
             if (this.cardLabelsModal && this.cardLabelsModal.style.display === 'flex') {
                 this.cancelCardLabelsStep();
                 return;
@@ -6208,10 +6227,72 @@ class ContentEditor {
         if (input) input.value = '';
         this.cardLabelsModal.style.display = 'flex';
         this.cardLabelsModal.setAttribute('aria-hidden', 'false');
-        void this.loadLabelPresetsForCardLabelsModal();
+        void this.refreshLabelPresetsAccessButton();
         requestAnimationFrame(() => {
             if (input) input.focus();
         });
+    }
+
+    /**
+     * Показать кнопку «Пресеты» только если есть доступ к API (root-админ).
+     */
+    async refreshLabelPresetsAccessButton() {
+        const btn = document.getElementById('cardLabelsOpenPresetsBtn');
+        if (!btn) return;
+        const ok = await this.fetchLabelPresetsFromServer();
+        btn.style.display = ok ? 'inline-flex' : 'none';
+    }
+
+    async fetchLabelPresetsFromServer() {
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) {
+            this._labelPresetsList = [];
+            return false;
+        }
+        try {
+            const r = await fetch('/api/content_cards/label_presets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(auth),
+            });
+            if (!r.ok) {
+                this._labelPresetsList = [];
+                return false;
+            }
+            const data = await r.json();
+            this._labelPresetsList = Array.isArray(data.presets) ? data.presets.slice() : [];
+            return true;
+        } catch (e) {
+            console.warn('fetchLabelPresetsFromServer:', e);
+            this._labelPresetsList = [];
+            return false;
+        }
+    }
+
+    openLabelPresetsModal() {
+        if (!this.labelPresetsModal) return;
+        void this._openLabelPresetsModalAsync();
+    }
+
+    async _openLabelPresetsModalAsync() {
+        const ok = await this.fetchLabelPresetsFromServer();
+        if (!ok) {
+            this.showNotification('Пресеты доступны только администраторам', 'warning');
+            return;
+        }
+        this.labelPresetsModal.style.display = 'flex';
+        this.labelPresetsModal.setAttribute('aria-hidden', 'false');
+        this.renderLabelPresetsPanel();
+        const inp = document.getElementById('labelPresetNewInput');
+        requestAnimationFrame(() => {
+            if (inp) inp.focus();
+        });
+    }
+
+    closeLabelPresetsModal() {
+        if (!this.labelPresetsModal) return;
+        this.labelPresetsModal.style.display = 'none';
+        this.labelPresetsModal.setAttribute('aria-hidden', 'true');
     }
 
     getContentCardApiAuthPayload() {
@@ -6223,40 +6304,8 @@ class ContentEditor {
         return null;
     }
 
-    async loadLabelPresetsForCardLabelsModal() {
-        const wrap = document.getElementById('cardLabelsPresetsWrap');
-        const listEl = document.getElementById('cardLabelsPresetsList');
-        if (!wrap || !listEl) return;
-        const auth = this.getContentCardApiAuthPayload();
-        if (!auth) {
-            wrap.style.display = 'none';
-            this._labelPresetsList = [];
-            return;
-        }
-        try {
-            const r = await fetch('/api/content_cards/label_presets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(auth),
-            });
-            if (!r.ok) {
-                wrap.style.display = 'none';
-                this._labelPresetsList = [];
-                return;
-            }
-            const data = await r.json();
-            this._labelPresetsList = Array.isArray(data.presets) ? data.presets.slice() : [];
-            wrap.style.display = 'flex';
-            this.renderLabelPresetsPanel();
-        } catch (e) {
-            console.warn('loadLabelPresetsForCardLabelsModal:', e);
-            wrap.style.display = 'none';
-            this._labelPresetsList = [];
-        }
-    }
-
     renderLabelPresetsPanel() {
-        const listEl = document.getElementById('cardLabelsPresetsList');
+        const listEl = document.getElementById('labelPresetsList');
         if (!listEl) return;
         if (!this._labelPresetsList.length) {
             listEl.innerHTML =
@@ -6288,7 +6337,7 @@ class ContentEditor {
     }
 
     async createLabelPresetFromInput() {
-        const inp = document.getElementById('cardLabelsPresetNewInput');
+        const inp = document.getElementById('labelPresetNewInput');
         const auth = this.getContentCardApiAuthPayload();
         if (!inp || !auth) return;
         const text = String(inp.value || '').trim();

@@ -1305,11 +1305,94 @@ button.content-card-admin-info-file-link:hover {
     text-align: center;
 }
 
-.card-labels-presets-wrap {
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #444;
+.card-labels-modal-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+}
+
+.card-labels-modal-header-row .card-labels-title {
+    flex: 1;
+    text-align: left;
+    min-width: 0;
+}
+
+.card-labels-presets-open-btn {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #6b5b2a;
+    background: #3a3420;
+    color: #fde68a;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.card-labels-presets-open-btn:hover {
+    background: #4a4228;
+}
+
+/* Отдельное окно пресетов — поверх модалки меток */
+.label-presets-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 21100;
+}
+
+.label-presets-modal-box {
+    width: min(440px, calc(100vw - 32px));
+    max-height: min(85vh, 560px);
+}
+
+.label-presets-modal .card-labels-presets-list {
+    max-height: 220px;
+}
+
+.label-presets-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.label-presets-modal-header .card-labels-title {
+    text-align: left;
+    flex: 1;
+    margin: 0;
+}
+
+.label-presets-modal-close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: #3a3a3a;
+    color: #e0e0e0;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.label-presets-modal-close:hover {
+    background: #505050;
+}
+
+.card-labels-actions--preset-footer {
+    justify-content: stretch;
+    margin-top: 4px;
+}
+
+.card-labels-actions--preset-footer .card-labels-save-btn {
+    width: 100%;
+    text-align: center;
 }
 
 .card-labels-presets-title {
