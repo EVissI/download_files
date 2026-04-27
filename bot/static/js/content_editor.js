@@ -6334,6 +6334,7 @@ class ContentEditor {
         }
         this.cardLabelsDraft.push(v);
         this.renderCardLabelsList();
+        this.closeLabelPresetsModal();
     }
 
     async createLabelPresetFromInput() {
