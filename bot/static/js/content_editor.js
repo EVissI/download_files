@@ -6316,8 +6316,8 @@ class ContentEditor {
             .map(
                 (p) =>
                     `<span class="card-labels-preset-chip">` +
-                    `<button type="button" class="card-labels-preset-insert" onclick="contentEditor.addCardLabelFromPresetById(${p.id})">${this.escapeHtml(p.value)}</button>` +
-                    `<button type="button" class="card-labels-preset-remove" onclick="contentEditor.deleteLabelPresetById(${p.id})" aria-label="Удалить пресет">&times;</button>` +
+                    `<button type="button" class="card-labels-preset-insert" onclick="event.stopPropagation(); contentEditor.addCardLabelFromPresetById(${p.id})">${this.escapeHtml(p.value)}</button>` +
+                    `<button type="button" class="card-labels-preset-remove" onclick="event.preventDefault(); event.stopPropagation(); contentEditor.deleteLabelPresetById(${p.id})" aria-label="Удалить пресет">&times;</button>` +
                     `</span>`
             )
             .join('');
@@ -6379,15 +6379,32 @@ class ContentEditor {
         }
     }
 
+    /**
+     * В Telegram WebApp часто блокируют множественные window.confirm — используем showConfirm.
+     */
+    confirmPresetDanger(message) {
+        return new Promise((resolve) => {
+            const tg = typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp;
+            if (tg && typeof tg.showConfirm === 'function') {
+                tg.showConfirm(message, (ok) => resolve(!!ok));
+                return;
+            }
+            resolve(window.confirm(message));
+        });
+    }
+
     async deleteLabelPresetById(id) {
-        if (!confirm('Удалить этот пресет для всех пользователей?')) return;
+        const presetId = Number(id);
+        if (!Number.isFinite(presetId) || presetId < 1) return;
+        const ok = await this.confirmPresetDanger('Удалить этот пресет?');
+        if (!ok) return;
         const auth = this.getContentCardApiAuthPayload();
         if (!auth) return;
         try {
             const r = await fetch('/api/content_cards/label_presets/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...auth, preset_id: id }),
+                body: JSON.stringify({ ...auth, preset_id: presetId }),
             });
             let j = {};
             try {
@@ -6400,7 +6417,7 @@ class ContentEditor {
                 this.showNotification(detail || 'Не удалось удалить пресет', 'error');
                 return;
             }
-            this._labelPresetsList = this._labelPresetsList.filter((x) => x.id !== id);
+            this._labelPresetsList = this._labelPresetsList.filter((x) => Number(x.id) !== presetId);
             this.renderLabelPresetsPanel();
             this.showNotification('Пресет удалён', 'success');
         } catch (e) {

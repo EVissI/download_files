@@ -1445,6 +1445,8 @@ button.content-card-admin-info-file-link:hover {
     text-align: left;
     cursor: pointer;
     word-break: break-word;
+    position: relative;
+    z-index: 1;
 }
 
 .card-labels-preset-insert:hover {
@@ -1453,7 +1455,8 @@ button.content-card-admin-info-file-link:hover {
 
 .card-labels-preset-remove {
     flex-shrink: 0;
-    width: 32px;
+    width: 36px;
+    min-width: 36px;
     padding: 0;
     border: none;
     border-left: 1px solid #6b5b2a;
@@ -1462,6 +1465,8 @@ button.content-card-admin-info-file-link:hover {
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
+    position: relative;
+    z-index: 2;
 }
 
 .card-labels-preset-remove:hover {

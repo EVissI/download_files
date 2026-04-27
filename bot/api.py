@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.wsgi import WSGIMiddleware
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from typing import Any, Optional
 import secrets
@@ -1024,10 +1024,12 @@ async def content_cards_label_preset_delete(body: LabelPresetDeleteBody):
     _require_content_card_admin(user_id)
 
     async with async_session_maker() as session:
-        preset = await session.get(LabelPreset, body.preset_id)
-        if not preset:
+        exists = await session.scalar(
+            select(LabelPreset.id).where(LabelPreset.id == body.preset_id).limit(1)
+        )
+        if exists is None:
             raise HTTPException(status_code=404, detail="Пресет не найден")
-        session.delete(preset)
+        await session.execute(delete(LabelPreset).where(LabelPreset.id == body.preset_id))
         await session.commit()
 
     return {"ok": True}
