@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.wsgi import WSGIMiddleware
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from typing import Any, Optional
 import secrets
 
@@ -31,7 +32,7 @@ from bot.db.dao import (
     ContentCardDAO,
     UserContentCardDAO,
 )
-from bot.db.models import ContentCard, ServiceType, UserContentCardStatus
+from bot.db.models import ContentCard, LabelPreset, ServiceType, UserContentCardStatus
 from bot.db.schemas import SContentCardCreate, SUserContentCardCreate
 from loguru import logger
 import traceback
@@ -597,6 +598,18 @@ class ContentCardMyListBody(BaseModel):
     fab_token: str | None = None
 
 
+class LabelPresetCreateBody(BaseModel):
+    init_data: str | None = None
+    fab_token: str | None = None
+    value: str = Field(..., min_length=1, max_length=255)
+
+
+class LabelPresetDeleteBody(BaseModel):
+    init_data: str | None = None
+    fab_token: str | None = None
+    preset_id: int = Field(..., ge=1)
+
+
 class ContentCardMarkViewedBody(BaseModel):
     """Отметка карточки как просмотренной для текущего пользователя."""
 
@@ -960,6 +973,64 @@ async def content_cards_all_labels(body: ContentCardMyListBody):
                     labels_set.add(text)
 
     return {"labels": sorted(labels_set, key=lambda x: x.lower())}
+
+
+@app.post("/api/content_cards/label_presets")
+async def content_cards_label_presets(body: ContentCardMyListBody):
+    """
+    Список пресетов меток из БД (тот же контур, что all_labels) — для подстановки в UI меток.
+    """
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(LabelPreset.id, LabelPreset.value).order_by(LabelPreset.value)
+        )
+        rows = result.all()
+
+    return {"presets": [{"id": int(i), "value": v} for (i, v) in rows]}
+
+
+@app.post("/api/content_cards/label_presets/create")
+async def content_cards_label_preset_create(body: LabelPresetCreateBody):
+    """Создать пресет метки (только ROOT_ADMIN_IDS)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+    val = str(body.value or "").strip()[:255]
+    if not val:
+        raise HTTPException(status_code=400, detail="Пустое значение пресета")
+
+    async with async_session_maker() as session:
+        preset = LabelPreset(value=val)
+        session.add(preset)
+        try:
+            await session.commit()
+            await session.refresh(preset)
+        except IntegrityError:
+            await session.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="Такой пресет уже существует",
+            )
+
+    return {"id": preset.id, "value": preset.value}
+
+
+@app.post("/api/content_cards/label_presets/delete")
+async def content_cards_label_preset_delete(body: LabelPresetDeleteBody):
+    """Удалить пресет метки (только ROOT_ADMIN_IDS)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        preset = await session.get(LabelPreset, body.preset_id)
+        if not preset:
+            raise HTTPException(status_code=404, detail="Пресет не найден")
+        session.delete(preset)
+        await session.commit()
+
+    return {"ok": True}
 
 
 @app.post("/api/content_cards/mark_viewed")

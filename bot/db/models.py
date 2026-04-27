@@ -590,6 +590,21 @@ class MessagesTexts(Base):
     text_en: Mapped[str] = mapped_column(String(1000))
 
 
+class LabelPreset(Base):
+    """
+    Пресеты текстов для меток карточек (ContentCard.labels): админ задаёт список,
+    при редактировании меток можно подставлять значения из пресетов.
+    """
+
+    __tablename__ = "label_presets"
+    __table_args__ = (
+        UniqueConstraint("value", name="uq_label_presets_value"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    value: Mapped[str] = mapped_column(String(255), nullable=False)
+
+
 class ContentCard(Base):
     """
     Сохранённая карточка редактора контента (hint viewer и т.п.).

@@ -55,6 +55,8 @@ class ContentEditor {
         /** Модалка меток карточки (целиком, не на отдельный кадр) */
         this.cardLabelsModal = null;
         this.cardLabelsDraft = [];
+        /** Пресеты меток с сервера (root-админ): { id, value }[] */
+        this._labelPresetsList = [];
         this._adminLabelsDraft = [];
         this._duplicateSourceConfirmAction = null;
 
@@ -285,7 +287,7 @@ class ContentEditor {
         }
         const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
         if (!initData && !fabToken) {
-            showErr('Откройте страницу из Telegram или через FAB-мост');
+            showErr('Откройте страницу из Telegram');
             return;
         }
         try {
@@ -966,7 +968,7 @@ class ContentEditor {
         const params = new URLSearchParams(window.location.search || '');
         const fabToken = String(params.get('fab_token') || '');
         if (!initData && !fabToken) {
-            this.showNotification('Сохранение доступно в Telegram WebApp или через FAB-мост', 'warning');
+            this.showNotification('Сохранение доступно в Telegram WebApp', 'warning');
             return false;
         }
         if (this._contentCardViewCardId == null) {
@@ -1030,7 +1032,7 @@ class ContentEditor {
         const params = new URLSearchParams(window.location.search || '');
         const fabToken = String(params.get('fab_token') || '');
         if (!initData && !fabToken) {
-            this.showNotification('Скачивание доступно в Telegram WebApp или через FAB-мост', 'warning');
+            this.showNotification('Скачивание доступно в Telegram WebApp', 'warning');
             return;
         }
         const cid = this._contentCardViewCardId;
@@ -1327,6 +1329,15 @@ class ContentEditor {
                     <div class="card-labels-overlay" onclick="contentEditor.cancelCardLabelsStep()"></div>
                     <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="cardLabelsModalTitle">
                         <h3 id="cardLabelsModalTitle" class="card-labels-title">Метки карточки</h3>
+                        <div id="cardLabelsPresetsWrap" class="card-labels-presets-wrap" style="display: none;">
+                            <p class="card-labels-presets-title">Пресеты</p>
+                            <p class="card-labels-presets-hint">Нажмите текст — добавить в метки карточки ниже.</p>
+                            <div id="cardLabelsPresetsList" class="card-labels-presets-list" aria-live="polite"></div>
+                            <div class="card-labels-preset-admin-row">
+                                <input type="text" id="cardLabelsPresetNewInput" class="card-labels-input" maxlength="255" placeholder="Новый пресет для всех" autocomplete="off" />
+                                <button type="button" class="card-labels-add-btn" onclick="contentEditor.createLabelPresetFromInput()">В пресеты</button>
+                            </div>
+                        </div>
                         <div class="card-labels-input-row">
                             <input type="text" id="cardLabelsInput" class="card-labels-input" maxlength="500" placeholder="Введите метку и нажмите Enter или «Добавить»" autocomplete="off" />
                             <button type="button" class="card-labels-add-btn" onclick="contentEditor.addCardLabelFromInput()">Добавить</button>
@@ -1365,6 +1376,15 @@ class ContentEditor {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         this.addCardLabelFromInput();
+                    }
+                });
+            }
+            const presetNewInput = document.getElementById('cardLabelsPresetNewInput');
+            if (presetNewInput) {
+                presetNewInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.createLabelPresetFromInput();
                     }
                 });
             }
@@ -6188,9 +6208,156 @@ class ContentEditor {
         if (input) input.value = '';
         this.cardLabelsModal.style.display = 'flex';
         this.cardLabelsModal.setAttribute('aria-hidden', 'false');
+        void this.loadLabelPresetsForCardLabelsModal();
         requestAnimationFrame(() => {
             if (input) input.focus();
         });
+    }
+
+    getContentCardApiAuthPayload() {
+        const initData = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
+        if (initData) return { init_data: initData };
+        const params = new URLSearchParams(window.location.search || '');
+        const fabToken = String(params.get('fab_token') || '');
+        if (fabToken) return { fab_token: fabToken };
+        return null;
+    }
+
+    async loadLabelPresetsForCardLabelsModal() {
+        const wrap = document.getElementById('cardLabelsPresetsWrap');
+        const listEl = document.getElementById('cardLabelsPresetsList');
+        if (!wrap || !listEl) return;
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) {
+            wrap.style.display = 'none';
+            this._labelPresetsList = [];
+            return;
+        }
+        try {
+            const r = await fetch('/api/content_cards/label_presets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(auth),
+            });
+            if (!r.ok) {
+                wrap.style.display = 'none';
+                this._labelPresetsList = [];
+                return;
+            }
+            const data = await r.json();
+            this._labelPresetsList = Array.isArray(data.presets) ? data.presets.slice() : [];
+            wrap.style.display = 'flex';
+            this.renderLabelPresetsPanel();
+        } catch (e) {
+            console.warn('loadLabelPresetsForCardLabelsModal:', e);
+            wrap.style.display = 'none';
+            this._labelPresetsList = [];
+        }
+    }
+
+    renderLabelPresetsPanel() {
+        const listEl = document.getElementById('cardLabelsPresetsList');
+        if (!listEl) return;
+        if (!this._labelPresetsList.length) {
+            listEl.innerHTML =
+                '<span class="card-labels-presets-empty">Пока нет пресетов — задайте строку ниже и нажмите «В пресеты».</span>';
+            return;
+        }
+        listEl.innerHTML = this._labelPresetsList
+            .map(
+                (p) =>
+                    `<span class="card-labels-preset-chip">` +
+                    `<button type="button" class="card-labels-preset-insert" onclick="contentEditor.addCardLabelFromPresetById(${p.id})">${this.escapeHtml(p.value)}</button>` +
+                    `<button type="button" class="card-labels-preset-remove" onclick="contentEditor.deleteLabelPresetById(${p.id})" aria-label="Удалить пресет">&times;</button>` +
+                    `</span>`
+            )
+            .join('');
+    }
+
+    addCardLabelFromPresetById(id) {
+        const p = this._labelPresetsList.find((x) => x.id === id);
+        if (!p || p.value == null) return;
+        const v = String(p.value).trim();
+        if (!v) return;
+        if (this.cardLabelsDraft.some((x) => String(x).trim() === v)) {
+            this.showNotification('Эта метка уже в списке', 'warning');
+            return;
+        }
+        this.cardLabelsDraft.push(v);
+        this.renderCardLabelsList();
+    }
+
+    async createLabelPresetFromInput() {
+        const inp = document.getElementById('cardLabelsPresetNewInput');
+        const auth = this.getContentCardApiAuthPayload();
+        if (!inp || !auth) return;
+        const text = String(inp.value || '').trim();
+        if (!text) {
+            this.showNotification('Введите текст пресета', 'warning');
+            return;
+        }
+        try {
+            const r = await fetch('/api/content_cards/label_presets/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...auth, value: text }),
+            });
+            let j = {};
+            try {
+                j = await r.json();
+            } catch (e) {}
+            if (!r.ok) {
+                let detail = '';
+                if (typeof j.detail === 'string') detail = j.detail;
+                else if (Array.isArray(j.detail))
+                    detail = j.detail.map((x) => x.msg || JSON.stringify(x)).join('; ');
+                else if (j.detail) detail = JSON.stringify(j.detail);
+                this.showNotification(detail || 'Не удалось сохранить пресет', 'error');
+                return;
+            }
+            if (j.id != null && j.value != null) {
+                this._labelPresetsList.push({ id: j.id, value: j.value });
+                this._labelPresetsList.sort((a, b) =>
+                    String(a.value).localeCompare(String(b.value), undefined, { sensitivity: 'base' })
+                );
+                inp.value = '';
+                this.renderLabelPresetsPanel();
+                this.showNotification('Пресет сохранён', 'success');
+            }
+        } catch (e) {
+            console.error('createLabelPresetFromInput:', e);
+            this.showNotification(e.message || String(e), 'error');
+        }
+    }
+
+    async deleteLabelPresetById(id) {
+        if (!confirm('Удалить этот пресет для всех пользователей?')) return;
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) return;
+        try {
+            const r = await fetch('/api/content_cards/label_presets/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...auth, preset_id: id }),
+            });
+            let j = {};
+            try {
+                j = await r.json();
+            } catch (e) {}
+            if (!r.ok) {
+                let detail = '';
+                if (typeof j.detail === 'string') detail = j.detail;
+                else if (j.detail) detail = JSON.stringify(j.detail);
+                this.showNotification(detail || 'Не удалось удалить пресет', 'error');
+                return;
+            }
+            this._labelPresetsList = this._labelPresetsList.filter((x) => x.id !== id);
+            this.renderLabelPresetsPanel();
+            this.showNotification('Пресет удалён', 'success');
+        } catch (e) {
+            console.error('deleteLabelPresetById:', e);
+            this.showNotification(e.message || String(e), 'error');
+        }
     }
 
     closeCardLabelsModal() {
