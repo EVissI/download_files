@@ -1506,8 +1506,18 @@ class ContentEditor {
         });
     }
 
+    /**
+     * Единые дефолты сессии редактора, чтобы поведение предпросмотра
+     * не зависело от предыдущего открытия страницы/редактора.
+     */
+    resetEditorSessionDefaults() {
+        this.toggleStates = {};
+        this.boardMatchBannerEnabled = false;
+    }
+
     openModal() {
         this.clearPreviewEditSession();
+        this.resetEditorSessionDefaults();
         // Force cache-busting by adding timestamp to modal
         const timestamp = Date.now();
         if (this.modal) {
@@ -1551,6 +1561,7 @@ class ContentEditor {
     openModalWithData(cardData, options = {}) {
         if (!options.fromPreviewRestore) {
             this.clearPreviewEditSession();
+            this.resetEditorSessionDefaults();
         }
         // Force cache-busting by adding timestamp to modal
         const timestamp = Date.now();
