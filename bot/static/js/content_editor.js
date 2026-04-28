@@ -5265,6 +5265,30 @@ class ContentEditor {
         this.openModalWithData(cardData);
     }
 
+    /**
+     * Единая точка входа для открытия редактора из страниц hint_viewer/pokaz.
+     * Выбирает самый "свежий" доступный способ открытия без привязки шаблонов
+     * к конкретной версии методов редактора.
+     */
+    async openModalWithBestDuplicateCheck(cardData, options = {}) {
+        if (options && options.forceBoardMatchBanner === true) {
+            this.boardMatchBannerEnabled = true;
+        }
+        if (typeof this.openModalWithDuplicateSourceCheck === 'function') {
+            await this.openModalWithDuplicateSourceCheck(cardData);
+            return;
+        }
+        if (typeof this.openModalWithDuplicateBoardXgidCheck === 'function') {
+            await this.openModalWithDuplicateBoardXgidCheck(cardData);
+            return;
+        }
+        if (typeof this.openModalWithData === 'function') {
+            this.openModalWithData(cardData);
+            return;
+        }
+        throw new Error('ContentEditor не содержит методов открытия модального окна');
+    }
+
     collectUnifiedLabelsFromFrameRefs(refs) {
         const seen = new Set();
         const out = [];

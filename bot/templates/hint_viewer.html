@@ -3953,11 +3953,18 @@
         // Функция открытия редактора контента
         async function openCardEditor() {
             if (typeof contentEditor !== 'undefined') {
-                await contentEditor.openModalWithDuplicateSourceCheck(
-                    typeof window.getHintViewerCurrentCardData === 'function'
-                        ? window.getHintViewerCurrentCardData()
-                        : (data.length > 0 ? data[current] : null)
-                );
+                const cardData = typeof window.getHintViewerCurrentCardData === 'function'
+                    ? window.getHintViewerCurrentCardData()
+                    : (data.length > 0 ? data[current] : null);
+                if (typeof contentEditor.openModalWithBestDuplicateCheck === 'function') {
+                    await contentEditor.openModalWithBestDuplicateCheck(cardData);
+                } else if (typeof contentEditor.openModalWithDuplicateSourceCheck === 'function') {
+                    await contentEditor.openModalWithDuplicateSourceCheck(cardData);
+                } else if (typeof contentEditor.openModalWithData === 'function') {
+                    contentEditor.openModalWithData(cardData);
+                } else {
+                    throw new Error('ContentEditor не содержит методов открытия модального окна');
+                }
             } else {
                 console.error('ContentEditor не инициализирован');
             }
