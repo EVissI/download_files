@@ -1,9 +1,58 @@
+import {
+    applyContentCardFetchPayloadImpl,
+    applyContentCardSharedToEditorPayloadImpl,
+    assignContentCardSharedContextFromWrapperImpl,
+    bootstrapContentCardViewPageImpl,
+    deriveContentCardSharedContextFromFramesImpl,
+    ensureContentCardAddFrameUiImpl,
+    getPayloadForCardPreviewRenderImpl,
+    initContentCardViewOnlyImpl,
+    mergeSharedUnderFrameCardDataImpl,
+    wrapContentCardFramesWithSharedImpl,
+} from '/static/js/content-editor/features/content_card_view_bootstrap.js';
+import {
+    buildEmptyContentCardFramePayloadImpl,
+    closeContentCardAddFrameModalImpl,
+    closeContentCardAdminInfoModalImpl,
+    confirmContentCardAddFrameImpl,
+    deleteCurrentContentCardFrameImpl,
+    ensureViewOnlyEditorMountedImpl,
+    openContentCardAddFrameModalImpl,
+    openContentCardAdminInfoModalImpl,
+    openEditorFromContentCardViewImpl,
+} from '/static/js/content-editor/features/content_card_view_admin.js';
+import {
+    appendCardPreviewBoardOverlayImpl,
+    cardPreviewApproveImpl,
+    cardPreviewNextImpl,
+    cardPreviewPrevImpl,
+    closeCardPreviewModalImpl,
+    deleteCurrentPreviewFrameImpl,
+    drawBoardPreviewCheckersImpl,
+    drawDoublingCubePreviewImpl,
+    formatBoardMatchBannerTextImpl,
+    getBoardPreviewBaseYImpl,
+    getBoardPreviewDyImpl,
+    getBoardPreviewPointXImpl,
+    loadBoardPreviewImagesImpl,
+    openCardPreviewModalImpl,
+    paintBoardPreviewCanvasImpl,
+    refreshCardPreviewScaleImpl,
+    refreshCardPreviewUIImpl,
+    renderCardPreviewSurfaceImpl,
+    reorderCardPreviewElementsBySavedTopImpl,
+    resolveBoardPositionsFromSnapshotImpl,
+    setupCardPreviewTableCollapseImpl,
+    shouldShowBoardInCardPreviewImpl,
+    updateCardPreviewInnerMinHeightImpl,
+} from '/static/js/content-editor/features/content_preview.js';
+
 /**
  * Content Editor Module
  * Редактор контента в стиле Photoshop
  */
 
-class ContentEditor {
+export class ContentEditor {
     constructor() {
         this.modal = null;
         this.canvas = null;
@@ -178,194 +227,21 @@ class ContentEditor {
 
     /** Только просмотр сохранённой карточки (страница /content-card-view), без редактора. */
     initContentCardViewOnly() {
-        this._contentCardTopLabels = [];
-        this._contentCardViewFileName = '';
-        this._contentCardAdminMeta = null;
-        /** Общие для всех кадров карточки данные hint viewer (доска, hints) — из JSON sharedContext или вывод из кадров. */
-        this._contentCardSharedContext = null;
-        if (!document.getElementById('contentCardViewRoot')) {
-            document.body.insertAdjacentHTML('beforeend', `
-                <div id="contentCardViewRoot" class="card-preview-modal card-preview-modal--fullscreen" style="display: none; min-height: 100vh;" aria-hidden="true">
-                    <div class="card-preview-box" style="width: 100%; max-width: 100%; box-sizing: border-box;">
-                        <div class="card-preview-header">
-                                <button type="button" id="contentCardViewEditFrameBtn" class="content-card-view-edit-btn" style="display: none;" onclick="contentEditor.openEditorFromContentCardView()" title="Редактировать текущий кадр">
-                                    <i class="fa fa-pencil" aria-hidden="true"></i><span class="content-card-view-edit-label"> Редактировать кадр</span>
-                                </button>
-                                <button type="button" id="contentCardViewAddFrameBtn" class="content-card-view-add-frame-btn" style="display: none;" onclick="contentEditor.openContentCardAddFrameModal()" title="Добавить кадр" aria-label="Добавить кадр">
-                                    <i class="fa fa-plus" aria-hidden="true"></i><span class="content-card-view-add-frame-label"> Добавить кадр</span>
-                                </button>
-                                <button type="button" id="contentCardViewDeleteFrameBtn" class="content-card-view-delete-frame-btn" style="display: none;" onclick="contentEditor.deleteCurrentContentCardFrame()" title="Удалить текущий кадр" aria-label="Удалить кадр">
-                                    <i class="fa fa-trash" aria-hidden="true"></i><span class="content-card-view-delete-frame-label"> Удалить кадр</span>
-                                </button>
-                                <button type="button" id="contentCardViewInfoBtn" class="content-card-view-info-btn" style="display: none;" onclick="contentEditor.openContentCardAdminInfoModal()" aria-label="Информация о карточке" title="Информация">
-                                    <i class="fa fa-info-circle" aria-hidden="true"></i>
-                                </button>
-                        </div>
-                        <div class="card-preview-nav">
-                            <button type="button" class="card-preview-nav-btn" id="cardPreviewPrevBtn" onclick="contentEditor.cardPreviewPrev()">←</button>
-                            <span class="card-preview-counter" id="cardPreviewCounter">0 / 0</span>
-                            <button type="button" class="card-preview-nav-btn" id="cardPreviewNextBtn" onclick="contentEditor.cardPreviewNext()">→</button>
-                        </div>
-                        <div class="card-preview-meta" id="cardPreviewMeta"></div>
-                        <div class="card-preview-frame-host" id="cardPreviewFrameHost"></div>
-                    </div>
-                </div>
-                <div id="contentCardAdminInfoModal" class="content-card-admin-info-modal" style="display: none;" aria-hidden="true">
-                    <div class="content-card-admin-info-overlay" onclick="contentEditor.closeContentCardAdminInfoModal()"></div>
-                    <div class="content-card-admin-info-box" role="dialog" aria-modal="true" aria-labelledby="contentCardAdminInfoTitle">
-                        <h3 id="contentCardAdminInfoTitle" class="content-card-admin-info-title">Информация о карточке</h3>
-                        <div id="contentCardAdminInfoBody" class="content-card-admin-info-body"></div>
-                        <div class="content-card-admin-info-actions">
-                            <button type="button" class="content-card-admin-info-close-btn" onclick="contentEditor.closeContentCardAdminInfoModal()">Закрыть</button>
-                        </div>
-                    </div>
-                </div>
-            `);
-        }
-        this.cardPreviewModal = document.getElementById('contentCardViewRoot');
-        this.cardLabelsModal = null;
-        this.modal = null;
-        this.canvas = null;
-        this.toolsList = null;
-        this.propertiesContent = null;
-        this._ensureContentCardAddFrameUi();
+        return initContentCardViewOnlyImpl(this);
     }
 
     /** Кнопка «Добавить кадр» и модалка (для старых встраиваний DOM без них). */
     _ensureContentCardAddFrameUi() {
-        if (!document.getElementById('contentCardAddFrameModal')) {
-            document.body.insertAdjacentHTML(
-                'beforeend',
-                `
-                <div id="contentCardAddFrameModal" class="content-card-admin-info-modal" style="display: none;" aria-hidden="true">
-                    <div class="content-card-admin-info-overlay" onclick="contentEditor.closeContentCardAddFrameModal()"></div>
-                    <div class="content-card-admin-info-box content-card-add-frame-box" role="dialog" aria-modal="true" aria-labelledby="contentCardAddFrameTitle">
-                        <h3 id="contentCardAddFrameTitle" class="content-card-admin-info-title">Добавить кадр</h3>
-                        <p class="content-card-add-frame-hint">Пустой кадр можно затем заполнить через «Редактировать кадр».</p>
-                        <label class="content-card-add-frame-label" for="contentCardAddFramePositionSelect">Позиция в списке</label>
-                        <select id="contentCardAddFramePositionSelect" class="content-card-add-frame-select" aria-describedby="contentCardAddFrameTitle"></select>
-                        <div class="content-card-admin-info-actions content-card-add-frame-actions">
-                            <button type="button" class="content-card-admin-info-close-btn" onclick="contentEditor.closeContentCardAddFrameModal()">Отмена</button>
-                            <button type="button" id="contentCardAddFrameConfirmBtn" class="content-card-add-frame-confirm-btn" onclick="contentEditor.confirmContentCardAddFrame()">Добавить</button>
-                        </div>
-                    </div>
-                </div>
-                `
-            );
-        }
-        const right = document.querySelector('#contentCardViewRoot .card-preview-header-right');
-        if (right && !document.getElementById('contentCardViewAddFrameBtn')) {
-            const del = document.getElementById('contentCardViewDeleteFrameBtn');
-            if (del) {
-                del.insertAdjacentHTML(
-                    'beforebegin',
-                    `<button type="button" id="contentCardViewAddFrameBtn" class="content-card-view-add-frame-btn" style="display: none;" onclick="contentEditor.openContentCardAddFrameModal()" title="Добавить кадр" aria-label="Добавить кадр">
-                        <i class="fa fa-plus" aria-hidden="true"></i><span class="content-card-view-add-frame-label"> Добавить кадр</span>
-                    </button>`
-                );
-            }
-        }
+        return ensureContentCardAddFrameUiImpl(this);
     }
 
     async bootstrapContentCardViewPage() {
-        const params = new URLSearchParams(window.location.search);
-        const cardId = params.get('content_card_id');
-        const fabToken = String(params.get('fab_token') || '');
-        const metaHost = document.getElementById('cardPreviewMeta');
-        const showErr = (msg) => {
-            const t = this.escapeHtml(msg);
-            if (metaHost) {
-                metaHost.innerHTML = `<span class="card-preview-meta-empty">${t}</span>`;
-            }
-            if (this.cardPreviewModal) {
-                this.cardPreviewModal.style.display = 'flex';
-                this.cardPreviewModal.setAttribute('aria-hidden', 'false');
-            }
-        };
-        if (!cardId) {
-            showErr('Не указан content_card_id в адресе страницы');
-            return;
-        }
-        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-        if (!initData && !fabToken) {
-            showErr('Откройте страницу из Telegram');
-            return;
-        }
-        try {
-            const authPayload = initData ? { init_data: initData } : { fab_token: fabToken };
-            const r = await fetch('/api/content_cards/fetch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...authPayload,
-                    content_card_id: parseInt(cardId, 10),
-                }),
-            });
-            const data = await r.json().catch(() => ({}));
-            if (!r.ok) {
-                let msg = data.detail;
-                if (Array.isArray(msg)) {
-                    msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
-                } else if (msg && typeof msg === 'object') {
-                    msg = JSON.stringify(msg);
-                }
-                throw new Error(msg || `Ошибка ${r.status}`);
-            }
-            const titleEl = document.getElementById('contentCardViewTitle');
-            if (titleEl) {
-                titleEl.textContent = 'Карточка';
-            }
-            this._contentCardViewFileName = '';
-            this._contentCardTopLabels = [];
-            this._contentCardViewCardId = parseInt(cardId, 10);
-            this._applyContentCardFetchPayload(data);
-            this.cardPreviewIndex = 0;
-            if (this.cardPreviewModal) {
-                this.cardPreviewModal.style.display = 'flex';
-                this.cardPreviewModal.setAttribute('aria-hidden', 'false');
-            }
-            document.body.style.overflow = 'hidden';
-            window.addEventListener('resize', this._onCardPreviewResize);
-            this.refreshCardPreviewUI();
-        } catch (e) {
-            console.error('bootstrapContentCardViewPage:', e);
-            showErr(e.message || String(e));
-        }
+        return bootstrapContentCardViewPageImpl(this);
     }
 
     /** Обновляет метаданные админа и cardPreviewRefs из ответа /api/content_cards/fetch. */
     _applyContentCardFetchPayload(data) {
-        const infoBtn = document.getElementById('contentCardViewInfoBtn');
-        const editBtn = document.getElementById('contentCardViewEditFrameBtn');
-        const addFrameBtn = document.getElementById('contentCardViewAddFrameBtn');
-        const deleteFrameBtn = document.getElementById('contentCardViewDeleteFrameBtn');
-        if (data.is_content_card_admin && infoBtn && editBtn) {
-            this._contentCardAdminMeta = {
-                file_name: data.file_name != null ? String(data.file_name) : '',
-                labels: Array.isArray(data.labels) ? data.labels : [],
-                notes: data.notes != null ? String(data.notes) : '',
-            };
-            infoBtn.style.display = '';
-            editBtn.style.display = 'inline-flex';
-            if (addFrameBtn) addFrameBtn.style.display = 'inline-flex';
-            if (deleteFrameBtn) deleteFrameBtn.style.display = 'inline-flex';
-        } else {
-            this._contentCardAdminMeta = null;
-            if (infoBtn) infoBtn.style.display = 'none';
-            if (editBtn) editBtn.style.display = 'none';
-            if (addFrameBtn) addFrameBtn.style.display = 'none';
-            if (deleteFrameBtn) deleteFrameBtn.style.display = 'none';
-        }
-        const fw = data.frames || {};
-        this._assignContentCardSharedContextFromWrapper(fw);
-        const framesArr = Array.isArray(fw.frames) ? fw.frames.slice() : [];
-        framesArr.sort((a, b) => (a.order != null ? a.order : 0) - (b.order != null ? b.order : 0));
-        this.cardPreviewRefs = framesArr.map((f) => ({
-            frameId: f.frameId,
-            saveSlotIndex: f.saveSlotIndex != null ? f.saveSlotIndex : 0,
-            payload: f.payload,
-            storageKey: null,
-        }));
+        return applyContentCardFetchPayloadImpl(this, data);
     }
 
     /**
@@ -373,99 +249,16 @@ class ContentEditor {
      * Не показывается в предпросмотре пустого кадра — подмешивается только при открытии редактора.
      */
     _assignContentCardSharedContextFromWrapper(fw) {
-        this._contentCardSharedContext = null;
-        if (!fw || typeof fw !== 'object') return;
-        const raw = fw.sharedContext;
-        if (raw && typeof raw === 'object') {
-            let board = null;
-            let cardData = null;
-            if (raw.board != null && typeof raw.board === 'object' && raw.board.error !== 'no_game_data') {
-                try {
-                    board = JSON.parse(JSON.stringify(raw.board));
-                } catch (e) {
-                    board = raw.board;
-                }
-            }
-            if (raw.cardData != null && typeof raw.cardData === 'object') {
-                try {
-                    cardData = JSON.parse(JSON.stringify(raw.cardData));
-                } catch (e) {
-                    cardData = raw.cardData;
-                }
-            }
-            if (board || cardData) {
-                this._contentCardSharedContext = { board, cardData };
-            }
-            return;
-        }
-        const framesArr = Array.isArray(fw.frames) ? fw.frames : [];
-        this._contentCardSharedContext = this._deriveContentCardSharedContextFromFrames(framesArr);
+        return assignContentCardSharedContextFromWrapperImpl(this, fw);
     }
 
     _deriveContentCardSharedContextFromFrames(framesArr) {
-        let board = null;
-        let cardData = null;
-        for (const f of framesArr) {
-            const p = f && f.payload;
-            if (!p || typeof p !== 'object') continue;
-            if (
-                board == null &&
-                p.board != null &&
-                typeof p.board === 'object' &&
-                p.board.error !== 'no_game_data'
-            ) {
-                try {
-                    board = JSON.parse(JSON.stringify(p.board));
-                } catch (e) {
-                    board = p.board;
-                }
-            }
-            if (cardData == null && p.cardData && typeof p.cardData === 'object') {
-                const h = p.cardData.hints;
-                const ch = p.cardData.cube_hints;
-                const hasHints = Array.isArray(h) && h.length > 0;
-                const hasCube = Array.isArray(ch) && ch.length > 0;
-                if (hasHints || hasCube) {
-                    try {
-                        cardData = JSON.parse(JSON.stringify(p.cardData));
-                    } catch (e) {
-                        cardData = p.cardData;
-                    }
-                }
-            }
-            if (board && cardData) break;
-        }
-        if (!board && !cardData) return null;
-        return { board, cardData };
+        return deriveContentCardSharedContextFromFramesImpl(this, framesArr);
     }
 
     /** Слой кадра поверх общего контекста: непустые поля кадра перекрывают shared. */
     mergeSharedUnderFrameCardData(sharedCd, frameCd) {
-        if (!sharedCd || typeof sharedCd !== 'object') {
-            if (!frameCd || typeof frameCd !== 'object') return null;
-            try {
-                return JSON.parse(JSON.stringify(frameCd));
-            } catch (e) {
-                return null;
-            }
-        }
-        let o;
-        try {
-            o = JSON.parse(JSON.stringify(sharedCd));
-        } catch (e) {
-            return null;
-        }
-        if (!frameCd || typeof frameCd !== 'object') return Object.keys(o).length ? o : null;
-        let f;
-        try {
-            f = JSON.parse(JSON.stringify(frameCd));
-        } catch (e) {
-            return Object.keys(o).length ? o : null;
-        }
-        for (const [k, v] of Object.entries(f)) {
-            if (v !== undefined && v !== null) o[k] = v;
-        }
-        return Object.keys(o).length ? o : null;
+        return mergeSharedUnderFrameCardDataImpl(this, sharedCd, frameCd);
     }
 
     /**
@@ -473,345 +266,43 @@ class ContentEditor {
      * если в самом кадре их нет (как в JSON после сохранения с общим контекстом).
      */
     getPayloadForCardPreviewRender(payload) {
-        if (!payload || typeof payload !== 'object') return payload;
-        const sc = this._contentCardSharedContext;
-        if (!sc || typeof sc !== 'object' || (!sc.board && !sc.cardData)) {
-            return payload;
-        }
-        let p;
-        try {
-            p = JSON.parse(JSON.stringify(payload));
-        } catch (e) {
-            return payload;
-        }
-        if (p.board == null && sc.board != null && typeof sc.board === 'object') {
-            try {
-                p.board = JSON.parse(JSON.stringify(sc.board));
-            } catch (e) {
-                p.board = sc.board;
-            }
-        }
-        if (sc.cardData && typeof sc.cardData === 'object') {
-            p.cardData = this.mergeSharedUnderFrameCardData(sc.cardData, p.cardData);
-        }
-        return p;
+        return getPayloadForCardPreviewRenderImpl(this, payload);
     }
 
     /** Подставить shared board/cardData в клон payload перед restore (пустой новый кадр). */
     applyContentCardSharedToEditorPayload(payload) {
-        const sc = this._contentCardSharedContext;
-        if (!sc || typeof sc !== 'object' || !payload || typeof payload !== 'object') return payload;
-        if (payload.board == null && sc.board != null && typeof sc.board === 'object') {
-            try {
-                payload.board = JSON.parse(JSON.stringify(sc.board));
-            } catch (e) {
-                payload.board = sc.board;
-            }
-        }
-        if (sc.cardData && typeof sc.cardData === 'object') {
-            payload.cardData = this.mergeSharedUnderFrameCardData(sc.cardData, payload.cardData);
-        }
-        return payload;
+        return applyContentCardSharedToEditorPayloadImpl(this, payload);
     }
 
     /** Обёртка кадров для POST /api/content_cards/update — сохраняет sharedContext карточки. */
     wrapContentCardFramesWithShared(framesArray) {
-        const w = { version: 1, frames: framesArray };
-        const sc = this._contentCardSharedContext;
-        if (sc && typeof sc === 'object' && (sc.board || sc.cardData)) {
-            w.sharedContext = {
-                board: sc.board ? JSON.parse(JSON.stringify(sc.board)) : null,
-                cardData: sc.cardData ? JSON.parse(JSON.stringify(sc.cardData)) : null,
-            };
-        }
-        return w;
+        return wrapContentCardFramesWithSharedImpl(this, framesArray);
     }
 
     /** Удаление текущего кадра (только ROOT-админ, только если кадров больше одного). */
     async deleteCurrentContentCardFrame() {
-        if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
-        if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
-        if (this.cardPreviewRefs.length <= 1) return;
-        if (!confirm('Удалить текущий кадр? Действие нельзя отменить.')) return;
-
-        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-        if (!initData) {
-            this.showNotification('Нет init_data для сохранения', 'warning');
-            return;
-        }
-
-        const idx = this.cardPreviewIndex;
-        const nextRefs = this.cardPreviewRefs.filter((_, i) => i !== idx);
-        const nextIndex = Math.min(idx, nextRefs.length - 1);
-        const framesList = nextRefs.map((r, order) => ({
-            frameId: r.frameId,
-            saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
-            order,
-            payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
-        }));
-        const framesWrapper = this.wrapContentCardFramesWithShared(framesList);
-
-        const deleteBtn = document.getElementById('contentCardViewDeleteFrameBtn');
-        if (deleteBtn) deleteBtn.disabled = true;
-
-        try {
-            const response = await fetch('/api/content_cards/update', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    init_data: initData,
-                    content_card_id: this._contentCardViewCardId,
-                    frames: framesWrapper,
-                }),
-            });
-            let respData = {};
-            try {
-                respData = await response.json();
-            } catch (e) {
-                respData = {};
-            }
-            if (!response.ok) {
-                let msg = respData.detail;
-                if (Array.isArray(msg)) {
-                    msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
-                } else if (msg && typeof msg === 'object') {
-                    msg = JSON.stringify(msg);
-                }
-                throw new Error(msg || `Ошибка ${response.status}`);
-            }
-            this.cardPreviewRefs = nextRefs.map((r) => ({
-                frameId: r.frameId,
-                saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
-                payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
-                storageKey: null,
-            }));
-            this.cardPreviewIndex = nextIndex;
-            this.refreshCardPreviewUI();
-            this.showNotification('Кадр удалён', 'success');
-        } catch (err) {
-            console.error('deleteCurrentContentCardFrame:', err);
-            this.showNotification('Не удалось удалить кадр: ' + (err.message || err), 'error');
-        } finally {
-            if (deleteBtn) deleteBtn.disabled = false;
-            this.refreshCardPreviewUI();
-        }
+        return deleteCurrentContentCardFrameImpl(this);
     }
 
     /** Пустой payload кадра для новой записи в карточке (content-card-view). */
     buildEmptyContentCardFramePayload() {
-        const cid = this._contentCardViewCardId != null ? this._contentCardViewCardId : 0;
-        const frameId = `cc_${cid}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-        return {
-            version: 1,
-            frameId,
-            saveSlotIndex: 0,
-            savedAt: new Date().toISOString(),
-            board: null,
-            cardData: null,
-            editor: {
-                boardCanvasToggle: false,
-                canvasBackground: '#ffffff',
-                showBoardMatchBanner: false,
-            },
-            elements: [],
-        };
+        return buildEmptyContentCardFramePayloadImpl(this);
     }
 
     openContentCardAddFrameModal() {
-        if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
-        if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
-        const modal = document.getElementById('contentCardAddFrameModal');
-        const sel = document.getElementById('contentCardAddFramePositionSelect');
-        if (!modal || !sel) return;
-        const n = this.cardPreviewRefs.length;
-        sel.innerHTML = '';
-        for (let pos = 1; pos <= n + 1; pos++) {
-            const opt = document.createElement('option');
-            opt.value = String(pos);
-            if (n === 0) {
-                opt.textContent = 'Позиция 1';
-            } else if (pos === n + 1) {
-                opt.textContent = `В конец (${n + 1}-й кадр)`;
-            } else {
-                opt.textContent = `Позиция ${pos} (${pos}-й кадр)`;
-            }
-            sel.appendChild(opt);
-        }
-        const defaultPos = n === 0 ? 1 : Math.min(this.cardPreviewIndex + 2, n + 1);
-        sel.value = String(defaultPos);
-        modal.style.display = 'flex';
-        modal.setAttribute('aria-hidden', 'false');
-        requestAnimationFrame(() => sel.focus());
+        return openContentCardAddFrameModalImpl(this);
     }
 
     closeContentCardAddFrameModal() {
-        const modal = document.getElementById('contentCardAddFrameModal');
-        if (!modal) return;
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
+        return closeContentCardAddFrameModalImpl(this);
     }
 
     async confirmContentCardAddFrame() {
-        if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
-        if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
-
-        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-        if (!initData) {
-            this.showNotification('Нет init_data для сохранения', 'warning');
-            return;
-        }
-
-        const sel = document.getElementById('contentCardAddFramePositionSelect');
-        const confirmBtn = document.getElementById('contentCardAddFrameConfirmBtn');
-        if (!sel) return;
-
-        const n = this.cardPreviewRefs.length;
-        const pos = parseInt(sel.value, 10);
-        if (!Number.isFinite(pos) || pos < 1 || pos > n + 1) {
-            this.showNotification('Некорректная позиция', 'warning');
-            return;
-        }
-        const insertIndex = pos - 1;
-
-        const newPayload = this.buildEmptyContentCardFramePayload();
-        const newRef = {
-            frameId: newPayload.frameId,
-            saveSlotIndex: 0,
-            payload: newPayload,
-            storageKey: null,
-        };
-
-        const refs = this.cardPreviewRefs.map((r) => ({
-            frameId: r.frameId,
-            saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
-            payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
-            storageKey: null,
-        }));
-        refs.splice(insertIndex, 0, newRef);
-
-        const framesList = refs.map((r, order) => ({
-            frameId: r.frameId,
-            saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
-            order,
-            payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
-        }));
-        const framesWrapper = this.wrapContentCardFramesWithShared(framesList);
-
-        if (confirmBtn) confirmBtn.disabled = true;
-        try {
-            await this.uploadPayloadMediaToS3(newPayload);
-            const response = await fetch('/api/content_cards/update', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    init_data: initData,
-                    content_card_id: this._contentCardViewCardId,
-                    frames: framesWrapper,
-                }),
-            });
-            let respData = {};
-            try {
-                respData = await response.json();
-            } catch (e) {
-                respData = {};
-            }
-            if (!response.ok) {
-                let msg = respData.detail;
-                if (Array.isArray(msg)) {
-                    msg = msg.map((x) => (x.msg || JSON.stringify(x))).join('; ');
-                } else if (msg && typeof msg === 'object') {
-                    msg = JSON.stringify(msg);
-                }
-                throw new Error(msg || `Ошибка ${response.status}`);
-            }
-            this.cardPreviewRefs = refs.map((r) => ({
-                frameId: r.frameId,
-                saveSlotIndex: r.saveSlotIndex != null ? r.saveSlotIndex : 0,
-                payload: r.payload ? JSON.parse(JSON.stringify(r.payload)) : null,
-                storageKey: null,
-            }));
-            this.cardPreviewIndex = insertIndex;
-            this.closeContentCardAddFrameModal();
-            this.refreshCardPreviewUI();
-            this.showNotification('Кадр добавлен', 'success');
-        } catch (err) {
-            console.error('confirmContentCardAddFrame:', err);
-            this.showNotification('Не удалось добавить кадр: ' + (err.message || err), 'error');
-        } finally {
-            if (confirmBtn) confirmBtn.disabled = false;
-        }
+        return confirmContentCardAddFrameImpl(this);
     }
 
     openContentCardAdminInfoModal() {
-        if (!this._contentCardAdminMeta) return;
-        const modal = document.getElementById('contentCardAdminInfoModal');
-        const body = document.getElementById('contentCardAdminInfoBody');
-        if (!modal || !body) return;
-        const rawFn = String(this._contentCardAdminMeta.file_name || '').trim();
-        const fnEsc = this.escapeHtml(rawFn || '—');
-        const sharedBoard = this._contentCardSharedContext && this._contentCardSharedContext.board
-            ? this._contentCardSharedContext.board
-            : null;
-        const isPokazSource =
-            sharedBoard &&
-            typeof sharedBoard === 'object' &&
-            String(sharedBoard.gameId || '').toLowerCase() === 'pokaz';
-        const canDownloadMat =
-            rawFn &&
-            rawFn.toLowerCase().endsWith('.mat') &&
-            !isPokazSource &&
-            this._contentCardViewCardId != null;
-        const fileDd = canDownloadMat
-            ? `<dd><button type="button" class="content-card-admin-info-file-link">${fnEsc}</button></dd>`
-            : `<dd>${fnEsc}</dd>`;
-        const labels = Array.isArray(this._contentCardAdminMeta.labels) ? this._contentCardAdminMeta.labels : [];
-        const parts = labels
-            .map((x) => (typeof x === 'string' ? x.trim() : String(x)))
-            .filter(Boolean);
-        let labelsBlock;
-        if (parts.length) {
-            labelsBlock =
-                '<ul class="content-card-admin-info-labels">' +
-                parts.map((t) => `<li>${this.escapeHtml(t)}</li>`).join('') +
-                '</ul>';
-        } else {
-            labelsBlock = '<p class="content-card-admin-info-empty">Нет меток</p>';
-        }
-        const rawNotes = String(this._contentCardAdminMeta.notes || '').trim();
-        const notesBlock = rawNotes
-            ? `<p>${this.escapeHtml(rawNotes)}</p>`
-            : '<p class="content-card-admin-info-empty">Нет примечаний</p>';
-        body.innerHTML =
-            `<dl class="content-card-admin-info-dl">` +
-            `<dt>Файл</dt>${fileDd}` +
-            `<dt>Метки <button type="button" class="content-card-admin-info-edit-btn" id="contentCardEditLabelsBtn" style="margin-left:8px;"><i class="fa fa-pencil" aria-hidden="true"></i></button></dt>` +
-            `<dd>${labelsBlock}</dd>` +
-            `<dt>Примечания <button type="button" class="content-card-admin-info-edit-btn" id="contentCardEditNotesBtn" style="margin-left:8px;"><i class="fa fa-pencil" aria-hidden="true"></i></button></dt>` +
-            `<dd>${notesBlock}</dd>` +
-            `</dl>`;
-        const fileBtn = body.querySelector('.content-card-admin-info-file-link');
-        if (fileBtn) {
-            fileBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.downloadContentCardHintMat();
-            });
-        }
-        const labelsBtn = body.querySelector('#contentCardEditLabelsBtn');
-        if (labelsBtn) {
-            labelsBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.openContentCardAdminLabelsEditModal();
-            });
-        }
-        const notesBtn = body.querySelector('#contentCardEditNotesBtn');
-        if (notesBtn) {
-            notesBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.openContentCardAdminNotesEditModal();
-            });
-        }
-        modal.style.display = 'flex';
-        modal.setAttribute('aria-hidden', 'false');
+        return openContentCardAdminInfoModalImpl(this);
     }
 
     ensureContentCardAdminLabelsEditModal() {
@@ -1089,57 +580,15 @@ class ContentEditor {
     }
 
     closeContentCardAdminInfoModal() {
-        const modal = document.getElementById('contentCardAdminInfoModal');
-        if (!modal) return;
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
+        return closeContentCardAdminInfoModalImpl(this);
     }
 
     ensureViewOnlyEditorMounted() {
-        if (window.__CONTENT_CARD_VIEW_ONLY__ !== true || this._viewOnlyEditorMounted) {
-            return;
-        }
-        this.createModal();
-        this.setupEventListeners();
-        this.setupCanvasEvents();
-        this._viewOnlyEditorMounted = true;
+        return ensureViewOnlyEditorMountedImpl(this);
     }
 
     async openEditorFromContentCardView() {
-        if (window.__CONTENT_CARD_VIEW_ONLY__ !== true || !this._contentCardViewCardId) {
-            return;
-        }
-        if (!this._contentCardAdminMeta) {
-            this.showNotification('Редактирование доступно только администраторам', 'warning');
-            return;
-        }
-        const ref = this.cardPreviewRefs[this.cardPreviewIndex];
-        if (!ref || !ref.payload) {
-            this.showNotification('Нет данных кадра', 'warning');
-            return;
-        }
-        this.ensureViewOnlyEditorMounted();
-        if (!this.modal || !this.canvas) {
-            this.showNotification('Не удалось открыть редактор', 'error');
-            return;
-        }
-        let payload;
-        try {
-            payload = JSON.parse(JSON.stringify(ref.payload));
-        } catch (e) {
-            this.showNotification('Не удалось загрузить кадр', 'error');
-            return;
-        }
-        this.applyContentCardSharedToEditorPayload(payload);
-        this.closeCardPreviewModal();
-        this.editorOpenedFromContentCardView = true;
-        this.editorOpenedFromPreview = true;
-        this.previewEditStorageKey = '__content_card_view__';
-        this.previewEditFrameId = ref.frameId;
-        this.previewEditSaveSlotIndex = ref.saveSlotIndex != null ? ref.saveSlotIndex : 0;
-        this._contentCardEditFrameIndex = this.cardPreviewIndex;
-        this.openModalWithData(payload.cardData || null, { fromPreviewRestore: true });
-        await this.restoreCanvasFromPayload(payload);
+        return openEditorFromContentCardViewImpl(this);
     }
 
     createModal() {
@@ -5779,600 +5228,90 @@ class ContentEditor {
     }
 
     openCardPreviewModal() {
-        if (!this.cardPreviewModal) return;
-        this.cardPreviewRefs = this.collectSavedFrameRefsForCurrentGame();
-        if (this._resumePreviewStorageKey) {
-            const i = this.cardPreviewRefs.findIndex((r) => r.storageKey === this._resumePreviewStorageKey);
-            this.cardPreviewIndex = i >= 0 ? i : 0;
-            this._resumePreviewStorageKey = null;
-        } else {
-            this.cardPreviewIndex = 0;
-        }
-        this.cardPreviewModal.classList.add('card-preview-modal--fullscreen');
-        this.cardPreviewModal.style.display = 'flex';
-        this.cardPreviewModal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        window.addEventListener('resize', this._onCardPreviewResize);
-        this.refreshCardPreviewUI();
+        return openCardPreviewModalImpl(this);
     }
 
     closeCardPreviewModal() {
-        if (!this.cardPreviewModal) return;
-        window.removeEventListener('resize', this._onCardPreviewResize);
-        this.cardPreviewModal.style.display = 'none';
-        this.cardPreviewModal.setAttribute('aria-hidden', 'true');
-        const editorStillOpen = this.modal && this.modal.style.display === 'flex';
-        document.body.style.overflow = editorStillOpen ? 'hidden' : 'auto';
-        const host = document.getElementById('cardPreviewFrameHost');
-        if (host) host.innerHTML = '';
+        return closeCardPreviewModalImpl(this);
     }
 
     refreshCardPreviewUI() {
-        const total = this.cardPreviewRefs.length;
-        const counter = document.getElementById('cardPreviewCounter');
-        const meta = document.getElementById('cardPreviewMeta');
-        const prevBtn = document.getElementById('cardPreviewPrevBtn');
-        const nextBtn = document.getElementById('cardPreviewNextBtn');
-        const approveBtn = document.getElementById('cardPreviewApproveBtn');
-        const deletePreviewBtn = document.getElementById('cardPreviewDeleteBtn');
-
-        if (counter) {
-            counter.textContent = total === 0 ? '0 / 0' : `${this.cardPreviewIndex + 1} / ${total}`;
-        }
-        if (prevBtn) prevBtn.disabled = total === 0 || this.cardPreviewIndex <= 0;
-        if (nextBtn) nextBtn.disabled = total === 0 || this.cardPreviewIndex >= total - 1;
-        if (approveBtn) approveBtn.disabled = total === 0;
-        if (deletePreviewBtn) deletePreviewBtn.disabled = total === 0;
-
-        const deleteFrameBtn = document.getElementById('contentCardViewDeleteFrameBtn');
-        if (deleteFrameBtn && typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true && this._contentCardAdminMeta) {
-            deleteFrameBtn.disabled = total <= 1;
-        }
-
-        if (!meta) return;
-
-        if (total === 0) {
-            meta.innerHTML = '<span class="card-preview-meta-empty">Нет сохранённых кадров для этой игры</span>';
-            this.renderCardPreviewSurface(null);
-            return;
-        }
-
-        const ref = this.cardPreviewRefs[this.cardPreviewIndex];
-        let payload = null;
-        if (ref && ref.payload != null && typeof ref.payload === 'object') {
-            payload = ref.payload;
-        } else if (ref && ref.storageKey) {
-            try {
-                const raw = localStorage.getItem(ref.storageKey);
-                payload = raw ? JSON.parse(raw) : null;
-            } catch (e) {
-                payload = null;
-            }
-        }
-
-        meta.innerHTML = '';
-        const viewOnlyPage = typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true;
-        if (!viewOnlyPage) {
-            const labelsKey = this.getCardLabelsStorageKey();
-            const hasStoredLabelsKey = localStorage.getItem(labelsKey) !== null;
-            const storedLabels = hasStoredLabelsKey ? this.loadCardLabelsFromStorage() : null;
-            const fallbackLabels = this._contentCardTopLabels && this._contentCardTopLabels.length
-                ? this._contentCardTopLabels
-                : [];
-            const labelsToShow = hasStoredLabelsKey ? storedLabels : fallbackLabels;
-            if (labelsToShow.length) {
-                const topParts = labelsToShow
-                    .filter((t) => typeof t === 'string' && t.trim())
-                    .map((t) => `<span class="card-preview-label-chip">${this.escapeHtml(t.trim())}</span>`)
-                    .join(' ');
-                if (topParts) {
-                    meta.insertAdjacentHTML(
-                        'beforeend',
-                        `<div class="card-preview-meta-line card-preview-meta-labels">Метки карточки: ${topParts}</div>`
-                    );
-                }
-            }
-        }
-        this.renderCardPreviewSurface(payload);
+        return refreshCardPreviewUIImpl(this);
     }
 
     /**
      * Порядок блоков в предпросмотре по сохранённому top с холста (перед flex-колонкой top сбрасывается).
      */
     reorderCardPreviewElementsBySavedTop(inner) {
-        const elems = Array.from(inner.querySelectorAll('.canvas-element'));
-        if (elems.length <= 1) return;
-        const meta = elems.map((el, i) => {
-            const t = parseInt(el.style.top, 10);
-            return { el, top: Number.isNaN(t) ? 0 : t, i };
-        });
-        meta.sort((a, b) => (a.top !== b.top ? a.top - b.top : a.i - b.i));
-        const frag = document.createDocumentFragment();
-        meta.forEach(({ el }) => frag.appendChild(el));
-        inner.appendChild(frag);
+        return reorderCardPreviewElementsBySavedTopImpl(this, inner);
     }
 
     shouldShowBoardInCardPreview(payload) {
-        if (!payload) return false;
-        if (payload.editor && payload.editor.boardCanvasToggle) return true;
-        if (payload.editor && payload.editor.boardCanvasToggle === false) return false;
-        const b = payload.board;
-        if (b == null || typeof b !== 'object') return false;
-        if (b.error === 'no_game_data') return false;
-        return true;
+        return shouldShowBoardInCardPreviewImpl(this, payload);
     }
 
     loadBoardPreviewImages() {
-        if (this._boardPreviewAssetsPromise) return this._boardPreviewAssetsPromise;
-        const bust = () => `?t=${Date.now()}`;
-        const loadOne = (src) => new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error(src));
-            img.src = src + bust();
-        });
-        const paths = {
-            board: '/static/board.png',
-            black: '/static/black_checker.png',
-            white: '/static/white_checker.png',
-            double2: '/static/Double2.png',
-            double4: '/static/Double4.png',
-            double8: '/static/Double8.png',
-            double16: '/static/Double16.png',
-            double32: '/static/Double32.png',
-            double64: '/static/Double64.png'
-        };
-        for (let i = 1; i <= 6; i++) {
-            paths[`d${i}w`] = `/static/${i}w.png`;
-            paths[`d${i}b`] = `/static/${i}b.png`;
-        }
-        this._boardPreviewAssetsPromise = Promise.all(
-            Object.entries(paths).map(([key, url]) => loadOne(url).then((img) => [key, img]))
-        ).then((pairs) => Object.fromEntries(pairs));
-        return this._boardPreviewAssetsPromise;
+        return loadBoardPreviewImagesImpl(this);
     }
 
     getBoardPreviewPointX(point) {
-        if (point >= 13 && point <= 18) {
-            const baseX = 50 + (point - 13) * 60;
-            return baseX - (point === 13 ? 8 : 0);
-        }
-        if (point >= 19 && point <= 24) {
-            return 450 + (point - 19) * 60;
-        }
-        if (point >= 7 && point <= 12) {
-            const baseX = 50 + (12 - point) * 60;
-            return baseX - (point === 12 ? 4 : 0);
-        }
-        if (point >= 1 && point <= 6) {
-            return 450 + (6 - point) * 60;
-        }
-        return 0;
+        return getBoardPreviewPointXImpl(this, point);
     }
 
     getBoardPreviewBaseY(point) {
-        return (point > 12) ? 70 : 690;
+        return getBoardPreviewBaseYImpl(this, point);
     }
 
     getBoardPreviewDy(point) {
-        return (point > 12) ? 55 : -55;
+        return getBoardPreviewDyImpl(this, point);
     }
 
     drawBoardPreviewCheckers(ctx, player, img, positions, currentPlayer, invertColors) {
-        ctx.font = 'bold 30px Arial';
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        if (player === currentPlayer) {
-            for (let point = 1; point <= 24; point++) {
-                const x = this.getBoardPreviewPointX(point);
-                let y = this.getBoardPreviewBaseY(point);
-                const dy = this.getBoardPreviewDy(point);
-                let displayPoint = point;
-                if (invertColors) {
-                    if (player === 'red') {
-                        displayPoint = 25 - point;
-                    }
-                } else if (player === 'black') {
-                    displayPoint = 25 - point;
-                }
-                let numberY;
-                if (point > 12) {
-                    numberY = y - 50;
-                } else {
-                    numberY = y + 60;
-                }
-                ctx.fillText(String(displayPoint), x, numberY);
-            }
-        }
-
-        for (const pointStr in positions) {
-            if (pointStr === 'bar' || pointStr === 'off') continue;
-            const point = parseInt(pointStr, 10);
-            const count = positions[pointStr];
-            const x = this.getBoardPreviewPointX(point);
-            const y = this.getBoardPreviewBaseY(point);
-            const dy = this.getBoardPreviewDy(point);
-            for (let i = 0; i < Math.min(count, 6); i++) {
-                ctx.drawImage(img, x - 31.25, y + (i * dy) - 31.25, 62.5, 62.5);
-            }
-            if (count > 6) {
-                const lastCheckerY = y + (5 * dy);
-                ctx.fillText(`${count}`, x + 40, lastCheckerY + 5);
-            }
-        }
-
-        const barX = 400;
-        let barY = (player === 'black') ? 220 : 520;
-        if (invertColors) {
-            barY = (player === 'black') ? 520 : 220;
-        }
-        if (positions.bar && positions.bar !== 0) {
-            let y = barY;
-            const dyBar = (player === 'black') ? 55 : -55;
-            for (let i = 0; i < Math.min(Math.abs(positions.bar), 6); i++) {
-                ctx.drawImage(img, barX - 31.25, y + (i * dyBar) - 31.25, 62.5, 62.5);
-            }
-            if (Math.abs(positions.bar) > 6) {
-                const lastCheckerY = y + (5 * dyBar);
-                ctx.fillText(`(${Math.abs(positions.bar)})`, barX + 30, lastCheckerY + 5);
-            }
-        }
-
-        let offX = 783;
-        let offY;
-        if (invertColors) {
-            offY = (player === 'black') ? 440 : 340;
-        } else {
-            offY = (player === 'black') ? 340 : 440;
-        }
-        if (positions.off && positions.off !== 0) {
-            const originalFont = ctx.font;
-            ctx.font = 'bold 32px Arial';
-            ctx.fillText(`${positions.off}`, offX, offY);
-            ctx.font = originalFont;
-        }
+        return drawBoardPreviewCheckersImpl(this, ctx, player, img, positions, currentPlayer, invertColors);
     }
 
     /** Соответствует геометрии куба в hint_viewer (cubeVisual из getHintViewerBoardSnapshot). */
     drawDoublingCubePreview(ctx, cubeVisual, invertColors, imgs) {
-        if (!cubeVisual || !cubeVisual.mode || !ctx) return;
-        const v = Number(cubeVisual.value) || 64;
-        const cubeKey = `double${v}`;
-        let img = imgs[cubeKey];
-        if (!img || !img.complete) img = imgs.double64;
-        if (!img || !img.complete) return;
-        const pl = cubeVisual.player ? String(cubeVisual.player).toLowerCase() : '';
-        const isRed = pl === 'red';
-
-        if (cubeVisual.mode === 'center') {
-            ctx.drawImage(img, 375, 350, 50, 50);
-            return;
-        }
-        if (cubeVisual.mode === 'side') {
-            let cubeX;
-            if (invertColors) {
-                cubeX = isRed ? 175 : 575;
-            } else {
-                cubeX = isRed ? 575 : 175;
-            }
-            ctx.drawImage(img, cubeX, 350, 50, 50);
-            return;
-        }
-        if (cubeVisual.mode === 'bar') {
-            let cubeY = 350;
-            if (invertColors) {
-                if (isRed) cubeY = 600;
-                else if (pl === 'black') cubeY = 100;
-            } else if (pl === 'black') {
-                cubeY = 600;
-            } else if (isRed) {
-                cubeY = 100;
-            }
-            ctx.drawImage(img, 375, cubeY, 50, 50);
-        }
+        return drawDoublingCubePreviewImpl(this, ctx, cubeVisual, invertColors, imgs);
     }
 
     resolveBoardPositionsFromSnapshot(snapshot) {
-        if (!snapshot || typeof snapshot !== 'object') return null;
-        if (snapshot.error === 'no_game_data') return null;
-        const inv = !!snapshot.invertColors;
-        const pos = snapshot.positions;
-        if (pos && typeof pos === 'object' && pos.red && pos.black) {
-            return { redPositions: pos.red, blackPositions: pos.black };
-        }
-        const fi = snapshot.frameIndex;
-        if (fi === 0 || fi === null || fi === undefined) {
-            if (inv) {
-                return {
-                    redPositions: { '1': 2, '12': 5, '17': 3, '19': 5, 'bar': 0, 'off': 0 },
-                    blackPositions: { '6': 5, '8': 3, '13': 5, '24': 2, 'bar': 0, 'off': 0 }
-                };
-            }
-            return {
-                redPositions: { '24': 2, '6': 5, '8': 3, '13': 5, 'bar': 0, 'off': 0 },
-                blackPositions: { '1': 2, '19': 5, '17': 3, '12': 5, 'bar': 0, 'off': 0 }
-            };
-        }
-        return null;
+        return resolveBoardPositionsFromSnapshotImpl(this, snapshot);
     }
 
     paintBoardPreviewCanvas(canvas, snapshot, imgs) {
-        const ctx = canvas.getContext('2d');
-        const w = canvas.width;
-        const h = canvas.height;
-        ctx.clearRect(0, 0, w, h);
-        if (!imgs.board || !imgs.board.complete) return;
-        ctx.drawImage(imgs.board, 0, 0, w, h);
-
-        const invertColors = !!snapshot.invertColors;
-        const resolved = this.resolveBoardPositionsFromSnapshot(snapshot);
-        const turnRow = snapshot.turn;
-        const currentPlayer = (turnRow && turnRow.player) ? String(turnRow.player).toLowerCase() : 'red';
-
-        if (resolved) {
-            this.drawBoardPreviewCheckers(ctx, 'red', imgs.white, resolved.redPositions, currentPlayer, invertColors);
-            this.drawBoardPreviewCheckers(ctx, 'black', imgs.black, resolved.blackPositions, currentPlayer, invertColors);
-        }
-
-        const diceImagesWhite = {
-            1: imgs.d1w, 2: imgs.d2w, 3: imgs.d3w, 4: imgs.d4w, 5: imgs.d5w, 6: imgs.d6w
-        };
-        const diceImagesBlack = {
-            1: imgs.d1b, 2: imgs.d2b, 3: imgs.d3b, 4: imgs.d4b, 5: imgs.d5b, 6: imgs.d6b
-        };
-
-        if (turnRow && turnRow.dice && turnRow.dice.length >= 2 && !['double', 'take', 'win'].includes(turnRow.action)) {
-            const [d1, d2] = turnRow.dice;
-            const diceY = 350;
-            let diceX1;
-            let diceX2;
-            let diceSet;
-            const isRedPlayer = String(turnRow.player || '').toLowerCase() === 'red';
-            if (invertColors) {
-                if (isRedPlayer) {
-                    diceX1 = 130;
-                    diceX2 = 220;
-                    diceSet = diceImagesWhite;
-                } else {
-                    diceX1 = 530;
-                    diceX2 = 620;
-                    diceSet = diceImagesBlack;
-                }
-            } else if (isRedPlayer) {
-                diceX1 = 530;
-                diceX2 = 620;
-                diceSet = diceImagesWhite;
-            } else {
-                diceX1 = 130;
-                diceX2 = 220;
-                diceSet = diceImagesBlack;
-            }
-            if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
-            if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
-        }
-
-        if (snapshot.cubeVisual) {
-            this.drawDoublingCubePreview(ctx, snapshot.cubeVisual, invertColors, imgs);
-        } else if (turnRow && turnRow.action === 'win' && imgs.double64) {
-            ctx.drawImage(imgs.double64, 375, 350, 50, 50);
-        }
+        return paintBoardPreviewCanvasImpl(this, canvas, snapshot, imgs);
     }
 
     /** Текст строки над доской (как в hint_viewer: матч до n и счёт, либо манигейм). */
     formatBoardMatchBannerText(snapshot) {
-        const s = snapshot && snapshot.scores;
-        if (!s || typeof s !== 'object' || s.matchLength == null) {
-            return '';
-        }
-        const ml = Number(s.matchLength);
-        if (!Number.isFinite(ml) || ml <= 0) {
-            return 'Манигейм';
-        }
-        const r = s.gameRedScore != null && s.gameRedScore !== '' ? s.gameRedScore : '—';
-        const b = s.gameBlackScore != null && s.gameBlackScore !== '' ? s.gameBlackScore : '—';
-        return `Матч до ${ml} · Счёт: ${r} — ${b}`;
+        return formatBoardMatchBannerTextImpl(this, snapshot);
     }
 
     /**
      * Предпросмотр карточки: кнопка сворачивания блока таблицы (ход/куб).
      */
     setupCardPreviewTableCollapse(tableEl) {
-        if (!tableEl || !tableEl.classList.contains('card-preview-canvas-clone')) return;
-        if (tableEl.querySelector(':scope > .card-preview-table-toggle')) return;
-        const kids = Array.from(tableEl.children);
-        if (!kids.length) return;
-
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'card-preview-table-toggle';
-        toggle.setAttribute('aria-expanded', 'true');
-        toggle.setAttribute('aria-label', 'Свернуть или развернуть таблицу');
-        toggle.title = 'Свернуть или развернуть таблицу';
-        toggle.innerHTML = `
-            <span class="card-preview-table-toggle-icon" aria-hidden="true">
-                <svg class="card-preview-table-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
-                    <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
-                </svg>
-            </span>`;
-
-        const body = document.createElement('div');
-        body.className = 'card-preview-table-collapse-body';
-        kids.forEach((k) => body.appendChild(k));
-        tableEl.appendChild(toggle);
-        tableEl.appendChild(body);
-
-        const syncA11y = () => {
-            const collapsed = tableEl.classList.contains('card-preview-table--collapsed');
-            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        };
-        const onToggle = (e) => {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            tableEl.classList.toggle('card-preview-table--collapsed');
-            syncA11y();
-            requestAnimationFrame(() => this.refreshCardPreviewScale());
-        };
-        toggle.addEventListener('click', onToggle);
-        toggle.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                onToggle(e);
-            }
-        });
-        syncA11y();
+        return setupCardPreviewTableCollapseImpl(this, tableEl);
     }
 
     appendCardPreviewBoardOverlay(wrap, payload) {
-        const snapshot = payload.board && typeof payload.board === 'object' ? payload.board : {};
-        const showMatchBanner = !!(payload && payload.editor && payload.editor.showBoardMatchBanner);
-        let bannerText = showMatchBanner ? this.formatBoardMatchBannerText(snapshot) : '';
-        if (showMatchBanner && !bannerText) {
-            bannerText = 'Данные матча недоступны';
-        }
-        const overlay = document.createElement('div');
-        overlay.className = 'card-preview-board-overlay';
-        overlay.innerHTML = `
-            <div class="card-preview-board-body">
-                <div class="card-preview-board-match-banner" ${showMatchBanner ? '' : 'hidden'}>${this.escapeHtml(bannerText)}</div>
-                <div class="card-preview-board-canvas-wrap">
-                    <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
-                </div>
-            </div>
-        `;
-
-        wrap.appendChild(overlay);
-
-        const canvas = overlay.querySelector('.card-preview-board-canvas');
-        this.loadBoardPreviewImages()
-            .then((imgs) => {
-                if (!canvas.isConnected) return;
-                this.paintBoardPreviewCanvas(canvas, snapshot, imgs);
-                requestAnimationFrame(() => this.refreshCardPreviewScale());
-            })
-            .catch((err) => {
-                console.error('appendCardPreviewBoardOverlay:', err);
-            });
+        return appendCardPreviewBoardOverlayImpl(this, wrap, payload);
     }
 
     renderCardPreviewSurface(payload) {
-        const host = document.getElementById('cardPreviewFrameHost');
-        if (!host) return;
-        host.innerHTML = '';
-        host.style.backgroundColor = '';
-        if (!payload) {
-            return;
-        }
-
-        const effectivePayload = this.getPayloadForCardPreviewRender(payload);
-        const list = Array.isArray(effectivePayload.elements) ? effectivePayload.elements : [];
-        const canvasBg = this.resolveSavedCanvasBackground(effectivePayload);
-        host.style.backgroundColor = canvasBg;
-
-        const wrap = document.createElement('div');
-        wrap.className = 'card-preview-surface-wrap';
-        wrap.style.backgroundColor = canvasBg;
-        const inner = document.createElement('div');
-        inner.className = 'card-preview-surface-inner card-preview-surface-inner--flex-stack';
-        inner.style.width = '100%';
-        inner.style.position = 'relative';
-        inner.style.boxSizing = 'border-box';
-        inner.style.backgroundColor = canvasBg;
-
-        let maxNum = 0;
-        list.forEach(item => {
-            const m = /^element_(\d+)$/.exec(item.id || '');
-            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10) + 1);
-        });
-        const savedCounter = this.elementIdCounter;
-        this.elementIdCounter = maxNum;
-        list.forEach(item => {
-            const el = this.deserializeCanvasElement(item, { previewMode: true });
-            if (el) {
-                el.style.width = '100%';
-                el.style.left = '0px';
-                el.style.boxSizing = 'border-box';
-                inner.appendChild(el);
-            }
-        });
-        this.elementIdCounter = savedCounter;
-
-        this.reorderCardPreviewElementsBySavedTop(inner);
-        const rawTops = Array.from(inner.querySelectorAll('.canvas-element')).map((el) => {
-            const t = parseInt(el.style.top, 10);
-            return Number.isNaN(t) ? 0 : t;
-        });
-        const minTop = rawTops.length ? Math.min(...rawTops) : 0;
-        inner.style.paddingTop = minTop > 0 ? `${minTop}px` : '';
-        inner.querySelectorAll('.canvas-element').forEach((el) => {
-            el.style.top = '';
-            el.style.left = '';
-        });
-        this.refreshPreviewTableElementsFromCardData(inner, effectivePayload);
-        inner
-            .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
-            .forEach((el) => this.setupCardPreviewTableCollapse(el));
-
-        if (this.shouldShowBoardInCardPreview(effectivePayload)) {
-            this.appendCardPreviewBoardOverlay(wrap, effectivePayload);
-        }
-        wrap.appendChild(inner);
-        host.appendChild(wrap);
-
-        inner.querySelectorAll('img').forEach((img) => {
-            img.addEventListener('load', () => this.refreshCardPreviewScale());
-        });
-
-        requestAnimationFrame(() => {
-            this.refreshCardPreviewScale();
-        });
+        return renderCardPreviewSurfaceImpl(this, payload);
     }
 
     /**
      * Для предпросмотра с flex-колонкой высота inner считается из потока; иначе — из absolute top + height.
      */
     updateCardPreviewInnerMinHeight(inner) {
-        if (!inner) return;
-        if (inner.classList.contains('card-preview-surface-inner--flex-stack')) {
-            inner.style.minHeight = '';
-            return;
-        }
-        const nodes = inner.querySelectorAll('.canvas-element');
-        if (!nodes.length) {
-            inner.style.minHeight = '';
-            return;
-        }
-        let maxBottom = 0;
-        nodes.forEach((el) => {
-            const top = parseInt(el.style.top, 10);
-            const t = Number.isNaN(top) ? 0 : top;
-            const bottom = t + (el.offsetHeight || 0);
-            maxBottom = Math.max(maxBottom, bottom);
-        });
-        const pad = 8;
-        inner.style.minHeight = maxBottom > 0 ? `${Math.ceil(maxBottom + pad)}px` : '';
+        return updateCardPreviewInnerMinHeightImpl(this, inner);
     }
 
     refreshCardPreviewScale() {
-        const host = document.getElementById('cardPreviewFrameHost');
-        if (!host) return;
-        const inner = host.querySelector('.card-preview-surface-inner');
-        const wrap = host.querySelector('.card-preview-surface-wrap');
-        if (!inner || !wrap) return;
-
-        inner.style.transform = 'none';
-        if (inner.classList.contains('card-preview-surface-inner--flex-stack')) {
-            inner.querySelectorAll('.canvas-element').forEach((el) => {
-                el.style.marginBottom = '';
-            });
-        }
-        this.updateCardPreviewInnerMinHeight(inner);
-        const boardEl = wrap.querySelector('.card-preview-board-overlay');
-        const boardH = boardEl ? Math.ceil(boardEl.offsetHeight) : 0;
-        const innerH = Math.ceil(inner.offsetHeight);
-        wrap.style.minHeight = `${boardH + innerH}px`;
+        return refreshCardPreviewScaleImpl(this);
     }
 
     escapeHtml(s) {
@@ -6384,70 +5323,19 @@ class ContentEditor {
     }
 
     cardPreviewPrev() {
-        if (this.cardPreviewIndex > 0) {
-            this.cardPreviewIndex--;
-            this.refreshCardPreviewUI();
-        }
+        return cardPreviewPrevImpl(this);
     }
 
     cardPreviewNext() {
-        if (this.cardPreviewIndex < this.cardPreviewRefs.length - 1) {
-            this.cardPreviewIndex++;
-            this.refreshCardPreviewUI();
-        }
+        return cardPreviewNextImpl(this);
     }
 
     deleteCurrentPreviewFrame() {
-        if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true) return;
-        const total = this.cardPreviewRefs.length;
-        if (total <= 0) {
-            this.showNotification('Нет кадров для удаления', 'warning');
-            return;
-        }
-        const ref = this.cardPreviewRefs[this.cardPreviewIndex];
-        if (!ref) return;
-
-        if (!confirm('Удалить текущий кадр из предпросмотра?')) return;
-
-        if (ref.storageKey) {
-            try {
-                localStorage.removeItem(ref.storageKey);
-            } catch (e) {
-                console.warn('deleteCurrentPreviewFrame removeItem:', e);
-            }
-        }
-        this.cardPreviewRefs.splice(this.cardPreviewIndex, 1);
-        if (this.cardPreviewIndex >= this.cardPreviewRefs.length) {
-            this.cardPreviewIndex = Math.max(this.cardPreviewRefs.length - 1, 0);
-        }
-        this.showNotification('Кадр удалён', 'success');
-        this.refreshCardPreviewUI();
+        return deleteCurrentPreviewFrameImpl(this);
     }
 
     cardPreviewApprove() {
-        if (!this.cardPreviewRefs.length) {
-            this.showNotification('Нет сохранённых кадров для этой игры', 'warning');
-            return;
-        }
-        let labels = this.loadCardLabelsFromStorage();
-        if (!labels.length && this._contentCardTopLabels && this._contentCardTopLabels.length) {
-            labels = this._contentCardTopLabels.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim());
-        }
-        if (!labels.length) {
-            const withKeys = this.cardPreviewRefs.filter((r) => r.storageKey);
-            if (withKeys.length) {
-                labels = this.collectUnifiedLabelsFromFrameRefs(withKeys);
-                if (labels.length) {
-                    try {
-                        this.saveCardLabelsToStorage(labels);
-                    } catch (e) {
-                        console.warn('cardPreviewApprove migrate labels:', e);
-                    }
-                }
-            }
-        }
-        this.cardLabelsDraft = labels.slice();
-        this.openCardLabelsModal();
+        return cardPreviewApproveImpl(this);
     }
 
     openCardLabelsModal() {
@@ -7797,49 +6685,4 @@ class ContentEditor {
     }
 }
 
-// Создаем глобальный экземпляр редактора
-let contentEditor;
-
-/**
- * При каждой загрузке страницы удаляем из localStorage только данные редактора
- * (кадры, карточки, счётчики слотов). Настройки страницы (eqThreshold, чекбоксы и т.д.) не трогаем.
- */
-function clearContentEditorLocalStorage() {
-    if (typeof localStorage === 'undefined') return;
-    const toRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('contentEditor_')) {
-            toRemove.push(k);
-        }
-    }
-    toRemove.forEach((k) => localStorage.removeItem(k));
-}
-
-/** Большие аудио лежат в IndexedDB под тем же именем, что и в ContentEditor.CONTENT_EDITOR_MEDIA_DB */
-function clearContentEditorIndexedDB() {
-    try {
-        if (typeof indexedDB !== 'undefined') {
-            indexedDB.deleteDatabase('contentEditorMedia');
-        }
-    } catch (e) {
-        /* ignore */
-    }
-}
-
-if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) {
-    clearContentEditorLocalStorage();
-    clearContentEditorIndexedDB();
-}
-
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.__CONTENT_CARD_VIEW_ONLY__ === true) {
-        contentEditor = new ContentEditor();
-        contentEditor.bootstrapContentCardViewPage().catch((e) => {
-            console.error('content card view bootstrap:', e);
-        });
-        return;
-    }
-    contentEditor = new ContentEditor();
-});
+export default ContentEditor;
