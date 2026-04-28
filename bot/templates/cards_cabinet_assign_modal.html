@@ -1,0 +1,42 @@
+<div id="assignCardsModal" class="assign-modal" aria-hidden="true">
+    <div class="assign-modal__overlay" id="assignCardsModalOverlay"></div>
+    <div class="assign-modal__box" role="dialog" aria-modal="true" aria-labelledby="assignCardsModalTitle">
+        <h3 id="assignCardsModalTitle" class="assign-modal__title">Выбор пользователя</h3>
+        <label for="assignUsersSearchInput" class="assign-modal__label">Поиск пользователя</label>
+        <input
+            id="assignUsersSearchInput"
+            class="assign-modal__input"
+            type="text"
+            placeholder="ID / username / присвоенное имя"
+            autocomplete="off"
+        >
+        <p id="assignCardsModalMsg" class="assign-modal__msg"></p>
+        <div class="assign-modal__table-wrap">
+            <table class="assign-modal__table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Присвоенное имя</th>
+                    </tr>
+                </thead>
+                <tbody id="assignUsersTbody"></tbody>
+            </table>
+        </div>
+        <div class="assign-modal__actions">
+            <button type="button" id="assignCardsModalCancelBtn" class="assign-modal__btn">Отмена</button>
+            <button type="button" id="assignCardsModalSubmitBtn" class="assign-modal__btn assign-modal__btn--primary">Отправить</button>
+        </div>
+    </div>
+</div>
+<div id="assignAlreadyHaveModal" class="assign-modal" aria-hidden="true">
+    <div class="assign-modal__overlay" id="assignAlreadyHaveModalOverlay"></div>
+    <div class="assign-modal__box" role="dialog" aria-modal="true" aria-labelledby="assignAlreadyHaveModalTitle">
+        <h3 id="assignAlreadyHaveModalTitle" class="assign-modal__title">Предупреждение</h3>
+        <p id="assignAlreadyHaveModalText" class="assign-modal__msg"></p>
+        <div class="assign-modal__actions">
+            <button type="button" id="assignAlreadyHaveCancelBtn" class="assign-modal__btn">Отмена</button>
+            <button type="button" id="assignAlreadyHaveContinueBtn" class="assign-modal__btn assign-modal__btn--primary">Продолжить</button>
+        </div>
+    </div>
+</div>

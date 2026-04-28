@@ -33,14 +33,18 @@
             grid-template-columns: auto 1fr auto;
             align-items: center;
             margin: 0 0 12px;
-            min-height: 30px;
+            min-height: 34px;
             gap: 8px;
         }
-        .cabinet-header-spacer {
-            width: 28px;
-            height: 28px;
+        .cabinet-header-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
-        .cabinet-shuffle-btn {
+        .cabinet-shuffle-btn,
+        .cabinet-mode-btn,
+        .cabinet-send-btn,
+        .cabinet-admin-btn {
             width: 28px;
             height: 28px;
             border: 1px solid #4a4a4a;
@@ -56,29 +60,37 @@
             text-decoration: none;
             padding: 0;
         }
-        .cabinet-shuffle-btn:active {
+        .cabinet-shuffle-btn:active,
+        .cabinet-mode-btn:active,
+        .cabinet-send-btn:active,
+        .cabinet-admin-btn:active {
             background: #3a3a3a;
         }
+        .cabinet-mode-btn,
+        .cabinet-send-btn,
         .cabinet-admin-btn {
-            width: 28px;
-            height: 28px;
-            border: 1px solid #4a4a4a;
-            border-radius: 8px;
-            background: #2d2d2d;
-            color: #ddd;
-            cursor: pointer;
             display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.85rem;
-            line-height: 1;
-            text-decoration: none;
         }
+        .cabinet-mode-btn,
+        .cabinet-send-btn {
+            width: auto;
+            min-width: 88px;
+            padding: 0 10px;
+            font-size: 0.78rem;
+        }
+        .cabinet-mode-btn.is-visible,
+        .cabinet-send-btn.is-visible,
         .cabinet-admin-btn.is-visible {
             display: inline-flex;
         }
-        .cabinet-admin-btn:active {
-            background: #3a3a3a;
+        .cabinet-mode-btn.is-active {
+            border-color: #5f8fbd;
+            background: #3e6f9f;
+            color: #fff;
+        }
+        .cabinet-send-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
 
         .hint {
@@ -196,6 +208,10 @@
             background: #a43b3b;
             border-color: #cb6363;
         }
+        .tile--selected {
+            box-shadow: 0 0 0 2px #7fbeff inset;
+            border-color: #7fbeff;
+        }
 
         .empty {
             color: #888;
@@ -287,15 +303,134 @@
             border-color: #5f8fbd;
             background: #3e6f9f;
         }
+        .assign-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 210000;
+        }
+        .assign-modal.is-open {
+            display: flex;
+        }
+        .assign-modal__overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+        }
+        .assign-modal__box {
+            position: relative;
+            width: 94%;
+            max-width: 720px;
+            max-height: 88vh;
+            overflow: hidden;
+            background: #262a30;
+            border: 1px solid #3f4550;
+            border-radius: 12px;
+            padding: 14px;
+            color: #fff;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .assign-modal__title {
+            margin: 0 0 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .assign-modal__label {
+            display: block;
+            margin: 0 0 6px;
+            font-size: 13px;
+            color: #cfd7e3;
+        }
+        .assign-modal__input {
+            width: 100%;
+            background: #1f2329;
+            color: #fff;
+            border: 1px solid #3f4550;
+            border-radius: 8px;
+            padding: 9px 10px;
+            margin-bottom: 10px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .assign-modal__msg {
+            min-height: 18px;
+            margin: 0 0 10px;
+            font-size: 13px;
+            color: #f4b567;
+        }
+        .assign-modal__table-wrap {
+            max-height: 320px;
+            overflow: auto;
+            border: 1px solid #3f4550;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .assign-modal__table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .assign-modal__table th,
+        .assign-modal__table td {
+            padding: 7px 8px;
+            border-bottom: 1px solid #3b414b;
+            text-align: left;
+            vertical-align: top;
+        }
+        .assign-modal__table tbody tr {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .assign-modal__table tbody tr:hover {
+            background: #2f3640;
+        }
+        .assign-modal__table tbody tr.is-selected {
+            background: #365775;
+        }
+        .assign-modal__table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+        .assign-modal__actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .assign-modal__btn {
+            border: 1px solid #4a505b;
+            background: #353b45;
+            color: #fff;
+            border-radius: 8px;
+            padding: 7px 12px;
+            cursor: pointer;
+        }
+        .assign-modal__btn--primary {
+            border-color: #5f8fbd;
+            background: #3e6f9f;
+        }
+        .assign-modal__btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
 <body>
     <div class="wrap">
         <div class="cabinet-header">
-            <button id="shuffle-cards-btn" class="cabinet-shuffle-btn" type="button" title="Перемешать карточки" aria-label="Перемешать карточки">⇄</button>
+            <div class="cabinet-header-actions">
+                <button id="shuffle-cards-btn" class="cabinet-shuffle-btn" type="button" title="Перемешать карточки" aria-label="Перемешать карточки">⇄</button>
+            </div>
             <h1>Мои карточки</h1>
-            <a id="admin-fab-btn" class="cabinet-admin-btn" href="/admin" title="Перейти в админку" aria-label="Перейти в админку">A</a>
+            <div class="cabinet-header-actions">
+                <button id="select-mode-btn" class="cabinet-mode-btn" type="button" title="Режим выделения карточек" aria-label="Режим выделения карточек">Выделение</button>
+                <button id="send-selected-btn" class="cabinet-send-btn" type="button" title="Отправить выбранные карточки" aria-label="Отправить выбранные карточки" disabled>Отправить</button>
+                <a id="admin-fab-btn" class="cabinet-admin-btn" href="/admin" title="Перейти в админку" aria-label="Перейти в админку">A</a>
+            </div>
         </div>
         <div class="search-wrap">
             <input
@@ -348,6 +483,7 @@
             </div>
         </div>
     </div>
+    {% include "cards_cabinet_assign_modal.html" %}
     <script>
         (function () {
             if (window.Telegram && window.Telegram.WebApp) {
@@ -363,6 +499,8 @@
             var labelFilterWrap = document.getElementById('label-filter-wrap');
             var labelFilter = document.getElementById('label-filter');
             var adminFabBtn = document.getElementById('admin-fab-btn');
+            var selectModeBtn = document.getElementById('select-mode-btn');
+            var sendSelectedBtn = document.getElementById('send-selected-btn');
             var shuffleCardsBtn = document.getElementById('shuffle-cards-btn');
             var shuffleModal = document.getElementById('shuffleModal');
             var shuffleModalOverlay = document.getElementById('shuffleModalOverlay');
@@ -371,8 +509,27 @@
             var shuffleModalApplyBtn = document.getElementById('shuffleModalApplyBtn');
             var shuffleModalCancelBtn = document.getElementById('shuffleModalCancelBtn');
             var shuffleModalResetBtn = document.getElementById('shuffleModalResetBtn');
+            var assignCardsModal = document.getElementById('assignCardsModal');
+            var assignCardsModalOverlay = document.getElementById('assignCardsModalOverlay');
+            var assignCardsModalMsg = document.getElementById('assignCardsModalMsg');
+            var assignUsersSearchInput = document.getElementById('assignUsersSearchInput');
+            var assignUsersTbody = document.getElementById('assignUsersTbody');
+            var assignCardsModalCancelBtn = document.getElementById('assignCardsModalCancelBtn');
+            var assignCardsModalSubmitBtn = document.getElementById('assignCardsModalSubmitBtn');
+            var assignAlreadyHaveModal = document.getElementById('assignAlreadyHaveModal');
+            var assignAlreadyHaveModalOverlay = document.getElementById('assignAlreadyHaveModalOverlay');
+            var assignAlreadyHaveModalText = document.getElementById('assignAlreadyHaveModalText');
+            var assignAlreadyHaveCancelBtn = document.getElementById('assignAlreadyHaveCancelBtn');
+            var assignAlreadyHaveContinueBtn = document.getElementById('assignAlreadyHaveContinueBtn');
             var allCards = [];
             var shuffledCards = null;
+            var isRootAdminUser = false;
+            var isSelectionMode = false;
+            var selectedCardIds = {};
+            var assignUsers = [];
+            var selectedAssignUserId = null;
+            var assignUsersLoaded = false;
+            var alreadyHaveModalResolver = null;
 
             function showErr(msg) {
                 errEl.textContent = msg;
@@ -395,6 +552,320 @@
                     Object.keys(extra).forEach(function (k) { base[k] = extra[k]; });
                 }
                 return base;
+            }
+
+            function setAssignModalMsg(msg) {
+                if (!assignCardsModalMsg) return;
+                assignCardsModalMsg.textContent = String(msg || '');
+            }
+
+            function selectedCardIdsCount() {
+                return Object.keys(selectedCardIds).length;
+            }
+
+            function getSelectedCardsInCabinetOrder() {
+                if (!Array.isArray(allCards) || !allCards.length) {
+                    return [];
+                }
+                var out = [];
+                allCards.forEach(function (row) {
+                    var cardIdNum = Number(row && row.content_card_id);
+                    if (!Number.isFinite(cardIdNum) || cardIdNum < 1) {
+                        return;
+                    }
+                    if (!selectedCardIds[String(cardIdNum)]) {
+                        return;
+                    }
+                    out.push({
+                        id: cardIdNum,
+                        number: Number((row && row.__index) || 0) + 1,
+                    });
+                });
+                return out;
+            }
+
+            function updateSelectionUi() {
+                var selectedCount = getSelectedCardsInCabinetOrder().length;
+                if (selectModeBtn) {
+                    selectModeBtn.textContent = isSelectionMode ? 'Обычный режим' : 'Выделение';
+                    selectModeBtn.classList.toggle('is-active', isSelectionMode);
+                }
+                if (sendSelectedBtn) {
+                    sendSelectedBtn.disabled = !isSelectionMode || selectedCount < 1;
+                }
+            }
+
+            function clearSelection() {
+                selectedCardIds = {};
+                updateSelectionUi();
+            }
+
+            function setSelectionMode(nextValue) {
+                isSelectionMode = !!nextValue;
+                if (!isSelectionMode) {
+                    clearSelection();
+                } else {
+                    updateSelectionUi();
+                }
+                renderCards();
+            }
+
+            function closeAssignModal() {
+                if (!assignCardsModal) return;
+                assignCardsModal.classList.remove('is-open');
+                assignCardsModal.setAttribute('aria-hidden', 'true');
+                setAssignModalMsg('');
+                selectedAssignUserId = null;
+            }
+
+            function closeAlreadyHaveModal(confirmed) {
+                if (!assignAlreadyHaveModal) return;
+                assignAlreadyHaveModal.classList.remove('is-open');
+                assignAlreadyHaveModal.setAttribute('aria-hidden', 'true');
+                if (alreadyHaveModalResolver) {
+                    var resolver = alreadyHaveModalResolver;
+                    alreadyHaveModalResolver = null;
+                    resolver(!!confirmed);
+                }
+            }
+
+            function openAlreadyHaveModal(cardItems) {
+                return new Promise(function (resolve) {
+                    alreadyHaveModalResolver = resolve;
+                    if (!assignAlreadyHaveModal || !assignAlreadyHaveModalText) {
+                        resolve(false);
+                        return;
+                    }
+                    assignAlreadyHaveModalText.textContent =
+                        'У пользователя уже есть карточки: ' + cardItems.join(', ') + '. Продолжить отправку остальных?';
+                    assignAlreadyHaveModal.classList.add('is-open');
+                    assignAlreadyHaveModal.setAttribute('aria-hidden', 'false');
+                });
+            }
+
+            function setAssignUsersLoadingState(isLoading) {
+                if (!assignCardsModalSubmitBtn) return;
+                assignCardsModalSubmitBtn.disabled = !!isLoading;
+            }
+
+            function renderAssignUsersTable() {
+                if (!assignUsersTbody) return;
+                assignUsersTbody.innerHTML = '';
+                var filterText = String(assignUsersSearchInput ? assignUsersSearchInput.value : '').trim().toLowerCase();
+                var rows = assignUsers.filter(function (row) {
+                    if (!filterText) return true;
+                    var idText = String(row && row.id || '');
+                    var username = String((row && row.username) || '').toLowerCase();
+                    var assignedName = String((row && row.assigned_name) || '').toLowerCase();
+                    return idText.indexOf(filterText) !== -1 ||
+                        username.indexOf(filterText) !== -1 ||
+                        assignedName.indexOf(filterText) !== -1;
+                });
+
+                if (!rows.length) {
+                    var emptyTr = document.createElement('tr');
+                    var emptyTd = document.createElement('td');
+                    emptyTd.colSpan = 3;
+                    emptyTd.textContent = 'Пользователи не найдены.';
+                    emptyTr.appendChild(emptyTd);
+                    assignUsersTbody.appendChild(emptyTr);
+                    return;
+                }
+
+                rows.forEach(function (row) {
+                    var tr = document.createElement('tr');
+                    tr.classList.toggle('is-selected', row.id === selectedAssignUserId);
+                    tr.addEventListener('click', function () {
+                        selectedAssignUserId = row.id;
+                        setAssignModalMsg('');
+                        renderAssignUsersTable();
+                    });
+
+                    var idTd = document.createElement('td');
+                    idTd.textContent = String(row.id);
+                    tr.appendChild(idTd);
+
+                    var usernameTd = document.createElement('td');
+                    usernameTd.textContent = row.username ? ('@' + row.username) : '—';
+                    tr.appendChild(usernameTd);
+
+                    var assignedNameTd = document.createElement('td');
+                    assignedNameTd.textContent = row.assigned_name || '—';
+                    tr.appendChild(assignedNameTd);
+
+                    assignUsersTbody.appendChild(tr);
+                });
+            }
+
+            function loadAssignUsers() {
+                if (assignUsersLoaded) {
+                    renderAssignUsersTable();
+                    return Promise.resolve();
+                }
+                setAssignUsersLoadingState(true);
+                return fetch('/api/content_cards/admin_users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload()),
+                })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error(j.detail || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Не удалось загрузить пользователей');
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        assignUsers = Array.isArray(data && data.users) ? data.users : [];
+                        assignUsersLoaded = true;
+                        renderAssignUsersTable();
+                    })
+                    .finally(function () {
+                        setAssignUsersLoadingState(false);
+                    });
+            }
+
+            function openAssignModal() {
+                if (!assignCardsModal) return;
+                if (!isRootAdminUser) return;
+                if (!isSelectionMode || getSelectedCardsInCabinetOrder().length < 1) return;
+                if (assignUsersSearchInput) {
+                    assignUsersSearchInput.value = '';
+                }
+                selectedAssignUserId = null;
+                setAssignModalMsg('');
+                assignCardsModal.classList.add('is-open');
+                assignCardsModal.setAttribute('aria-hidden', 'false');
+                loadAssignUsers().catch(function (e) {
+                    setAssignModalMsg(e && e.message ? e.message : 'Ошибка загрузки списка пользователей');
+                });
+            }
+
+            function submitSelectedCardsToUser() {
+                if (!selectedAssignUserId) {
+                    setAssignModalMsg('Выберите пользователя.');
+                    return;
+                }
+                var selectedCards = getSelectedCardsInCabinetOrder();
+                var selectedIds = selectedCards.map(function (row) { return row.id; });
+                var numberByCardId = {};
+                selectedCards.forEach(function (row) {
+                    numberByCardId[String(row.id)] = row.number;
+                });
+                if (!selectedCards.length) {
+                    setAssignModalMsg('Выберите хотя бы одну карточку.');
+                    return;
+                }
+
+                function sendAssignRequest() {
+                    return fetch('/api/content_cards/assign_to_user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(
+                            authPayload({
+                                target_user_id: selectedAssignUserId,
+                                content_card_ids: selectedIds,
+                            })
+                        ),
+                    });
+                }
+
+                setAssignUsersLoadingState(true);
+                fetch('/api/content_cards/assign_preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(
+                        authPayload({
+                            target_user_id: selectedAssignUserId,
+                            content_card_ids: selectedIds,
+                        })
+                    ),
+                })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error(j.detail || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Ошибка проверки карточек');
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function (previewData) {
+                        var alreadyHadIds = Array.isArray(previewData && previewData.already_had_ids)
+                            ? previewData.already_had_ids
+                            : [];
+                        if (alreadyHadIds.length) {
+                            var numberWithIdItems = alreadyHadIds
+                                .map(function (cardId) {
+                                    var n = numberByCardId[String(cardId)];
+                                    if (!Number.isFinite(n)) {
+                                        return null;
+                                    }
+                                    return {
+                                        number: n,
+                                        id: Number(cardId),
+                                    };
+                                })
+                                .filter(function (row) { return !!row; })
+                                .sort(function (a, b) { return a.number - b.number; })
+                                .map(function (row) {
+                                    return '№' + row.number + ' (id: ' + row.id + ')';
+                                });
+                            if (!numberWithIdItems.length) {
+                                numberWithIdItems = alreadyHadIds.map(function (cardId) {
+                                    return 'id: ' + cardId;
+                                });
+                            }
+                            return openAlreadyHaveModal(numberWithIdItems).then(function (confirmed) {
+                                if (!confirmed) {
+                                    throw new Error('__PREVIEW_CANCELLED__');
+                                }
+                                return sendAssignRequest();
+                            });
+                        }
+                        return sendAssignRequest();
+                    })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error(j.detail || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Ошибка отправки карточек');
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        var issuedCount = Number((data && data.issued_count) || 0);
+                        var alreadyHadCount = Number((data && data.already_had_count) || 0);
+                        var invalidCount = Number((data && data.invalid_count) || 0);
+                        var pieces = ['Выдано: ' + issuedCount + '.'];
+                        if (alreadyHadCount > 0) {
+                            pieces.push('Уже были у пользователя: ' + alreadyHadCount + '.');
+                        }
+                        if (invalidCount > 0) {
+                            pieces.push('Не найдены: ' + invalidCount + '.');
+                        }
+                        if (data && data.notify_sent === false && data.notify_error) {
+                            pieces.push('Уведомление не отправлено: ' + data.notify_error + '.');
+                        }
+                        window.alert(pieces.join(' '));
+                        closeAssignModal();
+                        setSelectionMode(false);
+                    })
+                    .catch(function (e) {
+                        if (e && e.message === '__PREVIEW_CANCELLED__') {
+                            return;
+                        }
+                        setAssignModalMsg(e && e.message ? e.message : 'Ошибка отправки карточек');
+                    })
+                    .finally(function () {
+                        setAssignUsersLoadingState(false);
+                    });
             }
 
             if (searchInput) {
@@ -438,6 +909,7 @@
                     var id = row.content_card_id;
                     var index = row.__index;
                     var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
+                    var cardIdNum = Number(id);
                     var btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'tile';
@@ -450,9 +922,23 @@
                     } else if (status === 'HARD') {
                         btn.classList.add('tile--hard');
                     }
+                    if (isSelectionMode && selectedCardIds[String(cardIdNum)]) {
+                        btn.classList.add('tile--selected');
+                    }
                     btn.textContent = String(index + 1);
                     btn.title = 'Карточка #' + id;
                     btn.addEventListener('click', function () {
+                        if (isSelectionMode) {
+                            var selectedKey = String(cardIdNum);
+                            if (selectedCardIds[selectedKey]) {
+                                delete selectedCardIds[selectedKey];
+                            } else {
+                                selectedCardIds[selectedKey] = true;
+                            }
+                            updateSelectionUi();
+                            renderCards();
+                            return;
+                        }
                         var cardNumber = index + 1;
                         var openCard = function () {
                             var path =
@@ -571,6 +1057,42 @@
                     renderCards();
                 });
             }
+            if (selectModeBtn) {
+                selectModeBtn.addEventListener('click', function () {
+                    setSelectionMode(!isSelectionMode);
+                });
+            }
+            if (sendSelectedBtn) {
+                sendSelectedBtn.addEventListener('click', openAssignModal);
+            }
+            if (assignUsersSearchInput) {
+                assignUsersSearchInput.addEventListener('input', renderAssignUsersTable);
+            }
+            if (assignCardsModalOverlay) {
+                assignCardsModalOverlay.addEventListener('click', closeAssignModal);
+            }
+            if (assignCardsModalCancelBtn) {
+                assignCardsModalCancelBtn.addEventListener('click', closeAssignModal);
+            }
+            if (assignCardsModalSubmitBtn) {
+                assignCardsModalSubmitBtn.addEventListener('click', submitSelectedCardsToUser);
+            }
+            if (assignAlreadyHaveModalOverlay) {
+                assignAlreadyHaveModalOverlay.addEventListener('click', function () {
+                    closeAlreadyHaveModal(false);
+                });
+            }
+            if (assignAlreadyHaveCancelBtn) {
+                assignAlreadyHaveCancelBtn.addEventListener('click', function () {
+                    closeAlreadyHaveModal(false);
+                });
+            }
+            if (assignAlreadyHaveContinueBtn) {
+                assignAlreadyHaveContinueBtn.addEventListener('click', function () {
+                    closeAlreadyHaveModal(true);
+                });
+            }
+            updateSelectionUi();
 
             fetch('/api/content_cards/my_list', {
                 method: 'POST',
@@ -588,9 +1110,15 @@
                     return r.json();
                 })
                 .then(function (data) {
-                    var isRootAdmin = !!(data && data.is_root_admin);
-                    if (isRootAdmin && adminFabBtn) {
+                    isRootAdminUser = !!(data && data.is_root_admin);
+                    if (isRootAdminUser && adminFabBtn) {
                         adminFabBtn.classList.add('is-visible');
+                    }
+                    if (isRootAdminUser && selectModeBtn) {
+                        selectModeBtn.classList.add('is-visible');
+                    }
+                    if (isRootAdminUser && sendSelectedBtn) {
+                        sendSelectedBtn.classList.add('is-visible');
                     }
                     var cards = (data && data.cards) || [];
                     if (!cards.length) {

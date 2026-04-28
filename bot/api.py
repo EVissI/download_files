@@ -32,7 +32,14 @@ from bot.db.dao import (
     ContentCardDAO,
     UserContentCardDAO,
 )
-from bot.db.models import ContentCard, LabelPreset, ServiceType, UserContentCardStatus
+from bot.db.models import (
+    ContentCard,
+    LabelPreset,
+    ServiceType,
+    User,
+    UserContentCard,
+    UserContentCardStatus,
+)
 from bot.db.schemas import SContentCardCreate, SUserContentCardCreate
 from loguru import logger
 import traceback
@@ -606,6 +613,14 @@ def _content_card_view_webapp_markup(view_url: str) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def _cards_cabinet_webapp_markup(view_url: str) -> InlineKeyboardMarkup:
+    """Кнопка открытия личного кабинета карточек в Telegram Web App."""
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Открыть личный кабинет", web_app=WebAppInfo(url=view_url))
+    kb.adjust(1)
+    return kb.as_markup()
+
+
 class ContentCardSaveBody(BaseModel):
     """Сохранение карточки редактора (hint viewer): проверка через Telegram init_data."""
 
@@ -643,6 +658,15 @@ class ContentCardMyListBody(BaseModel):
 
     init_data: str | None = None
     fab_token: str | None = None
+
+
+class ContentCardAssignToUserBody(BaseModel):
+    """Выдача выбранных карточек пользователю (только ROOT_ADMIN_IDS)."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    target_user_id: int = Field(..., ge=1)
+    content_card_ids: list[int] = Field(..., min_length=1, max_length=3000)
 
 
 class LabelPresetCreateBody(BaseModel):
@@ -1057,6 +1081,179 @@ async def content_cards_all_labels(body: ContentCardMyListBody):
                     labels_set.add(text)
 
     return {"labels": sorted(labels_set, key=lambda x: x.lower())}
+
+
+@app.post("/api/content_cards/admin_users")
+async def content_cards_admin_users(body: ContentCardMyListBody):
+    """Список пользователей для модалки назначения карточек (только ROOT_ADMIN_IDS)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(User.id, User.username, User.admin_insert_name).order_by(User.id.asc())
+        )
+        users = [
+            {
+                "id": int(row_id),
+                "username": str(username or ""),
+                "assigned_name": str(admin_insert_name or ""),
+            }
+            for row_id, username, admin_insert_name in result.all()
+        ]
+    return {"users": users}
+
+
+@app.post("/api/content_cards/assign_to_user")
+async def content_cards_assign_to_user(body: ContentCardAssignToUserBody):
+    """Выдать выбранные карточки пользователю и отправить Telegram-уведомление."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    card_ids_ordered_unique: list[int] = []
+    seen_ids: set[int] = set()
+    for raw_id in body.content_card_ids:
+        try:
+            card_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if card_id < 1 or card_id in seen_ids:
+            continue
+        seen_ids.add(card_id)
+        card_ids_ordered_unique.append(card_id)
+    if not card_ids_ordered_unique:
+        raise HTTPException(
+            status_code=400,
+            detail="Нужно передать хотя бы один корректный content_card_id",
+        )
+
+    issued_count = 0
+    already_had_count = 0
+    invalid_count = 0
+    async with async_session_maker() as session:
+        target_exists = await session.scalar(
+            select(User.id).where(User.id == body.target_user_id).limit(1)
+        )
+        if target_exists is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        existing_cards_result = await session.execute(
+            select(ContentCard.id).where(ContentCard.id.in_(card_ids_ordered_unique))
+        )
+        existing_card_ids = {
+            int(row_id) for row_id in existing_cards_result.scalars().all() if row_id is not None
+        }
+        selected_existing_ids = [
+            card_id for card_id in card_ids_ordered_unique if card_id in existing_card_ids
+        ]
+        invalid_count = len(card_ids_ordered_unique) - len(selected_existing_ids)
+        if not selected_existing_ids:
+            raise HTTPException(status_code=404, detail="Выбранные карточки не найдены")
+
+        existing_user_links_result = await session.execute(
+            select(UserContentCard.content_card_id).where(
+                UserContentCard.user_id == body.target_user_id,
+                UserContentCard.content_card_id.in_(selected_existing_ids),
+            )
+        )
+        already_has_ids = {
+            int(row_id)
+            for row_id in existing_user_links_result.scalars().all()
+            if row_id is not None
+        }
+        already_had_count = len(already_has_ids)
+
+        for card_id in selected_existing_ids:
+            if card_id in already_has_ids:
+                continue
+            session.add(
+                UserContentCard(
+                    user_id=body.target_user_id,
+                    content_card_id=card_id,
+                )
+            )
+            issued_count += 1
+
+        if issued_count > 0:
+            await session.commit()
+
+    notify_sent = False
+    notify_error = None
+    if issued_count > 0:
+        try:
+            cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
+            await bot.send_message(
+                chat_id=body.target_user_id,
+                text=(
+                    f"Вам зачислено {issued_count} карточек, "
+                    "посмотреть их можете в личном кабинете."
+                ),
+                reply_markup=_cards_cabinet_webapp_markup(cabinet_url),
+            )
+            notify_sent = True
+        except Exception as e:
+            notify_error = str(e)
+            logger.warning("Не удалось отправить уведомление о выдаче карточек: {}", e)
+
+    return {
+        "ok": True,
+        "issued_count": issued_count,
+        "already_had_count": already_had_count,
+        "invalid_count": invalid_count,
+        "notify_sent": notify_sent,
+        "notify_error": notify_error,
+    }
+
+
+@app.post("/api/content_cards/assign_preview")
+async def content_cards_assign_preview(body: ContentCardAssignToUserBody):
+    """Предпросмотр выдачи: какие выбранные карточки уже есть у пользователя."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    card_ids_ordered_unique: list[int] = []
+    seen_ids: set[int] = set()
+    for raw_id in body.content_card_ids:
+        try:
+            card_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if card_id < 1 or card_id in seen_ids:
+            continue
+        seen_ids.add(card_id)
+        card_ids_ordered_unique.append(card_id)
+    if not card_ids_ordered_unique:
+        raise HTTPException(
+            status_code=400,
+            detail="Нужно передать хотя бы один корректный content_card_id",
+        )
+
+    async with async_session_maker() as session:
+        target_exists = await session.scalar(
+            select(User.id).where(User.id == body.target_user_id).limit(1)
+        )
+        if target_exists is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        existing_user_links_result = await session.execute(
+            select(UserContentCard.content_card_id).where(
+                UserContentCard.user_id == body.target_user_id,
+                UserContentCard.content_card_id.in_(card_ids_ordered_unique),
+            )
+        )
+        already_has_ids_set = {
+            int(row_id)
+            for row_id in existing_user_links_result.scalars().all()
+            if row_id is not None
+        }
+        already_has_ids_ordered = [
+            card_id for card_id in card_ids_ordered_unique if card_id in already_has_ids_set
+        ]
+
+    return {
+        "ok": True,
+        "already_had_ids": already_has_ids_ordered,
+    }
 
 
 @app.post("/api/content_cards/label_presets")
