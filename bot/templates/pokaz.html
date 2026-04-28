@@ -1304,7 +1304,7 @@
             font-weight: bold;
         }
 
-        .action-buttons {
+        .container .action-buttons {
             display: flex;
             flex-direction: row;
             gap: clamp(0.3rem, 2vw, 0.6rem);
@@ -1312,7 +1312,7 @@
             align-items: center;
         }
 
-        .action-buttons-col {
+        .container .action-buttons-col {
             display: flex;
             flex-direction: column;
             gap: clamp(0.3rem, 2vw, 0.6rem);
@@ -1320,11 +1320,11 @@
             align-items: center;
         }
 
-        .action-buttons-col.left {
+        .container .action-buttons-col.left {
             justify-content: space-around;
         }
 
-        .action-buttons button {
+        .container .action-buttons button {
             padding: clamp(0.3rem, 2vw, 0.5rem) clamp(0.5rem, 2.5vw, 0.8rem);
             font-size: clamp(0.7rem, 2vw, 1rem);
             border-radius: clamp(0.2rem, 1vw, 0.4rem);
@@ -1341,17 +1341,17 @@
             padding-left: 0.5rem;
         }
 
-        .action-buttons-col.right button {
+        .container .action-buttons-col.right button {
             min-width: clamp(2.2rem, 8.8vw, 3.3rem);
             min-height: clamp(2.2rem, 8.8vw, 3.3rem);
             background-color: rgb(34, 177, 34);
         }
 
-        .action-buttons-col.left button i {
+        .container .action-buttons-col.left button i {
             font-size: clamp(1.05rem, 3vw, 1.5rem);
         }
 
-        .action-buttons-col.right button i {
+        .container .action-buttons-col.right button i {
             font-size: clamp(1.54rem, 4.4vw, 2.2rem);
         }
 
@@ -7060,7 +7060,7 @@
     function takeScreenshot() {
         // Скрываем элементы управления перед созданием скриншота
         const screenshotControls = document.getElementById('screenshotControls');
-        const actionButtons = document.querySelector('.action-buttons');
+        const actionButtons = document.querySelector('.container .action-buttons');
         const selectorsWrapper = document.querySelector('.selectors-wrapper');
         const boardOpenControls = document.getElementById('boardOpenControls');
         const xgidDisplay = document.getElementById('xgid-display');
@@ -7189,7 +7189,7 @@
     // Функция для сохранения скриншота в буфер
     function saveScreenshot() {
         const screenshotControls = document.getElementById('screenshotControls');
-        const actionButtons = document.querySelector('.action-buttons');
+        const actionButtons = document.querySelector('.container .action-buttons');
         const selectorsWrapper = document.querySelector('.selectors-wrapper');
         const boardOpenControls = document.getElementById('boardOpenControls');
         const xgidDisplay = document.getElementById('xgid-display');
