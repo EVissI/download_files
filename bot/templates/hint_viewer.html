@@ -3956,10 +3956,17 @@
                 const cardData = typeof window.getHintViewerCurrentCardData === 'function'
                     ? window.getHintViewerCurrentCardData()
                     : (data.length > 0 ? data[current] : null);
-                if (typeof contentEditor.openModalWithBestDuplicateCheck !== 'function') {
-                    throw new Error('ContentEditor не содержит unified-метод открытия редактора');
+                if (typeof contentEditor.openModalWithBestDuplicateCheck === 'function') {
+                    await contentEditor.openModalWithBestDuplicateCheck(cardData, { duplicateMode: 'source' });
+                } else if (typeof contentEditor.openModalWithDuplicateSourceCheck === 'function') {
+                    await contentEditor.openModalWithDuplicateSourceCheck(cardData);
+                } else if (typeof contentEditor.openModalWithDuplicateBoardXgidCheck === 'function') {
+                    await contentEditor.openModalWithDuplicateBoardXgidCheck(cardData);
+                } else if (typeof contentEditor.openModalWithData === 'function') {
+                    contentEditor.openModalWithData(cardData);
+                } else {
+                    throw new Error('ContentEditor не содержит методов открытия редактора');
                 }
-                await contentEditor.openModalWithBestDuplicateCheck(cardData, { duplicateMode: 'source' });
             } else {
                 console.error('ContentEditor не инициализирован');
             }
