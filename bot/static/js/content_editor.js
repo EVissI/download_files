@@ -1416,6 +1416,7 @@ class ContentEditor {
         this.toolbarPanel = this.modal.querySelector('.toolbar');
         this.workspacePanel = this.modal.querySelector('.workspace');
         this.propertiesPanel = this.modal.querySelector('.properties-panel');
+        this.ensurePreviewUiParity();
         this.applyPropertiesEmptyState();
         this.wireBoardMatchBannerToolbar();
     }
@@ -1528,6 +1529,52 @@ class ContentEditor {
             });
         }
         this.applyPropertiesEmptyState();
+    }
+
+    ensurePreviewUiParity() {
+        if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ === true) return;
+
+        const previewModal = document.getElementById('cardPreviewModal');
+        if (previewModal) {
+            const headerRight = previewModal.querySelector('.card-preview-header-right');
+            if (headerRight && !document.getElementById('cardPreviewDeleteBtn')) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.id = 'cardPreviewDeleteBtn';
+                deleteBtn.className = 'card-preview-open-editor';
+                deleteBtn.title = 'Удалить текущий кадр';
+                deleteBtn.textContent = 'Удалить кадр';
+                deleteBtn.onclick = () => this.deleteCurrentPreviewFrame();
+                headerRight.prepend(deleteBtn);
+            }
+
+            const nav = previewModal.querySelector('.card-preview-nav');
+            if (nav && !document.getElementById('cardPreviewApproveBtn')) {
+                const approveBtn = document.createElement('button');
+                approveBtn.type = 'button';
+                approveBtn.id = 'cardPreviewApproveBtn';
+                approveBtn.className = 'card-preview-approve';
+                approveBtn.textContent = 'Далее';
+                approveBtn.onclick = () => this.cardPreviewApprove();
+                nav.appendChild(approveBtn);
+            }
+        }
+
+        const labelsModal = document.getElementById('cardLabelsModal');
+        if (labelsModal && !document.getElementById('cardLabelsOpenPresetsBtn')) {
+            const headerRow = labelsModal.querySelector('.card-labels-modal-header-row');
+            if (headerRow) {
+                const presetsBtn = document.createElement('button');
+                presetsBtn.type = 'button';
+                presetsBtn.id = 'cardLabelsOpenPresetsBtn';
+                presetsBtn.className = 'card-labels-presets-open-btn';
+                presetsBtn.style.display = 'none';
+                presetsBtn.title = 'Пресеты меток';
+                presetsBtn.textContent = 'Пресеты';
+                presetsBtn.onclick = () => this.openLabelPresetsModal();
+                headerRow.appendChild(presetsBtn);
+            }
+        }
     }
 
     openModal() {

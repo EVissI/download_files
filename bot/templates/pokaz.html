@@ -3199,6 +3199,15 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        try {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready();
+                window.Telegram.WebApp.expand();
+            }
+        } catch (e) {
+            console.warn('Telegram WebApp init failed:', e);
+        }
+
         let positions = {
             first: {},
             second: {}
