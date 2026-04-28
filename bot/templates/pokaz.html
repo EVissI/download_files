@@ -6966,16 +6966,33 @@
             if (!pokazIsAdmin) return;
             if (typeof contentEditor === 'undefined') {
                 console.error('ContentEditor не инициализирован');
+                showMessageModal('Редактор карточек не инициализирован', 'error');
                 return;
             }
+            const cardData = (typeof window.getHintViewerCurrentCardData === 'function')
+                ? window.getHintViewerCurrentCardData()
+                : null;
             // Для pokaz всегда включаем баннер «матч / манигейм» над доской,
             // чтобы при сохранении кадра он попадал в payload.editor.showBoardMatchBanner.
             contentEditor.boardMatchBannerEnabled = true;
-            await contentEditor.openModalWithDuplicateBoardXgidCheck(
-                typeof window.getHintViewerCurrentCardData === 'function'
-                    ? window.getHintViewerCurrentCardData()
-                    : null
-            );
+
+            try {
+                await contentEditor.openModalWithDuplicateBoardXgidCheck(cardData);
+                const modal = document.getElementById('contentEditorModal');
+                const isOpened = modal && modal.style.display !== 'none';
+                if (!isOpened) {
+                    throw new Error('Редактор не открылся после проверки дубликата board_xgid');
+                }
+            } catch (e) {
+                console.error('openPokazCardEditor failed:', e);
+                try {
+                    contentEditor.openModalWithData(cardData);
+                } catch (fallbackError) {
+                    console.error('openPokazCardEditor fallback failed:', fallbackError);
+                }
+                const traceText = (e && e.stack) ? e.stack : String((e && e.message) ? e.message : e);
+                showMessageModal('Ошибка открытия редактора. Трассировка: ' + traceText, 'error');
+            }
         };
 
         checkPokazAdminStatus();
