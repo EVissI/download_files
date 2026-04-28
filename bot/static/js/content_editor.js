@@ -166,7 +166,7 @@ class ContentEditor {
     }
 
     init() {
-        if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__) {
+        if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true) {
             this.initContentCardViewOnly();
             return;
         }
@@ -529,7 +529,7 @@ class ContentEditor {
 
     /** Удаление текущего кадра (только ROOT-админ, только если кадров больше одного). */
     async deleteCurrentContentCardFrame() {
-        if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) return;
+        if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
         if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
         if (this.cardPreviewRefs.length <= 1) return;
         if (!confirm('Удалить текущий кадр? Действие нельзя отменить.')) return;
@@ -618,7 +618,7 @@ class ContentEditor {
     }
 
     openContentCardAddFrameModal() {
-        if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) return;
+        if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
         if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
         const modal = document.getElementById('contentCardAddFrameModal');
         const sel = document.getElementById('contentCardAddFramePositionSelect');
@@ -652,7 +652,7 @@ class ContentEditor {
     }
 
     async confirmContentCardAddFrame() {
-        if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) return;
+        if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
         if (!this._contentCardAdminMeta || this._contentCardViewCardId == null) return;
 
         const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
@@ -1096,7 +1096,7 @@ class ContentEditor {
     }
 
     ensureViewOnlyEditorMounted() {
-        if (!window.__CONTENT_CARD_VIEW_ONLY__ || this._viewOnlyEditorMounted) {
+        if (window.__CONTENT_CARD_VIEW_ONLY__ !== true || this._viewOnlyEditorMounted) {
             return;
         }
         this.createModal();
@@ -1106,7 +1106,7 @@ class ContentEditor {
     }
 
     async openEditorFromContentCardView() {
-        if (!window.__CONTENT_CARD_VIEW_ONLY__ || !this._contentCardViewCardId) {
+        if (window.__CONTENT_CARD_VIEW_ONLY__ !== true || !this._contentCardViewCardId) {
             return;
         }
         if (!this._contentCardAdminMeta) {
@@ -1292,7 +1292,7 @@ class ContentEditor {
             );
         }
 
-        if (!window.__CONTENT_CARD_VIEW_ONLY__) {
+        if (window.__CONTENT_CARD_VIEW_ONLY__ !== true) {
             if (!document.getElementById('cardPreviewModal')) {
                 document.body.insertAdjacentHTML('beforeend', `
                 <div id="cardPreviewModal" class="card-preview-modal card-preview-modal--fullscreen" style="display: none;" aria-hidden="true">
@@ -5778,7 +5778,7 @@ class ContentEditor {
         if (deletePreviewBtn) deletePreviewBtn.disabled = total === 0;
 
         const deleteFrameBtn = document.getElementById('contentCardViewDeleteFrameBtn');
-        if (deleteFrameBtn && typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ && this._contentCardAdminMeta) {
+        if (deleteFrameBtn && typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true && this._contentCardAdminMeta) {
             deleteFrameBtn.disabled = total <= 1;
         }
 
@@ -5804,7 +5804,7 @@ class ContentEditor {
         }
 
         meta.innerHTML = '';
-        const viewOnlyPage = typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__;
+        const viewOnlyPage = typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true;
         if (!viewOnlyPage) {
             const labelsKey = this.getCardLabelsStorageKey();
             const hasStoredLabelsKey = localStorage.getItem(labelsKey) !== null;
@@ -6351,7 +6351,7 @@ class ContentEditor {
     }
 
     deleteCurrentPreviewFrame() {
-        if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__) return;
+        if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true) return;
         const total = this.cardPreviewRefs.length;
         if (total <= 0) {
             this.showNotification('Нет кадров для удаления', 'warning');
@@ -7780,14 +7780,14 @@ function clearContentEditorIndexedDB() {
     }
 }
 
-if (typeof window === 'undefined' || !window.__CONTENT_CARD_VIEW_ONLY__) {
+if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) {
     clearContentEditorLocalStorage();
     clearContentEditorIndexedDB();
 }
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function () {
-    if (window.__CONTENT_CARD_VIEW_ONLY__) {
+    if (window.__CONTENT_CARD_VIEW_ONLY__ === true) {
         contentEditor = new ContentEditor();
         contentEditor.bootstrapContentCardViewPage().catch((e) => {
             console.error('content card view bootstrap:', e);
