@@ -6972,12 +6972,19 @@
             const cardData = (typeof window.getHintViewerCurrentCardData === 'function')
                 ? window.getHintViewerCurrentCardData()
                 : null;
+            const hasDuplicateCheck = typeof contentEditor.openModalWithDuplicateBoardXgidCheck === 'function';
             // Для pokaz всегда включаем баннер «матч / манигейм» над доской,
             // чтобы при сохранении кадра он попадал в payload.editor.showBoardMatchBanner.
             contentEditor.boardMatchBannerEnabled = true;
 
             try {
-                await contentEditor.openModalWithDuplicateBoardXgidCheck(cardData);
+                if (hasDuplicateCheck) {
+                    await contentEditor.openModalWithDuplicateBoardXgidCheck(cardData);
+                } else if (typeof contentEditor.openModalWithData === 'function') {
+                    contentEditor.openModalWithData(cardData);
+                } else {
+                    throw new Error('ContentEditor не содержит методов открытия модального окна');
+                }
                 const modal = document.getElementById('contentEditorModal');
                 const isOpened = modal && modal.style.display !== 'none';
                 if (!isOpened) {
