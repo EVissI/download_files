@@ -6977,17 +6977,13 @@
             contentEditor.boardMatchBannerEnabled = true;
 
             try {
-                if (typeof contentEditor.openModalWithBestDuplicateCheck === 'function') {
-                    await contentEditor.openModalWithBestDuplicateCheck(cardData, { forceBoardMatchBanner: true });
-                } else if (typeof contentEditor.openModalWithDuplicateSourceCheck === 'function') {
-                    await contentEditor.openModalWithDuplicateSourceCheck(cardData);
-                } else if (typeof contentEditor.openModalWithDuplicateBoardXgidCheck === 'function') {
-                    await contentEditor.openModalWithDuplicateBoardXgidCheck(cardData);
-                } else if (typeof contentEditor.openModalWithData === 'function') {
-                    contentEditor.openModalWithData(cardData);
-                } else {
-                    throw new Error('ContentEditor не содержит методов открытия модального окна');
+                if (typeof contentEditor.openModalWithBestDuplicateCheck !== 'function') {
+                    throw new Error('ContentEditor не содержит unified-метод открытия редактора');
                 }
+                await contentEditor.openModalWithBestDuplicateCheck(cardData, {
+                    duplicateMode: 'board_xgid',
+                    forceBoardMatchBanner: true
+                });
                 const modal = document.getElementById('contentEditorModal');
                 const isOpened = modal && modal.style.display !== 'none';
                 if (!isOpened) {

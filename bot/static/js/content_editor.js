@@ -5267,12 +5267,29 @@ class ContentEditor {
 
     /**
      * Единая точка входа для открытия редактора из страниц hint_viewer/pokaz.
-     * Выбирает самый "свежий" доступный способ открытия без привязки шаблонов
-     * к конкретной версии методов редактора.
+     * duplicateMode:
+     * - 'source'     -> проверка дубликата по исходному файлу (hint_viewer)
+     * - 'board_xgid' -> проверка дубликата по позиции доски (pokaz)
+     * - 'auto'       -> выбрать доступный метод автоматически
      */
     async openModalWithBestDuplicateCheck(cardData, options = {}) {
+        const duplicateMode = (options && options.duplicateMode) ? options.duplicateMode : 'auto';
         if (options && options.forceBoardMatchBanner === true) {
             this.boardMatchBannerEnabled = true;
+        }
+        if (duplicateMode === 'source') {
+            if (typeof this.openModalWithDuplicateSourceCheck !== 'function') {
+                throw new Error('Режим duplicateMode=source недоступен: нет openModalWithDuplicateSourceCheck');
+            }
+            await this.openModalWithDuplicateSourceCheck(cardData);
+            return;
+        }
+        if (duplicateMode === 'board_xgid') {
+            if (typeof this.openModalWithDuplicateBoardXgidCheck !== 'function') {
+                throw new Error('Режим duplicateMode=board_xgid недоступен: нет openModalWithDuplicateBoardXgidCheck');
+            }
+            await this.openModalWithDuplicateBoardXgidCheck(cardData);
+            return;
         }
         if (typeof this.openModalWithDuplicateSourceCheck === 'function') {
             await this.openModalWithDuplicateSourceCheck(cardData);
