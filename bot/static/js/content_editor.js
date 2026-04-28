@@ -1515,6 +1515,21 @@ class ContentEditor {
         this.boardMatchBannerEnabled = false;
     }
 
+    /**
+     * При каждом открытии редактора начинаем с одинакового состояния панели свойств,
+     * чтобы кнопки «Сохранить кадр / Предпросмотр» (и далее удаление/пресеты)
+     * были доступны одинаково из всех страниц.
+     */
+    resetSelectionForFreshOpen() {
+        this.selectedElement = null;
+        if (this.canvas) {
+            this.canvas.querySelectorAll('.canvas-element.selected').forEach((el) => {
+                el.classList.remove('selected');
+            });
+        }
+        this.applyPropertiesEmptyState();
+    }
+
     openModal() {
         this.clearPreviewEditSession();
         this.resetEditorSessionDefaults();
@@ -1529,6 +1544,7 @@ class ContentEditor {
         this.loadTools(); // Обновляем инструменты при открытии
         this.syncBoardToolToggleFromState();
         this.syncBoardMatchBannerToolbarVisibility();
+        this.resetSelectionForFreshOpen();
 
         // Force refresh of all dynamic content
         this.forceRefreshContent();
@@ -1574,6 +1590,7 @@ class ContentEditor {
         this.loadTools(); // Обновляем инструменты при открытии
         this.syncBoardToolToggleFromState();
         this.syncBoardMatchBannerToolbarVisibility();
+        this.resetSelectionForFreshOpen();
 
         // Сохраняем данные карточки для использования при выборе инструмента таблицы
         this.cardData = cardData;
