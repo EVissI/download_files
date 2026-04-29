@@ -5395,8 +5395,51 @@ export class ContentEditor {
     }
 
     openLabelPresetsModal() {
+        this.ensureLabelPresetsModal();
         if (!this.labelPresetsModal) return;
         void this._openLabelPresetsModalAsync();
+    }
+
+    ensureLabelPresetsModal() {
+        let modal = document.getElementById('labelPresetsModal');
+        if (!modal) {
+            document.body.insertAdjacentHTML(
+                'beforeend',
+                `
+                <div id="labelPresetsModal" class="label-presets-modal" style="display: none;" aria-hidden="true">
+                    <div class="card-labels-overlay" onclick="contentEditor.closeLabelPresetsModal()"></div>
+                    <div class="card-labels-box label-presets-modal-box" role="dialog" aria-modal="true" aria-labelledby="labelPresetsModalTitle">
+                        <div class="label-presets-modal-header">
+                            <h3 id="labelPresetsModalTitle" class="card-labels-title">Пресеты меток</h3>
+                            <button type="button" class="label-presets-modal-close" onclick="contentEditor.closeLabelPresetsModal()" aria-label="Закрыть">&times;</button>
+                        </div>
+                        <p class="card-labels-presets-hint">Нажмите текст пресета — он добавится в список меток карточки (в окне ниже после возврата).</p>
+                        <div id="labelPresetsList" class="card-labels-presets-list" aria-live="polite"></div>
+                        <div class="card-labels-preset-admin-row">
+                            <input type="text" id="labelPresetNewInput" class="card-labels-input" maxlength="255" placeholder="Новый пресет для всех" autocomplete="off" />
+                            <button type="button" class="card-labels-add-btn" onclick="contentEditor.createLabelPresetFromInput()">Сохранить в пресеты</button>
+                        </div>
+                        <div class="card-labels-actions card-labels-actions--preset-footer">
+                            <button type="button" class="card-labels-save-btn" onclick="contentEditor.closeLabelPresetsModal()">Готово</button>
+                        </div>
+                    </div>
+                </div>
+                `
+            );
+            modal = document.getElementById('labelPresetsModal');
+        }
+        this.labelPresetsModal = modal;
+        const labelPresetNewInput = document.getElementById('labelPresetNewInput');
+        if (labelPresetNewInput && !labelPresetNewInput.dataset.presetsEnterBound) {
+            labelPresetNewInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.createLabelPresetFromInput();
+                }
+            });
+            labelPresetNewInput.dataset.presetsEnterBound = '1';
+        }
+        return modal;
     }
 
     async _openLabelPresetsModalAsync() {

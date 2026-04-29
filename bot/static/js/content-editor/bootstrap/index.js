@@ -14,9 +14,9 @@ function ensureStorageCleanup() {
     clearContentEditorIndexedDB();
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     ensureStorageCleanup();
-    const contentEditor = createContentEditorCore();
+    const contentEditor = await createContentEditorCore();
     window.contentEditor = contentEditor;
     if (window.__CONTENT_CARD_VIEW_ONLY__ === true) {
         bootstrapViewMode(contentEditor).catch((e) => {
