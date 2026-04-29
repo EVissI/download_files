@@ -1341,7 +1341,7 @@ button.content-card-admin-info-file-link:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 21100;
+    z-index: 100010;
 }
 
 .label-presets-modal-box {
