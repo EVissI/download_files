@@ -837,6 +837,9 @@
                         ? 'Поиск по ID'
                         : 'Поиск по номеру карточки';
                 }
+                if (quickSelectInput) {
+                    quickSelectInput.placeholder = isDbIdMode ? '101,205,300-315' : '11,22,25-30';
+                }
             }
 
             if (!initData && !fabToken) {
@@ -920,12 +923,13 @@
                 var selectedByNumber = {};
                 if (parsed.numbers.length) {
                     allCards.forEach(function (row) {
-                        var relNumber = Number((row && row.__index) || 0) + 1;
-                        if (parsed.numbers.indexOf(relNumber) !== -1) {
-                            var cardIdNum = Number(row && row.content_card_id);
-                            if (Number.isFinite(cardIdNum) && cardIdNum > 0) {
-                                selectedByNumber[String(cardIdNum)] = true;
-                            }
+                        var matchValue = isDbIdMode
+                            ? Number(row && row.content_card_id)
+                            : Number((row && row.__index) || 0) + 1;
+                        if (parsed.numbers.indexOf(matchValue) === -1) return;
+                        var cardIdNum = Number(row && row.content_card_id);
+                        if (Number.isFinite(cardIdNum) && cardIdNum > 0) {
+                            selectedByNumber[String(cardIdNum)] = true;
                         }
                     });
                 }
