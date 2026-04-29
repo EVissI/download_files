@@ -1010,9 +1010,11 @@
                         }
                         var cardNumber = index + 1;
                         var openCard = function () {
+                            var cacheBust = Date.now();
                             var path =
                                 '/content-card-view?content_card_id=' + encodeURIComponent(id) +
                                 '&card_number=' + encodeURIComponent(cardNumber) +
+                                '&v=' + encodeURIComponent(cacheBust) +
                                 (fabToken ? '&fab_token=' + encodeURIComponent(fabToken) : '');
                             window.location.assign(path);
                         };

@@ -244,7 +244,8 @@ async def get_pokaz(
     """
     lang = lang if lang in ("ru", "en") else "ru"
     translations = _get_pokaz_translations(lang)
-    return templates.TemplateResponse(
+    cache_timestamp = int(time.time())
+    response = templates.TemplateResponse(
         "pokaz.html",
         {
             "request": request,
@@ -252,8 +253,13 @@ async def get_pokaz(
             "xgid": xgid,
             "lang": lang,
             "i18n": translations,
+            "cache_timestamp": cache_timestamp,
         },
     )
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.get("/content-card-view")
