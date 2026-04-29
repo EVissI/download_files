@@ -1043,7 +1043,7 @@ async def content_cards_my_list(body: ContentCardMyListBody):
     """
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     is_root_admin = user_id in settings.ROOT_ADMIN_IDS
-    recent_cutoff = datetime.utcnow() - timedelta(days=1)
+    recent_cutoff = datetime.utcnow() - timedelta(minutes=10)
 
     async with async_session_maker() as session:
         ucc_dao = UserContentCardDAO(session)
@@ -1055,6 +1055,15 @@ async def content_cards_my_list(body: ContentCardMyListBody):
                 "status": (
                     "RECENT"
                     if (
+                        (
+                            row.card_status == UserContentCardStatus.UNVIEWED
+                            or (
+                                hasattr(row.card_status, "value")
+                                and str(row.card_status.value) == UserContentCardStatus.UNVIEWED.value
+                            )
+                            or str(row.card_status) == UserContentCardStatus.UNVIEWED.value
+                        )
+                        and
                         row.created_at
                         and row.created_at >= recent_cutoff
                     )
