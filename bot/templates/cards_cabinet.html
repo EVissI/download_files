@@ -180,13 +180,15 @@
         .label-filter-wrap {
             grid-column: 1 / -1;
             display: none;
-            justify-content: flex-start;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
         }
         .label-filter-wrap.is-visible {
             display: flex;
         }
         .label-filter-select {
-            width: 60%;
+            width: 62%;
             background: #2b2b2b;
             color: #f0f0f0;
             border: 1px solid #454545;
@@ -198,6 +200,25 @@
         }
         .label-filter-select:focus {
             border-color: #5f8fbd;
+        }
+        .label-presets-open-btn {
+            display: none;
+            border: 1px solid #6b5b2a;
+            background: #3a3420;
+            color: #fde68a;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .label-presets-open-btn.is-visible {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .label-presets-open-btn:active {
+            background: #4a4228;
         }
 
         .err {
@@ -456,6 +477,92 @@
             opacity: 0.45;
             cursor: not-allowed;
         }
+        .presets-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 220000;
+        }
+        .presets-modal.is-open {
+            display: flex;
+        }
+        .presets-modal__overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+        }
+        .presets-modal__box {
+            position: relative;
+            width: 92%;
+            max-width: 520px;
+            max-height: 82vh;
+            overflow: hidden;
+            background: #262a30;
+            border: 1px solid #3f4550;
+            border-radius: 12px;
+            padding: 14px;
+            color: #fff;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .presets-modal__title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .presets-modal__hint {
+            margin: 0;
+            font-size: 12px;
+            color: #bfc9d8;
+        }
+        .presets-modal__msg {
+            min-height: 18px;
+            margin: 0;
+            font-size: 13px;
+            color: #f4b567;
+        }
+        .presets-modal__list {
+            max-height: 320px;
+            overflow: auto;
+            border: 1px solid #3f4550;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-content: flex-start;
+        }
+        .presets-modal__chip {
+            border: 1px solid #5a6473;
+            background: #323842;
+            color: #e9eef7;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 12px;
+            cursor: default;
+            user-select: text;
+        }
+        .presets-modal__empty {
+            color: #a7b0bf;
+            font-size: 13px;
+        }
+        .presets-modal__actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .presets-modal__btn {
+            border: 1px solid #4a505b;
+            background: #353b45;
+            color: #fff;
+            border-radius: 8px;
+            padding: 7px 12px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -494,10 +601,23 @@
                 <select id="label-filter" class="label-filter-select" title="Фильтр по метке">
                     <option value="">Все метки</option>
                 </select>
+                <button id="label-presets-open-btn" class="label-presets-open-btn" type="button" title="Открыть пресеты меток" aria-label="Открыть пресеты меток">Пресеты</button>
             </div>
         </div>
         <div id="err" class="err" style="display:none;"></div>
         <div id="grid" class="grid"></div>
+    </div>
+    <div id="labelPresetsModalCabinet" class="presets-modal" aria-hidden="true">
+        <div id="labelPresetsModalCabinetOverlay" class="presets-modal__overlay"></div>
+        <div class="presets-modal__box" role="dialog" aria-modal="true" aria-labelledby="labelPresetsModalCabinetTitle">
+            <h3 id="labelPresetsModalCabinetTitle" class="presets-modal__title">Пресеты меток</h3>
+            <p class="presets-modal__hint">Список только для просмотра в кабинете карточек.</p>
+            <p id="labelPresetsModalCabinetMsg" class="presets-modal__msg"></p>
+            <div id="labelPresetsModalCabinetList" class="presets-modal__list" aria-live="polite"></div>
+            <div class="presets-modal__actions">
+                <button id="labelPresetsModalCabinetCloseBtn" type="button" class="presets-modal__btn">Закрыть</button>
+            </div>
+        </div>
     </div>
     <footer class="cabinet-footer">
         <div class="cabinet-footer__inner">
@@ -543,6 +663,12 @@
             var statusFilter = document.getElementById('status-filter');
             var labelFilterWrap = document.getElementById('label-filter-wrap');
             var labelFilter = document.getElementById('label-filter');
+            var labelPresetsOpenBtn = document.getElementById('label-presets-open-btn');
+            var labelPresetsModalCabinet = document.getElementById('labelPresetsModalCabinet');
+            var labelPresetsModalCabinetOverlay = document.getElementById('labelPresetsModalCabinetOverlay');
+            var labelPresetsModalCabinetMsg = document.getElementById('labelPresetsModalCabinetMsg');
+            var labelPresetsModalCabinetList = document.getElementById('labelPresetsModalCabinetList');
+            var labelPresetsModalCabinetCloseBtn = document.getElementById('labelPresetsModalCabinetCloseBtn');
             var adminFabBtn = document.getElementById('admin-fab-btn');
             var selectModeBtn = document.getElementById('select-mode-btn');
             var sendSelectedBtn = document.getElementById('send-selected-btn');
@@ -577,6 +703,8 @@
             var assignUsersLoaded = false;
             var alreadyHaveModalResolver = null;
             var isDbIdMode = false;
+            var labelPresetsLoaded = false;
+            var labelPresets = [];
 
             function showErr(msg) {
                 errEl.textContent = msg;
@@ -625,6 +753,72 @@
             function setAssignModalMsg(msg) {
                 if (!assignCardsModalMsg) return;
                 assignCardsModalMsg.textContent = String(msg || '');
+            }
+
+            function setLabelPresetsModalMsg(msg) {
+                if (!labelPresetsModalCabinetMsg) return;
+                labelPresetsModalCabinetMsg.textContent = String(msg || '');
+            }
+
+            function renderLabelPresetsModalList() {
+                if (!labelPresetsModalCabinetList) return;
+                labelPresetsModalCabinetList.innerHTML = '';
+                if (!labelPresets.length) {
+                    labelPresetsModalCabinetList.innerHTML = '<span class="presets-modal__empty">Пока нет пресетов</span>';
+                    return;
+                }
+                labelPresets.forEach(function (preset) {
+                    var text = String((preset && preset.value) || '').trim();
+                    if (!text) return;
+                    var chip = document.createElement('span');
+                    chip.className = 'presets-modal__chip';
+                    chip.textContent = text;
+                    labelPresetsModalCabinetList.appendChild(chip);
+                });
+            }
+
+            function closeLabelPresetsModalCabinet() {
+                if (!labelPresetsModalCabinet) return;
+                labelPresetsModalCabinet.classList.remove('is-open');
+                labelPresetsModalCabinet.setAttribute('aria-hidden', 'true');
+                setLabelPresetsModalMsg('');
+            }
+
+            function loadLabelPresets() {
+                if (labelPresetsLoaded) {
+                    renderLabelPresetsModalList();
+                    return Promise.resolve();
+                }
+                return fetch('/api/content_cards/label_presets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload()),
+                })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error(j.detail || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Не удалось загрузить пресеты');
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        labelPresets = Array.isArray(data && data.presets) ? data.presets : [];
+                        labelPresetsLoaded = true;
+                        renderLabelPresetsModalList();
+                    });
+            }
+
+            function openLabelPresetsModalCabinet() {
+                if (!isRootAdminUser || !labelPresetsModalCabinet) return;
+                setLabelPresetsModalMsg('');
+                labelPresetsModalCabinet.classList.add('is-open');
+                labelPresetsModalCabinet.setAttribute('aria-hidden', 'false');
+                loadLabelPresets().catch(function (e) {
+                    setLabelPresetsModalMsg(e && e.message ? e.message : 'Ошибка загрузки пресетов');
+                });
             }
 
             function selectedCardIdsCount() {
@@ -951,6 +1145,15 @@
             if (labelFilter) {
                 labelFilter.addEventListener('change', renderCards);
             }
+            if (labelPresetsOpenBtn) {
+                labelPresetsOpenBtn.addEventListener('click', openLabelPresetsModalCabinet);
+            }
+            if (labelPresetsModalCabinetOverlay) {
+                labelPresetsModalCabinetOverlay.addEventListener('click', closeLabelPresetsModalCabinet);
+            }
+            if (labelPresetsModalCabinetCloseBtn) {
+                labelPresetsModalCabinetCloseBtn.addEventListener('click', closeLabelPresetsModalCabinet);
+            }
 
             function renderCards() {
                 gridEl.innerHTML = '';
@@ -1198,6 +1401,9 @@
                     }
                     if (isRootAdminUser && sendSelectedBtn) {
                         sendSelectedBtn.classList.add('is-visible');
+                    }
+                    if (isRootAdminUser && labelPresetsOpenBtn) {
+                        labelPresetsOpenBtn.classList.add('is-visible');
                     }
                     var cards = (data && data.cards) || [];
                     if (!cards.length) {
