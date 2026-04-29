@@ -74,9 +74,9 @@
             font-size: 0.74rem;
         }
         .cabinet-id-toggle-btn.is-db-mode {
-            background: #3e6f9f;
-            border-color: #5f8fbd;
-            color: #fff;
+            background: #3e6f9f !important;
+            border-color: #5f8fbd !important;
+            color: #fff !important;
         }
 
             background: #3a3a3a;
@@ -501,7 +501,7 @@
     </div>
     <footer class="cabinet-footer">
         <div class="cabinet-footer__inner">
-                <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">Режим ID</button>
+                <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">ID</button>
             <button id="select-mode-btn" class="cabinet-mode-btn" type="button" title="Режим выделения карточек" aria-label="Режим выделения карточек">Выделение</button>
             <button id="send-selected-btn" class="cabinet-send-btn" type="button" title="Отправить выбранные карточки" aria-label="Отправить выбранные карточки" disabled>Отправить</button>
         </div>
@@ -592,7 +592,7 @@
 
             function updateIdModeUi() {
                 if (!idToggleBtn) return;
-                idToggleBtn.textContent = 'Режим ID';
+                idToggleBtn.textContent = 'ID';
                 idToggleBtn.classList.toggle('is-db-mode', isDbIdMode);
                 idToggleBtn.title = isDbIdMode
                     ? 'Показаны ID карточек из базы'
