@@ -18,6 +18,7 @@
 
         .wrap {
             padding: 16px;
+            padding-bottom: 84px;
             max-width: 480px;
             margin: 0 auto;
         }
@@ -72,6 +73,11 @@
             padding: 0 10px;
             font-size: 0.74rem;
         }
+        .cabinet-id-toggle-btn.is-db-mode {
+            background: #3e6f9f;
+            border-color: #5f8fbd;
+            color: #fff;
+        }
 
             background: #3a3a3a;
         }
@@ -100,6 +106,31 @@
         .cabinet-send-btn:disabled {
             opacity: 0.45;
             cursor: not-allowed;
+        }
+        .cabinet-footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 190000;
+            background: rgba(26, 26, 26, 0.95);
+            border-top: 1px solid #3e3e3e;
+            backdrop-filter: blur(4px);
+        }
+        .cabinet-footer__inner {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cabinet-footer .cabinet-id-toggle-btn,
+        .cabinet-footer .cabinet-mode-btn,
+        .cabinet-footer .cabinet-send-btn {
+            flex: 1 1 0;
+            min-width: 0;
+            justify-content: center;
         }
 
         .hint {
@@ -433,12 +464,9 @@
         <div class="cabinet-header">
             <div class="cabinet-header-actions">
                 <button id="shuffle-cards-btn" class="cabinet-shuffle-btn" type="button" title="Перемешать карточки" aria-label="Перемешать карточки">⇄</button>
-                <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">ID: относит.</button>
             </div>
             <h1>Мои карточки</h1>
             <div class="cabinet-header-actions">
-                <button id="select-mode-btn" class="cabinet-mode-btn" type="button" title="Режим выделения карточек" aria-label="Режим выделения карточек">Выделение</button>
-                <button id="send-selected-btn" class="cabinet-send-btn" type="button" title="Отправить выбранные карточки" aria-label="Отправить выбранные карточки" disabled>Отправить</button>
                 <a id="admin-fab-btn" class="cabinet-admin-btn" href="/admin" title="Перейти в админку" aria-label="Перейти в админку">A</a>
             </div>
         </div>
@@ -471,6 +499,13 @@
         <div id="err" class="err" style="display:none;"></div>
         <div id="grid" class="grid"></div>
     </div>
+    <footer class="cabinet-footer">
+        <div class="cabinet-footer__inner">
+                <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">Режим ID</button>
+            <button id="select-mode-btn" class="cabinet-mode-btn" type="button" title="Режим выделения карточек" aria-label="Режим выделения карточек">Выделение</button>
+            <button id="send-selected-btn" class="cabinet-send-btn" type="button" title="Отправить выбранные карточки" aria-label="Отправить выбранные карточки" disabled>Отправить</button>
+        </div>
+    </footer>
     <div id="shuffleModal" class="shuffle-modal" aria-hidden="true">
         <div class="shuffle-modal__overlay" id="shuffleModalOverlay"></div>
         <div class="shuffle-modal__box" role="dialog" aria-modal="true" aria-labelledby="shuffleModalTitle">
@@ -557,7 +592,8 @@
 
             function updateIdModeUi() {
                 if (!idToggleBtn) return;
-                idToggleBtn.textContent = isDbIdMode ? 'ID: база' : 'ID: относит.';
+                idToggleBtn.textContent = 'Режим ID';
+                idToggleBtn.classList.toggle('is-db-mode', isDbIdMode);
                 idToggleBtn.title = isDbIdMode
                     ? 'Показаны ID карточек из базы'
                     : 'Показаны относительные номера карточек';
