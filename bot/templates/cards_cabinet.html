@@ -514,16 +514,39 @@
             font-size: 16px;
             font-weight: 600;
         }
-        .presets-modal__hint {
-            margin: 0;
-            font-size: 12px;
-            color: #bfc9d8;
-        }
         .presets-modal__msg {
             min-height: 18px;
             margin: 0;
             font-size: 13px;
             color: #f4b567;
+        }
+        .presets-modal__input-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+        }
+        .presets-modal__input {
+            width: 100%;
+            background: #1f2329;
+            color: #fff;
+            border: 1px solid #3f4550;
+            border-radius: 8px;
+            padding: 9px 10px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .presets-modal__input:focus {
+            border-color: #5f8fbd;
+        }
+        .presets-modal__add-btn {
+            border: 1px solid #5f8fbd;
+            background: #3e6f9f;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            white-space: nowrap;
         }
         .presets-modal__list {
             max-height: 320px;
@@ -545,6 +568,18 @@
             font-size: 12px;
             cursor: default;
             user-select: text;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .presets-modal__chip-remove {
+            border: 0;
+            background: transparent;
+            color: #f5b4b4;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0;
         }
         .presets-modal__empty {
             color: #a7b0bf;
@@ -611,7 +646,10 @@
         <div id="labelPresetsModalCabinetOverlay" class="presets-modal__overlay"></div>
         <div class="presets-modal__box" role="dialog" aria-modal="true" aria-labelledby="labelPresetsModalCabinetTitle">
             <h3 id="labelPresetsModalCabinetTitle" class="presets-modal__title">Пресеты меток</h3>
-            <p class="presets-modal__hint">Список только для просмотра в кабинете карточек.</p>
+            <div class="presets-modal__input-row">
+                <input id="labelPresetsModalCabinetInput" class="presets-modal__input" type="text" maxlength="255" placeholder="Новый пресет для всех" autocomplete="off">
+                <button id="labelPresetsModalCabinetAddBtn" type="button" class="presets-modal__add-btn">Добавить</button>
+            </div>
             <p id="labelPresetsModalCabinetMsg" class="presets-modal__msg"></p>
             <div id="labelPresetsModalCabinetList" class="presets-modal__list" aria-live="polite"></div>
             <div class="presets-modal__actions">
@@ -666,6 +704,8 @@
             var labelPresetsOpenBtn = document.getElementById('label-presets-open-btn');
             var labelPresetsModalCabinet = document.getElementById('labelPresetsModalCabinet');
             var labelPresetsModalCabinetOverlay = document.getElementById('labelPresetsModalCabinetOverlay');
+            var labelPresetsModalCabinetInput = document.getElementById('labelPresetsModalCabinetInput');
+            var labelPresetsModalCabinetAddBtn = document.getElementById('labelPresetsModalCabinetAddBtn');
             var labelPresetsModalCabinetMsg = document.getElementById('labelPresetsModalCabinetMsg');
             var labelPresetsModalCabinetList = document.getElementById('labelPresetsModalCabinetList');
             var labelPresetsModalCabinetCloseBtn = document.getElementById('labelPresetsModalCabinetCloseBtn');
@@ -773,6 +813,16 @@
                     var chip = document.createElement('span');
                     chip.className = 'presets-modal__chip';
                     chip.textContent = text;
+                    var removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'presets-modal__chip-remove';
+                    removeBtn.textContent = '×';
+                    removeBtn.title = 'Удалить пресет';
+                    removeBtn.setAttribute('aria-label', 'Удалить пресет');
+                    removeBtn.addEventListener('click', function () {
+                        deleteLabelPreset(preset && preset.id);
+                    });
+                    chip.appendChild(removeBtn);
                     labelPresetsModalCabinetList.appendChild(chip);
                 });
             }
@@ -808,6 +858,78 @@
                         labelPresets = Array.isArray(data && data.presets) ? data.presets : [];
                         labelPresetsLoaded = true;
                         renderLabelPresetsModalList();
+                    });
+            }
+
+            function addLabelPreset() {
+                if (!isRootAdminUser) return;
+                var text = String(labelPresetsModalCabinetInput ? labelPresetsModalCabinetInput.value : '').trim();
+                if (!text) {
+                    setLabelPresetsModalMsg('Введите текст пресета');
+                    return;
+                }
+                setLabelPresetsModalMsg('');
+                fetch('/api/content_cards/label_presets/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload({ value: text })),
+                })
+                    .then(function (r) {
+                        return r.json().catch(function () { return {}; }).then(function (j) {
+                            if (!r.ok) {
+                                var detail = (j && j.detail) || r.statusText || 'Не удалось добавить пресет';
+                                throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                            }
+                            return j;
+                        });
+                    })
+                    .then(function (data) {
+                        if (labelPresetsModalCabinetInput) labelPresetsModalCabinetInput.value = '';
+                        var id = data && data.id;
+                        var value = String((data && data.value) || '').trim();
+                        if (id != null && value) {
+                            labelPresets.push({ id: id, value: value });
+                            labelPresets.sort(function (a, b) {
+                                return String(a.value || '').localeCompare(String(b.value || ''), undefined, { sensitivity: 'base' });
+                            });
+                            labelPresetsLoaded = true;
+                            renderLabelPresetsModalList();
+                            return;
+                        }
+                        labelPresetsLoaded = false;
+                        return loadLabelPresets();
+                    })
+                    .catch(function (e) {
+                        setLabelPresetsModalMsg(e && e.message ? e.message : 'Не удалось добавить пресет');
+                    });
+            }
+
+            function deleteLabelPreset(presetId) {
+                var idNum = Number(presetId);
+                if (!Number.isFinite(idNum) || idNum < 1) return;
+                if (!isRootAdminUser) return;
+                if (!window.confirm('Удалить этот пресет?')) return;
+                setLabelPresetsModalMsg('');
+                fetch('/api/content_cards/label_presets/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload({ preset_id: idNum })),
+                })
+                    .then(function (r) {
+                        return r.json().catch(function () { return {}; }).then(function (j) {
+                            if (!r.ok) {
+                                var detail = (j && j.detail) || r.statusText || 'Не удалось удалить пресет';
+                                throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                            }
+                            return j;
+                        });
+                    })
+                    .then(function () {
+                        labelPresets = labelPresets.filter(function (p) { return Number(p && p.id) !== idNum; });
+                        renderLabelPresetsModalList();
+                    })
+                    .catch(function (e) {
+                        setLabelPresetsModalMsg(e && e.message ? e.message : 'Не удалось удалить пресет');
                     });
             }
 
@@ -1147,6 +1269,17 @@
             }
             if (labelPresetsOpenBtn) {
                 labelPresetsOpenBtn.addEventListener('click', openLabelPresetsModalCabinet);
+            }
+            if (labelPresetsModalCabinetAddBtn) {
+                labelPresetsModalCabinetAddBtn.addEventListener('click', addLabelPreset);
+            }
+            if (labelPresetsModalCabinetInput) {
+                labelPresetsModalCabinetInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addLabelPreset();
+                    }
+                });
             }
             if (labelPresetsModalCabinetOverlay) {
                 labelPresetsModalCabinetOverlay.addEventListener('click', closeLabelPresetsModalCabinet);
