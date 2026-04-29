@@ -73,10 +73,10 @@
             padding: 0 10px;
             font-size: 0.74rem;
         }
-        .cabinet-id-toggle-btn.is-db-mode {
-            background: #3e6f9f !important;
-            border-color: #5f8fbd !important;
-            color: #fff !important;
+        .cabinet-id-toggle-btn.is-active {
+            border-color: #5f8fbd;
+            background: #3e6f9f;
+            color: #fff;
         }
 
             background: #3a3a3a;
@@ -592,14 +592,14 @@
 
             function updateIdModeUi() {
                 if (!idToggleBtn) return;
-                idToggleBtn.textContent = 'ID';
-                idToggleBtn.classList.toggle('is-db-mode', isDbIdMode);
+                idToggleBtn.textContent = isDbIdMode ? 'ID' : 'номер';
+                idToggleBtn.classList.toggle('is-active', isDbIdMode);
                 idToggleBtn.title = isDbIdMode
-                    ? 'Показаны ID карточек из базы'
+                    ? 'Показаны ID карточек'
                     : 'Показаны относительные номера карточек';
                 if (searchInput) {
                     searchInput.placeholder = isDbIdMode
-                        ? 'Поиск по ID из базы'
+                        ? 'Поиск по ID'
                         : 'Поиск по номеру карточки';
                 }
             }
