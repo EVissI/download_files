@@ -1537,7 +1537,7 @@
                                 (fabToken ? '&fab_token=' + encodeURIComponent(fabToken) : '');
                             window.location.assign(path);
                         };
-                        if (status !== 'UNVIEWED') {
+                        if (status !== 'UNVIEWED' && status !== 'RECENT') {
                             openCard();
                             return;
                         }
