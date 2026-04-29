@@ -1,5 +1,6 @@
 import mimetypes
 import uuid
+from datetime import datetime, timedelta
 
 from fastapi import FastAPI, Request, Response, HTTPException, File, Form, UploadFile, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -1042,6 +1043,7 @@ async def content_cards_my_list(body: ContentCardMyListBody):
     """
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     is_root_admin = user_id in settings.ROOT_ADMIN_IDS
+    recent_cutoff = datetime.utcnow() - timedelta(days=1)
 
     async with async_session_maker() as session:
         ucc_dao = UserContentCardDAO(session)
@@ -1051,9 +1053,16 @@ async def content_cards_my_list(body: ContentCardMyListBody):
             {
                 "content_card_id": row.content_card_id,
                 "status": (
-                    row.card_status.value
-                    if hasattr(row.card_status, "value")
-                    else str(row.card_status)
+                    "RECENT"
+                    if (
+                        row.created_at
+                        and row.created_at >= recent_cutoff
+                    )
+                    else (
+                        row.card_status.value
+                        if hasattr(row.card_status, "value")
+                        else str(row.card_status)
+                    )
                 ),
                 "labels": (
                     list(row.content_card.labels)

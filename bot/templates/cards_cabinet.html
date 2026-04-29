@@ -289,6 +289,11 @@
             background: #a43b3b;
             border-color: #cb6363;
         }
+        .tile--recent {
+            background: #ffffff;
+            border-color: #d9d9d9;
+            color: #111111;
+        }
         .tile--selected {
             box-shadow: 0 0 0 2px #7fbeff inset;
             border-color: #7fbeff;
@@ -645,6 +650,7 @@
             <div class="status-filter-wrap">
                 <select id="status-filter" class="status-filter-select" title="Фильтр по статусу">
                     <option value="">Все статусы</option>
+                    <option value="RECENT">Недавно добавленные</option>
                     <option value="UNVIEWED">Не просмотренные</option>
                     <option value="VIEWED">Просмотренные</option>
                     <option value="SOLVED">Решенные</option>
@@ -694,6 +700,7 @@
             <div class="shuffle-modal__label">Статусы для выборки</div>
             <div class="shuffle-modal__statuses">
                 <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="UNVIEWED" checked>Не просмотренные</label>
+                <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="RECENT" checked>Недавно добавленные</label>
                 <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="VIEWED" checked>Просмотренные</label>
                 <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="SOLVED" checked>Решенные</label>
                 <label class="shuffle-modal__status-row"><input type="checkbox" name="shuffle-status" value="FAVORITE" checked>Избранные</label>
@@ -1499,6 +1506,8 @@
                         btn.classList.add('tile--favorite');
                     } else if (status === 'HARD') {
                         btn.classList.add('tile--hard');
+                    } else if (status === 'RECENT') {
+                        btn.classList.add('tile--recent');
                     }
                     if (selectedCardIds[String(cardIdNum)]) {
                         btn.classList.add('tile--selected');
