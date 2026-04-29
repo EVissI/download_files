@@ -745,10 +745,54 @@
             var isDbIdMode = false;
             var labelPresetsLoaded = false;
             var labelPresets = [];
+            var cabinetStateKey = 'cards_cabinet_state_v1';
+            var pendingLabelFilterValue = '';
 
             function showErr(msg) {
                 errEl.textContent = msg;
                 errEl.style.display = 'block';
+            }
+
+            function saveCabinetState() {
+                try {
+                    var payload = {
+                        search: String(searchInput ? (searchInput.value || '') : ''),
+                        status: String(statusFilter ? (statusFilter.value || '') : ''),
+                        label: String(labelFilter ? (labelFilter.value || '') : ''),
+                        isDbIdMode: !!isDbIdMode,
+                    };
+                    localStorage.setItem(cabinetStateKey, JSON.stringify(payload));
+                } catch (_e) {}
+            }
+
+            function restoreCabinetState() {
+                try {
+                    var raw = localStorage.getItem(cabinetStateKey);
+                    if (!raw) return;
+                    var state = JSON.parse(raw);
+                    if (searchInput && state && typeof state.search === 'string') {
+                        searchInput.value = state.search.replace(/\D+/g, '');
+                    }
+                    if (statusFilter && state && typeof state.status === 'string') {
+                        statusFilter.value = state.status;
+                    }
+                    if (state && typeof state.label === 'string') {
+                        pendingLabelFilterValue = state.label;
+                    }
+                    isDbIdMode = !!(state && state.isDbIdMode);
+                } catch (_e) {}
+            }
+
+            function applyPendingLabelFilterValue() {
+                if (!labelFilter) return;
+                if (!pendingLabelFilterValue) {
+                    labelFilter.value = '';
+                    return;
+                }
+                var hasOption = Array.from(labelFilter.options || []).some(function (opt) {
+                    return String(opt.value || '') === pendingLabelFilterValue;
+                });
+                labelFilter.value = hasOption ? pendingLabelFilterValue : '';
             }
 
             function getCardDisplayId(row) {
@@ -776,6 +820,7 @@
                 showErr('Откройте страницу из Telegram или через FAB-мост.');
                 return;
             }
+            restoreCabinetState();
 
             function authPayload(extra) {
                 var base = {};
@@ -1275,14 +1320,21 @@
                     if (this.value !== digitsOnly) {
                         this.value = digitsOnly;
                     }
+                    saveCabinetState();
                     renderCards();
                 });
             }
             if (statusFilter) {
-                statusFilter.addEventListener('change', renderCards);
+                statusFilter.addEventListener('change', function () {
+                    saveCabinetState();
+                    renderCards();
+                });
             }
             if (labelFilter) {
-                labelFilter.addEventListener('change', renderCards);
+                labelFilter.addEventListener('change', function () {
+                    saveCabinetState();
+                    renderCards();
+                });
             }
             if (labelPresetsOpenBtn) {
                 labelPresetsOpenBtn.addEventListener('click', openLabelPresetsModalCabinet);
@@ -1469,6 +1521,7 @@
                 idToggleBtn.addEventListener('click', function () {
                     isDbIdMode = !isDbIdMode;
                     updateIdModeUi();
+                    saveCabinetState();
                     renderCards();
                 });
                 updateIdModeUi();
@@ -1591,7 +1644,10 @@
                         opt.textContent = label;
                         labelFilter.appendChild(opt);
                     });
+                    applyPendingLabelFilterValue();
                     labelFilterWrap.classList.add('is-visible');
+                    saveCabinetState();
+                    renderCards();
                 })
                 .catch(function () {
                     // Для не-админов фильтр меток просто скрыт.
