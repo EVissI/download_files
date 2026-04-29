@@ -1282,7 +1282,7 @@
             function openAssignModal() {
                 if (!assignCardsModal) return;
                 if (!isRootAdminUser) return;
-                if (!isSelectionMode || getSelectedCardsInCabinetOrder().length < 1) return;
+                if (getSelectedCardsInCabinetOrder().length < 1) return;
                 if (assignUsersSearchInput) {
                     assignUsersSearchInput.value = '';
                 }
