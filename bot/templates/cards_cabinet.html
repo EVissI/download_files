@@ -861,11 +861,22 @@
                     });
             }
 
+            function restoreLabelPresetsInputFocus() {
+                if (!labelPresetsModalCabinetInput) return;
+                labelPresetsModalCabinetInput.disabled = false;
+                labelPresetsModalCabinetInput.readOnly = false;
+                labelPresetsModalCabinetInput.style.pointerEvents = 'auto';
+                requestAnimationFrame(function () {
+                    labelPresetsModalCabinetInput.focus();
+                });
+            }
+
             function addLabelPreset() {
                 if (!isRootAdminUser) return;
                 var text = String(labelPresetsModalCabinetInput ? labelPresetsModalCabinetInput.value : '').trim();
                 if (!text) {
                     setLabelPresetsModalMsg('Введите текст пресета');
+                    restoreLabelPresetsInputFocus();
                     return;
                 }
                 setLabelPresetsModalMsg('');
@@ -901,6 +912,9 @@
                     })
                     .catch(function (e) {
                         setLabelPresetsModalMsg(e && e.message ? e.message : 'Не удалось добавить пресет');
+                    })
+                    .finally(function () {
+                        restoreLabelPresetsInputFocus();
                     });
             }
 
@@ -930,6 +944,9 @@
                     })
                     .catch(function (e) {
                         setLabelPresetsModalMsg(e && e.message ? e.message : 'Не удалось удалить пресет');
+                    })
+                    .finally(function () {
+                        restoreLabelPresetsInputFocus();
                     });
             }
 
