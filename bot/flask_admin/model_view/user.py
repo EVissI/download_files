@@ -181,12 +181,13 @@ class UserModelView(ModelView):
         "total_balance",
     ]
     order_columns = ['id', 'username', 'role', 'active_promocodes', 'total_cards_count']
-    show_columns = list_columns
+    show_columns = [*list_columns, "admin_insert_name"]
 
     label_columns = {
         "id": "ID",
         "username": "Username",
         "player_username": "Игровое имя",
+        "admin_insert_name": "Присвоенное имя",
         "first_name": "Имя",
         "last_name": "Фамилия",
         "role": "Роль",
@@ -210,7 +211,40 @@ class UserModelView(ModelView):
             "user_fab_endpoint", getattr(self, "endpoint", self.__class__.__name__)
         )
         kwargs.setdefault("csrf_token_value", generate_csrf())
+        if template == self.show_template:
+            current_pk = kwargs.get("pk")
+            user = self.datamodel.get(current_pk) if current_pk is not None else None
+            kwargs.setdefault(
+                "current_admin_insert_name",
+                (user.admin_insert_name or "") if user else "",
+            )
         return super().render_template(template, **kwargs)
+
+    @expose("/update_admin_insert_name/<int:pk>", methods=["POST"])
+    @has_access
+    @permission_name("show")
+    def update_admin_insert_name(self, pk: int):
+        user = self.datamodel.get(pk)
+        if not user:
+            flash("Пользователь не найден", "danger")
+            return redirect(url_for(f"{self.endpoint}.list"))
+
+        admin_insert_name = (request.form.get("admin_insert_name") or "").strip()
+        if len(admin_insert_name) > 100:
+            flash("Присвоенное имя не должно превышать 100 символов.", "warning")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        session = self.datamodel.session
+        try:
+            user.admin_insert_name = admin_insert_name or None
+            session.commit()
+        except SQLAlchemyError as e:
+            session.rollback()
+            flash(f"Ошибка сохранения присвоенного имени: {e}", "danger")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        flash("Присвоенное имя обновлено.", "success")
+        return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
     @expose("/grant_cards/<int:pk>", methods=["POST"])
     @has_access

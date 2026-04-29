@@ -3,6 +3,26 @@
 {% block show_form %}
 {{ super() }}
 <div class="well" style="margin-top: 1em;">
+    <h4>Присвоенное имя</h4>
+    <form method="post" action="{{ url_for(user_fab_endpoint ~ '.update_admin_insert_name', pk=pk) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+        <label for="admin_insert_name">Имя в кабинете</label>
+        <div class="form-group" style="max-width: 620px; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <input
+                id="admin_insert_name"
+                name="admin_insert_name"
+                type="text"
+                class="form-control"
+                maxlength="100"
+                value="{{ current_admin_insert_name }}"
+                placeholder="Введите присвоенное имя"
+            >
+            <button type="submit" class="btn btn-primary" style="white-space: nowrap;">Сохранить имя</button>
+        </div>
+        <p class="text-muted" style="margin-bottom: 0;">Оставьте поле пустым, чтобы убрать присвоенное имя.</p>
+    </form>
+</div>
+<div class="well" style="margin-top: 1em;">
     <h4>Карточки пользователя</h4>
     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#grantCardsModal">
         Выдать карточки
