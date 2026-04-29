@@ -1056,12 +1056,12 @@ async def content_cards_my_list(body: ContentCardMyListBody):
                     "RECENT"
                     if (
                         (
-                            row.card_status == UserContentCardStatus.UNVIEWED
-                            or (
-                                hasattr(row.card_status, "value")
-                                and str(row.card_status.value) == UserContentCardStatus.UNVIEWED.value
+                            str(
+                                row.card_status.value
+                                if hasattr(row.card_status, "value")
+                                else row.card_status
                             )
-                            or str(row.card_status) == UserContentCardStatus.UNVIEWED.value
+                            == UserContentCardStatus.UNVIEWED.value
                         )
                         and
                         row.created_at
