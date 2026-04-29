@@ -107,6 +107,7 @@ export class ContentEditor {
         /** Пресеты меток с сервера (root-админ): { id, value }[] */
         this._labelPresetsList = [];
         this.labelPresetsModal = null;
+        this._labelPresetsTarget = 'card';
         this._adminLabelsDraft = [];
         this._duplicateSourceConfirmAction = null;
 
@@ -314,7 +315,10 @@ export class ContentEditor {
             <div id="contentCardAdminLabelsEditModal" class="card-labels-modal" style="display: none; z-index: 100003;" aria-hidden="true">
                 <div class="card-labels-overlay" id="contentCardAdminLabelsOverlay"></div>
                 <div class="card-labels-box" role="dialog" aria-modal="true" aria-labelledby="contentCardAdminLabelsTitle">
-                    <h3 id="contentCardAdminLabelsTitle" class="card-labels-title">Метки карточки</h3>
+                    <div class="card-labels-modal-header-row">
+                        <h3 id="contentCardAdminLabelsTitle" class="card-labels-title">Метки карточки</h3>
+                        <button type="button" id="contentCardAdminLabelsOpenPresetsBtn" class="card-labels-presets-open-btn" style="display: none;" onclick="contentEditor.openLabelPresetsModal()" title="Пресеты меток">Пресеты</button>
+                    </div>
                     <div class="card-labels-input-row">
                         <input type="text" id="contentCardAdminLabelsInput" class="card-labels-input" maxlength="500" placeholder="Введите метку и нажмите Enter или «Добавить»" autocomplete="off" />
                         <button type="button" class="card-labels-add-btn" id="contentCardAdminLabelsAddBtn">Добавить</button>
@@ -352,6 +356,7 @@ export class ContentEditor {
     openContentCardAdminLabelsEditModal() {
         if (!this._contentCardAdminMeta) return;
         const modal = this.ensureContentCardAdminLabelsEditModal();
+        this._labelPresetsTarget = 'admin';
         this._adminLabelsDraft = Array.isArray(this._contentCardAdminMeta.labels)
             ? this._contentCardAdminMeta.labels
                 .map((x) => (typeof x === 'string' ? x.trim() : String(x)))
@@ -362,6 +367,7 @@ export class ContentEditor {
         if (input) input.value = '';
         modal.style.display = 'flex';
         modal.setAttribute('aria-hidden', 'false');
+        void this.refreshLabelPresetsAccessButton('contentCardAdminLabelsOpenPresetsBtn');
         requestAnimationFrame(() => {
             if (input) input.focus();
         });
@@ -5340,6 +5346,7 @@ export class ContentEditor {
 
     openCardLabelsModal() {
         if (!this.cardLabelsModal) return;
+        this._labelPresetsTarget = 'card';
         this.renderCardLabelsList();
         const input = document.getElementById('cardLabelsInput');
         if (input) input.value = '';
@@ -5354,8 +5361,8 @@ export class ContentEditor {
     /**
      * Показать кнопку «Пресеты» только если есть доступ к API (root-админ).
      */
-    async refreshLabelPresetsAccessButton() {
-        const btn = document.getElementById('cardLabelsOpenPresetsBtn');
+    async refreshLabelPresetsAccessButton(buttonId = 'cardLabelsOpenPresetsBtn') {
+        const btn = document.getElementById(buttonId);
         if (!btn) return;
         const ok = await this.fetchLabelPresetsFromServer();
         btn.style.display = ok ? 'inline-flex' : 'none';
@@ -5446,12 +5453,17 @@ export class ContentEditor {
         if (!p || p.value == null) return;
         const v = String(p.value).trim();
         if (!v) return;
-        if (this.cardLabelsDraft.some((x) => String(x).trim() === v)) {
+        const draft = this._labelPresetsTarget === 'admin' ? this._adminLabelsDraft : this.cardLabelsDraft;
+        if (draft.some((x) => String(x).trim() === v)) {
             this.showNotification('Эта метка уже в списке', 'warning');
             return;
         }
-        this.cardLabelsDraft.push(v);
-        this.renderCardLabelsList();
+        draft.push(v);
+        if (this._labelPresetsTarget === 'admin') {
+            this.renderContentCardAdminLabelsList();
+        } else {
+            this.renderCardLabelsList();
+        }
         this.closeLabelPresetsModal();
     }
 
