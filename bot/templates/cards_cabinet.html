@@ -132,6 +132,26 @@
             min-width: 0;
             justify-content: center;
         }
+        .cabinet-footer .cabinet-quick-select-input {
+            display: none;
+            flex: 2 1 0;
+            min-width: 0;
+            background: #1f2329;
+            color: #fff;
+            border: 1px solid #3f4550;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .cabinet-footer .cabinet-quick-select-input.is-visible {
+            display: block;
+        }
+        .cabinet-footer .cabinet-quick-select-input.is-invalid {
+            border-color: #cb6363;
+            box-shadow: 0 0 0 1px rgba(203, 99, 99, 0.35) inset;
+        }
 
         .hint {
             font-size: 0.85rem;
@@ -659,7 +679,8 @@
     </div>
     <footer class="cabinet-footer">
         <div class="cabinet-footer__inner">
-                <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">ID</button>
+            <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">ID</button>
+            <input id="quick-select-input" class="cabinet-quick-select-input" type="text" inputmode="text" placeholder="11,22,25-30" title="Быстрое выделение: 11,22,25-30" autocomplete="off">
             <button id="select-mode-btn" class="cabinet-mode-btn" type="button" title="Режим выделения карточек" aria-label="Режим выделения карточек">Выделение</button>
             <button id="send-selected-btn" class="cabinet-send-btn" type="button" title="Отправить выбранные карточки" aria-label="Отправить выбранные карточки" disabled>Отправить</button>
         </div>
@@ -710,6 +731,7 @@
             var labelPresetsModalCabinetList = document.getElementById('labelPresetsModalCabinetList');
             var labelPresetsModalCabinetCloseBtn = document.getElementById('labelPresetsModalCabinetCloseBtn');
             var adminFabBtn = document.getElementById('admin-fab-btn');
+            var quickSelectInput = document.getElementById('quick-select-input');
             var selectModeBtn = document.getElementById('select-mode-btn');
             var sendSelectedBtn = document.getElementById('send-selected-btn');
             var shuffleCardsBtn = document.getElementById('shuffle-cards-btn');
@@ -747,6 +769,7 @@
             var labelPresets = [];
             var cabinetStateKey = 'cards_cabinet_state_v1';
             var pendingLabelFilterValue = '';
+            var quickSelectionInvalid = false;
 
             function showErr(msg) {
                 errEl.textContent = msg;
@@ -838,6 +861,77 @@
             function setAssignModalMsg(msg) {
                 if (!assignCardsModalMsg) return;
                 assignCardsModalMsg.textContent = String(msg || '');
+            }
+
+            function parseQuickSelectionInput(raw) {
+                var value = String(raw || '').trim();
+                if (!value) return { valid: true, numbers: [] };
+                var tokens = value.split(',');
+                var out = [];
+                for (var i = 0; i < tokens.length; i++) {
+                    var token = String(tokens[i] || '').replace(/\s+/g, '');
+                    if (!token) continue;
+                    var mNum = token.match(/^\d+$/);
+                    if (mNum) {
+                        var numVal = Number(token);
+                        if (!Number.isFinite(numVal) || numVal < 1) return { valid: false, numbers: [] };
+                        out.push(numVal);
+                        continue;
+                    }
+                    var mRange = token.match(/^(\d+)-(\d+)$/);
+                    if (mRange) {
+                        var a = Number(mRange[1]);
+                        var b = Number(mRange[2]);
+                        if (!Number.isFinite(a) || !Number.isFinite(b) || a < 1 || b < 1) {
+                            return { valid: false, numbers: [] };
+                        }
+                        if (a > b) {
+                            var tmp = a;
+                            a = b;
+                            b = tmp;
+                        }
+                        for (var n = a; n <= b; n++) out.push(n);
+                        continue;
+                    }
+                    return { valid: false, numbers: [] };
+                }
+                var unique = {};
+                var dedup = [];
+                out.forEach(function (n) {
+                    if (!unique[n]) {
+                        unique[n] = true;
+                        dedup.push(n);
+                    }
+                });
+                return { valid: true, numbers: dedup };
+            }
+
+            function applyQuickSelectionFromInput() {
+                if (!quickSelectInput) return;
+                var parsed = parseQuickSelectionInput(quickSelectInput.value);
+                quickSelectionInvalid = !parsed.valid;
+                quickSelectInput.classList.toggle('is-invalid', quickSelectionInvalid);
+                if (!parsed.valid) {
+                    selectedCardIds = {};
+                    updateSelectionUi();
+                    renderCards();
+                    return;
+                }
+                var selectedByNumber = {};
+                if (parsed.numbers.length) {
+                    allCards.forEach(function (row) {
+                        var relNumber = Number((row && row.__index) || 0) + 1;
+                        if (parsed.numbers.indexOf(relNumber) !== -1) {
+                            var cardIdNum = Number(row && row.content_card_id);
+                            if (Number.isFinite(cardIdNum) && cardIdNum > 0) {
+                                selectedByNumber[String(cardIdNum)] = true;
+                            }
+                        }
+                    });
+                }
+                selectedCardIds = selectedByNumber;
+                updateSelectionUi();
+                renderCards();
             }
 
             function setLabelPresetsModalMsg(msg) {
@@ -1032,17 +1126,24 @@
 
             function updateSelectionUi() {
                 var selectedCount = getSelectedCardsInCabinetOrder().length;
+                var hasQuickInput = !!(quickSelectInput && String(quickSelectInput.value || '').trim());
+                var quickReady = hasQuickInput && !quickSelectionInvalid && selectedCount > 0;
                 if (selectModeBtn) {
                     selectModeBtn.textContent = isSelectionMode ? 'Обычный режим' : 'Выделение';
                     selectModeBtn.classList.toggle('is-active', isSelectionMode);
                 }
                 if (sendSelectedBtn) {
-                    sendSelectedBtn.disabled = !isSelectionMode || selectedCount < 1;
+                    sendSelectedBtn.disabled = (!isSelectionMode && !quickReady) || selectedCount < 1;
                 }
             }
 
             function clearSelection() {
                 selectedCardIds = {};
+                if (quickSelectInput) {
+                    quickSelectInput.value = '';
+                    quickSelectInput.classList.remove('is-invalid');
+                }
+                quickSelectionInvalid = false;
                 updateSelectionUi();
             }
 
@@ -1395,7 +1496,7 @@
                     } else if (status === 'HARD') {
                         btn.classList.add('tile--hard');
                     }
-                    if (isSelectionMode && selectedCardIds[String(cardIdNum)]) {
+                    if (selectedCardIds[String(cardIdNum)]) {
                         btn.classList.add('tile--selected');
                     }
                     var displayId = getCardDisplayId(row);
@@ -1550,6 +1651,9 @@
             if (sendSelectedBtn) {
                 sendSelectedBtn.addEventListener('click', openAssignModal);
             }
+            if (quickSelectInput) {
+                quickSelectInput.addEventListener('input', applyQuickSelectionFromInput);
+            }
             if (assignUsersSearchInput) {
                 assignUsersSearchInput.addEventListener('input', renderAssignUsersTable);
             }
@@ -1605,6 +1709,9 @@
                     if (isRootAdminUser && sendSelectedBtn) {
                         sendSelectedBtn.classList.add('is-visible');
                     }
+                    if (isRootAdminUser && quickSelectInput) {
+                        quickSelectInput.classList.add('is-visible');
+                    }
                     if (isRootAdminUser && labelPresetsOpenBtn) {
                         labelPresetsOpenBtn.classList.add('is-visible');
                     }
@@ -1616,6 +1723,11 @@
                     allCards = cards.map(function (row, index) {
                         return Object.assign({}, row, { __index: index });
                     });
+                    if (quickSelectInput && String(quickSelectInput.value || '').trim()) {
+                        applyQuickSelectionFromInput();
+                    } else {
+                        updateSelectionUi();
+                    }
                     renderCards();
                 })
                 .catch(function (e) {
