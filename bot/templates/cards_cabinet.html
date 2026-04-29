@@ -42,6 +42,7 @@
             gap: 6px;
         }
         .cabinet-shuffle-btn,
+        .cabinet-id-toggle-btn,
         .cabinet-mode-btn,
         .cabinet-send-btn,
         .cabinet-admin-btn {
@@ -61,9 +62,17 @@
             padding: 0;
         }
         .cabinet-shuffle-btn:active,
+        .cabinet-id-toggle-btn:active,
         .cabinet-mode-btn:active,
         .cabinet-send-btn:active,
         .cabinet-admin-btn:active {
+        .cabinet-id-toggle-btn {
+            width: auto;
+            min-width: 96px;
+            padding: 0 10px;
+            font-size: 0.74rem;
+        }
+
             background: #3a3a3a;
         }
         .cabinet-mode-btn,
@@ -424,6 +433,7 @@
         <div class="cabinet-header">
             <div class="cabinet-header-actions">
                 <button id="shuffle-cards-btn" class="cabinet-shuffle-btn" type="button" title="Перемешать карточки" aria-label="Перемешать карточки">⇄</button>
+                <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">ID: относит.</button>
             </div>
             <h1>Мои карточки</h1>
             <div class="cabinet-header-actions">
@@ -502,6 +512,7 @@
             var selectModeBtn = document.getElementById('select-mode-btn');
             var sendSelectedBtn = document.getElementById('send-selected-btn');
             var shuffleCardsBtn = document.getElementById('shuffle-cards-btn');
+            var idToggleBtn = document.getElementById('id-toggle-btn');
             var shuffleModal = document.getElementById('shuffleModal');
             var shuffleModalOverlay = document.getElementById('shuffleModalOverlay');
             var shuffleModalMsg = document.getElementById('shuffleModalMsg');
@@ -530,10 +541,31 @@
             var selectedAssignUserId = null;
             var assignUsersLoaded = false;
             var alreadyHaveModalResolver = null;
+            var isDbIdMode = false;
 
             function showErr(msg) {
                 errEl.textContent = msg;
                 errEl.style.display = 'block';
+            }
+
+            function getCardDisplayId(row) {
+                if (isDbIdMode) {
+                    return Number((row && row.content_card_id) || 0);
+                }
+                return Number(((row && row.__index) || 0) + 1);
+            }
+
+            function updateIdModeUi() {
+                if (!idToggleBtn) return;
+                idToggleBtn.textContent = isDbIdMode ? 'ID: база' : 'ID: относит.';
+                idToggleBtn.title = isDbIdMode
+                    ? 'Показаны ID карточек из базы'
+                    : 'Показаны относительные номера карточек';
+                if (searchInput) {
+                    searchInput.placeholder = isDbIdMode
+                        ? 'Поиск по ID из базы'
+                        : 'Поиск по номеру карточки';
+                }
             }
 
             if (!initData && !fabToken) {
@@ -891,7 +923,7 @@
                 var labelFilterValue = labelFilter ? String(labelFilter.value || '') : '';
                 var sourceCards = shuffledCards && shuffledCards.length ? shuffledCards : allCards;
                 var cards = sourceCards.filter(function (row) {
-                    var cardNumber = String(((row && row.__index) || 0) + 1);
+                    var cardNumber = String(getCardDisplayId(row));
                     var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
                     var labels = Array.isArray(row && row.labels) ? row.labels : [];
                     var passNumber = !filter || cardNumber.indexOf(filter) !== -1;
@@ -925,7 +957,8 @@
                     if (isSelectionMode && selectedCardIds[String(cardIdNum)]) {
                         btn.classList.add('tile--selected');
                     }
-                    btn.textContent = String(index + 1);
+                    var displayId = getCardDisplayId(row);
+                    btn.textContent = String(displayId);
                     btn.title = 'Карточка #' + id;
                     btn.addEventListener('click', function () {
                         if (isSelectionMode) {
@@ -1040,6 +1073,14 @@
                 shuffleCardsBtn.addEventListener('click', function () {
                     openShuffleModal();
                 });
+            }
+            if (idToggleBtn) {
+                idToggleBtn.addEventListener('click', function () {
+                    isDbIdMode = !isDbIdMode;
+                    updateIdModeUi();
+                    renderCards();
+                });
+                updateIdModeUi();
             }
             if (shuffleModalOverlay) {
                 shuffleModalOverlay.addEventListener('click', closeShuffleModal);
