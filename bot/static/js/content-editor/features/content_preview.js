@@ -390,30 +390,45 @@ export function formatBoardMatchBannerTextImpl(_editor, snapshot) {
     return `Матч до ${ml} · Счёт: ${r} — ${b}`;
 }
 
-export function setupCardPreviewTableCollapseImpl(editor, tableEl) {
-    if (!tableEl || !tableEl.classList.contains('card-preview-canvas-clone')) return;
-    if (tableEl.querySelector(':scope > .card-preview-table-toggle')) return;
-    const kids = Array.from(tableEl.children);
-    if (!kids.length) return;
+export function setupCardPreviewTableCollapseImpl(editor, tableEl, options = {}) {
+    if (!tableEl) return;
+    const isPreviewClone = tableEl.classList.contains('card-preview-canvas-clone');
+    const isEditorTable = tableEl.classList.contains('table-element');
+    if (!isPreviewClone && !isEditorTable) return;
 
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'card-preview-table-toggle';
-    toggle.setAttribute('aria-expanded', 'true');
-    toggle.setAttribute('aria-label', 'Свернуть или развернуть таблицу');
-    toggle.title = 'Свернуть или развернуть таблицу';
-    toggle.innerHTML = `
+    let toggle = tableEl.querySelector(':scope > .card-preview-table-toggle');
+    let body = tableEl.querySelector(':scope > .card-preview-table-collapse-body');
+
+    if (!body) {
+        const contentNodes = Array.from(tableEl.children).filter((node) => {
+            if (!node || !(node instanceof HTMLElement)) return false;
+            if (node.classList.contains('card-preview-table-toggle')) return false;
+            if (node.classList.contains('card-preview-table-collapse-body')) return false;
+            if (node.classList.contains('ce-block-drag-handle')) return false;
+            return true;
+        });
+        if (!contentNodes.length) return;
+        body = document.createElement('div');
+        body.className = 'card-preview-table-collapse-body';
+        contentNodes.forEach((k) => body.appendChild(k));
+        tableEl.appendChild(body);
+    }
+
+    if (!toggle) {
+        toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'card-preview-table-toggle';
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-label', 'Свернуть или развернуть таблицу');
+        toggle.title = 'Свернуть или развернуть таблицу';
+        toggle.innerHTML = `
             <span class="card-preview-table-toggle-icon" aria-hidden="true">
                 <svg class="card-preview-table-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
                     <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
                 </svg>
             </span>`;
-
-    const body = document.createElement('div');
-    body.className = 'card-preview-table-collapse-body';
-    kids.forEach((k) => body.appendChild(k));
-    tableEl.appendChild(toggle);
-    tableEl.appendChild(body);
+        tableEl.appendChild(toggle);
+    }
 
     const syncA11y = () => {
         const collapsed = tableEl.classList.contains('card-preview-table--collapsed');
@@ -426,14 +441,22 @@ export function setupCardPreviewTableCollapseImpl(editor, tableEl) {
         }
         tableEl.classList.toggle('card-preview-table--collapsed');
         syncA11y();
-        requestAnimationFrame(() => editor.refreshCardPreviewScale());
-    };
-    toggle.addEventListener('click', onToggle);
-    toggle.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            onToggle(e);
+        if (typeof options.onToggle === 'function') {
+            requestAnimationFrame(() => options.onToggle());
         }
-    });
+        if (isPreviewClone) {
+            requestAnimationFrame(() => editor.refreshCardPreviewScale());
+        }
+    };
+    if (toggle.dataset.ceTableCollapseBound !== '1') {
+        toggle.dataset.ceTableCollapseBound = '1';
+        toggle.addEventListener('click', onToggle);
+        toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                onToggle(e);
+            }
+        });
+    }
     syncA11y();
 }
 

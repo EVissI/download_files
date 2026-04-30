@@ -40,6 +40,17 @@
     pointer-events: none;
 }
 
+.ce-editor-floating-board-overlay {
+    position: fixed !important;
+    z-index: 10050 !important;
+    left: 50% !important;
+    top: 42% !important;
+    transform: translate(-50%, -50%) !important;
+    width: min(92vw, 820px) !important;
+    margin: 0 !important;
+    pointer-events: none;
+}
+
 .content-editor-overlay {
     position: absolute;
     top: 0;
@@ -1850,6 +1861,10 @@ button.content-card-admin-info-file-link:hover {
     color: #fff;
     cursor: pointer;
     transition: background 0.2s;
+}
+
+.canvas-element.table-element:has(> .ce-block-drag-handle) > .card-preview-table-toggle {
+    left: 14px;
 }
 
 .card-preview-table-toggle:hover {
