@@ -33,7 +33,12 @@ def upgrade() -> None:
         sa.Column("link", sa.String(length=128), nullable=False),
         sa.Column(
             "status",
-            sa.Enum("unactivate", "activate", name="contentcardlinkstatus"),
+            postgresql.ENUM(
+                "unactivate",
+                "activate",
+                name="contentcardlinkstatus",
+                create_type=False,
+            ),
             nullable=False,
             server_default="unactivate",
         ),
