@@ -4048,7 +4048,6 @@ export class ContentEditor {
                            placeholder="Имя файла"
                            oninput="contentEditor.updateElementProperty('attachFileDisplayName', this.value)">
                 </div>
-                <p class="property-hint ce-attach-file-editor-hint">Скачивание файла доступно в предпросмотре.</p>
                 ` : ''}
             </div>
             
