@@ -6346,6 +6346,14 @@ export class ContentEditor {
     initPanelResizers() {
         const resizers = this.modal.querySelectorAll('.editor-resizer');
         if (!resizers.length) return;
+        let resizeSyncRaf = 0;
+        const scheduleResizeSync = () => {
+            if (resizeSyncRaf) return;
+            resizeSyncRaf = requestAnimationFrame(() => {
+                resizeSyncRaf = 0;
+                this.handleWindowResize();
+            });
+        };
 
         const startResize = (startX, startY, target, isMobile, startToolbarWidth, startPropsWidth, startToolbarHeight, startPropsHeight) => {
             // Разрешаем практически полностью "задвигать" панели
@@ -6379,6 +6387,7 @@ export class ContentEditor {
                         this.propertiesPanel.style.height = newHeight + 'px';
                     }
                 }
+                scheduleResizeSync();
             };
 
             const onMouseMove = (moveEvent) => {
@@ -6388,6 +6397,7 @@ export class ContentEditor {
             const onMouseUp = () => {
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);
+                this.handleWindowResize();
             };
 
             document.addEventListener('mousemove', onMouseMove);
