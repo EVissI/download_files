@@ -100,6 +100,8 @@ export class ContentEditor {
 
         /** Сохранённый style у #boardCanvas до «плавающего» показа поверх модалки редактора */
         this._liveBoardCanvasStyleBackup = null;
+        /** Хост отображения доски внутри редактора (только визуализация). */
+        this.editorBoardDisplayHost = null;
 
         /** Модалка меток карточки (целиком, не на отдельный кадр) */
         this.cardLabelsModal = null;
@@ -626,6 +628,7 @@ export class ContentEditor {
                             </div>
                             <div class="editor-resizer editor-resizer-vertical" data-resize-target="toolbar"></div>
                             <div class="workspace">
+                                <div id="editorBoardDisplayHost" class="editor-board-display-host" hidden aria-hidden="true"></div>
                                 <div class="canvas" id="canvas">
                                     <!-- Здесь будут размещаться элементы -->
                                 </div>
@@ -866,6 +869,17 @@ export class ContentEditor {
         }
 
         this.canvas = document.getElementById('canvas');
+        this.editorBoardDisplayHost = document.getElementById('editorBoardDisplayHost');
+        if (!this.editorBoardDisplayHost) {
+            const workspace = this.modal ? this.modal.querySelector('.workspace') : null;
+            if (workspace) {
+                workspace.insertAdjacentHTML(
+                    'afterbegin',
+                    `<div id="editorBoardDisplayHost" class="editor-board-display-host" hidden aria-hidden="true"></div>`
+                );
+                this.editorBoardDisplayHost = document.getElementById('editorBoardDisplayHost');
+            }
+        }
         this.toolsList = document.getElementById('toolsList');
         this.propertiesContent = document.getElementById('propertiesContent');
 
@@ -1048,6 +1062,7 @@ export class ContentEditor {
         this.loadTools(); // Обновляем инструменты при открытии
         this.syncBoardToolToggleFromState();
         this.syncBoardMatchBannerToolbarVisibility();
+        this.renderEditorBoardDisplay();
         this.resetSelectionForFreshOpen();
 
         // Force refresh of all dynamic content
@@ -1072,6 +1087,7 @@ export class ContentEditor {
             document.body.style.overflow = 'auto';
             this.clearPreviewEditSession();
         }
+        this.renderEditorBoardDisplay();
     }
 
     /**
@@ -1094,6 +1110,7 @@ export class ContentEditor {
         this.loadTools(); // Обновляем инструменты при открытии
         this.syncBoardToolToggleFromState();
         this.syncBoardMatchBannerToolbarVisibility();
+        this.renderEditorBoardDisplay();
         this.resetSelectionForFreshOpen();
 
         // Сохраняем данные карточки для использования при выборе инструмента таблицы
@@ -2785,10 +2802,12 @@ export class ContentEditor {
 
     /**
      * Раньше при открытой модалке и включённом тумблере «Доска» страничный #boardCanvas поднимался поверх редактора.
-     * Сейчас доска в редакторе не показывается — только в предпросмотре и у опубликованной карточки; метод снимает оверлей, если остался.
+     * Теперь в редакторе используется отдельный read-only рендер доски; этот метод
+     * снимает legacy-оверлей и синхронизирует встроенное отображение.
      */
     syncLiveHintBoardCanvasOverlay() {
         this._restoreLiveHintBoardCanvasIfNeeded();
+        this.renderEditorBoardDisplay();
     }
 
     _restoreLiveHintBoardCanvasIfNeeded() {
@@ -2802,6 +2821,82 @@ export class ContentEditor {
         } else {
             this._liveBoardCanvasStyleBackup = null;
         }
+    }
+
+    getEditorBoardSnapshotForDisplay() {
+        let snapshot = null;
+        if (typeof window !== 'undefined' && typeof window.getHintViewerBoardSnapshot === 'function') {
+            try {
+                snapshot = window.getHintViewerBoardSnapshot();
+            } catch (e) {
+                console.warn('getEditorBoardSnapshotForDisplay:', e);
+                snapshot = null;
+            }
+        }
+        if ((snapshot == null || typeof snapshot !== 'object') && this._editorSessionBoardSnapshot != null) {
+            snapshot = this._editorSessionBoardSnapshot;
+        }
+        if (snapshot == null || typeof snapshot !== 'object') return null;
+        try {
+            return JSON.parse(JSON.stringify(snapshot));
+        } catch (e) {
+            return snapshot;
+        }
+    }
+
+    clearEditorBoardDisplay() {
+        const host = this.editorBoardDisplayHost || document.getElementById('editorBoardDisplayHost');
+        if (!host) return;
+        host.innerHTML = '';
+        host.classList.remove('is-visible');
+        host.hidden = true;
+        host.setAttribute('aria-hidden', 'true');
+    }
+
+    renderEditorBoardDisplay() {
+        const host = this.editorBoardDisplayHost || document.getElementById('editorBoardDisplayHost');
+        if (!host) return;
+        const boardEnabled = !!this.toggleStates['boardCanvas'];
+        if (!boardEnabled) {
+            this.clearEditorBoardDisplay();
+            return;
+        }
+        const snapshot = this.getEditorBoardSnapshotForDisplay();
+        if (!snapshot || snapshot.error === 'no_game_data') {
+            host.innerHTML = `<div class="editor-board-display-empty">Нет данных доски для отображения</div>`;
+            host.classList.add('is-visible');
+            host.hidden = false;
+            host.setAttribute('aria-hidden', 'false');
+            return;
+        }
+        const showMatchBanner = !!this.boardMatchBannerEnabled;
+        let bannerText = showMatchBanner ? this.formatBoardMatchBannerText(snapshot) : '';
+        if (showMatchBanner && !bannerText) {
+            bannerText = 'Данные матча недоступны';
+        }
+        host.innerHTML = `
+            <div class="editor-board-display">
+                <div class="editor-board-display-body">
+                    <div class="editor-board-match-banner" ${showMatchBanner ? '' : 'hidden'}>${this.escapeHtml(bannerText)}</div>
+                    <div class="editor-board-canvas-wrap">
+                        <canvas class="editor-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
+                    </div>
+                </div>
+            </div>
+        `;
+        host.classList.add('is-visible');
+        host.hidden = false;
+        host.setAttribute('aria-hidden', 'false');
+        const canvas = host.querySelector('.editor-board-canvas');
+        if (!canvas) return;
+        this.loadBoardPreviewImages()
+            .then((imgs) => {
+                if (!canvas.isConnected) return;
+                this.paintBoardPreviewCanvas(canvas, snapshot, imgs);
+            })
+            .catch((err) => {
+                console.error('renderEditorBoardDisplay:', err);
+            });
     }
 
     showToggleNotification(toolId, isActive) {
@@ -6017,6 +6112,7 @@ export class ContentEditor {
         cb.dataset.ceWired = '1';
         cb.addEventListener('change', () => {
             this.boardMatchBannerEnabled = cb.checked;
+            this.renderEditorBoardDisplay();
         });
     }
 

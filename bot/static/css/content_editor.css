@@ -316,6 +316,75 @@
     transition: background-color 0.3s ease;
 }
 
+/* Read-only доска в редакторе (аналог рендера предпросмотра, но отдельный слой). */
+.editor-board-display-host {
+    flex: 0 0 auto;
+    display: none;
+    padding: 12px 20px 0;
+    box-sizing: border-box;
+}
+
+.editor-board-display-host.is-visible {
+    display: block;
+}
+
+.editor-board-display {
+    width: min(100%, calc(360px + 10vw));
+    max-width: 800px;
+    margin: 0 auto;
+    background: #1a1a1a;
+    border-radius: 10px;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.editor-board-display-body {
+    pointer-events: none;
+}
+
+.editor-board-match-banner {
+    box-sizing: border-box;
+    width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
+    text-align: center;
+    color: #e2e8f0;
+    background: linear-gradient(180deg, rgba(45, 55, 72, 0.98) 0%, rgba(30, 36, 48, 0.96) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.editor-board-match-banner[hidden] {
+    display: none !important;
+}
+
+.editor-board-canvas-wrap {
+    background: #1a1a1a;
+    line-height: 0;
+}
+
+.editor-board-canvas {
+    display: block;
+    width: 100%;
+    max-width: 800px;
+    height: auto;
+    margin: 0 auto;
+}
+
+.editor-board-display-empty {
+    width: min(100%, calc(360px + 10vw));
+    max-width: 800px;
+    margin: 0 auto;
+    background: rgba(30, 30, 30, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 10px;
+    color: #cbd5e1;
+    font-size: 13px;
+    text-align: center;
+    padding: 10px 12px;
+}
+
 /* Ресайзер между панелями и рабочей областью */
 .editor-resizer {
     background: #3a3a3a;
