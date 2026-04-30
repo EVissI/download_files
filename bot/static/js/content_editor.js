@@ -3689,15 +3689,6 @@ export class ContentEditor {
                         <option value="cube" ${element.dataset.tableType === 'cube' ? 'selected' : ''}>Таблица по кубу</option>
                     </select>
                 </div>
-                <div class="property-item">
-                    <label style="display:flex; align-items:center; gap:8px;">
-                        <input type="checkbox"
-                               id="propTableHideInPreview"
-                               ${element.dataset.tableHideInPreview === '1' ? 'checked' : ''}
-                               onchange="contentEditor.updateElementProperty('tableHideInPreview', this.checked)">
-                        Скрывать в предпросмотре
-                    </label>
-                </div>
                 ` : ''}
                 ${element.classList.contains('text-element') ? `
                 <div class="property-item">
@@ -3896,13 +3887,6 @@ export class ContentEditor {
             case 'tableType':
                 this.selectedElement.dataset.tableType = value;
                 this.updateTableContent(this.selectedElement, value);
-                break;
-            case 'tableHideInPreview':
-                if (value) {
-                    this.selectedElement.dataset.tableHideInPreview = '1';
-                } else {
-                    delete this.selectedElement.dataset.tableHideInPreview;
-                }
                 break;
             case 'textAlign': {
                 const el = this.selectedElement.querySelector('.text-content, .link-text');
@@ -4478,9 +4462,6 @@ export class ContentEditor {
                     const tbl = el.querySelector('table');
                     item.tableType = el.dataset.tableType || 'hints';
                     item.tableHtml = tbl ? tbl.outerHTML : this.elementInnerHtmlForSave(el);
-                    if (el.dataset.tableHideInPreview === '1') {
-                        item.tableHideInPreview = true;
-                    }
                     break;
                 }
                 case 'upload-image': {
@@ -6027,17 +6008,6 @@ export class ContentEditor {
                 break;
             }
             case 'moveHintsTable':
-                {
-                    const hideInPreviewRaw = (item.dataset && item.dataset.tableHideInPreview)
-                        || item.tableHideInPreview;
-                    const hideInPreview = hideInPreviewRaw === true
-                        || hideInPreviewRaw === 1
-                        || hideInPreviewRaw === '1'
-                        || hideInPreviewRaw === 'true';
-                    if (previewMode && hideInPreview) {
-                        return null;
-                    }
-                }
                 element.classList.add('table-element');
                 element.dataset.tableType = item.tableType || 'hints';
                 element.innerHTML = item.tableHtml || '';
