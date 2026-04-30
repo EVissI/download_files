@@ -100,6 +100,8 @@ export class ContentEditor {
 
         /** Сохранённый style у #boardCanvas до «плавающего» показа поверх модалки редактора */
         this._liveBoardCanvasStyleBackup = null;
+        /** Исходный padding-top канваса редактора до показа встроенной доски. */
+        this._editorCanvasPaddingTopBackup = null;
 
         /** Модалка меток карточки (целиком, не на отдельный кадр) */
         this.cardLabelsModal = null;
@@ -1185,6 +1187,7 @@ export class ContentEditor {
         }
 
         element.classList.add('table-element');
+        this.setupCardPreviewTableCollapse(element);
 
         // Debug: Log position preservation
         console.log('Table position after createTableElement:', {
@@ -1239,6 +1242,8 @@ export class ContentEditor {
             width: element.style.width,
             height: element.style.height
         });
+        this.applyContentTableMarkupClasses(element);
+        this.setupCardPreviewTableCollapse(element);
     }
 
     /**
@@ -2701,14 +2706,92 @@ export class ContentEditor {
     }
 
     /**
-     * Раньше при открытой модалке и включённом тумблере «Доска» страничный #boardCanvas поднимался поверх редактора.
-     * Сейчас доска в редакторе не показывается — только в предпросмотре и у опубликованной карточки; метод снимает оверлей, если остался.
+     * Синхронизация встроенной доски внутри канваса редактора (паритет с предпросмотром).
      */
     syncLiveHintBoardCanvasOverlay() {
-        this._restoreLiveHintBoardCanvasIfNeeded();
+        if (!this.canvas) return;
+        const enabled = !!this.toggleStates['boardCanvas'];
+        const overlayClass = 'content-editor-canvas-board-overlay';
+        const existing = this.canvas.querySelector(`:scope > .${overlayClass}`);
+
+        if (!enabled) {
+            if (existing) existing.remove();
+            this._restoreLiveHintBoardCanvasIfNeeded();
+            return;
+        }
+
+        const snapshot = this.getEditorBoardSnapshotForCanvas();
+        const showMatchBanner = !!this.boardMatchBannerEnabled;
+        let bannerText = showMatchBanner ? this.formatBoardMatchBannerText(snapshot) : '';
+        if (showMatchBanner && !bannerText) bannerText = 'Данные матча недоступны';
+
+        const overlay = existing || document.createElement('div');
+        overlay.className = `${overlayClass} card-preview-board-overlay`;
+        if (!existing) {
+            overlay.innerHTML = `
+                <div class="card-preview-board-body">
+                    <div class="card-preview-board-match-banner"></div>
+                    <div class="card-preview-board-canvas-wrap">
+                        <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
+                    </div>
+                </div>
+            `;
+            this.canvas.prepend(overlay);
+        }
+
+        const banner = overlay.querySelector('.card-preview-board-match-banner');
+        if (banner) {
+            banner.hidden = !showMatchBanner;
+            banner.textContent = bannerText;
+        }
+        const boardCanvas = overlay.querySelector('.card-preview-board-canvas');
+        if (boardCanvas) {
+            this.loadBoardPreviewImages()
+                .then((imgs) => {
+                    if (!boardCanvas.isConnected) return;
+                    this.paintBoardPreviewCanvas(boardCanvas, snapshot, imgs);
+                })
+                .catch((err) => {
+                    console.error('syncLiveHintBoardCanvasOverlay:', err);
+                });
+        }
+
+        if (this._editorCanvasPaddingTopBackup === null) {
+            this._editorCanvasPaddingTopBackup = this.canvas.style.paddingTop || '';
+        }
+        requestAnimationFrame(() => {
+            if (!overlay.isConnected || !this.canvas) return;
+            const h = Math.ceil(overlay.offsetHeight || 0);
+            this.canvas.style.paddingTop = h > 0 ? `${h}px` : this._editorCanvasPaddingTopBackup || '';
+        });
+    }
+
+    getEditorBoardSnapshotForCanvas() {
+        let snapshot =
+            typeof window.getHintViewerBoardSnapshot === 'function'
+                ? window.getHintViewerBoardSnapshot()
+                : null;
+        if (snapshot == null && this._editorSessionBoardSnapshot != null) {
+            try {
+                snapshot = JSON.parse(JSON.stringify(this._editorSessionBoardSnapshot));
+            } catch (e) {
+                snapshot = this._editorSessionBoardSnapshot;
+            }
+        }
+        return (snapshot && typeof snapshot === 'object') ? snapshot : {};
     }
 
     _restoreLiveHintBoardCanvasIfNeeded() {
+        if (this.canvas) {
+            const overlay = this.canvas.querySelector(':scope > .content-editor-canvas-board-overlay');
+            if (overlay) overlay.remove();
+            if (this._editorCanvasPaddingTopBackup !== null) {
+                this.canvas.style.paddingTop = this._editorCanvasPaddingTopBackup;
+                this._editorCanvasPaddingTopBackup = null;
+            }
+        } else {
+            this._editorCanvasPaddingTopBackup = null;
+        }
         const el = document.getElementById('boardCanvas');
         if (el) {
             el.classList.remove('content-editor-live-board-overlay');
@@ -5926,6 +6009,7 @@ export class ContentEditor {
         cb.dataset.ceWired = '1';
         cb.addEventListener('change', () => {
             this.boardMatchBannerEnabled = cb.checked;
+            this.syncLiveHintBoardCanvasOverlay();
         });
     }
 
@@ -6012,6 +6096,7 @@ export class ContentEditor {
                 element.dataset.tableType = item.tableType || 'hints';
                 element.innerHTML = item.tableHtml || '';
                 this.applyContentTableMarkupClasses(element);
+                if (!previewMode) this.setupCardPreviewTableCollapse(element);
                 break;
             case 'upload-image': {
                 element.classList.add('image-element');
@@ -6307,6 +6392,7 @@ export class ContentEditor {
             const maxBottom = parseInt(lastElement.style.top) + lastElement.offsetHeight;
             this.expandCanvasIfNeeded(maxBottom);
         }
+        this.syncLiveHintBoardCanvasOverlay();
     }
 
     recalculateAllElementPositions() {
