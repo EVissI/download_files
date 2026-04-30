@@ -1817,6 +1817,13 @@ button.content-card-admin-info-file-link:hover {
     position: relative;
 }
 
+@media (min-width: 769px) {
+    .card-preview-surface-inner .canvas-element.table-element.card-preview-canvas-clone table.ce-content-table {
+        margin-left: 0 !important;
+        margin-right: auto !important;
+    }
+}
+
 .card-preview-table-toggle {
     position: absolute;
     top: 0;
