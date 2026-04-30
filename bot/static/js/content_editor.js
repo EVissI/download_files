@@ -6057,6 +6057,65 @@ export class ContentEditor {
         return true;
     }
 
+    syncTextPropertiesFromActiveSelection(element = this.selectedElement) {
+        if (!element || !element.classList || !element.classList.contains('text-element')) return;
+        const textEl = element.querySelector('.text-content');
+        if (!textEl) return;
+
+        const fontSizeSelect = document.getElementById('propFontSize');
+        const textColorInput = document.getElementById('propTextColor');
+        const textAlignSelect = document.getElementById('propTextAlign');
+        const lineHeightSelect = document.getElementById('propLineHeight');
+        const paddingSelect = document.getElementById('propPadding');
+        const bgColorInput = document.getElementById('propBgColor');
+        const fontSizeDisplay = document.querySelector('#propFontSize + .property-value');
+        if (!fontSizeSelect && !textColorInput && !textAlignSelect && !lineHeightSelect && !paddingSelect && !bgColorInput) {
+            return;
+        }
+
+        let styleNode = textEl;
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount) {
+            const range = sel.getRangeAt(0);
+            const anchorNode = range.startContainer;
+            if (anchorNode && textEl.contains(anchorNode)) {
+                if (anchorNode.nodeType === Node.ELEMENT_NODE) {
+                    styleNode = anchorNode;
+                } else if (anchorNode.parentElement) {
+                    styleNode = anchorNode.parentElement;
+                }
+            }
+        }
+        if (!(styleNode instanceof Element) || !textEl.contains(styleNode)) {
+            styleNode = textEl;
+        }
+
+        const textStyle = window.getComputedStyle(styleNode);
+        const blockStyle = window.getComputedStyle(element);
+        const fontSizePx = this.clampNumericValue(parseInt(textStyle.fontSize, 10), 8, 200, 16);
+        const lineHeightPx = this.clampNumericValue(
+            parseInt(String(Math.round(parseFloat(textStyle.lineHeight) || 20)), 10),
+            8,
+            120,
+            20
+        );
+        const paddingPx = this.clampNumericValue(parseInt(blockStyle.padding, 10), 0, 100, 8);
+        const textColor = this.rgbToHex(textStyle.color || '#333333');
+        const textAlign = String(textStyle.textAlign || 'left');
+        const bgColor = this.normalizeBackgroundColorForInput(blockStyle.backgroundColor || '#ffffff');
+
+        if (fontSizeSelect) fontSizeSelect.value = String(fontSizePx);
+        if (fontSizeDisplay) fontSizeDisplay.textContent = `${fontSizePx}px`;
+        if (textColorInput) textColorInput.value = textColor;
+        if (textAlignSelect) {
+            const allowed = ['left', 'center', 'right', 'justify'];
+            textAlignSelect.value = allowed.includes(textAlign) ? textAlign : 'left';
+        }
+        if (lineHeightSelect) lineHeightSelect.value = String(lineHeightPx);
+        if (paddingSelect) paddingSelect.value = String(paddingPx);
+        if (bgColorInput) bgColorInput.value = bgColor;
+    }
+
     async applyTextStylePresetFromSelect(value) {
         const presetId = Number(value);
         const select = document.getElementById('propTextStylePresetSelect');

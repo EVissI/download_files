@@ -2,6 +2,11 @@ export function setupTextEditingImpl(editor, element) {
     const textContent = element.querySelector('.text-content');
     if (!textContent) return;
     editor.autoGrowTextElementContainer(element);
+    const syncPropsFromSelection = () => {
+        if (typeof editor.syncTextPropertiesFromActiveSelection === 'function') {
+            editor.syncTextPropertiesFromActiveSelection(element);
+        }
+    };
 
     // Предотвращаем всплытие события клика, чтобы не выделять элемент при редактировании текста
     textContent.addEventListener('mousedown', (e) => {
@@ -14,6 +19,7 @@ export function setupTextEditingImpl(editor, element) {
     // Добавляем обработчик фокуса для открытия свойств
     textContent.addEventListener('focus', () => {
         editor.selectElement(element);
+        requestAnimationFrame(syncPropsFromSelection);
     });
 
     // Обработка окончания редактирования и сохранение выделения для форматирования
@@ -34,6 +40,17 @@ export function setupTextEditingImpl(editor, element) {
     // Обработка ввода текста - только перенос строк
     textContent.addEventListener('input', () => {
         editor.autoGrowTextElementContainer(element);
+        requestAnimationFrame(syncPropsFromSelection);
+    });
+
+    textContent.addEventListener('mouseup', () => {
+        editor.saveSelectionForEditable(textContent);
+        requestAnimationFrame(syncPropsFromSelection);
+    });
+
+    textContent.addEventListener('keyup', () => {
+        editor.saveSelectionForEditable(textContent);
+        requestAnimationFrame(syncPropsFromSelection);
     });
 
     // Обработка клавиш для переноса строк
