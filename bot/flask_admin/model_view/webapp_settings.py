@@ -26,15 +26,12 @@ class WebAppSettingsModelView(ModelView):
     show_columns = ["id", "webapp_fullscreen_enabled"]
     edit_columns = ["webapp_fullscreen_enabled"]
 
-    form_overrides = {
-        "webapp_fullscreen_enabled": SelectField,
-    }
-    form_args = {
-        "webapp_fullscreen_enabled": {
-            "label": _("Разрешать полноэкранный режим"),
-            "choices": [(True, _("Включено")), (False, _("Выключено"))],
-            "coerce": lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
-        }
+    edit_form_extra_fields = {
+        "webapp_fullscreen_enabled": SelectField(
+            _("Разрешать полноэкранный режим"),
+            choices=[("true", _("Включено")), ("false", _("Выключено"))],
+            coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
+        )
     }
 
     label_columns = {
