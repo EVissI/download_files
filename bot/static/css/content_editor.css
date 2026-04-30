@@ -2992,20 +2992,21 @@ button.content-card-admin-info-file-link:hover {
         order: 1;
     }
 
-    .editor-resizer[data-resize-target="toolbar"] {
+    .toolbar.toolbar-properties {
         order: 2;
     }
 
-    .toolbar.toolbar-properties {
+    .editor-resizer[data-resize-target="properties"] {
         order: 3;
     }
 
-    .editor-resizer[data-resize-target="properties"] {
+    .workspace {
         order: 4;
     }
 
-    .workspace {
-        order: 5;
+    /* Верхний разделитель (между инструментами и свойствами) скрываем */
+    .editor-resizer[data-resize-target="toolbar"] {
+        display: none !important;
     }
 
     /* Убираем верхний хедер/плашку у панели свойств на мобильных */
