@@ -348,10 +348,9 @@
     margin: 0 auto;
     background: #1a1a1a;
     border-radius: 10px;
-    overflow: hidden;
+    overflow: visible;
     pointer-events: none;
     position: relative;
-    padding-bottom: 16px;
 }
 
 .editor-board-display-body {
@@ -399,9 +398,9 @@
 .editor-board-toggle {
     position: absolute;
     left: 50%;
-    bottom: 2px;
+    bottom: 0;
     z-index: 7;
-    transform: translateX(-50%);
+    transform: translate(-50%, 50%);
     width: 28px;
     height: 20px;
     padding: 0;
