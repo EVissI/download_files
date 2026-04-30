@@ -85,7 +85,7 @@
                 }
 
                 const tg = Telegram.WebApp;
-                const allowFullscreen = {{ 'true' if webapp_fullscreen_enabled else 'false' }};
+                const allowFullscreen = "{{ 'true' if webapp_fullscreen_enabled else 'false' }}" === 'true';
                 tg.ready();
                 tg.expand();
                 try {

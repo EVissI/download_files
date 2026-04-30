@@ -805,7 +805,7 @@
         (function () {
             if (window.Telegram && window.Telegram.WebApp) {
                 var tg = window.Telegram.WebApp;
-                var allowFullscreen = {{ 'true' if webapp_fullscreen_enabled else 'false' }};
+                var allowFullscreen = "{{ 'true' if webapp_fullscreen_enabled else 'false' }}" === 'true';
                 tg.ready();
                 tg.expand();
                 try {
