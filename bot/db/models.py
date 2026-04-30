@@ -120,6 +120,10 @@ class User(Base):
         """Общее количество карточек пользователя."""
         return str(len(self.user_content_cards or []))
 
+    def __repr__(self) -> str:
+        label = self.admin_insert_name or self.username or self.first_name or "user"
+        return f"{self.id} | {label}"
+
 
 class Analysis(Base):
     __tablename__ = "analyzes"
@@ -646,6 +650,20 @@ class ContentCardIssueSchedule(Base):
                 continue
             values.append(day_map.get(key, key))
         return ", ".join(values) if values else "—"
+
+    @property
+    @renders("target_user_display")
+    def target_user_display(self) -> str:
+        if not self.target_user:
+            return str(self.target_user_id)
+        username = f"@{self.target_user.username}" if self.target_user.username else "—"
+        title = (
+            self.target_user.admin_insert_name
+            or self.target_user.first_name
+            or self.target_user.last_name
+            or "—"
+        )
+        return f"{self.target_user_id} | {title} | {username}"
 
 
 class ContentCard(Base):

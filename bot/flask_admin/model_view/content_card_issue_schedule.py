@@ -42,7 +42,7 @@ class ContentCardIssueScheduleModelView(ModelView):
 
     list_columns = [
         "id",
-        "target_user_id",
+        "target_user_display",
         "cards_per_run",
         "weekdays_display",
         "issue_time_msk",
@@ -51,7 +51,7 @@ class ContentCardIssueScheduleModelView(ModelView):
     ]
     show_columns = [
         "id",
-        "target_user_id",
+        "target_user_display",
         "cards_per_run",
         "weekdays_display",
         "issue_time_msk",
@@ -61,14 +61,16 @@ class ContentCardIssueScheduleModelView(ModelView):
         "created_at",
         "updated_at",
     ]
-    add_columns = ["target_user_id", "cards_per_run", "weekdays", "issue_time_msk", "is_active"]
-    edit_columns = ["target_user_id", "cards_per_run", "weekdays", "issue_time_msk", "is_active"]
+    add_columns = ["target_user", "cards_per_run", "weekdays", "issue_time_msk", "is_active"]
+    edit_columns = ["target_user", "cards_per_run", "weekdays", "issue_time_msk", "is_active"]
     search_columns = ["target_user_id", "issue_time_msk", "scheduler_job_id"]
     order_columns = ["id", "target_user_id", "issue_time_msk", "last_run_at", "is_active"]
 
     label_columns = {
         "id": _("ID"),
+        "target_user": _("Пользователь"),
         "target_user_id": _("ID пользователя"),
+        "target_user_display": _("Пользователь"),
         "cards_per_run": _("Карточек за запуск"),
         "weekdays": _("Дни недели"),
         "weekdays_display": _("Дни недели"),
@@ -81,6 +83,7 @@ class ContentCardIssueScheduleModelView(ModelView):
     }
 
     description_columns = {
+        "target_user": _("Пользователь, которому по расписанию выдаются карточки."),
         "target_user_id": _("Пользователь, которому по расписанию выдаются карточки."),
         "cards_per_run": _("Сколько новых карточек выдать за один запуск."),
         "weekdays": _("Выберите дни недели запуска."),
