@@ -100,7 +100,6 @@ export class ContentEditor {
 
         /** Сохранённый style у #boardCanvas до «плавающего» показа поверх модалки редактора */
         this._liveBoardCanvasStyleBackup = null;
-        this._editorFloatingBoardOverlayEl = null;
 
         /** Модалка меток карточки (целиком, не на отдельный кадр) */
         this.cardLabelsModal = null;
@@ -937,18 +936,9 @@ export class ContentEditor {
             const t = el.dataset.tableType === 'cube' ? 'cube' : 'hints';
             if (t === 'hints' && this.cardData.hints) {
                 this.updateTableContent(el, 'hints');
-                this.applyContentTableMarkupClasses(el);
-                this.setupCardPreviewTableCollapse(el, {
-                    onToggle: () => this.recalculateAllElementPositions()
-                });
             } else if (t === 'cube' && this.cardData.cube_hints) {
                 this.updateTableContent(el, 'cube');
-                this.applyContentTableMarkupClasses(el);
-                this.setupCardPreviewTableCollapse(el, {
-                    onToggle: () => this.recalculateAllElementPositions()
-                });
             }
-            this.ensureBlockDragHandle(el);
         });
     }
 
@@ -1195,10 +1185,6 @@ export class ContentEditor {
         }
 
         element.classList.add('table-element');
-        this.applyContentTableMarkupClasses(element);
-        this.setupCardPreviewTableCollapse(element, {
-            onToggle: () => this.recalculateAllElementPositions()
-        });
 
         // Debug: Log position preservation
         console.log('Table position after createTableElement:', {
@@ -1253,13 +1239,6 @@ export class ContentEditor {
             width: element.style.width,
             height: element.style.height
         });
-        this.applyContentTableMarkupClasses(element);
-        this.setupCardPreviewTableCollapse(element, {
-            onToggle: () => this.recalculateAllElementPositions()
-        });
-        if (element.dataset.ceBlockReorderBound === '1') {
-            this.ensureBlockDragHandle(element);
-        }
     }
 
     /**
@@ -2723,26 +2702,10 @@ export class ContentEditor {
 
     /**
      * Раньше при открытой модалке и включённом тумблере «Доска» страничный #boardCanvas поднимался поверх редактора.
-     * Теперь доска показывается и в редакторе: используем живой #boardCanvas со страницы,
-     * а при его отсутствии рисуем плавающий canvas из snapshot кадра.
+     * Сейчас доска в редакторе не показывается — только в предпросмотре и у опубликованной карточки; метод снимает оверлей, если остался.
      */
     syncLiveHintBoardCanvasOverlay() {
-        const modalOpen = !!(this.modal && this.modal.style.display !== 'none');
-        const boardOn = !!this.toggleStates['boardCanvas'];
-        if (!modalOpen || !boardOn) {
-            this._restoreLiveHintBoardCanvasIfNeeded();
-            return;
-        }
-        const el = document.getElementById('boardCanvas');
-        if (el) {
-            if (this._liveBoardCanvasStyleBackup === null) {
-                this._liveBoardCanvasStyleBackup = el.getAttribute('style');
-            }
-            el.classList.add('content-editor-live-board-overlay');
-            this._removeEditorFloatingBoardOverlay();
-            return;
-        }
-        this._ensureEditorFloatingBoardOverlay();
+        this._restoreLiveHintBoardCanvasIfNeeded();
     }
 
     _restoreLiveHintBoardCanvasIfNeeded() {
@@ -2756,70 +2719,6 @@ export class ContentEditor {
         } else {
             this._liveBoardCanvasStyleBackup = null;
         }
-        this._removeEditorFloatingBoardOverlay();
-    }
-
-    _getEditorBoardSnapshotForOverlay() {
-        let snapshot = null;
-        if (typeof window.getHintViewerBoardSnapshot === 'function') {
-            snapshot = window.getHintViewerBoardSnapshot();
-        }
-        if (
-            (snapshot == null || typeof snapshot !== 'object') &&
-            this._editorSessionBoardSnapshot != null &&
-            typeof this._editorSessionBoardSnapshot === 'object'
-        ) {
-            try {
-                snapshot = JSON.parse(JSON.stringify(this._editorSessionBoardSnapshot));
-            } catch (e) {
-                snapshot = this._editorSessionBoardSnapshot;
-            }
-        }
-        return snapshot && typeof snapshot === 'object' ? snapshot : {};
-    }
-
-    _removeEditorFloatingBoardOverlay() {
-        if (this._editorFloatingBoardOverlayEl && this._editorFloatingBoardOverlayEl.parentNode) {
-            this._editorFloatingBoardOverlayEl.parentNode.removeChild(this._editorFloatingBoardOverlayEl);
-        }
-        this._editorFloatingBoardOverlayEl = null;
-    }
-
-    _ensureEditorFloatingBoardOverlay() {
-        let host = this._editorFloatingBoardOverlayEl;
-        if (!host || !host.isConnected) {
-            host = document.createElement('div');
-            host.className = 'ce-editor-floating-board-overlay card-preview-board-overlay';
-            host.innerHTML = `
-                <div class="card-preview-board-body">
-                    <div class="card-preview-board-match-banner"></div>
-                    <div class="card-preview-board-canvas-wrap">
-                        <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(host);
-            this._editorFloatingBoardOverlayEl = host;
-        }
-        const snapshot = this._getEditorBoardSnapshotForOverlay();
-        const showMatchBanner = !!this.boardMatchBannerEnabled;
-        const banner = host.querySelector('.card-preview-board-match-banner');
-        if (banner) {
-            let bannerText = showMatchBanner ? this.formatBoardMatchBannerText(snapshot) : '';
-            if (showMatchBanner && !bannerText) bannerText = 'Данные матча недоступны';
-            banner.textContent = bannerText;
-            banner.hidden = !showMatchBanner;
-        }
-        const canvas = host.querySelector('.card-preview-board-canvas');
-        if (!canvas) return;
-        this.loadBoardPreviewImages()
-            .then((imgs) => {
-                if (!canvas.isConnected) return;
-                this.paintBoardPreviewCanvas(canvas, snapshot, imgs);
-            })
-            .catch((err) => {
-                console.error('syncLiveHintBoardCanvasOverlay floating board:', err);
-            });
     }
 
     showToggleNotification(toolId, isActive) {
@@ -5439,8 +5338,8 @@ export class ContentEditor {
     /**
      * Предпросмотр карточки: кнопка сворачивания блока таблицы (ход/куб).
      */
-    setupCardPreviewTableCollapse(tableEl, options = {}) {
-        return setupCardPreviewTableCollapseImpl(this, tableEl, options);
+    setupCardPreviewTableCollapse(tableEl) {
+        return setupCardPreviewTableCollapseImpl(this, tableEl);
     }
 
     appendCardPreviewBoardOverlay(wrap, payload) {
@@ -6027,7 +5926,6 @@ export class ContentEditor {
         cb.dataset.ceWired = '1';
         cb.addEventListener('change', () => {
             this.boardMatchBannerEnabled = cb.checked;
-            this.syncLiveHintBoardCanvasOverlay();
         });
     }
 
@@ -6114,11 +6012,6 @@ export class ContentEditor {
                 element.dataset.tableType = item.tableType || 'hints';
                 element.innerHTML = item.tableHtml || '';
                 this.applyContentTableMarkupClasses(element);
-                if (!previewMode) {
-                    this.setupCardPreviewTableCollapse(element, {
-                        onToggle: () => this.recalculateAllElementPositions()
-                    });
-                }
                 break;
             case 'upload-image': {
                 element.classList.add('image-element');
@@ -6396,9 +6289,6 @@ export class ContentEditor {
                     table.style.width = '100%';
                     this.applyContentTableMarkupClasses(element);
                 }
-                this.setupCardPreviewTableCollapse(element, {
-                    onToggle: () => this.recalculateAllElementPositions()
-                });
             }
         });
 
