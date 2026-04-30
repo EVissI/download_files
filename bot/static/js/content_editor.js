@@ -185,6 +185,8 @@ export class ContentEditor {
         if (this.canvas) {
             this.canvas.querySelectorAll('.text-content, .link-text').forEach((n) => {
                 this.applyGlobalTextStyleDefaultsToTextNode(n);
+                const parent = n.closest('.canvas-element');
+                if (parent) this.autoGrowTextElementContainer(parent);
             });
         }
         return true;
@@ -3172,6 +3174,7 @@ export class ContentEditor {
         const linkText = element.querySelector('.link-text');
         const linkUrl = element.querySelector('.link-url');
         if (!linkText || !linkUrl) return;
+        this.autoGrowTextElementContainer(element);
 
         let linkifyDebounce = null;
         const scheduleLinkify = () => {
@@ -3204,11 +3207,18 @@ export class ContentEditor {
             if (linkText.textContent.trim() === '') {
                 linkText.textContent = 'Текст и ссылка';
             }
+            this.autoGrowTextElementContainer(element);
         });
 
-        linkText.addEventListener('input', scheduleLinkify);
+        linkText.addEventListener('input', () => {
+            scheduleLinkify();
+            this.autoGrowTextElementContainer(element);
+        });
         linkText.addEventListener('paste', () => {
-            requestAnimationFrame(() => this.linkifyPlainUrlsUnderLinkElement(element));
+            requestAnimationFrame(() => {
+                this.linkifyPlainUrlsUnderLinkElement(element);
+                this.autoGrowTextElementContainer(element);
+            });
         });
 
         // Обработка клика по ссылке для перехода (только если не в режиме редактирования)
@@ -3290,6 +3300,7 @@ export class ContentEditor {
     setupTextEditing(element) {
         const textContent = element.querySelector('.text-content');
         if (!textContent) return;
+        this.autoGrowTextElementContainer(element);
 
         // Предотвращаем всплытие события клика, чтобы не выделять элемент при редактировании текста
         textContent.addEventListener('mousedown', (e) => {
@@ -3319,7 +3330,7 @@ export class ContentEditor {
 
         // Обработка ввода текста - только перенос строк
         textContent.addEventListener('input', () => {
-            // Перенос строк работает через CSS, без автоматического изменения высоты
+            this.autoGrowTextElementContainer(element);
         });
 
         // Обработка клавиш для переноса строк
@@ -3336,10 +3347,31 @@ export class ContentEditor {
                     e.preventDefault();
                     // Вставляем перенос строки
                     document.execCommand('insertLineBreak');
-                    // Автоматическое изменение высоты отключено
+                    this.autoGrowTextElementContainer(element);
                 }
             }
         });
+    }
+
+    autoGrowTextElementContainer(element) {
+        if (!element || !this.canvas || !element.classList.contains('canvas-element')) return;
+        const tid = element.dataset.toolId;
+        if (!['question-text', 'answer-text', 'support-link'].includes(tid)) return;
+
+        const contentNode = element.querySelector('.text-content, .link-text');
+        if (!contentNode) return;
+
+        const cs = window.getComputedStyle(contentNode);
+        const lineHeight = parseFloat(cs.lineHeight) || 20;
+        const minElementHeight = 36;
+        const contentHeight = Math.max(contentNode.scrollHeight, lineHeight + 8);
+        const innerPadding = parseFloat(element.style.padding) || 0;
+        const targetHeight = Math.max(minElementHeight, Math.ceil(contentHeight + innerPadding * 2));
+        const currentHeight = parseFloat(element.style.height) || element.getBoundingClientRect().height || 0;
+
+        if (Math.abs(targetHeight - currentHeight) < 1) return;
+        element.style.height = `${targetHeight}px`;
+        if (element.id) this.repositionElementsBelow(element.id);
     }
 
     addElementControls(element) {
@@ -3830,6 +3862,7 @@ export class ContentEditor {
                 }
                 const fontSizeDisplay = document.querySelector('#propFontSize + .property-value');
                 if (fontSizeDisplay) fontSizeDisplay.textContent = value;
+                this.autoGrowTextElementContainer(this.selectedElement);
                 break;
             }
             case 'textColor': {
@@ -3860,11 +3893,13 @@ export class ContentEditor {
                 const el = this.selectedElement.querySelector('.text-content, .link-text');
                 if (el) {
                     el.style.lineHeight = value;
+                    this.autoGrowTextElementContainer(this.selectedElement);
                 }
                 break;
             }
             case 'padding': {
                 this.selectedElement.style.padding = value;
+                this.autoGrowTextElementContainer(this.selectedElement);
                 break;
             }
             case 'backgroundColor': {
