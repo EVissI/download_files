@@ -3976,19 +3976,17 @@ export class ContentEditor {
                     <input type="text" id="propAudioName" value="${this.escapeHtml(this._audioElementDisplayTitle(element))}" 
                            oninput="contentEditor.updateElementProperty('audioTitle', this.value)">
                 </div>
-                <div class="property-item">
-                    <label>Управление воспроизведением:</label>
-                    <div style="display: flex; gap: 10px; margin-top: 5px;">
-                        <button class="action-btn" onclick="contentEditor.playAudioElement('${element.id}')">▶ Воспроизвести</button>
-                        <button class="action-btn" onclick="contentEditor.pauseAudioElement('${element.id}')">⏸ Пауза</button>
-                    </div>
-                </div>
-                <div class="property-item">
-                    <label>Громкость:</label>
-                    <select id="propAudioVolume" onchange="contentEditor.updateElementProperty('audioVolume', this.value / 100)">
+                <div class="property-item property-item-audio-controls">
+                    <div class="audio-controls-compact-row">
+                        <button type="button" class="action-btn audio-compact-btn" aria-label="Воспроизвести" title="Воспроизвести"
+                                onclick="contentEditor.playAudioElement('${element.id}')">▶</button>
+                        <button type="button" class="action-btn audio-compact-btn" aria-label="Пауза" title="Пауза"
+                                onclick="contentEditor.pauseAudioElement('${element.id}')">⏸</button>
+                        <select id="propAudioVolume" class="audio-volume-compact-select" aria-label="Громкость"
+                                title="Громкость" onchange="contentEditor.updateElementProperty('audioVolume', this.value / 100)">
                         ${this.renderNumericSelectOptions(0, 100, 100, 5, '%')}
-                    </select>
-                    <div class="property-value">100%</div>
+                        </select>
+                    </div>
                 </div>
                 ` : ''}
                 ${element.dataset.toolId === 'attach-file' ? `

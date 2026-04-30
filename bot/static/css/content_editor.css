@@ -2382,6 +2382,34 @@ button.content-card-admin-info-file-link:hover {
     margin-right: 8px;
 }
 
+.property-item-audio-controls {
+    margin-top: 2px;
+}
+
+.audio-controls-compact-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.audio-compact-btn {
+    flex: 0 0 auto;
+    width: 44px;
+    min-width: 44px;
+    padding: 4px 6px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.audio-volume-compact-select {
+    flex: 0 0 auto;
+    width: 72px;
+    min-width: 72px;
+    padding: 4px 6px;
+    font-size: 11px;
+}
+
 .property-value {
     font-size: 11px;
     color: #a0a0a0;
