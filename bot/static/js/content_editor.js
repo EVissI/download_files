@@ -2063,7 +2063,7 @@ export class ContentEditor {
 
             this.addElementControls(element);
             this.attachBlockReorderInteractions(element);
-            this.canvas.appendChild(element);
+            this.getCanvasElementsRoot().appendChild(element);
 
             setTimeout(() => {
                 const elementBottom = parseInt(element.style.top, 10) + element.offsetHeight;
@@ -2450,7 +2450,7 @@ export class ContentEditor {
         element.style.height = '72px';
 
         this.buildAttachFileElementInner(element, false);
-        this.canvas.appendChild(element);
+        this.getCanvasElementsRoot().appendChild(element);
         this.addElementControls(element);
         this.attachBlockReorderInteractions(element);
         this.elements.push({
@@ -2609,7 +2609,7 @@ export class ContentEditor {
         this.attachBlockReorderInteractions(element);
 
         // Add to canvas
-        this.canvas.appendChild(element);
+        this.getCanvasElementsRoot().appendChild(element);
 
         // Expand canvas if needed for the audio element
         setTimeout(() => {
@@ -2727,7 +2727,7 @@ export class ContentEditor {
             this.attachBlockReorderInteractions(element);
 
             // Add to canvas
-            this.canvas.appendChild(element);
+            this.getCanvasElementsRoot().appendChild(element);
 
             // Expand canvas if needed for the image
             setTimeout(() => {
@@ -2816,19 +2816,52 @@ export class ContentEditor {
     ensureEditorBoardDisplayHost() {
         if (!this.canvas) return null;
         const existingById = document.getElementById('editorBoardDisplayHost');
-        if (existingById && existingById.parentElement !== this.canvas) {
+        if (existingById && !this.canvas.contains(existingById)) {
             existingById.remove();
         }
-        let host = this.canvas.querySelector('#editorBoardDisplayHost');
+        let host = this.canvas.querySelector(':scope > #editorBoardDisplayHost');
         if (!host) {
-            this.canvas.insertAdjacentHTML(
-                'afterbegin',
-                `<div id="editorBoardDisplayHost" class="editor-board-display-host" hidden aria-hidden="true"></div>`
-            );
-            host = this.canvas.querySelector('#editorBoardDisplayHost');
+            const layer = this.ensureCanvasContentLayer();
+            if (layer) {
+                layer.insertAdjacentHTML(
+                    'beforebegin',
+                    `<div id="editorBoardDisplayHost" class="editor-board-display-host" hidden aria-hidden="true"></div>`
+                );
+            } else {
+                this.canvas.insertAdjacentHTML(
+                    'afterbegin',
+                    `<div id="editorBoardDisplayHost" class="editor-board-display-host" hidden aria-hidden="true"></div>`
+                );
+            }
+            host = this.canvas.querySelector(':scope > #editorBoardDisplayHost');
         }
         this.editorBoardDisplayHost = host;
         return host;
+    }
+
+    ensureCanvasContentLayer() {
+        if (!this.canvas) return null;
+        let layer = this.canvas.querySelector(':scope > #editorCanvasContentLayer');
+        if (!layer) {
+            this.canvas.insertAdjacentHTML(
+                'beforeend',
+                `<div id="editorCanvasContentLayer" class="editor-canvas-content-layer"></div>`
+            );
+            layer = this.canvas.querySelector(':scope > #editorCanvasContentLayer');
+        }
+        return layer;
+    }
+
+    getCanvasElementsRoot() {
+        return this.ensureCanvasContentLayer() || this.canvas;
+    }
+
+    resetCanvasDomStructure() {
+        if (!this.canvas) return;
+        this.canvas.innerHTML = '';
+        this.editorBoardDisplayHost = null;
+        this.ensureCanvasContentLayer();
+        this.ensureEditorBoardDisplayHost();
     }
 
     getEditorBoardSnapshotForDisplay() {
@@ -3141,7 +3174,7 @@ export class ContentEditor {
             this.attachBlockReorderInteractions(element);
 
             // Добавляем на холст
-            this.canvas.appendChild(element);
+            this.getCanvasElementsRoot().appendChild(element);
 
             // Expand canvas if needed for the new element
             setTimeout(() => {
@@ -4239,7 +4272,7 @@ export class ContentEditor {
             `;
         }
 
-        this.canvas.appendChild(newElement);
+        this.getCanvasElementsRoot().appendChild(newElement);
         this.addElementControls(newElement);
         this.attachBlockReorderInteractions(newElement);
         this.elements.push({
@@ -4768,7 +4801,7 @@ export class ContentEditor {
     resetEditorAfterSave() {
         this.elements = [];
         if (this.canvas) {
-            this.canvas.innerHTML = '';
+            this.resetCanvasDomStructure();
             this.canvas.style.backgroundColor = '#ffffff';
         }
         this.selectedElement = null;
@@ -6043,7 +6076,7 @@ export class ContentEditor {
         if (!this.canvas) return;
 
         this.elements = [];
-        this.canvas.innerHTML = '';
+        this.resetCanvasDomStructure();
         this.selectedElement = null;
         this.toggleStates = {};
 
@@ -6082,7 +6115,7 @@ export class ContentEditor {
         items.forEach(item => {
             const el = this.deserializeCanvasElement(item);
             if (el) {
-                this.canvas.appendChild(el);
+                this.getCanvasElementsRoot().appendChild(el);
                 this.elements.push({
                     id: el.id,
                     toolId: el.dataset.toolId,
@@ -6939,7 +6972,7 @@ export class ContentEditor {
         // Clear all elements
         this.elements = [];
         if (this.canvas) {
-            this.canvas.innerHTML = '';
+            this.resetCanvasDomStructure();
         }
 
         // Reset properties

@@ -332,6 +332,11 @@
     pointer-events: none;
 }
 
+.editor-canvas-content-layer {
+    position: relative;
+    min-height: 100%;
+}
+
 .editor-board-display-host.is-visible {
     display: block;
 }
