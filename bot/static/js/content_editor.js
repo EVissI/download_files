@@ -4016,7 +4016,7 @@ export class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Цвет фона блока:</label>
-                    <input type="color" id="propBgColor" value="${this.normalizeBackgroundColorForInput(window.getComputedStyle(element).backgroundColor)}"
+                    <input type="color" id="propBgColor" value="${this.getBlockBackgroundColorForInput(element)}"
                            oninput="contentEditor.updateElementProperty('backgroundColor', this.value)">
                 </div>
                 <div class="property-item">
@@ -4202,6 +4202,10 @@ export class ContentEditor {
             }
             case 'backgroundColor': {
                 this.selectedElement.style.backgroundColor = value;
+                const bgColorInput = document.getElementById('propBgColor');
+                if (bgColorInput) {
+                    bgColorInput.value = this.getBlockBackgroundColorForInput(this.selectedElement);
+                }
                 break;
             }
             case 'toggleBold': {
@@ -5988,7 +5992,9 @@ export class ContentEditor {
                 8
             ),
             backgroundColor: this.normalizeBackgroundColorForInput(
-                bgColorInput && bgColorInput.value ? bgColorInput.value : (blockStyle.backgroundColor || '#ffffff')
+                bgColorInput && bgColorInput.value
+                    ? bgColorInput.value
+                    : this.getBlockBackgroundColorForInput(this.selectedElement)
             ),
             fontWeight: isBold ? 'bold' : 'normal',
             fontStyle: isItalic ? 'italic' : 'normal',
@@ -6102,7 +6108,7 @@ export class ContentEditor {
         const paddingPx = this.clampNumericValue(parseInt(blockStyle.padding, 10), 0, 100, 8);
         const textColor = this.rgbToHex(textStyle.color || '#333333');
         const textAlign = String(textStyle.textAlign || 'left');
-        const bgColor = this.normalizeBackgroundColorForInput(blockStyle.backgroundColor || '#ffffff');
+        const bgColor = this.getBlockBackgroundColorForInput(element);
 
         if (fontSizeSelect) fontSizeSelect.value = String(fontSizePx);
         if (fontSizeDisplay) fontSizeDisplay.textContent = `${fontSizePx}px`;
@@ -7591,6 +7597,25 @@ export class ContentEditor {
             }
         }
         return this.rgbToHex(raw || '#ffffff');
+    }
+
+    getBlockBackgroundColorForInput(element) {
+        if (!element) return '#ffffff';
+        const inline = String(element.style.backgroundColor || '').trim();
+        if (inline) {
+            return this.normalizeBackgroundColorForInput(inline);
+        }
+        const computed = window.getComputedStyle(element).backgroundColor || '';
+        const normalizedComputed = String(computed).trim().toLowerCase();
+        if (
+            normalizedComputed &&
+            normalizedComputed !== 'transparent' &&
+            normalizedComputed !== 'rgba(0, 0, 0, 0)' &&
+            normalizedComputed !== 'rgba(0,0,0,0)'
+        ) {
+            return this.normalizeBackgroundColorForInput(computed);
+        }
+        return '#ffffff';
     }
 
     // Method to force complete reload of the editor
