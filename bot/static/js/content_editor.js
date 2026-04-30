@@ -3972,7 +3972,7 @@ export class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Цвет фона блока:</label>
-                    <input type="color" id="propBgColor" value="${window.getComputedStyle(element).backgroundColor || '#ffffff'}"
+                    <input type="color" id="propBgColor" value="${this.normalizeBackgroundColorForInput(window.getComputedStyle(element).backgroundColor)}"
                            oninput="contentEditor.updateElementProperty('backgroundColor', this.value)">
                 </div>
                 <div class="property-item">
@@ -5888,19 +5888,67 @@ export class ContentEditor {
         if (!textEl) return null;
         const textStyle = window.getComputedStyle(textEl);
         const blockStyle = window.getComputedStyle(this.selectedElement);
-        const weightRaw = String(textStyle.fontWeight || '').trim();
-        const isBold = weightRaw === 'bold' || (!Number.isNaN(parseInt(weightRaw, 10)) && parseInt(weightRaw, 10) >= 600);
-        const textDecorationLine = String(textStyle.textDecorationLine || textStyle.textDecoration || '');
+        const fontSizeSelect = document.getElementById('propFontSize');
+        const textColorInput = document.getElementById('propTextColor');
+        const textAlignSelect = document.getElementById('propTextAlign');
+        const lineHeightSelect = document.getElementById('propLineHeight');
+        const paddingSelect = document.getElementById('propPadding');
+        const bgColorInput = document.getElementById('propBgColor');
+
+        const hasSelection = this.hasValidSelectionForFormat(textEl);
+        let isBold = false;
+        let isItalic = false;
+        let isUnderline = false;
+        if (hasSelection) {
+            this.restoreSelectionForEditable(textEl);
+            try {
+                isBold = !!document.queryCommandState('bold');
+            } catch (e) {}
+            try {
+                isItalic = !!document.queryCommandState('italic');
+            } catch (e) {}
+            try {
+                isUnderline = !!document.queryCommandState('underline');
+            } catch (e) {}
+        } else {
+            const weightRaw = String(textStyle.fontWeight || '').trim();
+            isBold = weightRaw === 'bold' || (!Number.isNaN(parseInt(weightRaw, 10)) && parseInt(weightRaw, 10) >= 600);
+            isItalic = textStyle.fontStyle === 'italic';
+            const textDecorationLine = String(textStyle.textDecorationLine || textStyle.textDecoration || '');
+            isUnderline = textDecorationLine.includes('underline');
+        }
+
         return {
-            fontSizePx: this.clampNumericValue(parseInt(textStyle.fontSize, 10), 8, 200, 16),
-            textColor: this.rgbToHex(textStyle.color || '#333333'),
-            textAlign: String(textStyle.textAlign || 'left'),
-            lineHeightPx: this.clampNumericValue(Math.round(parseFloat(textStyle.lineHeight) || 20), 8, 120, 20),
-            paddingPx: this.clampNumericValue(parseInt(blockStyle.padding, 10), 0, 100, 8),
-            backgroundColor: this.rgbToHex(blockStyle.backgroundColor || '#ffffff'),
+            fontSizePx: this.clampNumericValue(
+                parseInt(fontSizeSelect && fontSizeSelect.value ? fontSizeSelect.value : textStyle.fontSize, 10),
+                8,
+                200,
+                16
+            ),
+            textColor: this.rgbToHex(
+                textColorInput && textColorInput.value ? textColorInput.value : (textStyle.color || '#333333')
+            ),
+            textAlign: String(
+                textAlignSelect && textAlignSelect.value ? textAlignSelect.value : (textStyle.textAlign || 'left')
+            ),
+            lineHeightPx: this.clampNumericValue(
+                parseInt(lineHeightSelect && lineHeightSelect.value ? lineHeightSelect.value : Math.round(parseFloat(textStyle.lineHeight) || 20), 10),
+                8,
+                120,
+                20
+            ),
+            paddingPx: this.clampNumericValue(
+                parseInt(paddingSelect && paddingSelect.value ? paddingSelect.value : blockStyle.padding, 10),
+                0,
+                100,
+                8
+            ),
+            backgroundColor: this.normalizeBackgroundColorForInput(
+                bgColorInput && bgColorInput.value ? bgColorInput.value : (blockStyle.backgroundColor || '#ffffff')
+            ),
             fontWeight: isBold ? 'bold' : 'normal',
-            fontStyle: textStyle.fontStyle === 'italic' ? 'italic' : 'normal',
-            textDecoration: textDecorationLine.includes('underline') ? 'underline' : 'none',
+            fontStyle: isItalic ? 'italic' : 'normal',
+            textDecoration: isUnderline ? 'underline' : 'none',
         };
     }
 
@@ -7397,6 +7445,22 @@ export class ContentEditor {
         const b = parseInt(result[2]);
 
         return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+
+    normalizeBackgroundColorForInput(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '#ffffff';
+        const rgba = raw.match(/rgba?\(([^)]+)\)/i);
+        if (rgba) {
+            const parts = rgba[1].split(',').map((x) => x.trim());
+            if (parts.length >= 4) {
+                const alpha = parseFloat(parts[3]);
+                if (!Number.isNaN(alpha) && alpha <= 0) {
+                    return '#ffffff';
+                }
+            }
+        }
+        return this.rgbToHex(raw || '#ffffff');
     }
 
     // Method to force complete reload of the editor
