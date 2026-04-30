@@ -1679,7 +1679,7 @@ button.content-card-admin-info-file-link:hover {
     top: 0;
     z-index: 5;
     flex-shrink: 0;
-    width: min(100%, calc(360px + 25vw));
+    width: min(100%, calc(360px + 10vw));
     box-sizing: border-box;
     max-width: 800px;
     margin-left: auto;
