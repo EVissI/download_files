@@ -6385,11 +6385,15 @@ export class ContentEditor {
                 } else {
                     // Mobile: ресайз по вертикали (высота панелей)
                     if (target === 'toolbar' && this.toolbarPanel) {
-                        let newHeight = startToolbarHeight + dy;
+                        // После перестановки панелей toolbar находится внизу:
+                        // тянем разделитель вниз -> toolbar должен уменьшаться.
+                        let newHeight = startToolbarHeight - dy;
                         newHeight = Math.max(minPanelSize, Math.min(maxPanelSize, newHeight));
                         this.toolbarPanel.style.height = newHeight + 'px';
                     } else if (target === 'properties' && this.propertiesPanel) {
-                        let newHeight = startPropsHeight - dy;
+                        // Панель properties сверху:
+                        // тянем разделитель вниз -> панель должна увеличиваться.
+                        let newHeight = startPropsHeight + dy;
                         newHeight = Math.max(minPanelSize, Math.min(maxPanelSize, newHeight));
                         this.propertiesPanel.style.height = newHeight + 'px';
                     }
