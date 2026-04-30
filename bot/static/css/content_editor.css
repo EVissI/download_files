@@ -1894,6 +1894,68 @@ button.content-card-admin-info-file-link:hover {
     pointer-events: none;
 }
 
+/* Редактор: сворачивание блока таблицы (ход/куб), как в предпросмотре */
+.editor-table-toggle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px 0 6px 0;
+    background: #444;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.editor-table-toggle:hover {
+    background: #555;
+}
+
+.editor-table-toggle:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 1px;
+}
+
+.editor-table-toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease;
+}
+
+.editor-table-caret-svg {
+    width: 18px;
+    height: 9px;
+    display: block;
+    opacity: 0.95;
+}
+
+.editor-table--collapsed .editor-table-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.editor-table-collapse-body {
+    padding-top: 30px;
+    overflow: hidden;
+    max-height: 2500px;
+    opacity: 1;
+    transition: max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease;
+}
+
+.editor-table--collapsed .editor-table-collapse-body {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    pointer-events: none;
+}
+
 .card-preview-canvas-clone {
     box-sizing: border-box;
 }

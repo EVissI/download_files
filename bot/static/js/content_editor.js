@@ -1185,6 +1185,7 @@ export class ContentEditor {
         }
 
         element.classList.add('table-element');
+        this.setupEditorTableCollapse(element);
 
         // Debug: Log position preservation
         console.log('Table position after createTableElement:', {
@@ -1197,6 +1198,7 @@ export class ContentEditor {
 
     updateTableContent(element, tableType, cardDataOverride) {
         const cardData = cardDataOverride !== undefined ? cardDataOverride : this.cardData;
+        const wasCollapsed = element.classList.contains('editor-table--collapsed');
         // Debug: Log position before update
         console.log('updateTableContent - before:', {
             top: element.style.top,
@@ -1207,6 +1209,7 @@ export class ContentEditor {
 
         element.dataset.tableType = tableType;
         element.innerHTML = '';
+        element.classList.remove('editor-table--collapsed');
 
         if (!cardData) {
             // Если нет данных, показываем заглушку
@@ -1230,6 +1233,12 @@ export class ContentEditor {
                     </div>
                 `;
             }
+        }
+
+        this.applyContentTableMarkupClasses(element);
+        this.setupEditorTableCollapse(element);
+        if (wasCollapsed) {
+            element.classList.add('editor-table--collapsed');
         }
 
         // Debug: Log position after update
@@ -1364,6 +1373,56 @@ export class ContentEditor {
         } else {
             tbl.classList.remove('ce-content-table--cube');
         }
+    }
+
+    /**
+     * Редактор: кнопка сворачивания блока таблицы (аналогично предпросмотру/карточке).
+     */
+    setupEditorTableCollapse(tableEl) {
+        if (!tableEl || !tableEl.classList.contains('table-element')) return;
+        if (tableEl.querySelector(':scope > .editor-table-toggle')) return;
+        const kids = Array.from(tableEl.children);
+        if (!kids.length) return;
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'editor-table-toggle';
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-label', 'Свернуть или развернуть таблицу');
+        toggle.title = 'Свернуть или развернуть таблицу';
+        toggle.innerHTML = `
+            <span class="editor-table-toggle-icon" aria-hidden="true">
+                <svg class="editor-table-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                    <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
+                </svg>
+            </span>`;
+
+        const body = document.createElement('div');
+        body.className = 'editor-table-collapse-body';
+        kids.forEach((k) => body.appendChild(k));
+        tableEl.appendChild(toggle);
+        tableEl.appendChild(body);
+
+        const syncA11y = () => {
+            const collapsed = tableEl.classList.contains('editor-table--collapsed');
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        };
+        const onToggle = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            tableEl.classList.toggle('editor-table--collapsed');
+            syncA11y();
+        };
+
+        toggle.addEventListener('click', onToggle);
+        toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                onToggle(e);
+            }
+        });
+        syncA11y();
     }
 
     /** Высота блока при пересчёте вертикального стека (как в recalculateAllElementPositions). */
@@ -6012,6 +6071,7 @@ export class ContentEditor {
                 element.dataset.tableType = item.tableType || 'hints';
                 element.innerHTML = item.tableHtml || '';
                 this.applyContentTableMarkupClasses(element);
+                this.setupEditorTableCollapse(element);
                 break;
             case 'upload-image': {
                 element.classList.add('image-element');
