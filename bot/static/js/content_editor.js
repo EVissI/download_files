@@ -4016,14 +4016,8 @@ export class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Цвет фона блока:</label>
-                    <div class="background-color-controls-row">
-                        <input type="color" id="propBgColor" value="${this.getBlockBackgroundColorForInput(element)}"
-                               ${this.isBlockBackgroundUnset(element) ? 'disabled' : ''}
-                               oninput="contentEditor.updateElementProperty('backgroundColor', this.value)">
-                        <button type="button" class="action-btn background-toggle-btn" id="propBgToggleBtn"
-                                onclick="contentEditor.toggleBlockBackgroundMode()">${this.isBlockBackgroundUnset(element) ? 'Задать' : 'Сбросить'}</button>
-                    </div>
-                    <p class="property-hint">По умолчанию фон блока не задан.</p>
+                    <input type="color" id="propBgColor" value="${this.getBlockBackgroundColorForInput(element)}"
+                           oninput="contentEditor.updateElementProperty('backgroundColor', this.value)">
                 </div>
                 <div class="property-item">
                     <label>Форматирование:</label>
@@ -4208,7 +4202,10 @@ export class ContentEditor {
             }
             case 'backgroundColor': {
                 this.selectedElement.style.backgroundColor = value;
-                this.syncBlockBackgroundControls(this.selectedElement);
+                const bgColorInput = document.getElementById('propBgColor');
+                if (bgColorInput) {
+                    bgColorInput.value = this.getBlockBackgroundColorForInput(this.selectedElement);
+                }
                 break;
             }
             case 'toggleBold': {
@@ -5920,7 +5917,6 @@ export class ContentEditor {
             : 'left';
         const textColor = this.rgbToHex(String(p.textColor || '#333333'));
         const backgroundColor = this.rgbToHex(String(p.backgroundColor || '#ffffff'));
-        const backgroundUnset = !!p.backgroundUnset;
         return {
             fontSize: `${fontSizePx}px`,
             lineHeight: `${lineHeightPx}px`,
@@ -5928,7 +5924,6 @@ export class ContentEditor {
             textAlign,
             textColor,
             backgroundColor,
-            backgroundUnset,
             fontWeight: p.fontWeight === 'bold' ? 'bold' : 'normal',
             fontStyle: p.fontStyle === 'italic' ? 'italic' : 'normal',
             textDecoration: p.textDecoration === 'underline' ? 'underline' : 'none',
@@ -6001,7 +5996,6 @@ export class ContentEditor {
                     ? bgColorInput.value
                     : this.getBlockBackgroundColorForInput(this.selectedElement)
             ),
-            backgroundUnset: this.isBlockBackgroundUnset(this.selectedElement),
             fontWeight: isBold ? 'bold' : 'normal',
             fontStyle: isItalic ? 'italic' : 'normal',
             textDecoration: isUnderline ? 'underline' : 'none',
@@ -6036,7 +6030,7 @@ export class ContentEditor {
 
         textEl.style.textAlign = normalized.textAlign;
         this.selectedElement.style.padding = normalized.padding;
-        this.selectedElement.style.backgroundColor = normalized.backgroundUnset ? '' : normalized.backgroundColor;
+        this.selectedElement.style.backgroundColor = normalized.backgroundColor;
         this.autoGrowTextElementContainer(this.selectedElement);
         const fontSizeSelect = document.getElementById('propFontSize');
         const textColorInput = document.getElementById('propTextColor');
@@ -6066,7 +6060,6 @@ export class ContentEditor {
         if (bgColorInput) {
             bgColorInput.value = this.normalizeBackgroundColorForInput(normalized.backgroundColor);
         }
-        this.syncBlockBackgroundControls(this.selectedElement);
         return true;
     }
 
@@ -6127,7 +6120,6 @@ export class ContentEditor {
         if (lineHeightSelect) lineHeightSelect.value = String(lineHeightPx);
         if (paddingSelect) paddingSelect.value = String(paddingPx);
         if (bgColorInput) bgColorInput.value = bgColor;
-        this.syncBlockBackgroundControls(element);
     }
 
     async applyTextStylePresetFromSelect(value) {
@@ -7624,41 +7616,6 @@ export class ContentEditor {
             return this.normalizeBackgroundColorForInput(computed);
         }
         return '#ffffff';
-    }
-
-    isBlockBackgroundUnset(element) {
-        if (!element) return true;
-        const inline = String(element.style.backgroundColor || '').trim().toLowerCase();
-        if (!inline) return true;
-        return inline === 'transparent' || inline === 'rgba(0, 0, 0, 0)' || inline === 'rgba(0,0,0,0)';
-    }
-
-    syncBlockBackgroundControls(element = this.selectedElement) {
-        const bgColorInput = document.getElementById('propBgColor');
-        const bgToggleBtn = document.getElementById('propBgToggleBtn');
-        if (!bgColorInput && !bgToggleBtn) return;
-        const isUnset = this.isBlockBackgroundUnset(element);
-        if (bgColorInput) {
-            bgColorInput.value = this.getBlockBackgroundColorForInput(element);
-            bgColorInput.disabled = isUnset;
-        }
-        if (bgToggleBtn) {
-            bgToggleBtn.textContent = isUnset ? 'Задать' : 'Сбросить';
-            bgToggleBtn.title = isUnset ? 'Задать цвет фона блока' : 'Сбросить фон блока';
-        }
-    }
-
-    toggleBlockBackgroundMode() {
-        if (!this.selectedElement) return;
-        const bgColorInput = document.getElementById('propBgColor');
-        const isUnset = this.isBlockBackgroundUnset(this.selectedElement);
-        if (isUnset) {
-            const color = bgColorInput && bgColorInput.value ? bgColorInput.value : '#ffffff';
-            this.selectedElement.style.backgroundColor = color;
-        } else {
-            this.selectedElement.style.backgroundColor = '';
-        }
-        this.syncBlockBackgroundControls(this.selectedElement);
     }
 
     // Method to force complete reload of the editor
