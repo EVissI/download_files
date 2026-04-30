@@ -2987,33 +2987,25 @@ button.content-card-admin-info-file-link:hover {
         flex-direction: column;
     }
 
-    /* На мобильных: инструменты сверху, свойства под ними, рабочая область ниже */
-    .workspace {
+    /* На мобильных меняем местами панели: свойства сверху, инструменты снизу */
+    .toolbar.toolbar-properties {
         order: 1;
     }
 
-    /* Нижняя плашка: сверху инструменты, снизу свойства */
     .editor-resizer[data-resize-target="properties"] {
         order: 2;
     }
 
-    .toolbar.toolbar-tools {
+    .workspace {
         order: 3;
     }
 
-    .toolbar.toolbar-properties {
+    .editor-resizer[data-resize-target="toolbar"] {
         order: 4;
     }
 
-    /* Верхний разделитель (между инструментами и свойствами) скрываем */
-    .editor-resizer[data-resize-target="toolbar"] {
-        display: none !important;
-    }
-
-    /* Убираем верхний хедер/плашку у панели свойств на мобильных */
-    .toolbar.toolbar-properties > h3,
-    .properties-panel > h3 {
-        display: none !important;
+    .toolbar.toolbar-tools {
+        order: 5;
     }
 
     /* Отдельное управление размерами панелей на мобиле */
