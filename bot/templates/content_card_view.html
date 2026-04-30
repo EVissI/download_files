@@ -61,6 +61,9 @@
             flex-shrink: 0;
             gap: 8px 10px;
         }
+        #contentCardViewRoot .card-preview-nav .card-preview-counter {
+            display: none;
+        }
         #contentCardViewRoot .card-preview-admin-actions {
             display: inline-flex;
             align-items: center;
@@ -105,11 +108,13 @@
             background: #3a3f47;
         }
         .content-card-view-card-number {
-            text-align: center;
+            display: inline-flex;
+            align-items: center;
             color: #e3e8ef;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
-            margin: 6px 0 2px;
+            margin: 0 2px 0 0;
+            white-space: nowrap;
         }
         .content-card-status-modal {
             position: fixed;
@@ -401,19 +406,23 @@
                 });
             }
 
-            function ensureCardNumberHeader() {
+            function ensureCardNumberNearBackButton() {
                 var cardNumber = getCardNumber();
                 if (!cardNumber) return;
-                var box = document.querySelector('#contentCardViewRoot .card-preview-box');
                 var nav = document.querySelector('#contentCardViewRoot .card-preview-nav');
-                if (!box || !nav) return;
-                var existing = box.querySelector('.content-card-view-card-number');
-                if (existing) return;
+                if (!nav) return;
+                var backBtn = nav.querySelector('.content-card-view-back-btn');
+                if (!backBtn) return;
 
-                var header = document.createElement('div');
-                header.className = 'content-card-view-card-number';
-                header.textContent = '№ ' + cardNumber;
-                box.insertBefore(header, nav);
+                var existing = nav.querySelector('.content-card-view-card-number');
+                if (!existing) {
+                    existing = document.createElement('span');
+                    existing.className = 'content-card-view-card-number';
+                }
+                existing.textContent = '№ ' + cardNumber;
+                if (existing.nextSibling !== backBtn) {
+                    nav.insertBefore(existing, backBtn);
+                }
             }
 
             function normalizeCardNumberLabels() {
@@ -435,7 +444,7 @@
             var timer = setInterval(function () {
                 ensureNavButtons();
                 ensureNavInFooterAndAdminButtons();
-                ensureCardNumberHeader();
+                ensureCardNumberNearBackButton();
                 normalizeCardNumberLabels();
                 attempts += 1;
                 if (attempts >= maxAttempts) {
@@ -444,7 +453,7 @@
             }, 250);
             ensureNavButtons();
             ensureNavInFooterAndAdminButtons();
-            ensureCardNumberHeader();
+            ensureCardNumberNearBackButton();
             normalizeCardNumberLabels();
         })();
     </script>
