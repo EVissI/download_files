@@ -5509,7 +5509,79 @@ export class ContentEditor {
     }
 
     renderCardPreviewSurface(payload) {
-        return renderCardPreviewSurfaceImpl(this, payload);
+        const out = renderCardPreviewSurfaceImpl(this, payload);
+        this.ensureCardPreviewBoardCollapseUi();
+        return out;
+    }
+
+    ensureCardPreviewBoardCollapseUi() {
+        const host = document.getElementById('cardPreviewFrameHost');
+        if (!host) return;
+        const overlay = host.querySelector('.card-preview-board-overlay');
+        if (!overlay) return;
+
+        const body = overlay.querySelector('.card-preview-board-body');
+        if (!body) return;
+
+        let collapsible = body.querySelector(':scope > .card-preview-board-collapsible');
+        if (!collapsible) {
+            collapsible = document.createElement('div');
+            collapsible.className = 'card-preview-board-collapsible';
+            const movingNodes = Array.from(
+                body.querySelectorAll(':scope > .card-preview-board-match-banner, :scope > .card-preview-board-canvas-wrap')
+            );
+            movingNodes.forEach((n) => collapsible.appendChild(n));
+            body.insertBefore(collapsible, body.firstChild || null);
+        }
+
+        let toggleRow = body.querySelector(':scope > .card-preview-board-toggle-row');
+        if (!toggleRow) {
+            toggleRow = document.createElement('div');
+            toggleRow.className = 'card-preview-board-toggle-row';
+            toggleRow.innerHTML = `
+                <button type="button" class="card-preview-board-toggle" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
+                    <span class="card-preview-board-toggle-icon" aria-hidden="true">
+                        <svg class="card-preview-board-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
+                        </svg>
+                    </span>
+                </button>
+            `;
+            body.appendChild(toggleRow);
+        }
+
+        let toggle = toggleRow.querySelector('.card-preview-board-toggle');
+        if (!toggle) return;
+
+        const collapsedInitial = !!this._cardPreviewBoardCollapsed;
+        overlay.classList.toggle('card-preview-board-overlay--collapsed', collapsedInitial);
+        toggle.setAttribute('aria-expanded', collapsedInitial ? 'false' : 'true');
+        if (toggle.dataset.ceBoardCollapseBound !== '1') {
+            // Удаляем внешние/дублирующие обработчики (в т.ч. из legacy feature-слоя),
+            // чтобы состояние не переключалось дважды за один клик.
+            const cleanToggle = toggle.cloneNode(true);
+            toggle.replaceWith(cleanToggle);
+            toggle = cleanToggle;
+        }
+        if (toggle.dataset.ceBoardCollapseBound === '1') return;
+        toggle.dataset.ceBoardCollapseBound = '1';
+        const onToggle = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const collapsedNow = !overlay.classList.contains('card-preview-board-overlay--collapsed');
+            overlay.classList.toggle('card-preview-board-overlay--collapsed', collapsedNow);
+            this._cardPreviewBoardCollapsed = collapsedNow;
+            toggle.setAttribute('aria-expanded', collapsedNow ? 'false' : 'true');
+            requestAnimationFrame(() => this.refreshCardPreviewScale());
+        };
+        toggle.addEventListener('click', onToggle);
+        toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                onToggle(e);
+            }
+        });
     }
 
     /**
