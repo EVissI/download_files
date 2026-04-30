@@ -68,7 +68,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
+    padding: 0px 20px;
     background: #2d2d2d;
     border-bottom: 1px solid #404040;
     color: #e0e0e0;
@@ -302,7 +302,7 @@
 
 .canvas {
     background: #ffffff;
-    margin: 20px;
+    margin: 3px;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     position: relative;
@@ -3069,7 +3069,6 @@ button.content-card-admin-info-file-link:hover {
     }
 
     .canvas {
-        margin: 10px;
         max-height: none;
     }
 
