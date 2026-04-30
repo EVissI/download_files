@@ -398,6 +398,21 @@
                 }
             }
 
+            function ensureNavArrowIcons() {
+                var prevBtn = document.getElementById('cardPreviewPrevBtn');
+                var nextBtn = document.getElementById('cardPreviewNextBtn');
+                if (prevBtn) {
+                    prevBtn.innerHTML = '<i class="fa fa-long-arrow-left" aria-hidden="true"></i>';
+                    if (!prevBtn.getAttribute('aria-label')) prevBtn.setAttribute('aria-label', 'Предыдущий кадр');
+                    if (!prevBtn.getAttribute('title')) prevBtn.setAttribute('title', 'Предыдущий кадр');
+                }
+                if (nextBtn) {
+                    nextBtn.innerHTML = '<i class="fa fa-long-arrow-right" aria-hidden="true"></i>';
+                    if (!nextBtn.getAttribute('aria-label')) nextBtn.setAttribute('aria-label', 'Следующий кадр');
+                    if (!nextBtn.getAttribute('title')) nextBtn.setAttribute('title', 'Следующий кадр');
+                }
+            }
+
             function ensureNavInFooterAndAdminButtons() {
                 var root = document.getElementById('contentCardViewRoot');
                 if (!root) return;
@@ -463,6 +478,7 @@
             var maxAttempts = 40;
             var timer = setInterval(function () {
                 ensureNavButtons();
+                ensureNavArrowIcons();
                 ensureNavInFooterAndAdminButtons();
                 ensureCardNumberNearBackButton();
                 normalizeCardNumberLabels();
@@ -472,6 +488,7 @@
                 }
             }, 250);
             ensureNavButtons();
+            ensureNavArrowIcons();
             ensureNavInFooterAndAdminButtons();
             ensureCardNumberNearBackButton();
             normalizeCardNumberLabels();
