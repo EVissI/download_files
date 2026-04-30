@@ -925,8 +925,52 @@ export class ContentEditor {
             this.cardPreviewModal = document.getElementById('contentCardViewRoot');
             this.cardLabelsModal = null;
             this.labelPresetsModal = null;
-            this.textStylePresetSaveModal = null;
-            this.textStylePresetManageModal = null;
+        }
+
+        if (!document.getElementById('textStylePresetSaveModal')) {
+            document.body.insertAdjacentHTML(
+                'beforeend',
+                `
+                <div id="textStylePresetSaveModal" class="text-style-preset-modal" style="display: none;" aria-hidden="true">
+                    <div class="card-labels-overlay" onclick="contentEditor.closeTextStylePresetSaveModal()"></div>
+                    <div class="card-labels-box text-style-preset-modal-box" role="dialog" aria-modal="true" aria-labelledby="textStylePresetSaveTitle">
+                        <h3 id="textStylePresetSaveTitle" class="card-labels-title">Сохранить пресет текста</h3>
+                        <div class="card-labels-input-row">
+                            <input type="text" id="textStylePresetNameInput" class="card-labels-input" maxlength="80" placeholder="Название пресета" autocomplete="off" />
+                        </div>
+                        <div class="card-labels-actions">
+                            <button type="button" class="card-labels-back-btn" onclick="contentEditor.closeTextStylePresetSaveModal()">Отмена</button>
+                            <button type="button" class="card-labels-save-btn" onclick="contentEditor.createTextStylePresetFromModal()">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="textStylePresetManageModal" class="text-style-preset-modal" style="display: none;" aria-hidden="true">
+                    <div class="card-labels-overlay" onclick="contentEditor.closeTextStylePresetManageModal()"></div>
+                    <div class="card-labels-box text-style-preset-modal-box" role="dialog" aria-modal="true" aria-labelledby="textStylePresetManageTitle">
+                        <div class="label-presets-modal-header">
+                            <h3 id="textStylePresetManageTitle" class="card-labels-title">Пресеты текста</h3>
+                            <button type="button" class="label-presets-modal-close" onclick="contentEditor.closeTextStylePresetManageModal()" aria-label="Закрыть">&times;</button>
+                        </div>
+                        <div id="textStylePresetManageList" class="text-style-presets-list" aria-live="polite"></div>
+                        <div class="card-labels-actions card-labels-actions--preset-footer">
+                            <button type="button" class="card-labels-save-btn" onclick="contentEditor.closeTextStylePresetManageModal()">Готово</button>
+                        </div>
+                    </div>
+                </div>
+            `
+            );
+        }
+        this.textStylePresetSaveModal = document.getElementById('textStylePresetSaveModal');
+        this.textStylePresetManageModal = document.getElementById('textStylePresetManageModal');
+        const textStylePresetNameInput = document.getElementById('textStylePresetNameInput');
+        if (textStylePresetNameInput && !textStylePresetNameInput.dataset.cePresetBound) {
+            textStylePresetNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.createTextStylePresetFromModal();
+                }
+            });
+            textStylePresetNameInput.dataset.cePresetBound = '1';
         }
 
         this.canvas = document.getElementById('canvas');
