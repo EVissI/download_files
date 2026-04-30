@@ -455,6 +455,58 @@
     min-height: 0;
 }
 
+/* Desktop: компактная панель свойств, 2 элемента в ряд */
+@media (min-width: 769px) {
+    .content-editor-body.desktop-merged-tools #propertiesContent {
+        padding: 10px 12px;
+    }
+
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 10px;
+        margin-bottom: 10px;
+    }
+
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-group h4 {
+        grid-column: 1 / -1;
+        margin-bottom: 2px;
+        font-size: 12px;
+    }
+
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item {
+        margin-bottom: 0;
+        min-width: 0;
+    }
+
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item label {
+        font-size: 11px;
+        margin-bottom: 4px;
+    }
+
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item input[type="number"],
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item input[type="color"],
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item input[type="range"],
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item input[type="url"],
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item select {
+        padding: 5px 7px;
+        font-size: 12px;
+    }
+
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item .property-value {
+        font-size: 11px;
+    }
+
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item:has(input[type="range"]),
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item:has(textarea),
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item:has(#propLinkUrl),
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item:has(.ce-link-url-hint),
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item:has(.ce-attach-file-editor-hint),
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item:has(.action-btn) {
+        grid-column: 1 / -1;
+    }
+}
+
 .properties-panel h3 {
     padding: 15px;
     background: #383838;
