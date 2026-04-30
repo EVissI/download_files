@@ -2819,6 +2819,58 @@ button.content-card-admin-info-file-link:hover {
         height: 150px;
     }
 
+    /* Компактная раскладка свойств: минимум 3 элемента в ряд */
+    #propertiesContent {
+        padding: 8px;
+    }
+
+    #propertiesContent .property-group {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    #propertiesContent .property-group h4 {
+        grid-column: 1 / -1;
+        margin-bottom: 2px;
+        font-size: 11px;
+    }
+
+    #propertiesContent .property-item {
+        margin-bottom: 0;
+        min-width: 0;
+    }
+
+    #propertiesContent .property-item label {
+        font-size: 10px;
+        margin-bottom: 3px;
+    }
+
+    #propertiesContent .property-item input[type="number"],
+    #propertiesContent .property-item input[type="color"],
+    #propertiesContent .property-item input[type="range"],
+    #propertiesContent .property-item input[type="url"],
+    #propertiesContent .property-item select {
+        padding: 4px 6px;
+        font-size: 11px;
+        min-height: 28px;
+    }
+
+    #propertiesContent .property-item .property-value {
+        font-size: 10px;
+    }
+
+    /* Широкие/сложные элементы оставляем на всю строку */
+    #propertiesContent .property-item:has(input[type="range"]),
+    #propertiesContent .property-item:has(textarea),
+    #propertiesContent .property-item:has(#propLinkUrl),
+    #propertiesContent .property-item:has(.ce-link-url-hint),
+    #propertiesContent .property-item:has(.ce-attach-file-editor-hint),
+    #propertiesContent .property-item:has(.action-btn) {
+        grid-column: 1 / -1;
+    }
+
     .workspace {
         flex: 1;
         /* На мобиле тоже оставляем независимую область с прокруткой */
