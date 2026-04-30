@@ -647,7 +647,6 @@ export class ContentEditor {
                                     <h3 class="properties-tools-title">Инструменты</h3>
                                 </div>
                                 <div id="propertiesContent">
-                                    <p>Выберите элемент для редактирования</p>
                                 </div>
                             </div>
                         </div>
@@ -929,8 +928,7 @@ export class ContentEditor {
     }
 
     getPropertiesEmptyStateHtml() {
-        return `<p>Выберите элемент для редактирования</p>
-            <div class="action-buttons action-buttons-col">${this.getPropertiesFrameActionsInnerHtml()}</div>`;
+        return `<div class="action-buttons action-buttons-col">${this.getPropertiesFrameActionsInnerHtml()}</div>`;
     }
 
     applyPropertiesEmptyState() {
