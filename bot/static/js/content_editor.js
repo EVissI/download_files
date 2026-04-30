@@ -628,7 +628,6 @@ export class ContentEditor {
                             </div>
                             <div class="editor-resizer editor-resizer-vertical" data-resize-target="toolbar"></div>
                             <div class="workspace">
-                                <div id="editorBoardDisplayHost" class="editor-board-display-host" hidden aria-hidden="true"></div>
                                 <div class="canvas" id="canvas">
                                     <!-- Здесь будут размещаться элементы -->
                                 </div>
@@ -869,17 +868,8 @@ export class ContentEditor {
         }
 
         this.canvas = document.getElementById('canvas');
-        this.editorBoardDisplayHost = document.getElementById('editorBoardDisplayHost');
-        if (!this.editorBoardDisplayHost) {
-            const workspace = this.modal ? this.modal.querySelector('.workspace') : null;
-            if (workspace) {
-                workspace.insertAdjacentHTML(
-                    'afterbegin',
-                    `<div id="editorBoardDisplayHost" class="editor-board-display-host" hidden aria-hidden="true"></div>`
-                );
-                this.editorBoardDisplayHost = document.getElementById('editorBoardDisplayHost');
-            }
-        }
+        this.editorBoardDisplayHost = null;
+        this.ensureEditorBoardDisplayHost();
         this.toolsList = document.getElementById('toolsList');
         this.propertiesContent = document.getElementById('propertiesContent');
 
@@ -2823,6 +2813,24 @@ export class ContentEditor {
         }
     }
 
+    ensureEditorBoardDisplayHost() {
+        if (!this.canvas) return null;
+        const existingById = document.getElementById('editorBoardDisplayHost');
+        if (existingById && existingById.parentElement !== this.canvas) {
+            existingById.remove();
+        }
+        let host = this.canvas.querySelector('#editorBoardDisplayHost');
+        if (!host) {
+            this.canvas.insertAdjacentHTML(
+                'afterbegin',
+                `<div id="editorBoardDisplayHost" class="editor-board-display-host" hidden aria-hidden="true"></div>`
+            );
+            host = this.canvas.querySelector('#editorBoardDisplayHost');
+        }
+        this.editorBoardDisplayHost = host;
+        return host;
+    }
+
     getEditorBoardSnapshotForDisplay() {
         let snapshot = null;
         if (typeof window !== 'undefined' && typeof window.getHintViewerBoardSnapshot === 'function') {
@@ -2845,7 +2853,7 @@ export class ContentEditor {
     }
 
     clearEditorBoardDisplay() {
-        const host = this.editorBoardDisplayHost || document.getElementById('editorBoardDisplayHost');
+        const host = this.ensureEditorBoardDisplayHost();
         if (!host) return;
         host.innerHTML = '';
         host.classList.remove('is-visible');
@@ -2854,7 +2862,7 @@ export class ContentEditor {
     }
 
     renderEditorBoardDisplay() {
-        const host = this.editorBoardDisplayHost || document.getElementById('editorBoardDisplayHost');
+        const host = this.ensureEditorBoardDisplayHost();
         if (!host) return;
         const boardEnabled = !!this.toggleStates['boardCanvas'];
         if (!boardEnabled) {

@@ -318,10 +318,18 @@
 
 /* Read-only доска в редакторе (аналог рендера предпросмотра, но отдельный слой). */
 .editor-board-display-host {
-    flex: 0 0 auto;
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    width: 100%;
     display: none;
-    padding: 12px 20px 0;
+    padding: 0;
     box-sizing: border-box;
+    pointer-events: none;
+}
+
+.editor-board-display-host * {
+    pointer-events: none;
 }
 
 .editor-board-display-host.is-visible {
