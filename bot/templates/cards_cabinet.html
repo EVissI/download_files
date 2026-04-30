@@ -46,6 +46,7 @@
         .cabinet-id-toggle-btn,
         .cabinet-mode-btn,
         .cabinet-send-btn,
+        .cabinet-link-btn,
         .cabinet-admin-btn {
             width: 28px;
             height: 28px;
@@ -66,6 +67,7 @@
         .cabinet-id-toggle-btn:active,
         .cabinet-mode-btn:active,
         .cabinet-send-btn:active,
+        .cabinet-link-btn:active,
         .cabinet-admin-btn:active {
             background: #3a3a3a;
         }
@@ -83,11 +85,13 @@
         }
         .cabinet-mode-btn,
         .cabinet-send-btn,
+        .cabinet-link-btn,
         .cabinet-admin-btn {
             display: none;
         }
         .cabinet-mode-btn,
-        .cabinet-send-btn {
+        .cabinet-send-btn,
+        .cabinet-link-btn {
             width: auto;
             min-width: 88px;
             padding: 0 10px;
@@ -95,6 +99,7 @@
         }
         .cabinet-mode-btn.is-visible,
         .cabinet-send-btn.is-visible,
+        .cabinet-link-btn.is-visible,
         .cabinet-admin-btn.is-visible {
             display: inline-flex;
         }
@@ -104,6 +109,10 @@
             color: #fff;
         }
         .cabinet-send-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+        .cabinet-link-btn:disabled {
             opacity: 0.45;
             cursor: not-allowed;
         }
@@ -127,10 +136,74 @@
         }
         .cabinet-footer .cabinet-id-toggle-btn,
         .cabinet-footer .cabinet-mode-btn,
-        .cabinet-footer .cabinet-send-btn {
+        .cabinet-footer .cabinet-send-btn,
+        .cabinet-footer .cabinet-link-btn {
             flex: 1 1 0;
             min-width: 0;
             justify-content: center;
+        }
+        .link-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 220000;
+        }
+        .link-modal.is-open {
+            display: flex;
+        }
+        .link-modal__overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        .link-modal__box {
+            position: relative;
+            width: min(92vw, 430px);
+            background: #20242b;
+            border: 1px solid #3e4552;
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+        }
+        .link-modal__title {
+            margin: 0 0 10px;
+            font-size: 1rem;
+        }
+        .link-modal__input {
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 10px;
+            border: 1px solid #4a5362;
+            background: #161b22;
+            color: #e8edf5;
+            padding: 10px 12px;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .link-modal__msg {
+            min-height: 18px;
+            margin: 0;
+            font-size: 12px;
+            color: #9fb2c9;
+        }
+        .link-modal__actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .link-modal__btn {
+            border: 1px solid #4b5565;
+            border-radius: 9px;
+            background: #2f3742;
+            color: #ecf2ff;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .link-modal__btn:active {
+            background: #394455;
         }
         .cabinet-footer .cabinet-quick-select-input {
             display: none;
@@ -688,9 +761,22 @@
             <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">ID</button>
             <input id="quick-select-input" class="cabinet-quick-select-input" type="text" inputmode="text" placeholder="11,22,25-30" title="Быстрое выделение: 11,22,25-30" autocomplete="off">
             <button id="select-mode-btn" class="cabinet-mode-btn" type="button" title="Режим выделения карточек" aria-label="Режим выделения карточек">Выделение</button>
+            <button id="generate-link-btn" class="cabinet-link-btn" type="button" title="Получить одноразовую ссылку" aria-label="Получить одноразовую ссылку" disabled>Ссылка</button>
             <button id="send-selected-btn" class="cabinet-send-btn" type="button" title="Отправить выбранные карточки" aria-label="Отправить выбранные карточки" disabled>Отправить</button>
         </div>
     </footer>
+    <div id="generateLinkModal" class="link-modal" aria-hidden="true">
+        <div id="generateLinkModalOverlay" class="link-modal__overlay"></div>
+        <div class="link-modal__box" role="dialog" aria-modal="true" aria-labelledby="generateLinkModalTitle">
+            <h3 id="generateLinkModalTitle" class="link-modal__title">Одноразовая ссылка</h3>
+            <input id="generateLinkModalInput" class="link-modal__input" type="text" readonly>
+            <p id="generateLinkModalMsg" class="link-modal__msg"></p>
+            <div class="link-modal__actions">
+                <button id="generateLinkModalCloseBtn" type="button" class="link-modal__btn">Закрыть</button>
+                <button id="generateLinkModalCopyBtn" type="button" class="link-modal__btn">Скопировать</button>
+            </div>
+        </div>
+    </div>
     <div id="shuffleModal" class="shuffle-modal" aria-hidden="true">
         <div class="shuffle-modal__overlay" id="shuffleModalOverlay"></div>
         <div class="shuffle-modal__box" role="dialog" aria-modal="true" aria-labelledby="shuffleModalTitle">
@@ -740,6 +826,7 @@
             var adminFabBtn = document.getElementById('admin-fab-btn');
             var quickSelectInput = document.getElementById('quick-select-input');
             var selectModeBtn = document.getElementById('select-mode-btn');
+            var generateLinkBtn = document.getElementById('generate-link-btn');
             var sendSelectedBtn = document.getElementById('send-selected-btn');
             var shuffleCardsBtn = document.getElementById('shuffle-cards-btn');
             var idToggleBtn = document.getElementById('id-toggle-btn');
@@ -762,6 +849,12 @@
             var assignAlreadyHaveModalText = document.getElementById('assignAlreadyHaveModalText');
             var assignAlreadyHaveCancelBtn = document.getElementById('assignAlreadyHaveCancelBtn');
             var assignAlreadyHaveContinueBtn = document.getElementById('assignAlreadyHaveContinueBtn');
+            var generateLinkModal = document.getElementById('generateLinkModal');
+            var generateLinkModalOverlay = document.getElementById('generateLinkModalOverlay');
+            var generateLinkModalInput = document.getElementById('generateLinkModalInput');
+            var generateLinkModalMsg = document.getElementById('generateLinkModalMsg');
+            var generateLinkModalCloseBtn = document.getElementById('generateLinkModalCloseBtn');
+            var generateLinkModalCopyBtn = document.getElementById('generateLinkModalCopyBtn');
             var allCards = [];
             var shuffledCards = null;
             var isRootAdminUser = false;
@@ -777,6 +870,7 @@
             var cabinetStateKey = 'cards_cabinet_state_v1';
             var pendingLabelFilterValue = '';
             var quickSelectionInvalid = false;
+            var generatedActivationLink = '';
 
             function showErr(msg) {
                 errEl.textContent = msg;
@@ -1143,9 +1237,73 @@
                     selectModeBtn.textContent = isSelectionMode ? 'Обычный режим' : 'Выделение';
                     selectModeBtn.classList.toggle('is-active', isSelectionMode);
                 }
+                var canUseSelectionAction = (isSelectionMode || quickReady) && selectedCount > 0;
                 if (sendSelectedBtn) {
-                    sendSelectedBtn.disabled = (!isSelectionMode && !quickReady) || selectedCount < 1;
+                    sendSelectedBtn.disabled = !canUseSelectionAction;
                 }
+                if (generateLinkBtn) {
+                    generateLinkBtn.disabled = !canUseSelectionAction;
+                }
+            }
+
+            function setGenerateLinkModalMsg(msg) {
+                if (!generateLinkModalMsg) return;
+                generateLinkModalMsg.textContent = String(msg || '');
+            }
+
+            function closeGenerateLinkModal() {
+                if (!generateLinkModal) return;
+                generateLinkModal.classList.remove('is-open');
+                generateLinkModal.setAttribute('aria-hidden', 'true');
+                setGenerateLinkModalMsg('');
+            }
+
+            function openGenerateLinkModal(link) {
+                if (!generateLinkModal || !generateLinkModalInput) return;
+                generatedActivationLink = String(link || '');
+                generateLinkModalInput.value = generatedActivationLink;
+                setGenerateLinkModalMsg('');
+                generateLinkModal.classList.add('is-open');
+                generateLinkModal.setAttribute('aria-hidden', 'false');
+                generateLinkModalInput.focus();
+                generateLinkModalInput.select();
+            }
+
+            function copyGeneratedLinkToClipboard() {
+                if (!generatedActivationLink) {
+                    setGenerateLinkModalMsg('Ссылка еще не сгенерирована.');
+                    return;
+                }
+                var writePromise = null;
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    writePromise = navigator.clipboard.writeText(generatedActivationLink);
+                } else {
+                    writePromise = new Promise(function (resolve, reject) {
+                        try {
+                            if (!generateLinkModalInput) {
+                                reject(new Error('Поле ссылки недоступно.'));
+                                return;
+                            }
+                            generateLinkModalInput.focus();
+                            generateLinkModalInput.select();
+                            var ok = document.execCommand('copy');
+                            if (!ok) {
+                                reject(new Error('Не удалось скопировать ссылку.'));
+                                return;
+                            }
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                }
+                writePromise
+                    .then(function () {
+                        setGenerateLinkModalMsg('Ссылка скопирована.');
+                    })
+                    .catch(function () {
+                        setGenerateLinkModalMsg('Не удалось скопировать автоматически. Скопируйте вручную.');
+                    });
             }
 
             function clearSelection() {
@@ -1300,6 +1458,49 @@
                 loadAssignUsers().catch(function (e) {
                     setAssignModalMsg(e && e.message ? e.message : 'Ошибка загрузки списка пользователей');
                 });
+            }
+
+            function requestActivationLink() {
+                if (!isRootAdminUser || !generateLinkBtn) return;
+                var selectedCards = getSelectedCardsInCabinetOrder();
+                var selectedIds = selectedCards.map(function (row) { return row.id; });
+                if (!selectedIds.length) {
+                    return;
+                }
+
+                generateLinkBtn.disabled = true;
+                fetch('/api/content_cards/generate_link', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(
+                        authPayload({
+                            content_card_ids: selectedIds,
+                        })
+                    ),
+                })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error(j.detail || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Не удалось сгенерировать ссылку');
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        var link = String((data && data.link) || '').trim();
+                        if (!link) {
+                            throw new Error('Сервер не вернул ссылку');
+                        }
+                        openGenerateLinkModal(link);
+                    })
+                    .catch(function (e) {
+                        window.alert(e && e.message ? e.message : 'Ошибка генерации ссылки');
+                    })
+                    .finally(function () {
+                        updateSelectionUi();
+                    });
             }
 
             function submitSelectedCardsToUser() {
@@ -1664,6 +1865,9 @@
             if (sendSelectedBtn) {
                 sendSelectedBtn.addEventListener('click', openAssignModal);
             }
+            if (generateLinkBtn) {
+                generateLinkBtn.addEventListener('click', requestActivationLink);
+            }
             if (quickSelectInput) {
                 quickSelectInput.addEventListener('input', applyQuickSelectionFromInput);
             }
@@ -1694,6 +1898,15 @@
                     closeAlreadyHaveModal(true);
                 });
             }
+            if (generateLinkModalOverlay) {
+                generateLinkModalOverlay.addEventListener('click', closeGenerateLinkModal);
+            }
+            if (generateLinkModalCloseBtn) {
+                generateLinkModalCloseBtn.addEventListener('click', closeGenerateLinkModal);
+            }
+            if (generateLinkModalCopyBtn) {
+                generateLinkModalCopyBtn.addEventListener('click', copyGeneratedLinkToClipboard);
+            }
             updateSelectionUi();
 
             fetch('/api/content_cards/my_list', {
@@ -1721,6 +1934,9 @@
                     }
                     if (isRootAdminUser && sendSelectedBtn) {
                         sendSelectedBtn.classList.add('is-visible');
+                    }
+                    if (isRootAdminUser && generateLinkBtn) {
+                        generateLinkBtn.classList.add('is-visible');
                     }
                     if (isRootAdminUser && quickSelectInput) {
                         quickSelectInput.classList.add('is-visible');

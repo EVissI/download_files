@@ -1,11 +1,14 @@
 from loguru import logger
 import pytz
 import codecs
+import secrets
 from bot.db.base import BaseDAO
 from bot.db.models import (
     Broadcast,
     BroadcastStatus,
     BroadcastUser,
+    ContentCardActivationLink,
+    ContentCardActivationLinkStatus,
     ContentCard,
     MessagesTexts,
     ServiceType,
@@ -1207,6 +1210,118 @@ class UserContentCardDAO(BaseDAO[UserContentCard]):
                 f"content_card_id={content_card_id}: {e}"
             )
             raise
+
+
+class ContentCardActivationLinkDAO(BaseDAO[ContentCardActivationLink]):
+    model = ContentCardActivationLink
+
+    @staticmethod
+    def _normalize_card_ids(card_ids: list[int] | None) -> list[int]:
+        seen: set[int] = set()
+        normalized: list[int] = []
+        for raw_id in card_ids or []:
+            try:
+                card_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if card_id < 1 or card_id in seen:
+                continue
+            seen.add(card_id)
+            normalized.append(card_id)
+        return normalized
+
+    async def create_link(self, card_ids: list[int]) -> ContentCardActivationLink:
+        normalized_card_ids = self._normalize_card_ids(card_ids)
+        if not normalized_card_ids:
+            raise ValueError("Нужно передать хотя бы один корректный content_card_id")
+
+        activation_link = ContentCardActivationLink(
+            link=secrets.token_urlsafe(24),
+            status=ContentCardActivationLinkStatus.UNACTIVATE,
+            card_ids=normalized_card_ids,
+        )
+        self._session.add(activation_link)
+        await self._session.flush()
+        return activation_link
+
+    async def find_one_by_link(self, link_value: str) -> ContentCardActivationLink | None:
+        query = (
+            select(self.model)
+            .where(self.model.link == str(link_value or "").strip())
+            .limit(1)
+        )
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def activate_link_and_issue_cards(
+        self, link_value: str, user_id: int
+    ) -> dict[str, int | str]:
+        cleaned_link = str(link_value or "").strip()
+        if not cleaned_link:
+            return {"ok": 0, "reason": "invalid_link"}
+
+        link_query = (
+            select(self.model)
+            .where(self.model.link == cleaned_link)
+            .with_for_update()
+            .limit(1)
+        )
+        link_result = await self._session.execute(link_query)
+        activation_link = link_result.scalar_one_or_none()
+        if not activation_link:
+            return {"ok": 0, "reason": "not_found"}
+
+        if activation_link.status == ContentCardActivationLinkStatus.ACTIVATE:
+            return {"ok": 0, "reason": "already_activated"}
+
+        user = await self._session.get(User, user_id)
+        if not user:
+            return {"ok": 0, "reason": "user_not_found"}
+
+        requested_card_ids = self._normalize_card_ids(activation_link.card_ids)
+        if not requested_card_ids:
+            return {"ok": 0, "reason": "no_cards"}
+
+        existing_cards_result = await self._session.execute(
+            select(ContentCard.id).where(ContentCard.id.in_(requested_card_ids))
+        )
+        existing_card_ids = {
+            int(card_id)
+            for card_id in existing_cards_result.scalars().all()
+            if card_id is not None
+        }
+        valid_card_ids = [card_id for card_id in requested_card_ids if card_id in existing_card_ids]
+        if not valid_card_ids:
+            return {"ok": 0, "reason": "cards_not_found"}
+
+        existing_user_links_result = await self._session.execute(
+            select(UserContentCard.content_card_id).where(
+                UserContentCard.user_id == user_id,
+                UserContentCard.content_card_id.in_(valid_card_ids),
+            )
+        )
+        already_has_ids = {
+            int(card_id)
+            for card_id in existing_user_links_result.scalars().all()
+            if card_id is not None
+        }
+        to_issue_ids = [card_id for card_id in valid_card_ids if card_id not in already_has_ids]
+        for card_id in to_issue_ids:
+            self._session.add(UserContentCard(user_id=user_id, content_card_id=card_id))
+
+        activation_link.status = ContentCardActivationLinkStatus.ACTIVATE
+        activation_link.activated_by_user_id = user_id
+        activation_link.activated_at = datetime.now(timezone.utc)
+
+        await self._session.flush()
+        return {
+            "ok": 1,
+            "reason": "ok",
+            "issued_count": len(to_issue_ids),
+            "already_had_count": len(already_has_ids),
+            "total_count": len(valid_card_ids),
+            "link_id": int(activation_link.id),
+        }
 
 
 class UserAnalizePaymentDAO(BaseDAO[UserAnalizePayment]):

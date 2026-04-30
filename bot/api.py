@@ -28,6 +28,7 @@ from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.func.pokaz_func import get_hints_for_xgid
 from bot.db.database import async_session_maker
 from bot.db.dao import (
+    ContentCardActivationLinkDAO,
     UserDAO,
     MessagesTextsDAO,
     ContentCardDAO,
@@ -676,6 +677,14 @@ class ContentCardAssignToUserBody(BaseModel):
     content_card_ids: list[int] = Field(..., min_length=1, max_length=3000)
 
 
+class ContentCardGenerateLinkBody(BaseModel):
+    """Генерация одноразовой deep-link для активации карточек (только ROOT_ADMIN_IDS)."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    content_card_ids: list[int] = Field(..., min_length=1, max_length=3000)
+
+
 class LabelPresetCreateBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
@@ -802,6 +811,17 @@ async def _issue_fab_cards_auth_token(user_id: int) -> str:
     fab_token = secrets.token_urlsafe(24)
     await redis_client.set(f"fab_cards_auth:{fab_token}", str(user_id), expire=7200)
     return fab_token
+
+
+async def _build_start_link_for_cards_activation(link_token: str) -> str:
+    me = await bot.get_me()
+    if not me.username:
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось определить username бота для генерации ссылки",
+        )
+    payload = f"cardlink_{link_token}"
+    return f"https://t.me/{me.username}?start={payload}"
 
 
 @app.get("/admin/cards-cabinet")
@@ -1226,6 +1246,60 @@ async def content_cards_assign_to_user(body: ContentCardAssignToUserBody):
         "invalid_count": invalid_count,
         "notify_sent": notify_sent,
         "notify_error": notify_error,
+    }
+
+
+@app.post("/api/content_cards/generate_link")
+async def content_cards_generate_link(body: ContentCardGenerateLinkBody):
+    """Создать одноразовую deep-link для активации выбранных карточек."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    card_ids_ordered_unique: list[int] = []
+    seen_ids: set[int] = set()
+    for raw_id in body.content_card_ids:
+        try:
+            card_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if card_id < 1 or card_id in seen_ids:
+            continue
+        seen_ids.add(card_id)
+        card_ids_ordered_unique.append(card_id)
+    if not card_ids_ordered_unique:
+        raise HTTPException(
+            status_code=400,
+            detail="Нужно передать хотя бы один корректный content_card_id",
+        )
+
+    async with async_session_maker() as session:
+        existing_cards_result = await session.execute(
+            select(ContentCard.id).where(ContentCard.id.in_(card_ids_ordered_unique))
+        )
+        existing_card_ids = {
+            int(card_id)
+            for card_id in existing_cards_result.scalars().all()
+            if card_id is not None
+        }
+        selected_existing_ids = [
+            card_id for card_id in card_ids_ordered_unique if card_id in existing_card_ids
+        ]
+        if not selected_existing_ids:
+            raise HTTPException(status_code=404, detail="Выбранные карточки не найдены")
+
+        link_dao = ContentCardActivationLinkDAO(session)
+        try:
+            activation_link = await link_dao.create_link(selected_existing_ids)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        await session.commit()
+
+    start_link = await _build_start_link_for_cards_activation(activation_link.link)
+    return {
+        "ok": True,
+        "link": start_link,
+        "token": activation_link.link,
+        "cards_count": len(selected_existing_ids),
     }
 
 

@@ -688,6 +688,33 @@ class UserContentCardStatus(str, enum.Enum):
     HARD = "HARD"
 
 
+class ContentCardActivationLinkStatus(str, enum.Enum):
+    UNACTIVATE = "unactivate"
+    ACTIVATE = "activate"
+
+
+class ContentCardActivationLink(Base):
+    __tablename__ = "content_card_activation_links"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    link: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    status: Mapped["ContentCardActivationLinkStatus"] = mapped_column(
+        Enum(ContentCardActivationLinkStatus, name="contentcardlinkstatus"),
+        nullable=False,
+        default=ContentCardActivationLinkStatus.UNACTIVATE,
+        server_default=ContentCardActivationLinkStatus.UNACTIVATE.value,
+    )
+    card_ids: Mapped[list[int]] = mapped_column(JSONB, nullable=False)
+    activated_by_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    activated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    activated_by_user: Mapped[Optional["User"]] = relationship("User")
+
+
 class UserContentCard(Base):
     """Связь пользователь ↔ карточка (many-to-many), по аналогии с UserPromocode."""
 
