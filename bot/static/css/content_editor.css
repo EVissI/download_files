@@ -1909,14 +1909,13 @@ button.content-card-admin-info-file-link:hover {
     background: inherit;
     pointer-events: none;
     position: sticky;
+    padding-bottom: 16px;
 }
 
 .card-preview-board-body {
     width: min(100%, calc(360px + 10vw));
     max-width: 800px;
     margin: 0 auto;
-    position: relative;
-    padding-bottom: 16px;
     pointer-events: none;
     overflow: hidden;
     max-height: 960px;
