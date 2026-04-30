@@ -914,7 +914,10 @@ export class ContentEditor {
             dock.hidden = true;
             if (toolsToolbar) {
                 if (this.propertiesContent && this.propertiesContent.parentElement !== toolsToolbar) {
-                    toolsToolbar.insertBefore(this.propertiesContent, this.toolsList || null);
+                    const mobileToolsAnchor = (this.toolsList && this.toolsList.parentElement === toolsToolbar)
+                        ? this.toolsList
+                        : null;
+                    toolsToolbar.insertBefore(this.propertiesContent, mobileToolsAnchor);
                 }
                 if (this.toolsList.parentElement !== toolsToolbar) {
                     toolsToolbar.appendChild(this.toolsList);
