@@ -5982,7 +5982,34 @@ export class ContentEditor {
         this.selectedElement.style.padding = normalized.padding;
         this.selectedElement.style.backgroundColor = normalized.backgroundColor;
         this.autoGrowTextElementContainer(this.selectedElement);
-        this.showElementProperties(this.selectedElement);
+        const fontSizeSelect = document.getElementById('propFontSize');
+        const textColorInput = document.getElementById('propTextColor');
+        const textAlignSelect = document.getElementById('propTextAlign');
+        const lineHeightSelect = document.getElementById('propLineHeight');
+        const paddingSelect = document.getElementById('propPadding');
+        const bgColorInput = document.getElementById('propBgColor');
+        const fontSizeDisplay = document.querySelector('#propFontSize + .property-value');
+        if (fontSizeSelect) {
+            fontSizeSelect.value = String(parseInt(normalized.fontSize, 10) || 16);
+        }
+        if (fontSizeDisplay) {
+            fontSizeDisplay.textContent = normalized.fontSize;
+        }
+        if (textColorInput) {
+            textColorInput.value = normalized.textColor;
+        }
+        if (textAlignSelect) {
+            textAlignSelect.value = normalized.textAlign;
+        }
+        if (lineHeightSelect) {
+            lineHeightSelect.value = String(parseInt(normalized.lineHeight, 10) || 20);
+        }
+        if (paddingSelect) {
+            paddingSelect.value = String(parseInt(normalized.padding, 10) || 8);
+        }
+        if (bgColorInput) {
+            bgColorInput.value = this.normalizeBackgroundColorForInput(normalized.backgroundColor);
+        }
         return true;
     }
 
