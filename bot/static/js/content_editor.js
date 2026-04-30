@@ -65,6 +65,7 @@ export class ContentEditor {
         this.propertiesContent = null;
         this.propertiesToolsDock = null;
         this.toolsListOriginalParent = null;
+        this.propertiesContentOriginalParent = null;
         this.selectedElement = null;
         this.elements = [];
         this.elementIdCounter = 0;
@@ -886,6 +887,9 @@ export class ContentEditor {
         if (!this.toolsListOriginalParent && this.toolsList) {
             this.toolsListOriginalParent = this.toolsList.parentElement;
         }
+        if (!this.propertiesContentOriginalParent && this.propertiesContent) {
+            this.propertiesContentOriginalParent = this.propertiesContent.parentElement;
+        }
 
         // Дополнительные ссылки на панели для ресайза
         this.toolbarPanel = this.modal.querySelector('.toolbar');
@@ -901,15 +905,28 @@ export class ContentEditor {
         if (!this.modal || !this.toolsList) return;
         const body = this.modal.querySelector('.content-editor-body');
         const dock = this.propertiesToolsDock || document.getElementById('propertiesToolsDock');
+        const toolsToolbar = this.modal.querySelector('.toolbar.toolbar-tools');
         if (!body || !dock) return;
         const mobile = this.isMobile();
         if (mobile) {
             body.classList.remove('desktop-merged-tools');
+            body.classList.add('mobile-merged-properties');
             dock.hidden = true;
-            if (this.toolsListOriginalParent && this.toolsList.parentElement !== this.toolsListOriginalParent) {
+            if (toolsToolbar) {
+                if (this.propertiesContent && this.propertiesContent.parentElement !== toolsToolbar) {
+                    toolsToolbar.insertBefore(this.propertiesContent, this.toolsList || null);
+                }
+                if (this.toolsList.parentElement !== toolsToolbar) {
+                    toolsToolbar.appendChild(this.toolsList);
+                }
+            } else if (this.toolsListOriginalParent && this.toolsList.parentElement !== this.toolsListOriginalParent) {
                 this.toolsListOriginalParent.appendChild(this.toolsList);
             }
             return;
+        }
+        body.classList.remove('mobile-merged-properties');
+        if (this.propertiesContentOriginalParent && this.propertiesContent && this.propertiesContent.parentElement !== this.propertiesContentOriginalParent) {
+            this.propertiesContentOriginalParent.appendChild(this.propertiesContent);
         }
         body.classList.add('desktop-merged-tools');
         dock.hidden = false;
