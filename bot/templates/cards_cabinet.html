@@ -760,7 +760,7 @@
         <div class="cabinet-footer__inner">
             <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">ID</button>
             <input id="quick-select-input" class="cabinet-quick-select-input" type="text" inputmode="text" placeholder="11,22,25-30" title="Быстрое выделение: 11,22,25-30" autocomplete="off">
-            <button id="select-mode-btn" class="cabinet-mode-btn" type="button" title="Режим выделения карточек" aria-label="Режим выделения карточек">Выделение</button>
+            <button id="select-mode-btn" class="cabinet-mode-btn" type="button" title="Режим выделения карточек" aria-label="Режим выделения карточек">Обычный режим</button>
             <button id="generate-link-btn" class="cabinet-link-btn" type="button" title="Получить одноразовую ссылку" aria-label="Получить одноразовую ссылку" disabled>Ссылка</button>
             <button id="send-selected-btn" class="cabinet-send-btn" type="button" title="Отправить выбранные карточки" aria-label="Отправить выбранные карточки" disabled>Отправить</button>
         </div>
@@ -1234,7 +1234,7 @@
                 var hasQuickInput = !!(quickSelectInput && String(quickSelectInput.value || '').trim());
                 var quickReady = hasQuickInput && !quickSelectionInvalid && selectedCount > 0;
                 if (selectModeBtn) {
-                    selectModeBtn.textContent = isSelectionMode ? 'Обычный режим' : 'Выделение';
+                    selectModeBtn.textContent = isSelectionMode ? 'Выделение' : 'Обычный режим';
                     selectModeBtn.classList.toggle('is-active', isSelectionMode);
                 }
                 var canUseSelectionAction = (isSelectionMode || quickReady) && selectedCount > 0;
