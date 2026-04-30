@@ -1416,6 +1416,10 @@ export class ContentEditor {
             }
             tableEl.classList.toggle('editor-table--collapsed');
             syncA11y();
+            requestAnimationFrame(() => this.recalculateAllElementPositions());
+            setTimeout(() => {
+                this.recalculateAllElementPositions();
+            }, 420);
         };
 
         toggle.addEventListener('click', onToggle);
