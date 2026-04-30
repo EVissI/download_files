@@ -4093,6 +4093,13 @@ export class ContentEditor {
                 } else {
                     textEl.style.fontSize = value;
                 }
+                const fontSizeSelect = document.getElementById('propFontSize');
+                if (fontSizeSelect) {
+                    const n = parseInt(String(value), 10);
+                    if (Number.isFinite(n)) {
+                        fontSizeSelect.value = String(n);
+                    }
+                }
                 const fontSizeDisplay = document.querySelector('#propFontSize + .property-value');
                 if (fontSizeDisplay) fontSizeDisplay.textContent = value;
                 this.autoGrowTextElementContainer(this.selectedElement);
