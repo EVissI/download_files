@@ -425,12 +425,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transform: rotate(180deg);
+    transform: rotate(0deg);
     transition: transform 0.25s ease;
 }
 
 .editor-board-display.editor-board-display--collapsed .editor-board-toggle-icon {
-    transform: rotate(0deg);
+    transform: rotate(180deg);
 }
 
 .editor-board-caret-svg {
@@ -2027,12 +2027,12 @@ button.content-card-admin-info-file-link:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transform: rotate(180deg);
+    transform: rotate(0deg);
     transition: transform 0.25s ease;
 }
 
 .card-preview-board-overlay.card-preview-board-overlay--collapsed .card-preview-board-toggle-icon {
-    transform: rotate(0deg);
+    transform: rotate(180deg);
 }
 
 .card-preview-board-caret-svg {
