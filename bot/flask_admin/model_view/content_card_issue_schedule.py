@@ -5,7 +5,14 @@ from flask_appbuilder import ModelView
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
 from loguru import logger
-from wtforms import BooleanField, IntegerField, SelectMultipleField, StringField, widgets
+from wtforms import (
+    BooleanField,
+    IntegerField,
+    SelectMultipleField,
+    StringField,
+    ValidationError,
+    widgets,
+)
 from wtforms.validators import DataRequired, NumberRange, Regexp
 
 from bot.common.tasks.card_issue_schedule import run_content_card_issue_schedule
@@ -28,6 +35,12 @@ WEEKDAY_ORDER = {day: idx for idx, (day, _title) in enumerate(WEEKDAY_CHOICES)}
 class MultiCheckboxField(SelectMultipleField):
     widget = widgets.ListWidget(prefix_label=False)
     option_widget = widgets.CheckboxInput()
+
+
+def validate_at_least_one_weekday(_form, field):
+    values = field.data or []
+    if not any(str(value or "").strip() for value in values):
+        raise ValidationError(_("Выберите хотя бы один день недели."))
 
 
 class ContentCardIssueScheduleModelView(ModelView):
@@ -101,7 +114,7 @@ class ContentCardIssueScheduleModelView(ModelView):
         "weekdays": MultiCheckboxField(
             _("Дни недели"),
             choices=WEEKDAY_CHOICES,
-            validators=[DataRequired()],
+            validators=[validate_at_least_one_weekday],
         ),
         "issue_time_msk": StringField(
             _("Время (МСК)"),
