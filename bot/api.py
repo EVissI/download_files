@@ -1292,13 +1292,14 @@ async def content_cards_generate_link(body: ContentCardGenerateLinkBody):
             activation_link = await link_dao.create_link(selected_existing_ids)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
+        link_token = str(activation_link.link)
         await session.commit()
 
-    start_link = await _build_start_link_for_cards_activation(activation_link.link)
+    start_link = await _build_start_link_for_cards_activation(link_token)
     return {
         "ok": True,
         "link": start_link,
-        "token": activation_link.link,
+        "token": link_token,
         "cards_count": len(selected_existing_ids),
     }
 
