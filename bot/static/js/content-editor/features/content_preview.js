@@ -391,7 +391,7 @@ export function formatBoardMatchBannerTextImpl(_editor, snapshot) {
 }
 
 export function setupCardPreviewTableCollapseImpl(editor, tableEl) {
-    if (!tableEl || !tableEl.classList.contains('table-element')) return;
+    if (!tableEl || !tableEl.classList.contains('card-preview-canvas-clone')) return;
     if (tableEl.querySelector(':scope > .card-preview-table-toggle')) return;
     const kids = Array.from(tableEl.children);
     if (!kids.length) return;
