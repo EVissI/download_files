@@ -1064,9 +1064,20 @@
     </div>
 
     <script>
-        if (window.Telegram) {
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand();
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            try {
+                const canFullscreen =
+                    typeof tg.requestFullscreen === 'function' &&
+                    (typeof tg.isVersionAtLeast !== 'function' || tg.isVersionAtLeast('8.0'));
+                if (canFullscreen && !tg.isFullscreen) {
+                    tg.requestFullscreen();
+                }
+            } catch (e) {
+                console.warn('requestFullscreen(hint_viewer) failed:', e);
+            }
         }
 
         let data = [];

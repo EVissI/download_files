@@ -84,8 +84,19 @@
                     return;
                 }
 
-                Telegram.WebApp.ready();
-                Telegram.WebApp.expand();
+                const tg = Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+                try {
+                    const canFullscreen =
+                        typeof tg.requestFullscreen === 'function' &&
+                        (typeof tg.isVersionAtLeast !== 'function' || tg.isVersionAtLeast('8.0'));
+                    if (canFullscreen && !tg.isFullscreen) {
+                        tg.requestFullscreen();
+                    }
+                } catch (e) {
+                    console.warn('requestFullscreen(admin_login) failed:', e);
+                }
 
                 const info = updateDebug();
 

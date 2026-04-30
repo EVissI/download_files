@@ -804,8 +804,19 @@
     <script>
         (function () {
             if (window.Telegram && window.Telegram.WebApp) {
-                Telegram.WebApp.ready();
-                Telegram.WebApp.expand();
+                var tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+                try {
+                    var canFullscreen =
+                        typeof tg.requestFullscreen === 'function' &&
+                        (typeof tg.isVersionAtLeast !== 'function' || tg.isVersionAtLeast('8.0'));
+                    if (canFullscreen && !tg.isFullscreen) {
+                        tg.requestFullscreen();
+                    }
+                } catch (fsErr) {
+                    console.warn('requestFullscreen(cards_cabinet) failed:', fsErr);
+                }
             }
             var initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
             var fabToken = (new URLSearchParams(window.location.search || '')).get('fab_token') || '';

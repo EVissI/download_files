@@ -3201,8 +3201,19 @@
     document.addEventListener('DOMContentLoaded', function () {
         try {
             if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.ready();
-                window.Telegram.WebApp.expand();
+                const tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+                try {
+                    const canFullscreen =
+                        typeof tg.requestFullscreen === 'function' &&
+                        (typeof tg.isVersionAtLeast !== 'function' || tg.isVersionAtLeast('8.0'));
+                    if (canFullscreen && !tg.isFullscreen) {
+                        tg.requestFullscreen();
+                    }
+                } catch (fsErr) {
+                    console.warn('requestFullscreen(pokaz) failed:', fsErr);
+                }
             }
         } catch (e) {
             console.warn('Telegram WebApp init failed:', e);
