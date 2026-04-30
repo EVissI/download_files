@@ -1506,7 +1506,7 @@ export class ContentEditor {
         if (!this.canvas || !ordered || !ordered.length) return;
         const canvas = this.canvas;
         const w = canvas.getBoundingClientRect().width;
-        let nextY = 0;
+        let nextY = this.getEditorBoardOverlayReservedHeight();
         ordered.forEach((el) => {
             const h = this.getElementStackHeight(el);
             el.style.left = '0px';
@@ -2789,6 +2789,7 @@ export class ContentEditor {
      */
     syncLiveHintBoardCanvasOverlay() {
         this._restoreLiveHintBoardCanvasIfNeeded();
+        this.syncEditorBoardOverlay();
     }
 
     _restoreLiveHintBoardCanvasIfNeeded() {
@@ -2802,6 +2803,91 @@ export class ContentEditor {
         } else {
             this._liveBoardCanvasStyleBackup = null;
         }
+    }
+
+    resolveEditorBoardSnapshot() {
+        let snap = null;
+        if (typeof window.getHintViewerBoardSnapshot === 'function') {
+            try {
+                snap = window.getHintViewerBoardSnapshot();
+            } catch (e) {
+                snap = null;
+            }
+        }
+        if ((snap == null || typeof snap !== 'object') && this._editorSessionBoardSnapshot != null) {
+            snap = this._editorSessionBoardSnapshot;
+        }
+        if (snap == null || typeof snap !== 'object') return null;
+        try {
+            return JSON.parse(JSON.stringify(snap));
+        } catch (e) {
+            return snap;
+        }
+    }
+
+    getEditorBoardOverlayReservedHeight() {
+        if (!this.canvas) return 0;
+        const overlay = this.canvas.querySelector(':scope > .editor-board-overlay');
+        if (!overlay) return 0;
+        return Math.max(0, Math.ceil(overlay.offsetHeight || 0));
+    }
+
+    syncEditorBoardOverlay() {
+        if (!this.canvas) return;
+        const boardOn = !!this.toggleStates['boardCanvas'];
+        const snap = boardOn ? this.resolveEditorBoardSnapshot() : null;
+        let overlay = this.canvas.querySelector(':scope > .editor-board-overlay');
+
+        if (!boardOn || !snap || snap.error === 'no_game_data') {
+            if (overlay) {
+                overlay.remove();
+                this.recalculateAllElementPositions();
+            }
+            return;
+        }
+
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'editor-board-overlay card-preview-board-overlay';
+            overlay.innerHTML = `
+                <div class="card-preview-board-body">
+                    <div class="card-preview-board-match-banner" hidden></div>
+                    <div class="card-preview-board-canvas-wrap">
+                        <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
+                    </div>
+                </div>
+            `;
+            this.canvas.insertBefore(overlay, this.canvas.firstChild);
+        }
+
+        const banner = overlay.querySelector('.card-preview-board-match-banner');
+        if (banner) {
+            const showMatchBanner = !!this.boardMatchBannerEnabled;
+            let bannerText = showMatchBanner ? this.formatBoardMatchBannerText(snap) : '';
+            if (showMatchBanner && !bannerText) {
+                bannerText = 'Данные матча недоступны';
+            }
+            banner.textContent = bannerText;
+            banner.hidden = !showMatchBanner;
+        }
+
+        const canvas = overlay.querySelector('.card-preview-board-canvas');
+        if (!canvas) {
+            this.recalculateAllElementPositions();
+            return;
+        }
+
+        this.loadBoardPreviewImages()
+            .then((imgs) => {
+                if (!canvas.isConnected) return;
+                this.paintBoardPreviewCanvas(canvas, snap, imgs);
+                this.recalculateAllElementPositions();
+            })
+            .catch((err) => {
+                console.error('syncEditorBoardOverlay:', err);
+            });
+
+        this.recalculateAllElementPositions();
     }
 
     showToggleNotification(toolId, isActive) {
@@ -2831,7 +2917,7 @@ export class ContentEditor {
         const fullWidth = canvasRect.width;
 
         // Calculate vertical position with no spacing
-        const startY = 0; // No top margin for first element
+        const startY = this.getEditorBoardOverlayReservedHeight();
         const elementSpacing = 0; // No spacing between elements
 
         let nextY = startY;
@@ -6017,6 +6103,7 @@ export class ContentEditor {
         cb.dataset.ceWired = '1';
         cb.addEventListener('change', () => {
             this.boardMatchBannerEnabled = cb.checked;
+            this.syncEditorBoardOverlay();
         });
     }
 
@@ -6411,7 +6498,7 @@ export class ContentEditor {
 
         const canvasRect = this.canvas.getBoundingClientRect();
         const elementSpacing = 0; // No spacing between elements
-        let nextY = 0; // Start from top
+        let nextY = this.getEditorBoardOverlayReservedHeight();
 
         // Recalculate positions for all elements
         allElements.forEach(element => {
