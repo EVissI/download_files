@@ -85,18 +85,36 @@ export function autoGrowTextElementContainerImpl(editor, element, options = {}) 
     const minElementHeight = 36;
     const innerPadding = parseFloat(element.style.padding) || 0;
     const currentHeight = parseFloat(element.style.height) || element.getBoundingClientRect().height || 0;
+    const linkContentNode = tid === 'support-link' ? element.querySelector('.link-content') : null;
+    let extraVerticalPadding = 0;
+    if (linkContentNode) {
+        const lcs = window.getComputedStyle(linkContentNode);
+        extraVerticalPadding =
+            (parseFloat(lcs.paddingTop) || 0) +
+            (parseFloat(lcs.paddingBottom) || 0);
+    }
 
     // Временно снимаем фиксированную высоту, чтобы корректно считать shrink после удаления текста.
     const prevHeight = element.style.height;
+    const prevContentHeight = contentNode.style.height;
     element.style.height = 'auto';
+    if (tid === 'support-link') {
+        // Для link-блока scrollHeight корректно считается при авто-высоте.
+        contentNode.style.height = 'auto';
+    }
     const contentHeight = Math.max(contentNode.scrollHeight, lineHeight + 8);
-    const targetHeight = Math.max(minElementHeight, Math.ceil(contentHeight + innerPadding * 2));
+    const targetHeight = Math.max(
+        minElementHeight,
+        Math.ceil(contentHeight + innerPadding * 2 + extraVerticalPadding)
+    );
 
     if (Math.abs(targetHeight - currentHeight) < 1) {
+        contentNode.style.height = prevContentHeight;
         element.style.height = prevHeight;
         return;
     }
     element.style.height = `${targetHeight}px`;
+    contentNode.style.height = prevContentHeight;
     if (!skipReposition && element.id) editor.repositionElementsBelow(element.id);
 }
 
