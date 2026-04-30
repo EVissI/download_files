@@ -15,13 +15,57 @@
         }
         body {
             margin: 0;
-            min-height: 100%;
+            min-height: 100vh;
             background: #1a1a1a;
             box-sizing: border-box;
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            padding-top: 5px;
         }
         *, *::before, *::after {
             box-sizing: inherit;
+        }
+        #contentCardViewRoot {
+            height: calc(100vh - 5px);
+        }
+        #contentCardViewRoot .card-preview-box {
+            width: 100%;
+            max-width: none;
+            min-height: 100%;
+            margin: 0;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #contentCardViewRoot .card-preview-header {
+            display: none;
+        }
+        #contentCardViewRoot .card-preview-meta {
+            margin: 0;
+            padding: 6px 12px;
+        }
+        #contentCardViewRoot .card-preview-frame-host {
+            flex: 1 1 auto;
+            min-height: 0;
+            margin: 0;
+            border-radius: 0;
+        }
+        #contentCardViewRoot .card-preview-nav {
+            margin: 0;
+            padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+            border-top: 1px solid #404040;
+            border-bottom: 0;
+            background: #22272e;
+            flex-shrink: 0;
+            gap: 8px 10px;
+        }
+        #contentCardViewRoot .card-preview-admin-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         .content-card-view-back-btn {
             display: inline-flex;
@@ -329,6 +373,34 @@
                 }
             }
 
+            function ensureNavInFooterAndAdminButtons() {
+                var root = document.getElementById('contentCardViewRoot');
+                if (!root) return;
+                var box = root.querySelector('.card-preview-box');
+                var nav = root.querySelector('.card-preview-nav');
+                if (!box || !nav) return;
+
+                if (box.lastElementChild !== nav) {
+                    box.appendChild(nav);
+                }
+
+                var adminHost = nav.querySelector('.card-preview-admin-actions');
+                if (!adminHost) {
+                    adminHost = document.createElement('div');
+                    adminHost.className = 'card-preview-admin-actions';
+                    nav.appendChild(adminHost);
+                }
+
+                var adminButtons = root.querySelectorAll(
+                    '.content-card-view-info-btn, .content-card-view-edit-btn, .content-card-view-add-frame-btn, .content-card-view-delete-frame-btn'
+                );
+                adminButtons.forEach(function (btn) {
+                    if (btn && btn.parentElement !== adminHost) {
+                        adminHost.appendChild(btn);
+                    }
+                });
+            }
+
             function ensureCardNumberHeader() {
                 var cardNumber = getCardNumber();
                 if (!cardNumber) return;
@@ -340,22 +412,40 @@
 
                 var header = document.createElement('div');
                 header.className = 'content-card-view-card-number';
-                header.textContent = 'Карточка № ' + cardNumber;
+                header.textContent = '№ ' + cardNumber;
                 box.insertBefore(header, nav);
+            }
+
+            function normalizeCardNumberLabels() {
+                var root = document.getElementById('contentCardViewRoot');
+                if (!root) return;
+                var nodes = root.querySelectorAll('.card-preview-counter, .content-card-view-card-number');
+                nodes.forEach(function (node) {
+                    var raw = String(node.textContent || '');
+                    if (!raw) return;
+                    node.textContent = raw
+                        .replace(/карточка\s*№?\s*/ig, '№ ')
+                        .replace(/\s{2,}/g, ' ')
+                        .trim();
+                });
             }
 
             var attempts = 0;
             var maxAttempts = 40;
             var timer = setInterval(function () {
                 ensureNavButtons();
+                ensureNavInFooterAndAdminButtons();
                 ensureCardNumberHeader();
+                normalizeCardNumberLabels();
                 attempts += 1;
                 if (attempts >= maxAttempts) {
                     clearInterval(timer);
                 }
             }, 250);
             ensureNavButtons();
+            ensureNavInFooterAndAdminButtons();
             ensureCardNumberHeader();
+            normalizeCardNumberLabels();
         })();
     </script>
 </body>
