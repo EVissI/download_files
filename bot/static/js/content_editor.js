@@ -1409,6 +1409,24 @@ export class ContentEditor {
             const collapsed = tableEl.classList.contains('editor-table--collapsed');
             toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
         };
+        const runRelayoutAnimation = () => {
+            if (tableEl.__ceTableRelayoutRaf) {
+                cancelAnimationFrame(tableEl.__ceTableRelayoutRaf);
+                tableEl.__ceTableRelayoutRaf = 0;
+            }
+            const startedAt = performance.now();
+            const durationMs = 280;
+            const tick = () => {
+                this.recalculateAllElementPositions();
+                if (performance.now() - startedAt < durationMs) {
+                    tableEl.__ceTableRelayoutRaf = requestAnimationFrame(tick);
+                } else {
+                    tableEl.__ceTableRelayoutRaf = 0;
+                    this.recalculateAllElementPositions();
+                }
+            };
+            tick();
+        };
         const onToggle = (e) => {
             if (e) {
                 e.preventDefault();
@@ -1416,10 +1434,7 @@ export class ContentEditor {
             }
             tableEl.classList.toggle('editor-table--collapsed');
             syncA11y();
-            requestAnimationFrame(() => this.recalculateAllElementPositions());
-            setTimeout(() => {
-                this.recalculateAllElementPositions();
-            }, 420);
+            runRelayoutAnimation();
         };
 
         toggle.addEventListener('click', onToggle);
