@@ -625,6 +625,17 @@ class TextStylePreset(Base):
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
 
+class WebAppSetting(Base):
+    """
+    Глобальные настройки WebApp, редактируемые через FAB.
+    """
+
+    __tablename__ = "webapp_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    webapp_fullscreen_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
 class ContentCardIssueSchedule(Base):
     """Расписание автовыдачи карточек конкретному пользователю (по МСК)."""
 

@@ -25,6 +25,7 @@ from bot.flask_admin.model_view.user import (
     UserAnalizePaymentInline,
 )
 from bot.flask_admin.model_view.users_with_cards import UsersWithCardsView
+from bot.flask_admin.model_view.webapp_settings import WebAppSettingsModelView
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,11 @@ def register_models(appbuilder, db):
         MessageForNewModelView, "Сообщения для новеньких", icon="fa-calendar-o"
     )
     appbuilder.add_view(MessagesTextsModelView, "Текстовки", icon="fa-comment")
+    appbuilder.add_view(
+        WebAppSettingsModelView,
+        "Настройки WebApp",
+        icon="fa-cog",
+    )
     appbuilder.add_view(ContentCardModelView, "Карточки", icon="fa-clone")
     appbuilder.add_view(
         ContentCardIssueScheduleModelView,

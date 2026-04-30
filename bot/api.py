@@ -20,6 +20,7 @@ from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.common.service.hint_s3_service import HintS3Storage
+from bot.common.service.webapp_settings_service import get_webapp_fullscreen_enabled
 from bot.config import settings
 from bot.config import bot, scheduler, SUPPORT_TG_ID, translator_hub
 from bot.common.utils.i18n import get_text_for_locale
@@ -262,6 +263,7 @@ async def get_pokaz(
     lang = lang if lang in ("ru", "en") else "ru"
     translations = _get_pokaz_translations(lang)
     cache_timestamp = int(time.time())
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
     response = templates.TemplateResponse(
         "pokaz.html",
         {
@@ -271,7 +273,7 @@ async def get_pokaz(
             "lang": lang,
             "i18n": translations,
             "cache_timestamp": cache_timestamp,
-            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
+            "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -284,12 +286,13 @@ async def get_pokaz(
 async def content_card_view_page(request: Request):
     """Просмотр сохранённой карточки контента (кадры, только переключение)."""
     cache_timestamp = int(time.time())
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
     response = templates.TemplateResponse(
         "content_card_view.html",
         {
             "request": request,
             "cache_timestamp": cache_timestamp,
-            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
+            "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -302,12 +305,13 @@ async def content_card_view_page(request: Request):
 async def cards_cabinet_page(request: Request):
     """Личный кабинет: сетка карточек пользователя (Telegram WebApp)."""
     cache_timestamp = int(time.time())
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
     response = templates.TemplateResponse(
         "cards_cabinet.html",
         {
             "request": request,
             "cache_timestamp": cache_timestamp,
-            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
+            "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -381,11 +385,12 @@ async def get_pokaz_hints(xgid: str, chat_id: Optional[int] = None):
 
 @app.get("/admin/login", response_class=HTMLResponse)
 async def admin_login(request: Request):
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
     return templates.TemplateResponse(
         "admin_login.html",
         {
             "request": request,
-            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
+            "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
         },
     )
 

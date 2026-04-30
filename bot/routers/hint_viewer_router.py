@@ -55,6 +55,7 @@ from bot.common.kbds.inline.autoanalize import get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.routers.autoanalize.autoanaliz import analyze_file_by_path
 from bot.common.service.hint_s3_service import HintS3Storage
+from bot.common.service.webapp_settings_service import get_webapp_fullscreen_enabled
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.general_states import GeneralStates
@@ -697,6 +698,7 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
     import time
 
     cache_timestamp = int(time.time())
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
 
     response = templates.TemplateResponse(
         "hint_viewer.html",
@@ -704,7 +706,7 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
             "request": request,
             "game_id": game_id,
             "cache_timestamp": cache_timestamp,
-            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
+            "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
         },
     )
 
