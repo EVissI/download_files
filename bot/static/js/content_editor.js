@@ -1434,6 +1434,9 @@ export class ContentEditor {
     /** Высота блока при пересчёте вертикального стека (как в recalculateAllElementPositions). */
     getElementStackHeight(element) {
         if (element.classList.contains('table-element')) {
+            if (element.classList.contains('editor-table--collapsed')) {
+                return 28;
+            }
             let h = element.offsetHeight;
             if (h < 50) h = 100;
             return h;
@@ -2825,30 +2828,34 @@ export class ContentEditor {
 
             // Get actual height of existing element
             if (existingEl.classList.contains('table-element')) {
-                // For table elements, get the actual rendered height
-                existingHeight = existingEl.offsetHeight;
-
-                // Force a reflow to ensure we have the correct height
-                if (existingHeight < 50) {
-                    // Force reflow to get accurate table height
-                    existingEl.style.display = 'block';
-                    existingEl.offsetHeight; // Force reflow
+                if (existingEl.classList.contains('editor-table--collapsed')) {
+                    existingHeight = 28;
+                } else {
+                    // For table elements, get the actual rendered height
                     existingHeight = existingEl.offsetHeight;
-                    existingEl.style.display = '';
-                }
 
-                // If table still has very small height, estimate based on content
-                if (existingHeight < 50) {
-                    const table = existingEl.querySelector('table');
-                    if (table) {
-                        const rowCount = table.querySelectorAll('tr').length;
-                        existingHeight = Math.max(80, rowCount * 35); // Estimate 35px per row + minimum 80px
-                    } else {
-                        // Check if table has content but no table element yet
-                        if (existingEl.innerHTML.trim() !== '') {
-                            existingHeight = 150; // Content present but no table structure
+                    // Force a reflow to ensure we have the correct height
+                    if (existingHeight < 50) {
+                        // Force reflow to get accurate table height
+                        existingEl.style.display = 'block';
+                        existingEl.offsetHeight; // Force reflow
+                        existingHeight = existingEl.offsetHeight;
+                        existingEl.style.display = '';
+                    }
+
+                    // If table still has very small height, estimate based on content
+                    if (existingHeight < 50) {
+                        const table = existingEl.querySelector('table');
+                        if (table) {
+                            const rowCount = table.querySelectorAll('tr').length;
+                            existingHeight = Math.max(80, rowCount * 35); // Estimate 35px per row + minimum 80px
                         } else {
-                            existingHeight = 100; // Empty table
+                            // Check if table has content but no table element yet
+                            if (existingEl.innerHTML.trim() !== '') {
+                                existingHeight = 150; // Content present but no table structure
+                            } else {
+                                existingHeight = 100; // Empty table
+                            }
                         }
                     }
                 }
@@ -2907,7 +2914,7 @@ export class ContentEditor {
         if (!changedElement) return;
 
         const changedTop = parseInt(changedElement.style.top);
-        const changedHeight = changedElement.offsetHeight;
+        const changedHeight = this.getElementStackHeight(changedElement);
         const changedBottom = changedTop + changedHeight;
 
         // Get all elements sorted by their top position
@@ -2931,9 +2938,13 @@ export class ContentEditor {
 
             // Get actual height of element
             if (element.classList.contains('table-element')) {
-                elementHeight = element.offsetHeight;
-                if (elementHeight < 50) {
-                    elementHeight = 100; // Default for empty tables
+                if (element.classList.contains('editor-table--collapsed')) {
+                    elementHeight = 28;
+                } else {
+                    elementHeight = element.offsetHeight;
+                    if (elementHeight < 50) {
+                        elementHeight = 100; // Default for empty tables
+                    }
                 }
             } else {
                 elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
@@ -6393,9 +6404,13 @@ export class ContentEditor {
 
             // Get actual height of element
             if (element.classList.contains('table-element')) {
-                elementHeight = element.offsetHeight;
-                if (elementHeight < 50) {
-                    elementHeight = 100; // Default for empty tables
+                if (element.classList.contains('editor-table--collapsed')) {
+                    elementHeight = 28;
+                } else {
+                    elementHeight = element.offsetHeight;
+                    if (elementHeight < 50) {
+                        elementHeight = 100; // Default for empty tables
+                    }
                 }
             } else if (element.dataset.toolId === 'upload-image') {
                 // For images, use the current styled height

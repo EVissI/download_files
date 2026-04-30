@@ -1958,6 +1958,8 @@ button.content-card-admin-info-file-link:hover {
 
 .canvas-element.table-element.editor-table--collapsed {
     min-height: 28px !important;
+    height: 28px !important;
+    overflow: visible !important;
 }
 
 .card-preview-canvas-clone {
