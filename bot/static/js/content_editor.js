@@ -122,6 +122,11 @@ export class ContentEditor {
         this._labelPresetsTarget = 'card';
         this._adminLabelsDraft = [];
         this._duplicateSourceConfirmAction = null;
+        /** Пресеты стилей текста (общие для админов). */
+        this._textStylePresetsList = [];
+        this._textStylePresetsLoaded = false;
+        this.textStylePresetSaveModal = null;
+        this.textStylePresetManageModal = null;
 
         /** Кэш открытой IndexedDB для больших аудио (вне квоты localStorage JSON) */
         this._contentEditorMediaDbPromise = null;
@@ -852,8 +857,43 @@ export class ContentEditor {
             `
                 );
             }
+            if (!document.getElementById('textStylePresetSaveModal')) {
+                document.body.insertAdjacentHTML(
+                    'beforeend',
+                    `
+                <div id="textStylePresetSaveModal" class="text-style-preset-modal" style="display: none;" aria-hidden="true">
+                    <div class="card-labels-overlay" onclick="contentEditor.closeTextStylePresetSaveModal()"></div>
+                    <div class="card-labels-box text-style-preset-modal-box" role="dialog" aria-modal="true" aria-labelledby="textStylePresetSaveTitle">
+                        <h3 id="textStylePresetSaveTitle" class="card-labels-title">Сохранить пресет текста</h3>
+                        <div class="card-labels-input-row">
+                            <input type="text" id="textStylePresetNameInput" class="card-labels-input" maxlength="80" placeholder="Название пресета" autocomplete="off" />
+                        </div>
+                        <div class="card-labels-actions">
+                            <button type="button" class="card-labels-back-btn" onclick="contentEditor.closeTextStylePresetSaveModal()">Отмена</button>
+                            <button type="button" class="card-labels-save-btn" onclick="contentEditor.createTextStylePresetFromModal()">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="textStylePresetManageModal" class="text-style-preset-modal" style="display: none;" aria-hidden="true">
+                    <div class="card-labels-overlay" onclick="contentEditor.closeTextStylePresetManageModal()"></div>
+                    <div class="card-labels-box text-style-preset-modal-box" role="dialog" aria-modal="true" aria-labelledby="textStylePresetManageTitle">
+                        <div class="label-presets-modal-header">
+                            <h3 id="textStylePresetManageTitle" class="card-labels-title">Пресеты текста</h3>
+                            <button type="button" class="label-presets-modal-close" onclick="contentEditor.closeTextStylePresetManageModal()" aria-label="Закрыть">&times;</button>
+                        </div>
+                        <div id="textStylePresetManageList" class="text-style-presets-list" aria-live="polite"></div>
+                        <div class="card-labels-actions card-labels-actions--preset-footer">
+                            <button type="button" class="card-labels-save-btn" onclick="contentEditor.closeTextStylePresetManageModal()">Готово</button>
+                        </div>
+                    </div>
+                </div>
+            `
+                );
+            }
             this.cardLabelsModal = document.getElementById('cardLabelsModal');
             this.labelPresetsModal = document.getElementById('labelPresetsModal');
+            this.textStylePresetSaveModal = document.getElementById('textStylePresetSaveModal');
+            this.textStylePresetManageModal = document.getElementById('textStylePresetManageModal');
             const labelsInput = document.getElementById('cardLabelsInput');
             if (labelsInput) {
                 labelsInput.addEventListener('keydown', (e) => {
@@ -872,10 +912,21 @@ export class ContentEditor {
                     }
                 });
             }
+            const textStylePresetNameInput = document.getElementById('textStylePresetNameInput');
+            if (textStylePresetNameInput) {
+                textStylePresetNameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.createTextStylePresetFromModal();
+                    }
+                });
+            }
         } else {
             this.cardPreviewModal = document.getElementById('contentCardViewRoot');
             this.cardLabelsModal = null;
             this.labelPresetsModal = null;
+            this.textStylePresetSaveModal = null;
+            this.textStylePresetManageModal = null;
         }
 
         this.canvas = document.getElementById('canvas');
@@ -3932,6 +3983,18 @@ export class ContentEditor {
                         <button class="action-btn" type="button" onclick="contentEditor.updateElementProperty('toggleUnderline')"><u>U</u></button>
                     </div>
                 </div>
+                <div class="property-item property-item-text-presets">
+                    <div class="text-style-presets-controls-row">
+                        <select id="propTextStylePresetSelect" class="text-style-preset-select" title="Применить пресет текста"
+                                onchange="contentEditor.applyTextStylePresetFromSelect(this.value)">
+                            ${this.renderTextStylePresetSelectOptions()}
+                        </select>
+                        <button type="button" class="action-btn text-style-preset-save-btn" title="Сохранить текущий стиль как пресет"
+                                onclick="contentEditor.openTextStylePresetSaveModal()">Сохранить</button>
+                        <button type="button" class="action-btn text-style-preset-manage-btn" title="Просмотр и удаление пресетов"
+                                onclick="contentEditor.openTextStylePresetManageModal()">Просмотр</button>
+                    </div>
+                </div>
                 ` : ''}
                 ${element.classList.contains('link-element') ? `
                 <div class="property-item">
@@ -4004,6 +4067,10 @@ export class ContentEditor {
                 ${this.getPropertiesFrameActionsInnerHtml()}
             </div>
         `;
+        if (element.classList.contains('text-element')) {
+            this.syncTextStylePresetDropdown();
+            void this.refreshTextStylePresetsList();
+        }
     }
 
     updateElementProperty(property, value) {
@@ -4309,6 +4376,14 @@ export class ContentEditor {
             const dupModal = document.getElementById('contentCardDuplicateSourceModal');
             if (dupModal && dupModal.style.display === 'flex') {
                 this.closeContentCardDuplicateSourceModal();
+                return;
+            }
+            if (this.textStylePresetManageModal && this.textStylePresetManageModal.style.display === 'flex') {
+                this.closeTextStylePresetManageModal();
+                return;
+            }
+            if (this.textStylePresetSaveModal && this.textStylePresetSaveModal.style.display === 'flex') {
+                this.closeTextStylePresetSaveModal();
                 return;
             }
             if (this.labelPresetsModal && this.labelPresetsModal.style.display === 'flex') {
@@ -5764,6 +5839,319 @@ export class ContentEditor {
         const fabToken = String(params.get('fab_token') || '');
         if (fabToken) return { fab_token: fabToken };
         return null;
+    }
+
+    renderTextStylePresetSelectOptions() {
+        const opts = ['<option value="">Пресет стиля…</option>'];
+        for (const preset of this._textStylePresetsList) {
+            opts.push(
+                `<option value="${preset.id}">${this.escapeHtml(String(preset.name || 'Без имени'))}</option>`
+            );
+        }
+        return opts.join('');
+    }
+
+    syncTextStylePresetDropdown() {
+        const select = document.getElementById('propTextStylePresetSelect');
+        if (!select) return;
+        select.innerHTML = this.renderTextStylePresetSelectOptions();
+        select.value = '';
+    }
+
+    _normalizeTextStylePresetPayload(raw) {
+        if (!raw || typeof raw !== 'object') return null;
+        const p = raw;
+        const fontSizePx = this.clampNumericValue(p.fontSizePx, 8, 200, 16);
+        const lineHeightPx = this.clampNumericValue(p.lineHeightPx, 8, 120, 20);
+        const paddingPx = this.clampNumericValue(p.paddingPx, 0, 100, 8);
+        const textAlign = ['left', 'center', 'right', 'justify'].includes(String(p.textAlign))
+            ? String(p.textAlign)
+            : 'left';
+        const textColor = this.rgbToHex(String(p.textColor || '#333333'));
+        const backgroundColor = this.rgbToHex(String(p.backgroundColor || '#ffffff'));
+        return {
+            fontSize: `${fontSizePx}px`,
+            lineHeight: `${lineHeightPx}px`,
+            padding: `${paddingPx}px`,
+            textAlign,
+            textColor,
+            backgroundColor,
+            fontWeight: p.fontWeight === 'bold' ? 'bold' : 'normal',
+            fontStyle: p.fontStyle === 'italic' ? 'italic' : 'normal',
+            textDecoration: p.textDecoration === 'underline' ? 'underline' : 'none',
+        };
+    }
+
+    getCurrentTextStylePresetPayload() {
+        if (!this.selectedElement || !this.selectedElement.classList.contains('text-element')) return null;
+        const textEl = this.selectedElement.querySelector('.text-content');
+        if (!textEl) return null;
+        const textStyle = window.getComputedStyle(textEl);
+        const blockStyle = window.getComputedStyle(this.selectedElement);
+        const weightRaw = String(textStyle.fontWeight || '').trim();
+        const isBold = weightRaw === 'bold' || (!Number.isNaN(parseInt(weightRaw, 10)) && parseInt(weightRaw, 10) >= 600);
+        const textDecorationLine = String(textStyle.textDecorationLine || textStyle.textDecoration || '');
+        return {
+            fontSizePx: this.clampNumericValue(parseInt(textStyle.fontSize, 10), 8, 200, 16),
+            textColor: this.rgbToHex(textStyle.color || '#333333'),
+            textAlign: String(textStyle.textAlign || 'left'),
+            lineHeightPx: this.clampNumericValue(Math.round(parseFloat(textStyle.lineHeight) || 20), 8, 120, 20),
+            paddingPx: this.clampNumericValue(parseInt(blockStyle.padding, 10), 0, 100, 8),
+            backgroundColor: this.rgbToHex(blockStyle.backgroundColor || '#ffffff'),
+            fontWeight: isBold ? 'bold' : 'normal',
+            fontStyle: textStyle.fontStyle === 'italic' ? 'italic' : 'normal',
+            textDecoration: textDecorationLine.includes('underline') ? 'underline' : 'none',
+        };
+    }
+
+    applyTextStylePresetPayload(payload) {
+        if (!this.selectedElement || !this.selectedElement.classList.contains('text-element')) return false;
+        const normalized = this._normalizeTextStylePresetPayload(payload);
+        if (!normalized) return false;
+        const textEl = this.selectedElement.querySelector('.text-content');
+        if (!textEl) return false;
+
+        const hasSelection = this.hasValidSelectionForFormat(textEl);
+        if (hasSelection) {
+            this.applyStyleToSelection(textEl, {
+                fontSize: normalized.fontSize,
+                color: normalized.textColor,
+                lineHeight: normalized.lineHeight,
+                fontWeight: normalized.fontWeight,
+                fontStyle: normalized.fontStyle,
+                textDecoration: normalized.textDecoration,
+            });
+        } else {
+            textEl.style.fontSize = normalized.fontSize;
+            textEl.style.color = normalized.textColor;
+            textEl.style.lineHeight = normalized.lineHeight;
+            textEl.style.fontWeight = normalized.fontWeight;
+            textEl.style.fontStyle = normalized.fontStyle;
+            textEl.style.textDecoration = normalized.textDecoration;
+        }
+
+        textEl.style.textAlign = normalized.textAlign;
+        this.selectedElement.style.padding = normalized.padding;
+        this.selectedElement.style.backgroundColor = normalized.backgroundColor;
+        this.autoGrowTextElementContainer(this.selectedElement);
+        this.showElementProperties(this.selectedElement);
+        return true;
+    }
+
+    async applyTextStylePresetFromSelect(value) {
+        const presetId = Number(value);
+        const select = document.getElementById('propTextStylePresetSelect');
+        if (!Number.isFinite(presetId) || presetId < 1) {
+            if (select) select.value = '';
+            return;
+        }
+        const preset = this._textStylePresetsList.find((x) => Number(x.id) === presetId);
+        if (!preset || !preset.payload) {
+            this.showNotification('Пресет не найден', 'warning');
+            if (select) select.value = '';
+            return;
+        }
+        const ok = this.applyTextStylePresetPayload(preset.payload);
+        if (ok) {
+            this.showNotification('Пресет применён', 'success');
+        }
+        if (select) select.value = '';
+    }
+
+    openTextStylePresetSaveModal() {
+        if (!this.textStylePresetSaveModal) return;
+        if (!this.selectedElement || !this.selectedElement.classList.contains('text-element')) {
+            this.showNotification('Выберите текстовый блок', 'warning');
+            return;
+        }
+        const inp = document.getElementById('textStylePresetNameInput');
+        if (inp) inp.value = '';
+        this.textStylePresetSaveModal.style.display = 'flex';
+        this.textStylePresetSaveModal.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => {
+            if (inp) inp.focus();
+        });
+    }
+
+    closeTextStylePresetSaveModal() {
+        if (!this.textStylePresetSaveModal) return;
+        this.textStylePresetSaveModal.style.display = 'none';
+        this.textStylePresetSaveModal.setAttribute('aria-hidden', 'true');
+    }
+
+    async openTextStylePresetManageModal() {
+        if (!this.textStylePresetManageModal) return;
+        await this.refreshTextStylePresetsList(true);
+        this.renderTextStylePresetManageList();
+        this.textStylePresetManageModal.style.display = 'flex';
+        this.textStylePresetManageModal.setAttribute('aria-hidden', 'false');
+    }
+
+    closeTextStylePresetManageModal() {
+        if (!this.textStylePresetManageModal) return;
+        this.textStylePresetManageModal.style.display = 'none';
+        this.textStylePresetManageModal.setAttribute('aria-hidden', 'true');
+    }
+
+    renderTextStylePresetManageList() {
+        const list = document.getElementById('textStylePresetManageList');
+        if (!list) return;
+        if (!this._textStylePresetsList.length) {
+            list.innerHTML = '<span class="card-labels-presets-empty">Пока нет пресетов.</span>';
+            return;
+        }
+        list.innerHTML = this._textStylePresetsList
+            .map((p) => (
+                `<div class="text-style-preset-row">` +
+                `<span class="text-style-preset-name">${this.escapeHtml(String(p.name || 'Без имени'))}</span>` +
+                `<button type="button" class="card-labels-preset-remove" onclick="contentEditor.deleteTextStylePresetById(${p.id})" aria-label="Удалить пресет">&times;</button>` +
+                `</div>`
+            ))
+            .join('');
+    }
+
+    async refreshTextStylePresetsList(force = false) {
+        if (this._textStylePresetsLoaded && !force) {
+            this.syncTextStylePresetDropdown();
+            this.renderTextStylePresetManageList();
+            return this._textStylePresetsList;
+        }
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) return [];
+        try {
+            const r = await fetch('/api/content_cards/text_style_presets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(auth),
+            });
+            let j = {};
+            try {
+                j = await r.json();
+            } catch (e) {}
+            if (!r.ok) {
+                let detail = '';
+                if (typeof j.detail === 'string') detail = j.detail;
+                else if (Array.isArray(j.detail)) {
+                    detail = j.detail.map((x) => x.msg || JSON.stringify(x)).join('; ');
+                }
+                this.showNotification(detail || 'Не удалось загрузить пресеты текста', 'error');
+                return [];
+            }
+            this._textStylePresetsList = (Array.isArray(j.presets) ? j.presets : [])
+                .map((p) => {
+                    let payload = p.payload || null;
+                    if (!payload && p.payload_json && typeof p.payload_json === 'object') {
+                        payload = p.payload_json;
+                    }
+                    return {
+                        id: Number(p.id),
+                        name: String(p.name || ''),
+                        payload: payload && typeof payload === 'object' ? payload : null,
+                    };
+                })
+                .filter((p) => Number.isFinite(p.id) && p.id > 0 && p.name && p.payload);
+            this._textStylePresetsList.sort((a, b) =>
+                String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' })
+            );
+            this._textStylePresetsLoaded = true;
+            this.syncTextStylePresetDropdown();
+            this.renderTextStylePresetManageList();
+            return this._textStylePresetsList;
+        } catch (e) {
+            console.error('refreshTextStylePresetsList:', e);
+            this.showNotification(e.message || String(e), 'error');
+            return [];
+        }
+    }
+
+    async createTextStylePresetFromModal() {
+        const inp = document.getElementById('textStylePresetNameInput');
+        const auth = this.getContentCardApiAuthPayload();
+        const payload = this.getCurrentTextStylePresetPayload();
+        if (!inp || !auth || !payload) return;
+        const name = String(inp.value || '').trim();
+        if (!name) {
+            this.showNotification('Введите название пресета', 'warning');
+            return;
+        }
+        try {
+            const r = await fetch('/api/content_cards/text_style_presets/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...auth, name, payload }),
+            });
+            let j = {};
+            try {
+                j = await r.json();
+            } catch (e) {}
+            if (!r.ok) {
+                let detail = '';
+                if (typeof j.detail === 'string') detail = j.detail;
+                else if (Array.isArray(j.detail)) {
+                    detail = j.detail.map((x) => x.msg || JSON.stringify(x)).join('; ');
+                }
+                this.showNotification(detail || 'Не удалось сохранить пресет', 'error');
+                return;
+            }
+            const created = {
+                id: Number(j.id),
+                name: String(j.name || ''),
+                payload: j.payload && typeof j.payload === 'object' ? j.payload : payload,
+            };
+            if (!Number.isFinite(created.id) || created.id < 1 || !created.name) {
+                this.showNotification('Сервер вернул некорректный пресет', 'error');
+                return;
+            }
+            this._textStylePresetsList = this._textStylePresetsList.filter((x) => Number(x.id) !== created.id);
+            this._textStylePresetsList.push(created);
+            this._textStylePresetsList.sort((a, b) =>
+                String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' })
+            );
+            this._textStylePresetsLoaded = true;
+            this.syncTextStylePresetDropdown();
+            this.renderTextStylePresetManageList();
+            this.closeTextStylePresetSaveModal();
+            this.showNotification('Пресет текста сохранён', 'success');
+        } catch (e) {
+            console.error('createTextStylePresetFromModal:', e);
+            this.showNotification(e.message || String(e), 'error');
+        }
+    }
+
+    async deleteTextStylePresetById(id) {
+        const presetId = Number(id);
+        if (!Number.isFinite(presetId) || presetId < 1) return;
+        const ok = await this.confirmPresetDanger('Удалить этот текстовый пресет?');
+        if (!ok) return;
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) return;
+        try {
+            const r = await fetch('/api/content_cards/text_style_presets/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...auth, preset_id: presetId }),
+            });
+            let j = {};
+            try {
+                j = await r.json();
+            } catch (e) {}
+            if (!r.ok) {
+                let detail = '';
+                if (typeof j.detail === 'string') detail = j.detail;
+                else if (Array.isArray(j.detail)) {
+                    detail = j.detail.map((x) => x.msg || JSON.stringify(x)).join('; ');
+                }
+                this.showNotification(detail || 'Не удалось удалить пресет', 'error');
+                return;
+            }
+            this._textStylePresetsList = this._textStylePresetsList.filter((x) => Number(x.id) !== presetId);
+            this.syncTextStylePresetDropdown();
+            this.renderTextStylePresetManageList();
+            this.showNotification('Пресет удалён', 'success');
+        } catch (e) {
+            console.error('deleteTextStylePresetById:', e);
+            this.showNotification(e.message || String(e), 'error');
+        }
     }
 
     renderLabelPresetsPanel() {

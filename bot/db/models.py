@@ -609,6 +609,22 @@ class LabelPreset(Base):
     value: Mapped[str] = mapped_column(String(255), nullable=False)
 
 
+class TextStylePreset(Base):
+    """
+    Пресеты стилей для текстовых блоков редактора контента.
+    Хранятся глобально для администраторов.
+    """
+
+    __tablename__ = "text_style_presets"
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_text_style_presets_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+
 class ContentCardIssueSchedule(Base):
     """Расписание автовыдачи карточек конкретному пользователю (по МСК)."""
 

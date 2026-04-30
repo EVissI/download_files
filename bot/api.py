@@ -38,6 +38,7 @@ from bot.db.models import (
     ContentCard,
     LabelPreset,
     ServiceType,
+    TextStylePreset,
     User,
     UserContentCard,
     UserContentCardStatus,
@@ -726,6 +727,19 @@ class LabelPresetDeleteBody(BaseModel):
     preset_id: int = Field(..., ge=1)
 
 
+class TextStylePresetCreateBody(BaseModel):
+    init_data: str | None = None
+    fab_token: str | None = None
+    name: str = Field(..., min_length=1, max_length=80)
+    payload: dict[str, Any]
+
+
+class TextStylePresetDeleteBody(BaseModel):
+    init_data: str | None = None
+    fab_token: str | None = None
+    preset_id: int = Field(..., ge=1)
+
+
 class ContentCardMarkViewedBody(BaseModel):
     """Отметка карточки как просмотренной для текущего пользователя."""
 
@@ -749,6 +763,46 @@ class ContentCardHintMatBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
+
+
+def _sanitize_text_style_preset_payload(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Некорректный payload пресета")
+
+    def _int(value: Any, fallback: int, min_v: int, max_v: int) -> int:
+        try:
+            n = int(value)
+        except (TypeError, ValueError):
+            n = fallback
+        return max(min_v, min(max_v, n))
+
+    text_align = str(payload.get("textAlign") or "left").strip().lower()
+    if text_align not in {"left", "center", "right", "justify"}:
+        text_align = "left"
+
+    font_weight = str(payload.get("fontWeight") or "normal").strip().lower()
+    if font_weight not in {"normal", "bold"}:
+        font_weight = "normal"
+
+    font_style = str(payload.get("fontStyle") or "normal").strip().lower()
+    if font_style not in {"normal", "italic"}:
+        font_style = "normal"
+
+    text_decoration = str(payload.get("textDecoration") or "none").strip().lower()
+    if text_decoration not in {"none", "underline"}:
+        text_decoration = "none"
+
+    return {
+        "fontSizePx": _int(payload.get("fontSizePx"), 16, 8, 200),
+        "textColor": str(payload.get("textColor") or "#333333")[:32],
+        "textAlign": text_align,
+        "lineHeightPx": _int(payload.get("lineHeightPx"), 20, 8, 120),
+        "paddingPx": _int(payload.get("paddingPx"), 8, 0, 100),
+        "backgroundColor": str(payload.get("backgroundColor") or "#ffffff")[:32],
+        "fontWeight": font_weight,
+        "fontStyle": font_style,
+        "textDecoration": text_decoration,
+    }
 
 
 async def _resolve_hint_mat_location(content_card_id: int) -> tuple[str, str]:
@@ -1439,6 +1493,74 @@ async def content_cards_label_preset_delete(body: LabelPresetDeleteBody):
         if exists is None:
             raise HTTPException(status_code=404, detail="Пресет не найден")
         await session.execute(delete(LabelPreset).where(LabelPreset.id == body.preset_id))
+        await session.commit()
+
+    return {"ok": True}
+
+
+@app.post("/api/content_cards/text_style_presets")
+async def content_cards_text_style_presets(body: ContentCardMyListBody):
+    """Список пресетов стилей текста из БД (общие для ROOT_ADMIN_IDS)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(TextStylePreset.id, TextStylePreset.name, TextStylePreset.payload_json).order_by(
+                TextStylePreset.name
+            )
+        )
+        rows = result.all()
+
+    return {
+        "presets": [
+            {"id": int(pid), "name": name, "payload": payload or {}}
+            for (pid, name, payload) in rows
+        ]
+    }
+
+
+@app.post("/api/content_cards/text_style_presets/create")
+async def content_cards_text_style_presets_create(body: TextStylePresetCreateBody):
+    """Создать пресет стиля текста (только ROOT_ADMIN_IDS)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+    name = str(body.name or "").strip()[:80]
+    if not name:
+        raise HTTPException(status_code=400, detail="Пустое название пресета")
+    payload = _sanitize_text_style_preset_payload(body.payload)
+
+    async with async_session_maker() as session:
+        preset = TextStylePreset(name=name, payload_json=payload)
+        session.add(preset)
+        try:
+            await session.commit()
+            await session.refresh(preset)
+        except IntegrityError:
+            await session.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="Пресет с таким названием уже существует",
+            )
+
+    return {"id": preset.id, "name": preset.name, "payload": preset.payload_json or {}}
+
+
+@app.post("/api/content_cards/text_style_presets/delete")
+async def content_cards_text_style_presets_delete(body: TextStylePresetDeleteBody):
+    """Удалить пресет стиля текста (только ROOT_ADMIN_IDS)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        exists = await session.scalar(
+            select(TextStylePreset.id).where(TextStylePreset.id == body.preset_id).limit(1)
+        )
+        if exists is None:
+            raise HTTPException(status_code=404, detail="Пресет не найден")
+        await session.execute(
+            delete(TextStylePreset).where(TextStylePreset.id == body.preset_id)
+        )
         await session.commit()
 
     return {"ok": True}
