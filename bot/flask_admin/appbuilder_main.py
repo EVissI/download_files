@@ -6,6 +6,9 @@ from sqlalchemy.orm import declarative_base
 import logging
 
 from bot.flask_admin.model_view.content_cards import ContentCardModelView
+from bot.flask_admin.model_view.content_card_issue_schedule import (
+    ContentCardIssueScheduleModelView,
+)
 from bot.flask_admin.model_view.message_for_new import MessageForNewModelView
 from bot.flask_admin.model_view.message_texts import MessagesTextsModelView
 from bot.flask_admin.model_view.payment import (
@@ -93,6 +96,11 @@ def register_models(appbuilder, db):
     )
     appbuilder.add_view(MessagesTextsModelView, "Текстовки", icon="fa-comment")
     appbuilder.add_view(ContentCardModelView, "Карточки", icon="fa-clone")
+    appbuilder.add_view(
+        ContentCardIssueScheduleModelView,
+        "Выдача карточек по расписанию",
+        icon="fa-clock-o",
+    )
     appbuilder.add_view(
         UsersWithCardsView,
         "Пользователи с карточками",

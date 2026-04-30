@@ -605,6 +605,49 @@ class LabelPreset(Base):
     value: Mapped[str] = mapped_column(String(255), nullable=False)
 
 
+class ContentCardIssueSchedule(Base):
+    """Расписание автовыдачи карточек конкретному пользователю (по МСК)."""
+
+    __tablename__ = "content_card_issue_schedules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    target_user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    cards_per_run: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    weekdays: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    issue_time_msk: Mapped[str] = mapped_column(String(5), nullable=False)
+    scheduler_job_id: Mapped[str | None] = mapped_column(
+        String(128), unique=True, nullable=True
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    target_user: Mapped["User"] = relationship("User")
+
+    @property
+    @renders("weekdays_display")
+    def weekdays_display(self) -> str:
+        day_map = {
+            "mon": "Пн",
+            "tue": "Вт",
+            "wed": "Ср",
+            "thu": "Чт",
+            "fri": "Пт",
+            "sat": "Сб",
+            "sun": "Вс",
+        }
+        values = []
+        for day in self.weekdays or []:
+            key = str(day or "").strip().lower()
+            if not key:
+                continue
+            values.append(day_map.get(key, key))
+        return ", ".join(values) if values else "—"
+
+
 class ContentCard(Base):
     """
     Сохранённая карточка редактора контента (hint viewer и т.п.).
