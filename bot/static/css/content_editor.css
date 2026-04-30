@@ -350,10 +350,20 @@
     border-radius: 10px;
     overflow: hidden;
     pointer-events: none;
+    position: relative;
+    padding-bottom: 16px;
 }
 
 .editor-board-display-body {
     pointer-events: none;
+    overflow: hidden;
+    max-height: 960px;
+    transition: max-height 0.28s ease, opacity 0.2s ease;
+}
+
+.editor-board-display.editor-board-display--collapsed .editor-board-display-body {
+    max-height: 0;
+    opacity: 0;
 }
 
 .editor-board-match-banner {
@@ -384,6 +394,49 @@
     max-width: 800px;
     height: auto;
     margin: 0 auto;
+}
+
+.editor-board-toggle {
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    z-index: 7;
+    transform: translateX(-50%);
+    width: 28px;
+    height: 20px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px;
+    background: rgba(68, 68, 68, 0.95);
+    color: #fff;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: background 0.2s ease;
+}
+
+.editor-board-toggle:hover {
+    background: rgba(85, 85, 85, 0.98);
+}
+
+.editor-board-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(180deg);
+    transition: transform 0.25s ease;
+}
+
+.editor-board-display.editor-board-display--collapsed .editor-board-toggle-icon {
+    transform: rotate(0deg);
+}
+
+.editor-board-caret-svg {
+    width: 14px;
+    height: 7px;
+    display: block;
 }
 
 .editor-board-display-empty {
@@ -1855,6 +1908,8 @@ button.content-card-admin-info-file-link:hover {
     margin: 0;
     background: inherit;
     pointer-events: none;
+    position: sticky;
+    padding-bottom: 16px;
 }
 
 .card-preview-board-body {
@@ -1862,6 +1917,14 @@ button.content-card-admin-info-file-link:hover {
     max-width: 800px;
     margin: 0 auto;
     pointer-events: none;
+    overflow: hidden;
+    max-height: 960px;
+    transition: max-height 0.28s ease, opacity 0.2s ease;
+}
+
+.card-preview-board-overlay.card-preview-board-overlay--collapsed .card-preview-board-body {
+    max-height: 0;
+    opacity: 0;
 }
 
 .card-preview-board-match-banner {
@@ -1933,6 +1996,49 @@ button.content-card-admin-info-file-link:hover {
     max-width: 800px;
     height: auto;
     margin: 0 auto;
+}
+
+.card-preview-board-toggle {
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    z-index: 7;
+    transform: translateX(-50%);
+    width: 28px;
+    height: 20px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px;
+    background: rgba(68, 68, 68, 0.95);
+    color: #fff;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: background 0.2s ease;
+}
+
+.card-preview-board-toggle:hover {
+    background: rgba(85, 85, 85, 0.98);
+}
+
+.card-preview-board-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(180deg);
+    transition: transform 0.25s ease;
+}
+
+.card-preview-board-overlay.card-preview-board-overlay--collapsed .card-preview-board-toggle-icon {
+    transform: rotate(0deg);
+}
+
+.card-preview-board-caret-svg {
+    width: 14px;
+    height: 7px;
+    display: block;
 }
 
 .card-preview-surface-inner {

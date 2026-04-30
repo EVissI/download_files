@@ -453,9 +453,17 @@ export function appendCardPreviewBoardOverlayImpl(editor, wrap, payload) {
                     <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
                 </div>
             </div>
+            <button type="button" class="card-preview-board-toggle" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
+                <span class="card-preview-board-toggle-icon" aria-hidden="true">
+                    <svg class="card-preview-board-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                        <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
+                    </svg>
+                </span>
+            </button>
         `;
 
     wrap.appendChild(overlay);
+    setupCardPreviewBoardCollapseImpl(editor, overlay);
 
     const canvas = overlay.querySelector('.card-preview-board-canvas');
     editor.loadBoardPreviewImages()
@@ -467,6 +475,33 @@ export function appendCardPreviewBoardOverlayImpl(editor, wrap, payload) {
         .catch((err) => {
             console.error('appendCardPreviewBoardOverlay:', err);
         });
+}
+
+export function setupCardPreviewBoardCollapseImpl(editor, overlay) {
+    if (!overlay) return;
+    const toggle = overlay.querySelector('.card-preview-board-toggle');
+    const body = overlay.querySelector('.card-preview-board-body');
+    if (!toggle || !body) return;
+    const collapsedInitial = !!editor._cardPreviewBoardCollapsed;
+    overlay.classList.toggle('card-preview-board-overlay--collapsed', collapsedInitial);
+    toggle.setAttribute('aria-expanded', collapsedInitial ? 'false' : 'true');
+    const onToggle = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const collapsedNow = !overlay.classList.contains('card-preview-board-overlay--collapsed');
+        overlay.classList.toggle('card-preview-board-overlay--collapsed', collapsedNow);
+        editor._cardPreviewBoardCollapsed = collapsedNow;
+        toggle.setAttribute('aria-expanded', collapsedNow ? 'false' : 'true');
+        requestAnimationFrame(() => editor.refreshCardPreviewScale());
+    };
+    toggle.addEventListener('click', onToggle);
+    toggle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            onToggle(e);
+        }
+    });
 }
 
 export function renderCardPreviewSurfaceImpl(editor, payload) {

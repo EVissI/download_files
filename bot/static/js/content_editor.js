@@ -83,6 +83,8 @@ export class ContentEditor {
         /** Предпросмотр сохранённой карточки: список ссылок на кадры и текущий индекс */
         this.cardPreviewRefs = [];
         this.cardPreviewIndex = 0;
+        this._cardPreviewBoardCollapsed = false;
+        this._editorBoardCollapsed = false;
         this._onCardPreviewResize = () => this.refreshCardPreviewScale();
 
         /** Редактор открыт из предпросмотра карточки — одна кнопка «Сохранить», перезапись того же кадра */
@@ -2959,11 +2961,19 @@ export class ContentEditor {
                         <canvas class="editor-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
                     </div>
                 </div>
+                <button type="button" class="editor-board-toggle" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
+                    <span class="editor-board-toggle-icon" aria-hidden="true">
+                        <svg class="editor-board-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
+                        </svg>
+                    </span>
+                </button>
             </div>
         `;
         host.classList.add('is-visible');
         host.hidden = false;
         host.setAttribute('aria-hidden', 'false');
+        this.setupEditorBoardCollapse(host);
         const canvas = host.querySelector('.editor-board-canvas');
         if (!canvas) return;
         this.loadBoardPreviewImages()
@@ -2974,6 +2984,32 @@ export class ContentEditor {
             .catch((err) => {
                 console.error('renderEditorBoardDisplay:', err);
             });
+    }
+
+    setupEditorBoardCollapse(host) {
+        if (!host) return;
+        const display = host.querySelector('.editor-board-display');
+        const toggle = host.querySelector('.editor-board-toggle');
+        if (!display || !toggle) return;
+        const collapsedInitial = !!this._editorBoardCollapsed;
+        display.classList.toggle('editor-board-display--collapsed', collapsedInitial);
+        toggle.setAttribute('aria-expanded', collapsedInitial ? 'false' : 'true');
+        const onToggle = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const collapsedNow = !display.classList.contains('editor-board-display--collapsed');
+            display.classList.toggle('editor-board-display--collapsed', collapsedNow);
+            this._editorBoardCollapsed = collapsedNow;
+            toggle.setAttribute('aria-expanded', collapsedNow ? 'false' : 'true');
+        };
+        toggle.addEventListener('click', onToggle);
+        toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                onToggle(e);
+            }
+        });
     }
 
     showToggleNotification(toolId, isActive) {
