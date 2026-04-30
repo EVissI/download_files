@@ -646,7 +646,6 @@ export class ContentEditor {
                                 <div id="propertiesToolsDock" class="properties-tools-dock" hidden>
                                     <h3 class="properties-tools-title">Инструменты</h3>
                                 </div>
-                                <h3>Свойства</h3>
                                 <div id="propertiesContent">
                                     <p>Выберите элемент для редактирования</p>
                                 </div>
