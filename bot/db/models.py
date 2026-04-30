@@ -699,7 +699,11 @@ class ContentCardActivationLink(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     link: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     status: Mapped["ContentCardActivationLinkStatus"] = mapped_column(
-        Enum(ContentCardActivationLinkStatus, name="contentcardlinkstatus"),
+        Enum(
+            ContentCardActivationLinkStatus,
+            name="contentcardlinkstatus",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+        ),
         nullable=False,
         default=ContentCardActivationLinkStatus.UNACTIVATE,
         server_default=ContentCardActivationLinkStatus.UNACTIVATE.value,
