@@ -4001,7 +4001,7 @@ export class ContentEditor {
                 ` : ''}
             </div>
             
-            <div class="action-buttons action-buttons-col">
+            <div class="action-buttons">
                 <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')">Удалить</button>
                 ${this.getPropertiesFrameActionsInnerHtml()}
             </div>
