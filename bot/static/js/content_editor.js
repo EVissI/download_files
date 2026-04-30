@@ -3326,6 +3326,8 @@ export class ContentEditor {
                     textContent.textContent = 'Текст ответа';
                 }
             }
+            this.autoGrowTextElementContainer(element);
+            requestAnimationFrame(() => this.autoGrowTextElementContainer(element));
         });
 
         // Обработка ввода текста - только перенос строк
@@ -3349,6 +3351,9 @@ export class ContentEditor {
                     document.execCommand('insertLineBreak');
                     this.autoGrowTextElementContainer(element);
                 }
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                // После массового удаления (например Ctrl+A + Delete) схлопываем высоту блока.
+                requestAnimationFrame(() => this.autoGrowTextElementContainer(element));
             }
         });
     }
