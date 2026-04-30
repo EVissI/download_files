@@ -6071,7 +6071,9 @@ export class ContentEditor {
                 element.dataset.tableType = item.tableType || 'hints';
                 element.innerHTML = item.tableHtml || '';
                 this.applyContentTableMarkupClasses(element);
-                this.setupEditorTableCollapse(element);
+                if (!previewMode) {
+                    this.setupEditorTableCollapse(element);
+                }
                 break;
             case 'upload-image': {
                 element.classList.add('image-element');
