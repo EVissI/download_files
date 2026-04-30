@@ -39,6 +39,8 @@ class ContentCardIssueScheduleModelView(ModelView):
     add_title = _("Добавить расписание выдачи карточек")
     edit_title = _("Редактировать расписание выдачи карточек")
     show_title = _("Расписание выдачи карточек")
+    add_template = "content_card_issue_schedule_add.html"
+    edit_template = "content_card_issue_schedule_edit.html"
 
     list_columns = [
         "id",
@@ -103,6 +105,7 @@ class ContentCardIssueScheduleModelView(ModelView):
         ),
         "issue_time_msk": StringField(
             _("Время (МСК)"),
+            render_kw={"type": "time", "step": "60"},
             validators=[
                 DataRequired(),
                 Regexp(r"^\d{2}:\d{2}$", message=_("Формат: ЧЧ:ММ")),

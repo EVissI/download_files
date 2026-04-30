@@ -1,0 +1,87 @@
+<script>
+    (function () {
+        function byName(name) {
+            return document.querySelector('[name="' + name + '"]');
+        }
+
+        function checkboxNodesByName(name) {
+            return Array.prototype.slice.call(
+                document.querySelectorAll('input[type="checkbox"][name="' + name + '"]') || []
+            );
+        }
+
+        function nearestContainer(el) {
+            return el && el.closest
+                ? el.closest(".form-group, .control-group, .field-box, .formField")
+                : null;
+        }
+
+        function setTimeInputUx() {
+            var timeInput = byName("issue_time_msk");
+            if (!timeInput) return;
+            timeInput.setAttribute("type", "time");
+            if (!timeInput.getAttribute("step")) {
+                timeInput.setAttribute("step", "60");
+            }
+            if (!timeInput.getAttribute("placeholder")) {
+                timeInput.setAttribute("placeholder", "12:30");
+            }
+        }
+
+        function ensureWeekdaysToolbar() {
+            var checkboxes = checkboxNodesByName("weekdays");
+            if (!checkboxes.length) return;
+            var container = nearestContainer(checkboxes[0]);
+            if (!container) return;
+            if (container.querySelector(".weekday-ux-toolbar")) return;
+
+            var toolbar = document.createElement("div");
+            toolbar.className = "weekday-ux-toolbar";
+            toolbar.style.display = "flex";
+            toolbar.style.flexWrap = "wrap";
+            toolbar.style.gap = "8px";
+            toolbar.style.marginBottom = "10px";
+
+            function applySelection(allowedSet) {
+                checkboxes.forEach(function (cb) {
+                    cb.checked = allowedSet.has(String(cb.value || "").toLowerCase());
+                });
+            }
+
+            function addBtn(label, onClick) {
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "btn btn-default btn-sm";
+                btn.textContent = label;
+                btn.addEventListener("click", onClick);
+                toolbar.appendChild(btn);
+            }
+
+            addBtn("Будни", function () {
+                applySelection(new Set(["mon", "tue", "wed", "thu", "fri"]));
+            });
+            addBtn("Выходные", function () {
+                applySelection(new Set(["sat", "sun"]));
+            });
+            addBtn("Все дни", function () {
+                applySelection(new Set(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]));
+            });
+            addBtn("Очистить", function () {
+                applySelection(new Set());
+            });
+
+            container.insertBefore(toolbar, container.firstChild);
+        }
+
+        function init() {
+            setTimeInputUx();
+            ensureWeekdaysToolbar();
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", init);
+        } else {
+            init();
+        }
+    })();
+</script>
