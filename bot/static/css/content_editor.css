@@ -2988,19 +2988,20 @@ button.content-card-admin-info-file-link:hover {
     }
 
     /* На мобильных: инструменты сверху, свойства под ними, рабочая область ниже */
-    .toolbar.toolbar-tools {
+    .workspace {
         order: 1;
     }
 
-    .toolbar.toolbar-properties {
+    /* Нижняя плашка: сверху инструменты, снизу свойства */
+    .editor-resizer[data-resize-target="properties"] {
         order: 2;
     }
 
-    .editor-resizer[data-resize-target="properties"] {
+    .toolbar.toolbar-tools {
         order: 3;
     }
 
-    .workspace {
+    .toolbar.toolbar-properties {
         order: 4;
     }
 
