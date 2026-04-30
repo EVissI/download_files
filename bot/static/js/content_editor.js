@@ -1380,6 +1380,8 @@ export class ContentEditor {
      */
     setupEditorTableCollapse(tableEl) {
         if (!tableEl || !tableEl.classList.contains('table-element')) return;
+        if (tableEl.classList.contains('card-preview-canvas-clone')) return;
+        if (tableEl.querySelector(':scope > .card-preview-table-toggle')) return;
         if (tableEl.querySelector(':scope > .editor-table-toggle')) return;
         const kids = Array.from(tableEl.children);
         if (!kids.length) return;
