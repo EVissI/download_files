@@ -3369,12 +3369,19 @@ export class ContentEditor {
         const cs = window.getComputedStyle(contentNode);
         const lineHeight = parseFloat(cs.lineHeight) || 20;
         const minElementHeight = 36;
-        const contentHeight = Math.max(contentNode.scrollHeight, lineHeight + 8);
         const innerPadding = parseFloat(element.style.padding) || 0;
-        const targetHeight = Math.max(minElementHeight, Math.ceil(contentHeight + innerPadding * 2));
         const currentHeight = parseFloat(element.style.height) || element.getBoundingClientRect().height || 0;
 
-        if (Math.abs(targetHeight - currentHeight) < 1) return;
+        // Временно снимаем фиксированную высоту, чтобы корректно считать shrink после удаления текста.
+        const prevHeight = element.style.height;
+        element.style.height = 'auto';
+        const contentHeight = Math.max(contentNode.scrollHeight, lineHeight + 8);
+        const targetHeight = Math.max(minElementHeight, Math.ceil(contentHeight + innerPadding * 2));
+
+        if (Math.abs(targetHeight - currentHeight) < 1) {
+            element.style.height = prevHeight;
+            return;
+        }
         element.style.height = `${targetHeight}px`;
         if (element.id) this.repositionElementsBelow(element.id);
     }
