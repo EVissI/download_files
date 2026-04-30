@@ -700,7 +700,12 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
 
     response = templates.TemplateResponse(
         "hint_viewer.html",
-        {"request": request, "game_id": game_id, "cache_timestamp": cache_timestamp},
+        {
+            "request": request,
+            "game_id": game_id,
+            "cache_timestamp": cache_timestamp,
+            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
+        },
     )
 
     # Add cache-busting headers to prevent HTML caching

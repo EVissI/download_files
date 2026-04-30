@@ -85,10 +85,12 @@
                 }
 
                 const tg = Telegram.WebApp;
+                const allowFullscreen = {{ 'true' if webapp_fullscreen_enabled else 'false' }};
                 tg.ready();
                 tg.expand();
                 try {
                     const canFullscreen =
+                        allowFullscreen &&
                         typeof tg.requestFullscreen === 'function' &&
                         (typeof tg.isVersionAtLeast !== 'function' || tg.isVersionAtLeast('8.0'));
                     if (canFullscreen && !tg.isFullscreen) {

@@ -270,6 +270,7 @@ async def get_pokaz(
             "lang": lang,
             "i18n": translations,
             "cache_timestamp": cache_timestamp,
+            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -284,7 +285,11 @@ async def content_card_view_page(request: Request):
     cache_timestamp = int(time.time())
     response = templates.TemplateResponse(
         "content_card_view.html",
-        {"request": request, "cache_timestamp": cache_timestamp},
+        {
+            "request": request,
+            "cache_timestamp": cache_timestamp,
+            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
+        },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -298,7 +303,11 @@ async def cards_cabinet_page(request: Request):
     cache_timestamp = int(time.time())
     response = templates.TemplateResponse(
         "cards_cabinet.html",
-        {"request": request, "cache_timestamp": cache_timestamp},
+        {
+            "request": request,
+            "cache_timestamp": cache_timestamp,
+            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
+        },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -371,7 +380,13 @@ async def get_pokaz_hints(xgid: str, chat_id: Optional[int] = None):
 
 @app.get("/admin/login", response_class=HTMLResponse)
 async def admin_login(request: Request):
-    return templates.TemplateResponse("admin_login.html", {"request": request})
+    return templates.TemplateResponse(
+        "admin_login.html",
+        {
+            "request": request,
+            "webapp_fullscreen_enabled": settings.WEBAPP_FULLSCREEN_ENABLED,
+        },
+    )
 
 
 @app.post("/admin/verify")

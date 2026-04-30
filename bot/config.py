@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     SYNCTHING_HOST: str = "localhost:8384"
 
     MINI_APP_URL: str
+    WEBAPP_FULLSCREEN_ENABLED: bool = True
 
     SECRET_KEY: str = "dev-secret-key-change-in-production"
 
