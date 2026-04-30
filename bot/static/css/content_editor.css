@@ -2319,7 +2319,7 @@ button.content-card-admin-info-file-link:hover {
     outline: none;
     border: none;
     background: transparent;
-    overflow: auto;
+    overflow: hidden;
     white-space: pre-wrap;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -2364,7 +2364,7 @@ button.content-card-admin-info-file-link:hover {
     outline: none;
     border: none;
     background: transparent;
-    overflow: auto;
+    overflow: hidden;
     white-space: pre-wrap;
     word-wrap: break-word;
     overflow-wrap: break-word;
