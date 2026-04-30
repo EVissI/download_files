@@ -2423,6 +2423,19 @@ button.content-card-admin-info-file-link:hover {
     margin-right: 8px;
 }
 
+.background-color-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.background-toggle-btn {
+    flex: 0 0 auto;
+    min-width: 78px;
+    padding: 5px 8px;
+    font-size: 10px;
+}
+
 .property-item-audio-controls {
     margin-top: 2px;
 }

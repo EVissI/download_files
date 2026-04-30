@@ -804,6 +804,7 @@ def _sanitize_text_style_preset_payload(payload: Any) -> dict[str, Any]:
         "lineHeightPx": _int(payload.get("lineHeightPx"), 20, 8, 120),
         "paddingPx": _int(payload.get("paddingPx"), 8, 0, 100),
         "backgroundColor": str(payload.get("backgroundColor") or "#ffffff")[:32],
+        "backgroundUnset": bool(payload.get("backgroundUnset")),
         "fontWeight": font_weight,
         "fontStyle": font_style,
         "textDecoration": text_decoration,
