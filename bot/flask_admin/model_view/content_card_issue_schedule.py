@@ -92,7 +92,7 @@ class ContentCardIssueScheduleModelView(ModelView):
         "issue_time_msk": _("Формат: ЧЧ:ММ (Europe/Moscow)."),
     }
 
-    form_extra_fields = {
+    add_form_extra_fields = {
         "cards_per_run": IntegerField(
             _("Карточек за запуск"),
             validators=[DataRequired(), NumberRange(min=1, max=3000)],
@@ -113,6 +113,7 @@ class ContentCardIssueScheduleModelView(ModelView):
         ),
         "is_active": BooleanField(_("Активно"), default=True),
     }
+    edit_form_extra_fields = add_form_extra_fields
 
     def post_add(self, item):
         self._upsert_scheduler_job(item)

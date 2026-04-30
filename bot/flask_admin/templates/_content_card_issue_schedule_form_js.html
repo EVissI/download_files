@@ -30,10 +30,51 @@
 
         function ensureWeekdaysToolbar() {
             var checkboxes = checkboxNodesByName("weekdays");
-            if (!checkboxes.length) return;
-            var container = nearestContainer(checkboxes[0]);
+            var textInput = byName("weekdays");
+            if (!checkboxes.length && (!textInput || textInput.type === "checkbox")) return;
+
+            var sourceNode = checkboxes.length ? checkboxes[0] : textInput;
+            var container = nearestContainer(sourceNode);
             if (!container) return;
-            if (container.querySelector(".weekday-ux-toolbar")) return;
+            if (container.querySelector(".weekday-ux-toolbar") || container.querySelector(".weekday-pills")) return;
+
+            var DAYS = [
+                { value: "mon", short: "Пн", full: "Понедельник" },
+                { value: "tue", short: "Вт", full: "Вторник" },
+                { value: "wed", short: "Ср", full: "Среда" },
+                { value: "thu", short: "Чт", full: "Четверг" },
+                { value: "fri", short: "Пт", full: "Пятница" },
+                { value: "sat", short: "Сб", full: "Суббота" },
+                { value: "sun", short: "Вс", full: "Воскресенье" }
+            ];
+            var activeSet = new Set();
+
+            if (checkboxes.length) {
+                checkboxes.forEach(function (cb) {
+                    if (cb.checked) activeSet.add(String(cb.value || "").toLowerCase());
+                });
+            } else if (textInput) {
+                String(textInput.value || "")
+                    .split(",")
+                    .map(function (v) { return String(v || "").trim().toLowerCase(); })
+                    .filter(function (v) { return !!v; })
+                    .forEach(function (v) { activeSet.add(v); });
+                textInput.style.display = "none";
+            }
+
+            if (checkboxes.length) {
+                checkboxes.forEach(function (cb) {
+                    cb.style.display = "none";
+                    var lbl = cb.closest("label");
+                    if (lbl) {
+                        lbl.style.display = "none";
+                    }
+                    var li = cb.closest("li");
+                    if (li) {
+                        li.style.display = "none";
+                    }
+                });
+            }
 
             var toolbar = document.createElement("div");
             toolbar.className = "weekday-ux-toolbar";
@@ -42,35 +83,74 @@
             toolbar.style.gap = "8px";
             toolbar.style.marginBottom = "10px";
 
-            function applySelection(allowedSet) {
-                checkboxes.forEach(function (cb) {
-                    cb.checked = allowedSet.has(String(cb.value || "").toLowerCase());
+            var pills = document.createElement("div");
+            pills.className = "weekday-pills";
+            pills.style.display = "flex";
+            pills.style.flexWrap = "wrap";
+            pills.style.gap = "8px";
+            pills.style.marginBottom = "8px";
+
+            function syncValue() {
+                if (checkboxes.length) {
+                    checkboxes.forEach(function (cb) {
+                        cb.checked = activeSet.has(String(cb.value || "").toLowerCase());
+                    });
+                    return;
+                }
+                if (textInput) {
+                    var ordered = DAYS
+                        .map(function (d) { return d.value; })
+                        .filter(function (v) { return activeSet.has(v); });
+                    textInput.value = ordered.join(",");
+                }
+            }
+
+            function renderPills() {
+                pills.innerHTML = "";
+                DAYS.forEach(function (day) {
+                    var btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.textContent = day.short;
+                    btn.title = day.full;
+                    btn.className = "btn btn-sm";
+                    var isOn = activeSet.has(day.value);
+                    btn.style.borderRadius = "16px";
+                    btn.style.padding = "4px 10px";
+                    btn.style.border = isOn ? "1px solid #2e6da4" : "1px solid #b6b6b6";
+                    btn.style.background = isOn ? "#337ab7" : "#fff";
+                    btn.style.color = isOn ? "#fff" : "#333";
+                    btn.addEventListener("click", function () {
+                        if (activeSet.has(day.value)) activeSet.delete(day.value);
+                        else activeSet.add(day.value);
+                        syncValue();
+                        renderPills();
+                    });
+                    pills.appendChild(btn);
                 });
             }
 
-            function addBtn(label, onClick) {
+            function addBtn(label, values) {
                 var btn = document.createElement("button");
                 btn.type = "button";
                 btn.className = "btn btn-default btn-sm";
                 btn.textContent = label;
-                btn.addEventListener("click", onClick);
+                btn.addEventListener("click", function () {
+                    activeSet = new Set(values);
+                    syncValue();
+                    renderPills();
+                });
                 toolbar.appendChild(btn);
             }
 
-            addBtn("Будни", function () {
-                applySelection(new Set(["mon", "tue", "wed", "thu", "fri"]));
-            });
-            addBtn("Выходные", function () {
-                applySelection(new Set(["sat", "sun"]));
-            });
-            addBtn("Все дни", function () {
-                applySelection(new Set(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]));
-            });
-            addBtn("Очистить", function () {
-                applySelection(new Set());
-            });
+            addBtn("Будни", ["mon", "tue", "wed", "thu", "fri"]);
+            addBtn("Выходные", ["sat", "sun"]);
+            addBtn("Все дни", ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
+            addBtn("Очистить", []);
 
+            renderPills();
+            syncValue();
             container.insertBefore(toolbar, container.firstChild);
+            container.insertBefore(pills, toolbar.nextSibling);
         }
 
         function init() {
