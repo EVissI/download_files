@@ -21,7 +21,7 @@ from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.config import settings
-from bot.config import bot, SUPPORT_TG_ID, translator_hub
+from bot.config import bot, scheduler, SUPPORT_TG_ID, translator_hub
 from bot.common.utils.i18n import get_text_for_locale
 from bot.db.redis import redis_client
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
@@ -85,6 +85,18 @@ class NoCacheStaticFiles(StaticFiles):
 
 
 app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
+
+
+@app.on_event("startup")
+async def start_scheduler_on_api_startup():
+    """
+    AsyncIOScheduler должен запускаться из async-контекста с активным event loop.
+    FAB-обработчики работают в sync thread и не могут безопасно вызывать start().
+    """
+    if getattr(scheduler, "running", False):
+        return
+    scheduler.start()
+    logger.info("APScheduler started on FastAPI startup")
 
 
 @app.exception_handler(Exception)

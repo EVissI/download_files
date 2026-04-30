@@ -147,23 +147,21 @@ class ContentCardIssueScheduleModelView(ModelView):
         if hour < 0 or hour > 23 or minute < 0 or minute > 59:
             raise ValueError("Некорректное время. Используйте диапазон 00:00-23:59.")
 
-    @staticmethod
-    def _ensure_scheduler_started():
-        if getattr(scheduler, "running", False):
-            return
-        scheduler.start()
-        logger.info("APScheduler started from FAB for card issue schedules")
-
     def _upsert_scheduler_job(self, item: ContentCardIssueSchedule):
         session = self.datamodel.session
         try:
-            self._ensure_scheduler_started()
             if not item.is_active:
                 self._remove_scheduler_job(item, commit=False)
                 item.scheduler_job_id = None
                 session.commit()
                 flash(_("Расписание сохранено как неактивное, задача отключена."), "info")
                 return
+
+            if not getattr(scheduler, "running", False):
+                raise RuntimeError(
+                    "Планировщик APScheduler не запущен. "
+                    "Запустите API/бот с активным scheduler.start()."
+                )
 
             self._validate_time(item.issue_time_msk)
             weekdays = self._normalize_weekdays(item.weekdays)

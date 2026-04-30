@@ -1,11 +1,22 @@
 from datetime import datetime, timezone
 
+from aiogram.types import InlineKeyboardMarkup, WebAppInfo
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from loguru import logger
 from sqlalchemy import select
 
 from bot.common.utils.notify import notify_user
+from bot.config import settings
 from bot.db.database import async_session_maker
 from bot.db.models import ContentCard, ContentCardIssueSchedule, User, UserContentCard
+
+
+def _cards_cabinet_webapp_markup() -> InlineKeyboardMarkup:
+    cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Открыть кабинет", web_app=WebAppInfo(url=cabinet_url))
+    kb.adjust(1)
+    return kb.as_markup()
 
 
 async def run_content_card_issue_schedule(schedule_id: int) -> None:
@@ -85,8 +96,9 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
                 schedule.target_user_id,
                 (
                     f"Вам зачислено {issued_count} карточек.\n"
-                    "Посмотрите их в личном кабинете по команде /cards."
+                    "Посмотрите их в личном кабинете."
                 ),
+                _cards_cabinet_webapp_markup(),
             )
             logger.info(
                 "Card issue schedule %s granted %s cards to user %s",

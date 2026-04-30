@@ -1,6 +1,8 @@
 import asyncio
 
 from aiogram import Bot
+from aiogram.types import WebAppInfo
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from flask import flash, redirect, request, url_for
 from flask_appbuilder import ModelView, expose, has_access, permission_name
 from flask_appbuilder.models.sqla.interface import SQLAInterface
@@ -14,6 +16,7 @@ from bot.db.models import (
     UserPromocode,
 )
 from bot.config import create_bot_for_sync_context
+from bot.config import settings
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
@@ -28,6 +31,15 @@ def _run_telegram_sync(action):
             await tg_bot.session.close()
 
     asyncio.run(_runner())
+
+
+def _cards_cabinet_webapp_markup():
+    base = settings.MINI_APP_URL.rstrip("/")
+    url = f"{base}/cards-cabinet"
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Открыть кабинет", web_app=WebAppInfo(url=url))
+    kb.adjust(1)
+    return kb.as_markup()
 
 
 class CustomUserSQLAInterface(SQLAInterface):
@@ -311,8 +323,9 @@ class UserModelView(ModelView):
                         chat_id=pk,
                         text=(
                             f"Вам зачислено {issued_count} карточек.\n"
-                            "Посмотрите их в личном кабинете по команде /cards."
+                            "Посмотрите их в личном кабинете."
                         ),
+                        reply_markup=_cards_cabinet_webapp_markup(),
                     )
 
                 _run_telegram_sync(_send)
