@@ -448,18 +448,22 @@ export function appendCardPreviewBoardOverlayImpl(editor, wrap, payload) {
     overlay.className = 'card-preview-board-overlay';
     overlay.innerHTML = `
             <div class="card-preview-board-body">
-                <div class="card-preview-board-match-banner" ${showMatchBanner ? '' : 'hidden'}>${editor.escapeHtml(bannerText)}</div>
-                <div class="card-preview-board-canvas-wrap">
-                    <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
+                <div class="card-preview-board-collapsible">
+                    <div class="card-preview-board-match-banner" ${showMatchBanner ? '' : 'hidden'}>${editor.escapeHtml(bannerText)}</div>
+                    <div class="card-preview-board-canvas-wrap">
+                        <canvas class="card-preview-board-canvas" width="800" height="800" aria-hidden="true"></canvas>
+                    </div>
+                </div>
+                <div class="card-preview-board-toggle-row">
+                    <button type="button" class="card-preview-board-toggle" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
+                        <span class="card-preview-board-toggle-icon" aria-hidden="true">
+                            <svg class="card-preview-board-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                                <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
+                            </svg>
+                        </span>
+                    </button>
                 </div>
             </div>
-            <button type="button" class="card-preview-board-toggle" aria-expanded="true" aria-label="Свернуть или развернуть доску" title="Свернуть или развернуть доску">
-                <span class="card-preview-board-toggle-icon" aria-hidden="true">
-                    <svg class="card-preview-board-caret-svg" viewBox="0 0 48 22" xmlns="http://www.w3.org/2000/svg" focusable="false">
-                        <path fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" d="M7 17 L24 5 L41 17"/>
-                    </svg>
-                </span>
-            </button>
         `;
 
     wrap.appendChild(overlay);

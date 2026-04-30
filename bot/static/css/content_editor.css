@@ -1909,7 +1909,6 @@ button.content-card-admin-info-file-link:hover {
     background: inherit;
     pointer-events: none;
     position: sticky;
-    padding-bottom: 16px;
 }
 
 .card-preview-board-body {
@@ -1917,12 +1916,15 @@ button.content-card-admin-info-file-link:hover {
     max-width: 800px;
     margin: 0 auto;
     pointer-events: none;
+}
+
+.card-preview-board-collapsible {
     overflow: hidden;
     max-height: 960px;
     transition: max-height 0.28s ease, opacity 0.2s ease;
 }
 
-.card-preview-board-overlay.card-preview-board-overlay--collapsed .card-preview-board-body {
+.card-preview-board-overlay.card-preview-board-overlay--collapsed .card-preview-board-collapsible {
     max-height: 0;
     opacity: 0;
 }
@@ -1998,12 +2000,18 @@ button.content-card-admin-info-file-link:hover {
     margin: 0 auto;
 }
 
+.card-preview-board-toggle-row {
+    height: 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    pointer-events: auto;
+}
+
 .card-preview-board-toggle {
-    position: absolute;
-    left: 50%;
-    bottom: 2px;
+    position: relative;
     z-index: 7;
-    transform: translateX(-50%);
+    transform: translateY(-8px);
     width: 28px;
     height: 20px;
     padding: 0;
