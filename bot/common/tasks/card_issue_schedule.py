@@ -30,20 +30,22 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
         try:
             schedule = await session.get(ContentCardIssueSchedule, schedule_id)
             if not schedule:
-                logger.warning("Card issue schedule %s not found", schedule_id)
+                logger.warning("Card issue schedule {} not found", schedule_id)
                 return
             if not schedule.is_active:
-                logger.info("Card issue schedule %s is inactive, skip", schedule_id)
+                logger.info("Card issue schedule {} is inactive, skip", schedule_id)
                 return
+            target_user_id = int(schedule.target_user_id)
+            cards_per_run = max(1, int(schedule.cards_per_run))
 
             user_exists = await session.scalar(
-                select(User.id).where(User.id == schedule.target_user_id).limit(1)
+                select(User.id).where(User.id == target_user_id).limit(1)
             )
             if user_exists is None:
                 logger.warning(
-                    "Card issue schedule %s target user %s not found",
+                    "Card issue schedule {} target user {} not found",
                     schedule_id,
-                    schedule.target_user_id,
+                    target_user_id,
                 )
                 return
 
@@ -62,7 +64,7 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
 
             existing_card_ids_result = await session.execute(
                 select(UserContentCard.content_card_id).where(
-                    UserContentCard.user_id == schedule.target_user_id
+                    UserContentCard.user_id == target_user_id
                 )
             )
             existing_card_ids = {
@@ -79,11 +81,11 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
                 await session.commit()
                 return
 
-            to_issue_ids = available_card_ids[: max(1, int(schedule.cards_per_run))]
+            to_issue_ids = available_card_ids[:cards_per_run]
             for card_id in to_issue_ids:
                 session.add(
                     UserContentCard(
-                        user_id=schedule.target_user_id,
+                        user_id=target_user_id,
                         content_card_id=card_id,
                     )
                 )
@@ -93,7 +95,7 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
             await session.commit()
 
             await notify_user(
-                schedule.target_user_id,
+                target_user_id,
                 (
                     f"Вам зачислено {issued_count} карточек.\n"
                     "Посмотрите их в личном кабинете."
@@ -101,15 +103,15 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
                 _cards_cabinet_webapp_markup(),
             )
             logger.info(
-                "Card issue schedule %s granted %s cards to user %s",
+                "Card issue schedule {} granted {} cards to user {}",
                 schedule_id,
                 issued_count,
-                schedule.target_user_id,
+                target_user_id,
             )
         except Exception as exc:
             await session.rollback()
             logger.exception(
-                "Card issue schedule %s failed: %s",
+                "Card issue schedule {} failed: {}",
                 schedule_id,
                 exc,
             )
