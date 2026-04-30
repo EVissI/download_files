@@ -1956,6 +1956,10 @@ button.content-card-admin-info-file-link:hover {
     pointer-events: none;
 }
 
+.canvas-element.table-element.editor-table--collapsed {
+    min-height: 0 !important;
+}
+
 .card-preview-canvas-clone {
     box-sizing: border-box;
 }
