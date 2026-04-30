@@ -90,13 +90,15 @@ app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
 @app.on_event("startup")
 async def start_scheduler_on_api_startup():
     """
-    AsyncIOScheduler должен запускаться из async-контекста с активным event loop.
-    FAB-обработчики работают в sync thread и не могут безопасно вызывать start().
+    В API-процессе поднимаем scheduler в paused-режиме:
+    - FAB может создавать/обновлять jobs в SQLAlchemyJobStore;
+    - задачи НЕ исполняются в этом процессе (чтобы не было дублей с ботом).
+    Исполнение задач остается в backgammon_bot (bot/init.py).
     """
     if getattr(scheduler, "running", False):
         return
-    scheduler.start()
-    logger.info("APScheduler started on FastAPI startup")
+    scheduler.start(paused=True)
+    logger.info("APScheduler started on FastAPI startup in paused mode")
 
 
 @app.exception_handler(Exception)
