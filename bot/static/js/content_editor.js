@@ -3375,14 +3375,8 @@ export class ContentEditor {
     }
 
     addElementControls(element) {
-        const tid = element.dataset.toolId;
-        if (!['question-text', 'answer-text', 'support-link'].includes(tid)) return;
-        if (element.querySelector('.text-block-resize-handle')) return;
-        const h = document.createElement('div');
-        h.className = 'text-block-resize-handle';
-        h.title = 'Потяните, чтобы изменить высоту';
-        h.setAttribute('aria-hidden', 'true');
-        element.appendChild(h);
+        // Ручной ресайз текстовых блоков отключён: высота управляется авто-ростом по контенту.
+        return;
     }
 
     beginTextBlockHeightDrag(element, startClientY) {
@@ -6346,39 +6340,13 @@ export class ContentEditor {
     }
 
     setupCanvasEvents() {
-        // Клик по элементу для выделения и открытия свойств; ресайз высоты текстовых блоков
+        // Клик по элементу для выделения и открытия свойств
         this.canvas.addEventListener('mousedown', (e) => {
-            const resizeHandle = e.target.closest('.text-block-resize-handle');
-            if (resizeHandle) {
-                const canvasElement = resizeHandle.closest('.canvas-element');
-                if (canvasElement) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.selectElement(canvasElement);
-                    this.beginTextBlockHeightDrag(canvasElement, e.clientY);
-                }
-                return;
-            }
-
             const canvasElement = e.target.closest('.canvas-element');
             if (canvasElement && !e.target.classList.contains('control-btn')) {
                 this.selectElement(canvasElement);
             }
         });
-
-        this.canvas.addEventListener(
-            'touchstart',
-            (e) => {
-                const resizeHandle = e.target.closest('.text-block-resize-handle');
-                if (!resizeHandle) return;
-                const canvasElement = resizeHandle.closest('.canvas-element');
-                if (!canvasElement) return;
-                e.preventDefault();
-                this.selectElement(canvasElement);
-                this.beginTextBlockHeightDrag(canvasElement, e.touches[0].clientY);
-            },
-            { passive: false }
-        );
     }
 
 
