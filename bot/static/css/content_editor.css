@@ -420,6 +420,41 @@
     overflow: hidden;
 }
 
+.properties-tools-dock {
+    display: none;
+}
+
+.properties-tools-title {
+    padding: 12px 15px;
+    margin: 0;
+    background: #383838;
+    border-bottom: 1px solid #404040;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.content-editor-body.desktop-merged-tools .toolbar.toolbar-tools,
+.content-editor-body.desktop-merged-tools .editor-resizer[data-resize-target="toolbar"] {
+    display: none !important;
+}
+
+.content-editor-body.desktop-merged-tools .properties-tools-dock {
+    display: block;
+    flex: 0 0 auto;
+}
+
+.content-editor-body.desktop-merged-tools .properties-tools-dock .tools-list {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.content-editor-body.desktop-merged-tools #propertiesContent {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 .properties-panel h3 {
     padding: 15px;
     background: #383838;

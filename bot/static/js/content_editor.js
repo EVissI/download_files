@@ -58,6 +58,8 @@ export class ContentEditor {
         this.canvas = null;
         this.toolsList = null;
         this.propertiesContent = null;
+        this.propertiesToolsDock = null;
+        this.toolsListOriginalParent = null;
         this.selectedElement = null;
         this.elements = [];
         this.elementIdCounter = 0;
@@ -634,6 +636,9 @@ export class ContentEditor {
                             </div>
                             <div class="editor-resizer editor-resizer-vertical" data-resize-target="properties"></div>
                             <div class="properties-panel toolbar-properties">
+                                <div id="propertiesToolsDock" class="properties-tools-dock" hidden>
+                                    <h3 class="properties-tools-title">Инструменты</h3>
+                                </div>
                                 <h3>Свойства</h3>
                                 <div id="propertiesContent">
                                     <p>Выберите элемент для редактирования</p>
@@ -872,6 +877,10 @@ export class ContentEditor {
         this.ensureEditorBoardDisplayHost();
         this.toolsList = document.getElementById('toolsList');
         this.propertiesContent = document.getElementById('propertiesContent');
+        this.propertiesToolsDock = document.getElementById('propertiesToolsDock');
+        if (!this.toolsListOriginalParent && this.toolsList) {
+            this.toolsListOriginalParent = this.toolsList.parentElement;
+        }
 
         // Дополнительные ссылки на панели для ресайза
         this.toolbarPanel = this.modal.querySelector('.toolbar');
@@ -880,6 +889,28 @@ export class ContentEditor {
         this.ensurePreviewUiParity();
         this.applyPropertiesEmptyState();
         this.wireBoardMatchBannerToolbar();
+        this.syncDesktopPanelLayout();
+    }
+
+    syncDesktopPanelLayout() {
+        if (!this.modal || !this.toolsList) return;
+        const body = this.modal.querySelector('.content-editor-body');
+        const dock = this.propertiesToolsDock || document.getElementById('propertiesToolsDock');
+        if (!body || !dock) return;
+        const mobile = this.isMobile();
+        if (mobile) {
+            body.classList.remove('desktop-merged-tools');
+            dock.hidden = true;
+            if (this.toolsListOriginalParent && this.toolsList.parentElement !== this.toolsListOriginalParent) {
+                this.toolsListOriginalParent.appendChild(this.toolsList);
+            }
+            return;
+        }
+        body.classList.add('desktop-merged-tools');
+        dock.hidden = false;
+        if (this.toolsList.parentElement !== dock) {
+            dock.appendChild(this.toolsList);
+        }
     }
 
     /** Кнопки «Сохранить кадр» / «Предпросмотр» или «Сохранить» из режима предпросмотра (без обёртки). */
@@ -6483,6 +6514,7 @@ export class ContentEditor {
     }
 
     handleWindowResize() {
+        this.syncDesktopPanelLayout();
         // Get current canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
         const maxCanvasWidth = this.getMaxCanvasWidth();
