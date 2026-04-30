@@ -2871,13 +2871,24 @@ button.content-card-admin-info-file-link:hover {
     flex: none;
 }
 
+.properties-frame-actions-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+}
+
+.properties-frame-actions-row .action-btn {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
 .save-frame-inline-btn {
     background: #1a472a;
     border-color: #22c55e;
     color: #fff;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    padding: 6px 8px;
+    padding: 5px 7px;
 }
 
 .save-frame-inline-btn:hover {
@@ -2889,9 +2900,9 @@ button.content-card-admin-info-file-link:hover {
     background: #1e3a5f;
     border-color: #3b82f6;
     color: #fff;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    padding: 6px 8px;
+    padding: 5px 7px;
 }
 
 .save-card-inline-btn:hover {

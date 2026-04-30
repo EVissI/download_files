@@ -941,10 +941,14 @@ export class ContentEditor {
     /** Кнопки «Сохранить кадр» / «Предпросмотр» или «Сохранить» из режима предпросмотра (без обёртки). */
     getPropertiesFrameActionsInnerHtml() {
         if (this.editorOpenedFromPreview || this.editorOpenedFromContentCardView) {
-            return `<button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()">Сохранить</button>`;
+            return `<div class="properties-frame-actions-row">
+                        <button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()">Сохранить</button>
+                    </div>`;
         }
-        return `<button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
-                <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openCardPreviewModal()">Предпросмотр</button>`;
+        return `<div class="properties-frame-actions-row">
+                    <button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
+                    <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openCardPreviewModal()">Предпросмотр</button>
+                </div>`;
     }
 
     getPropertiesEmptyStateHtml() {
