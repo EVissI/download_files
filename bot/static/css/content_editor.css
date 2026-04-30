@@ -1957,7 +1957,7 @@ button.content-card-admin-info-file-link:hover {
 }
 
 .canvas-element.table-element.editor-table--collapsed {
-    min-height: 10 !important;
+    min-height: 10px !important;
 }
 
 .card-preview-canvas-clone {
