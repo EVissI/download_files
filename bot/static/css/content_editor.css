@@ -2344,7 +2344,6 @@ button.content-card-admin-info-file-link:hover {
 .property-item input[type="number"],
 .property-item input[type="color"],
 .property-item select {
-    width: 100%;
     background: #3a3a3a;
     border: 1px solid #505050;
     border-radius: 4px;
