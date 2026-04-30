@@ -1692,6 +1692,21 @@ button.content-card-admin-info-file-link:hover {
     pointer-events: none;
 }
 
+@media (min-width: 769px) {
+    .card-preview-board-body {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .card-preview-board-overlay,
+    .card-preview-board-match-banner,
+    .card-preview-board-canvas {
+        margin-left: 0;
+        margin-right: auto;
+    }
+}
+
 .card-preview-board-match-banner {
     box-sizing: border-box;
     width: 100%;
