@@ -1818,9 +1818,15 @@ button.content-card-admin-info-file-link:hover {
 }
 
 @media (min-width: 769px) {
-    .card-preview-surface-inner .canvas-element.table-element.card-preview-canvas-clone table.ce-content-table {
+    .card-preview-surface-inner .canvas-element.table-element.card-preview-canvas-clone table.ce-content-table,
+    .card-preview-surface-inner .canvas-element.table-element.card-preview-canvas-clone table {
         margin-left: 0 !important;
         margin-right: auto !important;
+    }
+
+    .card-preview-surface-inner .canvas-element.table-element.card-preview-canvas-clone,
+    .card-preview-surface-inner .canvas-element.table-element.card-preview-canvas-clone .card-preview-table-collapse-body {
+        text-align: left !important;
     }
 }
 
