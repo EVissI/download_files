@@ -1041,8 +1041,14 @@ export class ContentEditor {
                     </div>`;
         }
         return `<div class="properties-frame-actions-row">
-                    <button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()">Сохранить кадр</button>
-                    <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openCardPreviewModal()">Предпросмотр</button>
+                    <button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()"
+                            title="Сохранить кадр" aria-label="Сохранить кадр">
+                        <i class="fa fa-save" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
+                    </button>
+                    <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openCardPreviewModal()"
+                            title="Предпросмотр" aria-label="Предпросмотр">
+                        <i class="fa fa-eye" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
+                    </button>
                 </div>`;
     }
 
