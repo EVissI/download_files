@@ -2306,6 +2306,8 @@ button.content-card-admin-info-file-link:hover {
 .card-preview-surface-inner .text-content,
 .card-preview-surface-inner .link-text {
     outline: none !important;
+    overflow: visible !important;
+    height: auto !important;
 }
 
 /*
