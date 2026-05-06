@@ -2,6 +2,11 @@ export function setupTextEditingImpl(editor, element) {
     const textContent = element.querySelector('.text-content');
     if (!textContent) return;
     editor.autoGrowTextElementContainer(element);
+    const hasMeaningfulEditableContent = (node) => {
+        const plain = String(node.textContent || '').replace(/\u200B/g, '').trim();
+        if (plain) return true;
+        return !!node.querySelector('img, svg, video, audio, canvas, iframe, object, embed');
+    };
     const syncPropsFromSelection = () => {
         if (typeof editor.syncTextPropertiesFromActiveSelection === 'function') {
             editor.syncTextPropertiesFromActiveSelection(element);
@@ -26,7 +31,7 @@ export function setupTextEditingImpl(editor, element) {
     textContent.addEventListener('blur', () => {
         editor.saveSelectionForEditable(textContent);
         // Если текст пустой, возвращаем placeholder
-        if (textContent.textContent.trim() === '') {
+        if (!hasMeaningfulEditableContent(textContent)) {
             if (element.dataset.toolId === 'question-text') {
                 textContent.textContent = 'Текст вопроса';
             } else if (element.dataset.toolId === 'answer-text') {

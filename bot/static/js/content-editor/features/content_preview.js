@@ -109,6 +109,43 @@ export function reorderCardPreviewElementsBySavedTopImpl(_editor, inner) {
     inner.appendChild(frag);
 }
 
+/**
+ * На узких экранах сохранённая высота текстового блока может быть меньше фактической:
+ * текст переносится на больше строк и «обрезает» низ карточки.
+ * Подтягиваем высоту текстовых/ссылочных блоков по реальному контенту перед расчётом скролла.
+ */
+function normalizePreviewTextBlockHeights(inner) {
+    if (!inner) return;
+    const blocks = inner.querySelectorAll(
+        '.canvas-element.card-preview-canvas-clone.text-element, .canvas-element.card-preview-canvas-clone.link-element'
+    );
+    blocks.forEach((el) => {
+        const content = el.querySelector('.text-content, .link-text');
+        if (!content) return;
+
+        const savedHeight = parseFloat(el.style.height) || 0;
+        const elPrevHeight = el.style.height;
+        const contentPrevHeight = content.style.height;
+
+        // Временно снимаем фиксированную высоту, чтобы получить реальный scrollHeight контента.
+        el.style.height = 'auto';
+        content.style.height = 'auto';
+
+        const lineHeight = parseFloat(window.getComputedStyle(content).lineHeight) || 20;
+        const contentHeight = Math.max(content.scrollHeight || 0, lineHeight + 8);
+        const blockPadding = parseFloat(el.style.padding) || 0;
+        const minHeight = 36;
+        const requiredHeight = Math.max(minHeight, Math.ceil(contentHeight + blockPadding * 2));
+        const targetHeight = Math.max(savedHeight, requiredHeight);
+
+        el.style.height = `${targetHeight}px`;
+        content.style.height = contentPrevHeight || '';
+        if (!elPrevHeight && targetHeight <= 0) {
+            el.style.height = '';
+        }
+    });
+}
+
 export function shouldShowBoardInCardPreviewImpl(_editor, payload) {
     if (!payload) return false;
     if (payload.editor && payload.editor.boardCanvasToggle) return true;
@@ -565,6 +602,7 @@ export function renderCardPreviewSurfaceImpl(editor, payload) {
     inner
         .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
         .forEach((el) => editor.setupCardPreviewTableCollapse(el));
+    normalizePreviewTextBlockHeights(inner);
 
     if (editor.shouldShowBoardInCardPreview(effectivePayload)) {
         editor.appendCardPreviewBoardOverlay(wrap, effectivePayload);
@@ -615,6 +653,7 @@ export function refreshCardPreviewScaleImpl(editor) {
         inner.querySelectorAll('.canvas-element').forEach((el) => {
             el.style.marginBottom = '';
         });
+        normalizePreviewTextBlockHeights(inner);
     }
     editor.updateCardPreviewInnerMinHeight(inner);
     const boardEl = wrap.querySelector('.card-preview-board-overlay');

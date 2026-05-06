@@ -1714,6 +1714,26 @@ export class ContentEditor {
     }
 
     /**
+     * Нормализует HTML из contenteditable перед сохранением:
+     * Telegram/WebView может вставлять эмодзи как <img alt="🙂">.
+     * Преобразуем такие узлы обратно в Unicode-текст, чтобы эмодзи
+     * стабильно сохранялись в JSON и корректно восстанавливались.
+     */
+    editableInnerHtmlForSave(editableNode) {
+        if (!editableNode) return '';
+        const clone = editableNode.cloneNode(true);
+        clone.querySelectorAll('img').forEach((img) => {
+            const alt = String(img.getAttribute('alt') || img.getAttribute('aria-label') || '').trim();
+            if (alt) {
+                img.replaceWith(document.createTextNode(alt));
+            } else {
+                img.remove();
+            }
+        });
+        return clone.innerHTML;
+    }
+
+    /**
      * Перестановка блоков только по вертикали: тянуть за ручку слева, отпустить — новая позиция в стопке.
      */
     attachBlockReorderInteractions(element) {
@@ -4767,13 +4787,13 @@ export class ContentEditor {
                 case 'question-text':
                 case 'answer-text': {
                     const tc = el.querySelector('.text-content');
-                    item.textHtml = tc ? tc.innerHTML : '';
+                    item.textHtml = tc ? this.editableInnerHtmlForSave(tc) : '';
                     break;
                 }
                 case 'support-link': {
                     const lt = el.querySelector('.link-text');
                     const lu = el.querySelector('.link-url');
-                    item.linkTextHtml = lt ? lt.innerHTML : '';
+                    item.linkTextHtml = lt ? this.editableInnerHtmlForSave(lt) : '';
                     item.linkUrl = lu ? lu.value : '';
                     break;
                 }
