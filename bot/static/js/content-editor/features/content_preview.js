@@ -124,25 +124,13 @@ function normalizePreviewTextBlockHeights(inner) {
         if (!content) return;
 
         const savedHeight = parseFloat(el.style.height) || 0;
-        const elPrevHeight = el.style.height;
-        const contentPrevHeight = content.style.height;
+        const minHeight = Math.max(36, Math.ceil(savedHeight));
 
-        // Временно снимаем фиксированную высоту, чтобы получить реальный scrollHeight контента.
+        // Для превью не фиксируем height у текстовых блоков: на смартфонах перенос строк
+        // может сильно отличаться от редактора. Оставляем только нижнюю границу min-height.
         el.style.height = 'auto';
+        el.style.minHeight = `${minHeight}px`;
         content.style.height = 'auto';
-
-        const lineHeight = parseFloat(window.getComputedStyle(content).lineHeight) || 20;
-        const contentHeight = Math.max(content.scrollHeight || 0, lineHeight + 8);
-        const blockPadding = parseFloat(el.style.padding) || 0;
-        const minHeight = 36;
-        const requiredHeight = Math.max(minHeight, Math.ceil(contentHeight + blockPadding * 2));
-        const targetHeight = Math.max(savedHeight, requiredHeight);
-
-        el.style.height = `${targetHeight}px`;
-        content.style.height = contentPrevHeight || '';
-        if (!elPrevHeight && targetHeight <= 0) {
-            el.style.height = '';
-        }
     });
 }
 
