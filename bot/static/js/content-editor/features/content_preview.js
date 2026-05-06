@@ -124,15 +124,13 @@ function normalizePreviewTextBlockHeights(inner) {
         if (!content) return;
 
         // Не используем сохранённый fixed-height из редактора.
-        // Иначе на разных ширинах экрана получаются либо наложения, либо большие пустоты.
+        // В потоке flex высота будет вычислена от текущего content/layout и ширины экрана.
         el.style.height = 'auto';
         el.style.minHeight = '0px';
+        el.style.overflow = 'visible';
         content.style.height = 'auto';
-
-        const lineHeight = parseFloat(window.getComputedStyle(content).lineHeight) || 20;
-        const contentHeight = Math.max(content.scrollHeight || 0, lineHeight + 8);
-        const targetHeight = Math.max(36, Math.ceil(contentHeight));
-        el.style.height = `${targetHeight}px`;
+        content.style.minHeight = '0px';
+        content.style.overflow = 'visible';
     });
 }
 
