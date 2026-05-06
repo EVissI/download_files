@@ -4120,7 +4120,9 @@ export class ContentEditor {
             </div>
             
             <div class="action-buttons">
-                <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')">Удалить</button>
+                <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')" title="Удалить элемент" aria-label="Удалить элемент">
+                    <i class="fa fa-trash" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
+                </button>
                 ${this.getPropertiesFrameActionsInnerHtml()}
             </div>
         `;
