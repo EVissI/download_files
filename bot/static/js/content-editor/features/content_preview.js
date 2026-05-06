@@ -110,9 +110,9 @@ export function reorderCardPreviewElementsBySavedTopImpl(_editor, inner) {
 }
 
 /**
- * На узких экранах сохранённая высота текстового блока может быть меньше фактической:
- * текст переносится на больше строк и «обрезает» низ карточки.
- * Подтягиваем высоту текстовых/ссылочных блоков по реальному контенту перед расчётом скролла.
+ * В просмотре высота текстовых блоков должна зависеть от реального контента
+ * и текущей ширины экрана, чтобы избежать наложений на узких экранах
+ * и лишних пустых отступов на широких.
  */
 function normalizePreviewTextBlockHeights(inner) {
     if (!inner) return;
@@ -123,14 +123,16 @@ function normalizePreviewTextBlockHeights(inner) {
         const content = el.querySelector('.text-content, .link-text');
         if (!content) return;
 
-        const savedHeight = parseFloat(el.style.height) || 0;
-        const minHeight = Math.max(36, Math.ceil(savedHeight));
-
-        // В просмотре текстовые блоки должны расти естественно и сдвигать нижние блоки потоком.
-        // Сохраняем лишь минимальную высоту из редактора, а не жёсткий fixed-height.
+        // Не используем сохранённый fixed-height из редактора.
+        // Иначе на разных ширинах экрана получаются либо наложения, либо большие пустоты.
         el.style.height = 'auto';
-        el.style.minHeight = `${minHeight}px`;
+        el.style.minHeight = '0px';
         content.style.height = 'auto';
+
+        const lineHeight = parseFloat(window.getComputedStyle(content).lineHeight) || 20;
+        const contentHeight = Math.max(content.scrollHeight || 0, lineHeight + 8);
+        const targetHeight = Math.max(36, Math.ceil(contentHeight));
+        el.style.height = `${targetHeight}px`;
     });
 }
 
@@ -605,6 +607,9 @@ export function renderCardPreviewSurfaceImpl(editor, payload) {
     requestAnimationFrame(() => {
         editor.refreshCardPreviewScale();
     });
+    setTimeout(() => {
+        editor.refreshCardPreviewScale();
+    }, 120);
 }
 
 export function updateCardPreviewInnerMinHeightImpl(_editor, inner) {
