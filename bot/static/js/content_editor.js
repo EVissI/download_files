@@ -776,8 +776,9 @@ export class ContentEditor {
                         <div class="card-preview-header">
                             <h3 class="card-preview-title">Предпросмотр карточки</h3>
                             <div class="card-preview-header-right">
-                                <button type="button" id="cardPreviewDeleteBtn" class="card-preview-open-editor" onclick="contentEditor.deleteCurrentPreviewFrame()" title="Удалить текущий кадр">
-                                    Удалить кадр
+                                <button type="button" id="cardPreviewDeleteBtn" class="card-preview-open-editor" onclick="contentEditor.deleteCurrentPreviewFrame()" title="Удалить текущий кадр" aria-label="Удалить текущий кадр">
+                                    <i class="fa fa-trash" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
+                                    <span style="margin-left: 6px;">Удалить кадр</span>
                                 </button>
                                 <button type="button" class="card-preview-close" onclick="contentEditor.closeCardPreviewModal()" aria-label="Закрыть">&times;</button>
                             </div>
@@ -1037,7 +1038,10 @@ export class ContentEditor {
     getPropertiesFrameActionsInnerHtml() {
         if (this.editorOpenedFromPreview || this.editorOpenedFromContentCardView) {
             return `<div class="properties-frame-actions-row">
-                        <button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()">Сохранить</button>
+                        <button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()"
+                                title="Сохранить" aria-label="Сохранить">
+                            <i class="fa fa-save" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
+                        </button>
                     </div>`;
         }
         return `<div class="properties-frame-actions-row">
@@ -1164,7 +1168,10 @@ export class ContentEditor {
                 deleteBtn.id = 'cardPreviewDeleteBtn';
                 deleteBtn.className = 'card-preview-open-editor';
                 deleteBtn.title = 'Удалить текущий кадр';
-                deleteBtn.textContent = 'Удалить кадр';
+                deleteBtn.setAttribute('aria-label', 'Удалить текущий кадр');
+                deleteBtn.innerHTML =
+                    '<i class="fa fa-trash" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>' +
+                    '<span style="margin-left: 6px;">Удалить кадр</span>';
                 deleteBtn.onclick = () => this.deleteCurrentPreviewFrame();
                 headerRight.prepend(deleteBtn);
             }
