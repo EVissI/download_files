@@ -11,6 +11,7 @@ WEBAPP_FULLSCREEN_FIELD_BY_SERVICE: dict[str, str] = {
     "cards_cabinet": "webapp_fullscreen_cards_cabinet_enabled",
     "content_card_view": "webapp_fullscreen_content_card_view_enabled",
     "admin_login": "webapp_fullscreen_admin_login_enabled",
+    "player": "webapp_fullscreen_player_enabled",
 }
 
 
@@ -38,6 +39,7 @@ async def get_webapp_fullscreen_enabled(
                     webapp_fullscreen_cards_cabinet_enabled=v,
                     webapp_fullscreen_content_card_view_enabled=v,
                     webapp_fullscreen_admin_login_enabled=v,
+                    webapp_fullscreen_player_enabled=v,
                 )
                 session.add(row)
                 await session.commit()

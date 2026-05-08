@@ -2195,6 +2195,25 @@
             });
         }
 
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            const allowFullscreen = "{{ 'true' if webapp_fullscreen_enabled else 'false' }}" === 'true';
+            tg.ready();
+            tg.expand();
+            if (allowFullscreen) {
+                try {
+                    if (
+                        typeof tg.requestFullscreen === 'function' &&
+                        tg.isFullscreen !== true
+                    ) {
+                        tg.requestFullscreen();
+                    }
+                } catch (e) {
+                    console.warn('requestFullscreen(board_viewer) failed:', e);
+                }
+            }
+        }
+
     </script>
 </body>
 

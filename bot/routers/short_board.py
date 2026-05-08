@@ -33,6 +33,7 @@ from bot.db.models import User
 from bot.config import bot
 from bot.common.func.game_parser import parse_file, get_names
 from bot.common.func.yadisk import save_file_to_yandex_disk
+from bot.common.service.webapp_settings_service import get_webapp_fullscreen_enabled
 
 # FastAPI imports
 from fastapi import APIRouter, Request, HTTPException
@@ -255,11 +256,14 @@ async def get_board_viewer_web(request: Request, game_id: str = None):
     if not game_id:
         raise HTTPException(status_code=400, detail="game_id parameter is required")
 
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("player")
+
     return templates.TemplateResponse(
         "board_viewer.html",
         {
             "request": request,
             "game_id": game_id,
+            "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
         },
     )
 

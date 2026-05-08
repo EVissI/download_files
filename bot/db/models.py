@@ -648,6 +648,9 @@ class WebAppSetting(Base):
     webapp_fullscreen_admin_login_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )
+    webapp_fullscreen_player_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
 
 
 class ContentCardIssueSchedule(Base):

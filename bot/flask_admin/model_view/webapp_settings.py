@@ -29,6 +29,7 @@ class WebAppSettingsModelView(ModelView):
         "webapp_fullscreen_cards_cabinet_enabled",
         "webapp_fullscreen_content_card_view_enabled",
         "webapp_fullscreen_admin_login_enabled",
+        "webapp_fullscreen_player_enabled",
     ]
     show_columns = list_columns
     edit_columns = list_columns[1:]
@@ -59,6 +60,11 @@ class WebAppSettingsModelView(ModelView):
             choices=[("true", _("Включено")), ("false", _("Выключено"))],
             coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
         ),
+        "webapp_fullscreen_player_enabled": SelectField(
+            _("Плеер: полноэкранный режим"),
+            choices=[("true", _("Включено")), ("false", _("Выключено"))],
+            coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
+        ),
     }
 
     label_columns = {
@@ -68,6 +74,7 @@ class WebAppSettingsModelView(ModelView):
         "webapp_fullscreen_cards_cabinet_enabled": _("Кабинет карточек"),
         "webapp_fullscreen_content_card_view_enabled": _("Просмотр карточки"),
         "webapp_fullscreen_admin_login_enabled": _("Admin Login"),
+        "webapp_fullscreen_player_enabled": _("Плеер"),
         "created_at": _("Создано"),
         "updated_at": _("Обновлено"),
     }
