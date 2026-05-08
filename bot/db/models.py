@@ -633,7 +633,21 @@ class WebAppSetting(Base):
     __tablename__ = "webapp_settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    webapp_fullscreen_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    webapp_fullscreen_hints_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    webapp_fullscreen_pokaz_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    webapp_fullscreen_cards_cabinet_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    webapp_fullscreen_content_card_view_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    webapp_fullscreen_admin_login_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
 
 
 class ContentCardIssueSchedule(Base):

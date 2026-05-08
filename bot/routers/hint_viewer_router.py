@@ -698,7 +698,7 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
     import time
 
     cache_timestamp = int(time.time())
-    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("hints")
 
     response = templates.TemplateResponse(
         "hint_viewer.html",

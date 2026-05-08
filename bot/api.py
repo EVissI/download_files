@@ -263,7 +263,7 @@ async def get_pokaz(
     lang = lang if lang in ("ru", "en") else "ru"
     translations = _get_pokaz_translations(lang)
     cache_timestamp = int(time.time())
-    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("pokaz")
     response = templates.TemplateResponse(
         "pokaz.html",
         {
@@ -286,7 +286,7 @@ async def get_pokaz(
 async def content_card_view_page(request: Request):
     """Просмотр сохранённой карточки контента (кадры, только переключение)."""
     cache_timestamp = int(time.time())
-    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("content_card_view")
     response = templates.TemplateResponse(
         "content_card_view.html",
         {
@@ -305,7 +305,7 @@ async def content_card_view_page(request: Request):
 async def cards_cabinet_page(request: Request):
     """Личный кабинет: сетка карточек пользователя (Telegram WebApp)."""
     cache_timestamp = int(time.time())
-    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards_cabinet")
     response = templates.TemplateResponse(
         "cards_cabinet.html",
         {
@@ -385,7 +385,7 @@ async def get_pokaz_hints(xgid: str, chat_id: Optional[int] = None):
 
 @app.get("/admin/login", response_class=HTMLResponse)
 async def admin_login(request: Request):
-    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled()
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("admin_login")
     return templates.TemplateResponse(
         "admin_login.html",
         {

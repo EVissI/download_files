@@ -22,21 +22,52 @@ class WebAppSettingsModelView(ModelView):
     edit_title = _("Редактировать настройки WebApp")
     show_title = _("Просмотр настроек WebApp")
 
-    list_columns = ["id", "webapp_fullscreen_enabled"]
-    show_columns = ["id", "webapp_fullscreen_enabled"]
-    edit_columns = ["webapp_fullscreen_enabled"]
+    list_columns = [
+        "id",
+        "webapp_fullscreen_hints_enabled",
+        "webapp_fullscreen_pokaz_enabled",
+        "webapp_fullscreen_cards_cabinet_enabled",
+        "webapp_fullscreen_content_card_view_enabled",
+        "webapp_fullscreen_admin_login_enabled",
+    ]
+    show_columns = list_columns
+    edit_columns = list_columns[1:]
 
     edit_form_extra_fields = {
-        "webapp_fullscreen_enabled": SelectField(
-            _("Разрешать полноэкранный режим"),
+        "webapp_fullscreen_hints_enabled": SelectField(
+            _("Hints Viewer: полноэкранный режим"),
             choices=[("true", _("Включено")), ("false", _("Выключено"))],
             coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
-        )
+        ),
+        "webapp_fullscreen_pokaz_enabled": SelectField(
+            _("Pokaz: полноэкранный режим"),
+            choices=[("true", _("Включено")), ("false", _("Выключено"))],
+            coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
+        ),
+        "webapp_fullscreen_cards_cabinet_enabled": SelectField(
+            _("Кабинет карточек: полноэкранный режим"),
+            choices=[("true", _("Включено")), ("false", _("Выключено"))],
+            coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
+        ),
+        "webapp_fullscreen_content_card_view_enabled": SelectField(
+            _("Просмотр карточки: полноэкранный режим"),
+            choices=[("true", _("Включено")), ("false", _("Выключено"))],
+            coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
+        ),
+        "webapp_fullscreen_admin_login_enabled": SelectField(
+            _("Admin Login: полноэкранный режим"),
+            choices=[("true", _("Включено")), ("false", _("Выключено"))],
+            coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
+        ),
     }
 
     label_columns = {
         "id": _("ID"),
-        "webapp_fullscreen_enabled": _("Разрешать полноэкранный режим"),
+        "webapp_fullscreen_hints_enabled": _("Hints Viewer"),
+        "webapp_fullscreen_pokaz_enabled": _("Pokaz"),
+        "webapp_fullscreen_cards_cabinet_enabled": _("Кабинет карточек"),
+        "webapp_fullscreen_content_card_view_enabled": _("Просмотр карточки"),
+        "webapp_fullscreen_admin_login_enabled": _("Admin Login"),
         "created_at": _("Создано"),
         "updated_at": _("Обновлено"),
     }
