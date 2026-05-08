@@ -35,12 +35,12 @@ class WebAppSettingsModelView(ModelView):
 
     edit_form_extra_fields = {
         "webapp_fullscreen_hints_enabled": SelectField(
-            _("Hints Viewer: полноэкранный режим"),
+            _("Ошибки: полноэкранный режим"),
             choices=[("true", _("Включено")), ("false", _("Выключено"))],
             coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
         ),
         "webapp_fullscreen_pokaz_enabled": SelectField(
-            _("Pokaz: полноэкранный режим"),
+            _("Позиции: полноэкранный режим"),
             choices=[("true", _("Включено")), ("false", _("Выключено"))],
             coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
         ),
@@ -55,7 +55,7 @@ class WebAppSettingsModelView(ModelView):
             coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
         ),
         "webapp_fullscreen_admin_login_enabled": SelectField(
-            _("Admin Login: полноэкранный режим"),
+            _("Админка: полноэкранный режим"),
             choices=[("true", _("Включено")), ("false", _("Выключено"))],
             coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
         ),
