@@ -6831,8 +6831,9 @@ export class ContentEditor {
             if (item.style.left) element.style.left = item.style.left;
             if (item.style.width) element.style.width = item.style.width;
             const isTextual = toolId === 'question-text' || toolId === 'answer-text' || toolId === 'support-link';
+            const isPreviewImage = previewMode && toolId === 'upload-image';
             // В preview высота текстовых блоков должна считаться от текущей ширины экрана.
-            if (item.style.height && !(previewMode && isTextual)) {
+            if (item.style.height && !(previewMode && isTextual) && !isPreviewImage) {
                 element.style.height = item.style.height;
             }
         }

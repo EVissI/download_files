@@ -134,6 +134,30 @@ function normalizePreviewTextBlockHeights(inner) {
     });
 }
 
+function normalizePreviewImageBlockHeights(inner) {
+    if (!inner) return;
+    const blocks = inner.querySelectorAll('.canvas-element.card-preview-canvas-clone.image-element');
+    blocks.forEach((el) => {
+        const img = el.querySelector('img');
+        if (!img) return;
+        const apply = () => {
+            if (!img.naturalWidth || !img.naturalHeight) return;
+            const width = Math.ceil(el.getBoundingClientRect().width || el.clientWidth || 0);
+            if (width <= 0) return;
+            const ratio = img.naturalHeight / img.naturalWidth;
+            const h = Math.max(80, Math.ceil(width * ratio));
+            el.style.height = `${h}px`;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain';
+        };
+        apply();
+        if (!img.complete) {
+            img.addEventListener('load', apply, { once: true });
+        }
+    });
+}
+
 export function shouldShowBoardInCardPreviewImpl(_editor, payload) {
     if (!payload) return false;
     if (payload.editor && payload.editor.boardCanvasToggle) return true;
@@ -591,6 +615,7 @@ export function renderCardPreviewSurfaceImpl(editor, payload) {
         .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
         .forEach((el) => editor.setupCardPreviewTableCollapse(el));
     normalizePreviewTextBlockHeights(inner);
+    normalizePreviewImageBlockHeights(inner);
 
     if (editor.shouldShowBoardInCardPreview(effectivePayload)) {
         editor.appendCardPreviewBoardOverlay(wrap, effectivePayload);
@@ -645,6 +670,7 @@ export function refreshCardPreviewScaleImpl(editor) {
             el.style.marginBottom = '';
         });
         normalizePreviewTextBlockHeights(inner);
+        normalizePreviewImageBlockHeights(inner);
     }
     editor.updateCardPreviewInnerMinHeight(inner);
     const boardEl = wrap.querySelector('.card-preview-board-overlay');
