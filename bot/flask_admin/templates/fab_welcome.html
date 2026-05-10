@@ -5,20 +5,24 @@
     <div class="panel panel-default">
         <div class="panel-heading" style="font-size: 18px; font-weight: 600;">Быстрая навигация</div>
         <div class="panel-body">
-            <a class="btn btn-primary" href="{{ login_url }}" style="margin-bottom: 14px;">
-                <i class="fa fa-sign-in"></i> Войти
-            </a>
+            {% if not current_user or not current_user.is_authenticated %}
+                <a class="btn btn-primary" href="{{ login_url }}" style="margin-bottom: 14px;">
+                    <i class="fa fa-sign-in"></i> Войти
+                </a>
+            {% endif %}
 
             {% if menu_data %}
                 {% for item in menu_data %}
                     <div style="margin: 10px 0 14px; padding: 10px; border: 1px solid #e3e3e3; border-radius: 6px;">
-                        <div style="font-weight: 600; margin-bottom: 6px;">
-                            {% if item.icon %}<i class="fa {{ item.icon }}"></i>{% endif %}
-                            {{ item.name or "Раздел" }}
-                        </div>
                         {% if item.href %}
-                            <div style="margin-bottom: 6px;">
-                                <a href="{{ item.href }}">Открыть раздел</a>
+                            <a href="{{ item.href }}" style="display: inline-block; font-weight: 600; margin-bottom: 6px;">
+                                {% if item.icon %}<i class="fa {{ item.icon }}"></i>{% endif %}
+                                {{ item.name or "Раздел" }}
+                            </a>
+                        {% else %}
+                            <div style="font-weight: 600; margin-bottom: 6px;">
+                                {% if item.icon %}<i class="fa {{ item.icon }}"></i>{% endif %}
+                                {{ item.name or "Раздел" }}
                             </div>
                         {% endif %}
 
