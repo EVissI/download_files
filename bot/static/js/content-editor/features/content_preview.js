@@ -147,8 +147,8 @@ function normalizePreviewImageBlockHeights(editor, inner) {
                 const targetWidth = innerWidth > 0 ? Math.min(innerWidth, cap) : cap;
                 // В просмотре у пользователя не даём image-блокам тянуться на всю ширину экрана.
                 // Поведение синхронизировано с редактором (desktop/mobile cap).
-                el.style.width = `min(100%, ${cap}px)`;
-                el.style.maxWidth = `${cap}px`;
+                el.style.setProperty('width', `${targetWidth}px`, 'important');
+                el.style.setProperty('max-width', `${cap}px`, 'important');
                 el.style.alignSelf = 'center';
                 el.style.marginLeft = 'auto';
                 el.style.marginRight = 'auto';
