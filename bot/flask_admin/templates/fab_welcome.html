@@ -5,9 +5,6 @@
     <div class="panel panel-default">
         <div class="panel-heading" style="font-size: 18px; font-weight: 600;">Быстрая навигация</div>
         <div class="panel-body">
-            <p style="margin-bottom: 12px; color: #666;">
-                Если меню-бургер недоступно на смартфоне, используйте ссылки ниже.
-            </p>
             <a class="btn btn-primary" href="{{ login_url }}" style="margin-bottom: 14px;">
                 <i class="fa fa-sign-in"></i> Войти
             </a>
@@ -37,8 +34,6 @@
                         {% endif %}
                     </div>
                 {% endfor %}
-            {% else %}
-                <p style="color: #777; margin: 0;">Меню пока недоступно.</p>
             {% endif %}
         </div>
     </div>
