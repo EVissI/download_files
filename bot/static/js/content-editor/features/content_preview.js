@@ -143,9 +143,16 @@ function normalizePreviewImageBlockHeights(editor, inner) {
         const apply = () => {
             if (editor && typeof editor.applyResponsiveUploadImageLayout === 'function') {
                 const cap = typeof editor.getMaxCanvasWidth === 'function' ? editor.getMaxCanvasWidth() : 800;
+                const innerWidth = Math.ceil(inner.getBoundingClientRect().width || inner.clientWidth || 0);
+                const targetWidth = innerWidth > 0 ? Math.min(innerWidth, cap) : cap;
+                // В просмотре у пользователя не даём image-блокам тянуться на всю ширину экрана.
+                // Поведение синхронизировано с редактором (desktop/mobile cap).
+                el.style.width = `min(100%, ${cap}px)`;
                 el.style.maxWidth = `${cap}px`;
                 el.style.alignSelf = 'center';
-                editor.applyResponsiveUploadImageLayout(el, { maxWidth: cap });
+                el.style.marginLeft = 'auto';
+                el.style.marginRight = 'auto';
+                editor.applyResponsiveUploadImageLayout(el, { targetWidth, maxWidth: cap });
             }
         };
         apply();
