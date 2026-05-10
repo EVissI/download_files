@@ -1,0 +1,46 @@
+{% extends 'appbuilder/baselayout.html' %}
+
+{% block content %}
+<div class="container" style="padding: 14px 12px 22px;">
+    <div class="panel panel-default">
+        <div class="panel-heading" style="font-size: 18px; font-weight: 600;">Быстрая навигация</div>
+        <div class="panel-body">
+            <p style="margin-bottom: 12px; color: #666;">
+                Если меню-бургер недоступно на смартфоне, используйте ссылки ниже.
+            </p>
+            <a class="btn btn-primary" href="{{ login_url }}" style="margin-bottom: 14px;">
+                <i class="fa fa-sign-in"></i> Войти
+            </a>
+
+            {% if menu_data %}
+                {% for item in menu_data %}
+                    <div style="margin: 10px 0 14px; padding: 10px; border: 1px solid #e3e3e3; border-radius: 6px;">
+                        <div style="font-weight: 600; margin-bottom: 6px;">
+                            {% if item.icon %}<i class="fa {{ item.icon }}"></i>{% endif %}
+                            {{ item.name or "Раздел" }}
+                        </div>
+                        {% if item.href %}
+                            <div style="margin-bottom: 6px;">
+                                <a href="{{ item.href }}">Открыть раздел</a>
+                            </div>
+                        {% endif %}
+
+                        {% set children = item.childs if item.childs is defined else [] %}
+                        {% if children %}
+                            <ul style="margin: 0; padding-left: 18px;">
+                                {% for child in children %}
+                                    <li style="margin: 4px 0;">
+                                        <a href="{{ child.href }}">{{ child.name or "Пункт" }}</a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #777; margin: 0;">Меню пока недоступно.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

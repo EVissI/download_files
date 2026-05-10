@@ -1,5 +1,5 @@
-from flask import Flask
-from flask_appbuilder import AppBuilder, IndexView, ModelView
+from flask import Flask, url_for
+from flask_appbuilder import AppBuilder, IndexView, ModelView, expose
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
@@ -40,6 +40,26 @@ class CustomIndexView(IndexView):
     """Кастомная главная страница"""
 
     title = "Dashboard"
+
+    @expose("/")
+    def index(self):
+        menu_data = []
+        try:
+            menu_data = self.appbuilder.menu.get_data() or []
+        except Exception as e:
+            logger.warning(f"Failed to load FAB menu data for welcome page: {e}")
+
+        login_url = "/login/"
+        try:
+            login_url = url_for("AuthDBView.login")
+        except Exception:
+            pass
+
+        return self.render_template(
+            "fab_welcome.html",
+            menu_data=menu_data,
+            login_url=login_url,
+        )
 
 
 def create_app():
