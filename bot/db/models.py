@@ -639,10 +639,7 @@ class WebAppSetting(Base):
     webapp_fullscreen_pokaz_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )
-    webapp_fullscreen_cards_cabinet_enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
-    webapp_fullscreen_content_card_view_enabled: Mapped[bool] = mapped_column(
+    webapp_fullscreen_cards_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )
     webapp_fullscreen_admin_login_enabled: Mapped[bool] = mapped_column(

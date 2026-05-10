@@ -286,7 +286,7 @@ async def get_pokaz(
 async def content_card_view_page(request: Request):
     """Просмотр сохранённой карточки контента (кадры, только переключение)."""
     cache_timestamp = int(time.time())
-    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("content_card_view")
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
     response = templates.TemplateResponse(
         "content_card_view.html",
         {
@@ -305,7 +305,7 @@ async def content_card_view_page(request: Request):
 async def cards_cabinet_page(request: Request):
     """Личный кабинет: сетка карточек пользователя (Telegram WebApp)."""
     cache_timestamp = int(time.time())
-    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards_cabinet")
+    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
     response = templates.TemplateResponse(
         "cards_cabinet.html",
         {

@@ -8,8 +8,9 @@ WEBAPP_FULLSCREEN_FIELD_BY_SERVICE: dict[str, str] = {
     "default": "webapp_fullscreen_hints_enabled",
     "hints": "webapp_fullscreen_hints_enabled",
     "pokaz": "webapp_fullscreen_pokaz_enabled",
-    "cards_cabinet": "webapp_fullscreen_cards_cabinet_enabled",
-    "content_card_view": "webapp_fullscreen_content_card_view_enabled",
+    "cards": "webapp_fullscreen_cards_enabled",
+    "cards_cabinet": "webapp_fullscreen_cards_enabled",
+    "content_card_view": "webapp_fullscreen_cards_enabled",
     "admin_login": "webapp_fullscreen_admin_login_enabled",
     "player": "webapp_fullscreen_player_enabled",
 }
@@ -36,8 +37,7 @@ async def get_webapp_fullscreen_enabled(
                 row = WebAppSetting(
                     webapp_fullscreen_hints_enabled=v,
                     webapp_fullscreen_pokaz_enabled=v,
-                    webapp_fullscreen_cards_cabinet_enabled=v,
-                    webapp_fullscreen_content_card_view_enabled=v,
+                    webapp_fullscreen_cards_enabled=v,
                     webapp_fullscreen_admin_login_enabled=v,
                     webapp_fullscreen_player_enabled=v,
                 )

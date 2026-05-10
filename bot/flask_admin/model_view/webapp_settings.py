@@ -26,8 +26,7 @@ class WebAppSettingsModelView(ModelView):
         "id",
         "webapp_fullscreen_hints_enabled",
         "webapp_fullscreen_pokaz_enabled",
-        "webapp_fullscreen_cards_cabinet_enabled",
-        "webapp_fullscreen_content_card_view_enabled",
+        "webapp_fullscreen_cards_enabled",
         "webapp_fullscreen_admin_login_enabled",
         "webapp_fullscreen_player_enabled",
     ]
@@ -45,13 +44,8 @@ class WebAppSettingsModelView(ModelView):
             choices=[("true", _("Включено")), ("false", _("Выключено"))],
             coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
         ),
-        "webapp_fullscreen_cards_cabinet_enabled": SelectField(
-            _("Кабинет карточек: полноэкранный режим"),
-            choices=[("true", _("Включено")), ("false", _("Выключено"))],
-            coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
-        ),
-        "webapp_fullscreen_content_card_view_enabled": SelectField(
-            _("Просмотр карточки: полноэкранный режим"),
+        "webapp_fullscreen_cards_enabled": SelectField(
+            _("Карточки: полноэкранный режим"),
             choices=[("true", _("Включено")), ("false", _("Выключено"))],
             coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
         ),
@@ -71,8 +65,7 @@ class WebAppSettingsModelView(ModelView):
         "id": _("ID"),
         "webapp_fullscreen_hints_enabled": _("Hints Viewer"),
         "webapp_fullscreen_pokaz_enabled": _("Pokaz"),
-        "webapp_fullscreen_cards_cabinet_enabled": _("Кабинет карточек"),
-        "webapp_fullscreen_content_card_view_enabled": _("Просмотр карточки"),
+        "webapp_fullscreen_cards_enabled": _("Карточки"),
         "webapp_fullscreen_admin_login_enabled": _("Admin Login"),
         "webapp_fullscreen_player_enabled": _("Плеер"),
         "created_at": _("Создано"),
