@@ -1002,6 +1002,7 @@ export class ContentEditor {
         const body = this.modal.querySelector('.content-editor-body');
         const dock = this.propertiesToolsDock || document.getElementById('propertiesToolsDock');
         const toolsToolbar = this.modal.querySelector('.toolbar.toolbar-tools');
+        const boardExtraRow = document.getElementById('toolbarBoardMatchBannerRow');
         if (!body || !dock) return;
         const mobile = this.isMobile();
         if (mobile) {
@@ -1018,6 +1019,9 @@ export class ContentEditor {
                 if (this.toolsList.parentElement !== toolsToolbar) {
                     toolsToolbar.appendChild(this.toolsList);
                 }
+                if (boardExtraRow && boardExtraRow.parentElement !== toolsToolbar) {
+                    toolsToolbar.appendChild(boardExtraRow);
+                }
             } else if (this.toolsListOriginalParent && this.toolsList.parentElement !== this.toolsListOriginalParent) {
                 this.toolsListOriginalParent.appendChild(this.toolsList);
             }
@@ -1031,6 +1035,9 @@ export class ContentEditor {
         dock.hidden = false;
         if (this.toolsList.parentElement !== dock) {
             dock.appendChild(this.toolsList);
+        }
+        if (boardExtraRow && boardExtraRow.parentElement !== dock) {
+            dock.appendChild(boardExtraRow);
         }
     }
 
