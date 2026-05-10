@@ -1639,6 +1639,34 @@ export class ContentEditor {
         return parseInt(element.style.height, 10) || element.offsetHeight || 150;
     }
 
+    getResponsiveUploadImageHeight(width, naturalWidth, naturalHeight, options = {}) {
+        const w = Math.max(0, Math.ceil(Number(width) || 0));
+        const nw = Math.max(0, Number(naturalWidth) || 0);
+        const nh = Math.max(0, Number(naturalHeight) || 0);
+        if (!w || !nw || !nh) return null;
+        const minHeight = Math.max(1, Math.ceil(Number(options.minHeight) || 100));
+        const maxHeight = Math.max(minHeight, Math.ceil(Number(options.maxHeight) || 600));
+        const ratio = nh / nw;
+        return Math.max(minHeight, Math.min(maxHeight, Math.ceil(w * ratio)));
+    }
+
+    applyResponsiveUploadImageLayout(element, options = {}) {
+        if (!element || element.dataset.toolId !== 'upload-image') return null;
+        const img = element.querySelector('img');
+        if (!img || !img.naturalWidth || !img.naturalHeight) return null;
+        const widthFromOption = Number(options.targetWidth) || 0;
+        const width =
+            widthFromOption ||
+            Math.ceil(element.getBoundingClientRect().width || element.clientWidth || parseFloat(element.style.width) || 0);
+        const h = this.getResponsiveUploadImageHeight(width, img.naturalWidth, img.naturalHeight, options);
+        if (!h) return null;
+        element.style.height = `${h}px`;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        return h;
+    }
+
     getStackedCanvasElements() {
         if (!this.canvas) return [];
         return Array.from(this.canvas.querySelectorAll('.canvas-element'))
@@ -2231,8 +2259,7 @@ export class ContentEditor {
 
         const img = new Image();
         img.onload = () => {
-            const aspectRatio = img.naturalHeight / img.naturalWidth;
-            const smartHeight = Math.max(100, Math.min(600, canvasWidth * aspectRatio));
+            const smartHeight = this.getResponsiveUploadImageHeight(canvasWidth, img.naturalWidth, img.naturalHeight) || 200;
             const position = this.calculateVerticalPosition(canvasWidth, smartHeight);
 
             element.style.left = position.x + 'px';
@@ -2892,9 +2919,7 @@ export class ContentEditor {
         // Create image to get natural dimensions
         const img = new Image();
         img.onload = () => {
-            // Calculate smart height based on aspect ratio
-            const aspectRatio = img.naturalHeight / img.naturalWidth;
-            const smartHeight = Math.max(100, Math.min(600, canvasWidth * aspectRatio));
+            const smartHeight = this.getResponsiveUploadImageHeight(canvasWidth, img.naturalWidth, img.naturalHeight) || 200;
 
             // Calculate position for image element
             const position = this.calculateVerticalPosition(canvasWidth, smartHeight);
@@ -4345,8 +4370,7 @@ export class ContentEditor {
             const img = element.querySelector('img');
             if (img && img.naturalWidth && img.naturalHeight) {
                 const canvasRect = this.canvas.getBoundingClientRect();
-                const aspectRatio = img.naturalHeight / img.naturalWidth;
-                elementHeight = Math.max(100, Math.min(600, canvasRect.width * aspectRatio));
+                elementHeight = this.getResponsiveUploadImageHeight(canvasRect.width, img.naturalWidth, img.naturalHeight) || 200;
             } else {
                 elementHeight = parseInt(element.style.height) || 200;
             }
@@ -7142,23 +7166,11 @@ export class ContentEditor {
 
             // Special handling for uploaded images - recalculate smart height
             if (toolId === 'upload-image') {
-                const img = element.querySelector('img');
-                if (img && img.naturalWidth && img.naturalHeight) {
-                    const oldHeight = parseInt(element.style.height);
-
-                    // Recalculate smart height based on new canvas width
-                    const aspectRatio = img.naturalHeight / img.naturalWidth;
-                    const smartHeight = Math.max(100, Math.min(600, fullWidth * aspectRatio));
-
-                    element.style.height = smartHeight + 'px';
-                    img.style.width = '100%';
-                    img.style.height = '100%';
-                    img.style.objectFit = 'contain';
-
-                    // If height changed, reposition elements below
-                    if (oldHeight !== smartHeight) {
-                        this.repositionElementsBelow(element.id);
-                    }
+                const oldHeight = parseInt(element.style.height, 10);
+                const smartHeight = this.applyResponsiveUploadImageLayout(element, { targetWidth: fullWidth });
+                // If height changed, reposition elements below
+                if (smartHeight != null && oldHeight !== smartHeight) {
+                    this.repositionElementsBelow(element.id);
                 }
             }
 

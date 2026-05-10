@@ -134,22 +134,16 @@ function normalizePreviewTextBlockHeights(inner) {
     });
 }
 
-function normalizePreviewImageBlockHeights(inner) {
+function normalizePreviewImageBlockHeights(editor, inner) {
     if (!inner) return;
     const blocks = inner.querySelectorAll('.canvas-element.card-preview-canvas-clone.image-element');
     blocks.forEach((el) => {
         const img = el.querySelector('img');
         if (!img) return;
         const apply = () => {
-            if (!img.naturalWidth || !img.naturalHeight) return;
-            const width = Math.ceil(el.getBoundingClientRect().width || el.clientWidth || 0);
-            if (width <= 0) return;
-            const ratio = img.naturalHeight / img.naturalWidth;
-            const h = Math.max(80, Math.ceil(width * ratio));
-            el.style.height = `${h}px`;
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'contain';
+            if (editor && typeof editor.applyResponsiveUploadImageLayout === 'function') {
+                editor.applyResponsiveUploadImageLayout(el);
+            }
         };
         apply();
         if (!img.complete) {
@@ -615,7 +609,7 @@ export function renderCardPreviewSurfaceImpl(editor, payload) {
         .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
         .forEach((el) => editor.setupCardPreviewTableCollapse(el));
     normalizePreviewTextBlockHeights(inner);
-    normalizePreviewImageBlockHeights(inner);
+    normalizePreviewImageBlockHeights(editor, inner);
 
     if (editor.shouldShowBoardInCardPreview(effectivePayload)) {
         editor.appendCardPreviewBoardOverlay(wrap, effectivePayload);
@@ -670,7 +664,7 @@ export function refreshCardPreviewScaleImpl(editor) {
             el.style.marginBottom = '';
         });
         normalizePreviewTextBlockHeights(inner);
-        normalizePreviewImageBlockHeights(inner);
+        normalizePreviewImageBlockHeights(editor, inner);
     }
     editor.updateCardPreviewInnerMinHeight(inner);
     const boardEl = wrap.querySelector('.card-preview-board-overlay');
