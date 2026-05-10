@@ -142,7 +142,10 @@ function normalizePreviewImageBlockHeights(editor, inner) {
         if (!img) return;
         const apply = () => {
             if (editor && typeof editor.applyResponsiveUploadImageLayout === 'function') {
-                editor.applyResponsiveUploadImageLayout(el);
+                const cap = typeof editor.getMaxCanvasWidth === 'function' ? editor.getMaxCanvasWidth() : 800;
+                el.style.maxWidth = `${cap}px`;
+                el.style.alignSelf = 'center';
+                editor.applyResponsiveUploadImageLayout(el, { maxWidth: cap });
             }
         };
         apply();

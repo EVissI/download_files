@@ -1655,9 +1655,11 @@ export class ContentEditor {
         const img = element.querySelector('img');
         if (!img || !img.naturalWidth || !img.naturalHeight) return null;
         const widthFromOption = Number(options.targetWidth) || 0;
-        const width =
+        const widthRaw =
             widthFromOption ||
             Math.ceil(element.getBoundingClientRect().width || element.clientWidth || parseFloat(element.style.width) || 0);
+        const maxWidth = Math.max(0, Math.ceil(Number(options.maxWidth) || 0));
+        const width = maxWidth > 0 ? Math.min(widthRaw, maxWidth) : widthRaw;
         const h = this.getResponsiveUploadImageHeight(width, img.naturalWidth, img.naturalHeight, options);
         if (!h) return null;
         element.style.height = `${h}px`;
