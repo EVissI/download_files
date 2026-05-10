@@ -9,6 +9,10 @@
                 <a class="btn btn-primary" href="{{ login_url }}" style="margin-bottom: 14px;">
                     <i class="fa fa-sign-in"></i> Войти
                 </a>
+            {% else %}
+                <a class="btn btn-default" href="{{ logout_url }}" style="margin-bottom: 14px;">
+                    <i class="fa fa-sign-out"></i> Выход
+                </a>
             {% endif %}
 
             {% if nav_sections %}

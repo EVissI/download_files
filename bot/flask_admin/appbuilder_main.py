@@ -84,8 +84,13 @@ class CustomIndexView(IndexView):
             logger.warning(f"Failed to load FAB menu data for welcome page: {e}")
 
         login_url = "/login/"
+        logout_url = "/logout/"
         try:
             login_url = url_for("AuthDBView.login")
+        except Exception:
+            pass
+        try:
+            logout_url = url_for("AuthDBView.logout")
         except Exception:
             pass
 
@@ -93,6 +98,7 @@ class CustomIndexView(IndexView):
             "fab_welcome.html",
             nav_sections=self._normalize_menu(menu_data),
             login_url=login_url,
+            logout_url=logout_url,
         )
 
 
