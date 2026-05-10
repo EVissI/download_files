@@ -11,12 +11,12 @@
                 </a>
             {% endif %}
 
-            {% if menu_data %}
-                {% for item in menu_data %}
+            {% if nav_sections %}
+                {% for item in nav_sections %}
                     {% set section_name = (item.name or "")|lower %}
                     {% if section_name not in ["security", "безопасность"] %}
-                        {% set children = item.childs if item.childs is defined else [] %}
-                        {% set target_href = item.href or (children[0].href if children and children[0].href else None) %}
+                        {% set children = item.children if item.children is defined else [] %}
+                        {% set target_href = item.href %}
                         <div
                             style="margin: 10px 0 14px; padding: 10px; border: 1px solid #e3e3e3; border-radius: 6px;{% if target_href %} cursor: pointer;{% endif %}"
                             {% if target_href %}
@@ -35,7 +35,11 @@
                                 <ul style="margin: 0; padding-left: 18px;">
                                     {% for child in children %}
                                         <li style="margin: 4px 0;">
-                                            <a href="{{ child.href }}" onclick="event.stopPropagation();">{{ child.name or "Пункт" }}</a>
+                                            {% if child.href %}
+                                                <a href="{{ child.href }}" onclick="event.stopPropagation();">{{ child.name or "Пункт" }}</a>
+                                            {% else %}
+                                                <span>{{ child.name or "Пункт" }}</span>
+                                            {% endif %}
                                         </li>
                                     {% endfor %}
                                 </ul>

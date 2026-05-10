@@ -41,6 +41,40 @@ class CustomIndexView(IndexView):
 
     title = "Dashboard"
 
+    @staticmethod
+    def _menu_val(item, key, default=None):
+        if isinstance(item, dict):
+            return item.get(key, default)
+        return getattr(item, key, default)
+
+    @classmethod
+    def _menu_href(cls, item):
+        for key in ("href", "url", "link", "base_url"):
+            val = cls._menu_val(item, key)
+            if not isinstance(val, str):
+                continue
+            v = val.strip()
+            if not v or v == "#" or v.lower().startswith("javascript"):
+                continue
+            return v
+        return None
+
+    @classmethod
+    def _normalize_menu(cls, menu_data):
+        out = []
+        for item in menu_data or []:
+            name = cls._menu_val(item, "name") or "Раздел"
+            icon = cls._menu_val(item, "icon")
+            children_raw = cls._menu_val(item, "childs") or cls._menu_val(item, "children") or []
+            children = []
+            for ch in children_raw:
+                ch_name = cls._menu_val(ch, "name") or "Пункт"
+                ch_href = cls._menu_href(ch)
+                children.append({"name": ch_name, "href": ch_href})
+            href = cls._menu_href(item) or (children[0]["href"] if children and children[0]["href"] else None)
+            out.append({"name": name, "icon": icon, "href": href, "children": children})
+        return out
+
     @expose("/")
     def index(self):
         menu_data = []
@@ -57,7 +91,7 @@ class CustomIndexView(IndexView):
 
         return self.render_template(
             "fab_welcome.html",
-            menu_data=menu_data,
+            nav_sections=self._normalize_menu(menu_data),
             login_url=login_url,
         )
 
