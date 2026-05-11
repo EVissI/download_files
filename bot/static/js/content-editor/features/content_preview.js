@@ -162,6 +162,48 @@ function normalizePreviewImageBlockHeights(editor, inner) {
     });
 }
 
+function applyPreviewCanvasBackground(editor, payload, targets) {
+    if (!targets || !targets.length) return;
+    const bgColor = editor.resolveSavedCanvasBackground(payload);
+    const pattern = typeof editor.resolveSavedCanvasBackgroundPattern === 'function'
+        ? editor.resolveSavedCanvasBackgroundPattern(payload)
+        : null;
+    let patternCssUrl = '';
+    let tileW = 0;
+    let tileH = 0;
+    if (pattern && pattern.imageDataUrl && typeof editor.buildCanvasTilePatternCssUrl === 'function') {
+        patternCssUrl = editor.buildCanvasTilePatternCssUrl(pattern);
+        const clamp = typeof editor.clampNumericValue === 'function'
+            ? (v, min, max, d) => editor.clampNumericValue(v, min, max, d)
+            : (v, min, max, d) => {
+                const n = Number(v);
+                if (!Number.isFinite(n)) return d;
+                return Math.max(min, Math.min(max, n));
+            };
+        const interval = clamp(pattern.interval, 20, 200, 100);
+        const imageWidth = clamp(pattern.imageWidth, 8, 4096, 64);
+        const imageHeight = clamp(pattern.imageHeight, 8, 4096, 64);
+        const scale = interval / 100;
+        tileW = Math.max(1, Math.round(imageWidth * scale));
+        tileH = Math.max(1, Math.round(imageHeight * scale));
+    }
+    targets.forEach((node) => {
+        if (!node || !node.style) return;
+        node.style.backgroundColor = bgColor;
+        if (patternCssUrl) {
+            node.style.backgroundImage = patternCssUrl;
+            node.style.backgroundRepeat = 'repeat';
+            node.style.backgroundSize = `${tileW}px ${tileH}px`;
+            node.style.backgroundPosition = 'left top';
+        } else {
+            node.style.backgroundImage = 'none';
+            node.style.backgroundRepeat = '';
+            node.style.backgroundSize = '';
+            node.style.backgroundPosition = '';
+        }
+    });
+}
+
 export function shouldShowBoardInCardPreviewImpl(_editor, payload) {
     if (!payload) return false;
     if (payload.editor && payload.editor.boardCanvasToggle) return true;
@@ -566,24 +608,25 @@ export function renderCardPreviewSurfaceImpl(editor, payload) {
     if (!host) return;
     host.innerHTML = '';
     host.style.backgroundColor = '';
+    host.style.backgroundImage = 'none';
+    host.style.backgroundRepeat = '';
+    host.style.backgroundSize = '';
+    host.style.backgroundPosition = '';
     if (!payload) {
         return;
     }
 
     const effectivePayload = editor.getPayloadForCardPreviewRender(payload);
     const list = Array.isArray(effectivePayload.elements) ? effectivePayload.elements : [];
-    const canvasBg = editor.resolveSavedCanvasBackground(effectivePayload);
-    host.style.backgroundColor = canvasBg;
 
     const wrap = document.createElement('div');
     wrap.className = 'card-preview-surface-wrap';
-    wrap.style.backgroundColor = canvasBg;
     const inner = document.createElement('div');
     inner.className = 'card-preview-surface-inner card-preview-surface-inner--flex-stack';
     inner.style.width = '100%';
     inner.style.position = 'relative';
     inner.style.boxSizing = 'border-box';
-    inner.style.backgroundColor = canvasBg;
+    applyPreviewCanvasBackground(editor, effectivePayload, [host, wrap, inner]);
 
     let maxNum = 0;
     list.forEach(item => {
