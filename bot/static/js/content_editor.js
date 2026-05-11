@@ -3531,6 +3531,7 @@ export class ContentEditor {
                     <div class="text-content" contenteditable="true" placeholder="Введите текст вопроса...">Текст вопроса</div>
                 `;
                 element.classList.add('text-element');
+                element.style.backgroundColor = 'transparent';
                 const qtc = element.querySelector('.text-content');
                 if (qtc) this.applyGlobalTextStyleDefaultsToTextNode(qtc);
                 this.setupTextEditing(element);
@@ -3573,6 +3574,7 @@ export class ContentEditor {
                     <div class="text-content" contenteditable="true" placeholder="Введите текст ответа...">Текст ответа</div>
                 `;
                 element.classList.add('text-element');
+                element.style.backgroundColor = 'transparent';
                 const atc = element.querySelector('.text-content');
                 if (atc) this.applyGlobalTextStyleDefaultsToTextNode(atc);
                 this.setupTextEditing(element);
@@ -3587,6 +3589,7 @@ export class ContentEditor {
                     </div>
                 `;
                 element.classList.add('link-element');
+                element.style.backgroundColor = 'transparent';
                 const ltx = element.querySelector('.link-text');
                 if (ltx) this.applyGlobalTextStyleDefaultsToTextNode(ltx);
                 this.setupLinkEditing(element);
@@ -6051,7 +6054,17 @@ export class ContentEditor {
             ? String(p.textAlign)
             : 'left';
         const textColor = this.rgbToHex(String(p.textColor || '#333333'));
-        const backgroundColor = this.rgbToHex(String(p.backgroundColor || '#ffffff'));
+        let backgroundColor = 'transparent';
+        if (p.backgroundColor != null && String(p.backgroundColor).trim() !== '') {
+            const rawBg = String(p.backgroundColor).trim();
+            if (/^transparent$/i.test(rawBg)) {
+                backgroundColor = 'transparent';
+            } else if (/^rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)$/i.test(rawBg.replace(/\s/g, ''))) {
+                backgroundColor = 'transparent';
+            } else {
+                backgroundColor = this.rgbToHex(rawBg);
+            }
+        }
         return {
             fontSize: `${fontSizePx}px`,
             lineHeight: `${lineHeightPx}px`,
@@ -6126,11 +6139,13 @@ export class ContentEditor {
                 100,
                 8
             ),
-            backgroundColor: this.normalizeBackgroundColorForInput(
-                bgColorInput && bgColorInput.value
-                    ? bgColorInput.value
-                    : this.getBlockBackgroundColorForInput(this.selectedElement)
-            ),
+            backgroundColor: this.isCanvasElementBackgroundTransparent(this.selectedElement)
+                ? 'transparent'
+                : this.normalizeBackgroundColorForInput(
+                      bgColorInput && bgColorInput.value
+                          ? bgColorInput.value
+                          : this.getBlockBackgroundColorForInput(this.selectedElement)
+                  ),
             fontWeight: isBold ? 'bold' : 'normal',
             fontStyle: isItalic ? 'italic' : 'normal',
             textDecoration: isUnderline ? 'underline' : 'none',
@@ -7467,7 +7482,7 @@ export class ContentEditor {
 
     normalizeBackgroundColorForInput(value) {
         const raw = String(value || '').trim();
-        if (!raw) return '#ffffff';
+        if (!raw || /^transparent$/i.test(raw)) return '#ffffff';
         const rgba = raw.match(/rgba?\(([^)]+)\)/i);
         if (rgba) {
             const parts = rgba[1].split(',').map((x) => x.trim());
@@ -7479,6 +7494,18 @@ export class ContentEditor {
             }
         }
         return this.rgbToHex(raw || '#ffffff');
+    }
+
+    /** Фон обёртки canvas-element: прозрачный дефолт или без заливки. */
+    isCanvasElementBackgroundTransparent(element) {
+        if (!element) return true;
+        const inline = String(element.style.backgroundColor || '').trim();
+        if (/^transparent$/i.test(inline)) return true;
+        const inlineCompact = inline.replace(/\s/g, '');
+        if (/^rgba?\(0,0,0,0\)$/i.test(inlineCompact)) return true;
+        if (inline) return false;
+        const n = String(window.getComputedStyle(element).backgroundColor || '').trim().toLowerCase();
+        return !n || n === 'transparent' || n === 'rgba(0, 0, 0, 0)' || n === 'rgba(0,0,0,0)';
     }
 
     getBlockBackgroundColorForInput(element) {
