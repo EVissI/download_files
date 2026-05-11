@@ -360,7 +360,7 @@ export function openCanvasSettingsModalImpl(editor) {
     if (patternGapNumber) {
         patternGapNumber.addEventListener('input', (e) => syncPatternGapUi(e.target.value));
     }
-    syncPatternGapUi(patternGap);
+    syncPatternGapUi(patternInterval);
 
     const gCol = document.getElementById('globalTextColor');
     const gColTxt = document.getElementById('globalTextColorText');
