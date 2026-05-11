@@ -239,11 +239,11 @@ export function openCanvasSettingsModalImpl(editor) {
                                 </button>
                             </div>
                         </div>
-                        <div class="setting-group canvas-settings-pattern-toggle">
-                            <label class="checkbox-label" for="canvasPatternEnabled">
+                        <div class="setting-group">
+                            <label class="checkbox-label">
                                 <input type="checkbox" id="canvasPatternEnabled" ${patternEnabled ? 'checked' : ''}>
                                 <span class="checkbox-custom"></span>
-                                <span class="checkbox-text">Фон картинкой</span>
+                                <span class="checkbox-text">Фон картинкой (узор)</span>
                             </label>
                         </div>
                         <div id="canvasPatternControls" class="setting-group" style="${patternEnabled ? '' : 'display:none;'}">
