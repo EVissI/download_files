@@ -5391,28 +5391,37 @@ export class ContentEditor {
 
     /**
      * Перед сохранением кадра/карточки: заливает тяжёлые медиа в S3, в JSON остаются s3_key.
+     * Требуется Telegram WebApp init_data и права контент-админа — иначе upload не вызывается,
+     * в JSON остаются data/blob URL (см. uploadBinaryToContentCardMedia).
      */
     async uploadPayloadMediaToS3(payload) {
-        if (!payload || !Array.isArray(payload.elements)) {
+        if (!payload || typeof payload !== 'object') {
             return;
         }
-        if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.initData) {
+        const initData =
+            (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+        if (!initData) {
             return;
         }
         const bgPattern = payload.editor && payload.editor.canvasBackgroundPattern;
         if (bgPattern && typeof bgPattern === 'object') {
             const dataUrl = String(bgPattern.imageDataUrl || '');
             if (!bgPattern.imageS3Key && dataUrl.startsWith('data:image')) {
-                const blob = await (await fetch(dataUrl)).blob();
-                const hintName = (bgPattern.fileName && String(bgPattern.fileName).trim())
-                    ? String(bgPattern.fileName).trim()
-                    : 'canvas-pattern.png';
-                const up = await this.uploadBinaryToContentCardMedia(blob, hintName, blob.type);
-                bgPattern.imageS3Key = up.s3_key;
-                delete bgPattern.imageDataUrl;
+                try {
+                    const blob = await (await fetch(dataUrl)).blob();
+                    const hintName = (bgPattern.fileName && String(bgPattern.fileName).trim())
+                        ? String(bgPattern.fileName).trim()
+                        : 'canvas-pattern.png';
+                    const up = await this.uploadBinaryToContentCardMedia(blob, hintName, blob.type);
+                    bgPattern.imageS3Key = up.s3_key;
+                    delete bgPattern.imageDataUrl;
+                } catch (e) {
+                    console.warn('uploadPayloadMediaToS3 canvas pattern:', e && e.message ? e.message : e);
+                }
             }
         }
-        for (const item of payload.elements) {
+        const elements = Array.isArray(payload.elements) ? payload.elements : [];
+        for (const item of elements) {
             const toolId = item.toolId || '';
             if (toolId === 'upload-image' && !item.imageS3Key) {
                 const url = item.imageUrl || '';
