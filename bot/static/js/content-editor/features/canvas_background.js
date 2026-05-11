@@ -143,6 +143,7 @@ export function openCanvasSettingsModalImpl(editor) {
     const patternFileLabel = editor._canvasPatternDraft && editor._canvasPatternDraft.fileName
         ? editor._canvasPatternDraft.fileName
         : (patternEnabled ? 'Изображение выбрано' : 'Картинка не выбрана');
+    const patternGap = patternInterval;
 
     const modalHTML = `
         <div id="canvasSettingsModal" class="canvas-settings-modal" style="display: flex;">
@@ -352,7 +353,7 @@ export function openCanvasSettingsModalImpl(editor) {
     if (patternGapNumber) {
         patternGapNumber.addEventListener('input', (e) => syncPatternGapUi(e.target.value));
     }
-    syncPatternGapUi(patternInterval);
+    syncPatternGapUi(patternGap);
 
     const gCol = document.getElementById('globalTextColor');
     const gColTxt = document.getElementById('globalTextColorText');
