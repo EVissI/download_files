@@ -212,9 +212,15 @@ function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRe
         logPreviewBg('mergeLiveCanvasBackground:skip', { reason: 'no payload/canvas' });
         return payload;
     }
-    if (!editor.modal || editor.modal.style.display !== 'flex') {
+    const previewModalOpen =
+        editor.cardPreviewModal && editor.cardPreviewModal.style.display === 'flex';
+    const editorModalOpen = editor.modal && editor.modal.style.display === 'flex';
+    /* Раньше требовали только открытую модалку редактора; превью часто рендерится при уже
+       скрытом #contentEditorModal — merge не выполнялся, а при выполнении «живой» null затирал узор из JSON. */
+    if (!previewModalOpen && !editorModalOpen) {
         logPreviewBg('mergeLiveCanvasBackground:skip', {
-            reason: 'editor modal not flex',
+            reason: 'no preview or editor shell',
+            previewDisplay: editor.cardPreviewModal ? editor.cardPreviewModal.style.display : null,
             modalDisplay: editor.modal ? editor.modal.style.display : null,
         });
         return payload;
@@ -305,14 +311,24 @@ function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRe
         });
         return clone;
     }
-    if (typeof editor.getCanvasBackgroundForSave === 'function') {
-        clone.editor.canvasBackground = editor.getCanvasBackgroundForSave();
-    }
+    const editorModalFlex = editor.modal && editor.modal.style.display === 'flex';
+    let livePatternForBg = null;
     if (typeof editor.getCanvasBackgroundPatternForSave === 'function') {
-        clone.editor.canvasBackgroundPattern = editor.getCanvasBackgroundPatternForSave();
+        livePatternForBg = editor.getCanvasBackgroundPatternForSave();
+        if (livePatternForBg != null) {
+            clone.editor.canvasBackgroundPattern = livePatternForBg;
+        } else if (editorModalFlex) {
+            clone.editor.canvasBackgroundPattern = null;
+        }
+    }
+    if (typeof editor.getCanvasBackgroundForSave === 'function') {
+        if (editorModalFlex || livePatternForBg != null) {
+            clone.editor.canvasBackground = editor.getCanvasBackgroundForSave();
+        }
     }
     logPreviewBg('mergeLiveCanvasBackground:merged', {
         reason: mergeReason,
+        editorModalFlex,
         canvasBackground: clone.editor.canvasBackground,
         canvasBackgroundPattern: previewBgPatternSummary(clone.editor.canvasBackgroundPattern),
     });
