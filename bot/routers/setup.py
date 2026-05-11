@@ -14,7 +14,7 @@ from bot.routers.file_router import file_router
 from bot.routers.pokaz import pokaz_router
 from bot.routers.support_reply_router import support_reply_router
 from bot.routers.pokaz_entry_router import pokaz_entry_router
-from bot.routers.cards_router import cards_router
+from bot.routers.cards_cabinet_entry_router import cards_cabinet_entry_router
 
 setup_router = Router()
 
@@ -34,7 +34,7 @@ setup_router.include_routers(
     short_board_router,
     hint_viewer_router,
     pokaz_router,
+    cards_cabinet_entry_router,
     support_reply_router,
     pokaz_entry_router,
-    cards_router,
 )

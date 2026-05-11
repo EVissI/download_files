@@ -6,6 +6,10 @@ keyboard-user-reply-profile = 🧍‍♂️ Profile
 keyboard-admin-reply-admin_panel = Admin Panel
 keyboard-user-reply-short_board_view = 📊 Pleer
 keyboard-user-reply-pokaz = 🎯 Position
+keyboard-user-reply-cards_cabinet = 🗂️ Cards
+user-cards-cabinet-select_action = To open your cards cabinet, tap the button below ⬇
+user-cards-cabinet-open_button = Open cards cabinet
+user-cards-cabinet-no_cards = To get cards, contact <a href="https://t.me/Learn_bg">@Learn_bg</a>
 user-pokaz-select_action = Select an action:
 user-pokaz-open_editor = Open position editor
 keyboard-reply-cancel = Cancel

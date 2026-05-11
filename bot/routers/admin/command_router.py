@@ -23,6 +23,8 @@ from rq.registry import StartedJobRegistry
 from bot.config import settings, admins, scheduler
 from bot.common.tasks.monitor_notification import check_for_user
 import uuid
+from sqlalchemy import delete as sqlalchemy_delete
+from bot.db.models import UserContentCard
 
 commands_router = Router()
 
@@ -97,6 +99,27 @@ async def list_users(message: Message, session_without_commit):
         await message.answer(f"Список пользователей:\n{user_list}")
     except Exception as e:
         logger.error(f"Ошибка при выполнении команды /listusers: {e}")
+        await message.answer("Произошла ошибка при выполнении команды.")
+
+
+@commands_router.message(F.text.startswith("/clear_user_cards"))
+async def clear_user_cards(message: Message, session_without_commit):
+    try:
+        parts = message.text.split()
+        if len(parts) != 2 or not parts[1].isdigit():
+            return await message.answer("Использование: /clear_user_cards <user_id>")
+
+        user_id = int(parts[1])
+        result = await session_without_commit.execute(
+            sqlalchemy_delete(UserContentCard).where(UserContentCard.user_id == user_id)
+        )
+        await session_without_commit.commit()
+        deleted_count = int(result.rowcount or 0)
+        await message.answer(
+            f"Удалено карточек у пользователя {user_id}: {deleted_count}"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при выполнении команды /clear_user_cards: {e}")
         await message.answer("Произошла ошибка при выполнении команды.")
 
 
