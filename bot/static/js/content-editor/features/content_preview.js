@@ -168,6 +168,25 @@ function normalizePreviewImageBlockHeights(editor, inner) {
     });
 }
 
+function previewBgPatternSummary(p) {
+    if (!p || typeof p !== 'object') return null;
+    const u = String(p.imageDataUrl || '');
+    const key = String(p.imageS3Key || '').trim();
+    return {
+        hasDataUrl: u.length > 0,
+        dataUrlChars: u.length,
+        imageS3Key: key || null,
+        interval: p.interval,
+        imageWidth: p.imageWidth,
+        imageHeight: p.imageHeight,
+    };
+}
+
+function logPreviewBg(stage, detail) {
+    if (typeof console === 'undefined' || typeof console.debug !== 'function') return;
+    console.debug('[preview-bg]', stage, detail);
+}
+
 function isLatestSavedSlotForFrame(ref, allRefs) {
     const fid = ref && ref.frameId;
     if (!fid) return false;
@@ -189,21 +208,33 @@ function isLatestSavedSlotForFrame(ref, allRefs) {
  * если поверх открыт редактор и показывается тот же кадр, который сейчас редактируется.
  */
 function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRefs) {
-    if (!payload || typeof payload !== 'object' || !editor.canvas) return payload;
-    if (!editor.modal || editor.modal.style.display !== 'flex') return payload;
+    if (!payload || typeof payload !== 'object' || !editor.canvas) {
+        logPreviewBg('mergeLiveCanvasBackground:skip', { reason: 'no payload/canvas' });
+        return payload;
+    }
+    if (!editor.modal || editor.modal.style.display !== 'flex') {
+        logPreviewBg('mergeLiveCanvasBackground:skip', {
+            reason: 'editor modal not flex',
+            modalDisplay: editor.modal ? editor.modal.style.display : null,
+        });
+        return payload;
+    }
 
     let merge = false;
+    let mergeReason = '';
     if (editor.editorOpenedFromContentCardView && editor.previewEditFrameId != null) {
         merge =
             ref.frameId === editor.previewEditFrameId &&
             editor._contentCardEditFrameIndex != null &&
             editor._contentCardEditFrameIndex === editor.cardPreviewIndex;
+        if (merge) mergeReason = 'contentCardView';
     }
     if (!merge && editor.editorOpenedFromPreview && !editor.editorOpenedFromContentCardView && editor.previewEditFrameId != null) {
         const slot = ref.saveSlotIndex != null ? ref.saveSlotIndex : 0;
         const editSlot =
             editor.previewEditSaveSlotIndex != null ? editor.previewEditSaveSlotIndex : 0;
         merge = ref.frameId === editor.previewEditFrameId && slot === editSlot;
+        if (merge) mergeReason = 'openedFromPreview';
     }
     if (
         !merge &&
@@ -219,6 +250,7 @@ function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRe
             isLatestSavedSlotForFrame(ref, allRefs)
         ) {
             merge = true;
+            mergeReason = 'frameIdMatchesLatestSlot';
         }
     }
     /* Пока открыт редактор и смотрим превью того же кадра, что на странице hint viewer,
@@ -238,15 +270,28 @@ function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRe
             isLatestSavedSlotForFrame(ref, allRefs)
         ) {
             merge = true;
+            mergeReason = 'hintViewerFrameMatch';
         }
     }
 
-    if (!merge) return payload;
+    if (!merge) {
+        logPreviewBg('mergeLiveCanvasBackground:no-merge', {
+            refFrameId: ref && ref.frameId,
+            refSlot: ref && ref.saveSlotIndex,
+            cardPreviewIndex: editor.cardPreviewIndex,
+            editorOpenedFromContentCardView: editor.editorOpenedFromContentCardView,
+            previewEditFrameId: editor.previewEditFrameId,
+            getFrameIdForSave:
+                typeof editor.getFrameIdForSave === 'function' ? editor.getFrameIdForSave() : undefined,
+        });
+        return payload;
+    }
 
     let clone;
     try {
         clone = JSON.parse(JSON.stringify(payload));
     } catch (e) {
+        logPreviewBg('mergeLiveCanvasBackground:clone-failed', { err: String(e && e.message) });
         return payload;
     }
     if (!clone.editor || typeof clone.editor !== 'object') clone.editor = {};
@@ -256,6 +301,11 @@ function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRe
     if (typeof editor.getCanvasBackgroundPatternForSave === 'function') {
         clone.editor.canvasBackgroundPattern = editor.getCanvasBackgroundPatternForSave();
     }
+    logPreviewBg('mergeLiveCanvasBackground:merged', {
+        reason: mergeReason,
+        canvasBackground: clone.editor.canvasBackground,
+        canvasBackgroundPattern: previewBgPatternSummary(clone.editor.canvasBackgroundPattern),
+    });
     return clone;
 }
 
@@ -284,6 +334,13 @@ function applyPreviewCanvasBackground(editor, payload, targets) {
         tileW = Math.max(1, Math.round(imageWidth * scale));
         tileH = Math.max(1, Math.round(imageHeight * scale));
     }
+    logPreviewBg('applyPreviewCanvasBackground', {
+        targetCount: targets.length,
+        bgColor,
+        patternFromPayload: previewBgPatternSummary(pattern),
+        tilePx: patternCssUrl ? `${tileW}x${tileH}` : null,
+        patternCssApplied: !!patternCssUrl,
+    });
     targets.forEach((node) => {
         if (!node || !node.style) return;
         node.style.backgroundColor = bgColor;

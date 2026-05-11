@@ -1,3 +1,24 @@
+/** Краткое описание узора для консоли (без полного data URL). */
+function canvasBgPatternSummary(p) {
+    if (!p || typeof p !== 'object') return null;
+    const u = String(p.imageDataUrl || '');
+    const key = String(p.imageS3Key || '').trim();
+    return {
+        hasDataUrl: u.length > 0,
+        dataUrlChars: u.length,
+        imageS3Key: key || null,
+        interval: p.interval,
+        imageWidth: p.imageWidth,
+        imageHeight: p.imageHeight,
+        fileName: p.fileName || null,
+    };
+}
+
+function logCanvasBg(stage, detail) {
+    if (typeof console === 'undefined' || typeof console.debug !== 'function') return;
+    console.debug('[canvas-bg]', stage, detail);
+}
+
 export function getCanvasBackgroundForSaveImpl(editor) {
     if (!editor.canvas) return '#ffffff';
     const inline = (editor.canvas.style.backgroundColor || '').trim();
@@ -21,10 +42,16 @@ export function resolveSavedCanvasBackgroundImpl(_editor, payload) {
 }
 
 export function getCanvasBackgroundPatternForSaveImpl(editor) {
-    if (!editor.canvasBackgroundPattern) return null;
+    if (!editor.canvasBackgroundPattern) {
+        logCanvasBg('getCanvasBackgroundPatternForSave', { result: null });
+        return null;
+    }
     const imageDataUrl = String(editor.canvasBackgroundPattern.imageDataUrl || '').trim();
     const imageS3Key = String(editor.canvasBackgroundPattern.imageS3Key || '').trim();
-    if (!imageDataUrl && !imageS3Key) return null;
+    if (!imageDataUrl && !imageS3Key) {
+        logCanvasBg('getCanvasBackgroundPatternForSave', { result: null, reason: 'empty url and s3 key' });
+        return null;
+    }
     const interval = editor.clampNumericValue(
         editor.canvasBackgroundPattern.interval,
         20,
@@ -33,7 +60,7 @@ export function getCanvasBackgroundPatternForSaveImpl(editor) {
     );
     const imageWidth = editor.clampNumericValue(editor.canvasBackgroundPattern.imageWidth, 8, 4096, 64);
     const imageHeight = editor.clampNumericValue(editor.canvasBackgroundPattern.imageHeight, 8, 4096, 64);
-    return {
+    const out = {
         mode: 'tile',
         imageDataUrl,
         imageS3Key,
@@ -42,22 +69,37 @@ export function getCanvasBackgroundPatternForSaveImpl(editor) {
         interval,
         fileName: String(editor.canvasBackgroundPattern.fileName || ''),
     };
+    logCanvasBg('getCanvasBackgroundPatternForSave', { pattern: canvasBgPatternSummary(out) });
+    return out;
 }
 
 export function resolveSavedCanvasBackgroundPatternImpl(editor, payload) {
     const raw = payload && payload.editor && payload.editor.canvasBackgroundPattern;
-    if (!raw || typeof raw !== 'object') return null;
-    if (String(raw.mode || 'tile') !== 'tile') return null;
+    if (!raw || typeof raw !== 'object') {
+        logCanvasBg('resolveSavedCanvasBackgroundPattern', { result: null, reason: 'no raw' });
+        return null;
+    }
+    if (String(raw.mode || 'tile') !== 'tile') {
+        logCanvasBg('resolveSavedCanvasBackgroundPattern', { result: null, reason: 'mode not tile', mode: raw.mode });
+        return null;
+    }
     let imageDataUrl = String(raw.imageDataUrl || '').trim();
     const imageS3Key = String(raw.imageS3Key || '').trim();
     if (!imageDataUrl && imageS3Key && typeof editor.buildContentCardMediaUrl === 'function') {
         imageDataUrl = editor.buildContentCardMediaUrl(imageS3Key);
     }
-    if (!imageDataUrl) return null;
+    if (!imageDataUrl) {
+        logCanvasBg('resolveSavedCanvasBackgroundPattern', {
+            result: null,
+            reason: 'no imageDataUrl after resolve',
+            hadS3Key: !!imageS3Key,
+        });
+        return null;
+    }
     const fallbackInterval = raw.interval != null
         ? raw.interval
         : 100;
-    return {
+    const resolved = {
         mode: 'tile',
         imageDataUrl,
         imageS3Key,
@@ -66,6 +108,8 @@ export function resolveSavedCanvasBackgroundPatternImpl(editor, payload) {
         interval: editor.clampNumericValue(fallbackInterval, 20, 200, 100),
         fileName: String(raw.fileName || ''),
     };
+    logCanvasBg('resolveSavedCanvasBackgroundPattern', { pattern: canvasBgPatternSummary(resolved) });
+    return resolved;
 }
 
 export function buildCanvasTilePatternCssUrlImpl(editor, pattern) {
@@ -78,6 +122,7 @@ export function buildCanvasTilePatternCssUrlImpl(editor, pattern) {
 export function applyCanvasPatternConfigImpl(editor, pattern) {
     if (!editor.canvas) return;
     if (!pattern || !pattern.imageDataUrl) {
+        logCanvasBg('applyCanvasPatternConfig', { action: 'clear' });
         editor.canvasBackgroundPattern = null;
         editor.canvas.style.backgroundImage = 'none';
         editor.canvas.style.backgroundRepeat = '';
@@ -102,6 +147,11 @@ export function applyCanvasPatternConfigImpl(editor, pattern) {
     editor.canvas.style.backgroundRepeat = 'repeat';
     editor.canvas.style.backgroundSize = `${tileW}px ${tileH}px`;
     editor.canvas.style.backgroundPosition = 'left top';
+    logCanvasBg('applyCanvasPatternConfig', {
+        action: 'apply',
+        tilePx: `${tileW}x${tileH}`,
+        pattern: canvasBgPatternSummary(normalized),
+    });
 }
 
 export function openCanvasSettingsModalImpl(editor) {
@@ -136,6 +186,9 @@ export function openCanvasSettingsModalImpl(editor) {
         editor: { canvasBackgroundPattern: editor.canvasBackgroundPattern },
     });
     editor._canvasPatternDraft = activePattern ? { ...activePattern } : null;
+    logCanvasBg('openCanvasSettingsModal', {
+        draftFromEditor: canvasBgPatternSummary(editor._canvasPatternDraft),
+    });
     const patternEnabled = !!(editor._canvasPatternDraft && editor._canvasPatternDraft.imageDataUrl);
     const patternInterval = editor._canvasPatternDraft
         ? editor.clampNumericValue(editor._canvasPatternDraft.interval, 20, 200, 100)
@@ -477,6 +530,11 @@ export function handleCanvasPatternFileInputImpl(editor, inputEl) {
                 interval: fallbackInterval,
                 fileName: String(file.name || 'pattern-image'),
             };
+            logCanvasBg('handleCanvasPatternFileInput', {
+                fileName: editor._canvasPatternDraft.fileName,
+                naturalSize: `${img.naturalWidth}x${img.naturalHeight}`,
+                draft: canvasBgPatternSummary(editor._canvasPatternDraft),
+            });
             const nameEl = document.getElementById('canvasPatternFileName');
             if (nameEl) {
                 nameEl.textContent = editor._canvasPatternDraft.fileName || 'Изображение выбрано';
@@ -522,8 +580,14 @@ export function applyCanvasBackgroundImpl(editor) {
     const color = document.getElementById('canvasBackgroundColor').value;
     editor.canvas.style.backgroundColor = color;
     const patternEnabled = !!(document.getElementById('canvasPatternEnabled') && document.getElementById('canvasPatternEnabled').checked);
+    logCanvasBg('applyCanvasBackground', {
+        backgroundColor: color,
+        patternEnabled,
+        draftBefore: canvasBgPatternSummary(editor._canvasPatternDraft),
+    });
     if (patternEnabled) {
         if (!editor._canvasPatternDraft || !editor._canvasPatternDraft.imageDataUrl) {
+            logCanvasBg('applyCanvasBackground', { aborted: true, reason: 'no pattern draft image' });
             editor.showNotification('Сначала загрузите картинку для узора', 'warning');
             return;
         }
@@ -535,5 +599,9 @@ export function applyCanvasBackgroundImpl(editor) {
     } else {
         editor.applyCanvasPatternConfig(null);
     }
+    logCanvasBg('applyCanvasBackground', {
+        done: true,
+        storedPattern: canvasBgPatternSummary(editor.canvasBackgroundPattern),
+    });
     editor.closeCanvasSettingsModal();
 }
