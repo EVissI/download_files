@@ -4124,8 +4124,13 @@ export class ContentEditor {
                 </div>
                 <div class="property-item">
                     <label>Цвет фона блока:</label>
-                    <input type="color" id="propBgColor" value="${this.getBlockBackgroundColorForInput(element)}"
-                           oninput="contentEditor.updateElementProperty('backgroundColor', this.value)">
+                    <div class="property-bg-color-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <input type="color" id="propBgColor" value="${this.getBlockBackgroundColorForInput(element)}"
+                               oninput="contentEditor.updateElementProperty('backgroundColor', this.value)"
+                               aria-label="Цвет фона блока">
+                        <button type="button" class="action-btn" title="Убрать заливку, прозрачный фон"
+                                onclick="contentEditor.updateElementProperty('clearBlockBackground')">Сбросить</button>
+                    </div>
                 </div>
                 <div class="property-item">
                     <label>Форматирование:</label>
@@ -4315,6 +4320,14 @@ export class ContentEditor {
                 const bgColorInput = document.getElementById('propBgColor');
                 if (bgColorInput) {
                     bgColorInput.value = this.getBlockBackgroundColorForInput(this.selectedElement);
+                }
+                break;
+            }
+            case 'clearBlockBackground': {
+                this.selectedElement.style.backgroundColor = 'transparent';
+                const bgColorInputClear = document.getElementById('propBgColor');
+                if (bgColorInputClear) {
+                    bgColorInputClear.value = this.getBlockBackgroundColorForInput(this.selectedElement);
                 }
                 break;
             }
