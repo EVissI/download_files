@@ -1915,7 +1915,7 @@
             background-color: transparent !important;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 600px) {
             .history-nav-btn {
                 width: 62px;
                 height: 62px;
@@ -2422,8 +2422,8 @@
             background-color: #0056b3;
         }
 
-        /* Узкие экраны: опускаем контент (~10vh); max-width 767px — без конфликта с min-width: 768px */
-        @media (max-width: 767px) {
+        /* Узкие экраны: опускаем контент (~10vh); max-width 600px — без конфликта с min-width: 601px */
+        @media (max-width: 600px) {
             .container {
                 padding-top: max(10vh, 24px);
                 padding-left: 1rem;
@@ -2433,7 +2433,7 @@
         }
 
         /* ---------- Адаптивная верстка ---------- */
-        @media (min-width: 768px) {
+        @media (min-width: 601px) {
             body {
                 align-items: center;
             }
@@ -2496,7 +2496,7 @@
         }
 
         /* Планшеты: меньший верхний отступ (после общих min-width правил, чтобы не перезаписаться) */
-        @media (min-width: 768px) and (max-width: 1024px) {
+        @media (min-width: 601px) and (max-width: 1024px) {
             .container {
                 padding: max(5vh, 24px) 1rem 1.5rem;
                 box-sizing: border-box;
