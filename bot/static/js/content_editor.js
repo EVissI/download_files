@@ -4721,12 +4721,12 @@ export class ContentEditor {
         const cs = window.getComputedStyle(el);
         const out = {};
         const bgInline = el.style.backgroundColor;
+        /* Только inline: иначе getComputedStyle подставляет фон белого канваса и в JSON уезжает «белая заливка»
+           у блоков картинок и др., хотя пользователь фон не задавал. */
         if (bgInline && String(bgInline).trim()) {
-            out.backgroundColor = bgInline;
-        } else {
-            const c = cs.backgroundColor;
-            if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') {
-                out.backgroundColor = c;
+            const t = String(bgInline).trim().toLowerCase();
+            if (t !== 'transparent' && t !== 'rgba(0, 0, 0, 0)' && t !== 'rgba(0,0,0,0)') {
+                out.backgroundColor = bgInline;
             }
         }
         if (el.style.padding && String(el.style.padding).trim()) {
