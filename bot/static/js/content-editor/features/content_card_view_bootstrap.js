@@ -7,7 +7,6 @@ export function initContentCardViewOnlyImpl(editor) {
         document.body.insertAdjacentHTML('beforeend', `
                 <div id="contentCardViewRoot" class="card-preview-modal card-preview-modal--fullscreen" style="display: none; min-height: 100vh;" aria-hidden="true">
                     <div class="card-preview-box" style="width: 100%; max-width: 100%; box-sizing: border-box;">
-                        <div class="content-card-view-top-spacer" aria-hidden="true"></div>
                         <div class="card-preview-header">
                                 <button type="button" id="contentCardViewEditFrameBtn" class="content-card-view-edit-btn" style="display: none;" onclick="contentEditor.openEditorFromContentCardView()" title="Редактировать текущий кадр">
                                     <i class="fa fa-pencil" aria-hidden="true"></i><span class="content-card-view-edit-label"> Редактировать кадр</span>
@@ -42,10 +41,6 @@ export function initContentCardViewOnlyImpl(editor) {
                     </div>
                 </div>
             `);
-    }
-    const _ccb = document.querySelector('#contentCardViewRoot .card-preview-box');
-    if (_ccb && !_ccb.querySelector('.content-card-view-top-spacer')) {
-        _ccb.insertAdjacentHTML('afterbegin', '<div class="content-card-view-top-spacer" aria-hidden="true"></div>');
     }
     editor.cardPreviewModal = document.getElementById('contentCardViewRoot');
     editor.cardLabelsModal = null;

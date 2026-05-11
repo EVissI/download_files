@@ -23,6 +23,23 @@
             margin: 0 auto;
         }
 
+        /* Смартфоны: пустой блок ~10% высоты экрана над контентом кабинета */
+        @media (max-width: 768px) {
+            .cabinet-top-spacer {
+                width: 100%;
+                height: 10vh;
+                min-height: 24px;
+                flex-shrink: 0;
+                pointer-events: none;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .cabinet-top-spacer {
+                display: none;
+            }
+        }
+
         h1 {
             font-size: 1.15rem;
             font-weight: 600;
@@ -701,6 +718,7 @@
 
 <body>
     <div class="wrap">
+        <div class="cabinet-top-spacer" aria-hidden="true"></div>
         <div class="cabinet-header">
             <div class="cabinet-header-actions">
                 <button id="shuffle-cards-btn" class="cabinet-shuffle-btn" type="button" title="Перемешать карточки" aria-label="Перемешать карточки">⇄</button>
