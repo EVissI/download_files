@@ -2494,6 +2494,14 @@
                 max-width: 1140px;
             }
         }
+
+        /* Планшеты: верхний отступ как на телефоне (после общих min-width правил, чтобы не перезаписаться) */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .container {
+                padding: max(10vh, 24px) 1rem 1.5rem;
+                box-sizing: border-box;
+            }
+        }
     </style>
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>

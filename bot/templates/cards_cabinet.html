@@ -23,8 +23,8 @@
             margin: 0 auto;
         }
 
-        /* Смартфоны: пустой блок над контентом кабинета (под статус-бар / жесты) */
-        @media (max-width: 768px) {
+        /* Узкие экраны и планшеты: блок над контентом (под статус-бар / жесты) */
+        @media (max-width: 1024px) {
             .cabinet-top-spacer {
                 width: 100%;
                 height: 7vh;
@@ -34,7 +34,7 @@
             }
         }
 
-        @media (min-width: 769px) {
+        @media (min-width: 1025px) {
             .cabinet-top-spacer {
                 display: none;
             }
