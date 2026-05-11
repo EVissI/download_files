@@ -2693,6 +2693,12 @@ button.content-card-admin-info-file-link:hover {
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
 }
 
+/* Вложенные изображения (upload-image): без заливки за кадром */
+.canvas-element.image-element {
+    background: transparent;
+    background-color: transparent;
+}
+
 /*
  * Таблица подсказок: как .hints-table + table в hint_viewer.html
  * (!important — перебить сохранённый tableHtml и стили WebView)

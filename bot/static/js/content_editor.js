@@ -2297,6 +2297,7 @@ export class ContentEditor {
         element.className = 'canvas-element image-element';
         element.dataset.toolId = 'upload-image';
         element.dataset.imageS3Key = s3Key;
+        element.style.backgroundColor = 'transparent';
         if (displayName) {
             element.dataset.imageSourceName = String(displayName).slice(0, 240);
         }
@@ -2958,6 +2959,7 @@ export class ContentEditor {
         element.className = 'canvas-element image-element';
         element.dataset.toolId = 'upload-image';
         element.dataset.imageUrl = imageUrl;
+        element.style.backgroundColor = 'transparent';
 
         // Get canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
@@ -7013,6 +7015,7 @@ export class ContentEditor {
                 break;
             case 'upload-image': {
                 element.classList.add('image-element');
+                element.style.backgroundColor = 'transparent';
                 const s3img = item.imageS3Key || '';
                 if (s3img) {
                     element.dataset.imageS3Key = s3img;
