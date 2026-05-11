@@ -148,17 +148,16 @@ function normalizePreviewImageBlockHeights(editor, inner) {
         if (!img) return;
         const apply = () => {
             if (editor && typeof editor.applyResponsiveUploadImageLayout === 'function') {
-                const cap = typeof editor.getMaxCanvasWidth === 'function' ? editor.getMaxCanvasWidth() : 800;
+                el.style.removeProperty('width');
+                el.style.removeProperty('max-width');
+                el.style.removeProperty('align-self');
+                el.style.removeProperty('margin-left');
+                el.style.removeProperty('margin-right');
                 const innerWidth = Math.ceil(inner.getBoundingClientRect().width || inner.clientWidth || 0);
-                const targetWidth = innerWidth > 0 ? Math.min(innerWidth, cap) : cap;
-                // В просмотре у пользователя не даём image-блокам тянуться на всю ширину экрана.
-                // Поведение синхронизировано с редактором (desktop/mobile cap).
-                el.style.setProperty('width', `${targetWidth}px`, 'important');
-                el.style.setProperty('max-width', `${cap}px`, 'important');
-                el.style.alignSelf = 'center';
-                el.style.marginLeft = 'auto';
-                el.style.marginRight = 'auto';
-                editor.applyResponsiveUploadImageLayout(el, { targetWidth, maxWidth: cap });
+                const fallback =
+                    typeof editor.getMaxCanvasWidth === 'function' ? editor.getMaxCanvasWidth() : 800;
+                const targetWidth = innerWidth > 0 ? innerWidth : fallback;
+                editor.applyResponsiveUploadImageLayout(el, { targetWidth, maxWidth: 0 });
             }
         };
         apply();

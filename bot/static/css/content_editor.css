@@ -2130,16 +2130,6 @@ button.content-card-admin-info-file-link:hover {
     margin: 0;
 }
 
-/* Для image-блоков в предпросмотре отменяем принудительное width:100%,
-   чтобы применять тот же cap ширины, что в редакторе. */
-.card-preview-surface-inner--flex-stack > .canvas-element.card-preview-canvas-clone.image-element {
-    width: auto !important;
-    max-width: 100% !important;
-    align-self: center;
-    margin-left: auto;
-    margin-right: auto;
-}
-
 /* Предпросмотр: прослушивание аудио (inner с pointer-events: none иначе не доходит до ▶) */
 .card-preview-surface-inner .canvas-element.audio-element.card-preview-canvas-clone {
     pointer-events: auto;
