@@ -70,17 +70,9 @@ export function resolveSavedCanvasBackgroundPatternImpl(editor, payload) {
 
 export function buildCanvasTilePatternCssUrlImpl(editor, pattern) {
     if (!pattern || !pattern.imageDataUrl) return '';
-    const imageWidthBase = editor.clampNumericValue(pattern.imageWidth, 8, 4096, 64);
-    const imageHeightBase = editor.clampNumericValue(pattern.imageHeight, 8, 4096, 64);
-    const interval = editor.clampNumericValue(pattern.interval, 20, 200, 100);
-    const scale = interval / 100;
-    const imageWidth = Math.max(1, Math.round(imageWidthBase * scale));
-    const imageHeight = Math.max(1, Math.round(imageHeightBase * scale));
-    const tileW = imageWidth;
-    const tileH = imageHeight;
-    const href = String(pattern.imageDataUrl || '').replace(/"/g, '&quot;');
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${tileW}" height="${tileH}" viewBox="0 0 ${tileW} ${tileH}"><image href="${href}" x="0" y="0" width="${imageWidth}" height="${imageHeight}" preserveAspectRatio="none"/></svg>`;
-    return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
+    const src = String(pattern.imageDataUrl || '').trim().replace(/"/g, '\\"');
+    if (!src) return '';
+    return `url("${src}")`;
 }
 
 export function applyCanvasPatternConfigImpl(editor, pattern) {
