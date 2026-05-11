@@ -599,6 +599,9 @@ export function applyCanvasBackgroundImpl(editor) {
     } else {
         editor.applyCanvasPatternConfig(null);
     }
+    if (typeof editor._previewMergePreferStoredCanvasBg !== 'undefined') {
+        editor._previewMergePreferStoredCanvasBg = false;
+    }
     logCanvasBg('applyCanvasBackground', {
         done: true,
         storedPattern: canvasBgPatternSummary(editor.canvasBackgroundPattern),

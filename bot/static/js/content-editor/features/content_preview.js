@@ -295,6 +295,16 @@ function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRe
         return payload;
     }
     if (!clone.editor || typeof clone.editor !== 'object') clone.editor = {};
+    /* После «Сохранить кадр» редактор сбрасывает узор в DOM, но payload уже содержит паттерн в JSON.
+       Если подмешать «живое» состояние (null), превью затрёт только что сохранённый узор. */
+    if (editor._previewMergePreferStoredCanvasBg) {
+        logPreviewBg('mergeLiveCanvasBackground:merged-stored-only', {
+            reason: mergeReason,
+            canvasBackground: clone.editor.canvasBackground,
+            canvasBackgroundPattern: previewBgPatternSummary(clone.editor.canvasBackgroundPattern),
+        });
+        return clone;
+    }
     if (typeof editor.getCanvasBackgroundForSave === 'function') {
         clone.editor.canvasBackground = editor.getCanvasBackgroundForSave();
     }

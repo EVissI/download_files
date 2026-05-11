@@ -4987,6 +4987,8 @@ export class ContentEditor {
             this.canvas.style.backgroundColor = '#ffffff';
             this.applyCanvasPatternConfig(null);
         }
+        /* См. mergeLiveCanvasBackgroundIntoPreviewPayload: не затирать паттерн в превью пустым «живым» состоянием. */
+        this._previewMergePreferStoredCanvasBg = true;
         this.selectedElement = null;
         this.applyPropertiesEmptyState();
         this.toggleStates = {};
