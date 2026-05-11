@@ -806,11 +806,14 @@
             if (window.Telegram && window.Telegram.WebApp) {
                 var tg = window.Telegram.WebApp;
                 var allowFullscreen = "{{ 'true' if webapp_fullscreen_enabled else 'false' }}" === 'true';
+                var platform = String(tg.platform || '').toLowerCase();
+                var isMobilePlatform = platform === 'android' || platform === 'ios';
                 tg.ready();
                 tg.expand();
                 try {
                     var canFullscreen =
                         allowFullscreen &&
+                        !isMobilePlatform &&
                         typeof tg.requestFullscreen === 'function' &&
                         (typeof tg.isVersionAtLeast !== 'function' || tg.isVersionAtLeast('8.0'));
                     if (canFullscreen && !tg.isFullscreen) {

@@ -2198,9 +2198,11 @@
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
             const allowFullscreen = "{{ 'true' if webapp_fullscreen_enabled else 'false' }}" === 'true';
+            const platform = String(tg.platform || '').toLowerCase();
+            const isMobilePlatform = platform === 'android' || platform === 'ios';
             tg.ready();
             tg.expand();
-            if (allowFullscreen) {
+            if (allowFullscreen && !isMobilePlatform) {
                 try {
                     if (
                         typeof tg.requestFullscreen === 'function' &&
