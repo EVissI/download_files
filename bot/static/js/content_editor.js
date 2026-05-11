@@ -5387,6 +5387,19 @@ export class ContentEditor {
         if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.initData) {
             return;
         }
+        const bgPattern = payload.editor && payload.editor.canvasBackgroundPattern;
+        if (bgPattern && typeof bgPattern === 'object') {
+            const dataUrl = String(bgPattern.imageDataUrl || '');
+            if (!bgPattern.imageS3Key && dataUrl.startsWith('data:image')) {
+                const blob = await (await fetch(dataUrl)).blob();
+                const hintName = (bgPattern.fileName && String(bgPattern.fileName).trim())
+                    ? String(bgPattern.fileName).trim()
+                    : 'canvas-pattern.png';
+                const up = await this.uploadBinaryToContentCardMedia(blob, hintName, blob.type);
+                bgPattern.imageS3Key = up.s3_key;
+                delete bgPattern.imageDataUrl;
+            }
+        }
         for (const item of payload.elements) {
             const toolId = item.toolId || '';
             if (toolId === 'upload-image' && !item.imageS3Key) {

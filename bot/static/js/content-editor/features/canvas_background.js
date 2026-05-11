@@ -21,7 +21,10 @@ export function resolveSavedCanvasBackgroundImpl(_editor, payload) {
 }
 
 export function getCanvasBackgroundPatternForSaveImpl(editor) {
-    if (!editor.canvasBackgroundPattern || !editor.canvasBackgroundPattern.imageDataUrl) return null;
+    if (!editor.canvasBackgroundPattern) return null;
+    const imageDataUrl = String(editor.canvasBackgroundPattern.imageDataUrl || '').trim();
+    const imageS3Key = String(editor.canvasBackgroundPattern.imageS3Key || '').trim();
+    if (!imageDataUrl && !imageS3Key) return null;
     const interval = editor.clampNumericValue(
         editor.canvasBackgroundPattern.interval,
         20,
@@ -32,7 +35,8 @@ export function getCanvasBackgroundPatternForSaveImpl(editor) {
     const imageHeight = editor.clampNumericValue(editor.canvasBackgroundPattern.imageHeight, 8, 4096, 64);
     return {
         mode: 'tile',
-        imageDataUrl: String(editor.canvasBackgroundPattern.imageDataUrl || ''),
+        imageDataUrl,
+        imageS3Key,
         imageWidth,
         imageHeight,
         interval,
@@ -44,7 +48,11 @@ export function resolveSavedCanvasBackgroundPatternImpl(editor, payload) {
     const raw = payload && payload.editor && payload.editor.canvasBackgroundPattern;
     if (!raw || typeof raw !== 'object') return null;
     if (String(raw.mode || 'tile') !== 'tile') return null;
-    const imageDataUrl = String(raw.imageDataUrl || '').trim();
+    let imageDataUrl = String(raw.imageDataUrl || '').trim();
+    const imageS3Key = String(raw.imageS3Key || '').trim();
+    if (!imageDataUrl && imageS3Key && typeof editor.buildContentCardMediaUrl === 'function') {
+        imageDataUrl = editor.buildContentCardMediaUrl(imageS3Key);
+    }
     if (!imageDataUrl) return null;
     const fallbackInterval = raw.interval != null
         ? raw.interval
@@ -52,6 +60,7 @@ export function resolveSavedCanvasBackgroundPatternImpl(editor, payload) {
     return {
         mode: 'tile',
         imageDataUrl,
+        imageS3Key,
         imageWidth: editor.clampNumericValue(raw.imageWidth, 8, 4096, 64),
         imageHeight: editor.clampNumericValue(raw.imageHeight, 8, 4096, 64),
         interval: editor.clampNumericValue(fallbackInterval, 20, 200, 100),
@@ -87,6 +96,7 @@ export function applyCanvasPatternConfigImpl(editor, pattern) {
     const normalized = {
         mode: 'tile',
         imageDataUrl: String(pattern.imageDataUrl || ''),
+        imageS3Key: String(pattern.imageS3Key || ''),
         imageWidth: editor.clampNumericValue(pattern.imageWidth, 8, 4096, 64),
         imageHeight: editor.clampNumericValue(pattern.imageHeight, 8, 4096, 64),
         interval: editor.clampNumericValue(pattern.interval, 20, 200, 100),
@@ -469,6 +479,7 @@ export function handleCanvasPatternFileInputImpl(editor, inputEl) {
             editor._canvasPatternDraft = {
                 mode: 'tile',
                 imageDataUrl: dataUrl,
+                imageS3Key: '',
                 imageWidth: editor.clampNumericValue(img.naturalWidth, 8, 4096, 64),
                 imageHeight: editor.clampNumericValue(img.naturalHeight, 8, 4096, 64),
                 interval: fallbackInterval,
