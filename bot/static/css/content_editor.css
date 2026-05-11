@@ -198,6 +198,55 @@
     color: #ffffff;
 }
 
+/* Кнопка «Фон и узор» (настройки канваса): заметнее остальных инструментов */
+.tool-item-icon.tool-item-icon--canvas-bg {
+    background: linear-gradient(155deg, #4c3d6e 0%, #352f55 55%, #2e2848 100%);
+    border-color: #a78bfa;
+    box-shadow:
+        0 0 0 1px rgba(167, 139, 250, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    padding: 10px 8px;
+    min-height: 52px;
+}
+
+.tool-item-icon.tool-item-icon--canvas-bg:hover {
+    background: linear-gradient(155deg, #5a4a82 0%, #3f3665 55%, #383058 100%);
+    border-color: #c4b5fd;
+    box-shadow:
+        0 0 0 2px rgba(196, 181, 253, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.tool-item-icon.tool-item-icon--canvas-bg i {
+    font-size: 17px;
+    color: #ede9fe;
+}
+
+.tool-item-icon.tool-item-icon--canvas-bg:hover i {
+    color: #ffffff;
+}
+
+.tool-item-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.tool-item-short-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #e9d5ff;
+    line-height: 1;
+    letter-spacing: 0.03em;
+    text-transform: none;
+    max-width: 56px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .tool-item {
     background: #3a3a3a;
     border: 1px solid #505050;

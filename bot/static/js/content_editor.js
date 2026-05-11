@@ -1981,10 +1981,11 @@ export class ContentEditor {
             },
             {
                 id: 'canvas-settings',
-                name: 'Настройки',
+                name: 'Фон и узор',
                 type: 'settings',
-                description: 'Настройки фона канваса',
-                icon: 'fa fa-cog'
+                description: 'Цвет фона, узор-картинка и стили текста',
+                icon: 'fa fa-th',
+                shortLabel: 'Фон'
             }
         ];
 
@@ -1994,14 +1995,29 @@ export class ContentEditor {
     renderTools(tools) {
         this.toolsList.innerHTML = `
             <div class="tools-grid">
-                ${tools.map(tool => `
-                    <div class="tool-item-icon ${tool.id === 'boardCanvas' ? 'toggle-button' : ''}" 
+                ${tools
+                    .map((tool) => {
+                        const extraClasses = [
+                            tool.id === 'boardCanvas' ? 'toggle-button' : '',
+                            tool.id === 'canvas-settings' ? 'tool-item-icon--canvas-bg' : ''
+                        ]
+                            .filter(Boolean)
+                            .join(' ');
+                        let inner;
+                        if (tool.shortLabel) {
+                            inner = `<span class="tool-item-stack"><i class="${tool.icon}"></i><span class="tool-item-short-label">${this.escapeHtml(tool.shortLabel)}</span></span>`;
+                        } else {
+                            inner = `<i class="${tool.icon}"></i>`;
+                        }
+                        return `
+                    <div class="tool-item-icon ${extraClasses}"
                          data-tool-id="${tool.id}"
                          onclick="contentEditor.selectTool('${tool.id}')"
-                         title="${tool.name}">
-                        <i class="${tool.icon}"></i>
-                    </div>
-                `).join('')}
+                         title="${this.escapeHtml(tool.description || tool.name)}">
+                        ${inner}
+                    </div>`;
+                    })
+                    .join('')}
             </div>
         `;
     }
