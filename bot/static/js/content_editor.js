@@ -142,6 +142,10 @@ export class ContentEditor {
 
         /** Глобальный стиль текста: новые блоки + значения вкладки «Текст» в настройках */
         this.globalTextStyleDefaults = { ...ContentEditor.DEFAULT_GLOBAL_TEXT_STYLE };
+        /** Фон канваса-картинка: пока режим узора (tile). */
+        this.canvasBackgroundPattern = null;
+        /** Черновик паттерна внутри модалки настроек канваса. */
+        this._canvasPatternDraft = null;
 
         this.init();
     }
@@ -4627,6 +4631,7 @@ export class ContentEditor {
             editor: {
                 boardCanvasToggle: !!this.toggleStates['boardCanvas'],
                 canvasBackground: this.getCanvasBackgroundForSave(),
+                canvasBackgroundPattern: this.getCanvasBackgroundPatternForSave(),
                 showBoardMatchBanner: !!this.boardMatchBannerEnabled,
             },
             elements: await this.serializeCanvasElementsForSave()
@@ -4655,6 +4660,76 @@ export class ContentEditor {
             return String(raw).trim();
         }
         return '#ffffff';
+    }
+
+    getCanvasBackgroundPatternForSave() {
+        if (!this.canvasBackgroundPattern || !this.canvasBackgroundPattern.imageDataUrl) return null;
+        const gap = this.clampNumericValue(this.canvasBackgroundPattern.gap, 0, 120, 12);
+        const imageWidth = this.clampNumericValue(this.canvasBackgroundPattern.imageWidth, 8, 4096, 64);
+        const imageHeight = this.clampNumericValue(this.canvasBackgroundPattern.imageHeight, 8, 4096, 64);
+        return {
+            mode: 'tile',
+            imageDataUrl: String(this.canvasBackgroundPattern.imageDataUrl || ''),
+            imageWidth,
+            imageHeight,
+            gap,
+            fileName: String(this.canvasBackgroundPattern.fileName || ''),
+        };
+    }
+
+    resolveSavedCanvasBackgroundPattern(payload) {
+        const raw = payload && payload.editor && payload.editor.canvasBackgroundPattern;
+        if (!raw || typeof raw !== 'object') return null;
+        if (String(raw.mode || 'tile') !== 'tile') return null;
+        const imageDataUrl = String(raw.imageDataUrl || '').trim();
+        if (!imageDataUrl) return null;
+        return {
+            mode: 'tile',
+            imageDataUrl,
+            imageWidth: this.clampNumericValue(raw.imageWidth, 8, 4096, 64),
+            imageHeight: this.clampNumericValue(raw.imageHeight, 8, 4096, 64),
+            gap: this.clampNumericValue(raw.gap, 0, 120, 12),
+            fileName: String(raw.fileName || ''),
+        };
+    }
+
+    buildCanvasTilePatternCssUrl(pattern) {
+        if (!pattern || !pattern.imageDataUrl) return '';
+        const imageWidth = this.clampNumericValue(pattern.imageWidth, 8, 4096, 64);
+        const imageHeight = this.clampNumericValue(pattern.imageHeight, 8, 4096, 64);
+        const gap = this.clampNumericValue(pattern.gap, 0, 120, 12);
+        const tileW = imageWidth + gap;
+        const tileH = imageHeight + gap;
+        const href = String(pattern.imageDataUrl || '').replace(/"/g, '&quot;');
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${tileW}" height="${tileH}" viewBox="0 0 ${tileW} ${tileH}"><image href="${href}" x="0" y="0" width="${imageWidth}" height="${imageHeight}" preserveAspectRatio="none"/></svg>`;
+        return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
+    }
+
+    applyCanvasPatternConfig(pattern) {
+        if (!this.canvas) return;
+        if (!pattern || !pattern.imageDataUrl) {
+            this.canvasBackgroundPattern = null;
+            this.canvas.style.backgroundImage = 'none';
+            this.canvas.style.backgroundRepeat = '';
+            this.canvas.style.backgroundSize = '';
+            this.canvas.style.backgroundPosition = '';
+            return;
+        }
+        const normalized = {
+            mode: 'tile',
+            imageDataUrl: String(pattern.imageDataUrl || ''),
+            imageWidth: this.clampNumericValue(pattern.imageWidth, 8, 4096, 64),
+            imageHeight: this.clampNumericValue(pattern.imageHeight, 8, 4096, 64),
+            gap: this.clampNumericValue(pattern.gap, 0, 120, 12),
+            fileName: String(pattern.fileName || ''),
+        };
+        const tileW = normalized.imageWidth + normalized.gap;
+        const tileH = normalized.imageHeight + normalized.gap;
+        this.canvasBackgroundPattern = normalized;
+        this.canvas.style.backgroundImage = this.buildCanvasTilePatternCssUrl(normalized);
+        this.canvas.style.backgroundRepeat = 'repeat';
+        this.canvas.style.backgroundSize = `${tileW}px ${tileH}px`;
+        this.canvas.style.backgroundPosition = 'left top';
     }
 
     /** Стили обёртки .canvas-element (фон блока; padding — только если задан в панели свойств, не из computed) */
@@ -4948,11 +5023,13 @@ export class ContentEditor {
         if (this.canvas) {
             this.resetCanvasDomStructure();
             this.canvas.style.backgroundColor = '#ffffff';
+            this.applyCanvasPatternConfig(null);
         }
         this.selectedElement = null;
         this.applyPropertiesEmptyState();
         this.toggleStates = {};
         this._editorSessionBoardSnapshot = null;
+        this._canvasPatternDraft = null;
         this.syncCardDataFromHintViewerPage();
         this.elementIdCounter = 0;
         this.loadTools();
@@ -6769,6 +6846,7 @@ export class ContentEditor {
         }
 
         this.canvas.style.backgroundColor = this.resolveSavedCanvasBackground(payload);
+        this.applyCanvasPatternConfig(this.resolveSavedCanvasBackgroundPattern(payload));
 
         const items = payload.elements || [];
         let maxNum = 0;
@@ -7311,6 +7389,17 @@ export class ContentEditor {
             const v = String(o.value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
             return `<option value="${v}">${this.escapeHtml(o.label)}</option>`;
         }).join('');
+        const activePattern = this.canvasBackgroundPattern && this.canvasBackgroundPattern.imageDataUrl
+            ? { ...this.canvasBackgroundPattern }
+            : null;
+        this._canvasPatternDraft = activePattern ? { ...activePattern } : null;
+        const patternEnabled = !!(this._canvasPatternDraft && this._canvasPatternDraft.imageDataUrl);
+        const patternGap = this._canvasPatternDraft
+            ? this.clampNumericValue(this._canvasPatternDraft.gap, 0, 120, 12)
+            : 12;
+        const patternFileLabel = this._canvasPatternDraft && this._canvasPatternDraft.fileName
+            ? this._canvasPatternDraft.fileName
+            : (patternEnabled ? 'Изображение выбрано' : 'Картинка не выбрана');
 
         const modalHTML = `
             <div id="canvasSettingsModal" class="canvas-settings-modal" style="display: flex;">
@@ -7352,6 +7441,31 @@ export class ContentEditor {
                                     <button type="button" class="add-preset-btn" onclick="contentEditor.addPresetColor()">
                                         <i class="fa fa-plus"></i> Добавить цвет
                                     </button>
+                                </div>
+                            </div>
+                            <div class="setting-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="canvasPatternEnabled" ${patternEnabled ? 'checked' : ''}>
+                                    <span class="checkbox-custom"></span>
+                                    <span class="checkbox-text">Фон картинкой (узор)</span>
+                                </label>
+                            </div>
+                            <div id="canvasPatternControls" class="setting-group" style="${patternEnabled ? '' : 'display:none;'}">
+                                <label>Изображение узора:</label>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <button type="button" class="add-preset-btn" onclick="contentEditor.openCanvasPatternImagePicker()">
+                                        <i class="fa fa-image"></i> Загрузить картинку
+                                    </button>
+                                    <span id="canvasPatternFileName" style="font-size:12px; color:#666;">${this.escapeHtml(patternFileLabel)}</span>
+                                </div>
+                                <input type="file" id="canvasPatternFileInput" accept="image/*" style="display:none">
+                                <div id="canvasPatternPreview" style="margin-top:8px; width:100%; height:84px; border:1px solid #ddd; border-radius:8px; background-color:#fff; background-image:${patternEnabled ? this.buildCanvasTilePatternCssUrl(this._canvasPatternDraft) : 'none'}; background-repeat:repeat; background-size:${patternEnabled ? `${this._canvasPatternDraft.imageWidth + patternGap}px ${this._canvasPatternDraft.imageHeight + patternGap}px` : 'auto'};"></div>
+                            </div>
+                            <div id="canvasPatternGapWrap" class="setting-group" style="${patternEnabled ? '' : 'display:none;'}">
+                                <label for="canvasPatternGapRange">Интервал между картинками: <span id="canvasPatternGapValue">${patternGap}px</span></label>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input type="range" id="canvasPatternGapRange" min="0" max="120" step="1" value="${patternGap}" style="flex:1;">
+                                    <input type="number" id="canvasPatternGapNumber" min="0" max="120" step="1" value="${patternGap}" style="width:82px;">
                                 </div>
                             </div>
                         </div>
@@ -7457,6 +7571,45 @@ export class ContentEditor {
                 colorPicker.value = e.target.value;
             }
         });
+
+        const patternEnableCb = document.getElementById('canvasPatternEnabled');
+        const patternControls = document.getElementById('canvasPatternControls');
+        const patternGapWrap = document.getElementById('canvasPatternGapWrap');
+        const patternFileInput = document.getElementById('canvasPatternFileInput');
+        const patternGapRange = document.getElementById('canvasPatternGapRange');
+        const patternGapNumber = document.getElementById('canvasPatternGapNumber');
+        const patternGapValue = document.getElementById('canvasPatternGapValue');
+
+        const syncPatternGapUi = (raw) => {
+            const val = this.clampNumericValue(raw, 0, 120, 12);
+            if (patternGapRange) patternGapRange.value = String(val);
+            if (patternGapNumber) patternGapNumber.value = String(val);
+            if (patternGapValue) patternGapValue.textContent = `${val}px`;
+            if (this._canvasPatternDraft && this._canvasPatternDraft.imageDataUrl) {
+                this._canvasPatternDraft.gap = val;
+                this.refreshCanvasPatternPreviewInModal();
+            }
+        };
+
+        if (patternEnableCb) {
+            patternEnableCb.addEventListener('change', () => {
+                const enabled = !!patternEnableCb.checked;
+                if (patternControls) patternControls.style.display = enabled ? 'block' : 'none';
+                if (patternGapWrap) patternGapWrap.style.display = enabled ? 'block' : 'none';
+            });
+        }
+        if (patternFileInput) {
+            patternFileInput.addEventListener('change', () => {
+                this.handleCanvasPatternFileInput(patternFileInput);
+            });
+        }
+        if (patternGapRange) {
+            patternGapRange.addEventListener('input', (e) => syncPatternGapUi(e.target.value));
+        }
+        if (patternGapNumber) {
+            patternGapNumber.addEventListener('input', (e) => syncPatternGapUi(e.target.value));
+        }
+        syncPatternGapUi(patternGap);
 
         const gCol = document.getElementById('globalTextColor');
         const gColTxt = document.getElementById('globalTextColorText');
@@ -7613,16 +7766,96 @@ export class ContentEditor {
         return icons[type] || 'info-circle';
     }
 
+    openCanvasPatternImagePicker() {
+        const input = document.getElementById('canvasPatternFileInput');
+        if (input) input.click();
+    }
+
+    handleCanvasPatternFileInput(inputEl) {
+        if (!inputEl || !inputEl.files || !inputEl.files[0]) return;
+        const file = inputEl.files[0];
+        if (!file.type || !file.type.startsWith('image/')) {
+            this.showNotification('Нужно выбрать файл изображения', 'warning');
+            inputEl.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = String(reader.result || '');
+            if (!dataUrl) {
+                this.showNotification('Не удалось прочитать изображение', 'error');
+                return;
+            }
+            const img = new Image();
+            img.onload = () => {
+                const fallbackGap = this._canvasPatternDraft
+                    ? this.clampNumericValue(this._canvasPatternDraft.gap, 0, 120, 12)
+                    : 12;
+                this._canvasPatternDraft = {
+                    mode: 'tile',
+                    imageDataUrl: dataUrl,
+                    imageWidth: this.clampNumericValue(img.naturalWidth, 8, 4096, 64),
+                    imageHeight: this.clampNumericValue(img.naturalHeight, 8, 4096, 64),
+                    gap: fallbackGap,
+                    fileName: String(file.name || 'pattern-image'),
+                };
+                const nameEl = document.getElementById('canvasPatternFileName');
+                if (nameEl) {
+                    nameEl.textContent = this._canvasPatternDraft.fileName || 'Изображение выбрано';
+                }
+                this.refreshCanvasPatternPreviewInModal();
+                this.showNotification('Картинка узора загружена', 'success');
+            };
+            img.onerror = () => {
+                this.showNotification('Не удалось загрузить изображение', 'error');
+            };
+            img.src = dataUrl;
+        };
+        reader.onerror = () => {
+            this.showNotification('Ошибка чтения файла', 'error');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    refreshCanvasPatternPreviewInModal() {
+        const preview = document.getElementById('canvasPatternPreview');
+        if (!preview) return;
+        if (!this._canvasPatternDraft || !this._canvasPatternDraft.imageDataUrl) {
+            preview.style.backgroundImage = 'none';
+            preview.style.backgroundSize = 'auto';
+            return;
+        }
+        const gap = this.clampNumericValue(this._canvasPatternDraft.gap, 0, 120, 12);
+        preview.style.backgroundImage = this.buildCanvasTilePatternCssUrl(this._canvasPatternDraft);
+        preview.style.backgroundRepeat = 'repeat';
+        preview.style.backgroundSize = `${this._canvasPatternDraft.imageWidth + gap}px ${this._canvasPatternDraft.imageHeight + gap}px`;
+    }
+
     closeCanvasSettingsModal() {
         const modal = document.getElementById('canvasSettingsModal');
         if (modal) {
             modal.remove();
         }
+        this._canvasPatternDraft = null;
     }
 
     applyCanvasBackground() {
         const color = document.getElementById('canvasBackgroundColor').value;
         this.canvas.style.backgroundColor = color;
+        const patternEnabled = !!(document.getElementById('canvasPatternEnabled') && document.getElementById('canvasPatternEnabled').checked);
+        if (patternEnabled) {
+            if (!this._canvasPatternDraft || !this._canvasPatternDraft.imageDataUrl) {
+                this.showNotification('Сначала загрузите картинку для узора', 'warning');
+                return;
+            }
+            const gapRaw = document.getElementById('canvasPatternGapNumber')
+                ? document.getElementById('canvasPatternGapNumber').value
+                : this._canvasPatternDraft.gap;
+            this._canvasPatternDraft.gap = this.clampNumericValue(gapRaw, 0, 120, 12);
+            this.applyCanvasPatternConfig(this._canvasPatternDraft);
+        } else {
+            this.applyCanvasPatternConfig(null);
+        }
         this.closeCanvasSettingsModal();
     }
 
