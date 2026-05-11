@@ -132,9 +132,9 @@ export function openCanvasSettingsModalImpl(editor) {
         const v = String(o.value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
         return `<option value="${v}">${editor.escapeHtml(o.label)}</option>`;
     }).join('');
-    const activePattern = editor.canvasBackgroundPattern && editor.canvasBackgroundPattern.imageDataUrl
-        ? { ...editor.canvasBackgroundPattern }
-        : null;
+    const activePattern = resolveSavedCanvasBackgroundPatternImpl(editor, {
+        editor: { canvasBackgroundPattern: editor.canvasBackgroundPattern },
+    });
     editor._canvasPatternDraft = activePattern ? { ...activePattern } : null;
     const patternEnabled = !!(editor._canvasPatternDraft && editor._canvasPatternDraft.imageDataUrl);
     const patternInterval = editor._canvasPatternDraft

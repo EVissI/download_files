@@ -221,6 +221,25 @@ function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRe
             merge = true;
         }
     }
+    /* Пока открыт редактор и смотрим превью того же кадра, что на странице hint viewer,
+       подмешиваем живой фон/узор даже если слоты/флаги edit-сессии выше не совпали. */
+    if (
+        !merge &&
+        ref &&
+        typeof window !== 'undefined' &&
+        window.__CONTENT_CARD_VIEW_ONLY__ !== true &&
+        typeof window.getHintViewerBoardSnapshot === 'function'
+    ) {
+        const snap = window.getHintViewerBoardSnapshot();
+        const hintFid = snap && snap.frameId != null ? String(snap.frameId) : '';
+        if (
+            hintFid &&
+            String(ref.frameId) === hintFid &&
+            isLatestSavedSlotForFrame(ref, allRefs)
+        ) {
+            merge = true;
+        }
+    }
 
     if (!merge) return payload;
 
