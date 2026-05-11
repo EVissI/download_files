@@ -3611,6 +3611,13 @@ button.content-card-admin-info-file-link:hover {
     border-color: #8b9dc3;
 }
 
+.canvas-settings-body .canvas-settings-pattern-row {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(102, 126, 234, 0.18);
+    border: 1px solid rgba(102, 126, 234, 0.35);
+}
+
 .add-preset-btn {
     width: 100%;
     padding: 10px 15px;
