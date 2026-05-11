@@ -93,7 +93,13 @@ export function refreshCardPreviewUIImpl(editor) {
             }
         }
     }
-    editor.renderCardPreviewSurface(payload);
+    const payloadForRender = mergeLiveCanvasBackgroundIntoPreviewPayload(
+        editor,
+        payload,
+        ref,
+        editor.cardPreviewRefs
+    );
+    editor.renderCardPreviewSurface(payloadForRender);
 }
 
 export function reorderCardPreviewElementsBySavedTopImpl(_editor, inner) {
@@ -160,6 +166,78 @@ function normalizePreviewImageBlockHeights(editor, inner) {
             img.addEventListener('load', apply, { once: true });
         }
     });
+}
+
+function isLatestSavedSlotForFrame(ref, allRefs) {
+    const fid = ref && ref.frameId;
+    if (!fid) return false;
+    let maxSlot = -Infinity;
+    for (let i = 0; i < allRefs.length; i++) {
+        const r = allRefs[i];
+        if (!r || r.frameId !== fid) continue;
+        const s = r.saveSlotIndex != null ? r.saveSlotIndex : 0;
+        if (s > maxSlot) maxSlot = s;
+    }
+    if (!Number.isFinite(maxSlot)) return false;
+    const refSlot = ref.saveSlotIndex != null ? ref.saveSlotIndex : 0;
+    return refSlot === maxSlot;
+}
+
+/**
+ * Предпросмотр собирает payload из последнего сохранённого JSON (localStorage / сервер),
+ * а фон узора живёт только в состоянии редактора до «Сохранить кадр». Подмешиваем актуальный фон,
+ * если поверх открыт редактор и показывается тот же кадр, который сейчас редактируется.
+ */
+function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRefs) {
+    if (!payload || typeof payload !== 'object' || !editor.canvas) return payload;
+    if (!editor.modal || editor.modal.style.display !== 'flex') return payload;
+
+    let merge = false;
+    if (editor.editorOpenedFromContentCardView && editor.previewEditFrameId != null) {
+        merge =
+            ref.frameId === editor.previewEditFrameId &&
+            editor._contentCardEditFrameIndex != null &&
+            editor._contentCardEditFrameIndex === editor.cardPreviewIndex;
+    }
+    if (!merge && editor.editorOpenedFromPreview && !editor.editorOpenedFromContentCardView && editor.previewEditFrameId != null) {
+        const slot = ref.saveSlotIndex != null ? ref.saveSlotIndex : 0;
+        const editSlot =
+            editor.previewEditSaveSlotIndex != null ? editor.previewEditSaveSlotIndex : 0;
+        merge = ref.frameId === editor.previewEditFrameId && slot === editSlot;
+    }
+    if (
+        !merge &&
+        typeof window !== 'undefined' &&
+        window.__CONTENT_CARD_VIEW_ONLY__ !== true &&
+        typeof editor.getFrameIdForSave === 'function'
+    ) {
+        const curId = editor.getFrameIdForSave();
+        if (
+            curId &&
+            !String(curId).startsWith('editor_') &&
+            ref.frameId === curId &&
+            isLatestSavedSlotForFrame(ref, allRefs)
+        ) {
+            merge = true;
+        }
+    }
+
+    if (!merge) return payload;
+
+    let clone;
+    try {
+        clone = JSON.parse(JSON.stringify(payload));
+    } catch (e) {
+        return payload;
+    }
+    if (!clone.editor || typeof clone.editor !== 'object') clone.editor = {};
+    if (typeof editor.getCanvasBackgroundForSave === 'function') {
+        clone.editor.canvasBackground = editor.getCanvasBackgroundForSave();
+    }
+    if (typeof editor.getCanvasBackgroundPatternForSave === 'function') {
+        clone.editor.canvasBackgroundPattern = editor.getCanvasBackgroundPatternForSave();
+    }
+    return clone;
 }
 
 function applyPreviewCanvasBackground(editor, payload, targets) {
