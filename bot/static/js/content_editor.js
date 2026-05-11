@@ -22,6 +22,21 @@ import {
     openEditorFromContentCardViewImpl,
 } from '/static/js/content-editor/features/content_card_view_admin.js';
 import {
+    autoGrowTextElementContainerImpl,
+    beginTextBlockHeightDragImpl,
+    setupTextEditingImpl,
+} from '/static/js/content-editor/features/text_resize.js';
+
+/* Фича-модули со статическим import не наследуют ?t= от content_editor.js — кешируются отдельно.
+   Пробрасываем тот же query, что у динамического import content_editor.js из bootstrap/core. */
+const _featureModuleCacheQs = (() => {
+    try {
+        return new URL(import.meta.url).search || '';
+    } catch (_e) {
+        return '';
+    }
+})();
+const {
     appendCardPreviewBoardOverlayImpl,
     cardPreviewApproveImpl,
     cardPreviewNextImpl,
@@ -45,22 +60,9 @@ import {
     setupCardPreviewTableCollapseImpl,
     shouldShowBoardInCardPreviewImpl,
     updateCardPreviewInnerMinHeightImpl,
-} from '/static/js/content-editor/features/content_preview.js';
-import {
-    autoGrowTextElementContainerImpl,
-    beginTextBlockHeightDragImpl,
-    setupTextEditingImpl,
-} from '/static/js/content-editor/features/text_resize.js';
-
-/* Статический import не получает ?query от родителя — браузер кеширует фича-модуль отдельно.
-   Динамический import с тем же search, что у content_editor.js (bootstrap/core пробрасывают cache bust). */
-const _canvasBgCacheQs = (() => {
-    try {
-        return new URL(import.meta.url).search || '';
-    } catch (_e) {
-        return '';
-    }
-})();
+} = await import(
+    new URL('./content-editor/features/content_preview.js', import.meta.url).href + _featureModuleCacheQs
+);
 const {
     addPresetColorImpl,
     applyCanvasBackgroundImpl,
@@ -80,7 +82,9 @@ const {
     resolveSavedCanvasBackgroundPatternImpl,
     setupPresetColorHandlersImpl,
     switchCanvasSettingsTabImpl,
-} = await import(new URL('./content-editor/features/canvas_background.js', import.meta.url).href + _canvasBgCacheQs);
+} = await import(
+    new URL('./content-editor/features/canvas_background.js', import.meta.url).href + _featureModuleCacheQs
+);
 
 /**
  * Content Editor Module
