@@ -172,6 +172,7 @@ function previewBgPatternSummary(p) {
     const u = String(p.imageDataUrl || '');
     const key = String(p.imageS3Key || '').trim();
     return {
+        mode: p.mode || 'tile',
         hasDataUrl: u.length > 0,
         dataUrlChars: u.length,
         imageS3Key: key || null,
@@ -343,27 +344,32 @@ function applyPreviewCanvasBackground(editor, payload, targets) {
     let patternCssUrl = '';
     let tileW = 0;
     let tileH = 0;
+    let patternMode = 'tile';
     if (pattern && pattern.imageDataUrl && typeof editor.buildCanvasTilePatternCssUrl === 'function') {
         patternCssUrl = editor.buildCanvasTilePatternCssUrl(pattern);
-        const clamp = typeof editor.clampNumericValue === 'function'
-            ? (v, min, max, d) => editor.clampNumericValue(v, min, max, d)
-            : (v, min, max, d) => {
-                const n = Number(v);
-                if (!Number.isFinite(n)) return d;
-                return Math.max(min, Math.min(max, n));
-            };
-        const interval = clamp(pattern.interval, 20, 200, 100);
-        const imageWidth = clamp(pattern.imageWidth, 8, 4096, 64);
-        const imageHeight = clamp(pattern.imageHeight, 8, 4096, 64);
-        const scale = interval / 100;
-        tileW = Math.max(1, Math.round(imageWidth * scale));
-        tileH = Math.max(1, Math.round(imageHeight * scale));
+        patternMode = String(pattern.mode || 'tile').toLowerCase() === 'cover' ? 'cover' : 'tile';
+        if (patternMode === 'tile') {
+            const clamp = typeof editor.clampNumericValue === 'function'
+                ? (v, min, max, d) => editor.clampNumericValue(v, min, max, d)
+                : (v, min, max, d) => {
+                    const n = Number(v);
+                    if (!Number.isFinite(n)) return d;
+                    return Math.max(min, Math.min(max, n));
+                };
+            const interval = clamp(pattern.interval, 20, 200, 100);
+            const imageWidth = clamp(pattern.imageWidth, 8, 4096, 64);
+            const imageHeight = clamp(pattern.imageHeight, 8, 4096, 64);
+            const scale = interval / 100;
+            tileW = Math.max(1, Math.round(imageWidth * scale));
+            tileH = Math.max(1, Math.round(imageHeight * scale));
+        }
     }
     logPreviewBg('applyPreviewCanvasBackground', {
         targetCount: targets.length,
         bgColor,
         patternFromPayload: previewBgPatternSummary(pattern),
-        tilePx: patternCssUrl ? `${tileW}x${tileH}` : null,
+        patternMode: patternCssUrl ? patternMode : null,
+        tilePx: patternCssUrl && patternMode === 'tile' ? `${tileW}x${tileH}` : null,
         patternCssApplied: !!patternCssUrl,
     });
     targets.forEach((node) => {
@@ -371,9 +377,15 @@ function applyPreviewCanvasBackground(editor, payload, targets) {
         node.style.backgroundColor = bgColor;
         if (patternCssUrl) {
             node.style.backgroundImage = patternCssUrl;
-            node.style.backgroundRepeat = 'repeat';
-            node.style.backgroundSize = `${tileW}px ${tileH}px`;
-            node.style.backgroundPosition = 'left top';
+            if (patternMode === 'cover') {
+                node.style.backgroundRepeat = 'no-repeat';
+                node.style.backgroundSize = 'cover';
+                node.style.backgroundPosition = 'center center';
+            } else {
+                node.style.backgroundRepeat = 'repeat';
+                node.style.backgroundSize = `${tileW}px ${tileH}px`;
+                node.style.backgroundPosition = 'left top';
+            }
         } else {
             node.style.backgroundImage = 'none';
             node.style.backgroundRepeat = '';

@@ -4,6 +4,7 @@ function canvasBgPatternSummary(p) {
     const u = String(p.imageDataUrl || '');
     const key = String(p.imageS3Key || '').trim();
     return {
+        mode: p.mode || 'tile',
         hasDataUrl: u.length > 0,
         dataUrlChars: u.length,
         imageS3Key: key || null,
@@ -60,8 +61,10 @@ export function getCanvasBackgroundPatternForSaveImpl(editor) {
     );
     const imageWidth = editor.clampNumericValue(editor.canvasBackgroundPattern.imageWidth, 8, 4096, 64);
     const imageHeight = editor.clampNumericValue(editor.canvasBackgroundPattern.imageHeight, 8, 4096, 64);
+    const modeRaw = String(editor.canvasBackgroundPattern.mode || 'tile').toLowerCase();
+    const mode = modeRaw === 'cover' ? 'cover' : 'tile';
     const out = {
-        mode: 'tile',
+        mode,
         imageDataUrl,
         imageS3Key,
         imageWidth,
@@ -79,10 +82,8 @@ export function resolveSavedCanvasBackgroundPatternImpl(editor, payload) {
         logCanvasBg('resolveSavedCanvasBackgroundPattern', { result: null, reason: 'no raw' });
         return null;
     }
-    if (String(raw.mode || 'tile') !== 'tile') {
-        logCanvasBg('resolveSavedCanvasBackgroundPattern', { result: null, reason: 'mode not tile', mode: raw.mode });
-        return null;
-    }
+    let mode = String(raw.mode || 'tile').toLowerCase();
+    if (mode !== 'cover' && mode !== 'tile') mode = 'tile';
     let imageDataUrl = String(raw.imageDataUrl || '').trim();
     const imageS3Key = String(raw.imageS3Key || '').trim();
     if (!imageDataUrl && imageS3Key && typeof editor.buildContentCardMediaUrl === 'function') {
@@ -100,7 +101,7 @@ export function resolveSavedCanvasBackgroundPatternImpl(editor, payload) {
         ? raw.interval
         : 100;
     const resolved = {
-        mode: 'tile',
+        mode,
         imageDataUrl,
         imageS3Key,
         imageWidth: editor.clampNumericValue(raw.imageWidth, 8, 4096, 64),
@@ -130,8 +131,9 @@ export function applyCanvasPatternConfigImpl(editor, pattern) {
         editor.canvas.style.backgroundPosition = '';
         return;
     }
+    const mode = String(pattern.mode || 'tile').toLowerCase() === 'cover' ? 'cover' : 'tile';
     const normalized = {
-        mode: 'tile',
+        mode,
         imageDataUrl: String(pattern.imageDataUrl || ''),
         imageS3Key: String(pattern.imageS3Key || ''),
         imageWidth: editor.clampNumericValue(pattern.imageWidth, 8, 4096, 64),
@@ -139,16 +141,28 @@ export function applyCanvasPatternConfigImpl(editor, pattern) {
         interval: editor.clampNumericValue(pattern.interval, 20, 200, 100),
         fileName: String(pattern.fileName || ''),
     };
+    editor.canvasBackgroundPattern = normalized;
+    editor.canvas.style.backgroundImage = buildCanvasTilePatternCssUrlImpl(editor, normalized);
+    if (mode === 'cover') {
+        editor.canvas.style.backgroundRepeat = 'no-repeat';
+        editor.canvas.style.backgroundSize = 'cover';
+        editor.canvas.style.backgroundPosition = 'center center';
+        logCanvasBg('applyCanvasPatternConfig', {
+            action: 'apply',
+            mode: 'cover',
+            pattern: canvasBgPatternSummary(normalized),
+        });
+        return;
+    }
     const scale = normalized.interval / 100;
     const tileW = Math.max(1, Math.round(normalized.imageWidth * scale));
     const tileH = Math.max(1, Math.round(normalized.imageHeight * scale));
-    editor.canvasBackgroundPattern = normalized;
-    editor.canvas.style.backgroundImage = buildCanvasTilePatternCssUrlImpl(editor, normalized);
     editor.canvas.style.backgroundRepeat = 'repeat';
     editor.canvas.style.backgroundSize = `${tileW}px ${tileH}px`;
     editor.canvas.style.backgroundPosition = 'left top';
     logCanvasBg('applyCanvasPatternConfig', {
         action: 'apply',
+        mode: 'tile',
         tilePx: `${tileW}x${tileH}`,
         pattern: canvasBgPatternSummary(normalized),
     });
@@ -193,6 +207,10 @@ export function openCanvasSettingsModalImpl(editor) {
     const patternInterval = editor._canvasPatternDraft
         ? editor.clampNumericValue(editor._canvasPatternDraft.interval, 20, 200, 100)
         : 100;
+    const patternMode =
+        editor._canvasPatternDraft && String(editor._canvasPatternDraft.mode || '').toLowerCase() === 'cover'
+            ? 'cover'
+            : 'tile';
     const patternFileLabel = editor._canvasPatternDraft && editor._canvasPatternDraft.fileName
         ? editor._canvasPatternDraft.fileName
         : (patternEnabled ? 'Изображение выбрано' : 'Картинка не выбрана');
@@ -257,7 +275,20 @@ export function openCanvasSettingsModalImpl(editor) {
                             <input type="file" id="canvasPatternFileInput" accept="image/*" style="display:none">
                             <div id="canvasPatternPreview" style="margin-top:8px; width:100%; height:84px; border:1px solid #ddd; border-radius:8px; background-color:#fff; background-image:${patternEnabled ? editor.buildCanvasTilePatternCssUrl(editor._canvasPatternDraft) : 'none'}; background-repeat:repeat; background-size:${patternEnabled ? `${Math.max(1, Math.round(editor._canvasPatternDraft.imageWidth * (patternInterval / 100)))}px ${Math.max(1, Math.round(editor._canvasPatternDraft.imageHeight * (patternInterval / 100)))}px` : 'auto'};"></div>
                         </div>
-                        <div id="canvasPatternGapWrap" class="setting-group" style="${patternEnabled ? '' : 'display:none;'}">
+                        <div id="canvasPatternModeWrap" class="setting-group" style="${patternEnabled ? '' : 'display:none;'}">
+                            <label>Вид фона картинкой</label>
+                            <div class="canvas-pattern-mode-row" style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+                                <label class="checkbox-label" style="cursor:pointer;">
+                                    <input type="radio" name="canvasPatternMode" value="tile" ${patternMode === 'tile' ? 'checked' : ''}>
+                                    <span class="checkbox-text">Повторять (плитка / узор)</span>
+                                </label>
+                                <label class="checkbox-label" style="cursor:pointer;">
+                                    <input type="radio" name="canvasPatternMode" value="cover" ${patternMode === 'cover' ? 'checked' : ''}>
+                                    <span class="checkbox-text">На весь канвас (одна картинка, без шва)</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="canvasPatternGapWrap" class="setting-group" style="${patternEnabled && patternMode === 'tile' ? '' : 'display:none;'}">
                             <label for="canvasPatternGapRange">Интервал узора (меньше = мельче): <span id="canvasPatternGapValue">${patternInterval}%</span></label>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <input type="range" id="canvasPatternGapRange" min="20" max="200" step="1" value="${patternInterval}" style="flex:1;">
@@ -370,6 +401,7 @@ export function openCanvasSettingsModalImpl(editor) {
 
     const patternEnableCb = document.getElementById('canvasPatternEnabled');
     const patternControls = document.getElementById('canvasPatternControls');
+    const patternModeWrap = document.getElementById('canvasPatternModeWrap');
     const patternGapWrap = document.getElementById('canvasPatternGapWrap');
     const patternFileInput = document.getElementById('canvasPatternFileInput');
     const patternGapRange = document.getElementById('canvasPatternGapRange');
@@ -387,13 +419,31 @@ export function openCanvasSettingsModalImpl(editor) {
         }
     };
 
+    const syncPatternModeAndGapVisibility = () => {
+        const enabled = !!(patternEnableCb && patternEnableCb.checked);
+        if (patternModeWrap) patternModeWrap.style.display = enabled ? 'block' : 'none';
+        const modeRadio = document.querySelector('input[name="canvasPatternMode"]:checked');
+        const mode = modeRadio && modeRadio.value === 'cover' ? 'cover' : 'tile';
+        if (patternGapWrap) patternGapWrap.style.display = enabled && mode === 'tile' ? 'block' : 'none';
+    };
+
     if (patternEnableCb) {
         patternEnableCb.addEventListener('change', () => {
             const enabled = !!patternEnableCb.checked;
             if (patternControls) patternControls.style.display = enabled ? 'block' : 'none';
-            if (patternGapWrap) patternGapWrap.style.display = enabled ? 'block' : 'none';
+            syncPatternModeAndGapVisibility();
         });
     }
+    document.querySelectorAll('input[name="canvasPatternMode"]').forEach((radio) => {
+        radio.addEventListener('change', () => {
+            if (editor._canvasPatternDraft) {
+                const v = document.querySelector('input[name="canvasPatternMode"]:checked');
+                editor._canvasPatternDraft.mode = v && v.value === 'cover' ? 'cover' : 'tile';
+            }
+            syncPatternModeAndGapVisibility();
+            editor.refreshCanvasPatternPreviewInModal();
+        });
+    });
     if (patternFileInput) {
         patternFileInput.addEventListener('change', () => {
             editor.handleCanvasPatternFileInput(patternFileInput);
@@ -406,6 +456,7 @@ export function openCanvasSettingsModalImpl(editor) {
         patternGapNumber.addEventListener('input', (e) => syncPatternGapUi(e.target.value));
     }
     syncPatternGapUi(patternInterval);
+    syncPatternModeAndGapVisibility();
 
     const gCol = document.getElementById('globalTextColor');
     const gColTxt = document.getElementById('globalTextColorText');
@@ -521,8 +572,15 @@ export function handleCanvasPatternFileInputImpl(editor, inputEl) {
             const fallbackInterval = editor._canvasPatternDraft
                 ? editor.clampNumericValue(editor._canvasPatternDraft.interval, 20, 200, 100)
                 : 100;
+            const fromRadio = document.querySelector('input[name="canvasPatternMode"]:checked');
+            const radioMode = fromRadio && fromRadio.value === 'cover' ? 'cover' : 'tile';
+            const prevMode =
+                editor._canvasPatternDraft && String(editor._canvasPatternDraft.mode || '').toLowerCase() === 'cover'
+                    ? 'cover'
+                    : 'tile';
+            const mode = editor._canvasPatternDraft ? prevMode : radioMode;
             editor._canvasPatternDraft = {
-                mode: 'tile',
+                mode,
                 imageDataUrl: dataUrl,
                 imageS3Key: '',
                 imageWidth: editor.clampNumericValue(img.naturalWidth, 8, 4096, 64),
@@ -559,13 +617,24 @@ export function refreshCanvasPatternPreviewInModalImpl(editor) {
     if (!editor._canvasPatternDraft || !editor._canvasPatternDraft.imageDataUrl) {
         preview.style.backgroundImage = 'none';
         preview.style.backgroundSize = 'auto';
+        preview.style.backgroundRepeat = '';
+        preview.style.backgroundPosition = '';
+        return;
+    }
+    const mode =
+        String(editor._canvasPatternDraft.mode || 'tile').toLowerCase() === 'cover' ? 'cover' : 'tile';
+    preview.style.backgroundImage = editor.buildCanvasTilePatternCssUrl(editor._canvasPatternDraft);
+    if (mode === 'cover') {
+        preview.style.backgroundRepeat = 'no-repeat';
+        preview.style.backgroundSize = 'cover';
+        preview.style.backgroundPosition = 'center center';
         return;
     }
     const interval = editor.clampNumericValue(editor._canvasPatternDraft.interval, 20, 200, 100);
     const scale = interval / 100;
-    preview.style.backgroundImage = editor.buildCanvasTilePatternCssUrl(editor._canvasPatternDraft);
     preview.style.backgroundRepeat = 'repeat';
     preview.style.backgroundSize = `${Math.max(1, Math.round(editor._canvasPatternDraft.imageWidth * scale))}px ${Math.max(1, Math.round(editor._canvasPatternDraft.imageHeight * scale))}px`;
+    preview.style.backgroundPosition = 'left top';
 }
 
 export function closeCanvasSettingsModalImpl(editor) {
@@ -591,6 +660,8 @@ export function applyCanvasBackgroundImpl(editor) {
             editor.showNotification('Сначала загрузите картинку для узора', 'warning');
             return;
         }
+        const modeRadio = document.querySelector('input[name="canvasPatternMode"]:checked');
+        editor._canvasPatternDraft.mode = modeRadio && modeRadio.value === 'cover' ? 'cover' : 'tile';
         const gapRaw = document.getElementById('canvasPatternGapNumber')
             ? document.getElementById('canvasPatternGapNumber').value
             : editor._canvasPatternDraft.interval;
