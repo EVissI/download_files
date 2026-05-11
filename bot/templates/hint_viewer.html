@@ -316,7 +316,7 @@
 
         @media (max-width: 768px) {
             body {
-                padding: 10px;
+                padding: 0 10px 10px;
             }
 
             h1 {
@@ -379,8 +379,9 @@
                 word-spacing: 12px;
             }
 
+            /* Верхний отступ как в кабинете карточек (~12vh на узких экранах) */
             .container {
-                padding: 0 10px;
+                padding: max(12vh, 24px) 10px 0 10px;
             }
 
             .hints-table {
