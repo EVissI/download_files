@@ -51,7 +51,17 @@ import {
     beginTextBlockHeightDragImpl,
     setupTextEditingImpl,
 } from '/static/js/content-editor/features/text_resize.js';
-import {
+
+/* Статический import не получает ?query от родителя — браузер кеширует фича-модуль отдельно.
+   Динамический import с тем же search, что у content_editor.js (bootstrap/core пробрасывают cache bust). */
+const _canvasBgCacheQs = (() => {
+    try {
+        return new URL(import.meta.url).search || '';
+    } catch (_e) {
+        return '';
+    }
+})();
+const {
     addPresetColorImpl,
     applyCanvasBackgroundImpl,
     applyCanvasPatternConfigImpl,
@@ -70,7 +80,7 @@ import {
     resolveSavedCanvasBackgroundPatternImpl,
     setupPresetColorHandlersImpl,
     switchCanvasSettingsTabImpl,
-} from '/static/js/content-editor/features/canvas_background.js';
+} = await import(new URL('./content-editor/features/canvas_background.js', import.meta.url).href + _canvasBgCacheQs);
 
 /**
  * Content Editor Module
