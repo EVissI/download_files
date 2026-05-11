@@ -2422,6 +2422,16 @@
             background-color: #0056b3;
         }
 
+        /* Узкие экраны: опускаем контент (~10vh); max-width 767px — без конфликта с min-width: 768px */
+        @media (max-width: 767px) {
+            .container {
+                padding-top: max(10vh, 24px);
+                padding-left: 1rem;
+                padding-right: 1rem;
+                box-sizing: border-box;
+            }
+        }
+
         /* ---------- Адаптивная верстка ---------- */
         @media (min-width: 768px) {
             body {
