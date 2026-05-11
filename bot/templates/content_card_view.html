@@ -40,10 +40,16 @@
             overflow: hidden;
         }
 
-        /* Как в кабинете: опускаем контент (~10vh) на смартфонах и планшетах */
-        @media (max-width: 1024px) {
+        /* Смартфоны: ~10vh; планшеты: ~5vh */
+        @media (max-width: 768px) {
             #contentCardViewRoot .card-preview-box {
                 padding-top: max(10vh, 24px);
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            #contentCardViewRoot .card-preview-box {
+                padding-top: max(5vh, 24px);
             }
         }
         #contentCardViewRoot .card-preview-header {
