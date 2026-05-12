@@ -4107,6 +4107,11 @@ button.content-card-admin-info-file-link:hover {
     box-sizing: border-box;
 }
 
+/* Просмотр карточки в Telegram WebApp: модалка монтируется в #contentCardViewRoot — absolute заполняет fullscreen-корень (fixed на body иногда не попадает в видимую область WebApp). */
+#contentCardViewRoot > .ce-interactive-feedback-modal {
+    position: absolute;
+}
+
 .ce-interactive-feedback-modal__backdrop {
     position: absolute;
     inset: 0;

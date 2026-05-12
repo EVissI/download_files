@@ -7302,7 +7302,7 @@ export class ContentEditor {
 
     deserializeCanvasElement(item, options = {}) {
         const previewMode = options.previewMode === true;
-        const toolId = item.toolId || '';
+        const toolId = item.toolId || item.tool_id || '';
         const elementId = item.id || `element_${this.elementIdCounter++}`;
         const element = document.createElement('div');
         element.id = elementId;

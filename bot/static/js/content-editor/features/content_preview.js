@@ -51,10 +51,12 @@ export function refreshCardPreviewUIImpl(editor) {
         deleteFrameBtn.disabled = total <= 1;
     }
 
-    if (!meta) return;
+    const viewOnlyPage = typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true;
 
     if (total === 0) {
-        meta.innerHTML = '<span class="card-preview-meta-empty">Нет сохранённых кадров для этой игры</span>';
+        if (meta) {
+            meta.innerHTML = '<span class="card-preview-meta-empty">Нет сохранённых кадров для этой игры</span>';
+        }
         editor.renderCardPreviewSurface(null);
         return;
     }
@@ -72,26 +74,27 @@ export function refreshCardPreviewUIImpl(editor) {
         }
     }
 
-    meta.innerHTML = '';
-    const viewOnlyPage = typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true;
-    if (!viewOnlyPage) {
-        const labelsKey = editor.getCardLabelsStorageKey();
-        const hasStoredLabelsKey = localStorage.getItem(labelsKey) !== null;
-        const storedLabels = hasStoredLabelsKey ? editor.loadCardLabelsFromStorage() : null;
-        const fallbackLabels = editor._contentCardTopLabels && editor._contentCardTopLabels.length
-            ? editor._contentCardTopLabels
-            : [];
-        const labelsToShow = hasStoredLabelsKey ? storedLabels : fallbackLabels;
-        if (labelsToShow.length) {
-            const topParts = labelsToShow
-                .filter((t) => typeof t === 'string' && t.trim())
-                .map((t) => `<span class="card-preview-label-chip">${editor.escapeHtml(t.trim())}</span>`)
-                .join(' ');
-            if (topParts) {
-                meta.insertAdjacentHTML(
-                    'beforeend',
-                    `<div class="card-preview-meta-line card-preview-meta-labels">Метки карточки: ${topParts}</div>`
-                );
+    if (meta) {
+        meta.innerHTML = '';
+        if (!viewOnlyPage) {
+            const labelsKey = editor.getCardLabelsStorageKey();
+            const hasStoredLabelsKey = localStorage.getItem(labelsKey) !== null;
+            const storedLabels = hasStoredLabelsKey ? editor.loadCardLabelsFromStorage() : null;
+            const fallbackLabels = editor._contentCardTopLabels && editor._contentCardTopLabels.length
+                ? editor._contentCardTopLabels
+                : [];
+            const labelsToShow = hasStoredLabelsKey ? storedLabels : fallbackLabels;
+            if (labelsToShow.length) {
+                const topParts = labelsToShow
+                    .filter((t) => typeof t === 'string' && t.trim())
+                    .map((t) => `<span class="card-preview-label-chip">${editor.escapeHtml(t.trim())}</span>`)
+                    .join(' ');
+                if (topParts) {
+                    meta.insertAdjacentHTML(
+                        'beforeend',
+                        `<div class="card-preview-meta-line card-preview-meta-labels">Метки карточки: ${topParts}</div>`
+                    );
+                }
             }
         }
     }
@@ -102,10 +105,6 @@ export function refreshCardPreviewUIImpl(editor) {
         editor.cardPreviewRefs
     );
     editor.renderCardPreviewSurface(payloadForRender);
-    if (viewOnlyPage && editor._contentCardViewCardId) {
-        const effectivePayload = editor.getPayloadForCardPreviewRender(payloadForRender);
-        setupInteractiveBestMoveAfterCardPreviewRender(editor, effectivePayload);
-    }
 }
 
 export function reorderCardPreviewElementsBySavedTopImpl(_editor, inner) {
@@ -917,6 +916,16 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
     setTimeout(() => {
         editor.refreshCardPreviewScale(hostRoot);
     }, 120);
+
+    /* Страница просмотра карточки: кнопки и запись ответа — всегда после отрисовки хоста (не зависит от наличия #cardPreviewMeta в refreshCardPreviewUI). */
+    if (
+        !hostRoot &&
+        typeof window !== 'undefined' &&
+        window.__CONTENT_CARD_VIEW_ONLY__ === true &&
+        editor._contentCardViewCardId
+    ) {
+        setupInteractiveBestMoveAfterCardPreviewRender(editor, effectivePayload);
+    }
 }
 
 export function updateCardPreviewInnerMinHeightImpl(_editor, inner) {

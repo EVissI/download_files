@@ -36,6 +36,16 @@ function getInteractiveFeedbackTexts(gridEl) {
 
 let _feedbackModalBound = false;
 
+/** На странице карточки модалку монтируем внутрь #contentCardViewRoot — иначе в Telegram WebView фиксированный слой на document.body может не попадать в видимую область WebApp. */
+function getInteractiveBestMoveFeedbackMountEl() {
+    if (typeof document === 'undefined') return null;
+    if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true) {
+        const root = document.getElementById('contentCardViewRoot');
+        if (root) return root;
+    }
+    return document.body;
+}
+
 function closeInteractiveBestMoveFeedbackModal() {
     const root = document.getElementById('ceInteractiveBestMoveFeedbackModal');
     if (!root) return;
@@ -64,7 +74,8 @@ function ensureInteractiveBestMoveFeedbackModal() {
             <p class="ce-interactive-feedback-modal__text" id="ceInteractiveBestMoveFeedbackText"></p>
             <button type="button" class="ce-interactive-feedback-modal__btn" id="ceInteractiveBestMoveFeedbackOkBtn">OK</button>
         </div>`;
-    document.body.appendChild(root);
+    const mount = getInteractiveBestMoveFeedbackMountEl() || document.body;
+    mount.appendChild(root);
 
     const onClose = () => closeInteractiveBestMoveFeedbackModal();
     root.querySelector('.ce-interactive-feedback-modal__backdrop')?.addEventListener('click', onClose);
@@ -94,8 +105,8 @@ export function openInteractiveBestMoveFeedbackModal(message) {
     const textEl = document.getElementById('ceInteractiveBestMoveFeedbackText');
     const btn = document.getElementById('ceInteractiveBestMoveFeedbackOkBtn');
     if (textEl) textEl.textContent = message != null ? String(message) : '';
-    /* В конец body — поверх узлов, добавленных после первого создания модалки (страница карточки и др.). */
-    document.body.appendChild(root);
+    const mount = getInteractiveBestMoveFeedbackMountEl() || document.body;
+    mount.appendChild(root);
     root.style.display = 'flex';
     root.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
@@ -366,9 +377,7 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
 
     const cardData = payload && payload.cardData && typeof payload.cardData === 'object' ? payload.cardData : null;
 
-    const blocks = host.querySelectorAll(
-        '.canvas-element.card-preview-canvas-clone[data-tool-id="interactive-best-move"]'
-    );
+    const blocks = host.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]');
     blocks.forEach((block) => {
         const raw = parseInt(block.dataset.ceInteractiveButtonCount, 10);
         const maxM = countInteractiveMovesFromCardData(cardData);
