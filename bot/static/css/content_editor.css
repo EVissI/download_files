@@ -553,7 +553,8 @@
         font-size: 12px;
     }
 
-    .content-editor-body.desktop-merged-tools #propertiesContent .property-item input.ce-property-input-fluid[type="text"] {
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item input.ce-property-input-fluid[type="text"],
+    .content-editor-body.desktop-merged-tools #propertiesContent .property-item select.ce-property-input-fluid {
         padding: 5px 7px;
         font-size: 12px;
     }
@@ -2392,7 +2393,8 @@ button.content-card-admin-info-file-link:hover {
 }
 
 /* Текстовые поля на всю ширину блока свойств (проценты от контейнера панели) */
-.property-item input.ce-property-input-fluid[type="text"] {
+.property-item input.ce-property-input-fluid[type="text"],
+.property-item select.ce-property-input-fluid {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
@@ -3213,7 +3215,8 @@ button.content-card-admin-info-file-link:hover {
         min-height: 28px;
     }
 
-    #propertiesContent .property-item input.ce-property-input-fluid[type="text"] {
+    #propertiesContent .property-item input.ce-property-input-fluid[type="text"],
+    #propertiesContent .property-item select.ce-property-input-fluid {
         padding: 4px 6px;
         font-size: 11px;
         min-height: 28px;

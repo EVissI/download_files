@@ -93,6 +93,7 @@ const {
     fillInteractiveBestMoveEditorGridFromResult,
     buildInteractiveSlotsFromCardData,
     buildInteractiveSlotsFromMoveStrings,
+    countInteractiveMovesFromCardData,
 } = await import(
     new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
@@ -1273,10 +1274,17 @@ export class ContentEditor {
                 }
                 return;
             }
-            let result = buildInteractiveSlotsFromCardData(cd);
+            const maxFromCd = countInteractiveMovesFromCardData(cd);
+            const maxAvail = Math.max(maxFromCd, domMoves.length, 1);
+            const rawBc = parseInt(el.dataset.ceInteractiveButtonCount, 10);
+            let btnCount = Number.isFinite(rawBc) ? rawBc : 4;
+            btnCount = Math.min(Math.max(1, btnCount), maxAvail);
+            el.dataset.ceInteractiveButtonCount = String(btnCount);
+
+            let result = buildInteractiveSlotsFromCardData(cd, btnCount);
             let usedDomFallback = false;
             if (result.error && domMoves.length > 0) {
-                result = buildInteractiveSlotsFromMoveStrings(domMoves);
+                result = buildInteractiveSlotsFromMoveStrings(domMoves, btnCount);
                 usedDomFallback = true;
             }
             if (typeof console !== 'undefined' && console.info) {
@@ -1325,7 +1333,12 @@ export class ContentEditor {
         }
         inner.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
             const grid = el.querySelector('[data-ce-interactive-grid]');
-            fillInteractiveEditorPreviewGrid(grid, cd);
+            const maxM = countInteractiveMovesFromCardData(cd);
+            const rawBc = parseInt(el.dataset.ceInteractiveButtonCount, 10);
+            let btnCount = Number.isFinite(rawBc) ? rawBc : 4;
+            btnCount = Math.min(Math.max(1, btnCount), Math.max(1, maxM));
+            el.dataset.ceInteractiveButtonCount = String(btnCount);
+            fillInteractiveEditorPreviewGrid(grid, cd, btnCount);
         });
     }
 
@@ -3788,6 +3801,9 @@ export class ContentEditor {
                 if (element.dataset.ceInteractiveFeedbackBad == null || element.dataset.ceInteractiveFeedbackBad === '') {
                     element.dataset.ceInteractiveFeedbackBad = 'Неправильно';
                 }
+                if (!element.dataset.ceInteractiveButtonCount) {
+                    element.dataset.ceInteractiveButtonCount = '4';
+                }
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">
                         <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
@@ -4236,6 +4252,51 @@ export class ContentEditor {
         return opts.join('');
     }
 
+    /**
+     * Число кнопок интерактива: максимум = кол-ву ходов с probs в hints (как у таблицы), иначе строк таблицы на холсте.
+     */
+    renderInteractiveButtonCountSelectHtml(element) {
+        const payloadStub = {
+            cardData: this.cardData && typeof this.cardData === 'object' ? this.cardData : {},
+        };
+        const mergedPayload = this.getPayloadForCardPreviewRender(payloadStub);
+        let cd =
+            mergedPayload &&
+            mergedPayload.cardData &&
+            typeof mergedPayload.cardData === 'object'
+                ? mergedPayload.cardData
+                : this.getEffectiveCardDataForInteractivePreview();
+
+        let maxMoves = countInteractiveMovesFromCardData(cd);
+        if (maxMoves === 0 && this.canvas) {
+            const tableEl = Array.from(this.canvas.querySelectorAll('.canvas-element.table-element')).find(
+                (w) => w.dataset.tableType !== 'cube'
+            );
+            const domMoves = tableEl ? this.parseMovesFromHintsTableDom(tableEl) : [];
+            maxMoves = Math.max(domMoves.length, 1);
+        } else {
+            maxMoves = Math.max(maxMoves, 1);
+        }
+
+        const raw = parseInt(element.dataset.ceInteractiveButtonCount, 10);
+        let selected = Number.isFinite(raw) ? raw : 4;
+        selected = Math.min(Math.max(1, selected), maxMoves);
+
+        const opts = [];
+        for (let v = 1; v <= maxMoves; v++) {
+            opts.push(`<option value="${v}" ${v === selected ? 'selected' : ''}>${v}</option>`);
+        }
+        return `
+                <div class="property-item">
+                    <label>Число кнопок:</label>
+                    <select id="propInteractiveButtonCount" class="ce-property-input-fluid"
+                            title="Не больше числа ходов с данными в таблице подсказок"
+                            onchange="contentEditor.updateElementProperty('interactiveButtonCount', this.value)">
+                        ${opts.join('')}
+                    </select>
+                </div>`;
+    }
+
     showElementProperties(element) {
         const computedStyle = window.getComputedStyle(element);
 
@@ -4420,6 +4481,7 @@ export class ContentEditor {
                 </div>
                 ` : ''}
                 ${element.dataset.toolId === 'interactive-best-move' ? `
+                ${this.renderInteractiveButtonCountSelectHtml(element)}
                 <div class="property-item">
                     <label>Текст при верном ответе:</label>
                     <input type="text" id="propInteractiveFeedbackOk" class="ce-property-input-fluid" maxlength="500"
@@ -4469,6 +4531,14 @@ export class ContentEditor {
             case 'interactiveFeedbackBad':
                 if (this.selectedElement.dataset.toolId === 'interactive-best-move') {
                     this.selectedElement.dataset.ceInteractiveFeedbackBad = value != null ? String(value).slice(0, 500) : '';
+                }
+                break;
+            case 'interactiveButtonCount':
+                if (this.selectedElement.dataset.toolId === 'interactive-best-move') {
+                    const n = parseInt(value, 10);
+                    this.selectedElement.dataset.ceInteractiveButtonCount =
+                        Number.isFinite(n) && n >= 1 ? String(Math.min(n, 999)) : '4';
+                    this.refreshInteractiveBestMoveElementsFromCardData();
                 }
                 break;
             case 'audioTitle':
@@ -7286,6 +7356,9 @@ export class ContentEditor {
                 }
                 if (!String(element.dataset.ceInteractiveFeedbackBad || '').trim()) {
                     element.dataset.ceInteractiveFeedbackBad = 'Неправильно';
+                }
+                if (!element.dataset.ceInteractiveButtonCount) {
+                    element.dataset.ceInteractiveButtonCount = '4';
                 }
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">

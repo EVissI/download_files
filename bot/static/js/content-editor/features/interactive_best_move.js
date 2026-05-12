@@ -102,11 +102,34 @@ export function openInteractiveBestMoveFeedbackModal(message) {
     }, 0);
 }
 
+/** Сколько строк с probs даёт cardData (как у таблицы ходов). Победа → 1. */
+export function countInteractiveMovesFromCardData(cardData) {
+    if (!cardData || typeof cardData !== 'object') return 0;
+    if (cardData.action === 'win') return 1;
+    const hints = Array.isArray(cardData.hints) ? cardData.hints : [];
+    let n = 0;
+    for (let i = 0; i < hints.length; i++) {
+        const hint = hints[i];
+        if (!hint || !hint.probs || hint.probs.length < 2) continue;
+        n++;
+    }
+    return n;
+}
+
+function normalizeInteractiveButtonCount(raw, maxAvailable, defaultCount = 4) {
+    const max = Math.max(1, maxAvailable | 0);
+    let n = parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 1) n = defaultCount;
+    if (n > max) n = max;
+    return n;
+}
+
 /**
  * @param {object | null | undefined} cardData
+ * @param {number} [buttonCount=4] — желаемое число активных кнопок (не больше числа доступных ходов)
  * @returns {{ error: boolean, message?: string, slots: Array<{ label: string, disabled: boolean, isCorrect: boolean }> }}
  */
-export function buildInteractiveSlotsFromCardData(cardData) {
+export function buildInteractiveSlotsFromCardData(cardData, buttonCount = 4) {
     if (!cardData || typeof cardData !== 'object') {
         if (typeof console !== 'undefined' && console.info) {
             console.info(CE_IBM_LOG, 'buildInteractiveSlotsFromCardData: cardData пустой или не объект', {
@@ -124,15 +147,17 @@ export function buildInteractiveSlotsFromCardData(cardData) {
         const name = cardData.player_name != null ? cardData.player_name : cardData.player || '';
         const pts = cardData.points != null ? cardData.points : '';
         const move = `Победа ${name} (${pts} очков)`;
-        return {
-            error: false,
-            slots: [
-                { label: move, disabled: false, isCorrect: true },
-                { label: '—', disabled: true, isCorrect: false },
-                { label: '—', disabled: true, isCorrect: false },
-                { label: '—', disabled: true, isCorrect: false },
-            ],
-        };
+        const maxWin = 1;
+        const n = normalizeInteractiveButtonCount(buttonCount, maxWin, Math.min(4, maxWin));
+        const slots = [];
+        for (let j = 0; j < n; j++) {
+            if (j === 0) {
+                slots.push({ label: move, disabled: false, isCorrect: true });
+            } else {
+                slots.push({ label: '—', disabled: true, isCorrect: false });
+            }
+        }
+        return { error: false, slots };
     }
 
     /* Те же строки, что и в createHintsTable(): только подсказки с probs (как в таблице на холсте). */
@@ -167,22 +192,20 @@ export function buildInteractiveSlotsFromCardData(cardData) {
         };
     }
 
+    const n = normalizeInteractiveButtonCount(buttonCount, moves.length, 4);
     const slots = [];
-    for (let j = 0; j < 4; j++) {
-        if (j < moves.length) {
-            slots.push({
-                label: moves[j],
-                disabled: false,
-                isCorrect: j === 0,
-            });
-        } else {
-            slots.push({ label: '—', disabled: true, isCorrect: false });
-        }
+    for (let j = 0; j < n; j++) {
+        slots.push({
+            label: moves[j],
+            disabled: false,
+            isCorrect: j === 0,
+        });
     }
     if (typeof console !== 'undefined' && console.debug) {
         console.debug(CE_IBM_LOG, 'buildInteractiveSlotsFromCardData: ok', {
             movesLen: moves.length,
-            labels: moves.slice(0, 4),
+            buttonCount: n,
+            labels: moves.slice(0, n),
         });
     }
     return { error: false, slots };
@@ -277,17 +300,19 @@ function fillInteractiveBestMoveGridFromResult(gridEl, result, options = {}) {
  *
  * @param {HTMLElement | null} gridEl
  * @param {object | null | undefined} cardData — уже смерженный эффективный cardData
+ * @param {number} [buttonCount=4]
  */
-export function fillInteractiveEditorPreviewGrid(gridEl, cardData) {
-    const result = buildInteractiveSlotsFromCardData(cardData);
+export function fillInteractiveEditorPreviewGrid(gridEl, cardData, buttonCount = 4) {
+    const result = buildInteractiveSlotsFromCardData(cardData, buttonCount);
     fillInteractiveBestMoveGridFromResult(gridEl, result, { dryRun: true });
 }
 
 /**
  * Слоты из уже известных подписей ходов (например, разобранных с таблицы на холсте).
  * @param {string[]} moves
+ * @param {number} [buttonCount=4]
  */
-export function buildInteractiveSlotsFromMoveStrings(moves) {
+export function buildInteractiveSlotsFromMoveStrings(moves, buttonCount = 4) {
     if (!moves || !Array.isArray(moves) || moves.length === 0) {
         return {
             error: true,
@@ -295,17 +320,14 @@ export function buildInteractiveSlotsFromMoveStrings(moves) {
             slots: [],
         };
     }
+    const n = normalizeInteractiveButtonCount(buttonCount, moves.length, 4);
     const slots = [];
-    for (let j = 0; j < 4; j++) {
-        if (j < moves.length) {
-            slots.push({
-                label: String(moves[j]),
-                disabled: false,
-                isCorrect: j === 0,
-            });
-        } else {
-            slots.push({ label: '—', disabled: true, isCorrect: false });
-        }
+    for (let j = 0; j < n; j++) {
+        slots.push({
+            label: String(moves[j]),
+            disabled: false,
+            isCorrect: j === 0,
+        });
     }
     return { error: false, slots };
 }
@@ -332,12 +354,16 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
     if (!host) return;
 
     const cardData = payload && payload.cardData && typeof payload.cardData === 'object' ? payload.cardData : null;
-    const built = buildInteractiveSlotsFromCardData(cardData);
 
     const blocks = host.querySelectorAll(
         '.canvas-element.card-preview-canvas-clone[data-tool-id="interactive-best-move"]'
     );
     blocks.forEach((block) => {
+        const raw = parseInt(block.dataset.ceInteractiveButtonCount, 10);
+        const maxM = countInteractiveMovesFromCardData(cardData);
+        const btn = normalizeInteractiveButtonCount(raw, Math.max(1, maxM), 4);
+        if (block.dataset) block.dataset.ceInteractiveButtonCount = String(btn);
+        const built = buildInteractiveSlotsFromCardData(cardData, btn);
         fillInteractiveBlock(block, built, editor);
     });
 }
