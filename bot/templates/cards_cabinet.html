@@ -1047,7 +1047,7 @@
                     console.warn('requestFullscreen(cards_cabinet) failed:', fsErr);
                 }
             }
-            var initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+            var initData = '';
             var fabToken = (new URLSearchParams(window.location.search || '')).get('fab_token') || '';
             var errEl = document.getElementById('err');
             var gridEl = document.getElementById('grid');
@@ -1134,6 +1134,44 @@
                 errEl.style.display = 'block';
             }
 
+            /** На части клиентов Telegram (в т.ч. Desktop) initData может появиться позже tg.ready(). */
+            function waitForTelegramWebAppInitData(maxMs, stepMs) {
+                maxMs = typeof maxMs === 'number' ? maxMs : 5000;
+                stepMs = typeof stepMs === 'number' ? stepMs : 50;
+                if (fabToken) {
+                    return Promise.resolve('');
+                }
+                var tg = window.Telegram && window.Telegram.WebApp;
+                if (!tg) {
+                    return Promise.resolve('');
+                }
+                var cur = tg.initData || '';
+                if (cur) {
+                    return Promise.resolve(cur);
+                }
+                try {
+                    if (typeof tg.ready === 'function') {
+                        tg.ready();
+                    }
+                } catch (_e) {}
+                return new Promise(function (resolve) {
+                    var t0 = Date.now();
+                    function tick() {
+                        var v = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+                        if (v) {
+                            resolve(v);
+                            return;
+                        }
+                        if (Date.now() - t0 >= maxMs) {
+                            resolve('');
+                            return;
+                        }
+                        setTimeout(tick, stepMs);
+                    }
+                    tick();
+                });
+            }
+
             function saveCabinetState() {
                 try {
                     var payload = {
@@ -1200,11 +1238,16 @@
                 }
             }
 
-            if (!initData && !fabToken) {
-                showErr('Откройте страницу из Telegram или через FAB-мост.');
-                return;
-            }
-            restoreCabinetState();
+            waitForTelegramWebAppInitData(5000, 50).then(function (resolvedInitData) {
+                initData =
+                    resolvedInitData ||
+                    (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ||
+                    '';
+                if (!initData && !fabToken) {
+                    showErr('Откройте страницу из Telegram или через FAB-мост.');
+                    return;
+                }
+                restoreCabinetState();
 
             function authPayload(extra) {
                 var base = {};
@@ -2652,6 +2695,7 @@
                 .catch(function () {
                     // Для не-админов фильтр меток просто скрыт.
                 });
+            });
         })();
     </script>
 </body>

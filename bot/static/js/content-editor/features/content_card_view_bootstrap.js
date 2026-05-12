@@ -1,3 +1,5 @@
+import { waitForTelegramWebAppInitData } from '../infra/storage_telegram_bridge.js';
+
 export function initContentCardViewOnlyImpl(editor) {
     editor._contentCardTopLabels = [];
     editor._contentCardViewFileName = '';
@@ -105,7 +107,13 @@ export async function bootstrapContentCardViewPageImpl(editor) {
         showErr('Не указан content_card_id в адресе страницы');
         return;
     }
-    const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+    let initData = '';
+    if (!fabToken) {
+        initData =
+            (await waitForTelegramWebAppInitData(5000, 50)) ||
+            (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ||
+            '';
+    }
     if (!initData && !fabToken) {
         showErr('Откройте страницу из Telegram');
         return;
