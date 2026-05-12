@@ -3642,53 +3642,12 @@ export class ContentEditor {
         this.expandCanvasIfNeeded(nextY);
     }
 
-    /**
-     * Если передан выделенный canvas-element, вставка сразу под ним: сдвигаем все блоки
-     * с top >= низа якоря вниз на оценку высоты нового блока и возвращаем { x, y, width }.
-     * Иначе null — вызывать calculateVerticalPosition.
-     */
-    tryComputePositionBelowSelectedElement(placementAnchor, canvasWidthPx, defaultHeight, toolId, newElement) {
-        if (!placementAnchor || !this.canvas) return null;
-        if (!placementAnchor.classList || !placementAnchor.classList.contains('canvas-element')) return null;
-        if (newElement && placementAnchor === newElement) return null;
-        if (!this.canvas.contains(placementAnchor)) return null;
-        if (placementAnchor.id && placementAnchor.id.includes('boardLabel')) return null;
-
-        let estimatedNewH;
-        if (defaultHeight === 'auto') {
-            estimatedNewH = 120;
-        } else if (typeof defaultHeight === 'number') {
-            estimatedNewH = defaultHeight;
-        } else {
-            estimatedNewH = 150;
-        }
-
-        const selectedTop = parseInt(placementAnchor.style.top, 10) || 0;
-        const selectedBottom = selectedTop + this.getElementStackHeight(placementAnchor);
-
-        const centerX = 0;
-        const fullWidth = canvasWidthPx;
-
-        const shiftCandidates = Array.from(this.canvas.querySelectorAll('.canvas-element')).filter(
-            (el) => !el.id.includes('boardLabel') && el !== placementAnchor && el !== newElement
-        );
-        shiftCandidates.forEach((el) => {
-            const t = parseInt(el.style.top, 10) || 0;
-            if (t >= selectedBottom) {
-                el.style.top = t + estimatedNewH + 'px';
-            }
-        });
-
-        return { x: centerX, y: selectedBottom, width: fullWidth };
-    }
-
     addElementToCanvas(toolId) {
         const elementId = `element_${this.elementIdCounter++}`;
         const element = document.createElement('div');
         element.id = elementId;
         element.className = 'canvas-element';
         element.dataset.toolId = toolId;
-        const placementAnchorEl = this.selectedElement;
 
         // Get canvas dimensions
         const canvasRect = this.canvas.getBoundingClientRect();
@@ -3719,17 +3678,8 @@ export class ContentEditor {
                 });
             }
 
-            const canvasW = this.canvas.getBoundingClientRect().width;
-            let position = this.tryComputePositionBelowSelectedElement(
-                placementAnchorEl,
-                canvasW,
-                defaultHeight,
-                toolId,
-                element
-            );
-            if (!position) {
-                position = this.calculateVerticalPosition(canvasW, defaultHeight);
-            }
+            // Position elements in vertical blocks with actual canvas width
+            const position = this.calculateVerticalPosition(canvasRect.width, defaultHeight);
 
             // Debug: Log calculated position
             if (toolId !== 'moveHintsTable') {
