@@ -1978,6 +1978,7 @@ export class ContentEditor {
     applyVerticalStackFromOrder(ordered) {
         if (!this.canvas || !ordered || !ordered.length) return;
         const canvas = this.canvas;
+        const elementsRoot = this.getCanvasElementsRoot();
         const w = canvas.getBoundingClientRect().width;
         let nextY = 0;
         ordered.forEach((el) => {
@@ -1986,7 +1987,7 @@ export class ContentEditor {
             el.style.top = `${nextY}px`;
             el.style.width = `${w}px`;
             el.style.transform = '';
-            canvas.appendChild(el);
+            elementsRoot.appendChild(el);
             nextY += h;
         });
         this.expandCanvasIfNeeded(nextY);
