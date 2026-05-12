@@ -3649,6 +3649,10 @@ export class ContentEditor {
             // Добавляем на холст
             this.getCanvasElementsRoot().appendChild(element);
 
+            if (toolId === 'interactive-best-move') {
+                this.refreshInteractiveBestMoveElementsFromCardData();
+            }
+
             // Expand canvas if needed for the new element
             setTimeout(() => {
                 const elementBottom = parseInt(element.style.top) + element.offsetHeight;
@@ -3783,7 +3787,8 @@ export class ContentEditor {
                         <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
                         <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
                     </div>`;
-                this.refreshInteractiveBestMoveElementsFromCardData();
+                /* refreshInteractiveBestMoveElementsFromCardData вызывается после appendChild в addElementToCanvas —
+                   иначе блок ещё не в DOM и querySelector не находит интерактив (interactiveBlocksCount: 0). */
                 break;
             }
 
