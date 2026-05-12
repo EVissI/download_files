@@ -1287,7 +1287,6 @@
 
             function notifyGalleryLinkCopiedToClipboard() {
                 var text = 'Ссылка скопирована в буфер обмена.';
-                setCabinetGalleryMsg(text);
                 try {
                     var tg = window.Telegram && window.Telegram.WebApp;
                     if (tg && typeof tg.showAlert === 'function') {
@@ -1299,9 +1298,6 @@
                         window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
                     }
                 } catch (_h) {}
-                setTimeout(function () {
-                    setCabinetGalleryMsg('');
-                }, 4000);
             }
 
             function requestGalleryImageShareLink(s3Key) {
