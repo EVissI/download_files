@@ -1360,7 +1360,7 @@ export class ContentEditor {
             const domFallback = isCube ? domCubeActions : domMoves;
             const maxAvail = Math.max(maxFromCd, domFallback.length, 1);
             const rawBc = parseCeInteractiveButtonCountRaw(el);
-            const btnCount = clampInteractiveButtonCount(rawBc, maxAvail, 4);
+            const btnCount = isCube ? maxAvail : clampInteractiveButtonCount(rawBc, maxAvail, 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
 
             let result = buildInteractiveSlotsFromCardData(cd, btnCount, tableType);
@@ -1432,7 +1432,10 @@ export class ContentEditor {
             syncInteractiveBlockTitleByType(el, tableType);
             const maxM = countInteractiveAvailableFromCardData(cd, tableType);
             const rawBc = resolveInteractiveButtonCountRaw(el, payload);
-            const btnCount = clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
+            const btnCount =
+                tableType === INTERACTIVE_TABLE_TYPE_CUBE
+                    ? Math.max(1, maxM)
+                    : clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
             fillInteractiveEditorPreviewGrid(grid, cd, btnCount, tableType);
             el.style.height = 'auto';
@@ -4457,6 +4460,13 @@ export class ContentEditor {
             maxMoves = Math.max(domItems.length, 1);
         } else {
             maxMoves = Math.max(maxMoves, 1);
+        }
+
+        if (isCube) {
+            return `
+                <div class="property-item">
+                    <p class="property-hint" style="margin:0;font-size:11px;color:#aaa;line-height:1.35;">Для куба всегда показываются все ${maxMoves} действия в один ряд.</p>
+                </div>`;
         }
 
         const raw = parseCeInteractiveButtonCountRaw(element);

@@ -4036,6 +4036,10 @@ button.content-card-admin-info-file-link:hover {
     gap: 8px;
 }
 
+.ce-interactive-best-move[data-ce-interactive-table-type="cube"] .ce-interactive-best-move__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .ce-interactive-best-move__btn {
     min-height: 44px;
     padding: 8px 10px;

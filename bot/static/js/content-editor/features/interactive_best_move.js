@@ -608,7 +608,10 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
 
         const raw = resolveInteractiveButtonCountRaw(block, payload);
         const maxM = countInteractiveAvailableFromCardData(cardData, tableType);
-        const btn = clampInteractiveButtonCount(raw, Math.max(1, maxM), 4);
+        const btn =
+            tableType === INTERACTIVE_TABLE_TYPE_CUBE
+                ? Math.max(1, maxM)
+                : clampInteractiveButtonCount(raw, Math.max(1, maxM), 4);
         if (block.dataset) block.dataset.ceInteractiveButtonCount = String(btn);
         const built = buildInteractiveSlotsFromCardData(cardData, btn, tableType);
         fillInteractiveBlock(block, built, editor);
