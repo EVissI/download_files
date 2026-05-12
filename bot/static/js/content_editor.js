@@ -1186,7 +1186,14 @@ export class ContentEditor {
     parseMovesFromHintsTableDom(tableWrapper) {
         if (!tableWrapper) return [];
         const tbody = tableWrapper.querySelector('table.ce-content-table tbody');
-        if (!tbody) return [];
+        if (!tbody) {
+            if (typeof console !== 'undefined' && console.info) {
+                console.info('[CE:interactive-best-move]', 'parseMovesFromHintsTableDom: нет table.ce-content-table tbody', {
+                    hasWrapper: true,
+                });
+            }
+            return [];
+        }
         const moves = [];
         tbody.querySelectorAll('tr').forEach((row) => {
             const cell = row.querySelector('td');
@@ -1194,12 +1201,30 @@ export class ContentEditor {
             const txt = String(cell.textContent || '').trim();
             if (txt) moves.push(txt);
         });
+        if (typeof console !== 'undefined' && console.info) {
+            console.info('[CE:interactive-best-move]', 'parseMovesFromHintsTableDom', {
+                rowsParsed: moves.length,
+                preview: moves.slice(0, 6),
+            });
+        }
         return moves;
     }
 
     /** Обновить блоки «Интерактив» на канвасе по текущим данным таблицы ходов (только редактор). */
     refreshInteractiveBestMoveElementsFromCardData() {
-        if (!this.canvas || typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ === true) {
+        const log = '[CE:interactive-best-move]';
+        if (!this.canvas) {
+            if (typeof console !== 'undefined' && console.info) {
+                console.info(log, 'refreshInteractiveBestMoveElementsFromCardData: пропуск — нет canvas');
+            }
+            return;
+        }
+        if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ === true) {
+            if (typeof console !== 'undefined' && console.info) {
+                console.info(log, 'refreshInteractiveBestMoveElementsFromCardData: пропуск — режим просмотра карточки', {
+                    viewOnly: typeof window !== 'undefined' ? window.__CONTENT_CARD_VIEW_ONLY__ : undefined,
+                });
+            }
             return;
         }
         const payloadStub = {
@@ -1213,17 +1238,55 @@ export class ContentEditor {
                 ? mergedPayload.cardData
                 : this.getEffectiveCardDataForInteractivePreview();
 
+        const frameHintsLen =
+            this.cardData && Array.isArray(this.cardData.hints) ? this.cardData.hints.length : null;
+        const mergedHintsLen = cd && Array.isArray(cd.hints) ? cd.hints.length : null;
+        const mergedHintsWithProbs =
+            cd && Array.isArray(cd.hints)
+                ? cd.hints.filter((h) => h && Array.isArray(h.probs) && h.probs.length >= 2).length
+                : null;
+
         const tableEl = Array.from(this.canvas.querySelectorAll('.canvas-element.table-element')).find(
             (w) => w.dataset.tableType !== 'cube'
         );
         const domMoves = tableEl ? this.parseMovesFromHintsTableDom(tableEl) : [];
 
-        this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
+        const blocks = this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]');
+        if (typeof console !== 'undefined' && console.info) {
+            console.info(log, 'refreshInteractiveBestMoveElementsFromCardData', {
+                sharedContext: !!this._contentCardSharedContext,
+                frameCardDataHintsLen: frameHintsLen,
+                mergedCardDataHintsLen: mergedHintsLen,
+                mergedHintsWithProbsGe2: mergedHintsWithProbs,
+                cardDataAction: cd && cd.action != null ? cd.action : null,
+                hintsTableOnCanvas: !!tableEl,
+                domMovesCount: domMoves.length,
+                interactiveBlocksCount: blocks.length,
+            });
+        }
+
+        blocks.forEach((el) => {
             const grid = el.querySelector('[data-ce-interactive-grid]');
-            if (!grid) return;
+            if (!grid) {
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn(log, 'блок интерактива без [data-ce-interactive-grid]', { elementId: el.id });
+                }
+                return;
+            }
             let result = buildInteractiveSlotsFromCardData(cd);
+            let usedDomFallback = false;
             if (result.error && domMoves.length > 0) {
                 result = buildInteractiveSlotsFromMoveStrings(domMoves);
+                usedDomFallback = true;
+            }
+            if (typeof console !== 'undefined' && console.info) {
+                console.info(log, 'элемент интерактива', {
+                    elementId: el.id,
+                    buildOk: !result.error,
+                    message: result.error ? result.message : undefined,
+                    usedDomFallback,
+                    filledSlots: result.slots ? result.slots.filter((s) => !s.disabled).length : 0,
+                });
             }
             fillInteractiveBestMoveEditorGridFromResult(grid, result);
         });
@@ -6985,8 +7048,23 @@ export class ContentEditor {
             /* использовать исходный payload */
         }
         /* Как в предпросмотре: подмешать sharedContext, иначе hints: [] в кадре затирают общие подсказки карточки. */
+        const hintsBeforeShared =
+            p.cardData && Array.isArray(p.cardData.hints) ? p.cardData.hints.length : null;
         if (this._contentCardSharedContext && typeof this.applyContentCardSharedToEditorPayload === 'function') {
             this.applyContentCardSharedToEditorPayload(p);
+            if (typeof console !== 'undefined' && console.info) {
+                const hintsAfter =
+                    p.cardData && Array.isArray(p.cardData.hints) ? p.cardData.hints.length : null;
+                console.info('[CE:interactive-best-move]', 'restoreCanvasFromPayload: применён sharedContext', {
+                    hintsLenBefore: hintsBeforeShared,
+                    hintsLenAfter: hintsAfter,
+                });
+            }
+        } else if (typeof console !== 'undefined' && console.debug) {
+            console.debug('[CE:interactive-best-move]', 'restoreCanvasFromPayload: sharedContext не применялся', {
+                hasShared: !!this._contentCardSharedContext,
+                hintsLen: hintsBeforeShared,
+            });
         }
 
         this.elements = [];

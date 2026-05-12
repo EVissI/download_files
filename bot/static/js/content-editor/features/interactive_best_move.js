@@ -2,6 +2,8 @@
  * Интерактив «лучший ход»: страница карточки, превью редактора и канвас редактора.
  */
 
+const CE_IBM_LOG = '[CE:interactive-best-move]';
+
 function shuffleInPlace(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -18,6 +20,11 @@ function shuffleInPlace(arr) {
  */
 export function buildInteractiveSlotsFromCardData(cardData) {
     if (!cardData || typeof cardData !== 'object') {
+        if (typeof console !== 'undefined' && console.info) {
+            console.info(CE_IBM_LOG, 'buildInteractiveSlotsFromCardData: cardData пустой или не объект', {
+                cardData,
+            });
+        }
         return {
             error: true,
             message: 'Интерактив недоступен: нет таблицы ходов',
@@ -51,6 +58,20 @@ export function buildInteractiveSlotsFromCardData(cardData) {
     }
 
     if (moves.length === 0) {
+        const withProbs = hints.filter((h) => h && Array.isArray(h.probs) && h.probs.length >= 2).length;
+        if (typeof console !== 'undefined' && console.info) {
+            console.info(CE_IBM_LOG, 'buildInteractiveSlotsFromCardData: нет ходов с probs (как у таблицы)', {
+                hintsLen: hints.length,
+                hintsWithProbsGe2: withProbs,
+                action: cardData.action,
+                sampleHint0: hints[0]
+                    ? {
+                          hasMove: hints[0].move != null,
+                          probsLen: Array.isArray(hints[0].probs) ? hints[0].probs.length : 0,
+                      }
+                    : null,
+            });
+        }
         return {
             error: true,
             message: 'Интерактив недоступен: нет таблицы ходов',
@@ -70,6 +91,12 @@ export function buildInteractiveSlotsFromCardData(cardData) {
             slots.push({ label: '—', disabled: true, isCorrect: false });
         }
     }
+    if (typeof console !== 'undefined' && console.debug) {
+        console.debug(CE_IBM_LOG, 'buildInteractiveSlotsFromCardData: ok', {
+            movesLen: moves.length,
+            labels: moves.slice(0, 4),
+        });
+    }
     return { error: false, slots };
 }
 
@@ -79,13 +106,24 @@ export function buildInteractiveSlotsFromCardData(cardData) {
  * @param {{ dryRun?: boolean, recordEditor?: * }} [options] — dryRun: без записи на сервер; recordEditor: для записи (страница карточки)
  */
 function fillInteractiveBestMoveGridFromResult(gridEl, result, options = {}) {
-    if (!gridEl) return;
+    if (!gridEl) {
+        if (typeof console !== 'undefined' && console.warn) {
+            console.warn(CE_IBM_LOG, 'fillInteractiveBestMoveGridFromResult: gridEl отсутствует');
+        }
+        return;
+    }
     const dryRun = !!options.dryRun;
     const recordEditor = options.recordEditor || null;
 
     gridEl.innerHTML = '';
 
     if (result.error) {
+        if (typeof console !== 'undefined' && console.info) {
+            console.info(CE_IBM_LOG, 'fillInteractiveBestMoveGridFromResult: показ сообщения об ошибке', {
+                dryRun,
+                message: result.message,
+            });
+        }
         const p = document.createElement('p');
         p.className = 'ce-interactive-best-move__msg';
         p.textContent = result.message || 'Интерактив недоступен';
