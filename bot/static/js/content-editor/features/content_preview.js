@@ -794,8 +794,11 @@ export function setupCardPreviewBoardCollapseImpl(editor, overlay) {
     });
 }
 
-export function renderCardPreviewSurfaceImpl(editor, payload) {
-    const host = document.getElementById('cardPreviewFrameHost');
+/**
+ * @param {HTMLElement | null} [hostRoot] — если передан, отрисовка в этот узел (мини-превью); иначе #cardPreviewFrameHost.
+ */
+export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
+    const host = hostRoot || document.getElementById('cardPreviewFrameHost');
     if (!host) return;
     host.innerHTML = '';
     host.style.backgroundColor = '';
@@ -862,14 +865,14 @@ export function renderCardPreviewSurfaceImpl(editor, payload) {
     host.appendChild(wrap);
 
     inner.querySelectorAll('img').forEach((img) => {
-        img.addEventListener('load', () => editor.refreshCardPreviewScale());
+        img.addEventListener('load', () => editor.refreshCardPreviewScale(hostRoot));
     });
 
     requestAnimationFrame(() => {
-        editor.refreshCardPreviewScale();
+        editor.refreshCardPreviewScale(hostRoot);
     });
     setTimeout(() => {
-        editor.refreshCardPreviewScale();
+        editor.refreshCardPreviewScale(hostRoot);
     }, 120);
 }
 
@@ -895,8 +898,11 @@ export function updateCardPreviewInnerMinHeightImpl(_editor, inner) {
     inner.style.minHeight = maxBottom > 0 ? `${Math.ceil(maxBottom + pad)}px` : '';
 }
 
-export function refreshCardPreviewScaleImpl(editor) {
-    const host = document.getElementById('cardPreviewFrameHost');
+/**
+ * @param {HTMLElement | null} [hostRoot] — узел с превью; по умолчанию основной хост модалки предпросмотра.
+ */
+export function refreshCardPreviewScaleImpl(editor, hostRoot = null) {
+    const host = hostRoot || document.getElementById('cardPreviewFrameHost');
     if (!host) return;
     const inner = host.querySelector('.card-preview-surface-inner');
     const wrap = host.querySelector('.card-preview-surface-wrap');

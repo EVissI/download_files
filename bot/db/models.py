@@ -625,6 +625,26 @@ class TextStylePreset(Base):
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
 
+class ContentFrameTemplate(Base):
+    """
+    Шаблоны кадра редактора контента: полный JSON payload кадра (глобально для ROOT_ADMIN).
+    """
+
+    __tablename__ = "content_frame_templates"
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_content_frame_templates_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
 class WebAppSetting(Base):
     """
     Глобальные настройки WebApp, редактируемые через FAB.

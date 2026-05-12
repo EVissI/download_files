@@ -1,6 +1,6 @@
 import mimetypes
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Request, Response, HTTPException, File, Form, UploadFile, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -37,6 +37,7 @@ from bot.db.dao import (
 )
 from bot.db.models import (
     ContentCard,
+    ContentFrameTemplate,
     LabelPreset,
     ServiceType,
     TextStylePreset,
@@ -63,6 +64,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 BASE_DIR = Path(__file__).parent.parent
 
 CC_MEDIA_MAX_BYTES = 30 * 1024 * 1024
+CC_FRAME_TEMPLATE_MAX_JSON_BYTES = 12 * 1024 * 1024
 
 
 def _safe_content_disposition_filename(name: str | None, fallback: str) -> str:
@@ -752,6 +754,21 @@ class TextStylePresetDeleteBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
     preset_id: int = Field(..., ge=1)
+
+
+class FrameTemplateCreateBody(BaseModel):
+    """Сохранение шаблона кадра редактора (JSON payload после upload медиа в S3)."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    name: str = Field(..., min_length=1, max_length=200)
+    payload: dict[str, Any]
+
+
+class FrameTemplateDeleteBody(BaseModel):
+    init_data: str | None = None
+    fab_token: str | None = None
+    template_id: int = Field(..., ge=1)
 
 
 class ContentCardMarkViewedBody(BaseModel):
@@ -1608,6 +1625,111 @@ async def content_cards_text_style_presets_delete(body: TextStylePresetDeleteBod
             raise HTTPException(status_code=404, detail="Пресет не найден")
         await session.execute(
             delete(TextStylePreset).where(TextStylePreset.id == body.preset_id)
+        )
+        await session.commit()
+
+    return {"ok": True}
+
+
+def _frame_template_payload_json_bytes(payload: dict[str, Any]) -> int:
+    try:
+        raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode(
+            "utf-8"
+        )
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Некорректный JSON payload")
+    return len(raw)
+
+
+@app.post("/api/content_cards/frame_templates/list")
+async def content_cards_frame_templates_list(body: ContentCardMyListBody):
+    """Список шаблонов кадра редактора (глобально; только ROOT_ADMIN_IDS)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(
+                ContentFrameTemplate.id,
+                ContentFrameTemplate.name,
+                ContentFrameTemplate.payload_json,
+                ContentFrameTemplate.created_at,
+            ).order_by(ContentFrameTemplate.name)
+        )
+        rows = result.all()
+
+    out = []
+    for tid, name, payload, created_at in rows:
+        lm = created_at
+        if lm is not None and getattr(lm, "tzinfo", None) is None:
+            lm = lm.replace(tzinfo=timezone.utc)
+        lm_iso = lm.isoformat() if lm is not None else None
+        out.append(
+            {
+                "id": int(tid),
+                "name": name,
+                "payload": payload or {},
+                "created_at": lm_iso,
+            }
+        )
+
+    return {"templates": out}
+
+
+@app.post("/api/content_cards/frame_templates/create")
+async def content_cards_frame_templates_create(body: FrameTemplateCreateBody):
+    """Создать шаблон кадра (только ROOT_ADMIN_IDS)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+    name = str(body.name or "").strip()[:200]
+    if not name:
+        raise HTTPException(status_code=400, detail="Пустое название шаблона")
+    pay = body.payload if isinstance(body.payload, dict) else {}
+    sz = _frame_template_payload_json_bytes(pay)
+    if sz > CC_FRAME_TEMPLATE_MAX_JSON_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Шаблон слишком большой для сохранения",
+        )
+
+    async with async_session_maker() as session:
+        row = ContentFrameTemplate(name=name, payload_json=pay)
+        session.add(row)
+        try:
+            await session.commit()
+            await session.refresh(row)
+        except IntegrityError:
+            await session.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="Шаблон с таким названием уже существует",
+            )
+
+    return {
+        "id": row.id,
+        "name": row.name,
+        "payload": row.payload_json or {},
+    }
+
+
+@app.post("/api/content_cards/frame_templates/delete")
+async def content_cards_frame_templates_delete(body: FrameTemplateDeleteBody):
+    """Удалить шаблон кадра (только ROOT_ADMIN_IDS)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        exists = await session.scalar(
+            select(ContentFrameTemplate.id)
+            .where(ContentFrameTemplate.id == body.template_id)
+            .limit(1)
+        )
+        if exists is None:
+            raise HTTPException(status_code=404, detail="Шаблон не найден")
+        await session.execute(
+            delete(ContentFrameTemplate).where(
+                ContentFrameTemplate.id == body.template_id
+            )
         )
         await session.commit()
 

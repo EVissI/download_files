@@ -85,6 +85,9 @@ const {
 } = await import(
     new URL('./content-editor/features/canvas_background.js', import.meta.url).href + _featureModuleCacheQs
 );
+const { openFrameTemplatesRootModal } = await import(
+    new URL('./content-editor/features/frame_templates.js', import.meta.url).href + _featureModuleCacheQs
+);
 
 /**
  * Content Editor Module
@@ -1980,6 +1983,13 @@ export class ContentEditor {
                 icon: 'fa fa-link'
             },
             {
+                id: 'frame-templates',
+                name: 'Шаблоны',
+                type: 'templates',
+                description: 'Сохранить или вставить шаблон кадра',
+                icon: 'fa fa-clone'
+            },
+            {
                 id: 'canvas-settings',
                 name: 'Настройки',
                 type: 'settings',
@@ -2027,6 +2037,11 @@ export class ContentEditor {
 
         if (toolId === 'attach-file') {
             this.handleDirectAttachFileUpload();
+            return;
+        }
+
+        if (toolId === 'frame-templates') {
+            openFrameTemplatesRootModal(this);
             return;
         }
 
@@ -5804,9 +5819,16 @@ export class ContentEditor {
     }
 
     renderCardPreviewSurface(payload) {
-        const out = renderCardPreviewSurfaceImpl(this, payload);
+        const out = renderCardPreviewSurfaceImpl(this, payload, null);
         this.ensureCardPreviewBoardCollapseUi();
         return out;
+    }
+
+    /** Предпросмотр кадра в произвольном контейнере (миниатюры списка шаблонов). */
+    renderCardPreviewIntoHost(payload, hostEl) {
+        if (!hostEl) return;
+        renderCardPreviewSurfaceImpl(this, payload, hostEl);
+        this.refreshCardPreviewScale(hostEl);
     }
 
     ensureCardPreviewBoardCollapseUi() {
@@ -5886,8 +5908,8 @@ export class ContentEditor {
         return updateCardPreviewInnerMinHeightImpl(this, inner);
     }
 
-    refreshCardPreviewScale() {
-        return refreshCardPreviewScaleImpl(this);
+    refreshCardPreviewScale(hostRoot) {
+        return refreshCardPreviewScaleImpl(this, hostRoot ?? null);
     }
 
     escapeHtml(s) {
