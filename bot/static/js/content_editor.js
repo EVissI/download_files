@@ -96,6 +96,7 @@ const {
     countInteractiveMovesFromCardData,
     clampInteractiveButtonCount,
     parseCeInteractiveButtonCountRaw,
+    resolveInteractiveButtonCountRaw,
 } = await import(
     new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
@@ -1364,7 +1365,7 @@ export class ContentEditor {
         });
     }
 
-    /** Превью кадра: сетка интерактива как на карточке (клики без записи на сервер). На странице просмотра карточки не вызывать — там setupInteractiveBestMoveAfterCardPreviewRender. */
+    /** Превью кадра: сетка интерактива (dry-run); на content-card-view затем setupInteractiveBestMoveAfterCardPreviewRender пересобирает с записью ответа. */
     refreshInteractivePreviewBlocksFromCardData(inner, payload) {
         if (!inner || !payload || !payload.cardData || typeof payload.cardData !== 'object') return;
         let cd;
@@ -1376,7 +1377,7 @@ export class ContentEditor {
         inner.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
             const grid = el.querySelector('[data-ce-interactive-grid]');
             const maxM = countInteractiveMovesFromCardData(cd);
-            const rawBc = parseCeInteractiveButtonCountRaw(el);
+            const rawBc = resolveInteractiveButtonCountRaw(el, payload);
             const btnCount = clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
             fillInteractiveEditorPreviewGrid(grid, cd, btnCount);
@@ -7354,7 +7355,14 @@ export class ContentEditor {
         }
         if (toolId === 'interactive-best-move') {
             const ds = item.dataset || {};
-            const cand = [ds.ceInteractiveButtonCount, ds.ce_interactive_button_count, item.ceInteractiveButtonCount];
+            const cand = [
+                ds.ceInteractiveButtonCount,
+                ds.ce_interactive_button_count,
+                item.ceInteractiveButtonCount,
+                item.ce_interactive_button_count,
+                item.interactiveButtonCount,
+                item.interactive_button_count,
+            ];
             for (let i = 0; i < cand.length; i++) {
                 const v = cand[i];
                 if (v != null && String(v).trim() !== '') {

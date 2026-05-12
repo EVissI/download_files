@@ -145,6 +145,52 @@ export function parseCeInteractiveButtonCountRaw(el) {
     return NaN;
 }
 
+/**
+ * Число кнопок из объекта элемента кадра в JSON (payload.elements[]), до десериализации в DOM.
+ * Бэкенд / исторические сохранения могли класть поле не только в dataset.
+ */
+export function parseCeInteractiveButtonCountFromSavedElement(item) {
+    if (!item || typeof item !== 'object') return NaN;
+    const ds = item.dataset && typeof item.dataset === 'object' ? item.dataset : {};
+    const candidates = [
+        ds.ceInteractiveButtonCount,
+        ds.ce_interactive_button_count,
+        item.ceInteractiveButtonCount,
+        item.ce_interactive_button_count,
+        item.interactiveButtonCount,
+        item.interactive_button_count,
+    ];
+    for (let i = 0; i < candidates.length; i++) {
+        const v = candidates[i];
+        if (v != null && String(v).trim() !== '') {
+            const n = parseInt(String(v), 10);
+            if (Number.isFinite(n) && n >= 1) return n;
+        }
+    }
+    return NaN;
+}
+
+/**
+ * Для превью карточки сначала берём счётчик из payload.elements (истина из API), затем из DOM.
+ */
+export function resolveInteractiveButtonCountRaw(block, payload) {
+    const els = payload && Array.isArray(payload.elements) ? payload.elements : null;
+    if (els && block) {
+        let item = block.id ? els.find((e) => e && e.id === block.id) : null;
+        if (!item) {
+            const ibm = els.filter(
+                (e) => e && (e.toolId === 'interactive-best-move' || e.tool_id === 'interactive-best-move')
+            );
+            if (ibm.length === 1) item = ibm[0];
+        }
+        if (item) {
+            const fromJson = parseCeInteractiveButtonCountFromSavedElement(item);
+            if (Number.isFinite(fromJson)) return fromJson;
+        }
+    }
+    return parseCeInteractiveButtonCountRaw(block);
+}
+
 export function countInteractiveMovesFromCardData(cardData) {
     if (!cardData || typeof cardData !== 'object') return 0;
     if (cardData.action === 'win') return 1;
@@ -404,7 +450,7 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
 
     const blocks = host.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]');
     blocks.forEach((block) => {
-        const raw = parseCeInteractiveButtonCountRaw(block);
+        const raw = resolveInteractiveButtonCountRaw(block, payload);
         const maxM = countInteractiveMovesFromCardData(cardData);
         const btn = clampInteractiveButtonCount(raw, Math.max(1, maxM), 4);
         if (block.dataset) block.dataset.ceInteractiveButtonCount = String(btn);
