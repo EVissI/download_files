@@ -1676,6 +1676,14 @@ export class ContentEditor {
             element.classList.add('editor-table--collapsed');
         }
 
+        // innerHTML был очищен — ручка перетаскивания (.ce-block-drag-handle) исчезла вместе с ним,
+        // а флаг ceBlockReorderBound остался. Сбрасываем флаг и заново привязываем drag-интеракции,
+        // иначе блок таблицы перестаёт перетаскиваться после обновления контента.
+        if (!element.classList.contains('card-preview-canvas-clone')) {
+            delete element.dataset.ceBlockReorderBound;
+            this.attachBlockReorderInteractions(element);
+        }
+
         // Debug: Log position after update
         console.log('updateTableContent - after:', {
             top: element.style.top,
