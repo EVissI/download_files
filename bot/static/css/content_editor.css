@@ -4066,3 +4066,61 @@ button.content-card-admin-info-file-link:hover {
 .card-preview-surface-inner .canvas-element.ce-interactive-best-move.card-preview-canvas-clone {
     pointer-events: auto;
 }
+
+/* Модалка ответа интерактива «лучший ход» (выше панелей редактора / превью) */
+.ce-interactive-feedback-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.ce-interactive-feedback-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.ce-interactive-feedback-modal__panel {
+    position: relative;
+    z-index: 1;
+    max-width: 360px;
+    width: 100%;
+    padding: 20px 18px 16px;
+    border-radius: 12px;
+    background: #2a3140;
+    border: 1px solid #4a5568;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+    box-sizing: border-box;
+}
+
+.ce-interactive-feedback-modal__text {
+    margin: 0 0 16px;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: #f1f5f9;
+    text-align: center;
+}
+
+.ce-interactive-feedback-modal__btn {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: #4f6fb8;
+    border: 1px solid #6b8ad4;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.ce-interactive-feedback-modal__btn:hover {
+    background: #5d7ec9;
+}

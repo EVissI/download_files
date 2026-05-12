@@ -4,6 +4,9 @@
 
 const CE_IBM_LOG = '[CE:interactive-best-move]';
 
+export const INTERACTIVE_BEST_MOVE_FEEDBACK_DEFAULT_OK = 'Правильно';
+export const INTERACTIVE_BEST_MOVE_FEEDBACK_DEFAULT_BAD = 'Неправильно';
+
 function shuffleInPlace(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -12,6 +15,91 @@ function shuffleInPlace(arr) {
         arr[j] = t;
     }
     return arr;
+}
+
+function getInteractiveFeedbackTexts(gridEl) {
+    const block =
+        gridEl && gridEl.closest ? gridEl.closest('.canvas-element') || gridEl.closest('.ce-interactive-best-move') : null;
+    const okRaw =
+        block && block.dataset && block.dataset.ceInteractiveFeedbackOk != null
+            ? String(block.dataset.ceInteractiveFeedbackOk).trim()
+            : '';
+    const badRaw =
+        block && block.dataset && block.dataset.ceInteractiveFeedbackBad != null
+            ? String(block.dataset.ceInteractiveFeedbackBad).trim()
+            : '';
+    return {
+        ok: okRaw || INTERACTIVE_BEST_MOVE_FEEDBACK_DEFAULT_OK,
+        bad: badRaw || INTERACTIVE_BEST_MOVE_FEEDBACK_DEFAULT_BAD,
+    };
+}
+
+let _feedbackModalBound = false;
+
+function closeInteractiveBestMoveFeedbackModal() {
+    const root = document.getElementById('ceInteractiveBestMoveFeedbackModal');
+    if (!root) return;
+    root.style.display = 'none';
+    root.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+function ensureInteractiveBestMoveFeedbackModal() {
+    let root = document.getElementById('ceInteractiveBestMoveFeedbackModal');
+    if (root) return root;
+    root = document.createElement('div');
+    root.id = 'ceInteractiveBestMoveFeedbackModal';
+    root.className = 'ce-interactive-feedback-modal';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-hidden', 'true');
+    root.style.display = 'none';
+    root.innerHTML = `
+        <div class="ce-interactive-feedback-modal__backdrop" aria-hidden="true"></div>
+        <div class="ce-interactive-feedback-modal__panel">
+            <p class="ce-interactive-feedback-modal__text" id="ceInteractiveBestMoveFeedbackText"></p>
+            <button type="button" class="ce-interactive-feedback-modal__btn" id="ceInteractiveBestMoveFeedbackOkBtn">OK</button>
+        </div>`;
+    document.body.appendChild(root);
+
+    const onClose = () => closeInteractiveBestMoveFeedbackModal();
+    root.querySelector('.ce-interactive-feedback-modal__backdrop')?.addEventListener('click', onClose);
+    root.querySelector('#ceInteractiveBestMoveFeedbackOkBtn')?.addEventListener('click', onClose);
+
+    if (!_feedbackModalBound) {
+        _feedbackModalBound = true;
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const r = document.getElementById('ceInteractiveBestMoveFeedbackModal');
+            if (r && r.style.display === 'flex') {
+                e.preventDefault();
+                closeInteractiveBestMoveFeedbackModal();
+            }
+        });
+    }
+    return root;
+}
+
+/**
+ * Модалка «Правильно» / «Неправильно» после выбора хода (редактор, превью, карточка).
+ * @param {string} message
+ */
+export function openInteractiveBestMoveFeedbackModal(message) {
+    if (typeof document === 'undefined') return;
+    const root = ensureInteractiveBestMoveFeedbackModal();
+    const textEl = document.getElementById('ceInteractiveBestMoveFeedbackText');
+    const btn = document.getElementById('ceInteractiveBestMoveFeedbackOkBtn');
+    if (textEl) textEl.textContent = message != null ? String(message) : '';
+    root.style.display = 'flex';
+    root.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    window.setTimeout(() => {
+        try {
+            btn?.focus();
+        } catch (_e) {
+            /* noop */
+        }
+    }, 0);
 }
 
 /**
@@ -176,6 +264,8 @@ function fillInteractiveBestMoveGridFromResult(gridEl, result, options = {}) {
                         'ce-interactive-best-move__btn--flash-bad'
                     );
                 }, 450);
+                const { ok, bad } = getInteractiveFeedbackTexts(gridEl);
+                openInteractiveBestMoveFeedbackModal(correct ? ok : bad);
             });
         }
         gridEl.appendChild(btn);

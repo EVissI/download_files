@@ -3782,6 +3782,12 @@ export class ContentEditor {
 
             case 'interactive-best-move': {
                 element.classList.add('ce-interactive-best-move');
+                if (element.dataset.ceInteractiveFeedbackOk == null || element.dataset.ceInteractiveFeedbackOk === '') {
+                    element.dataset.ceInteractiveFeedbackOk = 'Правильно';
+                }
+                if (element.dataset.ceInteractiveFeedbackBad == null || element.dataset.ceInteractiveFeedbackBad === '') {
+                    element.dataset.ceInteractiveFeedbackBad = 'Неправильно';
+                }
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">
                         <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
@@ -4413,6 +4419,22 @@ export class ContentEditor {
                            oninput="contentEditor.updateElementProperty('attachFileDisplayName', this.value)">
                 </div>
                 ` : ''}
+                ${element.dataset.toolId === 'interactive-best-move' ? `
+                <div class="property-item">
+                    <label>Текст при верном ответе:</label>
+                    <input type="text" id="propInteractiveFeedbackOk" maxlength="500"
+                           value="${this.escapeHtml(element.dataset.ceInteractiveFeedbackOk !== undefined && element.dataset.ceInteractiveFeedbackOk !== null ? String(element.dataset.ceInteractiveFeedbackOk) : 'Правильно')}"
+                           placeholder="Правильно"
+                           oninput="contentEditor.updateElementProperty('interactiveFeedbackOk', this.value)">
+                </div>
+                <div class="property-item">
+                    <label>Текст при неверном ответе:</label>
+                    <input type="text" id="propInteractiveFeedbackBad" maxlength="500"
+                           value="${this.escapeHtml(element.dataset.ceInteractiveFeedbackBad !== undefined && element.dataset.ceInteractiveFeedbackBad !== null ? String(element.dataset.ceInteractiveFeedbackBad) : 'Неправильно')}"
+                           placeholder="Неправильно"
+                           oninput="contentEditor.updateElementProperty('interactiveFeedbackBad', this.value)">
+                </div>
+                ` : ''}
             </div>
             
             <div class="action-buttons">
@@ -4437,6 +4459,16 @@ export class ContentEditor {
                 {
                     const nm = this.selectedElement.querySelector('.ce-attach-file-name');
                     if (nm) nm.textContent = value.trim() ? value : 'Файл';
+                }
+                break;
+            case 'interactiveFeedbackOk':
+                if (this.selectedElement.dataset.toolId === 'interactive-best-move') {
+                    this.selectedElement.dataset.ceInteractiveFeedbackOk = value != null ? String(value).slice(0, 500) : '';
+                }
+                break;
+            case 'interactiveFeedbackBad':
+                if (this.selectedElement.dataset.toolId === 'interactive-best-move') {
+                    this.selectedElement.dataset.ceInteractiveFeedbackBad = value != null ? String(value).slice(0, 500) : '';
                 }
                 break;
             case 'audioTitle':
@@ -7249,6 +7281,12 @@ export class ContentEditor {
                 break;
             case 'interactive-best-move': {
                 element.classList.add('ce-interactive-best-move');
+                if (!String(element.dataset.ceInteractiveFeedbackOk || '').trim()) {
+                    element.dataset.ceInteractiveFeedbackOk = 'Правильно';
+                }
+                if (!String(element.dataset.ceInteractiveFeedbackBad || '').trim()) {
+                    element.dataset.ceInteractiveFeedbackBad = 'Неправильно';
+                }
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">
                         <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
