@@ -728,38 +728,41 @@
             position: fixed;
             inset: 0;
             display: none;
-            align-items: center;
-            justify-content: center;
             z-index: 225000;
         }
         .cabinet-gallery-modal.is-open {
-            display: flex;
+            display: block;
         }
         .cabinet-gallery-modal__overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.55);
+            z-index: 0;
+            background: #141414;
         }
         .cabinet-gallery-modal__box {
-            position: relative;
-            width: 94%;
-            max-width: 440px;
-            min-height: min(78vh, 560px);
-            max-height: 86vh;
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            width: auto;
+            height: auto;
+            min-height: 100%;
+            box-sizing: border-box;
             overflow: hidden;
             background: #262a30;
-            border: 1px solid #3f4550;
-            border-radius: 12px;
-            padding: 38px 10px 10px;
-            box-sizing: border-box;
+            border: none;
+            border-radius: 0;
+            padding: calc(44px + env(safe-area-inset-top, 0px))
+                calc(10px + env(safe-area-inset-right, 0px))
+                calc(12px + env(safe-area-inset-bottom, 0px))
+                calc(10px + env(safe-area-inset-left, 0px));
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
         .cabinet-gallery-modal__close {
             position: absolute;
-            top: 8px;
-            right: 8px;
+            top: calc(8px + env(safe-area-inset-top, 0px));
+            right: calc(8px + env(safe-area-inset-right, 0px));
             width: 32px;
             height: 32px;
             border: 1px solid #4a505b;
@@ -797,7 +800,7 @@
         .cabinet-gallery-modal__cell img {
             width: 100%;
             height: auto;
-            max-height: min(52vh, 440px);
+            max-height: min(72vh, 900px);
             object-fit: contain;
             object-position: center;
             display: block;
