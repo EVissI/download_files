@@ -1,4 +1,19 @@
-import { setupInteractiveBestMoveAfterCardPreviewRender } from './interactive_best_move.js';
+/* Статический import('./interactive_best_move.js') без query — в WebView кешируется отдельно от
+   content_preview.js?t=… и от content_editor.js. Тот же ?t=, что у этого модуля (пробрасывается из HTML). */
+const _interactiveBestMoveCacheQs = (() => {
+    try {
+        return new URL(import.meta.url).search || '';
+    } catch (_e) {
+        return '';
+    }
+})();
+const _interactiveBestMoveHref = (() => {
+    const resolved = new URL('./interactive_best_move.js', import.meta.url).href;
+    const q = _interactiveBestMoveCacheQs;
+    if (!q || resolved.includes('?')) return resolved;
+    return resolved + q;
+})();
+const { setupInteractiveBestMoveAfterCardPreviewRender } = await import(_interactiveBestMoveHref);
 
 export function openCardPreviewModalImpl(editor) {
     if (!editor.cardPreviewModal) return;
