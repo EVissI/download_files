@@ -26,7 +26,6 @@ import {
     beginTextBlockHeightDragImpl,
     setupTextEditingImpl,
 } from '/static/js/content-editor/features/text_resize.js';
-import { fillInteractiveEditorPreviewGrid } from './content-editor/features/interactive_best_move.js';
 
 /* Фича-модули со статическим import не наследуют ?t= от content_editor.js — кешируются отдельно.
    Пробрасываем тот же query, что у динамического import content_editor.js из bootstrap/core. */
@@ -88,6 +87,9 @@ const {
 );
 const { openFrameTemplatesRootModal } = await import(
     new URL('./content-editor/features/frame_templates.js', import.meta.url).href + _featureModuleCacheQs
+);
+const { fillInteractiveEditorPreviewGrid } = await import(
+    new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
 
 /**
