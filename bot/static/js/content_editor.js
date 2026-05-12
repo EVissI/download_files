@@ -4463,10 +4463,7 @@ export class ContentEditor {
         }
 
         if (isCube) {
-            return `
-                <div class="property-item">
-                    <p class="property-hint" style="margin:0;font-size:11px;color:#aaa;line-height:1.35;">Для куба всегда показываются все ${maxMoves} действия в один ряд.</p>
-                </div>`;
+            return '';
         }
 
         const raw = parseCeInteractiveButtonCountRaw(element);
