@@ -18,6 +18,7 @@ class HintS3Storage:
 
     PREFIX = "hints"
     CONTENT_CARDS_MEDIA_PREFIX = "content_cards/media"
+    CABINET_GALLERY_FOLDER = "cabinet_gallery"
 
     def __init__(self):
         addressing = settings.S3_ADDRESSING_STYLE.lower().strip()
@@ -59,6 +60,14 @@ class HintS3Storage:
     @staticmethod
     def game_json_key(game_id: str, game_num: str) -> str:
         return f"{HintS3Storage.PREFIX}/{game_id}_games/game_{game_num}.json"
+
+    @staticmethod
+    def cabinet_gallery_media_key(filename: str) -> str:
+        """Общая галерея кабинета карточек: ``content_cards/media/cabinet_gallery/{filename}``."""
+        fn = filename.replace("\\", "/").split("/")[-1].strip()
+        if not fn or ".." in fn or "/" in fn:
+            fn = "file.bin"
+        return f"{HintS3Storage.CONTENT_CARDS_MEDIA_PREFIX}/{HintS3Storage.CABINET_GALLERY_FOLDER}/{fn}"
 
     @staticmethod
     def content_card_media_key(user_id: int, filename: str) -> str:
@@ -189,3 +198,51 @@ class HintS3Storage:
                 }
             )
         return items, next_tok
+
+    def list_cabinet_gallery(
+        self,
+        *,
+        max_keys: int = 48,
+        continuation_token: str | None = None,
+        image_only: bool = True,
+    ) -> tuple[list[dict], str | None]:
+        """Объекты в ``content_cards/media/cabinet_gallery/``."""
+        prefix = f"{self.CONTENT_CARDS_MEDIA_PREFIX}/{self.CABINET_GALLERY_FOLDER}/"
+        kw: dict = {
+            "Bucket": self._bucket,
+            "Prefix": prefix,
+            "MaxKeys": min(max(1, max_keys), 200),
+        }
+        if continuation_token:
+            kw["ContinuationToken"] = continuation_token
+        resp = self._client.list_objects_v2(**kw)
+        raw = resp.get("Contents") or []
+        next_tok = resp.get("NextContinuationToken")
+        items: list[dict] = []
+        for obj in raw:
+            key = (obj.get("Key") or "").strip()
+            if not key or key.endswith("/"):
+                continue
+            name = key.rsplit("/", 1)[-1].lower()
+            if image_only:
+                if not any(name.endswith(s) for s in self._IMAGE_SUFFIXES):
+                    continue
+            lm = obj.get("LastModified")
+            if isinstance(lm, datetime):
+                if lm.tzinfo is None:
+                    lm = lm.replace(tzinfo=timezone.utc)
+                lm_iso = lm.astimezone(timezone.utc).isoformat()
+            else:
+                lm_iso = None
+            items.append(
+                {
+                    "key": key,
+                    "filename": key.rsplit("/", 1)[-1],
+                    "size": int(obj.get("Size") or 0),
+                    "last_modified": lm_iso,
+                }
+            )
+        return items, next_tok
+
+    def delete_object(self, key: str) -> None:
+        self._client.delete_object(Bucket=self._bucket, Key=key)

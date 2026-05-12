@@ -723,6 +723,141 @@
             padding: 7px 12px;
             cursor: pointer;
         }
+
+        .cabinet-gallery-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 225000;
+        }
+        .cabinet-gallery-modal.is-open {
+            display: flex;
+        }
+        .cabinet-gallery-modal__overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+        }
+        .cabinet-gallery-modal__box {
+            position: relative;
+            width: 94%;
+            max-width: 440px;
+            max-height: 86vh;
+            overflow: hidden;
+            background: #262a30;
+            border: 1px solid #3f4550;
+            border-radius: 12px;
+            padding: 38px 12px 12px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .cabinet-gallery-modal__box.is-admin .cabinet-gallery-modal__drop {
+            display: flex;
+        }
+        .cabinet-gallery-modal__close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            border: 1px solid #4a505b;
+            border-radius: 8px;
+            background: #353b45;
+            color: #fff;
+            font-size: 1.25rem;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .cabinet-gallery-modal__close:active {
+            background: #3d4550;
+        }
+        .cabinet-gallery-modal__drop {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            min-height: 56px;
+            border: 1px dashed #5a6473;
+            border-radius: 10px;
+            color: #a7b0bf;
+            font-size: 0.8rem;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .cabinet-gallery-modal__drop.is-drag {
+            border-color: #5f8fbd;
+            background: rgba(62, 111, 159, 0.2);
+        }
+        .cabinet-gallery-modal__grid {
+            flex: 1 1 auto;
+            min-height: 120px;
+            max-height: calc(86vh - 120px);
+            overflow: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+            gap: 8px;
+            align-content: start;
+        }
+        .cabinet-gallery-modal__cell {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #1a1d22;
+            border: 1px solid #3b414b;
+        }
+        .cabinet-gallery-modal__cell img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .cabinet-gallery-modal__del {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 26px;
+            height: 26px;
+            border: 0;
+            border-radius: 8px;
+            background: rgba(30, 30, 30, 0.82);
+            color: #f5b4b4;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .cabinet-gallery-modal__del:active {
+            background: rgba(50, 30, 30, 0.9);
+        }
+        .cabinet-gallery-modal__msg {
+            margin: 0;
+            min-height: 0;
+            font-size: 12px;
+            color: #f4b567;
+            display: none;
+        }
+        .cabinet-gallery-modal__msg.is-visible {
+            display: block;
+        }
+        .cabinet-gallery-modal__empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #8b93a0;
+            font-size: 0.85rem;
+            padding: 20px 8px;
+        }
     </style>
 </head>
 
@@ -732,6 +867,11 @@
         <div class="cabinet-header">
             <div class="cabinet-header-actions">
                 <button id="shuffle-cards-btn" class="cabinet-shuffle-btn" type="button" title="Перемешать карточки" aria-label="Перемешать карточки">⇄</button>
+                <button id="cabinet-gallery-btn" class="cabinet-shuffle-btn" type="button" title="Галерея" aria-label="Галерея">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M4 7.5C4 6.12 5.12 5 6.5 5h3l1.2 1.5H17.5A2.5 2.5 0 0 1 20 9v9.5A2.5 2.5 0 0 1 17.5 21h-11A2.5 2.5 0 0 1 4 18.5v-11Z" stroke="currentColor" stroke-width="1.65" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </div>
             <h1>Мои карточки</h1>
             <div class="cabinet-header-actions">
@@ -828,6 +968,16 @@
             </div>
         </div>
     </div>
+    <div id="cabinetGalleryModal" class="cabinet-gallery-modal" aria-hidden="true">
+        <div id="cabinetGalleryModalOverlay" class="cabinet-gallery-modal__overlay"></div>
+        <div id="cabinetGalleryModalBox" class="cabinet-gallery-modal__box" role="dialog" aria-modal="true" aria-label="Галерея">
+            <button id="cabinetGalleryModalClose" type="button" class="cabinet-gallery-modal__close" aria-label="Закрыть">×</button>
+            <div id="cabinetGalleryDrop" class="cabinet-gallery-modal__drop"></div>
+            <input id="cabinetGalleryFile" type="file" accept="image/*" multiple style="display:none" tabindex="-1">
+            <div id="cabinetGalleryGrid" class="cabinet-gallery-modal__grid"></div>
+            <p id="cabinetGalleryMsg" class="cabinet-gallery-modal__msg"></p>
+        </div>
+    </div>
     {% include "cards_cabinet_assign_modal.html" %}
     <script>
         (function () {
@@ -896,6 +1046,17 @@
             var generateLinkModalMsg = document.getElementById('generateLinkModalMsg');
             var generateLinkModalCloseBtn = document.getElementById('generateLinkModalCloseBtn');
             var generateLinkModalCopyBtn = document.getElementById('generateLinkModalCopyBtn');
+            var cabinetGalleryBtn = document.getElementById('cabinet-gallery-btn');
+            var cabinetGalleryModal = document.getElementById('cabinetGalleryModal');
+            var cabinetGalleryModalOverlay = document.getElementById('cabinetGalleryModalOverlay');
+            var cabinetGalleryModalClose = document.getElementById('cabinetGalleryModalClose');
+            var cabinetGalleryModalBox = document.getElementById('cabinetGalleryModalBox');
+            var cabinetGalleryDrop = document.getElementById('cabinetGalleryDrop');
+            var cabinetGalleryFile = document.getElementById('cabinetGalleryFile');
+            var cabinetGalleryGrid = document.getElementById('cabinetGalleryGrid');
+            var cabinetGalleryMsg = document.getElementById('cabinetGalleryMsg');
+            var galleryCanManage = false;
+            var galleryUploadBusy = false;
             var allCards = [];
             var shuffledCards = null;
             var isRootAdminUser = false;
@@ -1001,6 +1162,189 @@
                     Object.keys(extra).forEach(function (k) { base[k] = extra[k]; });
                 }
                 return base;
+            }
+
+            function setCabinetGalleryMsg(text) {
+                if (!cabinetGalleryMsg) return;
+                var t = String(text || '').trim();
+                cabinetGalleryMsg.textContent = t;
+                cabinetGalleryMsg.classList.toggle('is-visible', !!t);
+            }
+
+            function closeCabinetGalleryModal() {
+                if (!cabinetGalleryModal) return;
+                cabinetGalleryModal.classList.remove('is-open');
+                cabinetGalleryModal.setAttribute('aria-hidden', 'true');
+                if (cabinetGalleryModalBox) {
+                    cabinetGalleryModalBox.classList.remove('is-admin');
+                }
+                galleryCanManage = false;
+                setCabinetGalleryMsg('');
+            }
+
+            function renderCabinetGalleryGrid(items) {
+                if (!cabinetGalleryGrid) return;
+                cabinetGalleryGrid.innerHTML = '';
+                if (!items || !items.length) {
+                    return;
+                }
+                items.forEach(function (it) {
+                    var key = it && it.key;
+                    if (!key) return;
+                    var cell = document.createElement('div');
+                    cell.className = 'cabinet-gallery-modal__cell';
+                    var img = document.createElement('img');
+                    img.alt = '';
+                    img.loading = 'lazy';
+                    img.src = '/api/content_cards/media?' + new URLSearchParams({ key: key }).toString();
+                    cell.appendChild(img);
+                    if (galleryCanManage) {
+                        var del = document.createElement('button');
+                        del.type = 'button';
+                        del.className = 'cabinet-gallery-modal__del';
+                        del.setAttribute('aria-label', 'Удалить');
+                        del.textContent = '\u00d7';
+                        del.addEventListener('click', function (ev) {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            deleteCabinetGalleryItem(key, cell);
+                        });
+                        cell.appendChild(del);
+                    }
+                    cabinetGalleryGrid.appendChild(cell);
+                });
+            }
+
+            function deleteCabinetGalleryItem(key, cellEl) {
+                fetch('/api/content_cards/cabinet_gallery/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload({ key: key })),
+                })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error((j && j.detail) || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Ошибка');
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function () {
+                        if (cellEl && cellEl.parentNode) {
+                            cellEl.parentNode.removeChild(cellEl);
+                        }
+                    })
+                    .catch(function (e) {
+                        setCabinetGalleryMsg(e.message || String(e));
+                    });
+            }
+
+            function loadCabinetGalleryIntoModal() {
+                if (!cabinetGalleryGrid) return;
+                galleryCanManage = false;
+                cabinetGalleryGrid.innerHTML = '';
+
+                function collect(token, acc) {
+                    return fetch('/api/content_cards/cabinet_gallery/list', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(authPayload({
+                            continuation_token: token || undefined,
+                            limit: 100,
+                        })),
+                    }).then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error((j && j.detail) || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Ошибка');
+                            });
+                        }
+                        return r.json();
+                    }).then(function (data) {
+                        var items = (data && data.items) || [];
+                        items.forEach(function (it) { acc.push(it); });
+                        if (data && data.can_manage) {
+                            galleryCanManage = true;
+                        }
+                        var nt = data && data.continuation_token;
+                        if (nt) {
+                            return collect(nt, acc);
+                        }
+                        return acc;
+                    });
+                }
+
+                collect(null, []).then(function (allItems) {
+                    if (cabinetGalleryModalBox) {
+                        cabinetGalleryModalBox.classList.toggle('is-admin', !!galleryCanManage);
+                    }
+                    renderCabinetGalleryGrid(allItems);
+                }).catch(function (e) {
+                    setCabinetGalleryMsg(e.message || String(e));
+                });
+            }
+
+            function openCabinetGalleryModal() {
+                if (!cabinetGalleryModal || !cabinetGalleryGrid) return;
+                galleryCanManage = false;
+                cabinetGalleryModal.classList.add('is-open');
+                cabinetGalleryModal.setAttribute('aria-hidden', 'false');
+                if (cabinetGalleryModalBox) {
+                    cabinetGalleryModalBox.classList.remove('is-admin');
+                }
+                cabinetGalleryGrid.innerHTML = '';
+                setCabinetGalleryMsg('');
+                loadCabinetGalleryIntoModal();
+            }
+
+            function uploadCabinetGalleryFiles(fileList) {
+                if (!cabinetGalleryModalBox || !cabinetGalleryModalBox.classList.contains('is-admin')) {
+                    return;
+                }
+                if (galleryUploadBusy) return;
+                var files = Array.prototype.slice.call(fileList || []).filter(function (f) {
+                    return f && /^image\//i.test(f.type || '');
+                });
+                if (!files.length) return;
+                galleryUploadBusy = true;
+                setCabinetGalleryMsg('');
+                var i = 0;
+                function next() {
+                    if (i >= files.length) {
+                        galleryUploadBusy = false;
+                        loadCabinetGalleryIntoModal();
+                        return;
+                    }
+                    var f = files[i];
+                    i += 1;
+                    var fd = new FormData();
+                    if (initData) {
+                        fd.append('init_data', initData);
+                    } else if (fabToken) {
+                        fd.append('fab_token', fabToken);
+                    }
+                    fd.append('file', f, f.name || 'image');
+                    fetch('/api/content_cards/cabinet_gallery/upload', { method: 'POST', body: fd })
+                        .then(function (r) {
+                            if (!r.ok) {
+                                return r.json().then(function (j) {
+                                    throw new Error((j && j.detail) || r.statusText);
+                                }).catch(function () {
+                                    throw new Error('Ошибка загрузки');
+                                });
+                            }
+                            return r.json();
+                        })
+                        .then(function () { next(); })
+                        .catch(function (e) {
+                            galleryUploadBusy = false;
+                            setCabinetGalleryMsg(e.message || String(e));
+                        });
+                }
+                next();
             }
 
             function setAssignModalMsg(msg) {
@@ -1947,6 +2291,48 @@
             }
             if (generateLinkModalCopyBtn) {
                 generateLinkModalCopyBtn.addEventListener('click', copyGeneratedLinkToClipboard);
+            }
+            if (cabinetGalleryBtn) {
+                cabinetGalleryBtn.addEventListener('click', openCabinetGalleryModal);
+            }
+            if (cabinetGalleryModalOverlay) {
+                cabinetGalleryModalOverlay.addEventListener('click', closeCabinetGalleryModal);
+            }
+            if (cabinetGalleryModalClose) {
+                cabinetGalleryModalClose.addEventListener('click', closeCabinetGalleryModal);
+            }
+            if (cabinetGalleryDrop) {
+                cabinetGalleryDrop.addEventListener('click', function () {
+                    if (cabinetGalleryFile) {
+                        cabinetGalleryFile.click();
+                    }
+                });
+                cabinetGalleryDrop.addEventListener('dragover', function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    cabinetGalleryDrop.classList.add('is-drag');
+                });
+                cabinetGalleryDrop.addEventListener('dragleave', function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    cabinetGalleryDrop.classList.remove('is-drag');
+                });
+                cabinetGalleryDrop.addEventListener('drop', function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    cabinetGalleryDrop.classList.remove('is-drag');
+                    if (ev.dataTransfer && ev.dataTransfer.files) {
+                        uploadCabinetGalleryFiles(ev.dataTransfer.files);
+                    }
+                });
+            }
+            if (cabinetGalleryFile) {
+                cabinetGalleryFile.addEventListener('change', function () {
+                    if (cabinetGalleryFile.files) {
+                        uploadCabinetGalleryFiles(cabinetGalleryFile.files);
+                    }
+                    cabinetGalleryFile.value = '';
+                });
             }
             updateSelectionUi();
 

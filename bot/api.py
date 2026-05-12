@@ -556,21 +556,34 @@ async def send_to_admin(request: Request):
 
 def _is_public_content_card_media_key(key: str) -> bool:
     """
-    Допустимый ключ для публичного чтения: content_cards/media/{user_id}/{filename}.
-    Доступ по знанию полного ключа (в JSON карточки) — чтобы другие пользователи могли
-    открыть карточку после шаринга; перебор ключей не предполагается (случайное имя файла).
+    Допустимый ключ для публичного чтения:
+    - content_cards/media/{user_id}/{filename} (медиа карточек),
+    - content_cards/media/cabinet_gallery/{filename} (общая галерея кабинета).
     """
     parts = key.split("/")
     if len(parts) != 4:
         return False
     if parts[0] != "content_cards" or parts[1] != "media":
         return False
-    if not parts[2].isdigit():
-        return False
     name = parts[3]
     if not name or len(name) > 220 or ".." in name:
         return False
-    return all(c.isalnum() or c in "._-" for c in name)
+    if not all(c.isalnum() or c in "._-" for c in name):
+        return False
+    mid = parts[2]
+    if mid == HintS3Storage.CABINET_GALLERY_FOLDER:
+        return True
+    if mid.isdigit():
+        return True
+    return False
+
+
+def _is_cabinet_gallery_s3_key(key: str) -> bool:
+    prefix = (
+        f"{HintS3Storage.CONTENT_CARDS_MEDIA_PREFIX}/"
+        f"{HintS3Storage.CABINET_GALLERY_FOLDER}/"
+    )
+    return key.startswith(prefix) and _is_public_content_card_media_key(key)
 
 
 def _guess_content_upload_extension(filename: str | None, content_type: str | None) -> str:
@@ -859,6 +872,21 @@ class ContentCardMediaListBody(BaseModel):
     init_data: str = Field(..., min_length=1)
     continuation_token: str | None = None
     limit: int = Field(48, ge=1, le=100)
+
+
+class CabinetGalleryListBody(BaseModel):
+    """Список изображений общей галереи кабинета карточек (S3); просмотр — любой авторизованный WebApp."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    continuation_token: str | None = None
+    limit: int = Field(48, ge=1, le=100)
+
+
+class CabinetGalleryDeleteBody(BaseModel):
+    init_data: str | None = None
+    fab_token: str | None = None
+    key: str = Field(..., min_length=1, max_length=512)
 
 
 async def _resolve_content_cards_user_id(
@@ -1800,6 +1828,75 @@ async def content_card_media_list(body: ContentCardMediaListBody):
         image_only=True,
     )
     return {"items": items, "continuation_token": next_tok}
+
+
+@app.post("/api/content_cards/cabinet_gallery/list")
+async def cabinet_gallery_list(body: CabinetGalleryListBody):
+    uid = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    s3 = HintS3Storage.from_settings()
+    items, next_tok = s3.list_cabinet_gallery(
+        max_keys=body.limit,
+        continuation_token=body.continuation_token,
+        image_only=True,
+    )
+    return {
+        "items": items,
+        "continuation_token": next_tok,
+        "can_manage": uid in settings.ROOT_ADMIN_IDS,
+    }
+
+
+@app.post("/api/content_cards/cabinet_gallery/upload")
+async def cabinet_gallery_upload(
+    init_data: str | None = Form(None),
+    fab_token: str | None = Form(None),
+    file: UploadFile = File(...),
+):
+    """Загрузка изображения в общую галерею кабинета (S3); только ROOT_ADMIN_IDS."""
+    if not (init_data and init_data.strip()) and not (fab_token and fab_token.strip()):
+        raise HTTPException(
+            status_code=400, detail="Нужен init_data или fab_token",
+        )
+    uid = await _resolve_content_cards_user_id(
+        init_data.strip() if init_data else None,
+        fab_token.strip() if fab_token else None,
+    )
+    _require_content_card_admin(uid)
+    raw = await file.read()
+    if len(raw) > CC_MEDIA_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Файл слишком большой")
+    ext = _guess_content_upload_extension(file.filename, file.content_type)
+    unique_name = f"{uuid.uuid4().hex}{ext}"
+    ct = file.content_type or mimetypes.guess_type(unique_name)[0] or ""
+    if ";" in str(ct):
+        ct = str(ct).split(";")[0].strip()
+    ct_lower = (ct or "").lower()
+    if not ct_lower.startswith("image/"):
+        guessed = (mimetypes.guess_type(unique_name)[0] or "").lower()
+        if not guessed.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Ожидается изображение")
+    key = HintS3Storage.cabinet_gallery_media_key(unique_name)
+    store_ct = ct if ct_lower.startswith("image/") else (guessed or "application/octet-stream")
+    s3 = HintS3Storage.from_settings()
+    s3.upload_bytes(key, raw, content_type=store_ct)
+    logger.info(f"Cabinet gallery uploaded: key={key} user_id={uid} bytes={len(raw)}")
+    return {"s3_key": key, "content_type": store_ct}
+
+
+@app.post("/api/content_cards/cabinet_gallery/delete")
+async def cabinet_gallery_delete(body: CabinetGalleryDeleteBody):
+    """Удаление объекта галереи из S3; только ROOT_ADMIN_IDS."""
+    uid = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(uid)
+    key = str(body.key or "").strip()
+    if not _is_cabinet_gallery_s3_key(key):
+        raise HTTPException(status_code=400, detail="Некорректный key")
+    s3 = HintS3Storage.from_settings()
+    if not s3.exists(key):
+        raise HTTPException(status_code=404, detail="Файл не найден")
+    s3.delete_object(key)
+    logger.info(f"Cabinet gallery deleted: key={key} user_id={uid}")
+    return {"ok": True}
 
 
 @app.get("/api/content_cards/media")
