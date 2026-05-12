@@ -879,13 +879,8 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
         el.style.left = '';
     });
     editor.refreshPreviewTableElementsFromCardData(inner, effectivePayload);
-    const skipDryInteractive =
-        typeof window !== 'undefined' &&
-        window.__CONTENT_CARD_VIEW_ONLY__ === true &&
-        editor._contentCardViewCardId;
-    if (!skipDryInteractive) {
-        editor.refreshInteractivePreviewBlocksFromCardData(inner, effectivePayload);
-    }
+    /* Раньше на странице content_card_view этот шаг пропускали — интерактив собирался только в setupInteractiveBestMoveAfterCardPreviewRender и мог расходиться с обычным превью (hint_viewer и т.д.). Всегда используем ту же разметку кнопок, что и в превью; на карточке затем setupInteractiveBestMoveAfterCardPreviewRender перезаполняет сетку с записью ответа на сервер. */
+    editor.refreshInteractivePreviewBlocksFromCardData(inner, effectivePayload);
     inner
         .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
         .forEach((el) => editor.setupCardPreviewTableCollapse(el));
