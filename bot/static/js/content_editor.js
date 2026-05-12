@@ -26,6 +26,7 @@ import {
     beginTextBlockHeightDragImpl,
     setupTextEditingImpl,
 } from '/static/js/content-editor/features/text_resize.js';
+import { fillInteractiveEditorPreviewGrid } from './content-editor/features/interactive_best_move.js';
 
 /* Фича-модули со статическим import не наследуют ?t= от content_editor.js — кешируются отдельно.
    Пробрасываем тот же query, что у динамического import content_editor.js из bootstrap/core. */
@@ -1147,14 +1148,39 @@ export class ContentEditor {
 
     /** Пересобрать таблицы хода/куба из payload.cardData (если в JSON есть hints / cube_hints). */
     refreshTableElementsFromCardData() {
-        if (!this.canvas || !this.cardData) return;
-        this.canvas.querySelectorAll('.canvas-element.table-element').forEach((el) => {
-            const t = el.dataset.tableType === 'cube' ? 'cube' : 'hints';
-            if (t === 'hints' && this.cardData.hints) {
-                this.updateTableContent(el, 'hints');
-            } else if (t === 'cube' && this.cardData.cube_hints) {
-                this.updateTableContent(el, 'cube');
-            }
+        if (!this.canvas) return;
+        if (this.cardData) {
+            this.canvas.querySelectorAll('.canvas-element.table-element').forEach((el) => {
+                const t = el.dataset.tableType === 'cube' ? 'cube' : 'hints';
+                if (t === 'hints' && this.cardData.hints) {
+                    this.updateTableContent(el, 'hints');
+                } else if (t === 'cube' && this.cardData.cube_hints) {
+                    this.updateTableContent(el, 'cube');
+                }
+            });
+        }
+        this.refreshInteractiveBestMoveElementsFromCardData();
+    }
+
+    /**
+     * Эффективный cardData для превью интерактива: sharedContext карточки + данные кадра (как на странице карточки).
+     */
+    getEffectiveCardDataForInteractivePreview() {
+        const sc = this._contentCardSharedContext;
+        const sharedCd = sc && sc.cardData && typeof sc.cardData === 'object' ? sc.cardData : null;
+        const frameCd = this.cardData && typeof this.cardData === 'object' ? this.cardData : null;
+        return this.mergeSharedUnderFrameCardData(sharedCd, frameCd);
+    }
+
+    /** Обновить блоки «Интерактив» на канвасе по текущим данным таблицы ходов (только редактор). */
+    refreshInteractiveBestMoveElementsFromCardData() {
+        if (!this.canvas || typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ === true) {
+            return;
+        }
+        const cd = this.getEffectiveCardDataForInteractivePreview();
+        this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
+            const grid = el.querySelector('[data-ce-interactive-grid]');
+            fillInteractiveEditorPreviewGrid(grid, cd);
         });
     }
 
@@ -3623,13 +3649,14 @@ export class ContentEditor {
             }
 
             case 'interactive-best-move': {
-                element.classList.add('ce-interactive-best-move');
+                element.classList.add('ce-interactive-best-move', 'ce-interactive-best-move--editor-preview');
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">
                         <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
-                        <p class="ce-interactive-best-move__hint">На карточке подставятся первые четыре хода из таблицы (hints); лучший — верхняя строка.</p>
+                        <p class="ce-interactive-best-move__hint">Ниже — как на карточке (порядок как в таблице ходов). У игрока кнопки будут в случайном порядке.</p>
                         <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
                     </div>`;
+                this.refreshInteractiveBestMoveElementsFromCardData();
                 break;
             }
 
@@ -7059,9 +7086,16 @@ export class ContentEditor {
                 break;
             case 'interactive-best-move': {
                 element.classList.add('ce-interactive-best-move');
+                if (!previewMode) {
+                    element.classList.add('ce-interactive-best-move--editor-preview');
+                }
+                const hintHtml = previewMode
+                    ? ''
+                    : `<p class="ce-interactive-best-move__hint">Ниже — как на карточке (порядок как в таблице ходов). У игрока кнопки будут в случайном порядке.</p>`;
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">
                         <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
+                        ${hintHtml}
                         <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
                     </div>`;
                 break;

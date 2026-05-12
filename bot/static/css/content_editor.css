@@ -4065,3 +4065,9 @@ button.content-card-admin-info-file-link:hover {
 .card-preview-surface-inner .canvas-element.ce-interactive-best-move.card-preview-canvas-clone {
     pointer-events: auto;
 }
+
+/* Редактор: превью интерактива как на карточке, без кликов */
+.ce-interactive-best-move--editor-preview .ce-interactive-best-move__grid {
+    pointer-events: none;
+    user-select: none;
+}

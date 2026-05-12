@@ -71,6 +71,40 @@ export function buildInteractiveSlotsFromCardData(cardData) {
     return { error: false, slots };
 }
 
+/**
+ * Превью в редакторе: те же подписи и сетка 2×2, порядок как в таблице (без перемешивания),
+ * все кнопки неактивны.
+ *
+ * @param {HTMLElement | null} gridEl
+ * @param {object | null | undefined} cardData — уже смерженный эффективный cardData
+ */
+export function fillInteractiveEditorPreviewGrid(gridEl, cardData) {
+    if (!gridEl) return;
+    const result = buildInteractiveSlotsFromCardData(cardData);
+    gridEl.innerHTML = '';
+
+    if (result.error) {
+        const p = document.createElement('p');
+        p.className = 'ce-interactive-best-move__msg';
+        p.textContent = result.message || 'Интерактив недоступен';
+        gridEl.appendChild(p);
+        return;
+    }
+
+    result.slots.forEach((slot) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ce-interactive-best-move__btn';
+        btn.textContent = slot.label;
+        btn.tabIndex = -1;
+        if (slot.disabled) {
+            btn.disabled = true;
+            btn.classList.add('ce-interactive-best-move__btn--disabled');
+        }
+        gridEl.appendChild(btn);
+    });
+}
+
 function fillInteractiveBlock(block, result, editor) {
     const grid = block.querySelector('[data-ce-interactive-grid]');
     if (!grid) return;
