@@ -5209,6 +5209,42 @@ export class ContentEditor {
     }
 
     /**
+     * Снимок текущих блоков «таблица подсказок / по кубу» с канваса (сверху вниз по `top`) —
+     * при вставке шаблона они остаются первыми, контент шаблона идёт ниже.
+     */
+    serializeMoveHintsTableElementsFromCanvas() {
+        if (!this.canvas) return [];
+        const nodes = Array.from(
+            this.canvas.querySelectorAll('.canvas-element[data-tool-id="moveHintsTable"]')
+        ).sort((a, b) => (parseInt(a.style.top, 10) || 0) - (parseInt(b.style.top, 10) || 0));
+        const out = [];
+        for (const el of nodes) {
+            const toolId = 'moveHintsTable';
+            const item = {
+                id: el.id,
+                toolId,
+                style: {
+                    top: el.style.top,
+                    left: el.style.left,
+                    width: el.style.width,
+                    height: el.style.height,
+                },
+                dataset: { ...el.dataset },
+            };
+            if (item.dataset) {
+                delete item.dataset.ceBlockReorderBound;
+            }
+            const tbl = el.querySelector('table');
+            item.tableType = el.dataset.tableType || 'hints';
+            item.tableHtml = tbl ? tbl.outerHTML : this.elementInnerHtmlForSave(el);
+            const bs = this.collectBlockStyle(el);
+            if (bs) item.blockStyle = bs;
+            out.push(item);
+        }
+        return out;
+    }
+
+    /**
      * Доп. обработка payload перед сохранением шаблона в БД (при необходимости).
      * Раньше вырезались доска, таблицы и cardData — теперь шаблон хранит кадр как есть, чтобы при вставке
      * не терялись блоки доски/таблицы и данные подсказок.
@@ -5219,9 +5255,10 @@ export class ContentEditor {
     }
 
     /**
-     * Вставка шаблона кадра: восстанавливает элементы из шаблона (включая доску и таблицы, если они в шаблоне).
-     * Снимок доски и cardData подмешиваются с текущей сессии редактора / hint viewer, чтобы подсказки
-     * соответствовали открытой позиции; тогглы доски и баннер матча — как на канвасе сейчас.
+     * Вставка шаблона кадра: восстанавливает элементы из шаблона.
+     * Если на канвасе уже есть таблица подсказок (`moveHintsTable`), она сохраняется **верхним**
+     * блоком (все такие таблицы по порядку сверху вниз), из шаблона таблицы исключаются, остальной
+     * контент шаблона идёт ниже. Снимок доски и cardData — с текущей сессии / hint viewer.
      */
     async applyFrameTemplatePayload(rawTemplatePayload) {
         let p;
@@ -5233,6 +5270,32 @@ export class ContentEditor {
         if (!p || typeof p !== 'object') p = {};
         /* Шаблон может содержать доску и таблицы; cardData/board snapshot ниже подмешиваем с текущей сессии. */
         this.sanitizePayloadForTemplate(p);
+
+        const preservedHintTables = this.serializeMoveHintsTableElementsFromCanvas();
+        if (preservedHintTables.length > 0) {
+            const tplRaw = Array.isArray(p.elements) ? p.elements : [];
+            const tplNoTables = tplRaw.filter((it) => {
+                const tid = it && (it.toolId || it.tool_id || '');
+                return tid !== 'moveHintsTable';
+            });
+            let nextNum = preservedHintTables.reduce((max, it) => {
+                const m = /^element_(\d+)$/.exec((it && it.id) || '');
+                return m ? Math.max(max, parseInt(m[1], 10) + 1) : max;
+            }, 0);
+            const tplRenumbered = tplNoTables.map((it) => ({
+                ...it,
+                id: `element_${nextNum++}`,
+            }));
+            preservedHintTables.forEach((it, i) => {
+                if (!it.style || typeof it.style !== 'object') it.style = {};
+                it.style.top = `${i * 2}px`;
+            });
+            tplRenumbered.forEach((it, i) => {
+                if (!it.style || typeof it.style !== 'object') it.style = {};
+                it.style.top = `${preservedHintTables.length * 2 + i * 10000}px`;
+            });
+            p.elements = [...preservedHintTables, ...tplRenumbered];
+        }
 
         let currentBoard = null;
         if (this._editorSessionBoardSnapshot != null) {
