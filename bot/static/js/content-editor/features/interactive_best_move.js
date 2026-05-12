@@ -7,6 +7,23 @@ const CE_IBM_LOG = '[CE:interactive-best-move]';
 export const INTERACTIVE_BEST_MOVE_FEEDBACK_DEFAULT_OK = 'Правильно';
 export const INTERACTIVE_BEST_MOVE_FEEDBACK_DEFAULT_BAD = 'Неправильно';
 
+/**
+ * Настройка из кабинета карточек ("Открыть подсказки").
+ * Если выключена или отсутствует — блоки интерактива на странице карточки прячем.
+ */
+const INTERACTIVE_OPEN_HINTS_STORAGE_KEY = 'cards_cabinet_open_hints_v1';
+
+function isInteractiveHintsOpenForUser() {
+    if (typeof window === 'undefined') return true;
+    try {
+        const raw = window.localStorage ? window.localStorage.getItem(INTERACTIVE_OPEN_HINTS_STORAGE_KEY) : null;
+        if (raw === null || raw === undefined) return true;
+        return raw !== '0' && raw !== 'false';
+    } catch (_e) {
+        return true;
+    }
+}
+
 function shuffleInPlace(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -447,9 +464,19 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
     if (!host) return;
 
     const cardData = payload && payload.cardData && typeof payload.cardData === 'object' ? payload.cardData : null;
+    const hintsOpenForUser = isInteractiveHintsOpenForUser();
 
     const blocks = host.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]');
     blocks.forEach((block) => {
+        if (!hintsOpenForUser) {
+            // Чекбокс «Открыть подсказки» в кабинете снят — на всех кадрах скрываем интерактив у пользователя.
+            block.style.display = 'none';
+            block.setAttribute('aria-hidden', 'true');
+            return;
+        }
+        block.style.display = '';
+        block.removeAttribute('aria-hidden');
+
         const raw = resolveInteractiveButtonCountRaw(block, payload);
         const maxM = countInteractiveMovesFromCardData(cardData);
         const btn = clampInteractiveButtonCount(raw, Math.max(1, maxM), 4);
