@@ -196,13 +196,16 @@ function bindOnce() {
             }
             hide(els.insert);
             hideAll();
-            state.editor
-                .restoreCanvasFromPayload(payload)
+            const applyFn =
+                typeof state.editor.applyFrameTemplatePayload === 'function'
+                    ? state.editor.applyFrameTemplatePayload.bind(state.editor)
+                    : state.editor.restoreCanvasFromPayload.bind(state.editor);
+            applyFn(payload)
                 .then(() => {
                     state.editor.showNotification('Шаблон вставлен', 'success');
                 })
                 .catch((err) => {
-                    console.error('restoreCanvasFromPayload:', err);
+                    console.error('applyFrameTemplatePayload:', err);
                     state.editor.showNotification(
                         'Не удалось вставить шаблон: ' + (err && err.message ? err.message : err),
                         'error'
@@ -254,6 +257,9 @@ async function confirmSaveTemplate(editor, nameInput) {
         const frameId = editor.getFrameIdForSave();
         const saveSlotIndex = editor.allocateNextSaveSlotIndex(frameId);
         let payload = await editor.buildFrameSavePayload(frameId, saveSlotIndex);
+        if (typeof editor.sanitizePayloadForTemplate === 'function') {
+            payload = editor.sanitizePayloadForTemplate(payload) || payload;
+        }
         await editor.uploadPayloadMediaToS3(payload);
 
         const r = await fetch('/api/content_cards/frame_templates/create', {
@@ -337,7 +343,16 @@ async function openInsertModal(editor) {
         list.forEach((t) => {
             const id = t.id;
             const name = String(t.name || '');
-            const payload = t.payload || {};
+            let payload = t.payload || {};
+            /* Превью / вставка шаблона всегда без доски, таблиц и интерактива, даже если шаблон сохранён до этой правки. */
+            if (typeof editor.sanitizePayloadForTemplate === 'function') {
+                try {
+                    payload = JSON.parse(JSON.stringify(payload));
+                } catch (_e) {
+                    /* использовать исходный payload */
+                }
+                editor.sanitizePayloadForTemplate(payload);
+            }
             insertPayloadById.set(Number(id), payload);
             const card = document.createElement('div');
             card.className = 'frame-templates-insert-card';

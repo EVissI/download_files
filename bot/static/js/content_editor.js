@@ -5210,6 +5210,92 @@ export class ContentEditor {
         };
     }
 
+    /**
+     * Шаблон кадра не должен нести в себе доску, табличные блоки, интерактив и данные кадра (hints/cube_hints).
+     * Чистим payload, полученный из buildFrameSavePayload, in-place — последующая загрузка медиа и сохранение
+     * используют уже отфильтрованный payload.
+     */
+    sanitizePayloadForTemplate(payload) {
+        if (!payload || typeof payload !== 'object') return payload;
+
+        payload.board = null;
+        payload.cardData = null;
+
+        if (!payload.editor || typeof payload.editor !== 'object') payload.editor = {};
+        payload.editor.boardCanvasToggle = false;
+        payload.editor.showBoardMatchBanner = false;
+
+        const blockedToolIds = new Set([
+            'boardCanvas',
+            'board-illustration',
+            'moveHintsTable',
+            'interactive-best-move',
+        ]);
+        if (Array.isArray(payload.elements)) {
+            payload.elements = payload.elements.filter((item) => {
+                const tid = item && (item.toolId || (item.dataset && item.dataset.toolId)) || '';
+                return !blockedToolIds.has(tid);
+            });
+        }
+        return payload;
+    }
+
+    /**
+     * Вставка шаблона кадра: не перетирает текущие board / cardData (hints / cube_hints)
+     * и состояние тоггла доски — берём их с активного кадра, а из шаблона используем только
+     * визуальные настройки канваса и список элементов.
+     */
+    async applyFrameTemplatePayload(rawTemplatePayload) {
+        let p;
+        try {
+            p = JSON.parse(JSON.stringify(rawTemplatePayload || {}));
+        } catch (_e) {
+            p = rawTemplatePayload || {};
+        }
+        if (!p || typeof p !== 'object') p = {};
+        /* Старые шаблоны могут содержать board / cardData / таблицы / интерактив — снимаем их перед мерджем. */
+        this.sanitizePayloadForTemplate(p);
+
+        let currentBoard = null;
+        if (this._editorSessionBoardSnapshot != null) {
+            try {
+                currentBoard = JSON.parse(JSON.stringify(this._editorSessionBoardSnapshot));
+            } catch (_e) {
+                currentBoard = this._editorSessionBoardSnapshot;
+            }
+        }
+        if (currentBoard == null && typeof window !== 'undefined' && typeof window.getHintViewerBoardSnapshot === 'function') {
+            const snap = window.getHintViewerBoardSnapshot();
+            if (snap != null) {
+                try {
+                    currentBoard = JSON.parse(JSON.stringify(snap));
+                } catch (_e) {
+                    currentBoard = snap;
+                }
+            }
+        }
+
+        let currentCardData = null;
+        if (this.cardData && typeof this.cardData === 'object') {
+            try {
+                currentCardData = JSON.parse(JSON.stringify(this.cardData));
+            } catch (_e) {
+                currentCardData = this.cardData;
+            }
+        }
+
+        const currentBoardToggle = !!this.toggleStates['boardCanvas'];
+        const currentBoardBanner = !!this.boardMatchBannerEnabled;
+
+        p.board = currentBoard;
+        p.cardData = currentCardData;
+        if (!p.editor || typeof p.editor !== 'object') p.editor = {};
+        p.editor.boardCanvasToggle = currentBoardToggle;
+        p.editor.showBoardMatchBanner = currentBoardBanner;
+
+        return this.restoreCanvasFromPayload(p);
+    }
+
     /** Надёжное чтение фона канваса (inline или computed), чтобы корректно восстанавливать после сохранения */
     getCanvasBackgroundForSave() {
         return getCanvasBackgroundForSaveImpl(this);
