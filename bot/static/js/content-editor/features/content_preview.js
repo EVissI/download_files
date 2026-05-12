@@ -866,6 +866,13 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
         el.style.left = '';
     });
     editor.refreshPreviewTableElementsFromCardData(inner, effectivePayload);
+    const skipDryInteractive =
+        typeof window !== 'undefined' &&
+        window.__CONTENT_CARD_VIEW_ONLY__ === true &&
+        editor._contentCardViewCardId;
+    if (!skipDryInteractive) {
+        editor.refreshInteractivePreviewBlocksFromCardData(inner, effectivePayload);
+    }
     inner
         .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
         .forEach((el) => editor.setupCardPreviewTableCollapse(el));

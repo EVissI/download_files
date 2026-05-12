@@ -1,5 +1,5 @@
 /**
- * Интерактив «лучший ход» на странице просмотра карточки (не в мини-превью шаблонов).
+ * Интерактив «лучший ход»: страница карточки, превью редактора и канвас редактора.
  */
 
 function shuffleInPlace(arr) {
@@ -72,15 +72,15 @@ export function buildInteractiveSlotsFromCardData(cardData) {
 }
 
 /**
- * Превью в редакторе: те же подписи и сетка 2×2, порядок как в таблице (без перемешивания),
- * все кнопки неактивны.
- *
  * @param {HTMLElement | null} gridEl
- * @param {object | null | undefined} cardData — уже смерженный эффективный cardData
+ * @param {{ error: boolean, message?: string, slots: Array<{ label: string, disabled: boolean, isCorrect: boolean }> }} result
+ * @param {{ dryRun?: boolean, recordEditor?: * }} [options] — dryRun: без записи на сервер; recordEditor: для записи (страница карточки)
  */
-export function fillInteractiveEditorPreviewGrid(gridEl, cardData) {
+function fillInteractiveBestMoveGridFromResult(gridEl, result, options = {}) {
     if (!gridEl) return;
-    const result = buildInteractiveSlotsFromCardData(cardData);
+    const dryRun = !!options.dryRun;
+    const recordEditor = options.recordEditor || null;
+
     gridEl.innerHTML = '';
 
     if (result.error) {
@@ -91,36 +91,11 @@ export function fillInteractiveEditorPreviewGrid(gridEl, cardData) {
         return;
     }
 
-    result.slots.forEach((slot) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'ce-interactive-best-move__btn';
-        btn.textContent = slot.label;
-        btn.tabIndex = -1;
-        if (slot.disabled) {
-            btn.disabled = true;
-            btn.classList.add('ce-interactive-best-move__btn--disabled');
-        }
-        gridEl.appendChild(btn);
-    });
-}
-
-function fillInteractiveBlock(block, result, editor) {
-    const grid = block.querySelector('[data-ce-interactive-grid]');
-    if (!grid) return;
-    grid.innerHTML = '';
-
-    if (result.error) {
-        const p = document.createElement('p');
-        p.className = 'ce-interactive-best-move__msg';
-        p.textContent = result.message || 'Интерактив недоступен';
-        grid.appendChild(p);
-        return;
-    }
-
     const slots = shuffleInPlace(result.slots.map((s) => ({ ...s })));
-    const cardId = editor._contentCardViewCardId;
-    const auth = editor.getContentCardApiAuthPayload();
+    const cardId = recordEditor && recordEditor._contentCardViewCardId;
+    const auth = recordEditor && recordEditor.getContentCardApiAuthPayload
+        ? recordEditor.getContentCardApiAuthPayload()
+        : null;
 
     slots.forEach((slot) => {
         const btn = document.createElement('button');
@@ -131,18 +106,27 @@ function fillInteractiveBlock(block, result, editor) {
             btn.disabled = true;
             btn.classList.add('ce-interactive-best-move__btn--disabled');
         } else {
-            btn.addEventListener('click', () => {
-                if (!cardId || !auth) return;
+            btn.addEventListener('mousedown', (e) => {
+                if (e && typeof e.stopPropagation === 'function') {
+                    e.stopPropagation();
+                }
+            });
+            btn.addEventListener('click', (e) => {
+                if (e && typeof e.stopPropagation === 'function') {
+                    e.stopPropagation();
+                }
                 const correct = !!slot.isCorrect;
-                void fetch('/api/content_cards/interactive/record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...auth,
-                        content_card_id: Number(cardId),
-                        correct,
-                    }),
-                }).catch((e) => console.warn('interactive/record:', e));
+                if (!dryRun && recordEditor && cardId && auth) {
+                    void fetch('/api/content_cards/interactive/record', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...auth,
+                            content_card_id: Number(cardId),
+                            correct,
+                        }),
+                    }).catch((err) => console.warn('interactive/record:', err));
+                }
                 btn.classList.add(
                     correct ? 'ce-interactive-best-move__btn--flash-ok' : 'ce-interactive-best-move__btn--flash-bad'
                 );
@@ -154,8 +138,25 @@ function fillInteractiveBlock(block, result, editor) {
                 }, 450);
             });
         }
-        grid.appendChild(btn);
+        gridEl.appendChild(btn);
     });
+}
+
+/**
+ * Редактор и превью (без записи на сервер): как у игрока на карточке — перемешивание и клики с подсветкой.
+ *
+ * @param {HTMLElement | null} gridEl
+ * @param {object | null | undefined} cardData — уже смерженный эффективный cardData
+ */
+export function fillInteractiveEditorPreviewGrid(gridEl, cardData) {
+    const result = buildInteractiveSlotsFromCardData(cardData);
+    fillInteractiveBestMoveGridFromResult(gridEl, result, { dryRun: true });
+}
+
+export function fillInteractiveBlock(block, result, editor) {
+    const grid = block.querySelector('[data-ce-interactive-grid]');
+    if (!grid) return;
+    fillInteractiveBestMoveGridFromResult(grid, result, { dryRun: false, recordEditor: editor });
 }
 
 /**

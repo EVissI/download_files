@@ -1208,6 +1208,21 @@ export class ContentEditor {
         });
     }
 
+    /** Превью кадра: сетка интерактива как на карточке (клики без записи на сервер). На странице просмотра карточки не вызывать — там setupInteractiveBestMoveAfterCardPreviewRender. */
+    refreshInteractivePreviewBlocksFromCardData(inner, payload) {
+        if (!inner || !payload || !payload.cardData || typeof payload.cardData !== 'object') return;
+        let cd;
+        try {
+            cd = JSON.parse(JSON.stringify(payload.cardData));
+        } catch (e) {
+            return;
+        }
+        inner.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
+            const grid = el.querySelector('[data-ce-interactive-grid]');
+            fillInteractiveEditorPreviewGrid(grid, cd);
+        });
+    }
+
     /**
      * Единые дефолты сессии редактора, чтобы поведение предпросмотра
      * не зависело от предыдущего открытия страницы/редактора.
@@ -3651,11 +3666,10 @@ export class ContentEditor {
             }
 
             case 'interactive-best-move': {
-                element.classList.add('ce-interactive-best-move', 'ce-interactive-best-move--editor-preview');
+                element.classList.add('ce-interactive-best-move');
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">
                         <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
-                        <p class="ce-interactive-best-move__hint">Ниже — как на карточке (порядок как в таблице ходов). У игрока кнопки будут в случайном порядке.</p>
                         <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
                     </div>`;
                 this.refreshInteractiveBestMoveElementsFromCardData();
@@ -7088,16 +7102,9 @@ export class ContentEditor {
                 break;
             case 'interactive-best-move': {
                 element.classList.add('ce-interactive-best-move');
-                if (!previewMode) {
-                    element.classList.add('ce-interactive-best-move--editor-preview');
-                }
-                const hintHtml = previewMode
-                    ? ''
-                    : `<p class="ce-interactive-best-move__hint">Ниже — как на карточке (порядок как в таблице ходов). У игрока кнопки будут в случайном порядке.</p>`;
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">
                         <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
-                        ${hintHtml}
                         <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
                     </div>`;
                 break;
