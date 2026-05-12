@@ -1360,7 +1360,7 @@ export class ContentEditor {
             const domFallback = isCube ? domCubeActions : domMoves;
             const maxAvail = Math.max(maxFromCd, domFallback.length, 1);
             const rawBc = parseCeInteractiveButtonCountRaw(el);
-            const btnCount = isCube ? maxAvail : clampInteractiveButtonCount(rawBc, maxAvail, 4);
+            const btnCount = clampInteractiveButtonCount(rawBc, maxAvail, 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
 
             let result = buildInteractiveSlotsFromCardData(cd, btnCount, tableType);
@@ -1432,10 +1432,7 @@ export class ContentEditor {
             syncInteractiveBlockTitleByType(el, tableType);
             const maxM = countInteractiveAvailableFromCardData(cd, tableType);
             const rawBc = resolveInteractiveButtonCountRaw(el, payload);
-            const btnCount =
-                tableType === INTERACTIVE_TABLE_TYPE_CUBE
-                    ? Math.max(1, maxM)
-                    : clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
+            const btnCount = clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
             fillInteractiveEditorPreviewGrid(grid, cd, btnCount, tableType);
             el.style.height = 'auto';
@@ -4465,10 +4462,6 @@ export class ContentEditor {
             maxMoves = Math.max(domItems.length, 1);
         } else {
             maxMoves = Math.max(maxMoves, 1);
-        }
-
-        if (isCube) {
-            return '';
         }
 
         const raw = parseCeInteractiveButtonCountRaw(element);
@@ -7627,13 +7620,14 @@ export class ContentEditor {
         }
         if (toolId === 'interactive-best-move') {
             const ds = item.dataset || {};
+            /* Явные поля элемента важнее вложенного dataset: в старых сохранениях в dataset мог остаться дефолт «4», а актуальное число — только в корне объекта. */
             const cand = [
-                ds.ceInteractiveButtonCount,
-                ds.ce_interactive_button_count,
                 item.ceInteractiveButtonCount,
                 item.ce_interactive_button_count,
                 item.interactiveButtonCount,
                 item.interactive_button_count,
+                ds.ceInteractiveButtonCount,
+                ds.ce_interactive_button_count,
             ];
             for (let i = 0; i < cand.length; i++) {
                 const v = cand[i];

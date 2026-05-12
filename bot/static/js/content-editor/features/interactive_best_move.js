@@ -224,13 +224,14 @@ export function parseCeInteractiveButtonCountRaw(el) {
 export function parseCeInteractiveButtonCountFromSavedElement(item) {
     if (!item || typeof item !== 'object') return NaN;
     const ds = item.dataset && typeof item.dataset === 'object' ? item.dataset : {};
+    /* Корневые поля приоритетнее dataset: иначе дефолт «4» в dataset перекрывает актуальное значение из API/старых сохранений. */
     const candidates = [
-        ds.ceInteractiveButtonCount,
-        ds.ce_interactive_button_count,
         item.ceInteractiveButtonCount,
         item.ce_interactive_button_count,
         item.interactiveButtonCount,
         item.interactive_button_count,
+        ds.ceInteractiveButtonCount,
+        ds.ce_interactive_button_count,
     ];
     for (let i = 0; i < candidates.length; i++) {
         const v = candidates[i];
@@ -608,10 +609,7 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
 
         const raw = resolveInteractiveButtonCountRaw(block, payload);
         const maxM = countInteractiveAvailableFromCardData(cardData, tableType);
-        const btn =
-            tableType === INTERACTIVE_TABLE_TYPE_CUBE
-                ? Math.max(1, maxM)
-                : clampInteractiveButtonCount(raw, Math.max(1, maxM), 4);
+        const btn = clampInteractiveButtonCount(raw, Math.max(1, maxM), 4);
         if (block.dataset) block.dataset.ceInteractiveButtonCount = String(btn);
         const built = buildInteractiveSlotsFromCardData(cardData, btn, tableType);
         fillInteractiveBlock(block, built, editor);
