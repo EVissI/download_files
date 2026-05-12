@@ -207,9 +207,25 @@
             border-color: #5f8fbd;
             background: #3e6f9f;
         }
+        /* "Открыть подсказки" в кабинете снят (localStorage='0') — скрываем все блоки интерактива на всех кадрах. */
+        html.cards-cabinet-hints-closed .canvas-element[data-tool-id="interactive-best-move"],
+        html.cards-cabinet-hints-closed .canvas-element.ce-interactive-best-move {
+            display: none !important;
+        }
     </style>
     <script>
         window.__CONTENT_CARD_VIEW_ONLY__ = true;
+        (function () {
+            try {
+                var raw = window.localStorage ? window.localStorage.getItem('cards_cabinet_open_hints_v1') : null;
+                var hintsClosed = raw === '0' || raw === 'false';
+                if (hintsClosed) {
+                    document.documentElement.classList.add('cards-cabinet-hints-closed');
+                } else {
+                    document.documentElement.classList.remove('cards-cabinet-hints-closed');
+                }
+            } catch (_e) {}
+        })();
     </script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="module" src="/static/js/content-editor/bootstrap/index.js?t={{ cache_timestamp }}"></script>
