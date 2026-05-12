@@ -88,7 +88,12 @@ const {
 const { openFrameTemplatesRootModal } = await import(
     new URL('./content-editor/features/frame_templates.js', import.meta.url).href + _featureModuleCacheQs
 );
-const { fillInteractiveEditorPreviewGrid } = await import(
+const {
+    fillInteractiveEditorPreviewGrid,
+    fillInteractiveBestMoveEditorGridFromResult,
+    buildInteractiveSlotsFromCardData,
+    buildInteractiveSlotsFromMoveStrings,
+} = await import(
     new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
 
@@ -1174,15 +1179,53 @@ export class ContentEditor {
         return this.mergeSharedUnderFrameCardData(sharedCd, frameCd);
     }
 
+    /**
+     * Первая колонка tbody таблицы хода на холсте — те же подписи, что видит автор (как в createHintsTable).
+     * Нужна, если cardData в сессии без hints, а таблица заполнена из сохранённого HTML.
+     */
+    parseMovesFromHintsTableDom(tableWrapper) {
+        if (!tableWrapper) return [];
+        const tbody = tableWrapper.querySelector('table.ce-content-table tbody');
+        if (!tbody) return [];
+        const moves = [];
+        tbody.querySelectorAll('tr').forEach((row) => {
+            const cell = row.querySelector('td');
+            if (!cell) return;
+            const txt = String(cell.textContent || '').trim();
+            if (txt) moves.push(txt);
+        });
+        return moves;
+    }
+
     /** Обновить блоки «Интерактив» на канвасе по текущим данным таблицы ходов (только редактор). */
     refreshInteractiveBestMoveElementsFromCardData() {
         if (!this.canvas || typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ === true) {
             return;
         }
-        const cd = this.getEffectiveCardDataForInteractivePreview();
+        const payloadStub = {
+            cardData: this.cardData && typeof this.cardData === 'object' ? this.cardData : {},
+        };
+        const mergedPayload = this.getPayloadForCardPreviewRender(payloadStub);
+        let cd =
+            mergedPayload &&
+            mergedPayload.cardData &&
+            typeof mergedPayload.cardData === 'object'
+                ? mergedPayload.cardData
+                : this.getEffectiveCardDataForInteractivePreview();
+
+        const tableEl = Array.from(this.canvas.querySelectorAll('.canvas-element.table-element')).find(
+            (w) => w.dataset.tableType !== 'cube'
+        );
+        const domMoves = tableEl ? this.parseMovesFromHintsTableDom(tableEl) : [];
+
         this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
             const grid = el.querySelector('[data-ce-interactive-grid]');
-            fillInteractiveEditorPreviewGrid(grid, cd);
+            if (!grid) return;
+            let result = buildInteractiveSlotsFromCardData(cd);
+            if (result.error && domMoves.length > 0) {
+                result = buildInteractiveSlotsFromMoveStrings(domMoves);
+            }
+            fillInteractiveBestMoveEditorGridFromResult(grid, result);
         });
     }
 
@@ -6935,37 +6978,48 @@ export class ContentEditor {
     async restoreCanvasFromPayload(payload) {
         if (!this.canvas) return;
 
+        let p = payload;
+        try {
+            p = JSON.parse(JSON.stringify(payload));
+        } catch (_e) {
+            /* использовать исходный payload */
+        }
+        /* Как в предпросмотре: подмешать sharedContext, иначе hints: [] в кадре затирают общие подсказки карточки. */
+        if (this._contentCardSharedContext && typeof this.applyContentCardSharedToEditorPayload === 'function') {
+            this.applyContentCardSharedToEditorPayload(p);
+        }
+
         this.elements = [];
         this.resetCanvasDomStructure();
         this.selectedElement = null;
         this.toggleStates = {};
 
-        if (payload.editor && payload.editor.boardCanvasToggle) {
+        if (p.editor && p.editor.boardCanvasToggle) {
             this.toggleStates['boardCanvas'] = true;
         }
-        this.boardMatchBannerEnabled = !!(payload.editor && payload.editor.showBoardMatchBanner);
+        this.boardMatchBannerEnabled = !!(p.editor && p.editor.showBoardMatchBanner);
         this.cardData = null;
-        if (payload.cardData && typeof payload.cardData === 'object') {
+        if (p.cardData && typeof p.cardData === 'object') {
             try {
-                this.cardData = JSON.parse(JSON.stringify(payload.cardData));
+                this.cardData = JSON.parse(JSON.stringify(p.cardData));
             } catch (e) {
                 this.cardData = null;
             }
         }
 
         this._editorSessionBoardSnapshot = null;
-        if (payload.board != null && typeof payload.board === 'object') {
+        if (p.board != null && typeof p.board === 'object') {
             try {
-                this._editorSessionBoardSnapshot = JSON.parse(JSON.stringify(payload.board));
+                this._editorSessionBoardSnapshot = JSON.parse(JSON.stringify(p.board));
             } catch (e) {
-                this._editorSessionBoardSnapshot = payload.board;
+                this._editorSessionBoardSnapshot = p.board;
             }
         }
 
-        this.canvas.style.backgroundColor = this.resolveSavedCanvasBackground(payload);
-        this.applyCanvasPatternConfig(this.resolveSavedCanvasBackgroundPattern(payload));
+        this.canvas.style.backgroundColor = this.resolveSavedCanvasBackground(p);
+        this.applyCanvasPatternConfig(this.resolveSavedCanvasBackgroundPattern(p));
 
-        const items = payload.elements || [];
+        const items = p.elements || [];
         let maxNum = 0;
         items.forEach(item => {
             const m = /^element_(\d+)$/.exec(item.id || '');

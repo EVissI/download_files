@@ -40,18 +40,14 @@ export function buildInteractiveSlotsFromCardData(cardData) {
         };
     }
 
+    /* Те же строки, что и в createHintsTable(): только подсказки с probs (как в таблице на холсте). */
     const hints = Array.isArray(cardData.hints) ? cardData.hints : [];
     const moves = [];
     for (let i = 0; i < hints.length; i++) {
         const hint = hints[i];
         if (!hint) continue;
-        const hasProbs = Array.isArray(hint.probs) && hint.probs.length >= 2;
-        const moveRaw = hint.move != null ? String(hint.move).trim() : '';
-        if (hasProbs) {
-            moves.push(String(hint.move != null ? hint.move : '-'));
-        } else if (moveRaw !== '') {
-            moves.push(String(hint.move));
-        }
+        if (!hint.probs || hint.probs.length < 2) continue;
+        moves.push(String(hint.move != null ? hint.move : '-'));
     }
 
     if (moves.length === 0) {
@@ -156,6 +152,38 @@ function fillInteractiveBestMoveGridFromResult(gridEl, result, options = {}) {
  */
 export function fillInteractiveEditorPreviewGrid(gridEl, cardData) {
     const result = buildInteractiveSlotsFromCardData(cardData);
+    fillInteractiveBestMoveGridFromResult(gridEl, result, { dryRun: true });
+}
+
+/**
+ * Слоты из уже известных подписей ходов (например, разобранных с таблицы на холсте).
+ * @param {string[]} moves
+ */
+export function buildInteractiveSlotsFromMoveStrings(moves) {
+    if (!moves || !Array.isArray(moves) || moves.length === 0) {
+        return {
+            error: true,
+            message: 'Интерактив недоступен: нет таблицы ходов',
+            slots: [],
+        };
+    }
+    const slots = [];
+    for (let j = 0; j < 4; j++) {
+        if (j < moves.length) {
+            slots.push({
+                label: String(moves[j]),
+                disabled: false,
+                isCorrect: j === 0,
+            });
+        } else {
+            slots.push({ label: '—', disabled: true, isCorrect: false });
+        }
+    }
+    return { error: false, slots };
+}
+
+/** Редактор: подставить уже посчитанный результат (например, после fallback с DOM таблицы). */
+export function fillInteractiveBestMoveEditorGridFromResult(gridEl, result) {
     fillInteractiveBestMoveGridFromResult(gridEl, result, { dryRun: true });
 }
 
