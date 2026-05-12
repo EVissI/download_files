@@ -2112,6 +2112,16 @@ export class ContentEditor {
 
         handle.addEventListener('mousedown', onDown);
         handle.addEventListener('touchstart', onDown, { passive: false });
+        element.addEventListener('mousedown', (ev) => {
+            if (!element.classList.contains('table-element') || !element.classList.contains('editor-table--collapsed')) return;
+            if (ev.target.closest('.editor-table-toggle, .ce-block-drag-handle, button, a, input, textarea, select')) return;
+            onDown(ev);
+        });
+        element.addEventListener('touchstart', (ev) => {
+            if (!element.classList.contains('table-element') || !element.classList.contains('editor-table--collapsed')) return;
+            if (ev.target.closest('.editor-table-toggle, .ce-block-drag-handle, button, a, input, textarea, select')) return;
+            onDown(ev);
+        }, { passive: false });
         element.dataset.ceBlockReorderBound = '1';
     }
 
