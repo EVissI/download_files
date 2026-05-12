@@ -6797,6 +6797,11 @@ export class ContentEditor {
             this.showNotification('Пустые данные кадра', 'error');
             return;
         }
+        /* Как при «Редактировать кадр» из карточки: подмешать sharedContext в payload из localStorage,
+           иначе hints в кадре могут быть [] и интерактив на холсте пустой при том же кадре в превью. */
+        if (this._contentCardSharedContext && typeof this.applyContentCardSharedToEditorPayload === 'function') {
+            this.applyContentCardSharedToEditorPayload(payload);
+        }
         this.closeCardPreviewModal();
         this.editorOpenedFromPreview = true;
         this.previewEditStorageKey = ref.storageKey;

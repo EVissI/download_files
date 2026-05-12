@@ -286,6 +286,18 @@ export function mergeSharedUnderFrameCardDataImpl(_editor, sharedCd, frameCd) {
     for (const [k, v] of Object.entries(f)) {
         if (v !== undefined && v !== null) o[k] = v;
     }
+    /* Пустой hints/cube_hints в payload кадра не должен затирать общие подсказки карточки (sharedContext). */
+    for (const hk of ['hints', 'cube_hints']) {
+        const sharedArr = Array.isArray(sharedCd[hk]) ? sharedCd[hk] : null;
+        const mergedArr = Array.isArray(o[hk]) ? o[hk] : null;
+        if (sharedArr && sharedArr.length > 0 && mergedArr && mergedArr.length === 0) {
+            try {
+                o[hk] = JSON.parse(JSON.stringify(sharedArr));
+            } catch (_e) {
+                o[hk] = sharedArr.slice();
+            }
+        }
+    }
     return Object.keys(o).length ? o : null;
 }
 
