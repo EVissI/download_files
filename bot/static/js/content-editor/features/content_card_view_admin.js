@@ -326,6 +326,7 @@ export async function openEditorFromContentCardViewImpl(editor) {
         return;
     }
     editor.applyContentCardSharedToEditorPayload(payload);
+    editor._suspendContentCardViewOnlyForEditor();
     editor.closeCardPreviewModal();
     editor.editorOpenedFromContentCardView = true;
     editor.editorOpenedFromPreview = true;

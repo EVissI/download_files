@@ -148,6 +148,9 @@ export class ContentEditor {
         this._contentCardEditFrameIndex = null;
         this._contentCardViewCardId = null;
         this._viewOnlyEditorMounted = false;
+        /** При открытии редактора со страницы карточки временно снимаем __CONTENT_CARD_VIEW_ONLY__, иначе не заполняется интерактив */
+        this._contentCardViewOnlyBeforeEditor = undefined;
+        this._contentCardViewOnlySuspendedForEditor = false;
 
         /** Кэш загрузки PNG для оверлея доски в предпросмотре */
         this._boardPreviewAssetsPromise = null;
@@ -1134,6 +1137,27 @@ export class ContentEditor {
         this._editorSessionBoardSnapshot = null;
     }
 
+    /** Со страницы карточки window.__CONTENT_CARD_VIEW_ONLY__ === true блокирует заполнение кнопок интерактива на канвасе редактора. */
+    _suspendContentCardViewOnlyForEditor() {
+        if (this._contentCardViewOnlySuspendedForEditor) return;
+        this._contentCardViewOnlyBeforeEditor =
+            typeof window !== 'undefined' ? window.__CONTENT_CARD_VIEW_ONLY__ : undefined;
+        if (typeof window !== 'undefined') {
+            window.__CONTENT_CARD_VIEW_ONLY__ = false;
+        }
+        this._contentCardViewOnlySuspendedForEditor = true;
+    }
+
+    _resumeContentCardViewOnlyAfterEditor() {
+        if (!this._contentCardViewOnlySuspendedForEditor) return;
+        if (typeof window !== 'undefined') {
+            window.__CONTENT_CARD_VIEW_ONLY__ =
+                this._contentCardViewOnlyBeforeEditor !== undefined ? this._contentCardViewOnlyBeforeEditor : true;
+        }
+        this._contentCardViewOnlyBeforeEditor = undefined;
+        this._contentCardViewOnlySuspendedForEditor = false;
+    }
+
     /**
      * Объединение cardData при сохранении кадра с content-card-view: новые поля из редактора,
      * hints / cube_hints и прочее из оригинала, если в сессии не пришли.
@@ -1455,6 +1479,7 @@ export class ContentEditor {
         const fromContentCardView = this.editorOpenedFromContentCardView;
         this.modal.style.display = 'none';
         if (fromContentCardView) {
+            this._resumeContentCardViewOnlyAfterEditor();
             this.clearPreviewEditSession();
             document.body.style.overflow = 'hidden';
             if (this.cardPreviewModal) {
@@ -7131,6 +7156,7 @@ export class ContentEditor {
                 this.showNotification('Не удалось сохранить: ' + (err.message || err), 'error');
                 return;
             }
+            this._resumeContentCardViewOnlyAfterEditor();
             this.clearPreviewEditSession();
             this.resetEditorAfterSave();
             if (this.modal) {
