@@ -780,36 +780,55 @@
         .cabinet-gallery-modal__close:active {
             background: #3d4550;
         }
-        .cabinet-gallery-modal__grid {
+        .cabinet-gallery-modal__scroll {
             flex: 1 1 0;
             min-height: 0;
-            overflow: auto;
+            width: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+        }
+        .cabinet-gallery-modal__grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-            align-content: start;
+            grid-template-columns: minmax(0, 1fr);
+            grid-auto-rows: auto;
+            align-items: start;
+            gap: 12px;
+            width: 100%;
+            padding-bottom: 8px;
+            box-sizing: border-box;
         }
         .cabinet-gallery-modal__cell {
             position: relative;
             width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
             border-radius: 10px;
             overflow: hidden;
             background: #1a1d22;
             border: 1px solid #3b414b;
+            isolation: isolate;
         }
         .cabinet-gallery-modal__cell img {
-            width: 100%;
-            height: auto;
-            max-height: min(72vh, 900px);
-            object-fit: contain;
-            object-position: center;
             display: block;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            max-height: min(70vh, 800px);
+            object-fit: contain;
+            object-position: center top;
+            flex: 0 0 auto;
             background: #121418;
         }
         .cabinet-gallery-modal__del {
             position: absolute;
             top: 4px;
             right: 4px;
+            z-index: 2;
             width: 26px;
             height: 26px;
             border: 0;
@@ -830,6 +849,7 @@
         .cabinet-gallery-modal__msg {
             margin: 0;
             min-height: 0;
+            flex-shrink: 0;
             font-size: 12px;
             color: #f4b567;
             display: none;
@@ -956,7 +976,9 @@
         <div id="cabinetGalleryModalBox" class="cabinet-gallery-modal__box" role="dialog" aria-modal="true" aria-label="Галерея">
             <button id="cabinetGalleryModalClose" type="button" class="cabinet-gallery-modal__close" aria-label="Закрыть">×</button>
             <input id="cabinetGalleryFile" type="file" accept="image/*" multiple style="display:none" tabindex="-1">
-            <div id="cabinetGalleryGrid" class="cabinet-gallery-modal__grid"></div>
+            <div id="cabinetGalleryScroll" class="cabinet-gallery-modal__scroll">
+                <div id="cabinetGalleryGrid" class="cabinet-gallery-modal__grid"></div>
+            </div>
             <p id="cabinetGalleryMsg" class="cabinet-gallery-modal__msg"></p>
         </div>
     </div>
