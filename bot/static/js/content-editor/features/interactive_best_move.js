@@ -44,8 +44,14 @@ export function buildInteractiveSlotsFromCardData(cardData) {
     const moves = [];
     for (let i = 0; i < hints.length; i++) {
         const hint = hints[i];
-        if (!hint || !hint.probs || hint.probs.length < 2) continue;
-        moves.push(String(hint.move != null ? hint.move : '-'));
+        if (!hint) continue;
+        const hasProbs = Array.isArray(hint.probs) && hint.probs.length >= 2;
+        const moveRaw = hint.move != null ? String(hint.move).trim() : '';
+        if (hasProbs) {
+            moves.push(String(hint.move != null ? hint.move : '-'));
+        } else if (moveRaw !== '') {
+            moves.push(String(hint.move));
+        }
     }
 
     if (moves.length === 0) {

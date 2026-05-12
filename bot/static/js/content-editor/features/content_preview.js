@@ -213,6 +213,19 @@ function isLatestSavedSlotForFrame(ref, allRefs) {
  * а фон узора живёт только в состоянии редактора до «Сохранить кадр». Подмешиваем актуальный фон,
  * если поверх открыт редактор и показывается тот же кадр, который сейчас редактируется.
  */
+/** Как фон доски: для текущего редактируемого кадра подставляем актуальные hints из сессии, иначе в превью пустой интерактив. */
+function injectLiveCardDataForPreviewIfMerged(editor, clone) {
+    if (!editor || !clone) return;
+    if (typeof editor.getEffectiveCardDataForInteractivePreview !== 'function') return;
+    const liveCd = editor.getEffectiveCardDataForInteractivePreview();
+    if (!liveCd || typeof liveCd !== 'object' || !Object.keys(liveCd).length) return;
+    try {
+        clone.cardData = JSON.parse(JSON.stringify(liveCd));
+    } catch (_e) {
+        /* noop */
+    }
+}
+
 function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRefs) {
     if (!payload || typeof payload !== 'object' || !editor.canvas) {
         logPreviewBg('mergeLiveCanvasBackground:skip', { reason: 'no payload/canvas' });
@@ -307,6 +320,7 @@ function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRe
         return payload;
     }
     if (!clone.editor || typeof clone.editor !== 'object') clone.editor = {};
+    injectLiveCardDataForPreviewIfMerged(editor, clone);
     /* После «Сохранить кадр» редактор сбрасывает узор в DOM, но payload уже содержит паттерн в JSON.
        Если подмешать «живое» состояние (null), превью затрёт только что сохранённый узор. */
     if (editor._previewMergePreferStoredCanvasBg) {
