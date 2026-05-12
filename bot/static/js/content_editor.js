@@ -1245,10 +1245,15 @@ export class ContentEditor {
             }
             return;
         }
-        if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ === true) {
+        /* Только страница карточки: не трогаем канвас редактора, пока модалка закрыта (интерактив в превью заполняет setupInteractiveBestMoveAfterCardPreviewRender). Когда редактор уже открыт — всегда собираем кнопки, даже если window.__CONTENT_CARD_VIEW_ONLY__ ещё true. */
+        const viewOnlyCardPage =
+            typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true;
+        const editorModalOpen = !!(this.modal && this.modal.style.display === 'flex');
+        if (viewOnlyCardPage && !editorModalOpen) {
             if (typeof console !== 'undefined' && console.info) {
-                console.info(log, 'refreshInteractiveBestMoveElementsFromCardData: пропуск — режим просмотра карточки', {
-                    viewOnly: typeof window !== 'undefined' ? window.__CONTENT_CARD_VIEW_ONLY__ : undefined,
+                console.info(log, 'refreshInteractiveBestMoveElementsFromCardData: пропуск — только карточка, редактор закрыт', {
+                    viewOnly: true,
+                    editorModalOpen: false,
                 });
             }
             return;
@@ -1478,8 +1483,9 @@ export class ContentEditor {
         this._restoreLiveHintBoardCanvasIfNeeded();
         const fromContentCardView = this.editorOpenedFromContentCardView;
         this.modal.style.display = 'none';
+        /* После openEditorFromSelectedPreview со страницы карточки editorOpenedFromContentCardView может быть false — всё равно снимаем suspend. */
+        this._resumeContentCardViewOnlyAfterEditor();
         if (fromContentCardView) {
-            this._resumeContentCardViewOnlyAfterEditor();
             this.clearPreviewEditSession();
             document.body.style.overflow = 'hidden';
             if (this.cardPreviewModal) {
@@ -7067,6 +7073,9 @@ export class ContentEditor {
            иначе hints в кадре могут быть [] и интерактив на холсте пустой при том же кадре в превью. */
         if (this._contentCardSharedContext && typeof this.applyContentCardSharedToEditorPayload === 'function') {
             this.applyContentCardSharedToEditorPayload(payload);
+        }
+        if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true && this._contentCardViewCardId) {
+            this._suspendContentCardViewOnlyForEditor();
         }
         this.closeCardPreviewModal();
         this.editorOpenedFromPreview = true;
