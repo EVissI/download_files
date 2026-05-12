@@ -282,7 +282,7 @@ async function confirmSaveTemplate(editor, nameInput) {
             }
             throw new Error(msg || `Ошибка ${r.status}`);
         }
-        editor.resetEditorAfterSave();
+        /* В отличие от «Сохранить кадр», шаблон не должен очищать канвас редактора. */
         editor.showNotification('Шаблон сохранён', 'success');
     } catch (e) {
         console.error('frame_templates save:', e);
@@ -344,7 +344,6 @@ async function openInsertModal(editor) {
             const id = t.id;
             const name = String(t.name || '');
             let payload = t.payload || {};
-            /* Превью / вставка шаблона всегда без доски, таблиц и интерактива, даже если шаблон сохранён до этой правки. */
             if (typeof editor.sanitizePayloadForTemplate === 'function') {
                 try {
                     payload = JSON.parse(JSON.stringify(payload));

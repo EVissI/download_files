@@ -5209,39 +5209,19 @@ export class ContentEditor {
     }
 
     /**
-     * Шаблон кадра не должен нести в себе доску, табличные блоки, интерактив и данные кадра (hints/cube_hints).
-     * Чистим payload, полученный из buildFrameSavePayload, in-place — последующая загрузка медиа и сохранение
-     * используют уже отфильтрованный payload.
+     * Доп. обработка payload перед сохранением шаблона в БД (при необходимости).
+     * Раньше вырезались доска, таблицы и cardData — теперь шаблон хранит кадр как есть, чтобы при вставке
+     * не терялись блоки доски/таблицы и данные подсказок.
      */
     sanitizePayloadForTemplate(payload) {
         if (!payload || typeof payload !== 'object') return payload;
-
-        payload.board = null;
-        payload.cardData = null;
-
-        if (!payload.editor || typeof payload.editor !== 'object') payload.editor = {};
-        payload.editor.boardCanvasToggle = false;
-        payload.editor.showBoardMatchBanner = false;
-
-        const blockedToolIds = new Set([
-            'boardCanvas',
-            'board-illustration',
-            'moveHintsTable',
-            'interactive-best-move',
-        ]);
-        if (Array.isArray(payload.elements)) {
-            payload.elements = payload.elements.filter((item) => {
-                const tid = item && (item.toolId || (item.dataset && item.dataset.toolId)) || '';
-                return !blockedToolIds.has(tid);
-            });
-        }
         return payload;
     }
 
     /**
-     * Вставка шаблона кадра: не перетирает текущие board / cardData (hints / cube_hints)
-     * и состояние тоггла доски — берём их с активного кадра, а из шаблона используем только
-     * визуальные настройки канваса и список элементов.
+     * Вставка шаблона кадра: восстанавливает элементы из шаблона (включая доску и таблицы, если они в шаблоне).
+     * Снимок доски и cardData подмешиваются с текущей сессии редактора / hint viewer, чтобы подсказки
+     * соответствовали открытой позиции; тогглы доски и баннер матча — как на канвасе сейчас.
      */
     async applyFrameTemplatePayload(rawTemplatePayload) {
         let p;
@@ -5251,7 +5231,7 @@ export class ContentEditor {
             p = rawTemplatePayload || {};
         }
         if (!p || typeof p !== 'object') p = {};
-        /* Старые шаблоны могут содержать board / cardData / таблицы / интерактив — снимаем их перед мерджем. */
+        /* Шаблон может содержать доску и таблицы; cardData/board snapshot ниже подмешиваем с текущей сессии. */
         this.sanitizePayloadForTemplate(p);
 
         let currentBoard = null;
