@@ -94,9 +94,16 @@ const {
     buildInteractiveSlotsFromCardData,
     buildInteractiveSlotsFromMoveStrings,
     countInteractiveMovesFromCardData,
+    countInteractiveCubeActionsFromCardData,
+    countInteractiveAvailableFromCardData,
     clampInteractiveButtonCount,
     parseCeInteractiveButtonCountRaw,
     resolveInteractiveButtonCountRaw,
+    getInteractiveTableTypeFromBlock,
+    parseInteractiveTableTypeFromSavedElement,
+    syncInteractiveBlockTitleByType,
+    INTERACTIVE_TABLE_TYPE_HINTS,
+    INTERACTIVE_TABLE_TYPE_CUBE,
 } = await import(
     new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
@@ -1238,6 +1245,37 @@ export class ContentEditor {
         return moves;
     }
 
+    /**
+     * Первая колонка tbody таблицы по кубу на холсте — те же подписи, что видит автор (как в createCubeTable).
+     * Нужна, если cardData в сессии без cube_hints, а таблица заполнена из сохранённого HTML.
+     */
+    parseActionsFromCubeTableDom(tableWrapper) {
+        if (!tableWrapper) return [];
+        const tbody = tableWrapper.querySelector('table.ce-content-table tbody');
+        if (!tbody) {
+            if (typeof console !== 'undefined' && console.info) {
+                console.info('[CE:interactive-best-move]', 'parseActionsFromCubeTableDom: нет table.ce-content-table tbody', {
+                    hasWrapper: true,
+                });
+            }
+            return [];
+        }
+        const actions = [];
+        tbody.querySelectorAll('tr').forEach((row) => {
+            const cell = row.querySelector('td');
+            if (!cell) return;
+            const txt = String(cell.textContent || '').trim();
+            if (txt) actions.push(txt);
+        });
+        if (typeof console !== 'undefined' && console.info) {
+            console.info('[CE:interactive-best-move]', 'parseActionsFromCubeTableDom', {
+                rowsParsed: actions.length,
+                preview: actions.slice(0, 6),
+            });
+        }
+        return actions;
+    }
+
     /** Обновить блоки «Интерактив» на канвасе по текущим данным таблицы ходов (только редактор). */
     refreshInteractiveBestMoveElementsFromCardData() {
         const log = '[CE:interactive-best-move]';
@@ -1279,10 +1317,14 @@ export class ContentEditor {
                 ? cd.hints.filter((h) => h && Array.isArray(h.probs) && h.probs.length >= 2).length
                 : null;
 
-        const tableEl = Array.from(this.canvas.querySelectorAll('.canvas-element.table-element')).find(
+        const hintsTableEl = Array.from(this.canvas.querySelectorAll('.canvas-element.table-element')).find(
             (w) => w.dataset.tableType !== 'cube'
         );
-        const domMoves = tableEl ? this.parseMovesFromHintsTableDom(tableEl) : [];
+        const cubeTableEl = Array.from(this.canvas.querySelectorAll('.canvas-element.table-element')).find(
+            (w) => w.dataset.tableType === 'cube'
+        );
+        const domMoves = hintsTableEl ? this.parseMovesFromHintsTableDom(hintsTableEl) : [];
+        const domCubeActions = cubeTableEl ? this.parseActionsFromCubeTableDom(cubeTableEl) : [];
 
         const blocks = this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]');
         if (typeof console !== 'undefined' && console.info) {
@@ -1292,8 +1334,10 @@ export class ContentEditor {
                 mergedCardDataHintsLen: mergedHintsLen,
                 mergedHintsWithProbsGe2: mergedHintsWithProbs,
                 cardDataAction: cd && cd.action != null ? cd.action : null,
-                hintsTableOnCanvas: !!tableEl,
+                hintsTableOnCanvas: !!hintsTableEl,
+                cubeTableOnCanvas: !!cubeTableEl,
                 domMovesCount: domMoves.length,
+                domCubeActionsCount: domCubeActions.length,
                 interactiveBlocksCount: blocks.length,
             });
         }
@@ -1306,21 +1350,29 @@ export class ContentEditor {
                 }
                 return;
             }
-            const maxFromCd = countInteractiveMovesFromCardData(cd);
-            const maxAvail = Math.max(maxFromCd, domMoves.length, 1);
+            const tableType = getInteractiveTableTypeFromBlock(el);
+            syncInteractiveBlockTitleByType(el, tableType);
+
+            const isCube = tableType === INTERACTIVE_TABLE_TYPE_CUBE;
+            const maxFromCd = isCube
+                ? countInteractiveCubeActionsFromCardData(cd)
+                : countInteractiveMovesFromCardData(cd);
+            const domFallback = isCube ? domCubeActions : domMoves;
+            const maxAvail = Math.max(maxFromCd, domFallback.length, 1);
             const rawBc = parseCeInteractiveButtonCountRaw(el);
             const btnCount = clampInteractiveButtonCount(rawBc, maxAvail, 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
 
-            let result = buildInteractiveSlotsFromCardData(cd, btnCount);
+            let result = buildInteractiveSlotsFromCardData(cd, btnCount, tableType);
             let usedDomFallback = false;
-            if (result.error && domMoves.length > 0) {
-                result = buildInteractiveSlotsFromMoveStrings(domMoves, btnCount);
+            if (result.error && domFallback.length > 0) {
+                result = buildInteractiveSlotsFromMoveStrings(domFallback, btnCount);
                 usedDomFallback = true;
             }
             if (typeof console !== 'undefined' && console.info) {
                 console.info(log, 'элемент интерактива', {
                     elementId: el.id,
+                    tableType,
                     buildOk: !result.error,
                     message: result.error ? result.message : undefined,
                     usedDomFallback,
@@ -1376,11 +1428,13 @@ export class ContentEditor {
         }
         inner.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
             const grid = el.querySelector('[data-ce-interactive-grid]');
-            const maxM = countInteractiveMovesFromCardData(cd);
+            const tableType = getInteractiveTableTypeFromBlock(el);
+            syncInteractiveBlockTitleByType(el, tableType);
+            const maxM = countInteractiveAvailableFromCardData(cd, tableType);
             const rawBc = resolveInteractiveButtonCountRaw(el, payload);
             const btnCount = clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
-            fillInteractiveEditorPreviewGrid(grid, cd, btnCount);
+            fillInteractiveEditorPreviewGrid(grid, cd, btnCount, tableType);
             el.style.height = 'auto';
             el.style.minHeight = '';
         });
@@ -3917,9 +3971,16 @@ export class ContentEditor {
                 if (!element.dataset.ceInteractiveButtonCount) {
                     element.dataset.ceInteractiveButtonCount = '4';
                 }
+                if (!element.dataset.ceInteractiveTableType) {
+                    element.dataset.ceInteractiveTableType = INTERACTIVE_TABLE_TYPE_HINTS;
+                }
+                const titleText =
+                    element.dataset.ceInteractiveTableType === INTERACTIVE_TABLE_TYPE_CUBE
+                        ? 'Выбери лучшее действие'
+                        : 'Выбери лучший ход';
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">
-                        <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
+                        <p class="ce-interactive-best-move__title">${titleText}</p>
                         <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
                     </div>`;
                 /* refreshInteractiveBestMoveElementsFromCardData вызывается после appendChild в addElementToCanvas —
@@ -4380,13 +4441,20 @@ export class ContentEditor {
                 ? mergedPayload.cardData
                 : this.getEffectiveCardDataForInteractivePreview();
 
-        let maxMoves = countInteractiveMovesFromCardData(cd);
+        const tableType = getInteractiveTableTypeFromBlock(element);
+        const isCube = tableType === INTERACTIVE_TABLE_TYPE_CUBE;
+
+        let maxMoves = isCube
+            ? countInteractiveCubeActionsFromCardData(cd)
+            : countInteractiveMovesFromCardData(cd);
         if (maxMoves === 0 && this.canvas) {
             const tableEl = Array.from(this.canvas.querySelectorAll('.canvas-element.table-element')).find(
-                (w) => w.dataset.tableType !== 'cube'
+                (w) => (isCube ? w.dataset.tableType === 'cube' : w.dataset.tableType !== 'cube')
             );
-            const domMoves = tableEl ? this.parseMovesFromHintsTableDom(tableEl) : [];
-            maxMoves = Math.max(domMoves.length, 1);
+            const domItems = tableEl
+                ? (isCube ? this.parseActionsFromCubeTableDom(tableEl) : this.parseMovesFromHintsTableDom(tableEl))
+                : [];
+            maxMoves = Math.max(domItems.length, 1);
         } else {
             maxMoves = Math.max(maxMoves, 1);
         }
@@ -4395,12 +4463,18 @@ export class ContentEditor {
         const selected = clampInteractiveButtonCount(raw, maxMoves, 4);
 
         if (maxMoves < 2) {
+            const msg = isCube
+                ? 'В данных только один вариант действия — отображается одна кнопка.'
+                : 'В данных только один вариант хода — отображается одна кнопка.';
             return `
                 <div class="property-item">
-                    <p class="property-hint" style="margin:0;font-size:11px;color:#aaa;line-height:1.35;">В данных только один вариант хода — отображается одна кнопка.</p>
+                    <p class="property-hint" style="margin:0;font-size:11px;color:#aaa;line-height:1.35;">${msg}</p>
                 </div>`;
         }
 
+        const titleAttr = isCube
+            ? 'От 2 до числа действий в таблице по кубу'
+            : 'От 2 до числа ходов с данными в таблице подсказок';
         const opts = [];
         for (let v = 2; v <= maxMoves; v++) {
             opts.push(`<option value="${v}" ${v === selected ? 'selected' : ''}>${v}</option>`);
@@ -4409,7 +4483,7 @@ export class ContentEditor {
                 <div class="property-item">
                     <label>Число кнопок:</label>
                     <select id="propInteractiveButtonCount" class="ce-property-input-fluid"
-                            title="От 2 до числа ходов с данными в таблице подсказок"
+                            title="${titleAttr}"
                             onchange="contentEditor.updateElementProperty('interactiveButtonCount', this.value)">
                         ${opts.join('')}
                     </select>
@@ -4600,6 +4674,13 @@ export class ContentEditor {
                 </div>
                 ` : ''}
                 ${element.dataset.toolId === 'interactive-best-move' ? `
+                <div class="property-item">
+                    <label>Тип таблицы:</label>
+                    <select id="propInteractiveTableType" onchange="contentEditor.updateElementProperty('interactiveTableType', this.value)">
+                        <option value="hints" ${(element.dataset.ceInteractiveTableType === 'hints' || !element.dataset.ceInteractiveTableType) ? 'selected' : ''}>Таблица хода</option>
+                        <option value="cube" ${element.dataset.ceInteractiveTableType === 'cube' ? 'selected' : ''}>Таблица по кубу</option>
+                    </select>
+                </div>
                 ${this.renderInteractiveButtonCountSelectHtml(element)}
                 <div class="property-item">
                     <label>Текст при верном ответе:</label>
@@ -4658,6 +4739,19 @@ export class ContentEditor {
                     this.selectedElement.dataset.ceInteractiveButtonCount =
                         Number.isFinite(n) && n >= 2 ? String(Math.min(n, 999)) : '4';
                     this.refreshInteractiveBestMoveElementsFromCardData();
+                }
+                break;
+            case 'interactiveTableType':
+                if (this.selectedElement.dataset.toolId === 'interactive-best-move') {
+                    const t =
+                        String(value || '').trim().toLowerCase() === INTERACTIVE_TABLE_TYPE_CUBE
+                            ? INTERACTIVE_TABLE_TYPE_CUBE
+                            : INTERACTIVE_TABLE_TYPE_HINTS;
+                    this.selectedElement.dataset.ceInteractiveTableType = t;
+                    syncInteractiveBlockTitleByType(this.selectedElement, t);
+                    this.refreshInteractiveBestMoveElementsFromCardData();
+                    /* Заново отрисовать панель свойств: пересчитать максимум кнопок для нового типа таблицы. */
+                    this.showElementProperties(this.selectedElement);
                 }
                 break;
             case 'audioTitle':
@@ -7438,6 +7532,7 @@ export class ContentEditor {
                     break;
                 }
             }
+            element.dataset.ceInteractiveTableType = parseInteractiveTableTypeFromSavedElement(item);
         }
         if (item.style) {
             if (item.style.top) element.style.top = item.style.top;
@@ -7511,9 +7606,16 @@ export class ContentEditor {
                 if (!element.dataset.ceInteractiveButtonCount) {
                     element.dataset.ceInteractiveButtonCount = '4';
                 }
+                if (!element.dataset.ceInteractiveTableType) {
+                    element.dataset.ceInteractiveTableType = INTERACTIVE_TABLE_TYPE_HINTS;
+                }
+                const titleText =
+                    element.dataset.ceInteractiveTableType === INTERACTIVE_TABLE_TYPE_CUBE
+                        ? 'Выбери лучшее действие'
+                        : 'Выбери лучший ход';
                 element.innerHTML = `
                     <div class="ce-interactive-best-move__inner">
-                        <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
+                        <p class="ce-interactive-best-move__title">${titleText}</p>
                         <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
                     </div>`;
                 break;

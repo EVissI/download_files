@@ -7,6 +7,61 @@ const CE_IBM_LOG = '[CE:interactive-best-move]';
 export const INTERACTIVE_BEST_MOVE_FEEDBACK_DEFAULT_OK = 'Правильно';
 export const INTERACTIVE_BEST_MOVE_FEEDBACK_DEFAULT_BAD = 'Неправильно';
 
+/** Типы данных, по которым строится интерактив. */
+export const INTERACTIVE_TABLE_TYPE_HINTS = 'hints';
+export const INTERACTIVE_TABLE_TYPE_CUBE = 'cube';
+
+const INTERACTIVE_TITLE_HINTS = 'Выбери лучший ход';
+const INTERACTIVE_TITLE_CUBE = 'Выбери лучшее действие';
+
+function normalizeInteractiveTableType(value) {
+    return String(value || '').trim().toLowerCase() === INTERACTIVE_TABLE_TYPE_CUBE
+        ? INTERACTIVE_TABLE_TYPE_CUBE
+        : INTERACTIVE_TABLE_TYPE_HINTS;
+}
+
+/** Тип таблицы (hints/cube), по которой построен блок интерактива. */
+export function getInteractiveTableTypeFromBlock(block) {
+    if (!block) return INTERACTIVE_TABLE_TYPE_HINTS;
+    const attr =
+        typeof block.getAttribute === 'function'
+            ? block.getAttribute('data-ce-interactive-table-type')
+            : null;
+    const ds = block.dataset || {};
+    const candidate = attr || ds.ceInteractiveTableType || ds.ce_interactive_table_type;
+    return normalizeInteractiveTableType(candidate);
+}
+
+/** Тип таблицы из сохранённого payload (до десериализации в DOM). */
+export function parseInteractiveTableTypeFromSavedElement(item) {
+    if (!item || typeof item !== 'object') return INTERACTIVE_TABLE_TYPE_HINTS;
+    const ds = item.dataset && typeof item.dataset === 'object' ? item.dataset : {};
+    const candidates = [
+        ds.ceInteractiveTableType,
+        ds.ce_interactive_table_type,
+        item.ceInteractiveTableType,
+        item.ce_interactive_table_type,
+        item.interactiveTableType,
+        item.interactive_table_type,
+    ];
+    for (let i = 0; i < candidates.length; i++) {
+        const v = candidates[i];
+        if (v != null && String(v).trim() !== '') return normalizeInteractiveTableType(v);
+    }
+    return INTERACTIVE_TABLE_TYPE_HINTS;
+}
+
+/** Перенастроить заголовок блока интерактива под выбранный тип таблицы. */
+export function syncInteractiveBlockTitleByType(block, tableType) {
+    if (!block) return;
+    const title = block.querySelector('.ce-interactive-best-move__title');
+    if (!title) return;
+    title.textContent =
+        normalizeInteractiveTableType(tableType) === INTERACTIVE_TABLE_TYPE_CUBE
+            ? INTERACTIVE_TITLE_CUBE
+            : INTERACTIVE_TITLE_HINTS;
+}
+
 /**
  * Настройка из кабинета карточек ("Открыть подсказки").
  * Если выключена или отсутствует — блоки интерактива на странице карточки прячем.
@@ -221,6 +276,22 @@ export function countInteractiveMovesFromCardData(cardData) {
     return n;
 }
 
+/** Сколько кубических действий даёт cube_hints[0].cubeful_equities (как в createCubeTable). */
+export function countInteractiveCubeActionsFromCardData(cardData) {
+    if (!cardData || typeof cardData !== 'object') return 0;
+    const ch = Array.isArray(cardData.cube_hints) ? cardData.cube_hints : null;
+    const ch0 = ch && ch.length ? ch[0] : null;
+    const ce = ch0 && Array.isArray(ch0.cubeful_equities) ? ch0.cubeful_equities : null;
+    return ce ? ce.length : 0;
+}
+
+/** Универсальный счётчик: для hints — ходы с probs, для cube — cubeful_equities. */
+export function countInteractiveAvailableFromCardData(cardData, tableType) {
+    return normalizeInteractiveTableType(tableType) === INTERACTIVE_TABLE_TYPE_CUBE
+        ? countInteractiveCubeActionsFromCardData(cardData)
+        : countInteractiveMovesFromCardData(cardData);
+}
+
 /**
  * Не меньше 2 кнопок, если доступно ≥2 ходов; при одном варианте (победа / один ход) — 1.
  * Значение «1» из UI не выбирается при нескольких ходах.
@@ -237,20 +308,75 @@ export function clampInteractiveButtonCount(raw, maxAvailable, defaultCount = 4)
 /**
  * @param {object | null | undefined} cardData
  * @param {number} [buttonCount=4] — желаемое число активных кнопок (не больше числа доступных ходов)
+ * @param {'hints'|'cube'} [tableType='hints'] — по какой таблице строим интерактив
  * @returns {{ error: boolean, message?: string, slots: Array<{ label: string, disabled: boolean, isCorrect: boolean }> }}
  */
-export function buildInteractiveSlotsFromCardData(cardData, buttonCount = 4) {
+export function buildInteractiveSlotsFromCardData(cardData, buttonCount = 4, tableType = INTERACTIVE_TABLE_TYPE_HINTS) {
+    const type = normalizeInteractiveTableType(tableType);
+
     if (!cardData || typeof cardData !== 'object') {
         if (typeof console !== 'undefined' && console.info) {
             console.info(CE_IBM_LOG, 'buildInteractiveSlotsFromCardData: cardData пустой или не объект', {
                 cardData,
+                tableType: type,
             });
         }
         return {
             error: true,
-            message: 'Интерактив недоступен: нет таблицы ходов',
+            message:
+                type === INTERACTIVE_TABLE_TYPE_CUBE
+                    ? 'Интерактив недоступен: нет таблицы по кубу'
+                    : 'Интерактив недоступен: нет таблицы ходов',
             slots: [],
         };
+    }
+
+    if (type === INTERACTIVE_TABLE_TYPE_CUBE) {
+        /* Те же строки, что и в createCubeTable(): cubeful_equities из первого элемента cube_hints. */
+        const ch = Array.isArray(cardData.cube_hints) ? cardData.cube_hints : [];
+        const ch0 = ch.length ? ch[0] : null;
+        const equities = ch0 && Array.isArray(ch0.cubeful_equities) ? ch0.cubeful_equities : [];
+        const actions = [];
+        for (let i = 0; i < equities.length; i++) {
+            const h = equities[i];
+            if (!h) continue;
+            let label = h.action_1 != null ? String(h.action_1) : '';
+            if (h.action_2 != null && String(h.action_2).trim() !== '') {
+                label = label ? `${label}, ${h.action_2}` : String(h.action_2);
+            }
+            actions.push(label || '-');
+        }
+
+        if (actions.length === 0) {
+            if (typeof console !== 'undefined' && console.info) {
+                console.info(CE_IBM_LOG, 'buildInteractiveSlotsFromCardData(cube): нет cubeful_equities', {
+                    cubeHintsLen: ch.length,
+                });
+            }
+            return {
+                error: true,
+                message: 'Интерактив недоступен: нет таблицы по кубу',
+                slots: [],
+            };
+        }
+
+        const n = clampInteractiveButtonCount(buttonCount, actions.length, 4);
+        const slots = [];
+        for (let j = 0; j < n; j++) {
+            slots.push({
+                label: actions[j],
+                disabled: false,
+                isCorrect: j === 0,
+            });
+        }
+        if (typeof console !== 'undefined' && console.debug) {
+            console.debug(CE_IBM_LOG, 'buildInteractiveSlotsFromCardData(cube): ok', {
+                actionsLen: actions.length,
+                buttonCount: n,
+                labels: actions.slice(0, n),
+            });
+        }
+        return { error: false, slots };
     }
 
     if (cardData.action === 'win') {
@@ -412,8 +538,8 @@ function fillInteractiveBestMoveGridFromResult(gridEl, result, options = {}) {
  * @param {object | null | undefined} cardData — уже смерженный эффективный cardData
  * @param {number} [buttonCount=4]
  */
-export function fillInteractiveEditorPreviewGrid(gridEl, cardData, buttonCount = 4) {
-    const result = buildInteractiveSlotsFromCardData(cardData, buttonCount);
+export function fillInteractiveEditorPreviewGrid(gridEl, cardData, buttonCount = 4, tableType = INTERACTIVE_TABLE_TYPE_HINTS) {
+    const result = buildInteractiveSlotsFromCardData(cardData, buttonCount, tableType);
     fillInteractiveBestMoveGridFromResult(gridEl, result, { dryRun: true });
 }
 
@@ -477,11 +603,14 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
         block.style.display = '';
         block.removeAttribute('aria-hidden');
 
+        const tableType = getInteractiveTableTypeFromBlock(block);
+        syncInteractiveBlockTitleByType(block, tableType);
+
         const raw = resolveInteractiveButtonCountRaw(block, payload);
-        const maxM = countInteractiveMovesFromCardData(cardData);
+        const maxM = countInteractiveAvailableFromCardData(cardData, tableType);
         const btn = clampInteractiveButtonCount(raw, Math.max(1, maxM), 4);
         if (block.dataset) block.dataset.ceInteractiveButtonCount = String(btn);
-        const built = buildInteractiveSlotsFromCardData(cardData, btn);
+        const built = buildInteractiveSlotsFromCardData(cardData, btn, tableType);
         fillInteractiveBlock(block, built, editor);
     });
 }
