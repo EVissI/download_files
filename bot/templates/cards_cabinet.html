@@ -353,44 +353,6 @@
             gap: 10px;
         }
 
-        .cabinet-tile-cell {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1;
-        }
-
-        .cabinet-tile-cell .tile {
-            width: 100%;
-            height: 100%;
-            aspect-ratio: unset;
-            box-sizing: border-box;
-        }
-
-        .cabinet-interactive-stat-btn {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            z-index: 2;
-            width: 22px;
-            height: 22px;
-            padding: 0;
-            margin: 0;
-            border: 1px solid #555;
-            border-radius: 6px;
-            background: rgba(30, 30, 30, 0.92);
-            color: #c8d4e8;
-            font-size: 12px;
-            line-height: 1;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .cabinet-interactive-stat-btn:active {
-            background: #3a4a60;
-        }
-
         .tile {
             aspect-ratio: 1;
             display: flex;
@@ -939,6 +901,7 @@
             </div>
             <h1>Мои карточки</h1>
             <div class="cabinet-header-actions">
+                <button id="cabinet-interactive-stats-btn" class="cabinet-shuffle-btn" type="button" title="Статистика интерактива (все карточки)" aria-label="Статистика интерактива">📊</button>
                 <a id="admin-fab-btn" class="cabinet-admin-btn" href="/admin" title="Перейти в админку" aria-label="Перейти в админку">A</a>
             </div>
         </div>
@@ -1035,7 +998,7 @@
     <div id="interactiveStatsModal" class="shuffle-modal" aria-hidden="true">
         <div class="shuffle-modal__overlay" id="interactiveStatsModalOverlay"></div>
         <div class="shuffle-modal__box" role="dialog" aria-modal="true" aria-labelledby="interactiveStatsModalTitle">
-            <h3 id="interactiveStatsModalTitle" class="shuffle-modal__title">Интерактив «лучший ход»</h3>
+            <h3 id="interactiveStatsModalTitle" class="shuffle-modal__title">Интерактив: суммарно по всем карточкам</h3>
             <p id="interactiveStatsModalBody" class="shuffle-modal__msg" style="min-height: 48px; color: #e8e8e8;"></p>
             <div class="shuffle-modal__actions">
                 <button type="button" id="interactiveStatsModalCloseBtn" class="shuffle-modal__btn shuffle-modal__btn--primary">Закрыть</button>
@@ -1132,6 +1095,7 @@
             var generateLinkModalMsg = document.getElementById('generateLinkModalMsg');
             var generateLinkModalCloseBtn = document.getElementById('generateLinkModalCloseBtn');
             var generateLinkModalCopyBtn = document.getElementById('generateLinkModalCopyBtn');
+            var cabinetInteractiveStatsBtn = document.getElementById('cabinet-interactive-stats-btn');
             var cabinetGalleryBtn = document.getElementById('cabinet-gallery-btn');
             var cabinetGalleryModal = document.getElementById('cabinetGalleryModal');
             var cabinetGalleryModalOverlay = document.getElementById('cabinetGalleryModalOverlay');
@@ -2260,8 +2224,6 @@
                     var index = row.__index;
                     var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
                     var cardIdNum = Number(id);
-                    var cell = document.createElement('div');
-                    cell.className = 'cabinet-tile-cell';
                     var btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'tile';
@@ -2318,20 +2280,7 @@
                             // Даже если отметка статуса не удалась, всё равно открываем карточку.
                         }).finally(openCard);
                     });
-                    var statBtn = document.createElement('button');
-                    statBtn.type = 'button';
-                    statBtn.className = 'cabinet-interactive-stat-btn';
-                    statBtn.setAttribute('aria-label', 'Статистика интерактива');
-                    statBtn.title = 'Статистика интерактива';
-                    statBtn.textContent = '📊';
-                    statBtn.addEventListener('click', function (ev) {
-                        ev.preventDefault();
-                        ev.stopPropagation();
-                        openInteractiveStatsModal(cardIdNum);
-                    });
-                    cell.appendChild(btn);
-                    cell.appendChild(statBtn);
-                    gridEl.appendChild(cell);
+                    gridEl.appendChild(btn);
                 });
             }
 
@@ -2344,17 +2293,15 @@
                 }
             }
 
-            function openInteractiveStatsModal(cardId) {
+            function openInteractiveStatsModal() {
                 if (!interactiveStatsModal || !interactiveStatsModalBody) return;
                 interactiveStatsModalBody.textContent = 'Загрузка…';
                 interactiveStatsModal.classList.add('is-open');
                 interactiveStatsModal.setAttribute('aria-hidden', 'false');
-                fetch('/api/content_cards/interactive/stats', {
+                fetch('/api/content_cards/interactive/stats_total', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(
-                        authPayload({ content_card_id: Number(cardId) })
-                    ),
+                    body: JSON.stringify(authPayload({}))
                 })
                     .then(function (r) {
                         return r.json().then(function (data) {
@@ -2371,6 +2318,7 @@
                         var c = Number((res.data && res.data.correct_count) || 0);
                         var w = Number((res.data && res.data.wrong_count) || 0);
                         interactiveStatsModalBody.innerHTML =
+                            '<span style="display:block;margin-bottom:10px;font-size:0.9rem;color:#b8c0cc;">Сумма по всем карточкам, где вы отвечали в интерактиве.</span>' +
                             'Верных ответов: <strong>' +
                             c +
                             '</strong><br>Ошибок: <strong>' +
@@ -2488,6 +2436,11 @@
             }
             if (interactiveStatsModalCloseBtn) {
                 interactiveStatsModalCloseBtn.addEventListener('click', closeInteractiveStatsModal);
+            }
+            if (cabinetInteractiveStatsBtn) {
+                cabinetInteractiveStatsBtn.addEventListener('click', function () {
+                    openInteractiveStatsModal();
+                });
             }
             if (selectModeBtn) {
                 selectModeBtn.addEventListener('click', function () {

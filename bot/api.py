@@ -1847,6 +1847,24 @@ async def content_cards_interactive_stats(body: ContentCardInteractiveStatsBody)
         }
 
 
+@app.post("/api/content_cards/interactive/stats_total")
+async def content_cards_interactive_stats_total(body: ContentCardMyListBody):
+    """Суммарная статистика интерактива по всем карточкам текущего пользователя."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+
+    async with async_session_maker() as session:
+        q = select(
+            func.coalesce(func.sum(UserContentCardInteractiveStat.correct_count), 0),
+            func.coalesce(func.sum(UserContentCardInteractiveStat.wrong_count), 0),
+        ).where(UserContentCardInteractiveStat.user_id == user_id)
+        row = await session.execute(q)
+        c_sum, w_sum = row.one()
+        return {
+            "correct_count": int(c_sum),
+            "wrong_count": int(w_sum),
+        }
+
+
 @app.post("/api/content_cards/set_status")
 async def content_cards_set_status(body: ContentCardSetStatusBody):
     """Устанавливает статус карточки для текущего пользователя."""
