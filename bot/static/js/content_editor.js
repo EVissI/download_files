@@ -4422,14 +4422,14 @@ export class ContentEditor {
                 ${element.dataset.toolId === 'interactive-best-move' ? `
                 <div class="property-item">
                     <label>Текст при верном ответе:</label>
-                    <input type="text" id="propInteractiveFeedbackOk" maxlength="500"
+                    <input type="text" id="propInteractiveFeedbackOk" class="ce-property-input-fluid" maxlength="500"
                            value="${this.escapeHtml(element.dataset.ceInteractiveFeedbackOk !== undefined && element.dataset.ceInteractiveFeedbackOk !== null ? String(element.dataset.ceInteractiveFeedbackOk) : 'Правильно')}"
                            placeholder="Правильно"
                            oninput="contentEditor.updateElementProperty('interactiveFeedbackOk', this.value)">
                 </div>
                 <div class="property-item">
                     <label>Текст при неверном ответе:</label>
-                    <input type="text" id="propInteractiveFeedbackBad" maxlength="500"
+                    <input type="text" id="propInteractiveFeedbackBad" class="ce-property-input-fluid" maxlength="500"
                            value="${this.escapeHtml(element.dataset.ceInteractiveFeedbackBad !== undefined && element.dataset.ceInteractiveFeedbackBad !== null ? String(element.dataset.ceInteractiveFeedbackBad) : 'Неправильно')}"
                            placeholder="Неправильно"
                            oninput="contentEditor.updateElementProperty('interactiveFeedbackBad', this.value)">
