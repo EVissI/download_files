@@ -579,11 +579,7 @@ def _is_public_content_card_media_key(key: str) -> bool:
 
 
 def _is_cabinet_gallery_s3_key(key: str) -> bool:
-    prefix = (
-        f"{HintS3Storage.CONTENT_CARDS_MEDIA_PREFIX}/"
-        f"{HintS3Storage.CABINET_GALLERY_FOLDER}/"
-    )
-    return key.startswith(prefix) and _is_public_content_card_media_key(key)
+    return HintS3Storage.is_cabinet_gallery_media_key(key)
 
 
 def _guess_content_upload_extension(filename: str | None, content_type: str | None) -> str:
@@ -889,6 +885,14 @@ class CabinetGalleryDeleteBody(BaseModel):
     key: str = Field(..., min_length=1, max_length=512)
 
 
+class CabinetGalleryShareBody(BaseModel):
+    """Deep-link на отправку картинки из галереи кабинета (Redis + /start imglink_)."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    s3_key: str = Field(..., min_length=1, max_length=512)
+
+
 async def _resolve_content_cards_user_id(
     init_data: str | None, fab_token: str | None
 ) -> int:
@@ -937,6 +941,17 @@ async def _build_start_link_for_cards_activation(link_token: str) -> str:
             detail="Не удалось определить username бота для генерации ссылки",
         )
     payload = f"cardlink_{link_token}"
+    return f"https://t.me/{me.username}?start={payload}"
+
+
+async def _build_start_link_for_gallery_image_share(share_token: str) -> str:
+    me = await bot.get_me()
+    if not me.username:
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось определить username бота для генерации ссылки",
+        )
+    payload = f"imglink_{share_token}"
     return f"https://t.me/{me.username}?start={payload}"
 
 
@@ -1897,6 +1912,27 @@ async def cabinet_gallery_delete(body: CabinetGalleryDeleteBody):
     s3.delete_object(key)
     logger.info(f"Cabinet gallery deleted: key={key} user_id={uid}")
     return {"ok": True}
+
+
+@app.post("/api/content_cards/cabinet_gallery/share_link")
+async def cabinet_gallery_share_link(body: CabinetGalleryShareBody):
+    """
+    Deep-link: в Redis кладётся s3_key по токену; при /start imglink_<token> бот отправляет фото.
+    Доступно любому пользователю с валидной сессией кабинета; s3_key только из галереи кабинета.
+    Токен живёт до 7 суток, ссылку можно открывать повторно, пока токен в Redis.
+    """
+    await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    key = str(body.s3_key or "").strip()
+    if not HintS3Storage.is_cabinet_gallery_media_key(key):
+        raise HTTPException(status_code=400, detail="Некорректный key")
+    s3 = HintS3Storage.from_settings()
+    if not s3.exists(key):
+        raise HTTPException(status_code=404, detail="Файл не найден")
+    share_token = secrets.token_urlsafe(18)
+    redis_key = f"cabinet_gallery_img_share:{share_token}"
+    await redis_client.set(redis_key, key, expire=604800)
+    start_link = await _build_start_link_for_gallery_image_share(share_token)
+    return {"start_link": start_link}
 
 
 @app.get("/api/content_cards/media")

@@ -1,5 +1,6 @@
 ﻿from aiogram import Router, F
 from aiogram.types import (
+    BufferedInputFile,
     CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -24,6 +25,9 @@ from fluentogram import TranslatorRunner
 from bot.common.kbds.inline.activate_promo import (
     get_activate_promo_without_link_keyboard,
 )
+from bot.common.service.hint_s3_service import HintS3Storage
+from bot.db.redis import redis_client
+from loguru import logger
 
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
@@ -31,6 +35,52 @@ if TYPE_CHECKING:
 start_router = Router()
 CARD_LINK_START_PREFIX = "cardlink_"
 CARD_LINK_ACTIVATE_PREFIX = "activate_card_link:"
+GALLERY_IMG_START_PREFIX = "imglink_"
+GALLERY_IMG_REDIS_PREFIX = "cabinet_gallery_img_share:"
+
+
+def _extract_gallery_img_share_token(start_payload: str | None) -> str | None:
+    payload = str(start_payload or "").strip()
+    if not payload.startswith(GALLERY_IMG_START_PREFIX):
+        return None
+    token = payload[len(GALLERY_IMG_START_PREFIX) :].strip()
+    return token or None
+
+
+async def _send_gallery_image_from_start_if_needed(
+    message: Message,
+    start_payload: str | None,
+) -> None:
+    token = _extract_gallery_img_share_token(start_payload)
+    if not token:
+        return
+    redis_key = f"{GALLERY_IMG_REDIS_PREFIX}{token}"
+    s3_key_raw = await redis_client.get(redis_key)
+    if not s3_key_raw:
+        await message.answer("Ссылка недействительна или срок её действия истёк.")
+        return
+    s3_key = str(s3_key_raw).strip()
+    if not HintS3Storage.is_cabinet_gallery_media_key(s3_key):
+        await redis_client.delete(redis_key)
+        return
+    s3 = HintS3Storage.from_settings()
+    if not s3.exists(s3_key):
+        await redis_client.delete(redis_key)
+        await message.answer("Изображение больше не найдено.")
+        return
+    try:
+        blob = s3.download_bytes(s3_key)
+    except Exception as e:
+        logger.warning("cabinet gallery share S3 read failed: {}", e)
+        await message.answer("Не удалось загрузить изображение.")
+        return
+    fname = s3_key.rsplit("/", 1)[-1] or "image.jpg"
+    photo = BufferedInputFile(blob, filename=fname)
+    try:
+        await message.answer_photo(photo)
+    except Exception as e:
+        logger.warning("cabinet gallery share send_photo failed: {}", e)
+        await message.answer("Не удалось отправить изображение в Telegram.")
 
 
 def _extract_card_link_token(start_payload: str | None) -> str | None:
@@ -143,6 +193,7 @@ async def start_command(
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
         await _send_card_link_prompt_if_needed(message, session_with_commit, start_payload)
+        await _send_gallery_image_from_start_if_needed(message, start_payload)
         await state.clear()
         return
     if user_info is None:
@@ -176,6 +227,7 @@ async def start_command(
                 reply_markup=get_activate_promo_without_link_keyboard(i18n),
             )
         await _send_card_link_prompt_if_needed(message, session_with_commit, start_payload)
+        await _send_gallery_image_from_start_if_needed(message, start_payload)
         await state.clear()
         return
     i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
@@ -188,6 +240,7 @@ async def start_command(
         reply_markup=MainKeyboard.build(user_info.role, i18n),
     )
     await _send_card_link_prompt_if_needed(message, session_with_commit, start_payload)
+    await _send_gallery_image_from_start_if_needed(message, start_payload)
     await state.clear()
 
 

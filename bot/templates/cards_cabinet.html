@@ -833,6 +833,7 @@
             background: #1a1d22;
             border: 1px solid #3b414b;
             isolation: isolate;
+            cursor: pointer;
         }
         .cabinet-gallery-modal__cell img {
             display: block;
@@ -844,6 +845,7 @@
             object-position: center top;
             flex: 0 0 auto;
             background: #121418;
+            cursor: pointer;
         }
         .cabinet-gallery-modal__del {
             position: absolute;
@@ -1089,6 +1091,7 @@
             var cabinetGalleryMsg = document.getElementById('cabinetGalleryMsg');
             var galleryCanManage = false;
             var galleryUploadBusy = false;
+            var galleryShareBusy = false;
             var allCards = [];
             var shuffledCards = null;
             var isRootAdminUser = false;
@@ -1229,6 +1232,7 @@
                     if (!key) return;
                     var cell = document.createElement('div');
                     cell.className = 'cabinet-gallery-modal__cell';
+                    cell.dataset.s3Key = key;
                     var img = document.createElement('img');
                     img.alt = '';
                     img.loading = 'lazy';
@@ -1249,6 +1253,86 @@
                     }
                     cabinetGalleryGrid.appendChild(cell);
                 });
+            }
+
+            function copyGalleryDeepLinkToClipboard(url, onOk, onFail) {
+                var p;
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    p = navigator.clipboard.writeText(url);
+                } else {
+                    p = new Promise(function (resolve, reject) {
+                        try {
+                            var ta = document.createElement('textarea');
+                            ta.value = url;
+                            ta.setAttribute('readonly', '');
+                            ta.style.position = 'fixed';
+                            ta.style.left = '-9999px';
+                            document.body.appendChild(ta);
+                            ta.focus();
+                            ta.select();
+                            var ok = document.execCommand('copy');
+                            document.body.removeChild(ta);
+                            if (!ok) {
+                                reject(new Error('copy'));
+                            } else {
+                                resolve();
+                            }
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                }
+                p.then(onOk).catch(onFail);
+            }
+
+            function requestGalleryImageShareLink(s3Key) {
+                if (galleryShareBusy || !s3Key) return;
+                galleryShareBusy = true;
+                setCabinetGalleryMsg('');
+                fetch('/api/content_cards/cabinet_gallery/share_link', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload({ s3_key: s3Key })),
+                })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error((j && j.detail) || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Ошибка');
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        var link = data && data.start_link;
+                        if (!link) {
+                            throw new Error('Нет ссылки');
+                        }
+                        copyGalleryDeepLinkToClipboard(
+                            link,
+                            function () {
+                                galleryShareBusy = false;
+                                setCabinetGalleryMsg('Ссылка скопирована.');
+                                try {
+                                    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+                                        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                                    }
+                                } catch (_h) {}
+                                setTimeout(function () {
+                                    setCabinetGalleryMsg('');
+                                }, 2200);
+                            },
+                            function () {
+                                galleryShareBusy = false;
+                                setCabinetGalleryMsg('Не удалось скопировать: ' + link);
+                            }
+                        );
+                    })
+                    .catch(function (e) {
+                        galleryShareBusy = false;
+                        setCabinetGalleryMsg(e.message || String(e));
+                    });
             }
 
             function deleteCabinetGalleryItem(key, cellEl) {
@@ -2343,6 +2427,21 @@
                     ev.stopPropagation();
                     if (!galleryCanManage) return;
                     cabinetGalleryFile.click();
+                });
+            }
+            if (cabinetGalleryGrid) {
+                cabinetGalleryGrid.addEventListener('click', function (ev) {
+                    if (ev.target && ev.target.closest && ev.target.closest('.cabinet-gallery-modal__del')) {
+                        return;
+                    }
+                    var cell = ev.target && ev.target.closest
+                        ? ev.target.closest('.cabinet-gallery-modal__cell')
+                        : null;
+                    if (!cell || !cell.dataset || !cell.dataset.s3Key) {
+                        return;
+                    }
+                    ev.preventDefault();
+                    requestGalleryImageShareLink(cell.dataset.s3Key);
                 });
             }
             function cabinetGalleryDataTransferHasFiles(dt) {

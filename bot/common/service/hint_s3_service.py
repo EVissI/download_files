@@ -69,6 +69,21 @@ class HintS3Storage:
             fn = "file.bin"
         return f"{HintS3Storage.CONTENT_CARDS_MEDIA_PREFIX}/{HintS3Storage.CABINET_GALLERY_FOLDER}/{fn}"
 
+    @classmethod
+    def is_cabinet_gallery_media_key(cls, key: str) -> bool:
+        """Публичный ключ объекта общей галереи кабинета (S3)."""
+        parts = (key or "").strip().split("/")
+        if len(parts) != 4:
+            return False
+        if parts[0] != "content_cards" or parts[1] != "media":
+            return False
+        if parts[2] != cls.CABINET_GALLERY_FOLDER:
+            return False
+        name = parts[3]
+        if not name or len(name) > 220 or ".." in name:
+            return False
+        return all(c.isalnum() or c in "._-" for c in name)
+
     @staticmethod
     def content_card_media_key(user_id: int, filename: str) -> str:
         """
