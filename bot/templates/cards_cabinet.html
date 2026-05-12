@@ -353,6 +353,44 @@
             gap: 10px;
         }
 
+        .cabinet-tile-cell {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+        }
+
+        .cabinet-tile-cell .tile {
+            width: 100%;
+            height: 100%;
+            aspect-ratio: unset;
+            box-sizing: border-box;
+        }
+
+        .cabinet-interactive-stat-btn {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            z-index: 2;
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #555;
+            border-radius: 6px;
+            background: rgba(30, 30, 30, 0.92);
+            color: #c8d4e8;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cabinet-interactive-stat-btn:active {
+            background: #3a4a60;
+        }
+
         .tile {
             aspect-ratio: 1;
             display: flex;
@@ -994,6 +1032,16 @@
             </div>
         </div>
     </div>
+    <div id="interactiveStatsModal" class="shuffle-modal" aria-hidden="true">
+        <div class="shuffle-modal__overlay" id="interactiveStatsModalOverlay"></div>
+        <div class="shuffle-modal__box" role="dialog" aria-modal="true" aria-labelledby="interactiveStatsModalTitle">
+            <h3 id="interactiveStatsModalTitle" class="shuffle-modal__title">Интерактив «лучший ход»</h3>
+            <p id="interactiveStatsModalBody" class="shuffle-modal__msg" style="min-height: 48px; color: #e8e8e8;"></p>
+            <div class="shuffle-modal__actions">
+                <button type="button" id="interactiveStatsModalCloseBtn" class="shuffle-modal__btn shuffle-modal__btn--primary">Закрыть</button>
+            </div>
+        </div>
+    </div>
     <div id="cabinetGalleryModal" class="cabinet-gallery-modal" aria-hidden="true">
         <div id="cabinetGalleryModalOverlay" class="cabinet-gallery-modal__overlay"></div>
         <div id="cabinetGalleryModalBox" class="cabinet-gallery-modal__box" role="dialog" aria-modal="true" aria-label="Галерея">
@@ -1062,6 +1110,10 @@
             var shuffleModalApplyBtn = document.getElementById('shuffleModalApplyBtn');
             var shuffleModalCancelBtn = document.getElementById('shuffleModalCancelBtn');
             var shuffleModalResetBtn = document.getElementById('shuffleModalResetBtn');
+            var interactiveStatsModal = document.getElementById('interactiveStatsModal');
+            var interactiveStatsModalOverlay = document.getElementById('interactiveStatsModalOverlay');
+            var interactiveStatsModalBody = document.getElementById('interactiveStatsModalBody');
+            var interactiveStatsModalCloseBtn = document.getElementById('interactiveStatsModalCloseBtn');
             var assignCardsModal = document.getElementById('assignCardsModal');
             var assignCardsModalOverlay = document.getElementById('assignCardsModalOverlay');
             var assignCardsModalMsg = document.getElementById('assignCardsModalMsg');
@@ -2208,6 +2260,8 @@
                     var index = row.__index;
                     var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
                     var cardIdNum = Number(id);
+                    var cell = document.createElement('div');
+                    cell.className = 'cabinet-tile-cell';
                     var btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'tile';
@@ -2264,8 +2318,68 @@
                             // Даже если отметка статуса не удалась, всё равно открываем карточку.
                         }).finally(openCard);
                     });
-                    gridEl.appendChild(btn);
+                    var statBtn = document.createElement('button');
+                    statBtn.type = 'button';
+                    statBtn.className = 'cabinet-interactive-stat-btn';
+                    statBtn.setAttribute('aria-label', 'Статистика интерактива');
+                    statBtn.title = 'Статистика интерактива';
+                    statBtn.textContent = '📊';
+                    statBtn.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        openInteractiveStatsModal(cardIdNum);
+                    });
+                    cell.appendChild(btn);
+                    cell.appendChild(statBtn);
+                    gridEl.appendChild(cell);
                 });
+            }
+
+            function closeInteractiveStatsModal() {
+                if (!interactiveStatsModal) return;
+                interactiveStatsModal.classList.remove('is-open');
+                interactiveStatsModal.setAttribute('aria-hidden', 'true');
+                if (interactiveStatsModalBody) {
+                    interactiveStatsModalBody.textContent = '';
+                }
+            }
+
+            function openInteractiveStatsModal(cardId) {
+                if (!interactiveStatsModal || !interactiveStatsModalBody) return;
+                interactiveStatsModalBody.textContent = 'Загрузка…';
+                interactiveStatsModal.classList.add('is-open');
+                interactiveStatsModal.setAttribute('aria-hidden', 'false');
+                fetch('/api/content_cards/interactive/stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(
+                        authPayload({ content_card_id: Number(cardId) })
+                    ),
+                })
+                    .then(function (r) {
+                        return r.json().then(function (data) {
+                            return { ok: r.ok, data: data };
+                        });
+                    })
+                    .then(function (res) {
+                        if (!res.ok) {
+                            var d = res.data && res.data.detail;
+                            interactiveStatsModalBody.textContent =
+                                typeof d === 'string' ? d : 'Не удалось загрузить статистику';
+                            return;
+                        }
+                        var c = Number((res.data && res.data.correct_count) || 0);
+                        var w = Number((res.data && res.data.wrong_count) || 0);
+                        interactiveStatsModalBody.innerHTML =
+                            'Верных ответов: <strong>' +
+                            c +
+                            '</strong><br>Ошибок: <strong>' +
+                            w +
+                            '</strong>';
+                    })
+                    .catch(function () {
+                        interactiveStatsModalBody.textContent = 'Ошибка сети';
+                    });
             }
 
             function setShuffleModalMsg(msg) {
@@ -2368,6 +2482,12 @@
                     closeShuffleModal();
                     renderCards();
                 });
+            }
+            if (interactiveStatsModalOverlay) {
+                interactiveStatsModalOverlay.addEventListener('click', closeInteractiveStatsModal);
+            }
+            if (interactiveStatsModalCloseBtn) {
+                interactiveStatsModalCloseBtn.addEventListener('click', closeInteractiveStatsModal);
             }
             if (selectModeBtn) {
                 selectModeBtn.addEventListener('click', function () {

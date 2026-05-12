@@ -1,3 +1,5 @@
+import { setupInteractiveBestMoveAfterCardPreviewRender } from './interactive_best_move.js';
+
 export function openCardPreviewModalImpl(editor) {
     if (!editor.cardPreviewModal) return;
     editor.cardPreviewRefs = editor.collectSavedFrameRefsForCurrentGame();
@@ -100,6 +102,10 @@ export function refreshCardPreviewUIImpl(editor) {
         editor.cardPreviewRefs
     );
     editor.renderCardPreviewSurface(payloadForRender);
+    if (viewOnlyPage && editor._contentCardViewCardId) {
+        const effectivePayload = editor.getPayloadForCardPreviewRender(payloadForRender);
+        setupInteractiveBestMoveAfterCardPreviewRender(editor, effectivePayload);
+    }
 }
 
 export function reorderCardPreviewElementsBySavedTopImpl(_editor, inner) {

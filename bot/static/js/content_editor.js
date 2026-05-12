@@ -1983,6 +1983,13 @@ export class ContentEditor {
                 icon: 'fa fa-link'
             },
             {
+                id: 'interactive-best-move',
+                name: 'Интерактив',
+                type: 'interactive',
+                description: 'Выбор лучшего хода по данным таблицы hints',
+                icon: 'fa fa-gamepad'
+            },
+            {
                 id: 'frame-templates',
                 name: 'Шаблоны',
                 type: 'templates',
@@ -3439,6 +3446,8 @@ export class ContentEditor {
         if (toolId === 'moveHintsTable') {
             // Table elements have auto height
             defaultHeight = 'auto';
+        } else if (toolId === 'interactive-best-move') {
+            defaultHeight = this.isMobile() ? 140 : 180;
         } else {
             // Other elements have fixed height based on mobile/desktop
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
@@ -3610,6 +3619,17 @@ export class ContentEditor {
                 const ltx = element.querySelector('.link-text');
                 if (ltx) this.applyGlobalTextStyleDefaultsToTextNode(ltx);
                 this.setupLinkEditing(element);
+                break;
+            }
+
+            case 'interactive-best-move': {
+                element.classList.add('ce-interactive-best-move');
+                element.innerHTML = `
+                    <div class="ce-interactive-best-move__inner">
+                        <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
+                        <p class="ce-interactive-best-move__hint">На карточке подставятся первые четыре хода из таблицы (hints); лучший — верхняя строка.</p>
+                        <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
+                    </div>`;
                 break;
             }
 
@@ -4990,6 +5010,8 @@ export class ContentEditor {
                     }
                     break;
                 }
+                case 'interactive-best-move':
+                    break;
                 case 'board-illustration': {
                     const s3b = el.dataset.boardImageS3Key || '';
                     const img = el.querySelector('img');
@@ -7035,6 +7057,15 @@ export class ContentEditor {
                     this.setupEditorTableCollapse(element);
                 }
                 break;
+            case 'interactive-best-move': {
+                element.classList.add('ce-interactive-best-move');
+                element.innerHTML = `
+                    <div class="ce-interactive-best-move__inner">
+                        <p class="ce-interactive-best-move__title">Выбери лучший ход</p>
+                        <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
+                    </div>`;
+                break;
+            }
             case 'upload-image': {
                 element.classList.add('image-element');
                 element.style.backgroundColor = 'transparent';
@@ -7368,6 +7399,8 @@ export class ContentEditor {
                 elementHeight = parseInt(element.style.height) || 200;
             } else if (element.dataset.toolId === 'attach-file') {
                 elementHeight = parseInt(element.style.height, 10) || 72;
+            } else if (element.dataset.toolId === 'interactive-best-move') {
+                elementHeight = Math.max(element.offsetHeight || 0, 160);
             } else {
                 elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
             }

@@ -8,7 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.wsgi import WSGIMiddleware
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from typing import Any, Optional
 import secrets
@@ -43,6 +44,7 @@ from bot.db.models import (
     TextStylePreset,
     User,
     UserContentCard,
+    UserContentCardInteractiveStat,
     UserContentCardStatus,
 )
 from bot.db.schemas import SContentCardCreate, SUserContentCardCreate
@@ -779,6 +781,23 @@ class ContentCardMarkViewedBody(BaseModel):
     content_card_id: int = Field(..., ge=1)
 
 
+class ContentCardInteractiveRecordBody(BaseModel):
+    """Запись ответа в интерактиве «лучший ход»."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    content_card_id: int = Field(..., ge=1)
+    correct: bool
+
+
+class ContentCardInteractiveStatsBody(BaseModel):
+    """Запрос статистики интерактива по карточке."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    content_card_id: int = Field(..., ge=1)
+
+
 class ContentCardSetStatusBody(BaseModel):
     """Ручная установка статуса карточки для текущего пользователя."""
 
@@ -948,6 +967,21 @@ async def _issue_fab_cards_auth_token(user_id: int) -> str:
     fab_token = secrets.token_urlsafe(24)
     await redis_client.set(f"fab_cards_auth:{fab_token}", str(user_id), expire=7200)
     return fab_token
+
+
+async def _user_can_access_content_card_interactive(
+    session, user_id: int, content_card_id: int
+) -> bool:
+    """Доступ как у fetch: выдача user_content_cards или ROOT_ADMIN и существующая карточка."""
+    ucc_dao = UserContentCardDAO(session)
+    link = await ucc_dao.find_one_by_user_and_card(user_id, content_card_id)
+    if link:
+        return True
+    if user_id in settings.ROOT_ADMIN_IDS:
+        card_dao = ContentCardDAO(session)
+        card = await card_dao.find_one_or_none_by_id(content_card_id)
+        return card is not None
+    return False
 
 
 async def _build_start_link_for_cards_activation(link_token: str) -> str:
@@ -1752,6 +1786,65 @@ async def content_cards_mark_viewed(body: ContentCardMarkViewedBody):
             await session.commit()
 
     return {"ok": True}
+
+
+@app.post("/api/content_cards/interactive/record")
+async def content_cards_interactive_record(body: ContentCardInteractiveRecordBody):
+    """Учёт ответа в интерактиве «лучший ход» (доступ как у fetch)."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    incr_c = 1 if body.correct else 0
+    incr_w = 0 if body.correct else 1
+
+    async with async_session_maker() as session:
+        if not await _user_can_access_content_card_interactive(
+            session, user_id, body.content_card_id
+        ):
+            raise HTTPException(status_code=403, detail="Нет доступа к этой карточке")
+
+        stmt = insert(UserContentCardInteractiveStat).values(
+            user_id=user_id,
+            content_card_id=body.content_card_id,
+            correct_count=incr_c,
+            wrong_count=incr_w,
+        )
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_ucc_interactive_user_id_content_card_id",
+            set_={
+                "correct_count": UserContentCardInteractiveStat.correct_count + incr_c,
+                "wrong_count": UserContentCardInteractiveStat.wrong_count + incr_w,
+                "updated_at": func.now(),
+            },
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+    return {"ok": True}
+
+
+@app.post("/api/content_cards/interactive/stats")
+async def content_cards_interactive_stats(body: ContentCardInteractiveStatsBody):
+    """Статистика интерактива по карточке для текущего пользователя."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+
+    async with async_session_maker() as session:
+        if not await _user_can_access_content_card_interactive(
+            session, user_id, body.content_card_id
+        ):
+            raise HTTPException(status_code=403, detail="Нет доступа к этой карточке")
+
+        row = await session.execute(
+            select(UserContentCardInteractiveStat).where(
+                UserContentCardInteractiveStat.user_id == user_id,
+                UserContentCardInteractiveStat.content_card_id == body.content_card_id,
+            )
+        )
+        stat = row.scalar_one_or_none()
+        if stat is None:
+            return {"correct_count": 0, "wrong_count": 0}
+        return {
+            "correct_count": int(stat.correct_count),
+            "wrong_count": int(stat.wrong_count),
+        }
 
 
 @app.post("/api/content_cards/set_status")

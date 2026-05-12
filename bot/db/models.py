@@ -873,3 +873,33 @@ class UserContentCard(Base):
     source_user_promocode: Mapped[Optional["UserPromocode"]] = relationship(
         "UserPromocode", back_populates="issued_content_cards"
     )
+
+
+class UserContentCardInteractiveStat(Base):
+    """
+    Счётчики интерактива «лучший ход» по паре пользователь ↔ карточка
+    (без привязки к кадру).
+    """
+
+    __tablename__ = "user_content_card_interactive_stats"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "content_card_id",
+            name="uq_ucc_interactive_user_id_content_card_id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    content_card_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("content_cards.id", ondelete="CASCADE"), nullable=False
+    )
+    correct_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    wrong_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )

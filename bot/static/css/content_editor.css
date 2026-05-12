@@ -3957,3 +3957,111 @@ button.content-card-admin-info-file-link:hover {
     text-overflow: ellipsis;
     border-top: 1px solid #2f3540;
 }
+
+/* Интерактив «лучший ход» */
+.ce-interactive-best-move {
+    box-sizing: border-box;
+    padding: 10px 12px;
+    background: #252a32;
+    border-radius: 10px;
+    border: 1px solid #3a4150;
+}
+
+.ce-interactive-best-move__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ce-interactive-best-move__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #e8edf5;
+    text-align: center;
+}
+
+.ce-interactive-best-move__hint {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.card-preview-canvas-clone .ce-interactive-best-move__hint {
+    display: none;
+}
+
+.ce-interactive-best-move__msg {
+    margin: 0;
+    padding: 10px 8px;
+    font-size: 13px;
+    color: #f4b567;
+    text-align: center;
+}
+
+.ce-interactive-best-move__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.ce-interactive-best-move__btn {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #f1f5f9;
+    background: #3e4a5c;
+    border: 1px solid #556070;
+    border-radius: 8px;
+    cursor: pointer;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
+.ce-interactive-best-move__btn:hover:not(:disabled) {
+    background: #4a5a70;
+    border-color: #6a7d95;
+}
+
+.ce-interactive-best-move__btn:disabled,
+.ce-interactive-best-move__btn--disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.ce-interactive-best-move__btn--flash-ok {
+    animation: ceInteractiveFlashOk 0.45s ease;
+}
+
+.ce-interactive-best-move__btn--flash-bad {
+    animation: ceInteractiveFlashBad 0.45s ease;
+}
+
+@keyframes ceInteractiveFlashOk {
+    from {
+        background: #1b5e20;
+        border-color: #4caf50;
+    }
+    to {
+        background: #3e4a5c;
+        border-color: #556070;
+    }
+}
+
+@keyframes ceInteractiveFlashBad {
+    from {
+        background: #6a1b1b;
+        border-color: #e57373;
+    }
+    to {
+        background: #3e4a5c;
+        border-color: #556070;
+    }
+}
+
+.card-preview-surface-inner .canvas-element.ce-interactive-best-move.card-preview-canvas-clone {
+    pointer-events: auto;
+}
