@@ -94,6 +94,7 @@ const {
     buildInteractiveSlotsFromCardData,
     buildInteractiveSlotsFromMoveStrings,
     countInteractiveMovesFromCardData,
+    clampInteractiveButtonCount,
 } = await import(
     new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
@@ -1277,8 +1278,7 @@ export class ContentEditor {
             const maxFromCd = countInteractiveMovesFromCardData(cd);
             const maxAvail = Math.max(maxFromCd, domMoves.length, 1);
             const rawBc = parseInt(el.dataset.ceInteractiveButtonCount, 10);
-            let btnCount = Number.isFinite(rawBc) ? rawBc : 4;
-            btnCount = Math.min(Math.max(1, btnCount), maxAvail);
+            const btnCount = clampInteractiveButtonCount(rawBc, maxAvail, 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
 
             let result = buildInteractiveSlotsFromCardData(cd, btnCount);
@@ -1297,7 +1297,19 @@ export class ContentEditor {
                 });
             }
             fillInteractiveBestMoveEditorGridFromResult(grid, result);
+            this.syncInteractiveBestMoveElementHeight(el);
         });
+        if (blocks.length) {
+            this.recalculateAllElementPositions();
+        }
+    }
+
+    /** Высота блока интерактива по содержимому (число кнопок в сетке). */
+    syncInteractiveBestMoveElementHeight(el) {
+        if (!el || el.dataset.toolId !== 'interactive-best-move') return;
+        el.style.height = 'auto';
+        el.style.minHeight = (this.isMobile() ? 120 : 132) + 'px';
+        void el.offsetHeight;
     }
 
     /** Предпросмотр карточки: как в редакторе, пересобрать таблицы из payload.cardData поверх разметки из elements. */
@@ -1335,10 +1347,11 @@ export class ContentEditor {
             const grid = el.querySelector('[data-ce-interactive-grid]');
             const maxM = countInteractiveMovesFromCardData(cd);
             const rawBc = parseInt(el.dataset.ceInteractiveButtonCount, 10);
-            let btnCount = Number.isFinite(rawBc) ? rawBc : 4;
-            btnCount = Math.min(Math.max(1, btnCount), Math.max(1, maxM));
+            const btnCount = clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
             fillInteractiveEditorPreviewGrid(grid, cd, btnCount);
+            el.style.height = 'auto';
+            el.style.minHeight = '';
         });
     }
 
@@ -3648,6 +3661,9 @@ export class ContentEditor {
 
             if (defaultHeight === 'auto') {
                 element.style.height = 'auto';
+            } else if (toolId === 'interactive-best-move') {
+                element.style.height = 'auto';
+                element.style.minHeight = (this.isMobile() ? 120 : 132) + 'px';
             } else {
                 element.style.height = defaultHeight + 'px';
             }
@@ -4279,18 +4295,24 @@ export class ContentEditor {
         }
 
         const raw = parseInt(element.dataset.ceInteractiveButtonCount, 10);
-        let selected = Number.isFinite(raw) ? raw : 4;
-        selected = Math.min(Math.max(1, selected), maxMoves);
+        const selected = clampInteractiveButtonCount(raw, maxMoves, 4);
+
+        if (maxMoves < 2) {
+            return `
+                <div class="property-item">
+                    <p class="property-hint" style="margin:0;font-size:11px;color:#aaa;line-height:1.35;">В данных только один вариант хода — отображается одна кнопка.</p>
+                </div>`;
+        }
 
         const opts = [];
-        for (let v = 1; v <= maxMoves; v++) {
+        for (let v = 2; v <= maxMoves; v++) {
             opts.push(`<option value="${v}" ${v === selected ? 'selected' : ''}>${v}</option>`);
         }
         return `
                 <div class="property-item">
                     <label>Число кнопок:</label>
                     <select id="propInteractiveButtonCount" class="ce-property-input-fluid"
-                            title="Не больше числа ходов с данными в таблице подсказок"
+                            title="От 2 до числа ходов с данными в таблице подсказок"
                             onchange="contentEditor.updateElementProperty('interactiveButtonCount', this.value)">
                         ${opts.join('')}
                     </select>
@@ -4537,7 +4559,7 @@ export class ContentEditor {
                 if (this.selectedElement.dataset.toolId === 'interactive-best-move') {
                     const n = parseInt(value, 10);
                     this.selectedElement.dataset.ceInteractiveButtonCount =
-                        Number.isFinite(n) && n >= 1 ? String(Math.min(n, 999)) : '4';
+                        Number.isFinite(n) && n >= 2 ? String(Math.min(n, 999)) : '4';
                     this.refreshInteractiveBestMoveElementsFromCardData();
                 }
                 break;
@@ -5272,6 +5294,7 @@ export class ContentEditor {
                     break;
                 }
                 case 'interactive-best-move':
+                    delete item.style.height;
                     break;
                 case 'board-illustration': {
                     const s3b = el.dataset.boardImageS3Key || '';
@@ -7300,7 +7323,12 @@ export class ContentEditor {
             const isTextual = toolId === 'question-text' || toolId === 'answer-text' || toolId === 'support-link';
             const isPreviewImage = previewMode && toolId === 'upload-image';
             // В preview высота текстовых блоков должна считаться от текущей ширины экрана.
-            if (item.style.height && !(previewMode && isTextual) && !isPreviewImage) {
+            if (
+                item.style.height &&
+                !(previewMode && isTextual) &&
+                !isPreviewImage &&
+                toolId !== 'interactive-best-move'
+            ) {
                 element.style.height = item.style.height;
             }
         }
@@ -7652,6 +7680,10 @@ export class ContentEditor {
             if (toolId === 'question-text' || toolId === 'answer-text' || toolId === 'support-link') {
                 this.autoGrowTextElementContainer(element, { skipReposition: true });
             }
+
+            if (toolId === 'interactive-best-move') {
+                this.syncInteractiveBestMoveElementHeight(element);
+            }
         });
 
         // After updating all element sizes, recalculate positions for all elements
@@ -7701,7 +7733,7 @@ export class ContentEditor {
             } else if (element.dataset.toolId === 'attach-file') {
                 elementHeight = parseInt(element.style.height, 10) || 72;
             } else if (element.dataset.toolId === 'interactive-best-move') {
-                elementHeight = Math.max(element.offsetHeight || 0, 160);
+                elementHeight = Math.max(element.offsetHeight || 0, this.isMobile() ? 120 : 132);
             } else {
                 elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
             }

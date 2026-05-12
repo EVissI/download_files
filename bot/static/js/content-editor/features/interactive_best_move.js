@@ -116,12 +116,17 @@ export function countInteractiveMovesFromCardData(cardData) {
     return n;
 }
 
-function normalizeInteractiveButtonCount(raw, maxAvailable, defaultCount = 4) {
-    const max = Math.max(1, maxAvailable | 0);
+/**
+ * Не меньше 2 кнопок, если доступно ≥2 ходов; при одном варианте (победа / один ход) — 1.
+ * Значение «1» из UI не выбирается при нескольких ходах.
+ */
+export function clampInteractiveButtonCount(raw, maxAvailable, defaultCount = 4) {
+    const max = Math.floor(Math.max(0, Number(maxAvailable) || 0));
     let n = parseInt(raw, 10);
     if (!Number.isFinite(n) || n < 1) n = defaultCount;
-    if (n > max) n = max;
-    return n;
+    if (max <= 0) return Math.min(n, defaultCount);
+    if (max === 1) return 1;
+    return Math.min(Math.max(2, n), max);
 }
 
 /**
@@ -148,7 +153,7 @@ export function buildInteractiveSlotsFromCardData(cardData, buttonCount = 4) {
         const pts = cardData.points != null ? cardData.points : '';
         const move = `Победа ${name} (${pts} очков)`;
         const maxWin = 1;
-        const n = normalizeInteractiveButtonCount(buttonCount, maxWin, Math.min(4, maxWin));
+        const n = clampInteractiveButtonCount(buttonCount, maxWin, 4);
         const slots = [];
         for (let j = 0; j < n; j++) {
             if (j === 0) {
@@ -192,7 +197,7 @@ export function buildInteractiveSlotsFromCardData(cardData, buttonCount = 4) {
         };
     }
 
-    const n = normalizeInteractiveButtonCount(buttonCount, moves.length, 4);
+    const n = clampInteractiveButtonCount(buttonCount, moves.length, 4);
     const slots = [];
     for (let j = 0; j < n; j++) {
         slots.push({
@@ -320,7 +325,7 @@ export function buildInteractiveSlotsFromMoveStrings(moves, buttonCount = 4) {
             slots: [],
         };
     }
-    const n = normalizeInteractiveButtonCount(buttonCount, moves.length, 4);
+    const n = clampInteractiveButtonCount(buttonCount, moves.length, 4);
     const slots = [];
     for (let j = 0; j < n; j++) {
         slots.push({
@@ -361,7 +366,7 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
     blocks.forEach((block) => {
         const raw = parseInt(block.dataset.ceInteractiveButtonCount, 10);
         const maxM = countInteractiveMovesFromCardData(cardData);
-        const btn = normalizeInteractiveButtonCount(raw, Math.max(1, maxM), 4);
+        const btn = clampInteractiveButtonCount(raw, Math.max(1, maxM), 4);
         if (block.dataset) block.dataset.ceInteractiveButtonCount = String(btn);
         const built = buildInteractiveSlotsFromCardData(cardData, btn);
         fillInteractiveBlock(block, built, editor);
