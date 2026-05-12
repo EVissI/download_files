@@ -2286,8 +2286,9 @@ button.content-card-admin-info-file-link:hover {
     box-sizing: border-box;
 }
 
-/* Предпросмотр: без белой заливки редактора; без рамок и теней; inline blockStyle перебивает фон */
-.card-preview-surface-inner .canvas-element.card-preview-canvas-clone:not(.table-element),
+/* Предпросмотр: без белой заливки редактора; без рамок и теней; inline blockStyle перебивает фон.
+   Интерактив «лучший ход» (.ce-interactive-best-move) исключаем — иначе теряются фон/бордер из .ce-interactive-best-move */
+.card-preview-surface-inner .canvas-element.card-preview-canvas-clone:not(.table-element):not(.ce-interactive-best-move),
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone.text-element,
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone.link-element {
     background: transparent;

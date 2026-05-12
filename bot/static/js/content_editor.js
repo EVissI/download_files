@@ -1364,6 +1364,11 @@ export class ContentEditor {
         // Сохраняем данные карточки для использования при выборе инструмента таблицы
         this.cardData = cardData;
 
+        // Таблицы и интерактив «лучший ход» зависят от cardData — пересобрать, если холст уже был открыт
+        if (this.canvas) {
+            this.refreshTableElementsFromCardData();
+        }
+
         // Force refresh of all dynamic content
         this.forceRefreshContent();
     }
