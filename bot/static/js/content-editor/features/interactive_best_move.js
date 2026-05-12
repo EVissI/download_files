@@ -120,6 +120,31 @@ export function openInteractiveBestMoveFeedbackModal(message) {
 }
 
 /** Сколько строк с probs даёт cardData (как у таблицы ходов). Победа → 1. */
+/**
+ * Сохранённый payload может хранить счётчик как dataset.ceInteractiveButtonCount или под другим ключом после JSON/API.
+ * @param {HTMLElement | null} el
+ * @returns {number} число или NaN — тогда clampInteractiveButtonCount подставит defaultCount
+ */
+export function parseCeInteractiveButtonCountRaw(el) {
+    if (!el) return NaN;
+    const ga =
+        typeof el.getAttribute === 'function' ? el.getAttribute('data-ce-interactive-button-count') : null;
+    if (ga != null && String(ga).trim() !== '') {
+        const n = parseInt(ga, 10);
+        if (Number.isFinite(n)) return n;
+    }
+    const ds = el.dataset || {};
+    const keys = ['ceInteractiveButtonCount', 'ce_interactive_button_count'];
+    for (let i = 0; i < keys.length; i++) {
+        const v = ds[keys[i]];
+        if (v != null && String(v).trim() !== '') {
+            const n = parseInt(v, 10);
+            if (Number.isFinite(n)) return n;
+        }
+    }
+    return NaN;
+}
+
 export function countInteractiveMovesFromCardData(cardData) {
     if (!cardData || typeof cardData !== 'object') return 0;
     if (cardData.action === 'win') return 1;
@@ -379,7 +404,7 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
 
     const blocks = host.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]');
     blocks.forEach((block) => {
-        const raw = parseInt(block.dataset.ceInteractiveButtonCount, 10);
+        const raw = parseCeInteractiveButtonCountRaw(block);
         const maxM = countInteractiveMovesFromCardData(cardData);
         const btn = clampInteractiveButtonCount(raw, Math.max(1, maxM), 4);
         if (block.dataset) block.dataset.ceInteractiveButtonCount = String(btn);

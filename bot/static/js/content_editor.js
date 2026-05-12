@@ -95,6 +95,7 @@ const {
     buildInteractiveSlotsFromMoveStrings,
     countInteractiveMovesFromCardData,
     clampInteractiveButtonCount,
+    parseCeInteractiveButtonCountRaw,
 } = await import(
     new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
@@ -1306,7 +1307,7 @@ export class ContentEditor {
             }
             const maxFromCd = countInteractiveMovesFromCardData(cd);
             const maxAvail = Math.max(maxFromCd, domMoves.length, 1);
-            const rawBc = parseInt(el.dataset.ceInteractiveButtonCount, 10);
+            const rawBc = parseCeInteractiveButtonCountRaw(el);
             const btnCount = clampInteractiveButtonCount(rawBc, maxAvail, 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
 
@@ -1375,7 +1376,7 @@ export class ContentEditor {
         inner.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
             const grid = el.querySelector('[data-ce-interactive-grid]');
             const maxM = countInteractiveMovesFromCardData(cd);
-            const rawBc = parseInt(el.dataset.ceInteractiveButtonCount, 10);
+            const rawBc = parseCeInteractiveButtonCountRaw(el);
             const btnCount = clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
             el.dataset.ceInteractiveButtonCount = String(btnCount);
             fillInteractiveEditorPreviewGrid(grid, cd, btnCount);
@@ -4325,7 +4326,7 @@ export class ContentEditor {
             maxMoves = Math.max(maxMoves, 1);
         }
 
-        const raw = parseInt(element.dataset.ceInteractiveButtonCount, 10);
+        const raw = parseCeInteractiveButtonCountRaw(element);
         const selected = clampInteractiveButtonCount(raw, maxMoves, 4);
 
         if (maxMoves < 2) {
@@ -7350,6 +7351,17 @@ export class ContentEditor {
             Object.keys(item.dataset).forEach(k => {
                 element.dataset[k] = item.dataset[k];
             });
+        }
+        if (toolId === 'interactive-best-move') {
+            const ds = item.dataset || {};
+            const cand = [ds.ceInteractiveButtonCount, ds.ce_interactive_button_count, item.ceInteractiveButtonCount];
+            for (let i = 0; i < cand.length; i++) {
+                const v = cand[i];
+                if (v != null && String(v).trim() !== '') {
+                    element.dataset.ceInteractiveButtonCount = String(v).trim();
+                    break;
+                }
+            }
         }
         if (item.style) {
             if (item.style.top) element.style.top = item.style.top;
