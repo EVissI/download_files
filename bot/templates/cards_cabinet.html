@@ -744,19 +744,17 @@
             position: relative;
             width: 94%;
             max-width: 440px;
+            min-height: min(78vh, 560px);
             max-height: 86vh;
             overflow: hidden;
             background: #262a30;
             border: 1px solid #3f4550;
             border-radius: 12px;
-            padding: 38px 12px 12px;
+            padding: 38px 10px 10px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-        }
-        .cabinet-gallery-modal__box.is-admin .cabinet-gallery-modal__drop {
-            display: flex;
+            gap: 8px;
         }
         .cabinet-gallery-modal__close {
             position: absolute;
@@ -779,36 +777,18 @@
         .cabinet-gallery-modal__close:active {
             background: #3d4550;
         }
-        .cabinet-gallery-modal__drop {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            min-height: 56px;
-            border: 1px dashed #5a6473;
-            border-radius: 10px;
-            color: #a7b0bf;
-            font-size: 0.8rem;
-            cursor: pointer;
-            user-select: none;
-            flex-shrink: 0;
-        }
-        .cabinet-gallery-modal__drop.is-drag {
-            border-color: #5f8fbd;
-            background: rgba(62, 111, 159, 0.2);
-        }
         .cabinet-gallery-modal__grid {
-            flex: 1 1 auto;
-            min-height: 120px;
-            max-height: calc(86vh - 120px);
+            flex: 1 1 0;
+            min-height: 0;
             overflow: auto;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-            gap: 8px;
+            grid-template-columns: 1fr;
+            gap: 10px;
             align-content: start;
         }
         .cabinet-gallery-modal__cell {
             position: relative;
-            aspect-ratio: 1;
+            width: 100%;
             border-radius: 10px;
             overflow: hidden;
             background: #1a1d22;
@@ -816,9 +796,12 @@
         }
         .cabinet-gallery-modal__cell img {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            height: auto;
+            max-height: min(52vh, 440px);
+            object-fit: contain;
+            object-position: center;
             display: block;
+            background: #121418;
         }
         .cabinet-gallery-modal__del {
             position: absolute;
@@ -853,10 +836,7 @@
         }
         .cabinet-gallery-modal__empty {
             grid-column: 1 / -1;
-            text-align: center;
-            color: #8b93a0;
-            font-size: 0.85rem;
-            padding: 20px 8px;
+            min-height: 48px;
         }
     </style>
 </head>
@@ -972,7 +952,6 @@
         <div id="cabinetGalleryModalOverlay" class="cabinet-gallery-modal__overlay"></div>
         <div id="cabinetGalleryModalBox" class="cabinet-gallery-modal__box" role="dialog" aria-modal="true" aria-label="Галерея">
             <button id="cabinetGalleryModalClose" type="button" class="cabinet-gallery-modal__close" aria-label="Закрыть">×</button>
-            <div id="cabinetGalleryDrop" class="cabinet-gallery-modal__drop"></div>
             <input id="cabinetGalleryFile" type="file" accept="image/*" multiple style="display:none" tabindex="-1">
             <div id="cabinetGalleryGrid" class="cabinet-gallery-modal__grid"></div>
             <p id="cabinetGalleryMsg" class="cabinet-gallery-modal__msg"></p>
@@ -1051,7 +1030,6 @@
             var cabinetGalleryModalOverlay = document.getElementById('cabinetGalleryModalOverlay');
             var cabinetGalleryModalClose = document.getElementById('cabinetGalleryModalClose');
             var cabinetGalleryModalBox = document.getElementById('cabinetGalleryModalBox');
-            var cabinetGalleryDrop = document.getElementById('cabinetGalleryDrop');
             var cabinetGalleryFile = document.getElementById('cabinetGalleryFile');
             var cabinetGalleryGrid = document.getElementById('cabinetGalleryGrid');
             var cabinetGalleryMsg = document.getElementById('cabinetGalleryMsg');
@@ -1186,6 +1164,10 @@
                 if (!cabinetGalleryGrid) return;
                 cabinetGalleryGrid.innerHTML = '';
                 if (!items || !items.length) {
+                    var empty = document.createElement('div');
+                    empty.className = 'cabinet-gallery-modal__empty';
+                    empty.setAttribute('aria-hidden', 'true');
+                    cabinetGalleryGrid.appendChild(empty);
                     return;
                 }
                 items.forEach(function (it) {
@@ -2301,29 +2283,35 @@
             if (cabinetGalleryModalClose) {
                 cabinetGalleryModalClose.addEventListener('click', closeCabinetGalleryModal);
             }
-            if (cabinetGalleryDrop) {
-                cabinetGalleryDrop.addEventListener('click', function () {
-                    if (cabinetGalleryFile) {
-                        cabinetGalleryFile.click();
-                    }
-                });
-                cabinetGalleryDrop.addEventListener('dragover', function (ev) {
+            function cabinetGalleryDataTransferHasFiles(dt) {
+                if (!dt || !dt.types) return false;
+                for (var ti = 0; ti < dt.types.length; ti++) {
+                    if (dt.types[ti] === 'Files') return true;
+                }
+                return false;
+            }
+            if (cabinetGalleryModalBox) {
+                cabinetGalleryModalBox.addEventListener('dragover', function (ev) {
+                    if (!cabinetGalleryModalBox.classList.contains('is-admin')) return;
+                    if (!cabinetGalleryDataTransferHasFiles(ev.dataTransfer)) return;
                     ev.preventDefault();
                     ev.stopPropagation();
-                    cabinetGalleryDrop.classList.add('is-drag');
-                });
-                cabinetGalleryDrop.addEventListener('dragleave', function (ev) {
+                }, true);
+                cabinetGalleryModalBox.addEventListener('drop', function (ev) {
+                    if (!cabinetGalleryModalBox.classList.contains('is-admin')) return;
                     ev.preventDefault();
                     ev.stopPropagation();
-                    cabinetGalleryDrop.classList.remove('is-drag');
-                });
-                cabinetGalleryDrop.addEventListener('drop', function (ev) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    cabinetGalleryDrop.classList.remove('is-drag');
                     if (ev.dataTransfer && ev.dataTransfer.files) {
                         uploadCabinetGalleryFiles(ev.dataTransfer.files);
                     }
+                }, true);
+                cabinetGalleryModalBox.addEventListener('click', function (ev) {
+                    if (!galleryCanManage || !cabinetGalleryFile) return;
+                    var t = ev.target;
+                    if (t && t.closest && t.closest('#cabinetGalleryModalClose')) return;
+                    if (t && t.closest && t.closest('.cabinet-gallery-modal__cell')) return;
+                    if (t && t.id === 'cabinetGalleryMsg') return;
+                    cabinetGalleryFile.click();
                 });
             }
             if (cabinetGalleryFile) {
