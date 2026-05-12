@@ -3886,7 +3886,7 @@ button.content-card-admin-info-file-link:hover {
 
 .frame-templates-insert-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
     gap: 12px;
     overflow-y: auto;
     flex: 1 1 auto;
@@ -3937,7 +3937,8 @@ button.content-card-admin-info-file-link:hover {
 }
 
 .frame-templates-insert-preview-host {
-    height: 140px;
+    position: relative;
+    height: 192px;
     overflow: hidden;
     background: #121418;
     flex-shrink: 0;

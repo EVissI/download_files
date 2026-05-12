@@ -294,7 +294,19 @@ async function openInsertModal(editor) {
     insertPayloadById.clear();
     const grid = els.insert.querySelector('[data-ft-insert-grid]');
     const emptyEl = els.insert.querySelector('[data-ft-insert-empty]');
-    if (grid) grid.innerHTML = '';
+    if (grid) {
+        grid.querySelectorAll('.frame-templates-insert-preview-host').forEach((h) => {
+            if (h._frameTemplatePreviewRo) {
+                try {
+                    h._frameTemplatePreviewRo.disconnect();
+                } catch (_e) {
+                    /* noop */
+                }
+                h._frameTemplatePreviewRo = null;
+            }
+        });
+        grid.innerHTML = '';
+    }
 
     try {
         const r = await fetch('/api/content_cards/frame_templates/list', {

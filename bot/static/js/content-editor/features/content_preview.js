@@ -800,6 +800,14 @@ export function setupCardPreviewBoardCollapseImpl(editor, overlay) {
 export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
     const host = hostRoot || document.getElementById('cardPreviewFrameHost');
     if (!host) return;
+    if (hostRoot && host._frameTemplatePreviewRo) {
+        try {
+            host._frameTemplatePreviewRo.disconnect();
+        } catch (_e) {
+            /* noop */
+        }
+        host._frameTemplatePreviewRo = null;
+    }
     host.innerHTML = '';
     host.style.backgroundColor = '';
     host.style.backgroundImage = 'none';
@@ -864,6 +872,14 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
     wrap.appendChild(inner);
     host.appendChild(wrap);
 
+    if (hostRoot && typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => {
+            editor.refreshCardPreviewScale(hostRoot);
+        });
+        ro.observe(hostRoot);
+        hostRoot._frameTemplatePreviewRo = ro;
+    }
+
     inner.querySelectorAll('img').forEach((img) => {
         img.addEventListener('load', () => editor.refreshCardPreviewScale(hostRoot));
     });
@@ -921,6 +937,34 @@ export function refreshCardPreviewScaleImpl(editor, hostRoot = null) {
     const boardH = boardEl ? Math.ceil(boardEl.offsetHeight) : 0;
     const innerH = Math.ceil(inner.offsetHeight);
     wrap.style.minHeight = `${boardH + innerH}px`;
+
+    // Мини-превью в списке шаблонов: уменьшаем весь кадр, чтобы он помещался в узкий блок.
+    if (hostRoot) {
+        wrap.style.transformOrigin = 'top left';
+        const hw = host.clientWidth;
+        const hh = host.clientHeight;
+        const w = Math.max(wrap.scrollWidth, wrap.offsetWidth);
+        const h = Math.max(wrap.scrollHeight, wrap.offsetHeight);
+        if (w > 0 && h > 0 && hw > 0 && hh > 0) {
+            const scale = Math.min(hw / w, hh / h, 1);
+            const tx = (hw - w * scale) / 2;
+            const ty = (hh - h * scale) / 2;
+            wrap.style.position = 'absolute';
+            wrap.style.left = `${tx}px`;
+            wrap.style.top = `${ty}px`;
+            wrap.style.transform = `scale(${scale})`;
+        } else {
+            wrap.style.position = 'absolute';
+            wrap.style.left = '0px';
+            wrap.style.top = '0px';
+            wrap.style.transform = '';
+        }
+    } else {
+        wrap.style.position = '';
+        wrap.style.left = '';
+        wrap.style.top = '';
+        wrap.style.transform = '';
+    }
 }
 
 export function cardPreviewPrevImpl(editor) {
