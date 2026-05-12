@@ -2955,6 +2955,9 @@ export class ContentEditor {
             toolId: 'attach-file',
             element,
         });
+        if (position.anchor) {
+            this.repositionElementsBelow(elementId);
+        }
         this.selectElement(element);
     }
 
@@ -3123,6 +3126,10 @@ export class ContentEditor {
             toolId: 'audio-file',
             element: element
         });
+
+        if (position.anchor) {
+            this.repositionElementsBelow(elementId);
+        }
 
         // Select element
         this.selectElement(element);
@@ -3481,6 +3488,19 @@ export class ContentEditor {
         // console.log(`Canvas content bottom at ${requiredHeight}px`);
     }
 
+    /**
+     * Возвращает элемент, ниже которого должна быть установлена новая вставка,
+     * если на холсте выделен какой-либо блок. Иначе — null.
+     */
+    _getInsertionAnchorElement() {
+        const sel = this.selectedElement;
+        if (!sel) return null;
+        if (!this.canvas || !this.canvas.contains(sel)) return null;
+        if (typeof sel.id === 'string' && sel.id.includes('boardLabel')) return null;
+        if (!sel.classList || !sel.classList.contains('canvas-element')) return null;
+        return sel;
+    }
+
     calculateVerticalPosition(elementWidth, elementHeight) {
         const canvasRect = this.canvas.getBoundingClientRect();
         const maxCanvasWidth = this.getMaxCanvasWidth();
@@ -3499,6 +3519,25 @@ export class ContentEditor {
         // Calculate vertical position with no spacing
         const startY = 0; // No top margin for first element
         const elementSpacing = 0; // No spacing between elements
+
+        // Если на холсте есть выделенный блок — новый элемент ставится сразу под ним,
+        // а блоки, оказавшиеся ниже точки вставки, будут сдвинуты вниз вызывающей стороной.
+        const anchor = this._getInsertionAnchorElement();
+        if (anchor) {
+            const anchorTop = parseInt(anchor.style.top, 10) || 0;
+            const anchorHeight = this.getElementStackHeight(anchor);
+            const anchoredY = Math.max(startY, anchorTop + anchorHeight + elementSpacing);
+
+            const probeHeight = elementHeight === 'auto' ? 120 : elementHeight;
+            this.expandCanvasIfNeeded(anchoredY + probeHeight);
+
+            return {
+                x: centerX,
+                y: anchoredY,
+                width: fullWidth,
+                anchor,
+            };
+        }
 
         let nextY = startY;
 
@@ -3586,7 +3625,8 @@ export class ContentEditor {
         return {
             x: centerX,
             y: Math.max(startY, nextY),
-            width: fullWidth
+            width: fullWidth,
+            anchor: null,
         };
     }
 
@@ -3713,6 +3753,11 @@ export class ContentEditor {
 
             if (toolId === 'interactive-best-move') {
                 this.refreshInteractiveBestMoveElementsFromCardData();
+            }
+
+            // Если новый элемент был вставлен под выделенным — сдвигаем вниз блоки, оказавшиеся под точкой вставки.
+            if (position.anchor) {
+                this.repositionElementsBelow(elementId);
             }
 
             // Expand canvas if needed for the new element
@@ -4824,6 +4869,10 @@ export class ContentEditor {
             toolId: element.dataset.toolId,
             element: newElement
         });
+
+        if (position.anchor) {
+            this.repositionElementsBelow(newId);
+        }
 
         this.selectElement(newElement);
     }
