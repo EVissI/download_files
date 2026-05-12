@@ -41,7 +41,11 @@ function closeInteractiveBestMoveFeedbackModal() {
     if (!root) return;
     root.style.display = 'none';
     root.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
 }
 
 function ensureInteractiveBestMoveFeedbackModal() {
@@ -90,6 +94,8 @@ export function openInteractiveBestMoveFeedbackModal(message) {
     const textEl = document.getElementById('ceInteractiveBestMoveFeedbackText');
     const btn = document.getElementById('ceInteractiveBestMoveFeedbackOkBtn');
     if (textEl) textEl.textContent = message != null ? String(message) : '';
+    /* В конец body — поверх узлов, добавленных после первого создания модалки (страница карточки и др.). */
+    document.body.appendChild(root);
     root.style.display = 'flex';
     root.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';

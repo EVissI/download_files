@@ -4099,7 +4099,8 @@ button.content-card-admin-info-file-link:hover {
 .ce-interactive-feedback-modal {
     position: fixed;
     inset: 0;
-    z-index: 100100;
+    /* Выше .content-card-status-modal (200000) и админ-модалок — страница карточки добавляет оверлеи в body после загрузки */
+    z-index: 300000;
     display: none;
     align-items: center;
     justify-content: center;
