@@ -3834,6 +3834,11 @@ export class ContentEditor {
             // Если новый элемент был вставлен под выделенным — сдвигаем вниз блоки, оказавшиеся под точкой вставки.
             if (position.anchor) {
                 this.repositionElementsBelow(elementId);
+            } else {
+                /* Без якоря: иногда сохранённые элементы лежат с зазорами по top (например,
+                   когда кадр сохранён с включённой доской); чтобы новый элемент не оставлял
+                   видимой пустоты между блоками — пересобираем стопку вплотную. */
+                this.recalculateAllElementPositions();
             }
 
             // Expand canvas if needed for the new element
@@ -7552,12 +7557,24 @@ export class ContentEditor {
         this.syncLiveHintBoardCanvasOverlay();
         this.refreshTableElementsFromCardData();
 
+        const tryTightStackAfterRestore = (attempt = 0) => {
+            if (!this.canvas) return;
+            const ready = this.canvas.getBoundingClientRect().width > 0;
+            if (ready) {
+                /* Снимаем «непонятные» отступы сверху/между элементами, если они
+                   были сохранены при включённой доске или с разрывами. */
+                this.recalculateAllElementPositions();
+                this.handleWindowResize();
+                this.forceRefreshContent();
+            } else if (attempt < 10) {
+                setTimeout(() => tryTightStackAfterRestore(attempt + 1), 50);
+            } else {
+                this.forceRefreshContent();
+            }
+        };
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                if (this.canvas && this.canvas.getBoundingClientRect().width > 0) {
-                    this.handleWindowResize();
-                }
-                this.forceRefreshContent();
+                tryTightStackAfterRestore();
             });
         });
     }
