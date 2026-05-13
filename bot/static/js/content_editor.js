@@ -125,7 +125,7 @@ export class ContentEditor {
         this.selectedElement = null;
         this.elements = [];
         this.elementIdCounter = 0;
-        this.toggleStates = {}; // Для отслеживания состояния toggle-кнопок
+        this.toggleStates = { boardCanvas: true }; // Доска по умолчанию; openModal/resetEditorSessionDefaults выравнивают сессию
         /** Показывать строку «матч / манигейм» над доской в предпросмотре (сохраняется в payload.editor.showBoardMatchBanner). */
         this.boardMatchBannerEnabled = false;
         this.cardData = null; // Сохраняем данные карточки для таблиц
@@ -1445,7 +1445,8 @@ export class ContentEditor {
      * не зависело от предыдущего открытия страницы/редактора.
      */
     resetEditorSessionDefaults() {
-        this.toggleStates = {};
+        /* Доска по умолчанию включена при открытии редактора / новой сессии. */
+        this.toggleStates = { boardCanvas: true };
         this.boardMatchBannerEnabled = false;
     }
 
@@ -3337,7 +3338,7 @@ export class ContentEditor {
     toggleBoardCanvas(toolId) {
         // Инициализируем состояние если нужно
         if (this.toggleStates[toolId] === undefined) {
-            this.toggleStates[toolId] = false;
+            this.toggleStates[toolId] = toolId === 'boardCanvas';
         }
 
         // Переключаем состояние
@@ -5663,12 +5664,15 @@ export class ContentEditor {
         this._previewMergePreferStoredCanvasBg = true;
         this.selectedElement = null;
         this.applyPropertiesEmptyState();
-        this.toggleStates = {};
+        this.toggleStates = { boardCanvas: true };
         this._editorSessionBoardSnapshot = null;
         this._canvasPatternDraft = null;
         this.syncCardDataFromHintViewerPage();
         this.elementIdCounter = 0;
         this.loadTools();
+        this.syncBoardToolToggleFromState();
+        this.syncBoardMatchBannerToolbarVisibility();
+        this.renderEditorBoardDisplay();
         this.forceRefreshContent();
     }
 
@@ -7534,8 +7538,9 @@ export class ContentEditor {
         this.resetCanvasDomStructure();
         this.selectedElement = null;
         this.toggleStates = {};
-
-        if (p.editor && p.editor.boardCanvasToggle) {
+        if (p.editor && Object.prototype.hasOwnProperty.call(p.editor, 'boardCanvasToggle')) {
+            this.toggleStates['boardCanvas'] = !!p.editor.boardCanvasToggle;
+        } else {
             this.toggleStates['boardCanvas'] = true;
         }
         this.boardMatchBannerEnabled = !!(p.editor && p.editor.showBoardMatchBanner);
@@ -8317,10 +8322,13 @@ export class ContentEditor {
         this.applyPropertiesEmptyState();
 
         // Reset toggle states
-        this.toggleStates = {};
+        this.toggleStates = { boardCanvas: true };
 
         // Reload tools
         this.loadTools();
+        this.syncBoardToolToggleFromState();
+        this.syncBoardMatchBannerToolbarVisibility();
+        this.renderEditorBoardDisplay();
 
         // Force refresh
         this.forceRefreshContent();
