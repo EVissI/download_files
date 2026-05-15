@@ -781,6 +781,14 @@ class ContentCardMarkViewedBody(BaseModel):
     content_card_id: int = Field(..., ge=1)
 
 
+class ContentCardDeleteBody(BaseModel):
+    """Удаление карточки из БД (только ROOT_ADMIN_IDS)."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    content_card_id: int = Field(..., ge=1)
+
+
 class ContentCardInteractiveRecordBody(BaseModel):
     """Запись ответа в интерактиве «лучший ход»."""
 
@@ -1285,6 +1293,33 @@ async def content_cards_my_list(body: ContentCardMyListBody):
         ]
 
     return {"cards": cards, "is_root_admin": is_root_admin}
+
+
+@app.post("/api/content_cards/delete")
+async def content_cards_delete(body: ContentCardDeleteBody):
+    """Удаление карточки и связанных записей (CASCADE). Только ROOT_ADMIN_IDS."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    async with async_session_maker() as session:
+        exists = await session.scalar(
+            select(ContentCard.id)
+            .where(ContentCard.id == body.content_card_id)
+            .limit(1)
+        )
+        if exists is None:
+            raise HTTPException(status_code=404, detail="Карточка не найдена")
+        await session.execute(
+            delete(ContentCard).where(ContentCard.id == body.content_card_id)
+        )
+        await session.commit()
+
+    logger.info(
+        "Content card deleted: id={} by user_id={}",
+        body.content_card_id,
+        user_id,
+    )
+    return {"ok": True, "content_card_id": body.content_card_id}
 
 
 @app.post("/api/content_cards/all_labels")
