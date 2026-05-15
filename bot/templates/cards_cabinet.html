@@ -2599,11 +2599,19 @@
                         }
                         var c = Number((res.data && res.data.correct_count) || 0);
                         var w = Number((res.data && res.data.wrong_count) || 0);
+                        var totalAttempts = c + w;
+                        var correctPct =
+                            totalAttempts > 0
+                                ? String(Math.round((c / totalAttempts) * 100))
+                                : '—';
                         interactiveStatsModalBody.innerHTML =
                             'Верных ответов: <strong>' +
                             c +
                             '</strong><br>Ошибок: <strong>' +
                             w +
+                            '</strong><br>Процент верных решений: <strong>' +
+                            correctPct +
+                            (totalAttempts > 0 ? '%' : '') +
                             '</strong>';
                     })
                     .catch(function () {
