@@ -470,6 +470,20 @@
             background: rgba(60, 30, 30, 0.95);
         }
 
+        .tile--create {
+            background: transparent;
+            border: 2px dashed #666;
+            color: #9a9a9a;
+            font-size: 2rem;
+            font-weight: 400;
+            line-height: 1;
+        }
+        .tile--create:active {
+            background: rgba(61, 90, 128, 0.2);
+            border-color: #5a7aaa;
+            color: #c8d8ef;
+        }
+
         .empty {
             color: #888;
             font-size: 0.95rem;
@@ -2537,6 +2551,59 @@
                 updateSelectionUi();
             }
 
+            function appendCreateCardTile() {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'tile tile--create';
+                btn.textContent = '+';
+                btn.title = 'Создать новую карточку';
+                btn.setAttribute('aria-label', 'Создать новую карточку');
+                btn.addEventListener('click', function () {
+                    createEmptyContentCard();
+                });
+                gridEl.appendChild(btn);
+            }
+
+            function createEmptyContentCard() {
+                if (!isRootAdminUser) return;
+                if (!window.confirm('Создать новую пустую карточку?')) {
+                    return;
+                }
+                fetch('/api/content_cards/create_empty', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload({})),
+                })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error((j && j.detail) || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Не удалось создать карточку');
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        var newId = Number(data && data.content_card_id);
+                        if (!Number.isFinite(newId) || newId <= 0) {
+                            throw new Error('Некорректный ответ сервера');
+                        }
+                        var status = String((data && data.status) || 'UNVIEWED').toUpperCase();
+                        allCards.push({
+                            content_card_id: newId,
+                            status: status,
+                            labels: [],
+                            __index: allCards.length,
+                        });
+                        reindexAllCards();
+                        renderCards();
+                    })
+                    .catch(function (e) {
+                        window.alert(e.message || String(e));
+                    });
+            }
+
             function deleteContentCard(cardId) {
                 if (!isRootAdminUser) return;
                 var cardIdNum = Number(cardId);
@@ -2567,11 +2634,6 @@
                     })
                     .then(function () {
                         removeCardFromLists(cardIdNum);
-                        if (!allCards.length) {
-                            gridEl.innerHTML =
-                                '<p class="empty">У вас пока нет доступных карточек.</p>';
-                            return;
-                        }
                         renderCards();
                     })
                     .catch(function (e) {
@@ -2595,7 +2657,7 @@
                     return passNumber && passStatus && passLabel;
                 });
 
-                if (!cards.length) {
+                if (!cards.length && !isRootAdminUser) {
                     gridEl.innerHTML = '<p class="empty">Карточки по вашему запросу не найдены.</p>';
                     return;
                 }
@@ -2682,6 +2744,9 @@
                         gridEl.appendChild(btn);
                     }
                 });
+                if (isRootAdminUser) {
+                    appendCreateCardTile();
+                }
             }
 
             function closeInteractiveStatsModal() {
@@ -3037,7 +3102,13 @@
                     }
                     var cards = (data && data.cards) || [];
                     if (!cards.length) {
-                        gridEl.innerHTML = '<p class="empty">У вас пока нет доступных карточек.</p>';
+                        allCards = [];
+                        if (!isRootAdminUser) {
+                            gridEl.innerHTML =
+                                '<p class="empty">У вас пока нет доступных карточек.</p>';
+                            return;
+                        }
+                        renderCards();
                         return;
                     }
                     allCards = cards.map(function (row, index) {

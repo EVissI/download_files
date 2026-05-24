@@ -608,6 +608,37 @@ def _require_content_card_admin(user_id: int) -> None:
         )
 
 
+def _build_empty_content_card_frames() -> dict[str, Any]:
+    """Один пустой кадр — как buildEmptyContentCardFramePayload в редакторе."""
+    frame_id = f"cc_0_{int(datetime.now(timezone.utc).timestamp() * 1000)}_{secrets.token_hex(4)}"
+    saved_at = datetime.now(timezone.utc).isoformat()
+    payload: dict[str, Any] = {
+        "version": 1,
+        "frameId": frame_id,
+        "saveSlotIndex": 0,
+        "savedAt": saved_at,
+        "board": None,
+        "cardData": None,
+        "editor": {
+            "boardCanvasToggle": True,
+            "canvasBackground": "#ffffff",
+            "showBoardMatchBanner": False,
+        },
+        "elements": [],
+    }
+    return {
+        "version": 1,
+        "frames": [
+            {
+                "frameId": frame_id,
+                "saveSlotIndex": 0,
+                "order": 0,
+                "payload": payload,
+            }
+        ],
+    }
+
+
 def _normalize_content_card_labels(raw: list[str] | None) -> list[str] | None:
     if not raw:
         return None
@@ -1320,6 +1351,59 @@ async def content_cards_delete(body: ContentCardDeleteBody):
         user_id,
     )
     return {"ok": True, "content_card_id": body.content_card_id}
+
+
+@app.post("/api/content_cards/create_empty")
+async def content_cards_create_empty(body: ContentCardMyListBody):
+    """
+    Создаёт карточку с одним пустым кадром и выдаёт её текущему админу.
+    Только ROOT_ADMIN_IDS.
+    """
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(user_id)
+
+    frames = _build_empty_content_card_frames()
+    safe_name = f"cabinet_new_{uuid.uuid4().hex[:12]}.json"
+
+    async with async_session_maker() as session:
+        user_dao = UserDAO(session)
+        user = await user_dao.find_one_or_none_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="Пользователь не найден в базе. Откройте бота хотя бы раз.",
+            )
+
+        card_dao = ContentCardDAO(session)
+        ucc_dao = UserContentCardDAO(session)
+
+        new_card = await card_dao.add(
+            SContentCardCreate(
+                file_name=safe_name,
+                frames=frames,
+                labels=None,
+                board_xgid=None,
+            )
+        )
+        saved_id = new_card.id
+        await ucc_dao.add(
+            SUserContentCardCreate(
+                user_id=user_id,
+                content_card_id=saved_id,
+            )
+        )
+        await session.commit()
+
+    logger.info(
+        "Content card created (empty): id={} by user_id={}",
+        saved_id,
+        user_id,
+    )
+    return {
+        "ok": True,
+        "content_card_id": saved_id,
+        "status": UserContentCardStatus.UNVIEWED.value,
+    }
 
 
 @app.post("/api/content_cards/all_labels")
