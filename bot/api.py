@@ -940,7 +940,8 @@ class ContentCardMetaUpdateBody(BaseModel):
 class ContentCardMediaListBody(BaseModel):
     """Список объектов в S3 под префиксом медиа карточек текущего админа (для галереи в редакторе)."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     continuation_token: str | None = None
     limit: int = Field(48, ge=1, le=100)
 
@@ -2176,16 +2177,7 @@ async def content_card_media_list(body: ContentCardMediaListBody):
     Изображения из S3, которые этот админ уже загружал в карточки (префикс content_cards/media/{user_id}/).
     Только ROOT_ADMIN_IDS; для выбора в редакторе без повторной загрузки файла.
     """
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(
-            status_code=401, detail="Недействительные данные Telegram"
-        )
-    tg_user = user_data.get("user") or {}
-    uid = tg_user.get("id")
-    if uid is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    uid = int(uid)
+    uid = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(uid)
     s3 = HintS3Storage.from_settings()
     items, next_tok = s3.list_content_card_media_for_user(

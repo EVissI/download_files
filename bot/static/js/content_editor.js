@@ -205,6 +205,10 @@ export class ContentEditor {
         this.canvasBackgroundPattern = null;
         /** Черновик паттерна внутри модалки настроек канваса. */
         this._canvasPatternDraft = null;
+        /** Кастомный обработчик выбора файла из медиатеки S3. */
+        this._imageLibrarySelectHandler = null;
+        /** Возвращаться ли из медиатеки в модалку выбора источника картинки. */
+        this._imageLibraryReturnToSourceModal = true;
 
         this.init();
     }
@@ -813,7 +817,7 @@ export class ContentEditor {
                     <div class="ce-image-library-overlay" onclick="contentEditor.closeImageLibraryModal()"></div>
                     <div class="ce-image-library-box" role="dialog" aria-modal="true" aria-labelledby="imageLibraryModalTitle">
                         <h3 id="imageLibraryModalTitle" class="ce-image-library-title">Медиатека изображений</h3>
-                        <p class="ce-image-library-hint">Файлы из вашего каталога медиа карточек. Нажмите миниатюру, чтобы вставить на кадр (повторная загрузка не нужна).</p>
+                        <p id="imageLibraryModalHint" class="ce-image-library-hint">Файлы из вашего каталога медиа карточек. Нажмите миниатюру, чтобы вставить на кадр (повторная загрузка не нужна).</p>
                         <div id="imageLibraryStatus" class="ce-image-library-status" aria-live="polite"></div>
                         <div id="imageLibraryGrid" class="ce-image-library-grid"></div>
                         <div class="ce-image-library-actions">
@@ -2440,18 +2444,51 @@ export class ContentEditor {
     }
 
     imageModalOpenLibrary() {
-        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-        if (!initData) {
-            this.showNotification('Медиатека доступна в Telegram WebApp (нужен init_data)', 'warning');
+        this.openImageLibraryModal({
+            returnToSourceModal: true,
+            title: 'Медиатека изображений',
+            hint: 'Файлы из вашего каталога медиа карточек. Нажмите миниатюру, чтобы вставить на кадр (повторная загрузка не нужна).',
+        });
+    }
+
+    openCanvasPatternLibrary() {
+        this.openImageLibraryModal({
+            returnToSourceModal: false,
+            title: 'Фон из медиатеки',
+            hint: 'Файлы из вашего каталога медиа карточек. Нажмите миниатюру, чтобы использовать её как фон канваса без повторной загрузки.',
+            onSelect: (s3Key, filename) => {
+                this.applyCanvasPatternImageFromS3Key(s3Key, filename);
+            },
+        });
+    }
+
+    openImageLibraryModal(options = {}) {
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) {
+            this.showNotification('Медиатека недоступна: нет авторизации редактора', 'warning');
             return;
         }
         const src = document.getElementById('imageSourceModal');
         const lib = document.getElementById('imageLibraryModal');
+        const titleEl = document.getElementById('imageLibraryModalTitle');
+        const hintEl = document.getElementById('imageLibraryModalHint');
         if (!lib) {
             this.showNotification('Окно медиатеки не найдено', 'error');
             return;
         }
-        if (src) {
+        this._imageLibrarySelectHandler =
+            typeof options.onSelect === 'function' ? options.onSelect : null;
+        this._imageLibraryReturnToSourceModal = options.returnToSourceModal !== false;
+        if (titleEl) {
+            titleEl.textContent = String(options.title || 'Медиатека изображений');
+        }
+        if (hintEl) {
+            hintEl.textContent = String(
+                options.hint ||
+                    'Файлы из вашего каталога медиа карточек. Нажмите миниатюру, чтобы вставить на кадр (повторная загрузка не нужна).'
+            );
+        }
+        if (src && this._imageLibraryReturnToSourceModal) {
             src.style.display = 'none';
             src.setAttribute('aria-hidden', 'true');
         }
@@ -2474,10 +2511,12 @@ export class ContentEditor {
             lib.style.display = 'none';
             lib.setAttribute('aria-hidden', 'true');
         }
-        if (src) {
+        if (src && this._imageLibraryReturnToSourceModal) {
             src.style.display = 'flex';
             src.setAttribute('aria-hidden', 'false');
         }
+        this._imageLibrarySelectHandler = null;
+        this._imageLibraryReturnToSourceModal = true;
     }
 
     _closeAllImageModals() {
@@ -2491,6 +2530,8 @@ export class ContentEditor {
             src.style.display = 'none';
             src.setAttribute('aria-hidden', 'true');
         }
+        this._imageLibrarySelectHandler = null;
+        this._imageLibraryReturnToSourceModal = true;
     }
 
     imageLibraryLoadMore() {
@@ -2504,9 +2545,9 @@ export class ContentEditor {
         const st = document.getElementById('imageLibraryStatus');
         const more = document.getElementById('imageLibraryLoadMore');
         if (!grid) return;
-        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-        if (!initData) {
-            if (st) st.textContent = 'Нет доступа: откройте редактор из Telegram.';
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) {
+            if (st) st.textContent = 'Нет доступа: откройте редактор с авторизацией.';
             return;
         }
         if (st && !continuationToken) st.textContent = 'Загрузка…';
@@ -2516,7 +2557,7 @@ export class ContentEditor {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    init_data: initData,
+                    ...auth,
                     continuation_token: continuationToken || null,
                     limit: 48,
                 }),
@@ -2589,8 +2630,53 @@ export class ContentEditor {
     }
 
     _selectImageFromLibrary(s3Key, filename) {
+        const handler = this._imageLibrarySelectHandler;
         this._closeAllImageModals();
+        if (typeof handler === 'function') {
+            handler(s3Key, filename);
+            return;
+        }
         this.addImageElementFromS3Key(s3Key, filename);
+    }
+
+    applyCanvasPatternImageFromS3Key(s3Key, filename) {
+        const imageUrl = this.buildContentCardMediaUrl(s3Key);
+        if (!imageUrl) {
+            this.showNotification('Некорректный ключ файла', 'error');
+            return;
+        }
+        const img = new Image();
+        img.onload = () => {
+            const fallbackInterval = this._canvasPatternDraft
+                ? this.clampNumericValue(this._canvasPatternDraft.interval, 20, 200, 100)
+                : 100;
+            const fromRadio = document.querySelector('input[name="canvasPatternMode"]:checked');
+            const radioMode = fromRadio && fromRadio.value === 'cover' ? 'cover' : 'tile';
+            const prevMode =
+                this._canvasPatternDraft && String(this._canvasPatternDraft.mode || '').toLowerCase() === 'cover'
+                    ? 'cover'
+                    : 'tile';
+            const mode = this._canvasPatternDraft ? prevMode : radioMode;
+            this._canvasPatternDraft = {
+                mode,
+                imageDataUrl: imageUrl,
+                imageS3Key: String(s3Key || ''),
+                imageWidth: this.clampNumericValue(img.naturalWidth, 8, 4096, 64),
+                imageHeight: this.clampNumericValue(img.naturalHeight, 8, 4096, 64),
+                interval: fallbackInterval,
+                fileName: String(filename || this._shortenImageLibraryFilename(s3Key, 40) || 'pattern-image'),
+            };
+            const nameEl = document.getElementById('canvasPatternFileName');
+            if (nameEl) {
+                nameEl.textContent = this._canvasPatternDraft.fileName || 'Изображение выбрано';
+            }
+            this.refreshCanvasPatternPreviewInModal();
+            this.showNotification('Фон выбран из медиатеки', 'success');
+        };
+        img.onerror = () => {
+            this.showNotification('Не удалось загрузить изображение из медиатеки', 'error');
+        };
+        img.src = imageUrl;
     }
 
     /** Вставка картинки по уже существующему ключу S3 (без повторной загрузки при сохранении кадра). */

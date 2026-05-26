@@ -270,6 +270,9 @@ export function openCanvasSettingsModalImpl(editor) {
                                 <button type="button" class="add-preset-btn" onclick="contentEditor.openCanvasPatternImagePicker()">
                                     <i class="fa fa-image"></i> Загрузить картинку
                                 </button>
+                                <button type="button" class="add-preset-btn" onclick="contentEditor.openCanvasPatternLibrary()">
+                                    <i class="fa fa-database"></i> Из медиатеки
+                                </button>
                                 <span id="canvasPatternFileName" style="font-size:12px; color:#666;">${editor.escapeHtml(patternFileLabel)}</span>
                             </div>
                             <input type="file" id="canvasPatternFileInput" accept="image/*" style="display:none">
