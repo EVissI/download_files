@@ -2366,6 +2366,7 @@ class FolderGenerateLinkBody(FolderBaseBody):
 
 class FolderLinkResolveBody(FolderBaseBody):
     folder_token: str
+    direct_only: bool = False
 
 
 # ============================================================
@@ -2584,9 +2585,9 @@ async def folder_generate_link(body: FolderGenerateLinkBody):
 async def folder_link_resolve(body: FolderLinkResolveBody):
     """
     По folder_token вернуть папку и список карточек (read-only, без записи в user_content_cards).
-    Доступно любому авторизованному пользователю (init_data или fab_token).
+    direct_only=True — только карточки этой папки, без подпапок.
     """
-    await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
 
     token = str(body.folder_token or "").strip()
     if not token:
@@ -2603,11 +2604,29 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
         if not folder:
             raise HTTPException(status_code=404, detail="Папка не найдена")
 
-        card_ids = await folder_dao.collect_card_ids_for_folder_tree(
-            root_folder_id=link.folder_id, include_children=True
-        )
+        if body.direct_only:
+            card_ids = await folder_dao.get_folder_card_ids(link.folder_id)
+        else:
+            card_ids = await folder_dao.collect_card_ids_for_folder_tree(
+                root_folder_id=link.folder_id, include_children=True
+            )
 
-        # Загрузить карточки в том же порядке
+        child_folders: list[dict] = []
+        all_folders = await folder_dao.get_all_folders()
+        counts_res = await session.execute(
+            select(ContentCardFolderItem.folder_id, func.count(ContentCardFolderItem.id))
+            .group_by(ContentCardFolderItem.folder_id)
+        )
+        direct_counts: dict[int, int] = {row[0]: row[1] for row in counts_res.all()}
+        for f in all_folders:
+            if f.parent_id == link.folder_id:
+                child_folders.append({
+                    "id": f.id,
+                    "name": f.name,
+                    "parent_id": f.parent_id,
+                    "direct_cards_count": direct_counts.get(f.id, 0),
+                })
+
         cards_data: list[dict] = []
         if card_ids:
             cards_res = await session.execute(
@@ -2631,6 +2650,8 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
         "folder": _serialize_folder(folder),
         "card_ids": card_ids,
         "cards": cards_data,
+        "child_folders": child_folders,
+        "is_root_admin": user_id in settings.ROOT_ADMIN_IDS,
     }
 
 

@@ -114,15 +114,13 @@
         .cabinet-send-btn,
         .cabinet-link-btn,
         .cabinet-folder-add-btn,
-        .cabinet-folders-btn,
         .cabinet-admin-btn {
             display: none;
         }
         .cabinet-mode-btn,
         .cabinet-send-btn,
         .cabinet-link-btn,
-        .cabinet-folder-add-btn,
-        .cabinet-folders-btn {
+        .cabinet-folder-add-btn {
             width: auto;
             min-width: 88px;
             padding: 0 10px;
@@ -132,7 +130,6 @@
         .cabinet-send-btn.is-visible,
         .cabinet-link-btn.is-visible,
         .cabinet-folder-add-btn.is-visible,
-        .cabinet-folders-btn.is-visible,
         .cabinet-admin-btn.is-visible {
             display: inline-flex;
         }
@@ -171,8 +168,7 @@
         .cabinet-footer .cabinet-mode-btn,
         .cabinet-footer .cabinet-send-btn,
         .cabinet-footer .cabinet-link-btn,
-        .cabinet-footer .cabinet-folder-add-btn,
-        .cabinet-footer .cabinet-folders-btn {
+        .cabinet-footer .cabinet-folder-add-btn {
             flex: 1 1 0;
             min-width: 0;
             justify-content: center;
@@ -1148,6 +1144,44 @@
             padding-left: 18px; display: none;
         }
         .folder-node.is-expanded > .folder-node__children { display: block; }
+        .folder-node__actions {
+            display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+        }
+        .folder-node__action {
+            border: none; background: rgba(255,255,255,.08);
+            color: var(--tg-theme-text-color, #fff);
+            border-radius: 6px; padding: 4px 8px;
+            font-size: 11px; cursor: pointer; line-height: 1.2;
+        }
+        .folder-node__action:active { background: rgba(255,255,255,.14); }
+        .folder-node__action--danger {
+            background: transparent; color: var(--tg-theme-hint-color, #aaa);
+            font-size: 16px; padding: 2px 6px;
+        }
+        .folder-view-bar {
+            display: none; flex-wrap: wrap; gap: 8px;
+            align-items: center; margin: 0 0 12px; padding: 0 2px;
+        }
+        .folder-view-bar.is-visible { display: flex; }
+        .folder-view-bar__subfolders {
+            display: flex; flex-wrap: wrap; gap: 6px; flex: 1;
+        }
+        .folder-view-bar__chip {
+            border: 1px solid rgba(255,255,255,.12);
+            background: rgba(255,255,255,.06);
+            color: var(--tg-theme-text-color, #fff);
+            border-radius: 8px; padding: 6px 10px;
+            font-size: 13px; cursor: pointer;
+        }
+        .folder-view-bar__add {
+            border: 1px dashed rgba(255,255,255,.25);
+            background: transparent;
+            color: var(--tg-theme-hint-color, #aaa);
+            border-radius: 8px; padding: 6px 12px;
+            font-size: 13px; cursor: pointer;
+        }
+        #manage-folders-btn { display: none; }
+        #manage-folders-btn.is-visible { display: inline-flex; }
     </style>
 </head>
 
@@ -1168,6 +1202,11 @@
                 <button id="cabinet-interactive-stats-btn" class="cabinet-shuffle-btn" type="button" title="Статистика интерактива" aria-label="Статистика интерактива">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path d="M5 20V10M12 20V4M19 20v-8" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button id="manage-folders-btn" class="cabinet-shuffle-btn" type="button" title="Список папок" aria-label="Список папок">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M3 7.5C3 6.12 4.12 5 5.5 5h3.38l1.5 2H18.5A2.5 2.5 0 0 1 21 9.5v9A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-11Z" stroke="currentColor" stroke-width="1.65" stroke-linejoin="round"/>
                     </svg>
                 </button>
                 <a id="admin-fab-btn" class="cabinet-admin-btn" href="/admin" title="Перейти в админку" aria-label="Перейти в админку">A</a>
@@ -1202,6 +1241,10 @@
             </div>
         </div>
         <div id="err" class="err" style="display:none;"></div>
+        <div id="folder-view-bar" class="folder-view-bar" aria-hidden="true">
+            <div id="folder-view-subfolders" class="folder-view-bar__subfolders"></div>
+            <button id="folder-view-add-subfolder" class="folder-view-bar__add" type="button" style="display:none;">+ Подпапка</button>
+        </div>
         <div id="grid" class="grid"></div>
     </div>
     <div id="labelPresetsModalCabinet" class="presets-modal" aria-hidden="true">
@@ -1219,25 +1262,7 @@
             </div>
         </div>
     </div>
-    <!-- Выбор папки для добавления выделенных карточек -->
-    <div id="folderPickerModal" class="folders-modal" aria-hidden="true">
-        <div id="folderPickerModalOverlay" class="folders-modal__overlay"></div>
-        <div class="folders-modal__box" role="dialog" aria-modal="true">
-            <div class="folders-modal__header">
-                <h3 class="folders-modal__title">Добавить в папку</h3>
-                <button id="folderPickerModalClose" class="folders-modal__close" type="button" aria-label="Закрыть">✕</button>
-            </div>
-            <p id="folderPickerSubtitle" class="folders-modal__subtitle"></p>
-            <p id="folderPickerMsg" class="folders-modal__msg"></p>
-            <div id="folderPickerTree" class="folders-modal__tree"></div>
-            <div class="folders-modal__footer">
-                <button id="folderPickerCancelBtn" type="button" class="folders-modal__btn-secondary">Отмена</button>
-                <button id="folderPickerConfirmBtn" type="button" class="folders-modal__btn-primary" disabled>Добавить</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Управление папками -->
+    <!-- Список папок -->
     <div id="folderManageModal" class="folders-modal" aria-hidden="true">
         <div id="folderManageModalOverlay" class="folders-modal__overlay"></div>
         <div class="folders-modal__box" role="dialog" aria-modal="true">
@@ -1245,16 +1270,8 @@
                 <h3 class="folders-modal__title">Папки</h3>
                 <button id="folderManageModalClose" class="folders-modal__close" type="button" aria-label="Закрыть">✕</button>
             </div>
-            <div class="folders-modal__top">
-                <button id="folderManageCreateBtn" type="button">+ Создать папку</button>
-            </div>
             <p id="folderManageMsg" class="folders-modal__msg"></p>
             <div id="folderManageTree" class="folders-modal__tree"></div>
-            <div class="folders-modal__footer">
-                <button id="folderManageRenameBtn" type="button" class="folders-modal__btn-secondary" disabled>Имя</button>
-                <button id="folderManageLinkBtn" type="button" class="folders-modal__btn-secondary" disabled>Ссылка</button>
-                <button id="folderManageDeleteBtn" type="button" class="folders-modal__btn-secondary" disabled>Удалить</button>
-            </div>
         </div>
     </div>
 
@@ -1263,8 +1280,7 @@
             <button id="id-toggle-btn" class="cabinet-id-toggle-btn" type="button" title="Переключить вид ID карточек" aria-label="Переключить вид ID карточек">ID</button>
             <input id="quick-select-input" class="cabinet-quick-select-input" type="text" inputmode="text" placeholder="11,22,25-30" title="Быстрое выделение: 11,22,25-30" autocomplete="off">
             <button id="select-mode-btn" class="cabinet-mode-btn" type="button" title="Режим выделения карточек" aria-label="Режим выделения карточек">Обычный режим</button>
-            <button id="manage-folders-btn" class="cabinet-folders-btn" type="button" title="Управление папками" aria-label="Управление папками">Папки</button>
-            <button id="add-to-folder-btn" class="cabinet-folder-add-btn" type="button" title="Добавить выделенные в папку" aria-label="Добавить выделенные в папку" disabled>В папку</button>
+            <button id="add-to-folder-btn" class="cabinet-folder-add-btn" type="button" title="Создать папку с выделенными карточками" aria-label="Создать папку с выделенными карточками" disabled>В папку</button>
             <button id="generate-link-btn" class="cabinet-link-btn" type="button" title="Получить одноразовую ссылку" aria-label="Получить одноразовую ссылку" disabled>Ссылка</button>
             <button id="send-selected-btn" class="cabinet-send-btn" type="button" title="Отправить выбранные карточки" aria-label="Отправить выбранные карточки" disabled>Отправить</button>
             <label id="open-hints-toggle-wrap" class="cabinet-hints-toggle" title="Показывать на карточках интерактивные блоки выбора лучшего хода">
@@ -1416,6 +1432,7 @@
             var generateLinkModal = document.getElementById('generateLinkModal');
             var generateLinkModalOverlay = document.getElementById('generateLinkModalOverlay');
             var generateLinkModalInput = document.getElementById('generateLinkModalInput');
+            var generateLinkModalTitle = document.getElementById('generateLinkModalTitle');
             var generateLinkModalMsg = document.getElementById('generateLinkModalMsg');
             var generateLinkModalCloseBtn = document.getElementById('generateLinkModalCloseBtn');
             var generateLinkModalCopyBtn = document.getElementById('generateLinkModalCopyBtn');
@@ -2473,6 +2490,9 @@
 
             function requestActivationLink() {
                 if (!isRootAdminUser || !generateLinkBtn) return;
+                if (generateLinkModalTitle) {
+                    generateLinkModalTitle.textContent = 'Одноразовая ссылка';
+                }
                 var selectedCards = getSelectedCardsInCabinetOrder();
                 var selectedIds = selectedCards.map(function (row) { return row.id; });
                 if (!selectedIds.length) {
@@ -3219,46 +3239,96 @@
             }
             updateSelectionUi();
 
-            // ── Folder view mode (read-only, по folder_token) ──────────────────────
-            if (folderViewToken) {
-                // Скрыть все admin-only элементы
-                var adminOnlyElements = ['select-mode-btn', 'generate-link-btn', 'send-selected-btn',
-                    'add-to-folder-btn', 'manage-folders-btn', 'quick-select-input',
-                    'label-presets-open-btn', 'admin-fab-btn', 'shuffle-cards-btn',
-                    'cabinet-gallery-btn', 'cabinet-interactive-stats-btn'];
-                adminOnlyElements.forEach(function (id) {
-                    var el = document.getElementById(id);
-                    if (el) el.style.display = 'none';
-                });
-                // Заменить заголовок
-                var headerTitle = document.querySelector('.cabinet-header h1');
-                if (headerTitle) headerTitle.textContent = 'Просмотр папки';
+            // ── Folder view mode (по folder_token) ──────────────────────
+            var folderViewBar = document.getElementById('folder-view-bar');
+            var folderViewSubfolders = document.getElementById('folder-view-subfolders');
+            var folderViewAddSubfolderBtn = document.getElementById('folder-view-add-subfolder');
+            var folderViewCurrentFolderId = null;
 
-                fetch('/api/content_cards/folders/link_resolve', {
+            function renderFolderViewBar(data) {
+                if (!folderViewBar || !folderViewSubfolders) return;
+                var children = (data && data.child_folders) || [];
+                var isAdmin = !!(data && data.is_root_admin);
+                folderViewSubfolders.innerHTML = '';
+                children.forEach(function (child) {
+                    var chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'folder-view-bar__chip';
+                    var cnt = child.direct_cards_count || 0;
+                    chip.textContent = child.name + (cnt ? ' (' + cnt + ')' : '');
+                    chip.addEventListener('click', function () {
+                        navigateToFolder(child.id);
+                    });
+                    folderViewSubfolders.appendChild(chip);
+                });
+                if (folderViewAddSubfolderBtn) {
+                    folderViewAddSubfolderBtn.style.display = isAdmin ? '' : 'none';
+                }
+                folderViewBar.classList.add('is-visible');
+                folderViewBar.setAttribute('aria-hidden', 'false');
+            }
+
+            function loadFolderViewContent() {
+                var headerTitle = document.querySelector('.cabinet-header h1');
+                return fetch('/api/content_cards/folders/link_resolve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(authPayload({ folder_token: folderViewToken })),
+                    body: JSON.stringify(authPayload({
+                        folder_token: folderViewToken,
+                        direct_only: true,
+                    })),
                 })
                     .then(function (r) {
-                        if (!r.ok) return r.json().then(function (j) { throw new Error(j.detail || r.statusText); }).catch(function () { throw new Error('Ошибка'); });
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error(j.detail || r.statusText);
+                            }).catch(function () {
+                                throw new Error('Ошибка');
+                            });
+                        }
                         return r.json();
                     })
                     .then(function (data) {
                         var folder = data && data.folder;
+                        folderViewCurrentFolderId = folder && folder.id;
                         if (folder && headerTitle) {
-                            headerTitle.textContent = 'Папка: ' + folder.name;
+                            headerTitle.textContent = folder.name;
                         }
+                        renderFolderViewBar(data);
                         var cards = (data && data.cards) || [];
                         if (!cards.length) {
-                            gridEl.innerHTML = '<p class="empty">Папка пустая.</p>';
+                            allCards = [];
+                            gridEl.innerHTML = '<p class="empty">В этой папке пока нет карточек.</p>';
                             return;
                         }
                         allCards = cards.map(function (card, index) {
-                            return { content_card_id: card.id, status: 'UNVIEWED', labels: card.labels || [], __index: index, __folder_view: true };
+                            return {
+                                content_card_id: card.id,
+                                status: 'UNVIEWED',
+                                labels: card.labels || [],
+                                __index: index,
+                                __folder_view: true,
+                            };
                         });
                         renderCards();
-                    })
-                    .catch(function (e) { showErr(e.message || String(e)); });
+                    });
+            }
+
+            if (folderViewToken) {
+                var adminOnlyElements = ['select-mode-btn', 'generate-link-btn', 'send-selected-btn',
+                    'add-to-folder-btn', 'quick-select-input', 'label-presets-open-btn',
+                    'admin-fab-btn', 'shuffle-cards-btn', 'cabinet-gallery-btn',
+                    'cabinet-interactive-stats-btn', 'manage-folders-btn'];
+                adminOnlyElements.forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+                var searchWrap = document.querySelector('.search-wrap');
+                if (searchWrap) searchWrap.style.display = 'none';
+
+                loadFolderViewContent().catch(function (e) {
+                    showErr(e.message || String(e));
+                });
             } else {
 
             fetch('/api/content_cards/my_list', {
@@ -3361,31 +3431,16 @@
             } // end else (not folderViewToken)
 
             // ============================================================
-            //  Папки (picker + управление)
+            //  Папки
             // ============================================================
-            var folderPickerModal = document.getElementById('folderPickerModal');
-            var folderPickerModalOverlay = document.getElementById('folderPickerModalOverlay');
-            var folderPickerModalClose = document.getElementById('folderPickerModalClose');
-            var folderPickerTree = document.getElementById('folderPickerTree');
-            var folderPickerMsg = document.getElementById('folderPickerMsg');
-            var folderPickerSubtitle = document.getElementById('folderPickerSubtitle');
-            var folderPickerConfirmBtn = document.getElementById('folderPickerConfirmBtn');
-            var folderPickerCancelBtn = document.getElementById('folderPickerCancelBtn');
             var folderManageModal = document.getElementById('folderManageModal');
             var folderManageModalOverlay = document.getElementById('folderManageModalOverlay');
             var folderManageModalClose = document.getElementById('folderManageModalClose');
             var folderManageTree = document.getElementById('folderManageTree');
             var folderManageMsg = document.getElementById('folderManageMsg');
-            var folderManageCreateBtn = document.getElementById('folderManageCreateBtn');
-            var folderManageRenameBtn = document.getElementById('folderManageRenameBtn');
-            var folderManageDeleteBtn = document.getElementById('folderManageDeleteBtn');
-            var folderManageLinkBtn = document.getElementById('folderManageLinkBtn');
 
             var folderTreeData = [];
             var expandedFolderIds = {};
-            var pickerSelectedFolderId = null;
-            var manageSelectedFolderId = null;
-            var pickerPendingCardIds = [];
 
             function folderApiPost(endpoint, extraBody) {
                 var url = endpoint.startsWith('/') ? endpoint : '/api/content_cards/folders/' + endpoint;
@@ -3403,16 +3458,47 @@
                 });
             }
 
-            function findFolderById(nodes, id) {
-                for (var i = 0; i < nodes.length; i++) {
-                    var n = nodes[i];
-                    if (n.id === id) return n;
-                    if (n.children && n.children.length) {
-                        var found = findFolderById(n.children, id);
-                        if (found) return found;
+            function defaultNewFolderName(prefix) {
+                var d = new Date();
+                var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+                var base = pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+                return (prefix || 'Папка') + ' ' + base;
+            }
+
+            function buildFolderShareUrl(linkToken) {
+                var url = '/cards-cabinet?folder_token=' + encodeURIComponent(linkToken);
+                if (fabToken) url += '&fab_token=' + encodeURIComponent(fabToken);
+                return url;
+            }
+
+            function openFolderShareLinkModal(folderId) {
+                if (!generateLinkModal || !generateLinkModalInput) return;
+                folderApiPost('generate_link', { folder_id: folderId }).then(function (data) {
+                    var token = data && data.link_token;
+                    if (!token) throw new Error('Не удалось получить ссылку');
+                    generatedActivationLink = window.location.origin + buildFolderShareUrl(token);
+                    if (generateLinkModalTitle) {
+                        generateLinkModalTitle.textContent = 'Ссылка на папку';
                     }
-                }
-                return null;
+                    generateLinkModalInput.value = generatedActivationLink;
+                    setGenerateLinkModalMsg('');
+                    generateLinkModal.classList.add('is-open');
+                    generateLinkModal.setAttribute('aria-hidden', 'false');
+                    generateLinkModalInput.focus();
+                    generateLinkModalInput.select();
+                }).catch(function (e) {
+                    if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                });
+            }
+
+            function navigateToFolder(folderId) {
+                folderApiPost('generate_link', { folder_id: folderId }).then(function (data) {
+                    var token = data && data.link_token;
+                    if (!token) throw new Error('Не удалось открыть папку');
+                    window.location.assign(buildFolderShareUrl(token));
+                }).catch(function (e) {
+                    showErr(e.message || String(e));
+                });
             }
 
             function loadFolderTreeData() {
@@ -3422,12 +3508,22 @@
                 });
             }
 
-            function buildFolderNodeEl(node, selectedId, onSelect) {
+            function refreshFolderManageList() {
+                if (!folderManageTree) return;
+                folderManageTree.innerHTML = '';
+                if (!folderTreeData.length) {
+                    folderManageTree.innerHTML = '<p style="color:var(--tg-theme-hint-color,#aaa);font-size:13px;text-align:center;padding:16px 0;">Папок пока нет.</p>';
+                    return;
+                }
+                folderTreeData.forEach(function (node) {
+                    folderManageTree.appendChild(buildFolderManageNodeEl(node));
+                });
+            }
+
+            function buildFolderManageNodeEl(node) {
                 var wrap = document.createElement('div');
                 var hasChildren = node.children && node.children.length;
-                wrap.className = 'folder-node'
-                    + (node.id === selectedId ? ' is-selected' : '')
-                    + (expandedFolderIds[node.id] ? ' is-expanded' : '');
+                wrap.className = 'folder-node' + (expandedFolderIds[node.id] ? ' is-expanded' : '');
 
                 var row = document.createElement('div');
                 row.className = 'folder-node__row';
@@ -3448,12 +3544,55 @@
                 count.textContent = cnt ? String(cnt) : '';
                 row.appendChild(count);
 
-                row.addEventListener('click', function (ev) {
+                var actions = document.createElement('span');
+                actions.className = 'folder-node__actions';
+
+                var linkBtn = document.createElement('button');
+                linkBtn.type = 'button';
+                linkBtn.className = 'folder-node__action';
+                linkBtn.textContent = 'Ссылка';
+                linkBtn.title = 'Получить ссылку';
+                linkBtn.addEventListener('click', function (ev) {
                     ev.stopPropagation();
-                    if (hasChildren) {
-                        expandedFolderIds[node.id] = !expandedFolderIds[node.id];
-                    }
-                    onSelect(node.id);
+                    openFolderShareLinkModal(node.id);
+                });
+                actions.appendChild(linkBtn);
+
+                var goBtn = document.createElement('button');
+                goBtn.type = 'button';
+                goBtn.className = 'folder-node__action';
+                goBtn.textContent = 'Перейти';
+                goBtn.title = 'Открыть папку';
+                goBtn.addEventListener('click', function (ev) {
+                    ev.stopPropagation();
+                    navigateToFolder(node.id);
+                });
+                actions.appendChild(goBtn);
+
+                var delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'folder-node__action folder-node__action--danger';
+                delBtn.textContent = '✕';
+                delBtn.title = 'Удалить папку';
+                delBtn.addEventListener('click', function (ev) {
+                    ev.stopPropagation();
+                    if (!window.confirm('Удалить «' + node.name + '»?')) return;
+                    folderApiPost('delete', { folder_id: node.id })
+                        .then(function () { return loadFolderTreeData(); })
+                        .then(function () { refreshFolderManageList(); })
+                        .catch(function (e) {
+                            if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                        });
+                });
+                actions.appendChild(delBtn);
+
+                row.appendChild(actions);
+
+                toggle.addEventListener('click', function (ev) {
+                    ev.stopPropagation();
+                    if (!hasChildren) return;
+                    expandedFolderIds[node.id] = !expandedFolderIds[node.id];
+                    refreshFolderManageList();
                 });
 
                 wrap.appendChild(row);
@@ -3461,153 +3600,72 @@
                     var childrenWrap = document.createElement('div');
                     childrenWrap.className = 'folder-node__children';
                     node.children.forEach(function (child) {
-                        childrenWrap.appendChild(buildFolderNodeEl(child, selectedId, onSelect));
+                        childrenWrap.appendChild(buildFolderManageNodeEl(child));
                     });
                     wrap.appendChild(childrenWrap);
                 }
                 return wrap;
             }
 
-            function renderFolderTreeInto(container, selectedId, onSelect) {
-                if (!container) return;
-                container.innerHTML = '';
-                if (!folderTreeData.length) {
-                    container.innerHTML = '<p style="color:var(--tg-theme-hint-color,#aaa);font-size:13px;text-align:center;padding:16px 0;">Папок пока нет.</p>';
-                    return;
-                }
-                folderTreeData.forEach(function (node) {
-                    container.appendChild(buildFolderNodeEl(node, selectedId, onSelect));
-                });
-            }
-
-            function copyFolderShareUrl(linkToken) {
-                var url = window.location.origin + '/cards-cabinet?folder_token=' + encodeURIComponent(linkToken);
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    return navigator.clipboard.writeText(url);
-                }
-                window.prompt('Скопируйте ссылку:', url);
-                return Promise.resolve();
-            }
-
-            // --- Picker: добавить выделенные карточки ---
-            function closeFolderPickerModal() {
-                if (!folderPickerModal) return;
-                folderPickerModal.classList.remove('is-open');
-                folderPickerModal.setAttribute('aria-hidden', 'true');
-                pickerSelectedFolderId = null;
-                pickerPendingCardIds = [];
-                if (folderPickerMsg) folderPickerMsg.textContent = '';
-            }
-
-            function openFolderPickerModal() {
-                if (!isRootAdminUser || !folderPickerModal) return;
-                var selected = getSelectedCardsInCabinetOrder();
-                pickerPendingCardIds = selected.map(function (row) { return row.id; });
-                if (!pickerPendingCardIds.length) return;
-
-                pickerSelectedFolderId = null;
-                if (folderPickerSubtitle) {
-                    folderPickerSubtitle.textContent = 'Выбрано карточек: ' + pickerPendingCardIds.length;
-                }
-                if (folderPickerConfirmBtn) folderPickerConfirmBtn.disabled = true;
-                if (folderPickerMsg) folderPickerMsg.textContent = 'Выберите папку';
-                folderPickerModal.classList.add('is-open');
-                folderPickerModal.setAttribute('aria-hidden', 'false');
-
-                loadFolderTreeData().then(function () {
-                    function onPickerFolderSelect(folderId) {
-                        pickerSelectedFolderId = folderId;
-                        if (folderPickerConfirmBtn) folderPickerConfirmBtn.disabled = !folderId;
-                        renderFolderTreeInto(folderPickerTree, pickerSelectedFolderId, onPickerFolderSelect);
-                    }
-                    onPickerFolderSelect(null);
-                }).catch(function (e) {
-                    if (folderPickerMsg) folderPickerMsg.textContent = 'Ошибка: ' + (e.message || e);
-                });
-            }
-
-            function confirmAddCardsToFolder() {
-                if (!pickerSelectedFolderId || !pickerPendingCardIds.length) return;
-                if (folderPickerConfirmBtn) folderPickerConfirmBtn.disabled = true;
-                if (folderPickerMsg) folderPickerMsg.textContent = 'Сохранение…';
-
-                var folderId = pickerSelectedFolderId;
-                var cardIds = pickerPendingCardIds.slice();
-                var totalCount = cardIds.length;
-                folderApiPost('add_items', {
-                    folder_id: folderId,
-                    card_ids: cardIds,
-                }).then(function (data) {
-                    var added = (data && data.added_count) || 0;
-                    var folder = findFolderById(folderTreeData, folderId);
-                    var folderName = (folder && folder.name) || 'папку';
-                    closeFolderPickerModal();
-                    clearSelection();
-                    setSelectionMode(false);
-                    window.alert('Добавлено в «' + folderName + '»: ' + added + ' из ' + totalCount);
-                }).catch(function (e) {
-                    if (folderPickerMsg) folderPickerMsg.textContent = 'Ошибка: ' + (e.message || e);
-                    if (folderPickerConfirmBtn) folderPickerConfirmBtn.disabled = false;
-                });
-            }
-
-            // --- Manage: CRUD папок ---
             function closeFolderManageModal() {
                 if (!folderManageModal) return;
                 folderManageModal.classList.remove('is-open');
                 folderManageModal.setAttribute('aria-hidden', 'true');
-                manageSelectedFolderId = null;
                 if (folderManageMsg) folderManageMsg.textContent = '';
-                updateFolderManageActions();
-            }
-
-            function updateFolderManageActions() {
-                var has = !!manageSelectedFolderId;
-                if (folderManageRenameBtn) folderManageRenameBtn.disabled = !has;
-                if (folderManageDeleteBtn) folderManageDeleteBtn.disabled = !has;
-                if (folderManageLinkBtn) folderManageLinkBtn.disabled = !has;
-            }
-
-            function refreshFolderManageTree() {
-                function onManageFolderSelect(folderId) {
-                    manageSelectedFolderId = folderId;
-                    updateFolderManageActions();
-                    renderFolderTreeInto(folderManageTree, manageSelectedFolderId, onManageFolderSelect);
-                }
-                onManageFolderSelect(manageSelectedFolderId);
             }
 
             function openFolderManageModal() {
                 if (!isRootAdminUser || !folderManageModal) return;
-                manageSelectedFolderId = null;
-                updateFolderManageActions();
                 if (folderManageMsg) folderManageMsg.textContent = '';
                 folderManageModal.classList.add('is-open');
                 folderManageModal.setAttribute('aria-hidden', 'false');
                 loadFolderTreeData().then(function () {
-                    refreshFolderManageTree();
+                    refreshFolderManageList();
                 }).catch(function (e) {
                     if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
                 });
             }
 
+            function createFolderWithSelectedCards() {
+                if (!isRootAdminUser || !addToFolderBtn) return;
+                var cardIds = getSelectedCardsInCabinetOrder().map(function (row) { return row.id; });
+                if (!cardIds.length) return;
+
+                addToFolderBtn.disabled = true;
+                var folderName = defaultNewFolderName('Папка');
+                folderApiPost('create', {
+                    name: folderName,
+                    parent_id: null,
+                    sort_order: 0,
+                }).then(function (data) {
+                    var folder = data && data.folder;
+                    if (!folder || !folder.id) throw new Error('Не удалось создать папку');
+                    return folderApiPost('add_items', {
+                        folder_id: folder.id,
+                        card_ids: cardIds,
+                    }).then(function (addData) {
+                        return { folder: folder, added: (addData && addData.added_count) || 0 };
+                    });
+                }).then(function (result) {
+                    clearSelection();
+                    setSelectionMode(false);
+                    updateSelectionUi();
+                    window.alert(
+                        'Создана папка «' + result.folder.name + '» с ' + result.added + ' карточками.\n' +
+                        'Откройте её по ссылке из списка папок в шапке.'
+                    );
+                }).catch(function (e) {
+                    showErr(e.message || String(e));
+                }).finally(function () {
+                    updateSelectionUi();
+                });
+            }
+
             if (addToFolderBtn) {
-                addToFolderBtn.addEventListener('click', openFolderPickerModal);
+                addToFolderBtn.addEventListener('click', createFolderWithSelectedCards);
             }
             if (manageFoldersBtn) {
                 manageFoldersBtn.addEventListener('click', openFolderManageModal);
-            }
-            if (folderPickerConfirmBtn) {
-                folderPickerConfirmBtn.addEventListener('click', confirmAddCardsToFolder);
-            }
-            if (folderPickerCancelBtn) {
-                folderPickerCancelBtn.addEventListener('click', closeFolderPickerModal);
-            }
-            if (folderPickerModalClose) {
-                folderPickerModalClose.addEventListener('click', closeFolderPickerModal);
-            }
-            if (folderPickerModalOverlay) {
-                folderPickerModalOverlay.addEventListener('click', closeFolderPickerModal);
             }
             if (folderManageModalClose) {
                 folderManageModalClose.addEventListener('click', closeFolderManageModal);
@@ -3616,81 +3674,20 @@
                 folderManageModalOverlay.addEventListener('click', closeFolderManageModal);
             }
 
-            if (folderManageCreateBtn) {
-                folderManageCreateBtn.addEventListener('click', function () {
-                    var name = window.prompt('Название папки:');
+            if (folderViewAddSubfolderBtn) {
+                folderViewAddSubfolderBtn.addEventListener('click', function () {
+                    if (!folderViewCurrentFolderId) return;
+                    var name = window.prompt('Название подпапки:', defaultNewFolderName('Подпапка'));
                     if (!name || !name.trim()) return;
-                    var parentId = manageSelectedFolderId || null;
                     folderApiPost('create', {
                         name: name.trim(),
-                        parent_id: parentId,
+                        parent_id: folderViewCurrentFolderId,
                         sort_order: 0,
                     }).then(function () {
-                        return loadFolderTreeData();
-                    }).then(function () {
-                        refreshFolderManageTree();
-                        if (folderManageMsg) folderManageMsg.textContent = 'Папка создана';
+                        return loadFolderViewContent();
                     }).catch(function (e) {
-                        if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                        showErr(e.message || String(e));
                     });
-                });
-            }
-
-            if (folderManageRenameBtn) {
-                folderManageRenameBtn.addEventListener('click', function () {
-                    if (!manageSelectedFolderId) return;
-                    var folder = findFolderById(folderTreeData, manageSelectedFolderId);
-                    var name = window.prompt('Новое название:', (folder && folder.name) || '');
-                    if (!name || !name.trim()) return;
-                    folderApiPost('update', {
-                        folder_id: manageSelectedFolderId,
-                        name: name.trim(),
-                    }).then(function () {
-                        return loadFolderTreeData();
-                    }).then(function () {
-                        refreshFolderManageTree();
-                    }).catch(function (e) {
-                        if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
-                    });
-                });
-            }
-
-            if (folderManageDeleteBtn) {
-                folderManageDeleteBtn.addEventListener('click', function () {
-                    if (!manageSelectedFolderId) return;
-                    var folder = findFolderById(folderTreeData, manageSelectedFolderId);
-                    if (!window.confirm('Удалить «' + ((folder && folder.name) || manageSelectedFolderId) + '»?')) return;
-                    folderApiPost('delete', { folder_id: manageSelectedFolderId })
-                        .then(function () {
-                            manageSelectedFolderId = null;
-                            return loadFolderTreeData();
-                        })
-                        .then(function () {
-                            updateFolderManageActions();
-                            refreshFolderManageTree();
-                        })
-                        .catch(function (e) {
-                            if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
-                        });
-                });
-            }
-
-            if (folderManageLinkBtn) {
-                folderManageLinkBtn.addEventListener('click', function () {
-                    if (!manageSelectedFolderId) return;
-                    if (folderManageMsg) folderManageMsg.textContent = 'Генерация ссылки…';
-                    folderApiPost('generate_link', { folder_id: manageSelectedFolderId })
-                        .then(function (data) {
-                            var token = data && data.link_token;
-                            if (!token) throw new Error('Не удалось получить ссылку');
-                            return copyFolderShareUrl(token);
-                        })
-                        .then(function () {
-                            if (folderManageMsg) folderManageMsg.textContent = 'Ссылка скопирована';
-                        })
-                        .catch(function (e) {
-                            if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
-                        });
                 });
             }
 
