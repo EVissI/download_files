@@ -43,6 +43,18 @@ GALLERY_IMG_REDIS_PREFIX = "cabinet_gallery_img_share:"
 FOLDER_LINK_START_PREFIX = "folderlink_"
 
 
+def _is_cards_cabinet_deeplink(start_payload: str | None) -> bool:
+    """Deep-link из кабинета карточек: только ответ по ссылке, без приветствия /start."""
+    payload = str(start_payload or "").strip()
+    if not payload:
+        return False
+    return (
+        payload.startswith(CARD_LINK_START_PREFIX)
+        or payload.startswith(FOLDER_LINK_START_PREFIX)
+        or payload.startswith(GALLERY_IMG_START_PREFIX)
+    )
+
+
 def _extract_gallery_img_share_token(start_payload: str | None) -> str | None:
     payload = str(start_payload or "").strip()
     if not payload.startswith(GALLERY_IMG_START_PREFIX):
@@ -224,6 +236,49 @@ async def _send_card_link_prompt_if_needed(
     )
 
 
+async def _ensure_user_on_start(
+    message: Message,
+    session: AsyncSession,
+) -> User:
+    """Регистрация / обновление пользователя без приветственного сообщения."""
+    user_data = message.from_user
+    user_id = user_data.id
+    user_dao = UserDAO(session)
+    user_info = await user_dao.find_one_or_none_by_id(user_id)
+    if (
+        user_info
+        and user_data.id in settings.ROOT_ADMIN_IDS
+        and user_info.role != User.Role.ADMIN.value
+    ):
+        user_info.role = User.Role.ADMIN.value
+        await user_dao.update(user_info.id, SUser.model_validate(user_info.to_dict()))
+        return user_info
+    if user_info is None:
+        role = User.Role.USER.value
+        if user_data.id in settings.ROOT_ADMIN_IDS:
+            role = User.Role.ADMIN.value
+        user_schema = SUser(
+            id=user_id,
+            first_name=user_data.first_name,
+            last_name=user_data.last_name,
+            username=user_data.username,
+            role=role,
+        )
+        return await user_dao.add(user_schema)
+    return user_info
+
+
+async def _handle_cards_cabinet_deeplink_start(
+    message: Message,
+    session: AsyncSession,
+    start_payload: str,
+) -> None:
+    await _ensure_user_on_start(message, session)
+    await _send_card_link_prompt_if_needed(message, session, start_payload)
+    await _send_folder_link_prompt_if_needed(message, session, start_payload)
+    await _send_gallery_image_from_start_if_needed(message, start_payload)
+
+
 @start_router.message(CommandStart())
 async def start_command(
     message: Message,
@@ -234,6 +289,14 @@ async def start_command(
     user_data = message.from_user
     user_id = user_data.id
     start_payload = (command.args if command else "") or ""
+
+    if _is_cards_cabinet_deeplink(start_payload):
+        await _handle_cards_cabinet_deeplink_start(
+            message, session_with_commit, start_payload
+        )
+        await state.clear()
+        return
+
     message_dao = MessagesTextsDAO(session_with_commit)
     user_info: User = await UserDAO(session_with_commit).find_one_or_none_by_id(user_id)
     if (
@@ -254,9 +317,6 @@ async def start_command(
             ),
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
-        await _send_card_link_prompt_if_needed(message, session_with_commit, start_payload)
-        await _send_folder_link_prompt_if_needed(message, session_with_commit, start_payload)
-        await _send_gallery_image_from_start_if_needed(message, start_payload)
         await state.clear()
         return
     if user_info is None:
@@ -289,9 +349,6 @@ async def start_command(
                 message_for_new.text,
                 reply_markup=get_activate_promo_without_link_keyboard(i18n),
             )
-        await _send_card_link_prompt_if_needed(message, session_with_commit, start_payload)
-        await _send_folder_link_prompt_if_needed(message, session_with_commit, start_payload)
-        await _send_gallery_image_from_start_if_needed(message, start_payload)
         await state.clear()
         return
     i18n: TranslatorRunner = translator_hub.get_translator_by_locale(
@@ -303,9 +360,6 @@ async def start_command(
         ),
         reply_markup=MainKeyboard.build(user_info.role, i18n),
     )
-    await _send_card_link_prompt_if_needed(message, session_with_commit, start_payload)
-    await _send_folder_link_prompt_if_needed(message, session_with_commit, start_payload)
-    await _send_gallery_image_from_start_if_needed(message, start_payload)
     await state.clear()
 
 
