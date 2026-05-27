@@ -1051,6 +1051,17 @@ async def _build_start_link_for_gallery_image_share(share_token: str) -> str:
     return f"https://t.me/{me.username}?start={payload}"
 
 
+async def _build_start_link_for_folder_share(link_token: str) -> str:
+    me = await bot.get_me()
+    if not me.username:
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось определить username бота для генерации ссылки",
+        )
+    payload = f"folderlink_{link_token}"
+    return f"https://t.me/{me.username}?start={payload}"
+
+
 @app.get("/admin/cards-cabinet")
 async def admin_cards_cabinet_bridge(request: Request):
     """
@@ -2582,7 +2593,10 @@ async def folder_generate_link(body: FolderGenerateLinkBody):
                 folder_id=body.folder_id,
                 admin_id=user_id,
             )
-            return _serialize_folder_link(link)
+            link_payload = _serialize_folder_link(link)
+
+    start_link = await _build_start_link_for_folder_share(link_payload["link_token"])
+    return {**link_payload, "start_link": start_link}
 
 
 @app.post("/api/content_cards/folders/link_resolve")

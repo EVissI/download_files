@@ -3515,9 +3515,9 @@
             function openFolderShareLinkModal(folderId) {
                 if (!generateLinkModal || !generateLinkModalInput) return;
                 folderApiPost('generate_link', { folder_id: folderId }).then(function (data) {
-                    var token = data && data.link_token;
-                    if (!token) throw new Error('Не удалось получить ссылку');
-                    generatedActivationLink = window.location.origin + buildFolderShareUrl(token);
+                    var startLink = data && data.start_link;
+                    if (!startLink) throw new Error('Не удалось получить ссылку');
+                    generatedActivationLink = startLink;
                     if (generateLinkModalTitle) {
                         generateLinkModalTitle.textContent = 'Ссылка на папку';
                     }

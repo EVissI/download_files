@@ -13,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import (
     ContentCardActivationLinkDAO,
+    ContentCardFolderDAO,
+    ContentCardFolderLinkDAO,
     MessageForNewDAO,
     MessagesTextsDAO,
     UserDAO,
@@ -21,6 +23,7 @@ from bot.db.models import ContentCardActivationLinkStatus, User
 from bot.db.schemas import SUser
 from bot.config import settings, translator_hub
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 from fluentogram import TranslatorRunner
 from bot.common.kbds.inline.activate_promo import (
     get_activate_promo_without_link_keyboard,
@@ -37,6 +40,7 @@ CARD_LINK_START_PREFIX = "cardlink_"
 CARD_LINK_ACTIVATE_PREFIX = "activate_card_link:"
 GALLERY_IMG_START_PREFIX = "imglink_"
 GALLERY_IMG_REDIS_PREFIX = "cabinet_gallery_img_share:"
+FOLDER_LINK_START_PREFIX = "folderlink_"
 
 
 def _extract_gallery_img_share_token(start_payload: str | None) -> str | None:
@@ -133,6 +137,64 @@ def _normalize_card_ids(card_ids: list[int] | None) -> list[int]:
     return normalized
 
 
+def _extract_folder_link_token(start_payload: str | None) -> str | None:
+    payload = str(start_payload or "").strip()
+    if not payload.startswith(FOLDER_LINK_START_PREFIX):
+        return None
+    token = payload[len(FOLDER_LINK_START_PREFIX) :].strip()
+    return token or None
+
+
+def _folder_cabinet_webapp_markup(folder_token: str) -> InlineKeyboardMarkup:
+    cabinet_url = (
+        f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
+        f"?folder_token={quote(folder_token, safe='')}"
+    )
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Открыть папку",
+                    web_app=WebAppInfo(url=cabinet_url),
+                )
+            ]
+        ]
+    )
+
+
+async def _send_folder_link_prompt_if_needed(
+    message: Message,
+    session: AsyncSession,
+    start_payload: str | None,
+) -> None:
+    link_token = _extract_folder_link_token(start_payload)
+    if not link_token:
+        return
+
+    link_dao = ContentCardFolderLinkDAO(session)
+    folder_link = await link_dao.find_by_token(link_token)
+    if not folder_link:
+        await message.answer("Ссылка на папку недействительна или не найдена.")
+        return
+
+    folder_dao = ContentCardFolderDAO(session)
+    folder = await folder_dao.get_folder_by_id(folder_link.folder_id)
+    if not folder:
+        await message.answer("Папка по ссылке не найдена.")
+        return
+
+    card_ids = await folder_dao.get_folder_card_ids(folder_link.folder_id)
+    cards_count = len(card_ids)
+    if cards_count < 1:
+        text = f"Вам доступна папка «{folder.name}»."
+    else:
+        text = f"Вам доступна папка «{folder.name}». Карточек: {cards_count}."
+    await message.answer(
+        text,
+        reply_markup=_folder_cabinet_webapp_markup(link_token),
+    )
+
+
 async def _send_card_link_prompt_if_needed(
     message: Message,
     session: AsyncSession,
@@ -193,6 +255,7 @@ async def start_command(
             reply_markup=MainKeyboard.build(user_info.role, i18n),
         )
         await _send_card_link_prompt_if_needed(message, session_with_commit, start_payload)
+        await _send_folder_link_prompt_if_needed(message, session_with_commit, start_payload)
         await _send_gallery_image_from_start_if_needed(message, start_payload)
         await state.clear()
         return
@@ -227,6 +290,7 @@ async def start_command(
                 reply_markup=get_activate_promo_without_link_keyboard(i18n),
             )
         await _send_card_link_prompt_if_needed(message, session_with_commit, start_payload)
+        await _send_folder_link_prompt_if_needed(message, session_with_commit, start_payload)
         await _send_gallery_image_from_start_if_needed(message, start_payload)
         await state.clear()
         return
@@ -240,6 +304,7 @@ async def start_command(
         reply_markup=MainKeyboard.build(user_info.role, i18n),
     )
     await _send_card_link_prompt_if_needed(message, session_with_commit, start_payload)
+    await _send_folder_link_prompt_if_needed(message, session_with_commit, start_payload)
     await _send_gallery_image_from_start_if_needed(message, start_payload)
     await state.clear()
 
