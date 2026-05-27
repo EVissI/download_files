@@ -2389,6 +2389,14 @@ def _serialize_folder(f: ContentCardFolder) -> dict:
     }
 
 
+def _serialize_folder_link(link: ContentCardFolderLink) -> dict:
+    return {
+        "link_token": link.link_token,
+        "folder_id": link.folder_id,
+        "is_active": link.is_active,
+    }
+
+
 # ============================================================
 #  Admin API: папки карточек
 # ============================================================
@@ -2574,11 +2582,7 @@ async def folder_generate_link(body: FolderGenerateLinkBody):
                 folder_id=body.folder_id,
                 admin_id=user_id,
             )
-    return {
-        "link_token": link.link_token,
-        "folder_id": link.folder_id,
-        "is_active": link.is_active,
-    }
+            return _serialize_folder_link(link)
 
 
 @app.post("/api/content_cards/folders/link_resolve")
@@ -2646,13 +2650,13 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
                         "board_xgid": c.board_xgid,
                     })
 
-    return {
-        "folder": _serialize_folder(folder),
-        "card_ids": card_ids,
-        "cards": cards_data,
-        "child_folders": child_folders,
-        "is_root_admin": user_id in settings.ROOT_ADMIN_IDS,
-    }
+        return {
+            "folder": _serialize_folder(folder),
+            "card_ids": card_ids,
+            "cards": cards_data,
+            "child_folders": child_folders,
+            "is_root_admin": user_id in settings.ROOT_ADMIN_IDS,
+        }
 
 
 flask_app, _ = create_app()
