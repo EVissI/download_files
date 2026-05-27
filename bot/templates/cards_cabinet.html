@@ -1186,13 +1186,6 @@
             border-radius: 8px; padding: 6px 10px;
             font-size: 13px; cursor: pointer;
         }
-        .folder-view-bar__add {
-            border: 1px dashed rgba(255,255,255,.25);
-            background: transparent;
-            color: var(--tg-theme-hint-color, #aaa);
-            border-radius: 8px; padding: 6px 12px;
-            font-size: 13px; cursor: pointer;
-        }
         #manage-folders-btn { display: none; }
         #manage-folders-btn.is-visible { display: inline-flex; }
         #cabinet-back-to-main-btn { display: none; }
@@ -1263,7 +1256,6 @@
         <div id="err" class="err" style="display:none;"></div>
         <div id="folder-view-bar" class="folder-view-bar" aria-hidden="true">
             <div id="folder-view-subfolders" class="folder-view-bar__subfolders"></div>
-            <button id="folder-view-add-subfolder" class="folder-view-bar__add" type="button" style="display:none;">+ Подпапка</button>
         </div>
         <div id="grid" class="grid"></div>
     </div>
@@ -1422,7 +1414,15 @@
             var initData = '';
             var _urlParams = new URLSearchParams(window.location.search || '');
             var fabToken = _urlParams.get('fab_token') || '';
-            var folderViewToken = _urlParams.get('folder_token') || '';
+            var CABINET_DEFAULT_TITLE = 'Мои карточки';
+            var cabinetConfig = (function () {
+                var folderToken = _urlParams.get('folder_token') || '';
+                if (folderToken) {
+                    return { mode: 'folder', folderToken: folderToken };
+                }
+                return { mode: 'main' };
+            })();
+            var cabinetFolderId = null;
             var addToFolderBtn = document.getElementById('add-to-folder-btn');
             var manageFoldersBtn = document.getElementById('manage-folders-btn');
             var cabinetBackToMainBtn = document.getElementById('cabinet-back-to-main-btn');
@@ -3300,16 +3300,43 @@
             }
             updateSelectionUi();
 
-            // ── Folder view mode (по folder_token) ──────────────────────
+            // ── Кабинет: единая инициализация (main | folder) ───────────
             var folderViewBar = document.getElementById('folder-view-bar');
             var folderViewSubfolders = document.getElementById('folder-view-subfolders');
-            var folderViewAddSubfolderBtn = document.getElementById('folder-view-add-subfolder');
-            var folderViewCurrentFolderId = null;
 
-            function renderFolderViewBar(data) {
+            function parseApiJsonResponse(r, fallbackMessage) {
+                if (!r.ok) {
+                    return r.json().then(function (j) {
+                        throw new Error(j.detail || r.statusText);
+                    }).catch(function () {
+                        throw new Error(fallbackMessage || 'Ошибка');
+                    });
+                }
+                return r.json();
+            }
+
+            function applyRootAdminCabinetUi() {
+                if (!isRootAdminUser) return;
+                if (adminFabBtn) adminFabBtn.classList.add('is-visible');
+                if (manageFoldersBtn) manageFoldersBtn.classList.add('is-visible');
+                if (addToFolderBtn) addToFolderBtn.classList.add('is-visible');
+                if (selectModeBtn) selectModeBtn.classList.add('is-visible');
+                if (sendSelectedBtn) sendSelectedBtn.classList.add('is-visible');
+                if (generateLinkBtn) generateLinkBtn.classList.add('is-visible');
+                if (quickSelectInput) quickSelectInput.classList.add('is-visible');
+                if (labelPresetsOpenBtn) labelPresetsOpenBtn.classList.add('is-visible');
+            }
+
+            function hideFolderSubfoldersBar() {
+                if (!folderViewBar) return;
+                folderViewBar.classList.remove('is-visible');
+                folderViewBar.setAttribute('aria-hidden', 'true');
+                if (folderViewSubfolders) folderViewSubfolders.innerHTML = '';
+            }
+
+            function renderFolderSubfoldersBar(payload) {
                 if (!folderViewBar || !folderViewSubfolders) return;
-                var children = (data && data.child_folders) || [];
-                var isAdmin = !!(data && data.is_root_admin);
+                var children = (payload && payload.child_folders) || [];
                 folderViewSubfolders.innerHTML = '';
                 children.forEach(function (child) {
                     var chip = document.createElement('button');
@@ -3322,177 +3349,155 @@
                     });
                     folderViewSubfolders.appendChild(chip);
                 });
-                if (folderViewAddSubfolderBtn) {
-                    folderViewAddSubfolderBtn.style.display = isAdmin ? '' : 'none';
-                }
                 folderViewBar.classList.add('is-visible');
                 folderViewBar.setAttribute('aria-hidden', 'false');
             }
 
-            function loadFolderViewContent() {
-                var headerTitle = document.querySelector('.cabinet-header h1');
-                return fetch('/api/content_cards/folders/link_resolve', {
+            function getNewFolderParentId() {
+                if (cabinetConfig.mode === 'folder' && cabinetFolderId) {
+                    return cabinetFolderId;
+                }
+                return null;
+            }
+
+            function fetchCabinetData(config) {
+                if (config.mode === 'folder') {
+                    return fetch('/api/content_cards/folders/link_resolve', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(authPayload({
+                            folder_token: config.folderToken,
+                            direct_only: true,
+                        })),
+                    })
+                        .then(function (r) {
+                            return parseApiJsonResponse(r, 'Ошибка загрузки папки');
+                        })
+                        .then(function (data) {
+                            var cards = (data && data.cards) || [];
+                            return {
+                                is_root_admin: !!(data && data.is_root_admin),
+                                folder: data && data.folder,
+                                child_folders: (data && data.child_folders) || [],
+                                cards: cards.map(function (card, index) {
+                                    return {
+                                        content_card_id: card.id,
+                                        status: 'UNVIEWED',
+                                        labels: card.labels || [],
+                                        __index: index,
+                                    };
+                                }),
+                            };
+                        });
+                }
+                return fetch('/api/content_cards/my_list', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(authPayload({
-                        folder_token: folderViewToken,
-                        direct_only: true,
-                    })),
+                    body: JSON.stringify(authPayload()),
+                })
+                    .then(function (r) {
+                        return parseApiJsonResponse(r, 'Ошибка загрузки списка');
+                    })
+                    .then(function (data) {
+                        var cards = (data && data.cards) || [];
+                        return {
+                            is_root_admin: !!(data && data.is_root_admin),
+                            folder: null,
+                            child_folders: [],
+                            cards: cards.map(function (row, index) {
+                                return Object.assign({}, row, { __index: index });
+                            }),
+                        };
+                    });
+            }
+
+            function applyCabinetPayload(payload, config) {
+                isRootAdminUser = !!(payload && payload.is_root_admin);
+                applyRootAdminCabinetUi();
+
+                var headerTitle = document.querySelector('.cabinet-header h1');
+                if (config.mode === 'folder') {
+                    cabinetFolderId = payload.folder && payload.folder.id;
+                    if (cabinetBackToMainBtn) {
+                        cabinetBackToMainBtn.classList.add('is-visible');
+                    }
+                    if (payload.folder && headerTitle) {
+                        headerTitle.textContent = payload.folder.name;
+                    }
+                    renderFolderSubfoldersBar(payload);
+                } else {
+                    cabinetFolderId = null;
+                    if (headerTitle) {
+                        headerTitle.textContent = CABINET_DEFAULT_TITLE;
+                    }
+                    hideFolderSubfoldersBar();
+                }
+
+                var cards = (payload && payload.cards) || [];
+                if (!cards.length) {
+                    allCards = [];
+                    if (config.mode === 'folder') {
+                        gridEl.innerHTML = '<p class="empty">В этой папке пока нет карточек.</p>';
+                    } else if (!isRootAdminUser) {
+                        gridEl.innerHTML =
+                            '<p class="empty">У вас пока нет доступных карточек.</p>';
+                    } else {
+                        renderCards();
+                    }
+                    return;
+                }
+                allCards = cards;
+                if (quickSelectInput && String(quickSelectInput.value || '').trim()) {
+                    applyQuickSelectionFromInput();
+                } else {
+                    updateSelectionUi();
+                }
+                renderCards();
+            }
+
+            function reloadCabinet() {
+                return fetchCabinetData(cabinetConfig).then(function (payload) {
+                    applyCabinetPayload(payload, cabinetConfig);
+                });
+            }
+
+            function loadAllLabelsFilter() {
+                fetch('/api/content_cards/all_labels', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload()),
                 })
                     .then(function (r) {
                         if (!r.ok) {
-                            return r.json().then(function (j) {
-                                throw new Error(j.detail || r.statusText);
-                            }).catch(function () {
-                                throw new Error('Ошибка');
-                            });
+                            throw new Error('Нет доступа к фильтру меток');
                         }
                         return r.json();
                     })
                     .then(function (data) {
-                        var folder = data && data.folder;
-                        folderViewCurrentFolderId = folder && folder.id;
-                        if (folder && headerTitle) {
-                            headerTitle.textContent = folder.name;
-                        }
-                        renderFolderViewBar(data);
-                        var cards = (data && data.cards) || [];
-                        if (!cards.length) {
-                            allCards = [];
-                            gridEl.innerHTML = '<p class="empty">В этой папке пока нет карточек.</p>';
+                        var labels = (data && data.labels) || [];
+                        if (!labels.length || !labelFilter || !labelFilterWrap) {
                             return;
                         }
-                        allCards = cards.map(function (card, index) {
-                            return {
-                                content_card_id: card.id,
-                                status: 'UNVIEWED',
-                                labels: card.labels || [],
-                                __index: index,
-                                __folder_view: true,
-                            };
+                        labels.forEach(function (label) {
+                            var opt = document.createElement('option');
+                            opt.value = label;
+                            opt.textContent = label;
+                            labelFilter.appendChild(opt);
                         });
+                        applyPendingLabelFilterValue();
+                        labelFilterWrap.classList.add('is-visible');
+                        saveCabinetState();
                         renderCards();
+                    })
+                    .catch(function () {
+                        // Для не-админов фильтр меток просто скрыт.
                     });
             }
 
-            if (folderViewToken) {
-                var adminOnlyElements = ['select-mode-btn', 'generate-link-btn', 'send-selected-btn',
-                    'add-to-folder-btn', 'quick-select-input', 'label-presets-open-btn',
-                    'admin-fab-btn', 'shuffle-cards-btn', 'cabinet-gallery-btn',
-                    'cabinet-interactive-stats-btn', 'manage-folders-btn'];
-                adminOnlyElements.forEach(function (id) {
-                    var el = document.getElementById(id);
-                    if (el) el.style.display = 'none';
-                });
-                var searchWrap = document.querySelector('.search-wrap');
-                if (searchWrap) searchWrap.style.display = 'none';
-                if (cabinetBackToMainBtn) {
-                    cabinetBackToMainBtn.classList.add('is-visible');
-                }
-
-                loadFolderViewContent().catch(function (e) {
-                    showErr(e.message || String(e));
-                });
-            } else {
-
-            fetch('/api/content_cards/my_list', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(authPayload()),
-            })
-                .then(function (r) {
-                    if (!r.ok) {
-                        return r.json().then(function (j) {
-                            throw new Error(j.detail || r.statusText);
-                        }).catch(function () {
-                            throw new Error('Ошибка загрузки списка');
-                        });
-                    }
-                    return r.json();
-                })
-                .then(function (data) {
-                    isRootAdminUser = !!(data && data.is_root_admin);
-                    if (isRootAdminUser && adminFabBtn) {
-                        adminFabBtn.classList.add('is-visible');
-                    }
-                    if (isRootAdminUser && manageFoldersBtn) {
-                        manageFoldersBtn.classList.add('is-visible');
-                    }
-                    if (isRootAdminUser && addToFolderBtn) {
-                        addToFolderBtn.classList.add('is-visible');
-                    }
-                    if (isRootAdminUser && selectModeBtn) {
-                        selectModeBtn.classList.add('is-visible');
-                    }
-                    if (isRootAdminUser && sendSelectedBtn) {
-                        sendSelectedBtn.classList.add('is-visible');
-                    }
-                    if (isRootAdminUser && generateLinkBtn) {
-                        generateLinkBtn.classList.add('is-visible');
-                    }
-                    if (isRootAdminUser && quickSelectInput) {
-                        quickSelectInput.classList.add('is-visible');
-                    }
-                    if (isRootAdminUser && labelPresetsOpenBtn) {
-                        labelPresetsOpenBtn.classList.add('is-visible');
-                    }
-                    var cards = (data && data.cards) || [];
-                    if (!cards.length) {
-                        allCards = [];
-                        if (!isRootAdminUser) {
-                            gridEl.innerHTML =
-                                '<p class="empty">У вас пока нет доступных карточек.</p>';
-                            return;
-                        }
-                        renderCards();
-                        return;
-                    }
-                    allCards = cards.map(function (row, index) {
-                        return Object.assign({}, row, { __index: index });
-                    });
-                    if (quickSelectInput && String(quickSelectInput.value || '').trim()) {
-                        applyQuickSelectionFromInput();
-                    } else {
-                        updateSelectionUi();
-                    }
-                    renderCards();
-                })
-                .catch(function (e) {
-                    showErr(e.message || String(e));
-                });
-
-            fetch('/api/content_cards/all_labels', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(authPayload()),
-            })
-                .then(function (r) {
-                    if (!r.ok) {
-                        throw new Error('Нет доступа к фильтру меток');
-                    }
-                    return r.json();
-                })
-                .then(function (data) {
-                    var labels = (data && data.labels) || [];
-                    if (!labels.length || !labelFilter || !labelFilterWrap) {
-                        return;
-                    }
-                    labels.forEach(function (label) {
-                        var opt = document.createElement('option');
-                        opt.value = label;
-                        opt.textContent = label;
-                        labelFilter.appendChild(opt);
-                    });
-                    applyPendingLabelFilterValue();
-                    labelFilterWrap.classList.add('is-visible');
-                    saveCabinetState();
-                    renderCards();
-                })
-                .catch(function () {
-                    // Для не-админов фильтр меток просто скрыт.
-                });
-
-            } // end else (not folderViewToken)
+            reloadCabinet().catch(function (e) {
+                showErr(e.message || String(e));
+            });
+            loadAllLabelsFilter();
 
             // ============================================================
             //  Папки
@@ -3718,7 +3723,7 @@
                 var opts = options || {};
                 folderNameModalPending = {
                     mode: opts.mode || 'with_cards',
-                    parentId: opts.parentId != null ? opts.parentId : null,
+                    parentId: opts.parentId != null ? opts.parentId : getNewFolderParentId(),
                     cardIds: opts.cardIds || [],
                 };
                 if (folderNameModalTitle) {
@@ -3778,8 +3783,8 @@
                             'Создана папка «' + result.folder.name + '» с ' + result.added + ' карточками.\n' +
                             'Откройте её по ссылке из списка папок в шапке.'
                         );
-                    } else if (typeof loadFolderViewContent === 'function') {
-                        loadFolderViewContent().catch(function (e) {
+                    } else if (cabinetConfig.mode === 'folder') {
+                        reloadCabinet().catch(function (e) {
                             showErr(e.message || String(e));
                         });
                     }
@@ -3793,13 +3798,14 @@
                 if (!isRootAdminUser) return;
                 var cardIds = getSelectedCardsInCabinetOrder().map(function (row) { return row.id; });
                 if (!cardIds.length) return;
+                var parentId = getNewFolderParentId();
                 openFolderNameModal({
                     mode: 'with_cards',
-                    parentId: null,
+                    parentId: parentId,
                     cardIds: cardIds,
-                    title: 'Новая папка',
+                    title: parentId ? 'Новая подпапка' : 'Новая папка',
                     subtitle: 'Выбрано карточек: ' + cardIds.length,
-                    defaultName: defaultNewFolderName('Папка'),
+                    defaultName: defaultNewFolderName(parentId ? 'Подпапка' : 'Папка'),
                 });
             }
 
@@ -3831,20 +3837,6 @@
             }
             if (folderManageModalOverlay) {
                 folderManageModalOverlay.addEventListener('click', closeFolderManageModal);
-            }
-
-            if (folderViewAddSubfolderBtn) {
-                folderViewAddSubfolderBtn.addEventListener('click', function () {
-                    if (!folderViewCurrentFolderId) return;
-                    openFolderNameModal({
-                        mode: 'subfolder',
-                        parentId: folderViewCurrentFolderId,
-                        cardIds: [],
-                        title: 'Новая подпапка',
-                        subtitle: '',
-                        defaultName: defaultNewFolderName('Подпапка'),
-                    });
-                });
             }
 
             });
