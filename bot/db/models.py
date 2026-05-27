@@ -13,6 +13,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
+    true as sa_true,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from bot.db.database import Base
@@ -835,6 +837,112 @@ class ContentCardActivationLink(Base):
     )
 
     activated_by_user: Mapped[Optional["User"]] = relationship("User")
+
+
+class ContentCardFolder(Base):
+    """
+    Иерархическая «папка» для группировки карточек.
+    Используется для дерева в кабинете и ссылок на ветки.
+    """
+
+    __tablename__ = "content_card_folders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    parent_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("content_card_folders.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_by_admin_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    parent: Mapped[Optional["ContentCardFolder"]] = relationship(
+        "ContentCardFolder",
+        remote_side="ContentCardFolder.id",
+        back_populates="children",
+    )
+    children: Mapped[list["ContentCardFolder"]] = relationship(
+        "ContentCardFolder",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+    )
+    created_by_admin: Mapped[Optional["User"]] = relationship("User")
+
+
+class ContentCardFolderItem(Base):
+    """
+    Привязка карточки к папке дерева (many-to-many).
+    Одна карточка может находиться в нескольких папках.
+    """
+
+    __tablename__ = "content_card_folder_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "folder_id",
+            "content_card_id",
+            name="uq_content_card_folder_items_folder_id_content_card_id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("content_card_folders.id", ondelete="CASCADE"), nullable=False
+    )
+    content_card_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("content_cards.id", ondelete="CASCADE"), nullable=False
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["ContentCardFolder"] = relationship(
+        "ContentCardFolder",
+        backref="items",
+    )
+    content_card: Mapped["ContentCard"] = relationship("ContentCard")
+
+
+class ContentCardFolderLink(Base):
+    """
+    Многоразовая ссылка на папку дерева карточек для read-only просмотра.
+    """
+
+    __tablename__ = "content_card_folder_links"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    link_token: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    folder_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("content_card_folders.id", ondelete="CASCADE"), nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=sa_true()
+    )
+    created_by_admin_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["ContentCardFolder"] = relationship("ContentCardFolder")
+    created_by_admin: Mapped[Optional["User"]] = relationship("User")
 
 
 class UserContentCard(Base):

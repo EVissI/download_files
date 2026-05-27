@@ -10,6 +10,9 @@ from bot.db.models import (
     ContentCardActivationLink,
     ContentCardActivationLinkStatus,
     ContentCard,
+    ContentCardFolder,
+    ContentCardFolderItem,
+    ContentCardFolderLink,
     MessagesTexts,
     ServiceType,
     User,
@@ -1322,6 +1325,327 @@ class ContentCardActivationLinkDAO(BaseDAO[ContentCardActivationLink]):
             "total_count": len(valid_card_ids),
             "link_id": int(activation_link.id),
         }
+
+
+class ContentCardFolderDAO(BaseDAO[ContentCardFolder]):
+    """
+    DAO для управления деревом папок карточек.
+    Папки образуют иерархию (parent_id → children); карточки привязаны через ContentCardFolderItem.
+    """
+
+    model = ContentCardFolder
+
+    # ------------------------------------------------------------------
+    # Базовые операции с папками
+    # ------------------------------------------------------------------
+
+    async def get_all_folders(self) -> list[ContentCardFolder]:
+        result = await self._session.execute(
+            select(ContentCardFolder).order_by(
+                ContentCardFolder.parent_id.asc().nullsfirst(),
+                ContentCardFolder.sort_order.asc(),
+                ContentCardFolder.id.asc(),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def get_folder_by_id(self, folder_id: int) -> ContentCardFolder | None:
+        result = await self._session.execute(
+            select(ContentCardFolder).where(ContentCardFolder.id == folder_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_folder(
+        self,
+        name: str,
+        parent_id: int | None,
+        sort_order: int,
+        admin_id: int | None,
+    ) -> ContentCardFolder:
+        folder = ContentCardFolder(
+            name=name[:255],
+            parent_id=parent_id,
+            sort_order=sort_order,
+            created_by_admin_id=admin_id,
+        )
+        self._session.add(folder)
+        await self._session.flush()
+        return folder
+
+    async def update_folder(
+        self,
+        folder_id: int,
+        name: str | None = None,
+        sort_order: int | None = None,
+    ) -> ContentCardFolder | None:
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return None
+        if name is not None:
+            folder.name = name[:255]
+        if sort_order is not None:
+            folder.sort_order = sort_order
+        folder.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return folder
+
+    async def move_folder(
+        self,
+        folder_id: int,
+        new_parent_id: int | None,
+        new_sort_order: int,
+    ) -> ContentCardFolder | None:
+        """Перенести папку в другого родителя; защита от циклов."""
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return None
+        if new_parent_id is not None:
+            # Проверяем, что new_parent_id не является потомком folder_id
+            if await self._is_descendant(folder_id, new_parent_id):
+                raise ValueError(
+                    f"Нельзя переместить папку {folder_id} внутрь своего потомка {new_parent_id}"
+                )
+        folder.parent_id = new_parent_id
+        folder.sort_order = new_sort_order
+        folder.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return folder
+
+    async def delete_folder(self, folder_id: int) -> bool:
+        """
+        Удалить папку. Прямые дети поднимаются на уровень родителя (parent_id папки).
+        Связи карточек (ContentCardFolderItem) для этой папки удаляются каскадно.
+        """
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return False
+        parent_id = folder.parent_id
+        # Поднять детей на уровень выше
+        await self._session.execute(
+            select(ContentCardFolder)
+            .where(ContentCardFolder.parent_id == folder_id)
+        )
+        children_res = await self._session.execute(
+            select(ContentCardFolder).where(ContentCardFolder.parent_id == folder_id)
+        )
+        for child in children_res.scalars().all():
+            child.parent_id = parent_id
+        await self._session.delete(folder)
+        await self._session.flush()
+        return True
+
+    # ------------------------------------------------------------------
+    # Проверка дерева (anti-cycle)
+    # ------------------------------------------------------------------
+
+    async def _is_descendant(self, ancestor_id: int, candidate_id: int) -> bool:
+        """
+        Возвращает True, если candidate_id является потомком ancestor_id.
+        BFS по parent_id вверх (ancestor_id — вершина, проверяем путь от candidate).
+        """
+        visited: set[int] = set()
+        current_id: int | None = candidate_id
+        while current_id is not None:
+            if current_id in visited:
+                break  # Цикл в уже существующем дереве — прерываем
+            visited.add(current_id)
+            if current_id == ancestor_id:
+                return True
+            result = await self._session.execute(
+                select(ContentCardFolder.parent_id).where(ContentCardFolder.id == current_id)
+            )
+            row = result.scalar_one_or_none()
+            current_id = row
+        return False
+
+    # ------------------------------------------------------------------
+    # Резолв карточек по ветке (BFS, дедупликация)
+    # ------------------------------------------------------------------
+
+    async def collect_card_ids_for_folder_tree(
+        self, root_folder_id: int, include_children: bool = True
+    ) -> list[int]:
+        """
+        Собрать id карточек из папки root_folder_id и (если include_children) всех потомков.
+        Возвращает дедуплицированный список; порядок стабильный (BFS, sort_order).
+        """
+        all_folders = await self.get_all_folders()
+        # Построить словарь parent_id → [child_id] для BFS
+        children_map: dict[int | None, list[int]] = {}
+        for f in all_folders:
+            children_map.setdefault(f.parent_id, []).append(f.id)
+
+        folder_ids_to_process: list[int] = [root_folder_id]
+        if include_children:
+            queue: list[int] = [root_folder_id]
+            while queue:
+                current = queue.pop(0)
+                for child_id in children_map.get(current, []):
+                    if child_id not in folder_ids_to_process:
+                        folder_ids_to_process.append(child_id)
+                        queue.append(child_id)
+
+        result = await self._session.execute(
+            select(ContentCardFolderItem.content_card_id)
+            .where(ContentCardFolderItem.folder_id.in_(folder_ids_to_process))
+            .order_by(
+                ContentCardFolderItem.folder_id.asc(),
+                ContentCardFolderItem.sort_order.asc(),
+                ContentCardFolderItem.id.asc(),
+            )
+        )
+        seen: set[int] = set()
+        deduped: list[int] = []
+        for cid in result.scalars().all():
+            if cid not in seen:
+                seen.add(cid)
+                deduped.append(cid)
+        return deduped
+
+    # ------------------------------------------------------------------
+    # Управление карточками внутри папки
+    # ------------------------------------------------------------------
+
+    async def get_folder_items(self, folder_id: int) -> list[ContentCardFolderItem]:
+        result = await self._session.execute(
+            select(ContentCardFolderItem)
+            .where(ContentCardFolderItem.folder_id == folder_id)
+            .order_by(ContentCardFolderItem.sort_order.asc(), ContentCardFolderItem.id.asc())
+        )
+        return list(result.scalars().all())
+
+    async def add_card_to_folder(
+        self, folder_id: int, content_card_id: int, sort_order: int = 0
+    ) -> ContentCardFolderItem | None:
+        """Добавить карточку в папку. Если уже есть — вернуть None (нет ошибки)."""
+        existing = await self._session.execute(
+            select(ContentCardFolderItem).where(
+                ContentCardFolderItem.folder_id == folder_id,
+                ContentCardFolderItem.content_card_id == content_card_id,
+            )
+        )
+        if existing.scalar_one_or_none():
+            return None
+        item = ContentCardFolderItem(
+            folder_id=folder_id,
+            content_card_id=content_card_id,
+            sort_order=sort_order,
+        )
+        self._session.add(item)
+        await self._session.flush()
+        return item
+
+    async def remove_card_from_folder(
+        self, folder_id: int, content_card_id: int
+    ) -> bool:
+        result = await self._session.execute(
+            select(ContentCardFolderItem).where(
+                ContentCardFolderItem.folder_id == folder_id,
+                ContentCardFolderItem.content_card_id == content_card_id,
+            )
+        )
+        item = result.scalar_one_or_none()
+        if not item:
+            return False
+        await self._session.delete(item)
+        await self._session.flush()
+        return True
+
+    async def set_folder_items(
+        self,
+        folder_id: int,
+        card_ids_ordered: list[int],
+    ) -> None:
+        """
+        Батч-замена карточек в папке: удалить те, которых нет в card_ids_ordered,
+        добавить новые, проставить sort_order.
+        """
+        existing_res = await self._session.execute(
+            select(ContentCardFolderItem).where(ContentCardFolderItem.folder_id == folder_id)
+        )
+        existing_items = {
+            item.content_card_id: item for item in existing_res.scalars().all()
+        }
+        desired_ids = list(dict.fromkeys(card_ids_ordered))  # дедупликация с сохранением порядка
+
+        for item in existing_items.values():
+            if item.content_card_id not in desired_ids:
+                await self._session.delete(item)
+
+        for order, cid in enumerate(desired_ids):
+            if cid in existing_items:
+                existing_items[cid].sort_order = order
+            else:
+                self._session.add(
+                    ContentCardFolderItem(
+                        folder_id=folder_id,
+                        content_card_id=cid,
+                        sort_order=order,
+                    )
+                )
+        await self._session.flush()
+
+
+class ContentCardFolderLinkDAO(BaseDAO[ContentCardFolderLink]):
+    """DAO для многоразовых ссылок на папки дерева."""
+
+    model = ContentCardFolderLink
+
+    async def get_link_for_folder(self, folder_id: int) -> ContentCardFolderLink | None:
+        """Найти активную ссылку для папки (первую)."""
+        result = await self._session.execute(
+            select(ContentCardFolderLink)
+            .where(
+                ContentCardFolderLink.folder_id == folder_id,
+                ContentCardFolderLink.is_active == True,  # noqa: E712
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_link(
+        self, folder_id: int, admin_id: int | None
+    ) -> ContentCardFolderLink:
+        link = ContentCardFolderLink(
+            link_token=secrets.token_urlsafe(24),
+            folder_id=folder_id,
+            is_active=True,
+            created_by_admin_id=admin_id,
+        )
+        self._session.add(link)
+        await self._session.flush()
+        return link
+
+    async def get_or_create_link(
+        self, folder_id: int, admin_id: int | None
+    ) -> ContentCardFolderLink:
+        existing = await self.get_link_for_folder(folder_id)
+        if existing:
+            return existing
+        return await self.create_link(folder_id, admin_id)
+
+    async def find_by_token(self, token: str) -> ContentCardFolderLink | None:
+        result = await self._session.execute(
+            select(ContentCardFolderLink)
+            .where(
+                ContentCardFolderLink.link_token == str(token or "").strip(),
+                ContentCardFolderLink.is_active == True,  # noqa: E712
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def deactivate_link(self, link_id: int) -> bool:
+        result = await self._session.execute(
+            select(ContentCardFolderLink).where(ContentCardFolderLink.id == link_id)
+        )
+        link = result.scalar_one_or_none()
+        if not link:
+            return False
+        link.is_active = False
+        link.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return True
 
 
 class UserAnalizePaymentDAO(BaseDAO[UserAnalizePayment]):

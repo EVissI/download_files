@@ -31,6 +31,8 @@ from bot.common.func.pokaz_func import get_hints_for_xgid
 from bot.db.database import async_session_maker
 from bot.db.dao import (
     ContentCardActivationLinkDAO,
+    ContentCardFolderDAO,
+    ContentCardFolderLinkDAO,
     UserDAO,
     MessagesTextsDAO,
     ContentCardDAO,
@@ -38,6 +40,9 @@ from bot.db.dao import (
 )
 from bot.db.models import (
     ContentCard,
+    ContentCardFolder,
+    ContentCardFolderItem,
+    ContentCardFolderLink,
     ContentFrameTemplate,
     LabelPreset,
     ServiceType,
@@ -2312,6 +2317,286 @@ async def content_card_media_proxy(
         media_type=media_type,
         headers=headers,
     )
+
+
+# ============================================================
+#  Pydantic-модели для API папок карточек
+# ============================================================
+
+class FolderBaseBody(BaseModel):
+    init_data: str | None = None
+    fab_token: str | None = None
+
+
+class FolderCreateBody(FolderBaseBody):
+    name: str = Field(..., min_length=1, max_length=255)
+    parent_id: int | None = None
+    sort_order: int = 0
+
+
+class FolderUpdateBody(FolderBaseBody):
+    folder_id: int
+    name: str | None = Field(None, min_length=1, max_length=255)
+    sort_order: int | None = None
+
+
+class FolderMoveBody(FolderBaseBody):
+    folder_id: int
+    new_parent_id: int | None = None
+    new_sort_order: int = 0
+
+
+class FolderDeleteBody(FolderBaseBody):
+    folder_id: int
+
+
+class FolderSetItemsBody(FolderBaseBody):
+    folder_id: int
+    card_ids: list[int]
+
+
+class FolderGenerateLinkBody(FolderBaseBody):
+    folder_id: int
+
+
+class FolderLinkResolveBody(FolderBaseBody):
+    folder_token: str
+
+
+# ============================================================
+#  Helpers
+# ============================================================
+
+def _require_content_card_folder_admin(user_id: int) -> None:
+    if user_id not in settings.ROOT_ADMIN_IDS:
+        raise HTTPException(status_code=403, detail="Только администратор")
+
+
+def _serialize_folder(f: ContentCardFolder) -> dict:
+    return {
+        "id": f.id,
+        "name": f.name,
+        "parent_id": f.parent_id,
+        "sort_order": f.sort_order,
+        "created_by_admin_id": f.created_by_admin_id,
+        "created_at": f.created_at.isoformat() if f.created_at else None,
+    }
+
+
+# ============================================================
+#  Admin API: папки карточек
+# ============================================================
+
+@app.post("/api/content_cards/folders/tree")
+async def folder_tree(body: FolderBaseBody):
+    """Вернуть дерево папок со счётчиками карточек. Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    async with async_session_maker() as session:
+        dao = ContentCardFolderDAO(session)
+        folders = await dao.get_all_folders()
+
+        # Считаем прямые карточки каждой папки
+        counts_res = await session.execute(
+            select(ContentCardFolderItem.folder_id, func.count(ContentCardFolderItem.id))
+            .group_by(ContentCardFolderItem.folder_id)
+        )
+        direct_counts: dict[int, int] = {row[0]: row[1] for row in counts_res.all()}
+
+        # Строим дерево: словарь id → узел
+        nodes: dict[int, dict] = {}
+        for f in folders:
+            nodes[f.id] = {**_serialize_folder(f), "children": [], "direct_cards_count": direct_counts.get(f.id, 0)}
+
+        roots: list[dict] = []
+        for f in folders:
+            node = nodes[f.id]
+            if f.parent_id is not None and f.parent_id in nodes:
+                nodes[f.parent_id]["children"].append(node)
+            else:
+                roots.append(node)
+
+    return {"folders": roots}
+
+
+@app.post("/api/content_cards/folders/create")
+async def folder_create(body: FolderCreateBody):
+    """Создать папку. Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    async with async_session_maker() as session:
+        async with session.begin():
+            dao = ContentCardFolderDAO(session)
+            if body.parent_id is not None:
+                parent = await dao.get_folder_by_id(body.parent_id)
+                if not parent:
+                    raise HTTPException(status_code=404, detail="Родительская папка не найдена")
+            folder = await dao.create_folder(
+                name=body.name,
+                parent_id=body.parent_id,
+                sort_order=body.sort_order,
+                admin_id=user_id,
+            )
+            return {"folder": _serialize_folder(folder)}
+
+
+@app.post("/api/content_cards/folders/update")
+async def folder_update(body: FolderUpdateBody):
+    """Обновить имя/сортировку папки. Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    async with async_session_maker() as session:
+        async with session.begin():
+            dao = ContentCardFolderDAO(session)
+            folder = await dao.update_folder(
+                folder_id=body.folder_id,
+                name=body.name,
+                sort_order=body.sort_order,
+            )
+            if not folder:
+                raise HTTPException(status_code=404, detail="Папка не найдена")
+            return {"folder": _serialize_folder(folder)}
+
+
+@app.post("/api/content_cards/folders/move")
+async def folder_move(body: FolderMoveBody):
+    """Перенести папку (смена parent). Проверяет цикличность. Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    async with async_session_maker() as session:
+        async with session.begin():
+            dao = ContentCardFolderDAO(session)
+            try:
+                folder = await dao.move_folder(
+                    folder_id=body.folder_id,
+                    new_parent_id=body.new_parent_id,
+                    new_sort_order=body.new_sort_order,
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            if not folder:
+                raise HTTPException(status_code=404, detail="Папка не найдена")
+            return {"folder": _serialize_folder(folder)}
+
+
+@app.post("/api/content_cards/folders/delete")
+async def folder_delete(body: FolderDeleteBody):
+    """Удалить папку. Дети поднимаются на уровень родителя. Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    async with async_session_maker() as session:
+        async with session.begin():
+            dao = ContentCardFolderDAO(session)
+            ok = await dao.delete_folder(body.folder_id)
+            if not ok:
+                raise HTTPException(status_code=404, detail="Папка не найдена")
+    return {"ok": True}
+
+
+@app.post("/api/content_cards/folders/set_items")
+async def folder_set_items(body: FolderSetItemsBody):
+    """Батч-замена карточек в папке (add/remove/reorder). Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    async with async_session_maker() as session:
+        async with session.begin():
+            dao = ContentCardFolderDAO(session)
+            folder = await dao.get_folder_by_id(body.folder_id)
+            if not folder:
+                raise HTTPException(status_code=404, detail="Папка не найдена")
+            await dao.set_folder_items(
+                folder_id=body.folder_id,
+                card_ids_ordered=body.card_ids,
+            )
+    return {"ok": True}
+
+
+# ============================================================
+#  API ссылок на папки (generate + read-only resolve)
+# ============================================================
+
+@app.post("/api/content_cards/folders/generate_link")
+async def folder_generate_link(body: FolderGenerateLinkBody):
+    """Создать/получить активную ссылку на папку. Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    async with async_session_maker() as session:
+        async with session.begin():
+            folder_dao = ContentCardFolderDAO(session)
+            folder = await folder_dao.get_folder_by_id(body.folder_id)
+            if not folder:
+                raise HTTPException(status_code=404, detail="Папка не найдена")
+            link_dao = ContentCardFolderLinkDAO(session)
+            link = await link_dao.get_or_create_link(
+                folder_id=body.folder_id,
+                admin_id=user_id,
+            )
+    return {
+        "link_token": link.link_token,
+        "folder_id": link.folder_id,
+        "is_active": link.is_active,
+    }
+
+
+@app.post("/api/content_cards/folders/link_resolve")
+async def folder_link_resolve(body: FolderLinkResolveBody):
+    """
+    По folder_token вернуть папку и список карточек (read-only, без записи в user_content_cards).
+    Доступно любому авторизованному пользователю (init_data или fab_token).
+    """
+    await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+
+    token = str(body.folder_token or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="folder_token обязателен")
+
+    async with async_session_maker() as session:
+        link_dao = ContentCardFolderLinkDAO(session)
+        link = await link_dao.find_by_token(token)
+        if not link:
+            raise HTTPException(status_code=404, detail="Ссылка не найдена или неактивна")
+
+        folder_dao = ContentCardFolderDAO(session)
+        folder = await folder_dao.get_folder_by_id(link.folder_id)
+        if not folder:
+            raise HTTPException(status_code=404, detail="Папка не найдена")
+
+        card_ids = await folder_dao.collect_card_ids_for_folder_tree(
+            root_folder_id=link.folder_id, include_children=True
+        )
+
+        # Загрузить карточки в том же порядке
+        cards_data: list[dict] = []
+        if card_ids:
+            cards_res = await session.execute(
+                select(ContentCard).where(ContentCard.id.in_(card_ids))
+            )
+            cards_by_id: dict[int, ContentCard] = {
+                c.id: c for c in cards_res.scalars().all()
+            }
+            for cid in card_ids:
+                c = cards_by_id.get(cid)
+                if c:
+                    cards_data.append({
+                        "id": c.id,
+                        "file_name": c.file_name,
+                        "notes": c.notes,
+                        "labels": c.labels or [],
+                        "board_xgid": c.board_xgid,
+                    })
+
+    return {
+        "folder": _serialize_folder(folder),
+        "card_ids": card_ids,
+        "cards": cards_data,
+    }
 
 
 flask_app, _ = create_app()
