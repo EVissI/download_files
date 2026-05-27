@@ -1780,34 +1780,55 @@
                 updateCabinetGallerySlide();
             }
 
-            function copyGalleryDeepLinkToClipboard(url, onOk, onFail) {
-                var p;
-                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                    p = navigator.clipboard.writeText(url);
-                } else {
-                    p = new Promise(function (resolve, reject) {
-                        try {
-                            var ta = document.createElement('textarea');
-                            ta.value = url;
-                            ta.setAttribute('readonly', '');
-                            ta.style.position = 'fixed';
-                            ta.style.left = '-9999px';
-                            document.body.appendChild(ta);
-                            ta.focus();
-                            ta.select();
-                            var ok = document.execCommand('copy');
-                            document.body.removeChild(ta);
-                            if (!ok) {
-                                reject(new Error('copy'));
-                            } else {
-                                resolve();
-                            }
-                        } catch (e) {
-                            reject(e);
+            function copyTextViaTextarea(text) {
+                return new Promise(function (resolve, reject) {
+                    try {
+                        var value = String(text || '');
+                        if (!value) {
+                            reject(new Error('Пустая строка для копирования.'));
+                            return;
                         }
+                        var ta = document.createElement('textarea');
+                        ta.value = value;
+                        ta.setAttribute('readonly', '');
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        ta.style.top = '0';
+                        ta.style.opacity = '0';
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        if (typeof ta.setSelectionRange === 'function') {
+                            ta.setSelectionRange(0, value.length);
+                        }
+                        var ok = document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        if (!ok) {
+                            reject(new Error('execCommand copy failed'));
+                            return;
+                        }
+                        resolve();
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+
+            function copyTextToClipboard(text) {
+                var value = String(text || '');
+                if (!value) {
+                    return Promise.reject(new Error('Пустая строка для копирования.'));
+                }
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    return navigator.clipboard.writeText(value).catch(function () {
+                        return copyTextViaTextarea(value);
                     });
                 }
-                p.then(onOk).catch(onFail);
+                return copyTextViaTextarea(value);
+            }
+
+            function copyGalleryDeepLinkToClipboard(url, onOk, onFail) {
+                copyTextToClipboard(url).then(onOk).catch(onFail);
             }
 
             function notifyGalleryLinkCopiedToClipboard() {
@@ -2331,39 +2352,26 @@
             }
 
             function copyGeneratedLinkToClipboard() {
-                if (!generatedActivationLink) {
+                var textToCopy = generatedActivationLink
+                    || (generateLinkModalInput ? String(generateLinkModalInput.value || '').trim() : '');
+                if (!textToCopy) {
                     setGenerateLinkModalMsg('Ссылка еще не сгенерирована.');
                     return;
                 }
-                var writePromise = null;
-                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                    writePromise = navigator.clipboard.writeText(generatedActivationLink);
-                } else {
-                    writePromise = new Promise(function (resolve, reject) {
-                        try {
-                            if (!generateLinkModalInput) {
-                                reject(new Error('Поле ссылки недоступно.'));
-                                return;
-                            }
-                            generateLinkModalInput.focus();
-                            generateLinkModalInput.select();
-                            var ok = document.execCommand('copy');
-                            if (!ok) {
-                                reject(new Error('Не удалось скопировать ссылку.'));
-                                return;
-                            }
-                            resolve();
-                        } catch (e) {
-                            reject(e);
-                        }
-                    });
-                }
-                writePromise
+                copyTextToClipboard(textToCopy)
                     .then(function () {
                         setGenerateLinkModalMsg('Ссылка скопирована.');
+                        if (generateLinkModalInput) {
+                            generateLinkModalInput.focus();
+                            generateLinkModalInput.select();
+                        }
                     })
                     .catch(function () {
-                        setGenerateLinkModalMsg('Не удалось скопировать автоматически. Скопируйте вручную.');
+                        setGenerateLinkModalMsg('Не удалось скопировать автоматически. Выделите ссылку и скопируйте вручную.');
+                        if (generateLinkModalInput) {
+                            generateLinkModalInput.focus();
+                            generateLinkModalInput.select();
+                        }
                     });
             }
 
