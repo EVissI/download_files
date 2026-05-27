@@ -1195,6 +1195,8 @@
         }
         #manage-folders-btn { display: none; }
         #manage-folders-btn.is-visible { display: inline-flex; }
+        #cabinet-back-to-main-btn { display: none; }
+        #cabinet-back-to-main-btn.is-visible { display: inline-flex; }
     </style>
 </head>
 
@@ -1203,6 +1205,11 @@
         <div class="cabinet-top-spacer" aria-hidden="true"></div>
         <div class="cabinet-header">
             <div class="cabinet-header-actions">
+                <button id="cabinet-back-to-main-btn" class="cabinet-shuffle-btn" type="button" title="В основной кабинет" aria-label="В основной кабинет">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M14.5 5.5L8 12l6.5 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
                 <button id="shuffle-cards-btn" class="cabinet-shuffle-btn" type="button" title="Перемешать карточки" aria-label="Перемешать карточки">⇄</button>
                 <button id="cabinet-gallery-btn" class="cabinet-shuffle-btn" type="button" title="Галерея" aria-label="Галерея">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -1418,6 +1425,19 @@
             var folderViewToken = _urlParams.get('folder_token') || '';
             var addToFolderBtn = document.getElementById('add-to-folder-btn');
             var manageFoldersBtn = document.getElementById('manage-folders-btn');
+            var cabinetBackToMainBtn = document.getElementById('cabinet-back-to-main-btn');
+
+            function goToMainCabinet() {
+                var url = '/cards-cabinet';
+                if (fabToken) {
+                    url += '?fab_token=' + encodeURIComponent(fabToken);
+                }
+                window.location.assign(url);
+            }
+
+            if (cabinetBackToMainBtn) {
+                cabinetBackToMainBtn.addEventListener('click', goToMainCabinet);
+            }
             var errEl = document.getElementById('err');
             var gridEl = document.getElementById('grid');
             var searchInput = document.getElementById('card-search');
@@ -3366,6 +3386,9 @@
                 });
                 var searchWrap = document.querySelector('.search-wrap');
                 if (searchWrap) searchWrap.style.display = 'none';
+                if (cabinetBackToMainBtn) {
+                    cabinetBackToMainBtn.classList.add('is-visible');
+                }
 
                 loadFolderViewContent().catch(function (e) {
                     showErr(e.message || String(e));
