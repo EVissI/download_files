@@ -1,7 +1,7 @@
 """add content card folders and folder links
 
 Revision ID: f3a4b5c6d7e8
-Revises: e1a2b3c4d5e6
+Revises: f0a1b2c3d4e5
 Create Date: 2026-05-27 12:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 
 revision: str = "f3a4b5c6d7e8"
-down_revision: Union[str, Sequence[str], None] = "e1a2b3c4d5e6"
+down_revision: Union[str, Sequence[str], None] = "f0a1b2c3d4e5"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
