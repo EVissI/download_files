@@ -2355,6 +2355,11 @@ class FolderSetItemsBody(FolderBaseBody):
     card_ids: list[int]
 
 
+class FolderAddItemsBody(FolderBaseBody):
+    folder_id: int
+    card_ids: list[int]
+
+
 class FolderGenerateLinkBody(FolderBaseBody):
     folder_id: int
 
@@ -2496,6 +2501,36 @@ async def folder_delete(body: FolderDeleteBody):
             if not ok:
                 raise HTTPException(status_code=404, detail="Папка не найдена")
     return {"ok": True}
+
+
+@app.post("/api/content_cards/folders/add_items")
+async def folder_add_items(body: FolderAddItemsBody):
+    """Добавить карточки в папку (merge, без дубликатов). Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    card_ids: list[int] = []
+    seen: set[int] = set()
+    for raw_id in body.card_ids:
+        try:
+            cid = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if cid < 1 or cid in seen:
+            continue
+        seen.add(cid)
+        card_ids.append(cid)
+    if not card_ids:
+        raise HTTPException(status_code=400, detail="Нужен хотя бы один content_card_id")
+
+    async with async_session_maker() as session:
+        async with session.begin():
+            dao = ContentCardFolderDAO(session)
+            folder = await dao.get_folder_by_id(body.folder_id)
+            if not folder:
+                raise HTTPException(status_code=404, detail="Папка не найдена")
+            added = await dao.add_cards_to_folder(body.folder_id, card_ids)
+    return {"ok": True, "added_count": added}
 
 
 @app.post("/api/content_cards/folders/set_items")

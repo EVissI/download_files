@@ -1551,6 +1551,42 @@ class ContentCardFolderDAO(BaseDAO[ContentCardFolder]):
         await self._session.flush()
         return True
 
+    async def get_folder_card_ids(self, folder_id: int) -> list[int]:
+        """Прямые карточки папки (без подпапок), в порядке sort_order."""
+        result = await self._session.execute(
+            select(ContentCardFolderItem.content_card_id)
+            .where(ContentCardFolderItem.folder_id == folder_id)
+            .order_by(
+                ContentCardFolderItem.sort_order.asc(),
+                ContentCardFolderItem.id.asc(),
+            )
+        )
+        return [int(cid) for cid in result.scalars().all() if cid is not None]
+
+    async def add_cards_to_folder(
+        self, folder_id: int, card_ids: list[int]
+    ) -> int:
+        """Добавить карточки в папку (без дубликатов). Возвращает число новых привязок."""
+        existing_ids = set(await self.get_folder_card_ids(folder_id))
+        added = 0
+        next_order = len(existing_ids)
+        for cid in card_ids:
+            if cid in existing_ids:
+                continue
+            self._session.add(
+                ContentCardFolderItem(
+                    folder_id=folder_id,
+                    content_card_id=cid,
+                    sort_order=next_order,
+                )
+            )
+            existing_ids.add(cid)
+            next_order += 1
+            added += 1
+        if added:
+            await self._session.flush()
+        return added
+
     async def set_folder_items(
         self,
         folder_id: int,
