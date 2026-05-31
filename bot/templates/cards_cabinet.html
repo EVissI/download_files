@@ -490,6 +490,41 @@
         .tile__del:active {
             background: rgba(60, 30, 30, 0.95);
         }
+        .tile__edit-notes {
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            z-index: 2;
+            width: 20px;
+            height: 20px;
+            border: 0;
+            border-radius: 6px;
+            background: rgba(30, 30, 30, 0.85);
+            color: #b8c8e8;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .tile__edit-notes:active {
+            background: rgba(40, 50, 70, 0.95);
+        }
+        .link-modal__textarea {
+            width: 100%;
+            min-height: 96px;
+            max-height: 40vh;
+            box-sizing: border-box;
+            margin: 0 0 10px;
+            padding: 10px 12px;
+            border: 1px solid rgba(255,255,255,.15);
+            border-radius: 8px;
+            background: rgba(0,0,0,.25);
+            color: var(--tg-theme-text-color, #fff);
+            font-size: 14px;
+            line-height: 1.4;
+            resize: vertical;
+        }
 
         .tile--create {
             background: transparent;
@@ -1337,6 +1372,25 @@
             </div>
         </div>
     </div>
+    <div id="cardNotesModal" class="link-modal" aria-hidden="true">
+        <div id="cardNotesModalOverlay" class="link-modal__overlay"></div>
+        <div class="link-modal__box" role="dialog" aria-modal="true" aria-labelledby="cardNotesModalTitle">
+            <h3 id="cardNotesModalTitle" class="link-modal__title">Описание карточки</h3>
+            <p id="cardNotesModalSubtitle" class="link-modal__subtitle"></p>
+            <textarea
+                id="cardNotesModalInput"
+                class="link-modal__textarea"
+                maxlength="4000"
+                placeholder="Текст при наведении на карточку"
+                autocomplete="off"
+            ></textarea>
+            <p id="cardNotesModalMsg" class="link-modal__msg"></p>
+            <div class="link-modal__actions">
+                <button id="cardNotesModalCancelBtn" type="button" class="link-modal__btn">Отмена</button>
+                <button id="cardNotesModalSubmitBtn" type="button" class="link-modal__btn link-modal__btn--primary">Сохранить</button>
+            </div>
+        </div>
+    </div>
     <div id="folderNameModal" class="link-modal" aria-hidden="true">
         <div id="folderNameModalOverlay" class="link-modal__overlay"></div>
         <div class="link-modal__box" role="dialog" aria-modal="true" aria-labelledby="folderNameModalTitle">
@@ -1676,6 +1730,28 @@
                     return Number((row && row.content_card_id) || 0);
                 }
                 return Number(((row && row.__index) || 0) + 1);
+            }
+
+            function getCardHoverTitle(row, cardIdNum) {
+                var notes = String((row && row.notes) || '').trim();
+                if (notes) {
+                    return notes;
+                }
+                return 'Карточка #' + cardIdNum;
+            }
+
+            function updateCardNotesInLists(cardIdNum, notes) {
+                var value = String(notes || '').trim();
+                function patch(list) {
+                    if (!Array.isArray(list)) return;
+                    list.forEach(function (row) {
+                        if (Number(row && row.content_card_id) === cardIdNum) {
+                            row.notes = value;
+                        }
+                    });
+                }
+                patch(allCards);
+                patch(shuffledCards);
             }
 
             function updateIdModeUi() {
@@ -2954,7 +3030,7 @@
                     }
                     var displayId = getCardDisplayId(row);
                     btn.textContent = String(displayId);
-                    btn.title = 'Карточка #' + id;
+                    btn.title = getCardHoverTitle(row, cardIdNum);
                     btn.addEventListener('click', function () {
                         if (isSelectionMode) {
                             var selectedKey = String(cardIdNum);
@@ -3002,6 +3078,21 @@
                     if (isRootAdminUser) {
                         var tileWrap = document.createElement('div');
                         tileWrap.className = 'tile-wrap';
+                        var editNotesBtn = document.createElement('button');
+                        editNotesBtn.type = 'button';
+                        editNotesBtn.className = 'tile__edit-notes';
+                        editNotesBtn.title = 'Изменить описание';
+                        editNotesBtn.setAttribute('aria-label', 'Изменить описание карточки #' + id);
+                        editNotesBtn.innerHTML =
+                            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+                            '<path d="M4 20h4l10.5-10.5a1.4 1.4 0 0 0 0-2L14.5 3.5a1.4 1.4 0 0 0-2 0L3 13v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+                            '<path d="M13.5 5.5l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+                            '</svg>';
+                        editNotesBtn.addEventListener('click', function (ev) {
+                            ev.stopPropagation();
+                            ev.preventDefault();
+                            openCardNotesModal(cardIdNum, row.notes || '');
+                        });
                         var delBtn = document.createElement('button');
                         delBtn.type = 'button';
                         delBtn.className = 'tile__del';
@@ -3013,6 +3104,7 @@
                             ev.preventDefault();
                             deleteContentCard(cardIdNum);
                         });
+                        tileWrap.appendChild(editNotesBtn);
                         tileWrap.appendChild(btn);
                         tileWrap.appendChild(delBtn);
                         gridEl.appendChild(tileWrap);
@@ -3425,6 +3517,7 @@
                                         content_card_id: card.id,
                                         status: 'UNVIEWED',
                                         labels: card.labels || [],
+                                        notes: (card.notes || '').trim(),
                                         __index: index,
                                     };
                                 }),
@@ -3760,6 +3853,100 @@
                     refreshFolderManageList();
                 }).catch(function (e) {
                     if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                });
+            }
+
+            var cardNotesModal = document.getElementById('cardNotesModal');
+            var cardNotesModalOverlay = document.getElementById('cardNotesModalOverlay');
+            var cardNotesModalInput = document.getElementById('cardNotesModalInput');
+            var cardNotesModalTitle = document.getElementById('cardNotesModalTitle');
+            var cardNotesModalSubtitle = document.getElementById('cardNotesModalSubtitle');
+            var cardNotesModalMsg = document.getElementById('cardNotesModalMsg');
+            var cardNotesModalCancelBtn = document.getElementById('cardNotesModalCancelBtn');
+            var cardNotesModalSubmitBtn = document.getElementById('cardNotesModalSubmitBtn');
+            var cardNotesModalPendingId = null;
+
+            function setCardNotesModalMsg(msg) {
+                if (cardNotesModalMsg) cardNotesModalMsg.textContent = msg || '';
+            }
+
+            function closeCardNotesModal() {
+                if (!cardNotesModal) return;
+                cardNotesModal.classList.remove('is-open');
+                cardNotesModal.setAttribute('aria-hidden', 'true');
+                cardNotesModalPendingId = null;
+                setCardNotesModalMsg('');
+                if (cardNotesModalSubmitBtn) cardNotesModalSubmitBtn.disabled = false;
+            }
+
+            function openCardNotesModal(cardIdNum, currentNotes) {
+                if (!isRootAdminUser || !cardNotesModal || !cardNotesModalInput) return;
+                cardNotesModalPendingId = cardIdNum;
+                if (cardNotesModalTitle) {
+                    cardNotesModalTitle.textContent = 'Описание карточки #' + cardIdNum;
+                }
+                if (cardNotesModalSubtitle) {
+                    cardNotesModalSubtitle.textContent =
+                        'Показывается при наведении на плитку в кабинете.';
+                    cardNotesModalSubtitle.style.display = '';
+                }
+                cardNotesModalInput.value = String(currentNotes || '');
+                setCardNotesModalMsg('');
+                cardNotesModal.classList.add('is-open');
+                cardNotesModal.setAttribute('aria-hidden', 'false');
+                cardNotesModalInput.focus();
+            }
+
+            function submitCardNotesModal() {
+                if (!cardNotesModalPendingId || !cardNotesModalInput) return;
+                var notes = String(cardNotesModalInput.value || '').trim();
+                if (cardNotesModalSubmitBtn) cardNotesModalSubmitBtn.disabled = true;
+                setCardNotesModalMsg('Сохранение…');
+                var cardIdNum = cardNotesModalPendingId;
+                fetch('/api/content_cards/update_meta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(
+                        authPayload({
+                            content_card_id: cardIdNum,
+                            notes: notes,
+                        })
+                    ),
+                })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().then(function (j) {
+                                throw new Error((j && j.detail) || r.statusText);
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function () {
+                        updateCardNotesInLists(cardIdNum, notes);
+                        closeCardNotesModal();
+                        renderCards();
+                    })
+                    .catch(function (e) {
+                        setCardNotesModalMsg(e.message || String(e));
+                        if (cardNotesModalSubmitBtn) cardNotesModalSubmitBtn.disabled = false;
+                    });
+            }
+
+            if (cardNotesModalCancelBtn) {
+                cardNotesModalCancelBtn.addEventListener('click', closeCardNotesModal);
+            }
+            if (cardNotesModalOverlay) {
+                cardNotesModalOverlay.addEventListener('click', closeCardNotesModal);
+            }
+            if (cardNotesModalSubmitBtn) {
+                cardNotesModalSubmitBtn.addEventListener('click', submitCardNotesModal);
+            }
+            if (cardNotesModalInput) {
+                cardNotesModalInput.addEventListener('keydown', function (ev) {
+                    if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
+                        ev.preventDefault();
+                        submitCardNotesModal();
+                    }
                 });
             }
 

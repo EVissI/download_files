@@ -1272,22 +1272,22 @@ async def update_content_card_meta(body: ContentCardMetaUpdateBody):
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
 
-    labels = _normalize_content_card_labels(body.labels)
-    notes = (str(body.notes).strip() if body.notes is not None else "").strip()
-    notes = notes[:4000] if notes else None
+    if body.labels is None and body.notes is None:
+        raise HTTPException(status_code=400, detail="Нечего обновлять")
+
+    updates: dict[str, Any] = {}
+    if body.labels is not None:
+        updates["labels"] = _normalize_content_card_labels(body.labels)
+    if body.notes is not None:
+        notes = str(body.notes).strip()
+        updates["notes"] = notes[:4000] if notes else None
 
     async with async_session_maker() as session:
         card_dao = ContentCardDAO(session)
         card = await card_dao.find_one_or_none_by_id(body.content_card_id)
         if not card:
             raise HTTPException(status_code=404, detail="Карточка не найдена")
-        await card_dao.update(
-            body.content_card_id,
-            {
-                "labels": labels,
-                "notes": notes,
-            },
-        )
+        await card_dao.update(body.content_card_id, updates)
         await session.commit()
 
     return {"ok": True, "content_card_id": body.content_card_id}
@@ -1335,6 +1335,11 @@ async def content_cards_my_list(body: ContentCardMyListBody):
                     list(row.content_card.labels)
                     if is_root_admin and row.content_card and row.content_card.labels
                     else []
+                ),
+                "notes": (
+                    (row.content_card.notes or "").strip()
+                    if is_root_admin and row.content_card
+                    else ""
                 ),
             }
             for row in links
