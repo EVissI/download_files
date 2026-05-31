@@ -54,7 +54,22 @@ export function refreshCardPreviewUIImpl(editor) {
     const deletePreviewBtn = document.getElementById('cardPreviewDeleteBtn');
 
     if (counter) {
-        counter.textContent = total === 0 ? '0 / 0' : `${editor.cardPreviewIndex + 1} / ${total}`;
+        const compactCounter =
+            typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true;
+        if (total === 0) {
+            counter.textContent = compactCounter ? '0/0' : '0 / 0';
+        } else {
+            const current = editor.cardPreviewIndex + 1;
+            counter.textContent = compactCounter ? `${current}/${total}` : `${current} / ${total}`;
+        }
+        if (compactCounter) {
+            counter.setAttribute(
+                'aria-label',
+                total === 0 ? 'Кадры отсутствуют' : `Кадр ${editor.cardPreviewIndex + 1} из ${total}`
+            );
+        } else {
+            counter.removeAttribute('aria-label');
+        }
     }
     if (prevBtn) prevBtn.disabled = total === 0 || editor.cardPreviewIndex <= 0;
     if (nextBtn) nextBtn.disabled = total === 0 || editor.cardPreviewIndex >= total - 1;

@@ -90,8 +90,26 @@
             font-weight: 800;
             line-height: 1;
         }
+        #contentCardViewRoot .card-preview-nav-arrows {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px 14px;
+            flex-shrink: 0;
+            margin: 0 auto;
+        }
         #contentCardViewRoot .card-preview-nav .card-preview-counter {
-            display: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 3.2em;
+            padding: 0 4px;
+            font-size: 17px;
+            font-weight: 800;
+            color: #e3e8ef;
+            line-height: 1.2;
+            white-space: nowrap;
+            user-select: none;
         }
         #contentCardViewRoot .card-preview-admin-actions {
             display: inline-flex;
@@ -468,6 +486,27 @@
                 }
             }
 
+            function ensureNavArrowsGroup() {
+                var nav = document.querySelector('#contentCardViewRoot .card-preview-nav');
+                if (!nav) return;
+                var prevBtn = document.getElementById('cardPreviewPrevBtn');
+                var nextBtn = document.getElementById('cardPreviewNextBtn');
+                var counter = document.getElementById('cardPreviewCounter');
+                if (!prevBtn || !nextBtn || !counter) return;
+
+                var group = nav.querySelector('.card-preview-nav-arrows');
+                if (!group) {
+                    group = document.createElement('div');
+                    group.className = 'card-preview-nav-arrows';
+                    nav.insertBefore(group, prevBtn);
+                }
+                if (prevBtn.parentElement !== group) group.appendChild(prevBtn);
+                if (counter.parentElement !== group) group.appendChild(counter);
+                if (nextBtn.parentElement !== group) group.appendChild(nextBtn);
+
+                counter.setAttribute('aria-live', 'polite');
+            }
+
             function ensureNavInFooterAndAdminButtons() {
                 var root = document.getElementById('contentCardViewRoot');
                 if (!root) return;
@@ -518,7 +557,7 @@
             function normalizeCardNumberLabels() {
                 var root = document.getElementById('contentCardViewRoot');
                 if (!root) return;
-                var nodes = root.querySelectorAll('.card-preview-counter, .content-card-view-card-number');
+                var nodes = root.querySelectorAll('.content-card-view-card-number');
                 nodes.forEach(function (node) {
                     var raw = String(node.textContent || '');
                     if (!raw) return;
@@ -534,6 +573,7 @@
             var timer = setInterval(function () {
                 ensureNavButtons();
                 ensureNavArrowIcons();
+                ensureNavArrowsGroup();
                 ensureNavInFooterAndAdminButtons();
                 ensureCardNumberNearBackButton();
                 normalizeCardNumberLabels();
@@ -544,6 +584,7 @@
             }, 250);
             ensureNavButtons();
             ensureNavArrowIcons();
+            ensureNavArrowsGroup();
             ensureNavInFooterAndAdminButtons();
             ensureCardNumberNearBackButton();
             normalizeCardNumberLabels();
