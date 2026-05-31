@@ -697,14 +697,6 @@ def _extract_board_xgid_from_frames(frames: dict[str, Any] | None) -> str | None
     return None
 
 
-def _content_card_view_webapp_markup(view_url: str) -> InlineKeyboardMarkup:
-    """Кнопка Web App — иначе при открытии ссылки из чата init_data в Telegram не передаётся."""
-    kb = InlineKeyboardBuilder()
-    kb.button(text="Открыть карточку", web_app=WebAppInfo(url=view_url))
-    kb.adjust(1)
-    return kb.as_markup()
-
-
 def _cards_cabinet_webapp_markup(view_url: str) -> InlineKeyboardMarkup:
     """Кнопка открытия личного кабинета карточек в Telegram Web App."""
     kb = InlineKeyboardBuilder()
@@ -1204,23 +1196,6 @@ async def save_content_card(body: ContentCardSaveBody):
             )
         )
         await session.commit()
-        # --- TEST_ONLY: уведомление в Telegram со ссылкой на просмотр (удалить после тестов) ---
-        try:
-            _view_url = (
-                f"{settings.MINI_APP_URL.rstrip('/')}"
-                f"/content-card-view?content_card_id={saved_id}"
-            )
-            await bot.send_message(
-                chat_id=user_id,
-                text="Карточка сохранена.",
-                reply_markup=_content_card_view_webapp_markup(_view_url),
-            )
-        except Exception as _e:
-            logger.warning(
-                "TEST_ONLY content_card TG notify (create) skipped: {}",
-                _e,
-            )
-        # --- /TEST_ONLY ---
         return {
             "ok": True,
             "content_card_id": saved_id,
@@ -2553,7 +2528,7 @@ async def folder_move(body: FolderMoveBody):
 
 @app.post("/api/content_cards/folders/delete")
 async def folder_delete(body: FolderDeleteBody):
-    """Удалить папку. Дети поднимаются на уровень родителя. Только ROOT_ADMIN."""
+    """Удалить папку и все вложенные подпапки. Только ROOT_ADMIN."""
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_folder_admin(user_id)
 

@@ -1411,26 +1411,35 @@ class ContentCardFolderDAO(BaseDAO[ContentCardFolder]):
         await self._session.flush()
         return folder
 
+    async def _collect_descendant_folder_ids(self, root_folder_id: int) -> list[int]:
+        """BFS: все id вложенных папок (без root_folder_id)."""
+        all_folders = await self.get_all_folders()
+        children_map: dict[int | None, list[int]] = {}
+        for f in all_folders:
+            children_map.setdefault(f.parent_id, []).append(f.id)
+
+        result: list[int] = []
+        queue: list[int] = list(children_map.get(root_folder_id, []))
+        while queue:
+            current = queue.pop(0)
+            result.append(current)
+            queue.extend(children_map.get(current, []))
+        return result
+
     async def delete_folder(self, folder_id: int) -> bool:
         """
-        Удалить папку. Прямые дети поднимаются на уровень родителя (parent_id папки).
-        Связи карточек (ContentCardFolderItem) для этой папки удаляются каскадно.
+        Удалить папку и все вложенные подпапки рекурсивно.
+        Связи карточек и ссылки на папки удаляются каскадно (FK ON DELETE CASCADE).
         """
         folder = await self.get_folder_by_id(folder_id)
         if not folder:
             return False
-        parent_id = folder.parent_id
-        # Поднять детей на уровень выше
+
+        descendant_ids = await self._collect_descendant_folder_ids(folder_id)
+        ids_to_delete = descendant_ids + [folder_id]
         await self._session.execute(
-            select(ContentCardFolder)
-            .where(ContentCardFolder.parent_id == folder_id)
+            delete(ContentCardFolder).where(ContentCardFolder.id.in_(ids_to_delete))
         )
-        children_res = await self._session.execute(
-            select(ContentCardFolder).where(ContentCardFolder.parent_id == folder_id)
-        )
-        for child in children_res.scalars().all():
-            child.parent_id = parent_id
-        await self._session.delete(folder)
         await self._session.flush()
         return True
 
