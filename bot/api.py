@@ -625,7 +625,7 @@ def _build_empty_content_card_frames() -> dict[str, Any]:
         "board": None,
         "cardData": None,
         "editor": {
-            "boardCanvasToggle": True,
+            "boardCanvasToggle": False,
             "canvasBackground": "#ffffff",
             "showBoardMatchBanner": False,
         },

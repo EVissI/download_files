@@ -78,7 +78,7 @@ export function buildEmptyContentCardFramePayloadImpl(editor) {
         board: null,
         cardData: null,
         editor: {
-            boardCanvasToggle: true,
+            boardCanvasToggle: false,
             canvasBackground: '#ffffff',
             showBoardMatchBanner: false,
         },
