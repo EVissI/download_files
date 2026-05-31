@@ -177,7 +177,16 @@ function normalizePreviewImageBlockHeights(editor, inner) {
                 const fallback =
                     typeof editor.getMaxCanvasWidth === 'function' ? editor.getMaxCanvasWidth() : 800;
                 const targetWidth = innerWidth > 0 ? innerWidth : fallback;
-                editor.applyResponsiveUploadImageLayout(el, { targetWidth, maxWidth: 0 });
+                editor.applyResponsiveUploadImageLayout(el, { targetWidth, maxWidth: 0, skipTopAdjust: true });
+                const scale =
+                    typeof editor.getUploadImageScalePercent === 'function'
+                        ? editor.getUploadImageScalePercent(el)
+                        : 100;
+                if (scale < 100) {
+                    const w = el.style.width;
+                    if (w) el.style.setProperty('width', w, 'important');
+                    el.style.setProperty('align-self', 'center', 'important');
+                }
             }
         };
         apply();

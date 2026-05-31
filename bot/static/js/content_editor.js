@@ -1967,6 +1967,13 @@ export class ContentEditor {
         return parseInt(element.style.height, 10) || element.offsetHeight || 150;
     }
 
+    getUploadImageScalePercent(element) {
+        if (!element) return 100;
+        const raw = element.dataset.imageScale;
+        if (raw === undefined || raw === null || String(raw).trim() === '') return 100;
+        return this.clampNumericValue(raw, 10, 100, 100);
+    }
+
     getResponsiveUploadImageHeight(width, naturalWidth, naturalHeight, options = {}) {
         const w = Math.max(0, Math.ceil(Number(width) || 0));
         const nw = Math.max(0, Number(naturalWidth) || 0);
@@ -1982,19 +1989,53 @@ export class ContentEditor {
         if (!element || element.dataset.toolId !== 'upload-image') return null;
         const img = element.querySelector('img');
         if (!img || !img.naturalWidth || !img.naturalHeight) return null;
+
         const widthFromOption = Number(options.targetWidth) || 0;
         const widthRaw =
             widthFromOption ||
-            Math.ceil(element.getBoundingClientRect().width || element.clientWidth || parseFloat(element.style.width) || 0);
+            Math.ceil(
+                (this.canvas && this.canvas.getBoundingClientRect().width) ||
+                    element.getBoundingClientRect().width ||
+                    element.clientWidth ||
+                    parseFloat(element.style.width) ||
+                    0
+            );
         const maxWidth = Math.max(0, Math.ceil(Number(options.maxWidth) || 0));
-        const width = maxWidth > 0 ? Math.min(widthRaw, maxWidth) : widthRaw;
-        const h = this.getResponsiveUploadImageHeight(width, img.naturalWidth, img.naturalHeight, options);
-        if (!h) return null;
-        element.style.height = `${h}px`;
+        const canvasW = maxWidth > 0 ? Math.min(widthRaw, maxWidth) : widthRaw;
+        if (!canvasW) return null;
+
+        const baseH = this.getResponsiveUploadImageHeight(canvasW, img.naturalWidth, img.naturalHeight, options);
+        if (!baseH) return null;
+
+        const scalePct = Number(options.scalePercent) || this.getUploadImageScalePercent(element);
+        const scaledW = Math.max(1, Math.ceil((canvasW * scalePct) / 100));
+        const scaledH = Math.max(1, Math.ceil((baseH * scalePct) / 100));
+
+        const oldH = parseInt(element.style.height, 10) || element.offsetHeight || scaledH;
+        const oldW = parseFloat(element.style.width) || element.offsetWidth || scaledW;
+        const oldTop = parseInt(element.style.top, 10) || 0;
+        const oldLeft = parseFloat(element.style.left) || 0;
+        const skipTopAdjust = options.skipTopAdjust === true;
+        const adjustFromCenter = options.adjustFromCenter === true;
+
+        element.style.width = `${scaledW}px`;
+        element.style.height = `${scaledH}px`;
+
+        if (adjustFromCenter && !skipTopAdjust) {
+            element.style.top = `${Math.max(0, oldTop + Math.round((oldH - scaledH) / 2))}px`;
+            element.style.left = `${Math.max(0, oldLeft + Math.round((oldW - scaledW) / 2))}px`;
+        } else if (scalePct >= 100) {
+            element.style.left = '0px';
+        } else {
+            element.style.left = `${Math.max(0, Math.round((canvasW - scaledW) / 2))}px`;
+        }
+
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'contain';
-        return h;
+        img.style.transform = '';
+        img.style.transformOrigin = '';
+        return scaledH;
     }
 
     getStackedCanvasElements() {
@@ -2041,11 +2082,15 @@ export class ContentEditor {
         const w = canvas.getBoundingClientRect().width;
         let nextY = 0;
         ordered.forEach((el) => {
-            const h = this.getElementStackHeight(el);
-            el.style.left = '0px';
             el.style.top = `${nextY}px`;
-            el.style.width = `${w}px`;
-            el.style.transform = '';
+            if (el.dataset.toolId === 'upload-image') {
+                this.applyResponsiveUploadImageLayout(el, { targetWidth: w, skipTopAdjust: true });
+            } else {
+                el.style.left = '0px';
+                el.style.width = `${w}px`;
+                el.style.transform = '';
+            }
+            const h = this.getElementStackHeight(el);
             elementsRoot.appendChild(el);
             nextY += h;
         });
@@ -4765,6 +4810,18 @@ export class ContentEditor {
                            oninput="contentEditor.updateElementProperty('attachFileDisplayName', this.value)">
                 </div>
                 ` : ''}
+                ${element.dataset.toolId === 'upload-image' ? `
+                <div class="property-item">
+                    <label>Масштаб:</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="range" id="propImageScale" min="10" max="100" step="5"
+                               value="${this.getUploadImageScalePercent(element)}"
+                               oninput="contentEditor.updateElementProperty('imageScale', this.value)"
+                               style="flex:1;" aria-label="Масштаб изображения">
+                        <div class="property-value" id="propImageScaleValue">${this.getUploadImageScalePercent(element)}%</div>
+                    </div>
+                </div>
+                ` : ''}
                 ${element.dataset.toolId === 'interactive-best-move' ? `
                 <div class="property-item">
                     <label>Тип таблицы:</label>
@@ -4859,6 +4916,28 @@ export class ContentEditor {
                 const audio = this.selectedElement.querySelector('audio');
                 if (audio) {
                     audio.volume = value;
+                }
+                break;
+            case 'imageScale':
+                if (this.selectedElement.dataset.toolId === 'upload-image') {
+                    const scale = this.clampNumericValue(value, 10, 100, 100);
+                    this.selectedElement.dataset.imageScale = String(scale);
+                    const oldHeight = parseInt(this.selectedElement.style.height, 10);
+                    const oldTop = parseInt(this.selectedElement.style.top, 10) || 0;
+                    const newHeight = this.applyResponsiveUploadImageLayout(this.selectedElement, {
+                        adjustFromCenter: true,
+                    });
+                    const newTop = parseInt(this.selectedElement.style.top, 10) || 0;
+                    if (newHeight != null && (oldHeight !== newHeight || oldTop !== newTop)) {
+                        this.repositionElementsBelow(this.selectedElement.id);
+                        const elementBottom =
+                            parseInt(this.selectedElement.style.top, 10) + this.selectedElement.offsetHeight;
+                        this.expandCanvasIfNeeded(elementBottom);
+                    }
+                    const scaleInput = document.getElementById('propImageScale');
+                    if (scaleInput) scaleInput.value = String(scale);
+                    const scaleLabel = document.getElementById('propImageScaleValue');
+                    if (scaleLabel) scaleLabel.textContent = `${scale}%`;
                 }
                 break;
             case 'fontSize': {
@@ -5032,14 +5111,12 @@ export class ContentEditor {
             // For table elements, use actual dimensions
             elementHeight = element.offsetHeight;
         } else if (element.dataset.toolId === 'upload-image') {
-            // For uploaded images, recalculate smart height based on current canvas width
-            const img = element.querySelector('img');
-            if (img && img.naturalWidth && img.naturalHeight) {
-                const canvasRect = this.canvas.getBoundingClientRect();
-                elementHeight = this.getResponsiveUploadImageHeight(canvasRect.width, img.naturalWidth, img.naturalHeight) || 200;
-            } else {
-                elementHeight = parseInt(element.style.height) || 200;
-            }
+            const canvasRect = this.canvas.getBoundingClientRect();
+            newElement.style.width = canvasRect.width + 'px';
+            elementHeight =
+                this.applyResponsiveUploadImageLayout(newElement, { targetWidth: canvasRect.width }) ||
+                parseInt(element.style.height) ||
+                200;
         } else if (element.dataset.toolId === 'attach-file') {
             elementHeight = parseInt(element.style.height, 10) || 72;
         } else {
@@ -8102,10 +8179,11 @@ export class ContentEditor {
         // Update all canvas elements to match new canvas width
         const canvasElements = this.canvas.querySelectorAll('.canvas-element');
         canvasElements.forEach(element => {
-            // Update width for all elements to actual canvas width
-            element.style.width = fullWidth + 'px';
-
             const toolId = element.dataset.toolId;
+
+            if (toolId !== 'upload-image') {
+                element.style.width = fullWidth + 'px';
+            }
 
             // Special handling for canvas/image elements
             if (toolId === 'boardCanvas' || toolId === 'board-illustration') {
@@ -8117,11 +8195,13 @@ export class ContentEditor {
                 }
             }
 
-            // Special handling for uploaded images - recalculate smart height
+            // Special handling for uploaded images — ширина/высота блока по масштабу (100% = вся ширина кадра)
             if (toolId === 'upload-image') {
                 const oldHeight = parseInt(element.style.height, 10);
-                const smartHeight = this.applyResponsiveUploadImageLayout(element, { targetWidth: fullWidth });
-                // If height changed, reposition elements below
+                const smartHeight = this.applyResponsiveUploadImageLayout(element, {
+                    targetWidth: fullWidth,
+                    skipTopAdjust: true,
+                });
                 if (smartHeight != null && oldHeight !== smartHeight) {
                     this.repositionElementsBelow(element.id);
                 }
@@ -8191,8 +8271,11 @@ export class ContentEditor {
                     }
                 }
             } else if (element.dataset.toolId === 'upload-image') {
-                // For images, use the current styled height
-                elementHeight = parseInt(element.style.height) || 200;
+                this.applyResponsiveUploadImageLayout(element, {
+                    targetWidth: canvasRect.width,
+                    skipTopAdjust: true,
+                });
+                elementHeight = parseInt(element.style.height, 10) || 200;
             } else if (element.dataset.toolId === 'attach-file') {
                 elementHeight = parseInt(element.style.height, 10) || 72;
             } else if (element.dataset.toolId === 'interactive-best-move') {
@@ -8203,8 +8286,10 @@ export class ContentEditor {
 
             // Update position
             element.style.top = nextY + 'px';
-            element.style.left = '0px'; // Always align to left
-            element.style.width = canvasRect.width + 'px'; // Full canvas width
+            if (element.dataset.toolId !== 'upload-image') {
+                element.style.left = '0px';
+                element.style.width = canvasRect.width + 'px';
+            }
 
             // Move to next position
             nextY += elementHeight + elementSpacing;
