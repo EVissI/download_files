@@ -1146,9 +1146,28 @@
             width: 16px; font-size: 10px; color: var(--tg-theme-hint-color,#aaa);
             flex-shrink: 0; text-align: center;
         }
+        .folder-node__name-wrap {
+            flex: 1; display: flex; align-items: center; gap: 4px;
+            min-width: 0;
+        }
         .folder-node__name {
             flex: 1; font-size: 14px; color: var(--tg-theme-text-color, #fff);
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            min-width: 0;
+        }
+        .folder-node__rename {
+            flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; padding: 0;
+            border: none; border-radius: 6px;
+            background: transparent;
+            color: var(--tg-theme-hint-color, #aaa);
+            cursor: pointer;
+        }
+        .folder-node__rename:hover,
+        .folder-node__rename:active {
+            background: rgba(255,255,255,.08);
+            color: var(--tg-theme-text-color, #fff);
         }
         .folder-node__count {
             font-size: 11px; color: var(--tg-theme-hint-color, #aaa);
@@ -3622,10 +3641,30 @@
                 toggle.textContent = hasChildren ? (expandedFolderIds[node.id] ? '▾' : '▸') : '';
                 row.appendChild(toggle);
 
+                var nameWrap = document.createElement('span');
+                nameWrap.className = 'folder-node__name-wrap';
+
                 var name = document.createElement('span');
                 name.className = 'folder-node__name';
                 name.textContent = node.name;
-                row.appendChild(name);
+                nameWrap.appendChild(name);
+
+                var renameBtn = document.createElement('button');
+                renameBtn.type = 'button';
+                renameBtn.className = 'folder-node__rename';
+                renameBtn.title = 'Переименовать папку';
+                renameBtn.setAttribute('aria-label', 'Переименовать папку «' + node.name + '»');
+                renameBtn.innerHTML =
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+                    '<path d="M4 20h4l10.5-10.5a1.4 1.4 0 0 0 0-2L14.5 3.5a1.4 1.4 0 0 0-2 0L3 13v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+                    '<path d="M13.5 5.5l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+                    '</svg>';
+                renameBtn.addEventListener('click', function (ev) {
+                    ev.stopPropagation();
+                    openRenameFolderModal(node.id, node.name);
+                });
+                nameWrap.appendChild(renameBtn);
+                row.appendChild(nameWrap);
 
                 var count = document.createElement('span');
                 count.className = 'folder-node__count';
@@ -3735,16 +3774,21 @@
                 folderNameModal.setAttribute('aria-hidden', 'true');
                 folderNameModalPending = null;
                 setFolderNameModalMsg('');
-                if (folderNameModalSubmitBtn) folderNameModalSubmitBtn.disabled = false;
+                if (folderNameModalSubmitBtn) {
+                    folderNameModalSubmitBtn.disabled = false;
+                    folderNameModalSubmitBtn.textContent = 'Создать';
+                }
             }
 
             function openFolderNameModal(options) {
                 if (!folderNameModal || !folderNameModalInput) return;
                 var opts = options || {};
+                var mode = opts.mode || 'with_cards';
                 folderNameModalPending = {
-                    mode: opts.mode || 'with_cards',
+                    mode: mode,
                     parentId: opts.parentId != null ? opts.parentId : getNewFolderParentId(),
                     cardIds: opts.cardIds || [],
+                    folderId: opts.folderId != null ? opts.folderId : null,
                 };
                 if (folderNameModalTitle) {
                     folderNameModalTitle.textContent = opts.title || 'Новая папка';
@@ -3753,12 +3797,31 @@
                     folderNameModalSubtitle.textContent = opts.subtitle || '';
                     folderNameModalSubtitle.style.display = opts.subtitle ? '' : 'none';
                 }
-                folderNameModalInput.value = String(opts.defaultName || defaultNewFolderName('Папка'));
+                if (folderNameModalSubmitBtn) {
+                    folderNameModalSubmitBtn.textContent =
+                        opts.submitLabel || (mode === 'rename' ? 'Сохранить' : 'Создать');
+                }
+                folderNameModalInput.value = String(
+                    opts.defaultName != null
+                        ? opts.defaultName
+                        : (mode === 'rename' ? '' : defaultNewFolderName('Папка'))
+                );
                 setFolderNameModalMsg('');
                 folderNameModal.classList.add('is-open');
                 folderNameModal.setAttribute('aria-hidden', 'false');
                 folderNameModalInput.focus();
                 folderNameModalInput.select();
+            }
+
+            function openRenameFolderModal(folderId, currentName) {
+                openFolderNameModal({
+                    mode: 'rename',
+                    folderId: folderId,
+                    title: 'Переименовать папку',
+                    subtitle: '',
+                    defaultName: currentName,
+                    submitLabel: 'Сохранить',
+                });
             }
 
             function submitFolderNameModal() {
@@ -3770,9 +3833,33 @@
                     return;
                 }
                 if (folderNameModalSubmitBtn) folderNameModalSubmitBtn.disabled = true;
-                setFolderNameModalMsg('Создание…');
 
                 var pending = folderNameModalPending;
+
+                if (pending.mode === 'rename') {
+                    setFolderNameModalMsg('Сохранение…');
+                    folderApiPost('update', {
+                        folder_id: pending.folderId,
+                        name: name,
+                    }).then(function () {
+                        closeFolderNameModal();
+                        return loadFolderTreeData();
+                    }).then(function () {
+                        refreshFolderManageList();
+                        if (
+                            cabinetConfig.mode === 'folder' &&
+                            cabinetFolderId === pending.folderId
+                        ) {
+                            return reloadCabinet();
+                        }
+                    }).catch(function (e) {
+                        setFolderNameModalMsg(e.message || String(e));
+                        if (folderNameModalSubmitBtn) folderNameModalSubmitBtn.disabled = false;
+                    });
+                    return;
+                }
+
+                setFolderNameModalMsg('Создание…');
                 folderApiPost('create', {
                     name: name,
                     parent_id: pending.parentId,
