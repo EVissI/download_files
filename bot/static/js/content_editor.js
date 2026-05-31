@@ -2022,7 +2022,9 @@ export class ContentEditor {
         element.style.height = `${scaledH}px`;
 
         if (adjustFromCenter && !skipTopAdjust) {
-            element.style.top = `${Math.max(0, oldTop + Math.round((oldH - scaledH) / 2))}px`;
+            // При уменьшении — сдвиг вверх на всю разницу высот; по горизонтали — из центра.
+            const deltaH = oldH - scaledH;
+            element.style.top = `${Math.max(0, oldTop - deltaH)}px`;
             element.style.left = `${Math.max(0, oldLeft + Math.round((oldW - scaledW) / 2))}px`;
         } else if (scalePct >= 100) {
             element.style.left = '0px';
