@@ -177,7 +177,7 @@ function normalizePreviewImageBlockHeights(editor, inner) {
                 const fallback =
                     typeof editor.getMaxCanvasWidth === 'function' ? editor.getMaxCanvasWidth() : 800;
                 const targetWidth = innerWidth > 0 ? innerWidth : fallback;
-                editor.applyResponsiveUploadImageLayout(el, { targetWidth, maxWidth: 0, skipTopAdjust: true });
+                editor.applyResponsiveUploadImageLayout(el, { targetWidth, maxWidth: 0 });
                 const scale =
                     typeof editor.getUploadImageScalePercent === 'function'
                         ? editor.getUploadImageScalePercent(el)

@@ -2011,22 +2011,9 @@ export class ContentEditor {
         const scaledW = Math.max(1, Math.ceil((canvasW * scalePct) / 100));
         const scaledH = Math.max(1, Math.ceil((baseH * scalePct) / 100));
 
-        const oldH = parseInt(element.style.height, 10) || element.offsetHeight || scaledH;
-        const oldW = parseFloat(element.style.width) || element.offsetWidth || scaledW;
-        const oldTop = parseInt(element.style.top, 10) || 0;
-        const oldLeft = parseFloat(element.style.left) || 0;
-        const skipTopAdjust = options.skipTopAdjust === true;
-        const adjustFromCenter = options.adjustFromCenter === true;
-
         element.style.width = `${scaledW}px`;
         element.style.height = `${scaledH}px`;
-
-        if (adjustFromCenter && !skipTopAdjust) {
-            // При уменьшении — сдвиг вверх на всю разницу высот; по горизонтали — из центра.
-            const deltaH = oldH - scaledH;
-            element.style.top = `${Math.max(0, oldTop - deltaH)}px`;
-            element.style.left = `${Math.max(0, oldLeft + Math.round((oldW - scaledW) / 2))}px`;
-        } else if (scalePct >= 100) {
+        if (scalePct >= 100) {
             element.style.left = '0px';
         } else {
             element.style.left = `${Math.max(0, Math.round((canvasW - scaledW) / 2))}px`;
@@ -2086,7 +2073,7 @@ export class ContentEditor {
         ordered.forEach((el) => {
             el.style.top = `${nextY}px`;
             if (el.dataset.toolId === 'upload-image') {
-                this.applyResponsiveUploadImageLayout(el, { targetWidth: w, skipTopAdjust: true });
+                this.applyResponsiveUploadImageLayout(el, { targetWidth: w });
             } else {
                 el.style.left = '0px';
                 el.style.width = `${w}px`;
@@ -3837,55 +3824,52 @@ export class ContentEditor {
         };
     }
 
+    /** Вертикальная позиция блока = сумма высот всех блоков выше в стопке (без зазора). */
+    snapCanvasElementTopToStack(element) {
+        if (!element || !this.canvas) return;
+        const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
+            .filter((el) => !el.id.includes('boardLabel'))
+            .sort((a, b) => {
+                const ta = parseInt(a.style.top, 10) || 0;
+                const tb = parseInt(b.style.top, 10) || 0;
+                if (ta !== tb) return ta - tb;
+                return a.id.localeCompare(b.id);
+            });
+        const idx = allElements.indexOf(element);
+        if (idx < 0) return;
+        let y = 0;
+        for (let i = 0; i < idx; i++) {
+            y += this.getElementStackHeight(allElements[i]);
+        }
+        element.style.top = `${y}px`;
+    }
+
     repositionElementsBelow(elementId) {
         const changedElement = document.getElementById(elementId);
-        if (!changedElement) return;
+        if (!changedElement || !this.canvas) return;
 
-        const changedTop = parseInt(changedElement.style.top);
-        const changedHeight = this.getElementStackHeight(changedElement);
-        const changedBottom = changedTop + changedHeight;
-
-        // Get all elements sorted by their top position
         const allElements = Array.from(this.canvas.querySelectorAll('.canvas-element'))
-            .filter(el => el.id !== elementId && !el.id.includes('boardLabel'))
-            .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
+            .filter((el) => !el.id.includes('boardLabel'))
+            .sort((a, b) => {
+                const ta = parseInt(a.style.top, 10) || 0;
+                const tb = parseInt(b.style.top, 10) || 0;
+                if (ta !== tb) return ta - tb;
+                return a.id.localeCompare(b.id);
+            });
 
-        // Find elements that need to be repositioned (those below the changed element)
-        const elementsBelow = allElements.filter(el => {
-            const elementTop = parseInt(el.style.top);
-            return elementTop >= changedTop;
-        });
+        const idx = allElements.findIndex((el) => el.id === elementId);
+        if (idx < 0) return;
 
-        // Reposition elements below
-        let nextY = changedBottom;
-        const elementSpacing = 0; // No spacing between elements
+        const elementSpacing = 0;
+        let nextY =
+            (parseInt(changedElement.style.top, 10) || 0) + this.getElementStackHeight(changedElement);
 
-        elementsBelow.forEach(element => {
-            const currentTop = parseInt(element.style.top);
-            let elementHeight;
+        for (let i = idx + 1; i < allElements.length; i++) {
+            const el = allElements[i];
+            el.style.top = `${nextY}px`;
+            nextY += this.getElementStackHeight(el) + elementSpacing;
+        }
 
-            // Get actual height of element
-            if (element.classList.contains('table-element')) {
-                if (element.classList.contains('editor-table--collapsed')) {
-                    elementHeight = 28;
-                } else {
-                    elementHeight = element.offsetHeight;
-                    if (elementHeight < 50) {
-                        elementHeight = 100; // Default for empty tables
-                    }
-                }
-            } else {
-                elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
-            }
-
-            // Only reposition if this element was actually below
-            if (currentTop >= changedTop) {
-                element.style.top = nextY + 'px';
-                nextY += elementHeight + elementSpacing;
-            }
-        });
-
-        // Expand canvas if needed after repositioning
         this.expandCanvasIfNeeded(nextY);
     }
 
@@ -4924,17 +4908,11 @@ export class ContentEditor {
                 if (this.selectedElement.dataset.toolId === 'upload-image') {
                     const scale = this.clampNumericValue(value, 10, 100, 100);
                     this.selectedElement.dataset.imageScale = String(scale);
+                    this.snapCanvasElementTopToStack(this.selectedElement);
                     const oldHeight = parseInt(this.selectedElement.style.height, 10);
-                    const oldTop = parseInt(this.selectedElement.style.top, 10) || 0;
-                    const newHeight = this.applyResponsiveUploadImageLayout(this.selectedElement, {
-                        adjustFromCenter: true,
-                    });
-                    const newTop = parseInt(this.selectedElement.style.top, 10) || 0;
-                    if (newHeight != null && (oldHeight !== newHeight || oldTop !== newTop)) {
+                    const newHeight = this.applyResponsiveUploadImageLayout(this.selectedElement);
+                    if (newHeight != null) {
                         this.repositionElementsBelow(this.selectedElement.id);
-                        const elementBottom =
-                            parseInt(this.selectedElement.style.top, 10) + this.selectedElement.offsetHeight;
-                        this.expandCanvasIfNeeded(elementBottom);
                     }
                     const scaleInput = document.getElementById('propImageScale');
                     if (scaleInput) scaleInput.value = String(scale);
@@ -8200,10 +8178,7 @@ export class ContentEditor {
             // Special handling for uploaded images — ширина/высота блока по масштабу (100% = вся ширина кадра)
             if (toolId === 'upload-image') {
                 const oldHeight = parseInt(element.style.height, 10);
-                const smartHeight = this.applyResponsiveUploadImageLayout(element, {
-                    targetWidth: fullWidth,
-                    skipTopAdjust: true,
-                });
+                const smartHeight = this.applyResponsiveUploadImageLayout(element, { targetWidth: fullWidth });
                 if (smartHeight != null && oldHeight !== smartHeight) {
                     this.repositionElementsBelow(element.id);
                 }
@@ -8273,10 +8248,7 @@ export class ContentEditor {
                     }
                 }
             } else if (element.dataset.toolId === 'upload-image') {
-                this.applyResponsiveUploadImageLayout(element, {
-                    targetWidth: canvasRect.width,
-                    skipTopAdjust: true,
-                });
+                this.applyResponsiveUploadImageLayout(element, { targetWidth: canvasRect.width });
                 elementHeight = parseInt(element.style.height, 10) || 200;
             } else if (element.dataset.toolId === 'attach-file') {
                 elementHeight = parseInt(element.style.height, 10) || 72;
