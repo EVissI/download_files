@@ -1358,6 +1358,11 @@ async def content_cards_delete(body: ContentCardDeleteBody):
         if exists is None:
             raise HTTPException(status_code=404, detail="Карточка не найдена")
         await session.execute(
+            delete(ContentCardFolderItem).where(
+                ContentCardFolderItem.content_card_id == body.content_card_id
+            )
+        )
+        await session.execute(
             delete(ContentCard).where(ContentCard.id == body.content_card_id)
         )
         await session.commit()

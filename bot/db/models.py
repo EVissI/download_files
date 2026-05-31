@@ -769,6 +769,12 @@ class ContentCard(Base):
         back_populates="content_card",
         cascade="all, delete-orphan",
     )
+    folder_items: Mapped[list["ContentCardFolderItem"]] = relationship(
+        "ContentCardFolderItem",
+        back_populates="content_card",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class PromocodeContentCard(Base):
@@ -877,6 +883,12 @@ class ContentCardFolder(Base):
         back_populates="parent",
         cascade="all, delete-orphan",
     )
+    items: Mapped[list["ContentCardFolderItem"]] = relationship(
+        "ContentCardFolderItem",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     created_by_admin: Mapped[Optional["User"]] = relationship("User")
 
 
@@ -909,9 +921,13 @@ class ContentCardFolderItem(Base):
 
     folder: Mapped["ContentCardFolder"] = relationship(
         "ContentCardFolder",
-        backref="items",
+        back_populates="items",
     )
-    content_card: Mapped["ContentCard"] = relationship("ContentCard")
+    content_card: Mapped["ContentCard"] = relationship(
+        "ContentCard",
+        back_populates="folder_items",
+        passive_deletes=True,
+    )
 
 
 class ContentCardFolderLink(Base):
