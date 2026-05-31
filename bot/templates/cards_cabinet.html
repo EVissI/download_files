@@ -1427,12 +1427,21 @@
             var manageFoldersBtn = document.getElementById('manage-folders-btn');
             var cabinetBackToMainBtn = document.getElementById('cabinet-back-to-main-btn');
 
-            function goToMainCabinet() {
-                var url = '/cards-cabinet';
+            function buildCardsCabinetUrl(opts) {
+                var params = new URLSearchParams();
                 if (fabToken) {
-                    url += '?fab_token=' + encodeURIComponent(fabToken);
+                    params.set('fab_token', fabToken);
                 }
-                window.location.assign(url);
+                var includeFolder = !opts || opts.includeFolder !== false;
+                if (includeFolder && cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
+                    params.set('folder_token', cabinetConfig.folderToken);
+                }
+                var qs = params.toString();
+                return '/cards-cabinet' + (qs ? '?' + qs : '');
+            }
+
+            function goToMainCabinet() {
+                window.location.assign(buildCardsCabinetUrl({ includeFolder: false }));
             }
 
             if (cabinetBackToMainBtn) {
@@ -2937,12 +2946,20 @@
                         var cardNumber = index + 1;
                         var openCard = function () {
                             var cacheBust = Date.now();
-                            var path =
-                                '/content-card-view?content_card_id=' + encodeURIComponent(id) +
-                                '&card_number=' + encodeURIComponent(cardNumber) +
-                                '&v=' + encodeURIComponent(cacheBust) +
-                                (fabToken ? '&fab_token=' + encodeURIComponent(fabToken) : '');
-                            window.location.assign(path);
+                            var cardParams = new URLSearchParams({
+                                content_card_id: String(id),
+                                card_number: String(cardNumber),
+                                v: String(cacheBust),
+                            });
+                            if (fabToken) {
+                                cardParams.set('fab_token', fabToken);
+                            }
+                            if (cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
+                                cardParams.set('folder_token', cabinetConfig.folderToken);
+                            }
+                            window.location.assign(
+                                '/content-card-view?' + cardParams.toString()
+                            );
                         };
                         if (status !== 'UNVIEWED' && status !== 'RECENT') {
                             openCard();
@@ -3535,9 +3552,12 @@
             }
 
             function buildFolderShareUrl(linkToken) {
-                var url = '/cards-cabinet?folder_token=' + encodeURIComponent(linkToken);
-                if (fabToken) url += '&fab_token=' + encodeURIComponent(fabToken);
-                return url;
+                var params = new URLSearchParams();
+                params.set('folder_token', linkToken);
+                if (fabToken) {
+                    params.set('fab_token', fabToken);
+                }
+                return '/cards-cabinet?' + params.toString();
             }
 
             function openFolderShareLinkModal(folderId) {

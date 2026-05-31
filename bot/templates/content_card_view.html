@@ -269,6 +269,25 @@
                 return String(params.get('fab_token') || '');
             }
 
+            function getFolderToken() {
+                var params = new URLSearchParams(window.location.search || '');
+                return String(params.get('folder_token') || '');
+            }
+
+            function buildCabinetReturnUrl() {
+                var params = new URLSearchParams();
+                var fabToken = getFabToken();
+                var folderToken = getFolderToken();
+                if (fabToken) {
+                    params.set('fab_token', fabToken);
+                }
+                if (folderToken) {
+                    params.set('folder_token', folderToken);
+                }
+                var qs = params.toString();
+                return '/cards-cabinet' + (qs ? '?' + qs : '');
+            }
+
             function getCardNumber() {
                 var params = new URLSearchParams(window.location.search || '');
                 var cardNumber = Number(params.get('card_number') || 0);
@@ -411,15 +430,13 @@
                 if (!nav.querySelector('.content-card-view-back-btn')) {
                     var backLink = document.createElement('a');
                     backLink.className = 'content-card-view-back-btn';
-                    backLink.href = '/cards-cabinet';
+                    backLink.href = buildCabinetReturnUrl();
                     backLink.setAttribute('aria-label', 'Назад в кабинет карточек');
                     backLink.setAttribute('title', 'Назад в кабинет');
                     backLink.innerHTML = '<i class="fa fa-mail-reply" aria-hidden="true"></i>';
                     backLink.addEventListener('click', function (e) {
                         e.preventDefault();
-                        var fabToken = getFabToken();
-                        var url = '/cards-cabinet' + (fabToken ? ('?fab_token=' + encodeURIComponent(fabToken)) : '');
-                        window.location.assign(url);
+                        window.location.assign(buildCabinetReturnUrl());
                     });
                     nav.insertBefore(backLink, nav.firstChild);
                 }
