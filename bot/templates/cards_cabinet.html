@@ -4359,10 +4359,56 @@
                     });
                 }
 
+                var folderTreeLoadSeq = 0;
+
+                function folderExistsInTree(nodes, folderId) {
+                    if (!Array.isArray(nodes) || folderId == null) return false;
+                    for (var i = 0; i < nodes.length; i++) {
+                        var node = nodes[i];
+                        if (!node) continue;
+                        if (Number(node.id) === Number(folderId)) return true;
+                        if (folderExistsInTree(node.children, folderId)) return true;
+                    }
+                    return false;
+                }
+
                 function loadFolderTreeData() {
+                    var seq = ++folderTreeLoadSeq;
                     return folderApiPost('tree').then(function (data) {
+                        if (seq !== folderTreeLoadSeq) {
+                            return folderTreeData;
+                        }
                         folderTreeData = (data && data.folders) || [];
                         return folderTreeData;
+                    });
+                }
+
+                function afterFolderStructureChanged(deletedFolderId) {
+                    if (deletedFolderId != null) {
+                        delete expandedFolderIds[deletedFolderId];
+                        delete expandedFolderPickIds[deletedFolderId];
+                        delete expandedFolderCreateParentIds[deletedFolderId];
+                    }
+                    if (folderManageMsg) folderManageMsg.textContent = '';
+                    return loadFolderTreeData().then(function () {
+                        if (folderManageModal && folderManageModal.classList.contains('is-open')) {
+                            refreshFolderManageList();
+                        }
+                        if (folderPickModal && folderPickModal.classList.contains('is-open')) {
+                            refreshFolderPickList();
+                        }
+                        if (folderCreateParentModal && folderCreateParentModal.classList.contains('is-open')) {
+                            refreshFolderCreateParentList();
+                        }
+                        if (cabinetConfig.mode === 'folder' && cabinetFolderId) {
+                            if (!folderExistsInTree(folderTreeData, cabinetFolderId)) {
+                                goToMainCabinet();
+                                return;
+                            }
+                            return reloadCabinet().catch(function () {
+                                goToMainCabinet();
+                            });
+                        }
                     });
                 }
 
@@ -4636,11 +4682,15 @@
                             { danger: true, confirmLabel: 'Удалить' }
                         ).then(function (ok) {
                             if (!ok) return;
-                            folderApiPost('delete', { folder_id: node.id })
-                                .then(function () { return loadFolderTreeData(); })
-                                .then(function () { refreshFolderManageList(); })
+                            var deletedFolderId = node.id;
+                            folderApiPost('delete', { folder_id: deletedFolderId })
+                                .then(function () {
+                                    return afterFolderStructureChanged(deletedFolderId);
+                                })
                                 .catch(function (e) {
-                                    if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                                    if (folderManageMsg) {
+                                        folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                                    }
                                 });
                         });
                     });

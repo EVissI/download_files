@@ -2535,10 +2535,8 @@ async def folder_delete(body: FolderDeleteBody):
     async with async_session_maker() as session:
         async with session.begin():
             dao = ContentCardFolderDAO(session)
-            ok = await dao.delete_folder(body.folder_id)
-            if not ok:
-                raise HTTPException(status_code=404, detail="Папка не найдена")
-    return {"ok": True}
+            deleted = await dao.delete_folder(body.folder_id)
+    return {"ok": True, "deleted": deleted}
 
 
 @app.post("/api/content_cards/folders/add_items")
