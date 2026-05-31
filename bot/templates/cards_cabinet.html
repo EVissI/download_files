@@ -4970,16 +4970,10 @@
                             clearSelection();
                             setSelectionMode(false);
                             updateSelectionUi();
-                            return showCabinetNotice(
-                                'Создана папка «' + result.folder.name + '» с ' + result.added + ' карточками.\n' +
-                                'Откройте её по ссылке из списка папок в шапке.',
-                                'Папка создана'
-                            ).then(function () {
-                                return loadFolderTreeData().then(function () {
-                                    if (folderManageModal && folderManageModal.classList.contains('is-open')) {
-                                        refreshFolderManageList();
-                                    }
-                                });
+                            return loadFolderTreeData().then(function () {
+                                if (folderManageModal && folderManageModal.classList.contains('is-open')) {
+                                    refreshFolderManageList();
+                                }
                             });
                         }
                         return loadFolderTreeData().then(function () {
@@ -4992,12 +4986,6 @@
                             }
                             if (folderCreateParentModal && folderCreateParentModal.classList.contains('is-open')) {
                                 refreshFolderCreateParentList();
-                            }
-                            if (pending.mode === 'empty') {
-                                return showCabinetNotice(
-                                    'Создана папка «' + result.folder.name + '».',
-                                    'Папка создана'
-                                );
                             }
                             if (cabinetConfig.mode === 'folder') {
                                 return reloadCabinet();
