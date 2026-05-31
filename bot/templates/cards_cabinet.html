@@ -1644,11 +1644,13 @@
             display: inline-flex;
         }
 
-        #cabinet-back-to-main-btn {
+        #cabinet-home-btn,
+        #cabinet-back-to-parent-btn {
             display: none;
         }
 
-        #cabinet-back-to-main-btn.is-visible {
+        #cabinet-home-btn.is-visible,
+        #cabinet-back-to-parent-btn.is-visible {
             display: inline-flex;
         }
     </style>
@@ -1659,8 +1661,17 @@
         <div class="cabinet-top-spacer" aria-hidden="true"></div>
         <div class="cabinet-header">
             <div class="cabinet-header-actions">
-                <button id="cabinet-back-to-main-btn" class="cabinet-shuffle-btn" type="button"
+                <button id="cabinet-home-btn" class="cabinet-shuffle-btn" type="button"
                     title="В основной кабинет" aria-label="В основной кабинет">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true">
+                        <path
+                            d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9V20.5H5.5A1.5 1.5 0 0 1 4 19v-8.5Z"
+                            stroke="currentColor" stroke-width="1.65" stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <button id="cabinet-back-to-parent-btn" class="cabinet-shuffle-btn" type="button"
+                    title="В родительскую папку" aria-label="В родительскую папку">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
                         aria-hidden="true">
                         <path d="M14.5 5.5L8 12l6.5 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
@@ -2029,9 +2040,11 @@
                 return { mode: 'main' };
             })();
             var cabinetFolderId = null;
+            var cabinetParentFolderId = null;
             var addToFolderBtn = document.getElementById('add-to-folder-btn');
             var manageFoldersBtn = document.getElementById('manage-folders-btn');
-            var cabinetBackToMainBtn = document.getElementById('cabinet-back-to-main-btn');
+            var cabinetHomeBtn = document.getElementById('cabinet-home-btn');
+            var cabinetBackToParentBtn = document.getElementById('cabinet-back-to-parent-btn');
 
             function buildCardsCabinetUrl(opts) {
                 var params = new URLSearchParams();
@@ -2050,8 +2063,8 @@
                 window.location.assign(buildCardsCabinetUrl({ includeFolder: false }));
             }
 
-            if (cabinetBackToMainBtn) {
-                cabinetBackToMainBtn.addEventListener('click', goToMainCabinet);
+            if (cabinetHomeBtn) {
+                cabinetHomeBtn.addEventListener('click', goToMainCabinet);
             }
             var errEl = document.getElementById('err');
             var gridEl = document.getElementById('grid');
@@ -4187,6 +4200,23 @@
                         });
                 }
 
+                function updateFolderNavButtons(payload, config) {
+                    var folder = payload && payload.folder;
+                    var showHome = config.mode === 'folder' && isRootAdminUser;
+                    var parentId = folder && folder.parent_id != null ? Number(folder.parent_id) : null;
+                    cabinetParentFolderId = parentId;
+
+                    if (cabinetHomeBtn) {
+                        cabinetHomeBtn.classList.toggle('is-visible', showHome);
+                    }
+                    if (cabinetBackToParentBtn) {
+                        cabinetBackToParentBtn.classList.toggle(
+                            'is-visible',
+                            showHome && parentId != null && parentId > 0
+                        );
+                    }
+                }
+
                 function applyCabinetPayload(payload, config) {
                     isRootAdminUser = !!(payload && payload.is_root_admin);
                     applyRootAdminCabinetUi();
@@ -4194,15 +4224,15 @@
                     var headerTitle = document.querySelector('.cabinet-header h1');
                     if (config.mode === 'folder') {
                         cabinetFolderId = payload.folder && payload.folder.id;
-                        if (cabinetBackToMainBtn) {
-                            cabinetBackToMainBtn.classList.add('is-visible');
-                        }
+                        updateFolderNavButtons(payload, config);
                         if (payload.folder && headerTitle) {
                             headerTitle.textContent = payload.folder.name;
                         }
                         renderFolderSubfoldersBar(payload);
                     } else {
                         cabinetFolderId = null;
+                        cabinetParentFolderId = null;
+                        updateFolderNavButtons(payload, config);
                         if (headerTitle) {
                             headerTitle.textContent = CABINET_DEFAULT_TITLE;
                         }
@@ -4377,6 +4407,13 @@
                         window.location.assign(buildFolderShareUrl(token));
                     }).catch(function (e) {
                         showErr(e.message || String(e));
+                    });
+                }
+
+                if (cabinetBackToParentBtn) {
+                    cabinetBackToParentBtn.addEventListener('click', function () {
+                        if (cabinetParentFolderId == null) return;
+                        navigateToFolder(cabinetParentFolderId);
                     });
                 }
 
