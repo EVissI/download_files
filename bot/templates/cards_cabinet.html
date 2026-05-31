@@ -3886,9 +3886,8 @@
                     cardNotesModalTitle.textContent = 'Описание карточки #' + cardIdNum;
                 }
                 if (cardNotesModalSubtitle) {
-                    cardNotesModalSubtitle.textContent =
-                        'Показывается при наведении на плитку в кабинете.';
-                    cardNotesModalSubtitle.style.display = '';
+                    cardNotesModalSubtitle.textContent = '';
+                    cardNotesModalSubtitle.style.display = 'none';
                 }
                 cardNotesModalInput.value = String(currentNotes || '');
                 setCardNotesModalMsg('');
