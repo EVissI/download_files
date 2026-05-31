@@ -2418,6 +2418,49 @@ def _serialize_folder_link(link: ContentCardFolderLink) -> dict:
     }
 
 
+def _sort_folder_tree_nodes(nodes: list[dict]) -> None:
+    nodes.sort(key=lambda n: (n.get("sort_order", 0), n.get("id", 0)))
+    for node in nodes:
+        children = node.get("children")
+        if children:
+            _sort_folder_tree_nodes(children)
+
+
+def _collect_folder_tree_ids(nodes: list[dict], placed: set[int]) -> None:
+    for node in nodes:
+        placed.add(node["id"])
+        children = node.get("children")
+        if children:
+            _collect_folder_tree_ids(children, placed)
+
+
+def _build_folder_tree(folders: list[ContentCardFolder], direct_counts: dict[int, int]) -> list[dict]:
+    nodes: dict[int, dict] = {}
+    for f in folders:
+        nodes[f.id] = {
+            **_serialize_folder(f),
+            "children": [],
+            "direct_cards_count": direct_counts.get(f.id, 0),
+        }
+
+    roots: list[dict] = []
+    for f in folders:
+        node = nodes[f.id]
+        if f.parent_id is not None and f.parent_id in nodes:
+            nodes[f.parent_id]["children"].append(node)
+        else:
+            roots.append(node)
+
+    placed: set[int] = set()
+    _collect_folder_tree_ids(roots, placed)
+    for f in folders:
+        if f.id not in placed:
+            roots.append(nodes[f.id])
+
+    _sort_folder_tree_nodes(roots)
+    return roots
+
+
 # ============================================================
 #  Admin API: папки карточек
 # ============================================================
@@ -2440,17 +2483,7 @@ async def folder_tree(body: FolderBaseBody):
         direct_counts: dict[int, int] = {row[0]: row[1] for row in counts_res.all()}
 
         # Строим дерево: словарь id → узел
-        nodes: dict[int, dict] = {}
-        for f in folders:
-            nodes[f.id] = {**_serialize_folder(f), "children": [], "direct_cards_count": direct_counts.get(f.id, 0)}
-
-        roots: list[dict] = []
-        for f in folders:
-            node = nodes[f.id]
-            if f.parent_id is not None and f.parent_id in nodes:
-                nodes[f.parent_id]["children"].append(node)
-            else:
-                roots.append(node)
+        roots = _build_folder_tree(folders, direct_counts)
 
     return {"folders": roots}
 
