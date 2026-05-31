@@ -3605,22 +3605,35 @@
                     });
                 }
 
+                function isCabinetFolderView() {
+                    return cabinetConfig.mode === 'folder' && cabinetFolderId != null;
+                }
+
                 function deleteContentCard(cardId) {
                     if (!isRootAdminUser) return;
                     var cardIdNum = Number(cardId);
                     if (!Number.isFinite(cardIdNum) || cardIdNum <= 0) return;
-                    showCabinetConfirm(
-                        'Удалить карточку #' + cardIdNum + ' из базы? Это действие необратимо.',
-                        'Удаление карточки',
-                        { danger: true, confirmLabel: 'Удалить' }
-                    ).then(function (ok) {
+                    var fromFolder = isCabinetFolderView();
+                    var confirmMessage = fromFolder
+                        ? 'Убрать карточку #' + cardIdNum + ' из этой папки? Сама карточка в базе останется.'
+                        : 'Удалить карточку #' + cardIdNum + ' из базы? Это действие необратимо.';
+                    var confirmTitle = fromFolder ? 'Убрать из папки' : 'Удаление карточки';
+                    var confirmLabel = fromFolder ? 'Убрать' : 'Удалить';
+                    showCabinetConfirm(confirmMessage, confirmTitle, {
+                        danger: true,
+                        confirmLabel: confirmLabel,
+                    }).then(function (ok) {
                         if (!ok) return;
-                        fetch('/api/content_cards/delete', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(authPayload({ content_card_id: cardIdNum })),
-                        })
-                            .then(function (r) {
+                        var requestPromise = fromFolder
+                            ? folderApiPost('remove_items', {
+                                folder_id: cabinetFolderId,
+                                card_ids: [cardIdNum],
+                            })
+                            : fetch('/api/content_cards/delete', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(authPayload({ content_card_id: cardIdNum })),
+                            }).then(function (r) {
                                 if (!r.ok) {
                                     return r.json().then(function (j) {
                                         throw new Error((j && j.detail) || r.statusText);
@@ -3629,8 +3642,15 @@
                                     });
                                 }
                                 return r.json();
-                            })
-                            .then(function () {
+                            });
+                        requestPromise
+                            .then(function (data) {
+                                if (fromFolder) {
+                                    var removed = (data && data.removed_count) || 0;
+                                    if (!removed) {
+                                        throw new Error('Карточка не найдена в этой папке');
+                                    }
+                                }
                                 removeCardFromLists(cardIdNum);
                                 renderCards();
                             })
@@ -3751,8 +3771,16 @@
                             var delBtn = document.createElement('button');
                             delBtn.type = 'button';
                             delBtn.className = 'tile__del';
-                            delBtn.setAttribute('aria-label', 'Удалить карточку #' + id);
-                            delBtn.title = 'Удалить карточку из базы';
+                            var fromFolder = isCabinetFolderView();
+                            delBtn.setAttribute(
+                                'aria-label',
+                                fromFolder
+                                    ? 'Убрать карточку #' + id + ' из папки'
+                                    : 'Удалить карточку #' + id
+                            );
+                            delBtn.title = fromFolder
+                                ? 'Убрать карточку из папки'
+                                : 'Удалить карточку из базы';
                             delBtn.textContent = '×';
                             delBtn.addEventListener('click', function (ev) {
                                 ev.stopPropagation();
