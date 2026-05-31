@@ -601,7 +601,7 @@
             border: 1px solid rgba(255, 255, 255, .15);
             border-radius: 8px;
             background: rgba(0, 0, 0, .25);
-            color: var(--tg-theme-text-color, #fff);
+            color: #e8e8e8;
             font-size: 14px;
             line-height: 1.4;
             resize: vertical;
@@ -1280,7 +1280,7 @@
             height: 75dvh;
             min-height: min(360px, 75dvh);
             max-height: 85dvh;
-            background: var(--tg-theme-bg-color, #18181b);
+            background: #18181b;
             border-radius: 18px 18px 0 0;
             display: flex;
             flex-direction: column;
@@ -1301,12 +1301,12 @@
             margin: 0;
             font-size: 16px;
             font-weight: 600;
-            color: var(--tg-theme-text-color, #fff);
+            color: #e8e8e8;
         }
 
         .folders-modal__subtitle {
             font-size: 12px;
-            color: var(--tg-theme-hint-color, #aaa);
+            color: #aaaaaa;
             padding: 0 16px 8px;
             flex-shrink: 0;
         }
@@ -1315,7 +1315,7 @@
             background: none;
             border: none;
             cursor: pointer;
-            color: var(--tg-theme-hint-color, #aaa);
+            color: #aaaaaa;
             font-size: 20px;
             padding: 4px;
         }
@@ -1327,8 +1327,8 @@
             padding: 6px 10px;
             font-size: 12px;
             cursor: pointer;
-            background: var(--tg-theme-button-color, #3b82f6);
-            color: var(--tg-theme-button-text-color, #fff);
+            background: #3b82f6;
+            color: #ffffff;
         }
 
         .folders-modal__header-btn:active {
@@ -1353,7 +1353,7 @@
             border: 1px dashed rgba(255, 255, 255, .25);
             border-radius: 10px;
             background: rgba(255, 255, 255, .05);
-            color: var(--tg-theme-text-color, #fff);
+            color: #e8e8e8;
             font-size: 14px;
             text-align: left;
             cursor: pointer;
@@ -1389,8 +1389,8 @@
             padding: 8px 14px;
             border-radius: 8px;
             border: none;
-            background: var(--tg-theme-button-color, #3b82f6);
-            color: var(--tg-theme-button-text-color, #fff);
+            background: #3b82f6;
+            color: #ffffff;
             font-size: 13px;
             cursor: pointer;
         }
@@ -1399,7 +1399,7 @@
             padding: 0 16px 6px;
             font-size: 12px;
             min-height: 0;
-            color: var(--tg-theme-hint-color, #aaa);
+            color: #aaaaaa;
             flex-shrink: 0;
         }
 
@@ -1446,13 +1446,13 @@
         }
 
         .folders-modal__footer .folders-modal__btn-primary {
-            background: var(--tg-theme-button-color, #3b82f6);
-            color: var(--tg-theme-button-text-color, #fff);
+            background: #3b82f6;
+            color: #ffffff;
         }
 
         .folders-modal__footer .folders-modal__btn-secondary {
             background: rgba(255, 255, 255, .08);
-            color: var(--tg-theme-text-color, #fff);
+            color: #e8e8e8;
         }
 
         .folder-node__row {
@@ -1475,7 +1475,7 @@
         .folder-node__toggle {
             width: 16px;
             font-size: 10px;
-            color: var(--tg-theme-hint-color, #aaa);
+            color: #aaaaaa;
             flex-shrink: 0;
             text-align: center;
         }
@@ -1500,7 +1500,7 @@
         .folder-node__name {
             flex: 0 1 auto;
             font-size: 14px;
-            color: var(--tg-theme-text-color, #fff);
+            color: #e8e8e8;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -1519,19 +1519,19 @@
             border: none;
             border-radius: 4px;
             background: transparent;
-            color: var(--tg-theme-hint-color, #aaa);
+            color: #aaaaaa;
             cursor: pointer;
         }
 
         .folder-node__rename:hover,
         .folder-node__rename:active {
             background: rgba(255, 255, 255, .08);
-            color: var(--tg-theme-text-color, #fff);
+            color: #e8e8e8;
         }
 
         .folder-node__count {
             font-size: 11px;
-            color: var(--tg-theme-hint-color, #aaa);
+            color: #aaaaaa;
         }
 
         .folder-node__children {
@@ -1553,7 +1553,7 @@
         .folder-node__action {
             border: none;
             background: rgba(255, 255, 255, .08);
-            color: var(--tg-theme-text-color, #fff);
+            color: #e8e8e8;
             border-radius: 6px;
             padding: 4px 8px;
             font-size: 11px;
@@ -1567,7 +1567,7 @@
 
         .folder-node__action--danger {
             background: transparent;
-            color: var(--tg-theme-hint-color, #aaa);
+            color: #aaaaaa;
             font-size: 16px;
             padding: 2px 6px;
         }
@@ -1579,7 +1579,7 @@
         .folder-node--pick .folder-node__pick-label {
             flex-shrink: 0;
             font-size: 11px;
-            color: var(--tg-theme-hint-color, #aaa);
+            color: #aaaaaa;
         }
 
         .link-modal__choices {
@@ -1629,7 +1629,7 @@
         .folder-view-bar__chip {
             border: 1px solid rgba(255, 255, 255, .12);
             background: rgba(255, 255, 255, .06);
-            color: var(--tg-theme-text-color, #fff);
+            color: #e8e8e8;
             border-radius: 8px;
             padding: 6px 10px;
             font-size: 13px;
@@ -1982,8 +1982,29 @@
             if (window.Telegram && window.Telegram.WebApp) {
                 var tg = window.Telegram.WebApp;
                 var allowFullscreen = "{{ 'true' if webapp_fullscreen_enabled else 'false' }}" === 'true';
+                var cabinetChromeColor = '#1a1a1a';
                 tg.ready();
                 tg.expand();
+                try {
+                    if (typeof tg.setBackgroundColor === 'function') {
+                        tg.setBackgroundColor(cabinetChromeColor);
+                    }
+                    if (typeof tg.setHeaderColor === 'function') {
+                        tg.setHeaderColor(cabinetChromeColor);
+                    }
+                    if (typeof tg.onEvent === 'function') {
+                        tg.onEvent('themeChanged', function () {
+                            if (typeof tg.setBackgroundColor === 'function') {
+                                tg.setBackgroundColor(cabinetChromeColor);
+                            }
+                            if (typeof tg.setHeaderColor === 'function') {
+                                tg.setHeaderColor(cabinetChromeColor);
+                            }
+                        });
+                    }
+                } catch (themeErr) {
+                    console.warn('Telegram theme lock (cards_cabinet) failed:', themeErr);
+                }
                 try {
                     var canFullscreen =
                         allowFullscreen &&
@@ -4416,7 +4437,7 @@
                     if (!folderManageTree) return;
                     folderManageTree.innerHTML = '';
                     if (!folderTreeData.length) {
-                        folderManageTree.innerHTML = '<p style="color:var(--tg-theme-hint-color,#aaa);font-size:13px;text-align:center;padding:16px 0;">Папок пока нет.</p>';
+                        folderManageTree.innerHTML = '<p style="color:#aaa;font-size:13px;text-align:center;padding:16px 0;">Папок пока нет.</p>';
                         return;
                     }
                     folderTreeData.forEach(function (node) {
@@ -4429,7 +4450,7 @@
                     folderPickTree.innerHTML = '';
                     if (!folderTreeData.length) {
                         folderPickTree.innerHTML =
-                            '<p style="color:var(--tg-theme-hint-color,#aaa);font-size:13px;text-align:center;padding:16px 0;">Папок пока нет. Сначала создайте папку.</p>';
+                            '<p style="color:#aaa;font-size:13px;text-align:center;padding:16px 0;">Папок пока нет. Сначала создайте папку.</p>';
                         return;
                     }
                     folderTreeData.forEach(function (node) {
