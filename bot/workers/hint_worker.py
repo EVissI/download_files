@@ -8,7 +8,11 @@ from redis import Redis
 from rq import Worker, Queue
 from bot.common.func.hint_viewer import process_mat_file
 from bot.common.service.hint_s3_service import HintS3Storage
-from bot.config import settings
+from bot.config import settings, format_telegram_api_error
+from bot.common.telegram_proxy_config import (
+    telegram_proxy_source,
+    telegram_requests_proxies,
+)
 from bot.common.func.hint_viewer import extract_player_names
 from bot.routers.hint_viewer_router import remove_active_job
 
@@ -139,15 +143,28 @@ def analyze_backgammon_batch_job(
         f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
     )
 
-    def send_telegram_message(text, parse_mode="Markdown"):
+    _tg_proxies = telegram_requests_proxies(redis=redis_conn, refresh=True)
+
+    def send_telegram_message(text, parse_mode="Markdown", reply_markup=None):
         try:
             url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
             data = {"chat_id": int(user_id), "text": text, "parse_mode": parse_mode}
-            response = requests.post(url, data=data, timeout=10)
+            if reply_markup is not None:
+                data["reply_markup"] = (
+                    reply_markup
+                    if isinstance(reply_markup, str)
+                    else json.dumps(reply_markup)
+                )
+            response = requests.post(
+                url, data=data, timeout=10, proxies=_tg_proxies
+            )
             if response.status_code != 200:
-                logger.warning(f"Failed to send Telegram message: {response.text}")
+                logger.warning(
+                    "Failed to send Telegram message: HTTP %s",
+                    response.status_code,
+                )
         except Exception as e:
-            logger.warning(f"Error sending Telegram message: {e}")
+            logger.warning("Error sending Telegram message: %s", format_telegram_api_error(e))
 
     for idx, input_mat_key in enumerate(mat_s3_keys):
         fname = os.path.basename(input_mat_key)
@@ -232,20 +249,12 @@ def analyze_backgammon_batch_job(
                     f"✅ <b>{fname}</b> обработан!\n{red_player} vs {black_player}",
                     parse_mode="HTML",
                 )
-                try:
-                    url = (
-                        f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
-                    )
-                    data = {
-                        "chat_id": int(user_id),
-                        "text": text["hint_viewer_finished"][lang_code].format(
-                            red_player=red_player, black_player=black_player
-                        ),
-                        "reply_markup": json.dumps(keyboard),
-                    }
-                    requests.post(url, data=data, timeout=10)
-                except Exception as e:
-                    logger.warning(f"Error sending keyboard: {e}")
+                send_telegram_message(
+                    text["hint_viewer_finished"][lang_code].format(
+                        red_player=red_player, black_player=black_player
+                    ),
+                    reply_markup=keyboard,
+                )
             else:
                 send_telegram_message(
                     f"✅ <b>{fname}</b> обработан, но игр не найдено.",
@@ -294,6 +303,17 @@ if __name__ == "__main__":
     try:
         redis_conn.ping()
         logger.info(f"✅ Connected to Redis: {REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
+        telegram_requests_proxies(redis=redis_conn, refresh=True)
+        proxy_src = telegram_proxy_source(redis=redis_conn)
+        if proxy_src == "none":
+            logger.warning(
+                "Telegram proxy not configured (set TELEGRAM_PROXY on main bot "
+                "and restart it, or set TELEGRAM_PROXY locally)"
+            )
+        else:
+            logger.info(
+                "Telegram API proxy enabled for worker (source: %s)", proxy_src
+            )
     except Exception as e:
         logger.error(f"❌ Failed to connect to Redis: {e}")
         sys.exit(1)

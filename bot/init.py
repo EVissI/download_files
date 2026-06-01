@@ -17,6 +17,7 @@ from bot.common.tasks.cleanup_screenshots import cleanup_screenshots
 from bot.db.pg_backup import backup_postgres_to_yandex_disk
 from bot.routers.setup import setup_router
 from bot.config import setup_logger, bot, admins, scheduler
+from bot.common.telegram_proxy_config import publish_telegram_proxy_to_redis
 from bot.db.redis import redis_client
 
 setup_logger("bot")
@@ -78,6 +79,7 @@ async def stop_bot():
 
 async def main():
     await redis_client.connect()
+    await publish_telegram_proxy_to_redis()
     storage = RedisStorage(
         redis_client.redis,
         key_builder=DefaultKeyBuilder(with_bot_id=True, with_destiny=True),

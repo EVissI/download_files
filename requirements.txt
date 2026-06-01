@@ -83,6 +83,7 @@ PyJWT==2.10.1
 pyphen==0.17.2
 pytesseract==0.3.13
 python-dateutil==2.9.0.post0
+PySocks==1.7.1
 python-dotenv==1.1.1
 python-multipart==0.0.20
 pytz==2025.2

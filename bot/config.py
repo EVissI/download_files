@@ -1,4 +1,5 @@
 import os
+import re
 from loguru import logger
 from bot.common.utils.i18n import create_translator_hub
 from fluentogram import TranslatorHub
@@ -54,8 +55,8 @@ class Settings(BaseSettings):
     REMOTE_REDIS_HOST: str = "localhost"
     WORKERS_COUNT: int = 1
 
-    # HTTP/SOCKS прокси для запросов к api.telegram.org (нужен пакет aiohttp-socks).
-    # Пример: http://user:pass@host:8080 или socks5://host:1080
+    # HTTP/SOCKS прокси для api.telegram.org (aiohttp-socks). Задаётся на сервере бота;
+    # при старте публикуется в Redis — воркеры читают оттуда (см. telegram_proxy_config).
     TELEGRAM_PROXY: Optional[str] = None
 
     @property
@@ -76,6 +77,23 @@ class Settings(BaseSettings):
 
 settings = Settings()
 translator_hub: TranslatorHub = create_translator_hub()
+
+
+_TELEGRAM_BOT_URL_RE = re.compile(
+    r"https?://api\.telegram\.org/bot[^\s/]+", re.IGNORECASE
+)
+_TELEGRAM_BOT_PATH_RE = re.compile(r"/bot[^\s/]+", re.IGNORECASE)
+
+
+def format_telegram_api_error(exc: BaseException) -> str:
+    """Текст ошибки без BOT_TOKEN и без URL api.telegram.org/bot…"""
+    msg = str(exc) or repr(exc)
+    msg = _TELEGRAM_BOT_URL_RE.sub("https://api.telegram.org/bot***", msg)
+    msg = _TELEGRAM_BOT_PATH_RE.sub("/bot***", msg)
+    token = settings.BOT_TOKEN
+    if token:
+        msg = msg.replace(token, "***")
+    return f"{type(exc).__name__}: {msg}"
 
 
 def _build_bot() -> Bot:

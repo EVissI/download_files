@@ -9,6 +9,8 @@
       - REDIS_USER=${REDIS_USER}
       - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
       - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
     volumes:
       - ./bot:/app/bot
       - ./files:/app/files
