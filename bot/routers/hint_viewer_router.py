@@ -55,6 +55,12 @@ from bot.common.kbds.inline.autoanalize import get_download_pdf_kb
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.routers.autoanalize.autoanaliz import analyze_file_by_path
 from bot.common.service.hint_s3_service import HintS3Storage
+from bot.common.hint_job_state import (
+    add_active_job,
+    can_enqueue_job,
+    get_batch_file_statuses,
+    remove_active_job,
+)
 from bot.common.service.webapp_settings_service import get_webapp_fullscreen_enabled
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
@@ -178,31 +184,6 @@ async def get_queue_position_message(
     except Exception as e:
         logger.error(f"Error checking queue: {e}")
         return None
-
-
-def can_enqueue_job(user_id: int) -> bool:
-    """
-    Проверяет, может ли пользователь добавить новую задачу в очередь.
-    """
-    active_jobs = sync_redis_client.smembers(f"user_active_jobs:{user_id}")
-    return len(active_jobs) == 0
-
-
-def add_active_job(user_id: int, job_id: str):
-    """
-    Добавляет job_id в активные задачи пользователя.
-    """
-    sync_redis_client.sadd(f"user_active_jobs:{user_id}", job_id)
-    sync_redis_client.expire(f"user_active_jobs:{user_id}", 3600)
-    logger.info(f"Added active job: user_id={user_id}, job_id={job_id}")
-
-
-def remove_active_job(user_id: int, job_id: str):
-    """
-    Удаляет job_id из активных задач пользователя.
-    """
-    sync_redis_client.srem(f"user_active_jobs:{user_id}", job_id)
-    logger.info(f"Removed active job: user_id={user_id}, job_id={job_id}")
 
 
 @hint_viewer_router.message(
@@ -1112,14 +1093,23 @@ async def process_batch_hint_files(
             mat_s3_keys,
             str(message.from_user.id),
             batch_id,
-            job_id,
             job_id=job_id,
-            lang_code=user_info.lang_code,
         )
 
         add_active_job(message.from_user.id, job_id)
 
-        # === Сохраняем информацию о батче в Redis ===
+        await redis_client.set(
+            f"job_info:{job_id}",
+            json.dumps(
+                {
+                    "type": "batch",
+                    "batch_id": batch_id,
+                    "user_id": message.from_user.id,
+                    "total_files": total_files,
+                }
+            ),
+            expire=3600,
+        )
         batch_info = {
             "batch_id": batch_id,
             "job_id": job_id,
@@ -1131,7 +1121,7 @@ async def process_batch_hint_files(
         await redis_client.set(
             f"batch_info:{batch_id}",
             json.dumps(batch_info),
-            expire=3600,  # 1 час
+            expire=3600,
         )
         queue_warning = await get_queue_position_message(
             redis_rq,
@@ -1165,12 +1155,194 @@ async def process_batch_hint_files(
         )
         await message.answer(summary, parse_mode="HTML")
 
+        asyncio.create_task(
+            check_batch_job_status(
+                message,
+                job_id,
+                batch_id,
+                user_info,
+                session_without_commit,
+            )
+        )
+
         await state.clear()
 
     except Exception as e:
         logger.exception(f"Error in process_batch_hint_files: {e}")
         await message.answer(f"❌ Ошибка при обработке батча: {e}")
         await state.clear()
+
+
+async def _notify_batch_file_telegram(
+    message: Message,
+    message_dao: MessagesTextsDAO,
+    user_info: User,
+    session_without_commit: AsyncSession,
+    payload: dict,
+) -> None:
+    """Отправляет в Telegram результат одного файла батча (вызывается из бота, не воркера)."""
+    fname = payload.get("fname", "file")
+    if payload.get("status") == "error":
+        err = payload.get("error", "Неизвестная ошибка")
+        await message.answer(
+            f"❌ <b>{fname}</b>: {str(err)[:100]}", parse_mode="HTML"
+        )
+        return
+
+    await UserDAO(session_without_commit).decrease_analiz_balance(
+        user_id=message.from_user.id, service_type="HINTS"
+    )
+
+    game_id = payload.get("game_id")
+    has_games = payload.get("has_games")
+    red_player = payload.get("red_player", "Red")
+    black_player = payload.get("black_player", "Black")
+
+    if has_games and game_id:
+        await message.answer(
+            f"✅ <b>{fname}</b> обработан!\n{red_player} vs {black_player}",
+            parse_mode="HTML",
+        )
+        mini_app_url_all = (
+            f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
+        )
+        mini_app_url_both_errors = (
+            f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+        )
+        mini_app_url_red_errors = (
+            f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+        )
+        mini_app_url_black_errors = (
+            f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
+        )
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=await message_dao.get_text(
+                            "hint_viewer_all_moves_b", user_info.lang_code
+                        ),
+                        web_app=WebAppInfo(url=mini_app_url_all),
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=await message_dao.get_text(
+                            "hint_viewer_both_errors_b", user_info.lang_code
+                        ),
+                        web_app=WebAppInfo(url=mini_app_url_both_errors),
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=await message_dao.get_text(
+                            "hint_viewer_player_error_b",
+                            user_info.lang_code,
+                            player=red_player,
+                        ),
+                        web_app=WebAppInfo(url=mini_app_url_red_errors),
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=await message_dao.get_text(
+                            "hint_viewer_player_error_b",
+                            user_info.lang_code,
+                            player=black_player,
+                        ),
+                        web_app=WebAppInfo(url=mini_app_url_black_errors),
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=await message_dao.get_text(
+                            "hint_viewer_show_stat", user_info.lang_code
+                        ),
+                        callback_data=f"show_stats:{game_id}",
+                    ),
+                ],
+            ]
+        )
+        await message.answer(
+            text=await message_dao.get_text(
+                "hint_viewer_finished",
+                user_info.lang_code,
+                red_player=red_player,
+                black_player=black_player,
+            ),
+            reply_markup=keyboard,
+        )
+    else:
+        await message.answer(
+            f"✅ <b>{fname}</b> обработан, но игр не найдено.",
+            parse_mode="HTML",
+        )
+    await session_without_commit.commit()
+
+
+async def check_batch_job_status(
+    message: Message,
+    job_id: str,
+    batch_id: str,
+    user_info: User,
+    session_without_commit: AsyncSession,
+):
+    """
+    Фоновая проверка батч-задачи: читает статусы файлов из Redis (воркер)
+    и отправляет уведомления в Telegram через бота.
+    """
+    notified_indices: set[str] = set()
+    try:
+        message_dao = MessagesTextsDAO(session_without_commit)
+
+        async def drain_batch_notifications() -> None:
+            statuses = await asyncio.to_thread(get_batch_file_statuses, batch_id)
+            for idx_str, raw_json in statuses.items():
+                if idx_str in notified_indices:
+                    continue
+                try:
+                    payload = json.loads(raw_json)
+                except json.JSONDecodeError:
+                    logger.warning("Invalid batch file status JSON: {}", raw_json)
+                    continue
+                await _notify_batch_file_telegram(
+                    message,
+                    message_dao,
+                    user_info,
+                    session_without_commit,
+                    payload,
+                )
+                notified_indices.add(idx_str)
+
+        while True:
+            try:
+                await drain_batch_notifications()
+
+                job = Job.fetch(job_id, connection=redis_rq)
+
+                if job.is_finished:
+                    await drain_batch_notifications()
+                    logger.info(f"Batch job {job_id} completed")
+                    break
+
+                if job.is_failed:
+                    await drain_batch_notifications()
+                    await message.answer(
+                        "❌ Пакетный анализ завершился с критической ошибкой"
+                    )
+                    break
+
+                await asyncio.sleep(3)
+
+            except Exception as e:
+                logger.warning(f"Error checking batch job status: {e}")
+                await asyncio.sleep(5)
+
+    except Exception as e:
+        logger.exception(f"Error in check_batch_job_status for {job_id}")
+        await message.answer("❌ Ошибка при проверке статуса пакетной задачи")
+    finally:
+        remove_active_job(message.from_user.id, job_id)
 
 
 async def check_job_status(

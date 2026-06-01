@@ -721,10 +721,8 @@ async def handle_send_batch_to_hint_viewer(
 ):
     """Обрабатывает отправку batch файлов на анализ ошибок после автоанализа"""
     # Ленивый импорт для избежания циклического импорта
-    from bot.routers.hint_viewer_router import (
-        process_batch_hint_files,
-        can_enqueue_job,
-    )
+    from bot.common.hint_job_state import can_enqueue_job
+    from bot.routers.hint_viewer_router import process_batch_hint_files
     
     message_dao = MessagesTextsDAO(session_without_commit)
     await callback.message.delete()

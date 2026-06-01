@@ -29,10 +29,9 @@ from bot.db.schemas import SUser
 from bot.db.models import User
 from bot.db.redis import redis_client
 from bot.routers.short_board import ShortBoardDialog
+from bot.common.hint_job_state import add_active_job, can_enqueue_job
 from bot.routers.hint_viewer_router import (
     HintViewerStates,
-    can_enqueue_job,
-    add_active_job,
     task_queue,
     redis_rq,
     get_queue_position_message,

@@ -1,21 +1,12 @@
 import os
 import sys
 import logging
-import json
 import tempfile
-import requests
 from redis import Redis
 from rq import Worker, Queue
-from bot.common.func.hint_viewer import process_mat_file
+from bot.common.func.hint_viewer import process_mat_file, extract_player_names
 from bot.common.service.hint_s3_service import HintS3Storage
-from bot.config import settings, format_telegram_api_error
-from bot.common.telegram_proxy_config import (
-    telegram_proxy_source,
-    telegram_requests_proxies,
-)
-from bot.common.func.hint_viewer import extract_player_names
-from bot.routers.hint_viewer_router import remove_active_job
-
+from bot.common.hint_job_state import publish_batch_file_ready
 from bot.db.redis import sync_redis_client
 
 logging.basicConfig(
@@ -30,29 +21,7 @@ REDIS_DB = int(os.getenv("REDIS_DB", 0))
 REDIS_USER = os.getenv("REDIS_USER")
 REDIS_USER_PASSWORD = os.getenv("REDIS_USER_PASSWORD")
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-text = {
-    "hint_viewer_finished": {
-        "en": "✅ Analysis completed!\n{red_player} vs {black_player}\n",
-        "ru": "✅ Анализ завершен!\n{red_player} vs {black_player}\n",
-    },
-    "hint_viewer_butn_1": {"en": "View all moves", "ru": "Просмотр всех ходов"},
-    "hint_viewer_butn_2": {
-        "en": "Only mistakes (both players)",
-        "ru": "Только ошибки (оба игрока)",
-    },
-    "hint_viewer_butn_3": {
-        "en": "Only mistakes ({red_player})",
-        "ru": "Только ошибки ({red_player})",
-    },
-    "hint_viewer_butn_4": {
-        "en": "Only mistakes ({black_player})",
-        "ru": "Только ошибки ({black_player})",
-    },
-    "hint_viewer_butn_5": {
-        "en": "Show game statistics",
-        "ru": "Показать статистику игры",
-    },
-}
+
 if REDIS_USER and REDIS_USER_PASSWORD:
     redis_url = f"redis://{REDIS_USER}:{REDIS_USER_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
     logger.info(f"Connecting to Redis with ACL user: {REDIS_USER}")
@@ -89,6 +58,7 @@ def _upload_hint_results(
 def analyze_backgammon_job(game_id: str, user_id: str, job_id: str = None):
     """
     Анализирует один .mat: источник в S3 hints/{game_id}.mat, результат туда же.
+    Уведомления в Telegram — только на стороне бота (check_job_status).
     """
     s3 = HintS3Storage.from_settings()
     src_key = s3.mat_key(game_id)
@@ -130,10 +100,10 @@ def analyze_backgammon_batch_job(
     user_id: str,
     batch_id: str,
     job_id: str = None,
-    lang_code: str = "en",
 ):
     """
     mat_s3_keys: ключи входных .mat в S3 (например hints/batch_in/...).
+    Статусы файлов пишет в Redis; Telegram — только бот (check_batch_job_status).
     """
     results = []
     total_files = len(mat_s3_keys)
@@ -142,29 +112,6 @@ def analyze_backgammon_batch_job(
     logger.info(
         f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
     )
-
-    _tg_proxies = telegram_requests_proxies(redis=redis_conn, refresh=True)
-
-    def send_telegram_message(text, parse_mode="Markdown", reply_markup=None):
-        try:
-            url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
-            data = {"chat_id": int(user_id), "text": text, "parse_mode": parse_mode}
-            if reply_markup is not None:
-                data["reply_markup"] = (
-                    reply_markup
-                    if isinstance(reply_markup, str)
-                    else json.dumps(reply_markup)
-                )
-            response = requests.post(
-                url, data=data, timeout=10, proxies=_tg_proxies
-            )
-            if response.status_code != 200:
-                logger.warning(
-                    "Failed to send Telegram message: HTTP %s",
-                    response.status_code,
-                )
-        except Exception as e:
-            logger.warning("Error sending Telegram message: %s", format_telegram_api_error(e))
 
     for idx, input_mat_key in enumerate(mat_s3_keys):
         fname = os.path.basename(input_mat_key)
@@ -193,74 +140,25 @@ def analyze_backgammon_batch_job(
                 else:
                     red_player, black_player = "Red", "Black"
 
+            sync_redis_client.set(f"mat_path:{game_id}", mat_key, ex=7200)
+
+            publish_batch_file_ready(
+                batch_id,
+                idx,
+                {
+                    "status": "success",
+                    "fname": fname,
+                    "game_id": game_id,
+                    "mat_path": mat_key,
+                    "has_games": has_games,
+                    "red_player": red_player,
+                    "black_player": black_player,
+                },
+            )
+
             logger.info(
                 f"[Batch File Completed] {fname} -> {mat_key} (has_games={has_games})"
             )
-
-            if has_games:
-
-                keyboard = {
-                    "inline_keyboard": [
-                        [
-                            {
-                                "text": text["hint_viewer_butn_1"][lang_code],
-                                "web_app": {
-                                    "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
-                                },
-                            }
-                        ],
-                        [
-                            {
-                                "text": text["hint_viewer_butn_2"][lang_code],
-                                "web_app": {
-                                    "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
-                                },
-                            }
-                        ],
-                        [
-                            {
-                                "text": text["hint_viewer_butn_3"][lang_code].format(
-                                    red_player=red_player
-                                ),
-                                "web_app": {
-                                    "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
-                                },
-                            }
-                        ],
-                        [
-                            {
-                                "text": text["hint_viewer_butn_4"][lang_code].format(
-                                    black_player=black_player
-                                ),
-                                "web_app": {
-                                    "url": f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
-                                },
-                            }
-                        ],
-                        [
-                            {
-                                "text": text["hint_viewer_butn_5"][lang_code],
-                                "callback_data": f"show_stats:{game_id}",
-                            }
-                        ],
-                    ]
-                }
-                send_telegram_message(
-                    f"✅ <b>{fname}</b> обработан!\n{red_player} vs {black_player}",
-                    parse_mode="HTML",
-                )
-                send_telegram_message(
-                    text["hint_viewer_finished"][lang_code].format(
-                        red_player=red_player, black_player=black_player
-                    ),
-                    reply_markup=keyboard,
-                )
-            else:
-                send_telegram_message(
-                    f"✅ <b>{fname}</b> обработан, но игр не найдено.",
-                    parse_mode="HTML",
-                )
-
             results.append(
                 {
                     "file_index": idx + 1,
@@ -269,12 +167,17 @@ def analyze_backgammon_batch_job(
                     "status": "success",
                 }
             )
-            sync_redis_client.set(f"mat_path:{game_id}", mat_key, ex=7200)
 
         except Exception as e:
             logger.exception(f"[Batch File Failed] {fname}")
-            send_telegram_message(
-                f"❌ <b>{fname}</b>: {str(e)[:100]}", parse_mode="HTML"
+            publish_batch_file_ready(
+                batch_id,
+                idx,
+                {
+                    "status": "error",
+                    "fname": fname,
+                    "error": str(e)[:200],
+                },
             )
             results.append(
                 {
@@ -288,9 +191,6 @@ def analyze_backgammon_batch_job(
     logger.info(
         f"[Batch Job Completed] batch_id={batch_id}, processed={len(results)}/{total_files}"
     )
-
-    logger.info(f"Removing active job: user_id={user_id}, job_id={job_id or batch_id}")
-    remove_active_job(user_id, job_id or batch_id)
     return {
         "batch_id": batch_id,
         "total_files": total_files,
@@ -303,17 +203,6 @@ if __name__ == "__main__":
     try:
         redis_conn.ping()
         logger.info(f"✅ Connected to Redis: {REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
-        telegram_requests_proxies(redis=redis_conn, refresh=True)
-        proxy_src = telegram_proxy_source(redis=redis_conn)
-        if proxy_src == "none":
-            logger.warning(
-                "Telegram proxy not configured (set TELEGRAM_PROXY on main bot "
-                "and restart it, or set TELEGRAM_PROXY locally)"
-            )
-        else:
-            logger.info(
-                "Telegram API proxy enabled for worker (source: %s)", proxy_src
-            )
     except Exception as e:
         logger.error(f"❌ Failed to connect to Redis: {e}")
         sys.exit(1)
