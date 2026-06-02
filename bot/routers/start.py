@@ -22,6 +22,7 @@ from bot.db.dao import (
 from bot.db.models import ContentCardActivationLinkStatus, User
 from bot.db.schemas import SUser
 from bot.config import settings, translator_hub
+from html import escape
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 from fluentogram import TranslatorRunner
@@ -174,6 +175,37 @@ def _folder_cabinet_webapp_markup(folder_token: str) -> InlineKeyboardMarkup:
     )
 
 
+async def _notify_admins_folder_link_opened(
+    message: Message,
+    *,
+    folder_link,
+    folder,
+    cards_count: int,
+) -> None:
+    user = message.from_user
+    if not user or not message.bot:
+        return
+    user_ref = (
+        f"@{user.username}" if user.username else f"tg://user?id={user.id}"
+    )
+    folder_name = escape(str(folder.name or ""))
+    try:
+        await message.bot.send_message(
+            settings.CHAT_GROUP_ID,
+            (
+                "<b>Активирована ссылка на папку кабинета</b>\n"
+                f"Пользователь: {escape(user.first_name or '')} ({user_ref})\n"
+                f"ID пользователя: {user.id}\n"
+                f"Папка: «{folder_name}» (id={folder.id})\n"
+                f"ID ссылки: {folder_link.id}\n"
+                f"Карточек в папке: {cards_count}"
+            ),
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        logger.warning("folder link admin notify failed: {}", e)
+
+
 async def _send_folder_link_prompt_if_needed(
     message: Message,
     session: AsyncSession,
@@ -204,6 +236,12 @@ async def _send_folder_link_prompt_if_needed(
     await message.answer(
         text,
         reply_markup=_folder_cabinet_webapp_markup(link_token),
+    )
+    await _notify_admins_folder_link_opened(
+        message,
+        folder_link=folder_link,
+        folder=folder,
+        cards_count=cards_count,
     )
 
 
