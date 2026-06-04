@@ -65,6 +65,11 @@
             position: relative;
             margin-top: 1.5rem;
             flex: 1;
+            width: calc(99% * 0.5);
+            max-width: calc(99% * 0.5);
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
         }
 
         .game-type-label {
@@ -134,7 +139,7 @@
             border: 0.125rem solid #333;
             border-radius: 0.5rem;
             background-color: #2a2a2a;
-            width: 99%;
+            width: 100%;
             aspect-ratio: 1 / 1;
             display: block;
         }
@@ -187,7 +192,7 @@
             flex-direction: column;
             gap: 0.1rem;
             z-index: 1001;
-            max-height: 180px;
+            max-height: 90px;
             overflow-y: auto;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
@@ -1993,9 +1998,9 @@
         .pips-above-board {
             background-color: #000000;
             color: #ffffff;
-            padding: 3px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2007,9 +2012,9 @@
         .pips-above-board-white {
             background-color: #ffffff;
             color: #000000;
-            padding: 3px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2020,9 +2025,9 @@
         .pips-above-board-inverted {
             background-color: #ffffff;
             color: #000000;
-            padding: 3px 6px;
+            padding: 2px 3px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: right;
             display: block;
@@ -2032,9 +2037,9 @@
         .pips-below-board-inverted {
             background-color: #000000;
             color: #ffffff;
-            padding: 3px 6px;
+            padding: 2px 3px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: right;
             display: block;
@@ -2048,9 +2053,9 @@
         .pips-below-board {
             background-color: #ffffff;
             color: #000000;
-            padding: 3px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2062,9 +2067,9 @@
         .pips-below-board-black {
             background-color: #000000;
             color: #ffffff;
-            padding: 3px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
