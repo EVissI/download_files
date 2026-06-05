@@ -1,4 +1,6 @@
-﻿from aiogram import Router, F
+﻿import secrets
+
+from aiogram import Router, F
 from aiogram.types import (
     BufferedInputFile,
     CallbackQuery,
@@ -31,7 +33,12 @@ from bot.common.kbds.inline.activate_promo import (
 )
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.db.redis import redis_client
-from bot.routers.support_reply_router import FOLDER_ADMIN_REPLY_PREFIX
+from bot.routers.support_reply_router import (
+    FOLDER_REPLY_START_PREFIX,
+    build_folder_admin_reply_markup,
+    handle_folder_reply_deeplink,
+    save_folder_admin_reply_context,
+)
 from loguru import logger
 
 if TYPE_CHECKING:
@@ -159,19 +166,6 @@ def _extract_folder_link_token(start_payload: str | None) -> str | None:
     return token or None
 
 
-def _folder_admin_reply_markup(user_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Ответить",
-                    callback_data=f"{FOLDER_ADMIN_REPLY_PREFIX}{user_id}",
-                )
-            ]
-        ]
-    )
-
-
 def _folder_cabinet_webapp_markup(folder_token: str) -> InlineKeyboardMarkup:
     cabinet_url = (
         f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
@@ -203,19 +197,38 @@ async def _notify_admins_folder_link_opened(
         f"@{user.username}" if user.username else f"tg://user?id={user.id}"
     )
     folder_name = escape(str(folder.name or ""))
+    notify_text = (
+        "<b>Активирована ссылка на папку кабинета</b>\n"
+        f"Пользователь: {escape(user.first_name or '')} ({user_ref})\n"
+        f"ID пользователя: {user.id}\n"
+        f"Папка: «{folder_name}» (id={folder.id})\n"
+        f"ID ссылки: {folder_link.id}\n"
+        f"Карточек в папке: {cards_count}"
+    )
     try:
-        await message.bot.send_message(
+        sent = await message.bot.send_message(
             settings.CHAT_GROUP_ID,
-            (
-                "<b>Активирована ссылка на папку кабинета</b>\n"
-                f"Пользователь: {escape(user.first_name or '')} ({user_ref})\n"
-                f"ID пользователя: {user.id}\n"
-                f"Папка: «{folder_name}» (id={folder.id})\n"
-                f"ID ссылки: {folder_link.id}\n"
-                f"Карточек в папке: {cards_count}"
-            ),
+            notify_text,
             parse_mode="HTML",
-            reply_markup=_folder_admin_reply_markup(user.id),
+        )
+        reply_token = secrets.token_urlsafe(12)
+        await save_folder_admin_reply_context(
+            reply_token,
+            {
+                "target_user_id": user.id,
+                "source_chat_id": settings.CHAT_GROUP_ID,
+                "source_message_id": sent.message_id,
+                "source_text": notify_text,
+            },
+        )
+        bot_info = await message.bot.get_me()
+        await message.bot.edit_message_reply_markup(
+            chat_id=settings.CHAT_GROUP_ID,
+            message_id=sent.message_id,
+            reply_markup=build_folder_admin_reply_markup(
+                reply_token,
+                bot_info.username or "",
+            ),
         )
     except Exception as e:
         logger.warning("folder link admin notify failed: {}", e)
@@ -342,6 +355,11 @@ async def start_command(
     user_data = message.from_user
     user_id = user_data.id
     start_payload = (command.args if command else "") or ""
+
+    if start_payload.startswith(FOLDER_REPLY_START_PREFIX):
+        if await handle_folder_reply_deeplink(message, start_payload):
+            await state.clear()
+            return
 
     if _is_cards_cabinet_deeplink(start_payload):
         await _handle_cards_cabinet_deeplink_start(

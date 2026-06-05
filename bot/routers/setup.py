@@ -24,6 +24,7 @@ hint_viewer_router.message.middleware(HintsMiddleware())
 setup_router.include_routers(
     file_router,  # Должен быть первым для перехвата файлов вне FSM
     start_router,
+    support_reply_router,
     stat_router,
     setup_autoanalize_router,
     profile_router,
@@ -35,6 +36,5 @@ setup_router.include_routers(
     hint_viewer_router,
     pokaz_router,
     cards_cabinet_entry_router,
-    support_reply_router,
     pokaz_entry_router,
 )
