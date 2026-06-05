@@ -31,6 +31,7 @@ from bot.common.kbds.inline.activate_promo import (
 )
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.db.redis import redis_client
+from bot.routers.support_reply_router import FOLDER_ADMIN_REPLY_PREFIX
 from loguru import logger
 
 if TYPE_CHECKING:
@@ -158,6 +159,19 @@ def _extract_folder_link_token(start_payload: str | None) -> str | None:
     return token or None
 
 
+def _folder_admin_reply_markup(user_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Ответить",
+                    callback_data=f"{FOLDER_ADMIN_REPLY_PREFIX}{user_id}",
+                )
+            ]
+        ]
+    )
+
+
 def _folder_cabinet_webapp_markup(folder_token: str) -> InlineKeyboardMarkup:
     cabinet_url = (
         f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
@@ -201,6 +215,7 @@ async def _notify_admins_folder_link_opened(
                 f"Карточек в папке: {cards_count}"
             ),
             parse_mode="HTML",
+            reply_markup=_folder_admin_reply_markup(user.id),
         )
     except Exception as e:
         logger.warning("folder link admin notify failed: {}", e)
