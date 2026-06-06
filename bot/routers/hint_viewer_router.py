@@ -330,13 +330,6 @@ async def handle_sequential_hint_file(
                                 file_paths.append(extracted_path)
                 # Удаляем временный ZIP файл
                 os.remove(temp_path)
-                await message.answer(
-                    await message_dao.get_text(
-                        "hint_viewer_batch_file_extracted",
-                        user_info.lang_code,
-                        zip_size=len([p for p in file_paths if p.endswith(".mat")]),
-                    ),
-                )
             except Exception as e:
                 logger.error(f"Error extracting ZIP: {e}")
                 await message.reply(
@@ -346,18 +339,37 @@ async def handle_sequential_hint_file(
                 )
                 os.remove(temp_path)
                 return
-        else:
-            # Обычный .mat файл
-            file_paths.append(temp_path)
-            await message.answer(
-                await message_dao.get_text(
-                    "hint_viewer_batch_file_added",
-                    user_info.lang_code,
-                    file_count=len(file_paths),
+            await state.update_data(file_paths=file_paths)
+            try:
+                await message.answer(
+                    await message_dao.get_text(
+                        "hint_viewer_batch_file_extracted",
+                        user_info.lang_code,
+                        zip_size=len([p for p in file_paths if p.endswith(".mat")]),
+                    ),
                 )
-            )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to send batch zip confirmation for user {user_info.id}: {e}"
+                )
+        else:
+            # Обычный .mat файл — сначала сохраняем state, потом подтверждение
+            file_paths.append(temp_path)
+            await state.update_data(file_paths=file_paths)
+            try:
+                await message.answer(
+                    await message_dao.get_text(
+                        "hint_viewer_batch_file_added",
+                        user_info.lang_code,
+                        file_count=len(file_paths),
+                    )
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to send batch file confirmation for user {user_info.id}: {e}"
+                )
 
-        await state.update_data(file_paths=file_paths)
+        await asyncio.sleep(0.3)
 
 
 @hint_viewer_router.message(
