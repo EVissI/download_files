@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="hint-screenshot-font-scale" content="{{ hint_viewer_screenshot_font_scale_percent | default(100) }}">
     <title>Backgammon Game Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
@@ -889,10 +890,6 @@
             background-color: #0056b3;
         }
 
-        body.hint-viewer-screenshot-font-scale {
-            zoom: var(--hint-screenshot-font-scale, 1);
-        }
-
         .admin-screenshot-font-scale {
             margin-top: 16px;
             display: flex;
@@ -922,18 +919,53 @@
         const gameId = urlParams.get('game_id') || 'default';
         const error = urlParams.get('error') || '0';
         window.hintViewerIsAdmin = false;
-        let hintViewerScreenshotFontScale = {{ hint_viewer_screenshot_font_scale_percent | default(100) }};
+        let hintViewerScreenshotFontScale = (function () {
+            const meta = document.querySelector('meta[name="hint-screenshot-font-scale"]');
+            const parsed = parseInt(meta?.getAttribute('content') || '100', 10);
+            return Number.isNaN(parsed) ? 100 : parsed;
+        })();
+        let screenshotFontScaleBackup = [];
+
+        function isScreenshotFontScaleSkipped(el) {
+            if (!el || el.nodeType !== 1) return true;
+            if (el.id === 'boardCanvas') return true;
+            if (el.closest('#boardCanvas')) return true;
+            if (el.closest('#adminButtonContainer')) return true;
+            if (el.tagName === 'CANVAS') return true;
+            return false;
+        }
 
         function applyScreenshotFontScale() {
             const scale = hintViewerScreenshotFontScale / 100;
+            screenshotFontScaleBackup = [];
             if (scale === 1) return;
-            document.documentElement.style.setProperty('--hint-screenshot-font-scale', String(scale));
-            document.body.classList.add('hint-viewer-screenshot-font-scale');
+
+            const container = document.querySelector('.container');
+            if (!container) return;
+
+            const elements = container.querySelectorAll('*');
+            const updates = [];
+            elements.forEach((el) => {
+                if (isScreenshotFontScaleSkipped(el)) return;
+                const px = parseFloat(window.getComputedStyle(el).fontSize);
+                if (!px || Number.isNaN(px)) return;
+                updates.push({
+                    el,
+                    fontSize: el.style.fontSize,
+                    nextFontSize: `${Math.round(px * scale * 10) / 10}px`,
+                });
+            });
+            updates.forEach(({ el, fontSize, nextFontSize }) => {
+                screenshotFontScaleBackup.push({ el, fontSize });
+                el.style.fontSize = nextFontSize;
+            });
         }
 
         function removeScreenshotFontScale() {
-            document.body.classList.remove('hint-viewer-screenshot-font-scale');
-            document.documentElement.style.removeProperty('--hint-screenshot-font-scale');
+            screenshotFontScaleBackup.forEach(({ el, fontSize }) => {
+                el.style.fontSize = fontSize;
+            });
+            screenshotFontScaleBackup = [];
         }
 
         function restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalDisplay) {
