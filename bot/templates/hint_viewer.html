@@ -32,10 +32,27 @@
             border: 2px solid #333;
             border-radius: 8px;
             background-color: #2a2a2a;
-            max-width: 100%;
-            height: 100%;
             display: block;
+            box-sizing: border-box;
+        }
+
+        .board-block {
+            width: 100%;
+            max-width: 800px;
             margin: 0 auto 20px;
+        }
+
+        .board-block .header,
+        .board-block .board-footer {
+            width: 100%;
+        }
+
+        #boardCanvas {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            aspect-ratio: 1;
+            margin: 0;
         }
 
         .game-info {
@@ -335,7 +352,7 @@
 
             canvas {
                 width: 100%;
-                height: 100%;
+                height: auto;
             }
 
             #top-row {
@@ -431,7 +448,7 @@
 
             canvas {
                 width: 100%;
-                height: 100%;
+                height: auto;
             }
 
             button {
@@ -537,7 +554,7 @@
 
 
         #players-info {
-            max-width: 800px;
+            width: 100%;
             margin: 0 auto;
         }
 
@@ -1014,15 +1031,17 @@
 <body>
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
-        <div class="header">
-            <div id="match-info"></div>
-            <div id="players-info"></div>
-            <div id="top-bar"></div>
-        </div>
-        <canvas id="boardCanvas" width="800" height="800"></canvas>
-        <div class="board-footer">
-            <div id="move-info" class="move-info"></div>
-            <div id="red-pips" class="pips-below-board">0</div>
+        <div class="board-block">
+            <div class="header">
+                <div id="match-info"></div>
+                <div id="players-info"></div>
+                <div id="top-bar"></div>
+            </div>
+            <canvas id="boardCanvas" width="800" height="800"></canvas>
+            <div class="board-footer">
+                <div id="move-info" class="move-info"></div>
+                <div id="red-pips" class="pips-below-board">0</div>
+            </div>
         </div>
 
         <div id="top-row">
