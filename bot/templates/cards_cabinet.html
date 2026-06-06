@@ -1572,6 +1572,91 @@
             padding: 2px 6px;
         }
 
+        .folder-node__action--schedule-active {
+            background: rgba(46, 109, 164, .28);
+            color: #9ec9ff;
+        }
+
+        .folder-schedule-modal .shuffle-modal__box {
+            max-width: 420px;
+        }
+
+        .folder-schedule-modal__weekdays {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .folder-schedule-modal__weekday-btn {
+            border: 1px solid #4a5362;
+            border-radius: 16px;
+            background: #2a313c;
+            color: #ecf2ff;
+            padding: 4px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .folder-schedule-modal__weekday-btn.is-active {
+            border-color: #2e6da4;
+            background: #337ab7;
+            color: #fff;
+        }
+
+        .folder-schedule-modal__toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .folder-schedule-modal__toolbar-btn {
+            border: 1px solid #4a5362;
+            border-radius: 8px;
+            background: #2a313c;
+            color: #c8d4ea;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .folder-schedule-modal__labels {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 180px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            padding: 8px 10px;
+            border: 1px solid #3a4350;
+            border-radius: 10px;
+            background: #222831;
+        }
+
+        .folder-schedule-modal__label-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #e8e8e8;
+        }
+
+        .folder-schedule-modal__toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #e8e8e8;
+        }
+
+        .folder-schedule-modal__meta {
+            font-size: 12px;
+            color: #9aa3b2;
+            margin-bottom: 10px;
+        }
+
         .folder-node--pick .folder-node__row {
             cursor: pointer;
         }
@@ -1847,6 +1932,35 @@
             </div>
             <p id="folderManageMsg" class="folders-modal__msg"></p>
             <div id="folderManageTree" class="folders-modal__tree"></div>
+        </div>
+    </div>
+    <div id="folderScheduleModal" class="shuffle-modal folder-schedule-modal" aria-hidden="true">
+        <div id="folderScheduleModalOverlay" class="shuffle-modal__overlay"></div>
+        <div class="shuffle-modal__box" role="dialog" aria-modal="true" aria-labelledby="folderScheduleModalTitle">
+            <h3 id="folderScheduleModalTitle" class="shuffle-modal__title">Расписание папки</h3>
+            <p id="folderScheduleModalSubtitle" class="link-modal__subtitle" style="display:block;"></p>
+            <p id="folderScheduleModalMeta" class="folder-schedule-modal__meta"></p>
+            <div class="shuffle-modal__label">Дни недели (МСК)</div>
+            <div id="folderScheduleWeekdayToolbar" class="folder-schedule-modal__toolbar"></div>
+            <div id="folderScheduleWeekdays" class="folder-schedule-modal__weekdays"></div>
+            <label for="folderScheduleTimeInput" class="shuffle-modal__label">Время (МСК)</label>
+            <input id="folderScheduleTimeInput" class="shuffle-modal__input" type="time" step="60">
+            <label for="folderScheduleCountInput" class="shuffle-modal__label">Карточек за запуск</label>
+            <input id="folderScheduleCountInput" class="shuffle-modal__input" type="number" min="1" max="3000"
+                step="1" inputmode="numeric" value="1">
+            <div class="shuffle-modal__label">Метки (добавляются только карточки с выбранными метками)</div>
+            <div id="folderScheduleLabels" class="folder-schedule-modal__labels"></div>
+            <label class="folder-schedule-modal__toggle-row">
+                <input id="folderScheduleActiveInput" type="checkbox" checked>
+                <span>Расписание активно</span>
+            </label>
+            <p id="folderScheduleModalMsg" class="shuffle-modal__msg"></p>
+            <div class="shuffle-modal__actions">
+                <button type="button" id="folderScheduleDeleteBtn" class="shuffle-modal__btn">Удалить</button>
+                <button type="button" id="folderScheduleCancelBtn" class="shuffle-modal__btn">Отмена</button>
+                <button type="button" id="folderScheduleSaveBtn"
+                    class="shuffle-modal__btn shuffle-modal__btn--primary">Сохранить</button>
+            </div>
         </div>
     </div>
 
@@ -4309,6 +4423,7 @@
                         })
                         .then(function (data) {
                             var labels = (data && data.labels) || [];
+                            cabinetAllLabels = labels.slice();
                             if (!labels.length || !labelFilter || !labelFilterWrap) {
                                 return;
                             }
@@ -4343,6 +4458,7 @@
                 var folderManageMsg = document.getElementById('folderManageMsg');
 
                 var folderTreeData = [];
+                var cabinetAllLabels = [];
                 var expandedFolderIds = {};
                 var expandedFolderPickIds = {};
                 var expandedFolderCreateParentIds = {};
@@ -4375,6 +4491,296 @@
                 var folderCreateRootBtn = document.getElementById('folderCreateRootBtn');
                 var folderCreateParentTree = document.getElementById('folderCreateParentTree');
                 var folderCreateParentMsg = document.getElementById('folderCreateParentMsg');
+
+                var folderScheduleModal = document.getElementById('folderScheduleModal');
+                var folderScheduleModalOverlay = document.getElementById('folderScheduleModalOverlay');
+                var folderScheduleModalTitle = document.getElementById('folderScheduleModalTitle');
+                var folderScheduleModalSubtitle = document.getElementById('folderScheduleModalSubtitle');
+                var folderScheduleModalMeta = document.getElementById('folderScheduleModalMeta');
+                var folderScheduleWeekdayToolbar = document.getElementById('folderScheduleWeekdayToolbar');
+                var folderScheduleWeekdays = document.getElementById('folderScheduleWeekdays');
+                var folderScheduleTimeInput = document.getElementById('folderScheduleTimeInput');
+                var folderScheduleCountInput = document.getElementById('folderScheduleCountInput');
+                var folderScheduleLabels = document.getElementById('folderScheduleLabels');
+                var folderScheduleActiveInput = document.getElementById('folderScheduleActiveInput');
+                var folderScheduleModalMsg = document.getElementById('folderScheduleModalMsg');
+                var folderScheduleDeleteBtn = document.getElementById('folderScheduleDeleteBtn');
+                var folderScheduleCancelBtn = document.getElementById('folderScheduleCancelBtn');
+                var folderScheduleSaveBtn = document.getElementById('folderScheduleSaveBtn');
+
+                var FOLDER_SCHEDULE_DAYS = [
+                    { value: 'mon', short: 'Пн', full: 'Понедельник' },
+                    { value: 'tue', short: 'Вт', full: 'Вторник' },
+                    { value: 'wed', short: 'Ср', full: 'Среда' },
+                    { value: 'thu', short: 'Чт', full: 'Четверг' },
+                    { value: 'fri', short: 'Пт', full: 'Пятница' },
+                    { value: 'sat', short: 'Сб', full: 'Суббота' },
+                    { value: 'sun', short: 'Вс', full: 'Воскресенье' }
+                ];
+                var folderSchedulePending = null;
+                var folderScheduleSelectedWeekdays = {};
+                var folderScheduleSelectedLabels = {};
+
+                function setFolderScheduleModalMsg(msg) {
+                    if (folderScheduleModalMsg) folderScheduleModalMsg.textContent = msg || '';
+                }
+
+                function renderFolderScheduleWeekdays() {
+                    if (!folderScheduleWeekdays) return;
+                    folderScheduleWeekdays.innerHTML = '';
+                    FOLDER_SCHEDULE_DAYS.forEach(function (day) {
+                        var btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'folder-schedule-modal__weekday-btn' +
+                            (folderScheduleSelectedWeekdays[day.value] ? ' is-active' : '');
+                        btn.textContent = day.short;
+                        btn.title = day.full;
+                        btn.addEventListener('click', function () {
+                            folderScheduleSelectedWeekdays[day.value] = !folderScheduleSelectedWeekdays[day.value];
+                            renderFolderScheduleWeekdays();
+                        });
+                        folderScheduleWeekdays.appendChild(btn);
+                    });
+                }
+
+                function setFolderScheduleWeekdays(values) {
+                    folderScheduleSelectedWeekdays = {};
+                    (values || []).forEach(function (value) {
+                        var key = String(value || '').trim().toLowerCase();
+                        if (key) folderScheduleSelectedWeekdays[key] = true;
+                    });
+                    renderFolderScheduleWeekdays();
+                }
+
+                function getFolderScheduleWeekdays() {
+                    return FOLDER_SCHEDULE_DAYS
+                        .map(function (day) { return day.value; })
+                        .filter(function (value) { return !!folderScheduleSelectedWeekdays[value]; });
+                }
+
+                function renderFolderScheduleWeekdayToolbar() {
+                    if (!folderScheduleWeekdayToolbar || folderScheduleWeekdayToolbar.dataset.ready === '1') return;
+                    folderScheduleWeekdayToolbar.dataset.ready = '1';
+                    [
+                        { label: 'Будни', values: ['mon', 'tue', 'wed', 'thu', 'fri'] },
+                        { label: 'Выходные', values: ['sat', 'sun'] },
+                        { label: 'Все дни', values: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] },
+                        { label: 'Очистить', values: [] }
+                    ].forEach(function (item) {
+                        var btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'folder-schedule-modal__toolbar-btn';
+                        btn.textContent = item.label;
+                        btn.addEventListener('click', function () {
+                            setFolderScheduleWeekdays(item.values);
+                        });
+                        folderScheduleWeekdayToolbar.appendChild(btn);
+                    });
+                }
+
+                function renderFolderScheduleLabels(selectedLabels) {
+                    if (!folderScheduleLabels) return;
+                    folderScheduleLabels.innerHTML = '';
+                    folderScheduleSelectedLabels = {};
+                    (selectedLabels || []).forEach(function (label) {
+                        var text = String(label || '').trim();
+                        if (text) folderScheduleSelectedLabels[text] = true;
+                    });
+                    if (!cabinetAllLabels.length) {
+                        folderScheduleLabels.innerHTML =
+                            '<p style="margin:0;color:#9aa3b2;font-size:12px;">Метки не найдены.</p>';
+                        return;
+                    }
+                    cabinetAllLabels.forEach(function (label) {
+                        var row = document.createElement('label');
+                        row.className = 'folder-schedule-modal__label-row';
+                        var input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.value = label;
+                        input.checked = !!folderScheduleSelectedLabels[label];
+                        input.addEventListener('change', function () {
+                            if (input.checked) folderScheduleSelectedLabels[label] = true;
+                            else delete folderScheduleSelectedLabels[label];
+                        });
+                        var text = document.createElement('span');
+                        text.textContent = label;
+                        row.appendChild(input);
+                        row.appendChild(text);
+                        folderScheduleLabels.appendChild(row);
+                    });
+                }
+
+                function getFolderScheduleSelectedLabels() {
+                    return Object.keys(folderScheduleSelectedLabels).filter(function (label) {
+                        return !!folderScheduleSelectedLabels[label];
+                    });
+                }
+
+                function formatFolderScheduleMeta(schedule) {
+                    if (!schedule || !schedule.last_run_at) return '';
+                    try {
+                        var dt = new Date(schedule.last_run_at);
+                        if (isNaN(dt.getTime())) return '';
+                        return 'Последний запуск: ' + dt.toLocaleString('ru-RU');
+                    } catch (e) {
+                        return '';
+                    }
+                }
+
+                function closeFolderScheduleModal() {
+                    if (!folderScheduleModal) return;
+                    folderScheduleModal.classList.remove('is-open');
+                    folderScheduleModal.setAttribute('aria-hidden', 'true');
+                    folderSchedulePending = null;
+                    setFolderScheduleModalMsg('');
+                    if (folderScheduleSaveBtn) folderScheduleSaveBtn.disabled = false;
+                    if (folderScheduleDeleteBtn) folderScheduleDeleteBtn.disabled = false;
+                }
+
+                function openFolderScheduleModal(folderId, folderName, existingSchedule) {
+                    if (!folderScheduleModal) return;
+                    folderSchedulePending = {
+                        folderId: folderId,
+                        folderName: folderName,
+                        hasSchedule: !!existingSchedule
+                    };
+                    renderFolderScheduleWeekdayToolbar();
+                    if (folderScheduleModalTitle) {
+                        folderScheduleModalTitle.textContent = 'Расписание папки';
+                    }
+                    if (folderScheduleModalSubtitle) {
+                        folderScheduleModalSubtitle.textContent = '«' + folderName + '»';
+                    }
+                    if (folderScheduleModalMeta) {
+                        folderScheduleModalMeta.textContent = formatFolderScheduleMeta(existingSchedule);
+                    }
+                    var schedule = existingSchedule || {};
+                    setFolderScheduleWeekdays(schedule.weekdays || ['mon', 'tue', 'wed', 'thu', 'fri']);
+                    if (folderScheduleTimeInput) {
+                        folderScheduleTimeInput.value = schedule.issue_time_msk || '09:00';
+                    }
+                    if (folderScheduleCountInput) {
+                        folderScheduleCountInput.value = String(schedule.cards_per_run || 1);
+                    }
+                    renderFolderScheduleLabels(schedule.labels || []);
+                    if (folderScheduleActiveInput) {
+                        folderScheduleActiveInput.checked = existingSchedule ? !!schedule.is_active : true;
+                    }
+                    if (folderScheduleDeleteBtn) {
+                        folderScheduleDeleteBtn.style.display = existingSchedule ? '' : 'none';
+                    }
+                    setFolderScheduleModalMsg('');
+                    folderScheduleModal.classList.add('is-open');
+                    folderScheduleModal.setAttribute('aria-hidden', 'false');
+                }
+
+                function ensureCabinetAllLabelsLoaded() {
+                    if (cabinetAllLabels.length) {
+                        return Promise.resolve(cabinetAllLabels);
+                    }
+                    return fetch('/api/content_cards/all_labels', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(authPayload()),
+                    }).then(function (r) {
+                        if (!r.ok) {
+                            throw new Error('Не удалось загрузить метки');
+                        }
+                        return r.json();
+                    }).then(function (data) {
+                        cabinetAllLabels = ((data && data.labels) || []).slice();
+                        return cabinetAllLabels;
+                    });
+                }
+
+                function loadFolderScheduleAndOpen(folderId, folderName, existingSchedule) {
+                    ensureCabinetAllLabelsLoaded().then(function () {
+                        if (existingSchedule) {
+                            openFolderScheduleModal(folderId, folderName, existingSchedule);
+                            return;
+                        }
+                        return folderApiPost('schedule_get', { folder_id: folderId })
+                            .then(function (data) {
+                                openFolderScheduleModal(folderId, folderName, data && data.schedule);
+                            });
+                    }).catch(function (e) {
+                        if (folderManageMsg) {
+                            folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                        }
+                    });
+                }
+
+                function submitFolderScheduleSave() {
+                    if (!folderSchedulePending) return;
+                    var weekdays = getFolderScheduleWeekdays();
+                    if (!weekdays.length) {
+                        setFolderScheduleModalMsg('Выберите хотя бы один день недели.');
+                        return;
+                    }
+                    var labels = getFolderScheduleSelectedLabels();
+                    if (!labels.length) {
+                        setFolderScheduleModalMsg('Выберите хотя бы одну метку.');
+                        return;
+                    }
+                    var timeValue = folderScheduleTimeInput ? String(folderScheduleTimeInput.value || '').trim() : '';
+                    if (!/^\d{2}:\d{2}$/.test(timeValue)) {
+                        setFolderScheduleModalMsg('Укажите время в формате ЧЧ:ММ.');
+                        return;
+                    }
+                    var cardsPerRun = folderScheduleCountInput ? parseInt(folderScheduleCountInput.value, 10) : 1;
+                    if (!cardsPerRun || cardsPerRun < 1) {
+                        setFolderScheduleModalMsg('Количество карточек должно быть не меньше 1.');
+                        return;
+                    }
+                    if (folderScheduleSaveBtn) folderScheduleSaveBtn.disabled = true;
+                    setFolderScheduleModalMsg('Сохранение...');
+                    folderApiPost('schedule_save', {
+                        folder_id: folderSchedulePending.folderId,
+                        weekdays: weekdays,
+                        issue_time_msk: timeValue,
+                        cards_per_run: cardsPerRun,
+                        labels: labels,
+                        is_active: !!(folderScheduleActiveInput && folderScheduleActiveInput.checked),
+                    }).then(function () {
+                        closeFolderScheduleModal();
+                        return loadFolderTreeData().then(function () {
+                            refreshFolderManageList();
+                            if (folderManageMsg) {
+                                folderManageMsg.textContent = 'Расписание сохранено.';
+                            }
+                        });
+                    }).catch(function (e) {
+                        setFolderScheduleModalMsg(e.message || String(e));
+                        if (folderScheduleSaveBtn) folderScheduleSaveBtn.disabled = false;
+                    });
+                }
+
+                function submitFolderScheduleDelete() {
+                    if (!folderSchedulePending || !folderSchedulePending.hasSchedule) return;
+                    showCabinetConfirm(
+                        'Удалить расписание для «' + folderSchedulePending.folderName + '»?',
+                        'Удаление расписания',
+                        { danger: true, confirmLabel: 'Удалить' }
+                    ).then(function (ok) {
+                        if (!ok) return;
+                        if (folderScheduleDeleteBtn) folderScheduleDeleteBtn.disabled = true;
+                        setFolderScheduleModalMsg('Удаление...');
+                        folderApiPost('schedule_delete', {
+                            folder_id: folderSchedulePending.folderId,
+                        }).then(function () {
+                            closeFolderScheduleModal();
+                            return loadFolderTreeData().then(function () {
+                                refreshFolderManageList();
+                                if (folderManageMsg) {
+                                    folderManageMsg.textContent = 'Расписание удалено.';
+                                }
+                            });
+                        }).catch(function (e) {
+                            setFolderScheduleModalMsg(e.message || String(e));
+                            if (folderScheduleDeleteBtn) folderScheduleDeleteBtn.disabled = false;
+                        });
+                    });
+                }
 
                 function folderApiPost(endpoint, extraBody) {
                     var url = endpoint.startsWith('/') ? endpoint : '/api/content_cards/folders/' + endpoint;
@@ -4743,6 +5149,22 @@
                         openFolderShareLinkModal(node.id);
                     });
                     actions.appendChild(linkBtn);
+
+                    var scheduleBtn = document.createElement('button');
+                    scheduleBtn.type = 'button';
+                    scheduleBtn.className = 'folder-node__action';
+                    if (node.schedule && node.schedule.is_active) {
+                        scheduleBtn.className += ' folder-node__action--schedule-active';
+                    }
+                    scheduleBtn.textContent = 'Расписание';
+                    scheduleBtn.title = node.schedule && node.schedule.is_active
+                        ? 'Расписание активно'
+                        : 'Настроить расписание';
+                    scheduleBtn.addEventListener('click', function (ev) {
+                        ev.stopPropagation();
+                        loadFolderScheduleAndOpen(node.id, node.name, node.schedule || null);
+                    });
+                    actions.appendChild(scheduleBtn);
 
                     var goBtn = document.createElement('button');
                     goBtn.type = 'button';
@@ -5292,6 +5714,18 @@
                 }
                 if (folderCreateParentModalOverlay) {
                     folderCreateParentModalOverlay.addEventListener('click', closeFolderCreateParentModal);
+                }
+                if (folderScheduleCancelBtn) {
+                    folderScheduleCancelBtn.addEventListener('click', closeFolderScheduleModal);
+                }
+                if (folderScheduleModalOverlay) {
+                    folderScheduleModalOverlay.addEventListener('click', closeFolderScheduleModal);
+                }
+                if (folderScheduleSaveBtn) {
+                    folderScheduleSaveBtn.addEventListener('click', submitFolderScheduleSave);
+                }
+                if (folderScheduleDeleteBtn) {
+                    folderScheduleDeleteBtn.addEventListener('click', submitFolderScheduleDelete);
                 }
 
             });

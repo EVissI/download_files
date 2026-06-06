@@ -28,6 +28,13 @@ from bot.common.utils.i18n import get_text_for_locale
 from bot.db.redis import redis_client
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.func.pokaz_func import get_hints_for_xgid
+from bot.common.tasks.folder_schedule import (
+    normalize_labels,
+    normalize_weekdays,
+    remove_folder_schedule_job,
+    upsert_folder_schedule_job,
+    validate_issue_time_msk,
+)
 from bot.db.database import async_session_maker
 from bot.db.dao import (
     ContentCardActivationLinkDAO,
@@ -43,6 +50,7 @@ from bot.db.models import (
     ContentCardFolder,
     ContentCardFolderItem,
     ContentCardFolderLink,
+    ContentCardFolderSchedule,
     ContentFrameTemplate,
     LabelPreset,
     ServiceType,
@@ -2370,6 +2378,23 @@ class FolderLinkResolveBody(FolderBaseBody):
     direct_only: bool = False
 
 
+class FolderScheduleGetBody(FolderBaseBody):
+    folder_id: int
+
+
+class FolderScheduleSaveBody(FolderBaseBody):
+    folder_id: int
+    cards_per_run: int = Field(1, ge=1, le=3000)
+    weekdays: list[str]
+    issue_time_msk: str
+    labels: list[str]
+    is_active: bool = True
+
+
+class FolderScheduleDeleteBody(FolderBaseBody):
+    folder_id: int
+
+
 # ============================================================
 #  Helpers
 # ============================================================
@@ -2398,6 +2423,21 @@ def _serialize_folder_link(link: ContentCardFolderLink) -> dict:
     }
 
 
+def _serialize_folder_schedule(schedule: ContentCardFolderSchedule | None) -> dict | None:
+    if not schedule:
+        return None
+    return {
+        "id": schedule.id,
+        "folder_id": schedule.folder_id,
+        "cards_per_run": schedule.cards_per_run,
+        "weekdays": schedule.weekdays or [],
+        "issue_time_msk": schedule.issue_time_msk,
+        "labels": schedule.labels or [],
+        "is_active": schedule.is_active,
+        "last_run_at": schedule.last_run_at.isoformat() if schedule.last_run_at else None,
+    }
+
+
 def _sort_folder_tree_nodes(nodes: list[dict]) -> None:
     nodes.sort(key=lambda n: (n.get("sort_order", 0), n.get("id", 0)))
     for node in nodes:
@@ -2414,13 +2454,19 @@ def _collect_folder_tree_ids(nodes: list[dict], placed: set[int]) -> None:
             _collect_folder_tree_ids(children, placed)
 
 
-def _build_folder_tree(folders: list[ContentCardFolder], direct_counts: dict[int, int]) -> list[dict]:
+def _build_folder_tree(
+    folders: list[ContentCardFolder],
+    direct_counts: dict[int, int],
+    schedules_by_folder: dict[int, ContentCardFolderSchedule] | None = None,
+) -> list[dict]:
+    schedules_by_folder = schedules_by_folder or {}
     nodes: dict[int, dict] = {}
     for f in folders:
         nodes[f.id] = {
             **_serialize_folder(f),
             "children": [],
             "direct_cards_count": direct_counts.get(f.id, 0),
+            "schedule": _serialize_folder_schedule(schedules_by_folder.get(f.id)),
         }
 
     roots: list[dict] = []
@@ -2462,8 +2508,14 @@ async def folder_tree(body: FolderBaseBody):
         )
         direct_counts: dict[int, int] = {row[0]: row[1] for row in counts_res.all()}
 
+        schedules_res = await session.execute(select(ContentCardFolderSchedule))
+        schedules_by_folder = {
+            schedule.folder_id: schedule
+            for schedule in schedules_res.scalars().all()
+        }
+
         # Строим дерево: словарь id → узел
-        roots = _build_folder_tree(folders, direct_counts)
+        roots = _build_folder_tree(folders, direct_counts, schedules_by_folder)
 
     return {"folders": roots}
 
@@ -2540,6 +2592,13 @@ async def folder_delete(body: FolderDeleteBody):
     async with async_session_maker() as session:
         async with session.begin():
             dao = ContentCardFolderDAO(session)
+            schedule = await session.scalar(
+                select(ContentCardFolderSchedule).where(
+                    ContentCardFolderSchedule.folder_id == body.folder_id
+                )
+            )
+            if schedule:
+                remove_folder_schedule_job(schedule)
             deleted = await dao.delete_folder(body.folder_id)
     return {"ok": True, "deleted": deleted}
 
@@ -2624,6 +2683,112 @@ async def folder_set_items(body: FolderSetItemsBody):
                 card_ids_ordered=body.card_ids,
             )
     return {"ok": True}
+
+
+@app.post("/api/content_cards/folders/schedule_get")
+async def folder_schedule_get(body: FolderScheduleGetBody):
+    """Получить расписание автодобавления карточек в папку. Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    async with async_session_maker() as session:
+        folder = await session.scalar(
+            select(ContentCardFolder).where(ContentCardFolder.id == body.folder_id)
+        )
+        if not folder:
+            raise HTTPException(status_code=404, detail="Папка не найдена")
+        schedule = await session.scalar(
+            select(ContentCardFolderSchedule).where(
+                ContentCardFolderSchedule.folder_id == body.folder_id
+            )
+        )
+    return {"schedule": _serialize_folder_schedule(schedule)}
+
+
+@app.post("/api/content_cards/folders/schedule_save")
+async def folder_schedule_save(body: FolderScheduleSaveBody):
+    """Создать/обновить расписание автодобавления карточек в папку. Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    try:
+        weekdays = normalize_weekdays(body.weekdays)
+        validate_issue_time_msk(body.issue_time_msk)
+        labels = normalize_labels(body.labels)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    async with async_session_maker() as session:
+        folder = await session.scalar(
+            select(ContentCardFolder).where(ContentCardFolder.id == body.folder_id)
+        )
+        if not folder:
+            raise HTTPException(status_code=404, detail="Папка не найдена")
+
+        schedule = await session.scalar(
+            select(ContentCardFolderSchedule).where(
+                ContentCardFolderSchedule.folder_id == body.folder_id
+            )
+        )
+        if schedule is None:
+            schedule = ContentCardFolderSchedule(
+                folder_id=body.folder_id,
+                created_by_admin_id=user_id,
+            )
+            session.add(schedule)
+
+        schedule.cards_per_run = int(body.cards_per_run)
+        schedule.weekdays = weekdays
+        schedule.issue_time_msk = str(body.issue_time_msk).strip()
+        schedule.labels = labels
+        schedule.is_active = bool(body.is_active)
+        schedule.updated_at = datetime.now(timezone.utc)
+
+        await session.flush()
+
+        try:
+            if schedule.is_active:
+                upsert_folder_schedule_job(schedule)
+            else:
+                remove_folder_schedule_job(schedule)
+        except ValueError as exc:
+            await session.rollback()
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            await session.rollback()
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except Exception as exc:
+            await session.rollback()
+            logger.exception("Failed to upsert folder schedule job: {}", exc)
+            raise HTTPException(
+                status_code=500,
+                detail="Расписание сохранено не полностью: не удалось обновить задачу APScheduler.",
+            ) from exc
+
+        await session.commit()
+        await session.refresh(schedule)
+
+    return {"schedule": _serialize_folder_schedule(schedule)}
+
+
+@app.post("/api/content_cards/folders/schedule_delete")
+async def folder_schedule_delete(body: FolderScheduleDeleteBody):
+    """Удалить расписание автодобавления карточек в папку. Только ROOT_ADMIN."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_folder_admin(user_id)
+
+    async with async_session_maker() as session:
+        schedule = await session.scalar(
+            select(ContentCardFolderSchedule).where(
+                ContentCardFolderSchedule.folder_id == body.folder_id
+            )
+        )
+        if not schedule:
+            return {"ok": True, "deleted": False}
+        remove_folder_schedule_job(schedule)
+        await session.delete(schedule)
+        await session.commit()
+    return {"ok": True, "deleted": True}
 
 
 # ============================================================

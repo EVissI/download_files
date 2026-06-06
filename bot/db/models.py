@@ -961,6 +961,67 @@ class ContentCardFolderLink(Base):
     created_by_admin: Mapped[Optional["User"]] = relationship("User")
 
 
+class ContentCardFolderSchedule(Base):
+    """Расписание автодобавления карточек в папку по меткам (по МСК)."""
+
+    __tablename__ = "content_card_folder_schedules"
+    __table_args__ = (
+        UniqueConstraint("folder_id", name="uq_content_card_folder_schedules_folder_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("content_card_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    cards_per_run: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    weekdays: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    issue_time_msk: Mapped[str] = mapped_column(String(5), nullable=False)
+    labels: Mapped[list[str]] = mapped_column(ARRAY[str](String(255)), nullable=False)
+    scheduler_job_id: Mapped[str | None] = mapped_column(
+        String(128), unique=True, nullable=True
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_by_admin_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["ContentCardFolder"] = relationship("ContentCardFolder")
+    created_by_admin: Mapped[Optional["User"]] = relationship("User")
+
+    @property
+    @renders("weekdays_display")
+    def weekdays_display(self) -> str:
+        day_map = {
+            "mon": "Пн",
+            "tue": "Вт",
+            "wed": "Ср",
+            "thu": "Чт",
+            "fri": "Пт",
+            "sat": "Сб",
+            "sun": "Вс",
+        }
+        values = []
+        for day in self.weekdays or []:
+            key = str(day or "").strip().lower()
+            if not key:
+                continue
+            values.append(day_map.get(key, key))
+        return ", ".join(values) if values else "—"
+
+
 class UserContentCard(Base):
     """Связь пользователь ↔ карточка (many-to-many), по аналогии с UserPromocode."""
 
