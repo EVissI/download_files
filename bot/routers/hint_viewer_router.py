@@ -121,7 +121,8 @@ def load_analysis_json_from_s3(game_id: str, game_num: str | None = None):
     return json.loads(s3.download_bytes(key).decode("utf-8"))
 
 
-WORKER_COUNT_CACHE_KEY = "cache:worker_count"
+from bot.common.rq_queue_maintenance import WORKER_COUNT_CACHE_KEY
+
 WORKER_CACHE_TTL = 10
 
 

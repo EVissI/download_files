@@ -22,6 +22,7 @@ from rq import Queue, Worker
 from rq.registry import StartedJobRegistry
 from bot.config import settings, admins, scheduler
 from bot.common.tasks.monitor_notification import check_for_user
+from bot.common.rq_queue_maintenance import cleanup_rq_queues, HINT_QUEUE_NAMES
 import uuid
 from sqlalchemy import delete as sqlalchemy_delete
 from bot.db.models import UserContentCard
@@ -121,6 +122,42 @@ async def clear_user_cards(message: Message, session_without_commit):
     except Exception as e:
         logger.error(f"Ошибка при выполнении команды /clear_user_cards: {e}")
         await message.answer("Произошла ошибка при выполнении команды.")
+
+
+@commands_router.message(F.text == "/clear_rq_cache")
+async def clear_rq_cache(message: Message):
+    """Очищает кэш мониторинга и «мёртвые» записи воркеров/очередей RQ."""
+    try:
+        if message.from_user is None or message.from_user.id not in admins:
+            return await message.reply("Доступ запрещен.")
+
+        redis_conn = Redis.from_url(settings.REDIS_URL, decode_responses=False)
+        result = await asyncio.to_thread(cleanup_rq_queues, redis_conn)
+
+        lines = [
+            "✅ Очистка RQ выполнена.",
+            f"Кэш worker_count: {'удалён' if result['cache_deleted'] else 'не был в Redis'}.",
+            (
+                "Воркеров (глобально): "
+                f"{result['workers_before_global']} → {result['workers_after_global']}"
+            ),
+        ]
+        queue_titles = {
+            "backgammon_analysis": "Одиночные игры",
+            "backgammon_batch_analysis": "Пакеты игр",
+        }
+        for qname in HINT_QUEUE_NAMES:
+            stats = result["per_queue"][qname]
+            title = queue_titles.get(qname, qname)
+            lines.append(
+                f"{title}: {stats['before']} → {stats['after']} воркеров в реестре"
+            )
+
+        await message.answer("\n".join(lines))
+        logger.info("RQ cache cleanup by admin {}: {}", message.from_user.id, result)
+    except Exception as e:
+        logger.exception(f"Ошибка при выполнении команды /clear_rq_cache: {e}")
+        await message.answer("Произошла ошибка при очистке кэша RQ.")
 
 
 @commands_router.message(F.text.startswith("/clear_active_jobs"))
