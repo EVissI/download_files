@@ -99,6 +99,7 @@ def analyze_backgammon_batch_job(
     mat_s3_keys: list,
     user_id: str,
     batch_id: str,
+    original_fnames: list | None = None,
     job_id: str = None,
 ):
     """
@@ -108,13 +109,23 @@ def analyze_backgammon_batch_job(
     results = []
     total_files = len(mat_s3_keys)
     s3 = HintS3Storage.from_settings()
+    original_fnames = original_fnames or []
 
     logger.info(
         f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
     )
 
     for idx, input_mat_key in enumerate(mat_s3_keys):
-        fname = os.path.basename(input_mat_key)
+        fname = (
+            original_fnames[idx]
+            if idx < len(original_fnames)
+            else os.path.basename(input_mat_key)
+        )
+        next_fname = (
+            original_fnames[idx + 1]
+            if idx + 1 < len(original_fnames)
+            else None
+        )
         logger.info(f"[Batch Processing] {idx + 1}/{total_files}: {fname}")
 
         try:
@@ -148,6 +159,7 @@ def analyze_backgammon_batch_job(
                 {
                     "status": "success",
                     "fname": fname,
+                    "next_fname": next_fname,
                     "game_id": game_id,
                     "mat_path": mat_key,
                     "has_games": has_games,
@@ -176,6 +188,7 @@ def analyze_backgammon_batch_job(
                 {
                     "status": "error",
                     "fname": fname,
+                    "next_fname": next_fname,
                     "error": str(e)[:200],
                 },
             )

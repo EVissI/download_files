@@ -1099,12 +1099,14 @@ async def process_batch_hint_files(
             return keys
 
         mat_s3_keys = await asyncio.to_thread(upload_batch_inputs)
+        original_fnames = [os.path.basename(p) for p in file_paths]
 
         job = batch_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_batch_job",
             mat_s3_keys,
             str(message.from_user.id),
             batch_id,
+            original_fnames,
             job_id=job_id,
         )
 
@@ -1126,6 +1128,7 @@ async def process_batch_hint_files(
             "batch_id": batch_id,
             "job_id": job_id,
             "mat_s3_keys": mat_s3_keys,
+            "original_fnames": original_fnames,
             "user_id": message.from_user.id,
             "total_files": total_files,
             "status": "queued",
@@ -1185,6 +1188,13 @@ async def process_batch_hint_files(
         await state.clear()
 
 
+def _batch_next_file_suffix(payload: dict) -> str:
+    next_fname = payload.get("next_fname")
+    if not next_fname:
+        return ""
+    return f"\n\n⏭ Следующий: <b>{next_fname}</b>"
+
+
 async def _notify_batch_file_telegram(
     message: Message,
     message_dao: MessagesTextsDAO,
@@ -1194,10 +1204,12 @@ async def _notify_batch_file_telegram(
 ) -> None:
     """Отправляет в Telegram результат одного файла батча (вызывается из бота, не воркера)."""
     fname = payload.get("fname", "file")
+    next_suffix = _batch_next_file_suffix(payload)
     if payload.get("status") == "error":
         err = payload.get("error", "Неизвестная ошибка")
         await message.answer(
-            f"❌ <b>{fname}</b>: {str(err)[:100]}", parse_mode="HTML"
+            f"❌ <b>{fname}</b>: {str(err)[:100]}{next_suffix}",
+            parse_mode="HTML",
         )
         return
 
@@ -1212,7 +1224,7 @@ async def _notify_batch_file_telegram(
 
     if has_games and game_id:
         await message.answer(
-            f"✅ <b>{fname}</b> обработан!\n{red_player} vs {black_player}",
+            f"✅ <b>{fname}</b> обработан!\n{red_player} vs {black_player}{next_suffix}",
             parse_mode="HTML",
         )
         mini_app_url_all = (
@@ -1286,7 +1298,7 @@ async def _notify_batch_file_telegram(
         )
     else:
         await message.answer(
-            f"✅ <b>{fname}</b> обработан, но игр не найдено.",
+            f"✅ <b>{fname}</b> обработан, но игр не найдено.{next_suffix}",
             parse_mode="HTML",
         )
     await session_without_commit.commit()
