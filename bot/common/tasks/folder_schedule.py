@@ -44,6 +44,7 @@ def validate_issue_time_msk(value: str) -> None:
 
 
 def normalize_labels(raw_labels: list[str] | None) -> list[str]:
+    """Пустой список — без фильтра по меткам (все карточки)."""
     out: list[str] = []
     seen: set[str] = set()
     for item in raw_labels or []:
@@ -52,8 +53,6 @@ def normalize_labels(raw_labels: list[str] | None) -> list[str]:
             continue
         seen.add(text)
         out.append(text)
-    if not out:
-        raise ValueError("Выберите хотя бы одну метку.")
     return out
 
 
@@ -115,7 +114,7 @@ def remove_folder_schedule_job(
 async def run_content_card_folder_schedule(schedule_id: int) -> None:
     """
     Добавляет карточки в папку по расписанию:
-    - только с выбранными метками;
+    - с выбранными метками или из всего пула, если метки не заданы;
     - по возрастанию ID, пропуская уже добавленные в папку;
     - не более cards_per_run за запуск.
     """
@@ -145,14 +144,13 @@ async def run_content_card_folder_schedule(schedule_id: int) -> None:
                 )
                 return
 
-            all_card_ids_result = await session.execute(
-                select(ContentCard.id)
-                .where(
+            card_ids_query = select(ContentCard.id).order_by(ContentCard.id.asc())
+            if filter_labels:
+                card_ids_query = card_ids_query.where(
                     ContentCard.labels.isnot(None),
                     ContentCard.labels.overlap(filter_labels),
                 )
-                .order_by(ContentCard.id.asc())
-            )
+            all_card_ids_result = await session.execute(card_ids_query)
             all_card_ids = [
                 int(card_id)
                 for card_id in all_card_ids_result.scalars().all()
