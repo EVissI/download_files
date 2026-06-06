@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from flask import url_for
 from flask_appbuilder import BaseView, expose, has_access
 from loguru import logger
@@ -5,6 +7,17 @@ from sqlalchemy import func, select
 from werkzeug.routing import BuildError
 
 from bot.db.models import User, UserContentCard
+
+
+def _user_id_background(last_card_at: datetime | None) -> str:
+    """Зелёный — последняя карточка < 24 ч назад, иначе оранжевый."""
+    if last_card_at is None:
+        return "#ffe0b2"
+    if last_card_at.tzinfo is None:
+        last_card_at = last_card_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) - last_card_at < timedelta(days=1):
+        return "#c8e6c9"
+    return "#ffe0b2"
 
 
 class UsersWithCardsView(BaseView):
@@ -26,6 +39,7 @@ class UsersWithCardsView(BaseView):
                     User.username.label("username"),
                     User.admin_insert_name.label("admin_insert_name"),
                     func.count(UserContentCard.id).label("cards_count"),
+                    func.max(UserContentCard.created_at).label("last_card_at"),
                 )
                 .join(UserContentCard, UserContentCard.user_id == User.id)
                 .group_by(User.id, User.username, User.admin_insert_name)
@@ -47,6 +61,7 @@ class UsersWithCardsView(BaseView):
                 rows.append(
                     {
                         "user_id": user_id,
+                        "user_id_bg": _user_id_background(item.last_card_at),
                         "tg_username": tg_username,
                         "admin_name": admin_name,
                         "cards_count": int(item.cards_count or 0),

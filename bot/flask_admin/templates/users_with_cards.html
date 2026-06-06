@@ -20,7 +20,7 @@
                         {% if rows %}
                             {% for row in rows %}
                             <tr>
-                                <td>{{ row.user_id }}</td>
+                                <td style="background-color: {{ row.user_id_bg }};">{{ row.user_id }}</td>
                                 <td>{{ row.tg_username }}</td>
                                 <td>{{ row.admin_name }}</td>
                                 <td>{{ row.cards_count }}</td>
