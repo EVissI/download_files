@@ -61,7 +61,12 @@ from bot.common.hint_job_state import (
     get_batch_file_statuses,
     remove_active_job,
 )
-from bot.common.service.webapp_settings_service import get_webapp_fullscreen_enabled
+from bot.common.service.webapp_settings_service import (
+    get_webapp_fullscreen_enabled,
+    get_hint_viewer_screenshot_font_scale_percent,
+    set_hint_viewer_screenshot_font_scale_percent,
+    clamp_hint_viewer_screenshot_font_scale_percent,
+)
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.common.general_states import GeneralStates
@@ -693,6 +698,9 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
 
     cache_timestamp = int(time.time())
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("hints")
+    hint_viewer_screenshot_font_scale_percent = (
+        await get_hint_viewer_screenshot_font_scale_percent()
+    )
 
     response = templates.TemplateResponse(
         "hint_viewer.html",
@@ -701,6 +709,7 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
             "game_id": game_id,
             "cache_timestamp": cache_timestamp,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
+            "hint_viewer_screenshot_font_scale_percent": hint_viewer_screenshot_font_scale_percent,
         },
     )
 
@@ -1568,3 +1577,36 @@ async def check_admin_status(request: Request):
     except Exception as e:
         logger.error(f"Error checking admin status: {e}")
         raise HTTPException(status_code=500, detail="Error checking admin status")
+
+
+@hint_viewer_api_router.post("/api/hint_viewer_screenshot_font_scale")
+async def update_hint_viewer_screenshot_font_scale(request: Request):
+    """Сохраняет глобальный масштаб шрифта для скриншотов hint_viewer (только ROOT_ADMIN)."""
+    try:
+        data = await request.json()
+        init_data = data.get("initData")
+        if not init_data:
+            raise HTTPException(status_code=400, detail="Missing initData")
+
+        user_data = verify_telegram_webapp_data(init_data)
+        if not user_data:
+            raise HTTPException(status_code=401, detail="Invalid Telegram data")
+
+        user_id = user_data.get("user", {}).get("id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Invalid user data")
+        if user_id not in settings.ROOT_ADMIN_IDS:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        font_scale_percent = clamp_hint_viewer_screenshot_font_scale_percent(
+            data.get("fontScalePercent", 100)
+        )
+        saved = await set_hint_viewer_screenshot_font_scale_percent(font_scale_percent)
+        return {"fontScalePercent": saved}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating hint viewer screenshot font scale: {e}")
+        raise HTTPException(
+            status_code=500, detail="Error updating screenshot font scale"
+        )

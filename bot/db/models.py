@@ -666,6 +666,9 @@ class WebAppSetting(Base):
     webapp_fullscreen_player_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )
+    hint_viewer_screenshot_font_scale_percent: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=100
+    )
 
 
 class ContentCardIssueSchedule(Base):

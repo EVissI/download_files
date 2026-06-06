@@ -888,6 +888,30 @@
         .msg-modal-ok-btn:hover {
             background-color: #0056b3;
         }
+
+        body.hint-viewer-screenshot-font-scale {
+            zoom: var(--hint-screenshot-font-scale, 1);
+        }
+
+        .admin-screenshot-font-scale {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .admin-screenshot-font-scale select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 14px;
+        }
     </style>
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -898,6 +922,19 @@
         const gameId = urlParams.get('game_id') || 'default';
         const error = urlParams.get('error') || '0';
         window.hintViewerIsAdmin = false;
+        let hintViewerScreenshotFontScale = {{ hint_viewer_screenshot_font_scale_percent | default(100) }};
+
+        function applyScreenshotFontScale() {
+            const scale = hintViewerScreenshotFontScale / 100;
+            if (scale === 1) return;
+            document.documentElement.style.setProperty('--hint-screenshot-font-scale', String(scale));
+            document.body.classList.add('hint-viewer-screenshot-font-scale');
+        }
+
+        function removeScreenshotFontScale() {
+            document.body.classList.remove('hint-viewer-screenshot-font-scale');
+            document.documentElement.style.removeProperty('--hint-screenshot-font-scale');
+        }
 
         function restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalDisplay) {
             if (!adminButtonContainer) return;
@@ -3187,6 +3224,7 @@
                 if (redPips && originalRedPipsDisplay !== null) redPips.style.display = originalRedPipsDisplay;
                 if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
                 restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
+                removeScreenshotFontScale();
             }
 
             controls.style.display = 'none';
@@ -3224,6 +3262,7 @@
                 if (redPips) redPips.style.display = 'none';
             }
 
+            applyScreenshotFontScale();
             html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
                 canvas.toBlob(blob => {
                     const formData = new FormData();
@@ -3364,6 +3403,7 @@
                 if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
                 if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
                 restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
+                removeScreenshotFontScale();
             }
 
             controls.style.display = 'none';
@@ -3390,6 +3430,7 @@
             }
 
             // Create a canvas to capture the entire page
+            applyScreenshotFontScale();
             html2canvas(document.body, {
                 useCORS: true,
                 allowTaint: true,
@@ -3493,11 +3534,13 @@
             const originalModalDisplay = modal.style.display;
             modal.style.display = 'none';
 
+            applyScreenshotFontScale();
             html2canvas(document.body, {
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#1a1a1a'
             }).then(canvas => {
+                removeScreenshotFontScale();
                 canvas.toBlob(blob => {
                     const formData = new FormData();
                     formData.append('photo', blob);
@@ -3540,6 +3583,7 @@
                         supportContainer.style.display = originalSupportDisplay;
                         if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
                         restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
+                        removeScreenshotFontScale();
                     });
                 });
             }).catch(error => {
@@ -3551,6 +3595,7 @@
                 supportContainer.style.display = originalSupportDisplay;
                 if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
                 restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
+                removeScreenshotFontScale();
             });
         }
 
@@ -3820,6 +3865,42 @@
             }
         }
 
+        async function saveHintViewerScreenshotFontScale() {
+            const select = document.getElementById('screenshotFontScaleSelect');
+            if (!select) return;
+
+            const fontScalePercent = parseInt(select.value, 10);
+            hintViewerScreenshotFontScale = fontScalePercent;
+
+            let initData = '';
+            if (window.Telegram && window.Telegram.WebApp) {
+                initData = window.Telegram.WebApp.initData;
+            }
+            if (!initData) {
+                showMessageModal('Не удалось сохранить: нет данных Telegram', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/hint_viewer_screenshot_font_scale', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData, fontScalePercent })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    hintViewerScreenshotFontScale = data.fontScalePercent;
+                    select.value = String(hintViewerScreenshotFontScale);
+                    showMessageModal('Масштаб шрифта для скриншота сохранён', 'success');
+                } else {
+                    showMessageModal('Не удалось сохранить масштаб шрифта', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving screenshot font scale:', error);
+                showMessageModal('Не удалось сохранить масштаб шрифта', 'error');
+            }
+        }
+
         // Check admin status and show/hide admin button
         async function checkAdminStatus() {
             try {
@@ -3849,6 +3930,10 @@
                     if (data.is_admin) {
                         window.hintViewerIsAdmin = true;
                         document.getElementById('adminButtonContainer').style.display = 'block';
+                        const fontScaleSelect = document.getElementById('screenshotFontScaleSelect');
+                        if (fontScaleSelect) {
+                            fontScaleSelect.value = String(hintViewerScreenshotFontScale);
+                        }
                         console.log('Admin access granted for user:', data.user_id);
                     }
                 } else {
@@ -4058,6 +4143,19 @@
         " onmouseover="this.style.backgroundColor='#218838'" onmouseout="this.style.backgroundColor='#28a745'">
             Открыть редактор карточек
         </button>
+        <div class="admin-screenshot-font-scale">
+            <label for="screenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
+            <select id="screenshotFontScaleSelect" onchange="saveHintViewerScreenshotFontScale()">
+                <option value="80">80%</option>
+                <option value="90">90%</option>
+                <option value="100">100%</option>
+                <option value="110">110%</option>
+                <option value="120">120%</option>
+                <option value="130">130%</option>
+                <option value="140">140%</option>
+                <option value="150">150%</option>
+            </select>
+        </div>
     </div>
 
     <div id="msgModalOverlay" class="msg-modal-overlay">
