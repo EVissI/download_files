@@ -4049,10 +4049,10 @@
 
         function updateDomPipsScale() {
             const scale = canvas.offsetWidth / 800;
-            const fontSize = 9 * scale;
-            const padV = 2 * scale;
-            const padH = 8 * scale;
-            const borderRadius = 4 * scale;
+            const fontSize = 27 * scale;
+            const padV = 6 * scale;
+            const padH = 24 * scale;
+            const borderRadius = 12 * scale;
             ['black-pips', 'red-pips'].forEach((id) => {
                 const el = document.getElementById(id);
                 if (!el) return;
