@@ -2013,9 +2013,9 @@
         .pips-above-board {
             background-color: #000000;
             color: #ffffff;
-            padding: 4px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2027,9 +2027,9 @@
         .pips-above-board-white {
             background-color: #ffffff;
             color: #000000;
-            padding: 4px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2040,9 +2040,9 @@
         .pips-above-board-inverted {
             background-color: #ffffff;
             color: #000000;
-            padding: 4px 6px;
+            padding: 2px 3px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: right;
             display: block;
@@ -2052,9 +2052,9 @@
         .pips-below-board-inverted {
             background-color: #000000;
             color: #ffffff;
-            padding: 4px 6px;
+            padding: 2px 3px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: right;
             display: block;
@@ -2068,9 +2068,9 @@
         .pips-below-board {
             background-color: #ffffff;
             color: #000000;
-            padding: 4px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2082,9 +2082,9 @@
         .pips-below-board-black {
             background-color: #000000;
             color: #ffffff;
-            padding: 4px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -4047,6 +4047,21 @@
             wrapper.style.fontSize = (26 * scale) + 'px';
         }
 
+        function updateDomPipsScale() {
+            const scale = canvas.offsetWidth / 800;
+            const fontSize = 9 * scale;
+            const padV = 2 * scale;
+            const padH = 8 * scale;
+            const borderRadius = 4 * scale;
+            ['black-pips', 'red-pips'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.style.fontSize = `${Math.round(fontSize * 10) / 10}px`;
+                el.style.padding = `${Math.round(padV * 10) / 10}px ${Math.round(padH * 10) / 10}px`;
+                el.style.borderRadius = `${Math.round(borderRadius * 10) / 10}px`;
+            });
+        }
+
         function updateAllDropdownPositions() {
             const scale = canvas.offsetWidth / 800;
             for (let point = 1; point <= 24; point++) {
@@ -4055,6 +4070,7 @@
                     updateDropdownPosition(wrapper, point, scale);
                 }
             }
+            updateDomPipsScale();
         }
 
         function updatePointSelectorDisplay(point) {
@@ -4429,6 +4445,7 @@
                 ctx.fillStyle = '#ffffff';
                 ctx.fillText(`${blackCheckersOff}`, offX, lowerOffY);
             }
+            updateDomPipsScale();
         }
 
         function getTotalCheckers(pos) {
