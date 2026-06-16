@@ -2507,6 +2507,28 @@
                 box-sizing: border-box;
             }
         }
+
+        /* Мобильные и планшеты: доска на всю доступную ширину, высота масштабируется пропорционально */
+        @media (max-width: 1024px) {
+            .container {
+                padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+                padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+            }
+
+            .board-wrapper {
+                width: 100%;
+                max-width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+            }
+
+            #boardCanvas {
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+                aspect-ratio: 1 / 1;
+            }
+        }
     </style>
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
