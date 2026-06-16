@@ -244,7 +244,7 @@ def _get_pokaz_translations(lang: str) -> dict:
         "unknown_hint_type": t("pokaz-page-unknown-hint-type", "Unknown hint type"),
         "turn_white": t("pokaz-page-turn-white", "White to move"),
         "turn_black": t("pokaz-page-turn-black", "Black to move"),
-        "loading_hints": t("pokaz-page-loading-hints", "Loading hints..."),
+        "loading_hints": t("pokaz-page-loading-hints", "Finding best moves"),
         "error_insufficient_balance": t(
             "pokaz-page-error-insufficient-balance", "Insufficient balance for hints"
         ),

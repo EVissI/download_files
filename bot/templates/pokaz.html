@@ -1467,6 +1467,13 @@
             display: block;
         }
 
+        .hints-content.active:has(.loading) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+        }
+
         table {
             margin: 0 auto;
             border-collapse: collapse;
@@ -1587,7 +1594,14 @@
 
         .loading {
             color: #007bff;
-            font-style: italic;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+            padding: 1rem;
         }
 
         .error {
@@ -1999,9 +2013,9 @@
         .pips-above-board {
             background-color: #000000;
             color: #ffffff;
-            padding: 2px 8px;
+            padding: 4px 16px;
             border-radius: 4px;
-            font-size: 9px;
+            font-size: 18px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2013,9 +2027,9 @@
         .pips-above-board-white {
             background-color: #ffffff;
             color: #000000;
-            padding: 2px 8px;
+            padding: 4px 16px;
             border-radius: 4px;
-            font-size: 9px;
+            font-size: 18px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2026,9 +2040,9 @@
         .pips-above-board-inverted {
             background-color: #ffffff;
             color: #000000;
-            padding: 2px 3px;
+            padding: 4px 6px;
             border-radius: 4px;
-            font-size: 9px;
+            font-size: 18px;
             font-weight: bold;
             text-align: right;
             display: block;
@@ -2038,9 +2052,9 @@
         .pips-below-board-inverted {
             background-color: #000000;
             color: #ffffff;
-            padding: 2px 3px;
+            padding: 4px 6px;
             border-radius: 4px;
-            font-size: 9px;
+            font-size: 18px;
             font-weight: bold;
             text-align: right;
             display: block;
@@ -2054,9 +2068,9 @@
         .pips-below-board {
             background-color: #ffffff;
             color: #000000;
-            padding: 2px 8px;
+            padding: 4px 16px;
             border-radius: 4px;
-            font-size: 9px;
+            font-size: 18px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2068,9 +2082,9 @@
         .pips-below-board-black {
             background-color: #000000;
             color: #ffffff;
-            padding: 2px 8px;
+            padding: 4px 16px;
             border-radius: 4px;
-            font-size: 9px;
+            font-size: 18px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -4188,9 +4202,9 @@
 
         // Draw pip count box
         function drawPipBox(x, y, pips, isWhite) {
-            const boxWidth = 60;
-            const boxHeight = 40;
-            const fontSize = 30;
+            const boxWidth = 120;
+            const boxHeight = 80;
+            const fontSize = 60;
 
             // Draw background
             ctx.fillStyle = isWhite ? '#ffffff' : '#000000';
@@ -4337,28 +4351,28 @@
                     // draw on canvas for screenshots (same as board_viewer/hint_viewer)
                     if (upperPlayerColor === 'black') {
                         ctx.fillStyle = '#000000';
-                        ctx.fillRect(650, -50, 150, 50);
+                        ctx.fillRect(575, -100, 300, 100);
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 20px Arial';
+                        ctx.font = 'bold 40px Arial';
                         ctx.textAlign = 'center';
-                        ctx.fillText(`${blackPips}`, 725, -20);
+                        ctx.fillText(`${blackPips}`, 725, -45);
 
                         ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(650, 800, 150, 50);
+                        ctx.fillRect(575, 750, 300, 100);
                         ctx.fillStyle = '#000000';
-                        ctx.fillText(`${whitePips}`, 725, 830);
+                        ctx.fillText(`${whitePips}`, 725, 805);
                     } else {
                         ctx.fillStyle = '#000000';
-                        ctx.fillRect(650, -50, 150, 50);
+                        ctx.fillRect(575, -100, 300, 100);
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 20px Arial';
+                        ctx.font = 'bold 40px Arial';
                         ctx.textAlign = 'center';
-                        ctx.fillText(`${whitePips}`, 725, -20);
+                        ctx.fillText(`${whitePips}`, 725, -45);
 
                         ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(650, 800, 150, 50);
+                        ctx.fillRect(575, 750, 300, 100);
                         ctx.fillStyle = '#000000';
-                        ctx.fillText(`${blackPips}`, 725, 830);
+                        ctx.fillText(`${blackPips}`, 725, 805);
                     }
                 } else {
                     // original inline pips boxes on canvas
@@ -6307,7 +6321,9 @@
                 }
             }
 
-            hintsTable.innerHTML = '<div class="loading">' + ((window.POKAZ_I18N || {}).loading_hints || 'Загрузка подсказок...') + '</div>';
+            hintsTable.innerHTML = '<div class="loading">' + ((window.POKAZ_I18N || {}).loading_hints || 'Поиск лучших ходов') + '</div>';
+            hintsTable.classList.add('active');
+            hintsTableContainer.classList.add('active');
             console.log('Requesting hints with chat_id:', chatId, 'xgid:', xgid);
             fetch(`/pokaz/hints?xgid=${encodeURIComponent(xgid)}&chat_id=${chatId}`, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
                 .then(response => {
