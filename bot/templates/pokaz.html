@@ -2013,9 +2013,9 @@
         .pips-above-board {
             background-color: #000000;
             color: #ffffff;
-            padding: 4px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2027,9 +2027,9 @@
         .pips-above-board-white {
             background-color: #ffffff;
             color: #000000;
-            padding: 4px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2040,9 +2040,9 @@
         .pips-above-board-inverted {
             background-color: #ffffff;
             color: #000000;
-            padding: 4px 6px;
+            padding: 2px 3px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: right;
             display: block;
@@ -2052,9 +2052,9 @@
         .pips-below-board-inverted {
             background-color: #000000;
             color: #ffffff;
-            padding: 4px 6px;
+            padding: 2px 3px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: right;
             display: block;
@@ -2068,9 +2068,9 @@
         .pips-below-board {
             background-color: #ffffff;
             color: #000000;
-            padding: 4px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2082,9 +2082,9 @@
         .pips-below-board-black {
             background-color: #000000;
             color: #ffffff;
-            padding: 4px 16px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             display: block;
@@ -4202,9 +4202,9 @@
 
         // Draw pip count box
         function drawPipBox(x, y, pips, isWhite) {
-            const boxWidth = 120;
-            const boxHeight = 80;
-            const fontSize = 60;
+            const boxWidth = 60;
+            const boxHeight = 40;
+            const fontSize = 30;
 
             // Draw background
             ctx.fillStyle = isWhite ? '#ffffff' : '#000000';
@@ -4351,28 +4351,28 @@
                     // draw on canvas for screenshots (same as board_viewer/hint_viewer)
                     if (upperPlayerColor === 'black') {
                         ctx.fillStyle = '#000000';
-                        ctx.fillRect(575, -100, 300, 100);
+                        ctx.fillRect(650, -50, 150, 50);
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 40px Arial';
+                        ctx.font = 'bold 20px Arial';
                         ctx.textAlign = 'center';
-                        ctx.fillText(`${blackPips}`, 725, -45);
+                        ctx.fillText(`${blackPips}`, 725, -20);
 
                         ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(575, 750, 300, 100);
+                        ctx.fillRect(650, 800, 150, 50);
                         ctx.fillStyle = '#000000';
-                        ctx.fillText(`${whitePips}`, 725, 805);
+                        ctx.fillText(`${whitePips}`, 725, 830);
                     } else {
                         ctx.fillStyle = '#000000';
-                        ctx.fillRect(575, -100, 300, 100);
+                        ctx.fillRect(650, -50, 150, 50);
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 40px Arial';
+                        ctx.font = 'bold 20px Arial';
                         ctx.textAlign = 'center';
-                        ctx.fillText(`${whitePips}`, 725, -45);
+                        ctx.fillText(`${whitePips}`, 725, -20);
 
                         ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(575, 750, 300, 100);
+                        ctx.fillRect(650, 800, 150, 50);
                         ctx.fillStyle = '#000000';
-                        ctx.fillText(`${blackPips}`, 725, 805);
+                        ctx.fillText(`${blackPips}`, 725, 830);
                     }
                 } else {
                     // original inline pips boxes on canvas
