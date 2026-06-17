@@ -728,6 +728,13 @@ class ContentCardIssueSchedule(Base):
         return f"{self.target_user_id} | {title} | {username}"
 
 
+class ContentCardPool(str, enum.Enum):
+    """Пул карточек: обычные «Карточки» или «Подсчёт пипсов»."""
+
+    CARDS = "cards"
+    PIP_COUNT = "pip_count"
+
+
 class ContentCard(Base):
     """
     Сохранённая карточка редактора контента (hint viewer и т.п.).
@@ -761,6 +768,12 @@ class ContentCard(Base):
     frames: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     board_xgid: Mapped[str | None] = mapped_column(Text, nullable=True)
     labels: Mapped[list[str] | None] = mapped_column(ARRAY[str](String(255)), nullable=True)
+    card_pool: Mapped["ContentCardPool"] = mapped_column(
+        Enum(ContentCardPool, name="contentcardpool"),
+        nullable=False,
+        default=ContentCardPool.CARDS,
+        server_default=ContentCardPool.CARDS.value,
+    )
 
     users: Mapped[list["UserContentCard"]] = relationship(
         "UserContentCard",
@@ -864,6 +877,12 @@ class ContentCardFolder(Base):
         nullable=True,
     )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    folder_pool: Mapped["ContentCardPool"] = mapped_column(
+        Enum(ContentCardPool, name="contentcardpool"),
+        nullable=False,
+        default=ContentCardPool.CARDS,
+        server_default=ContentCardPool.CARDS.value,
+    )
     created_by_admin_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("users.id", ondelete="SET NULL"),

@@ -141,6 +141,7 @@ class SContentCardCreate(BaseModel):
     frames: dict[str, Any]
     labels: Optional[list[str]] = None
     board_xgid: Optional[str] = None
+    card_pool: Optional[str] = None
 
 
 class SUserContentCardCreate(BaseModel):

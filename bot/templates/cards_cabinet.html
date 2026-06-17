@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мои карточки</title>
+    <title>{{ cabinet_title|default('Мои карточки') }}</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         html,
@@ -1775,7 +1775,7 @@
                     </svg>
                 </button>
             </div>
-            <h1>Мои карточки</h1>
+            <h1>{{ cabinet_title|default('Мои карточки') }}</h1>
             <div class="cabinet-header-actions">
                 <button id="cabinet-interactive-stats-btn" class="cabinet-shuffle-btn" type="button"
                     title="Статистика интерактива" aria-label="Статистика интерактива">
@@ -1978,11 +1978,13 @@
                 aria-label="Получить одноразовую ссылку" disabled>Ссылка</button>
             <button id="send-selected-btn" class="cabinet-send-btn" type="button" title="Отправить выбранные карточки"
                 aria-label="Отправить выбранные карточки" disabled>Отправить</button>
+            {% if show_open_hints_toggle|default(true) %}
             <label id="open-hints-toggle-wrap" class="cabinet-hints-toggle"
                 title="Показывать на карточках интерактивные блоки выбора лучшего хода">
                 <input id="open-hints-toggle" type="checkbox" class="cabinet-hints-toggle__input">
                 <span class="cabinet-hints-toggle__label">Открыть подсказки</span>
             </label>
+            {% endif %}
         </div>
     </footer>
     <div id="generateLinkModal" class="link-modal" aria-hidden="true">
@@ -2145,7 +2147,11 @@
             var initData = '';
             var _urlParams = new URLSearchParams(window.location.search || '');
             var fabToken = _urlParams.get('fab_token') || '';
-            var CABINET_DEFAULT_TITLE = 'Мои карточки';
+            var CABINET_POOL = {{ cabinet_pool|default('cards')|tojson }};
+            var CABINET_BASE_PATH = {{ cabinet_base_path|default('/cards-cabinet')|tojson }};
+            var CABINET_DEFAULT_TITLE = {{ cabinet_title|default('Мои карточки')|tojson }};
+            var cabinetStateKey = {{ cabinet_state_key|default('cards_cabinet_state_v1')|tojson }};
+            var openHintsStateKey = {{ cabinet_open_hints_key|default('cards_cabinet_open_hints_v1')|tojson }};
             var cabinetConfig = (function () {
                 var folderToken = _urlParams.get('folder_token') || '';
                 if (folderToken) {
@@ -2170,7 +2176,7 @@
                     params.set('folder_token', cabinetConfig.folderToken);
                 }
                 var qs = params.toString();
-                return '/cards-cabinet' + (qs ? '?' + qs : '');
+                return CABINET_BASE_PATH + (qs ? '?' + qs : '');
             }
 
             function goToMainCabinet() {
@@ -2261,8 +2267,6 @@
             var isDbIdMode = false;
             var labelPresetsLoaded = false;
             var labelPresets = [];
-            var cabinetStateKey = 'cards_cabinet_state_v1';
-            var openHintsStateKey = 'cards_cabinet_open_hints_v1';
             var pendingLabelFilterValue = '';
             var quickSelectionInvalid = false;
             var generatedActivationLink = '';
@@ -2542,7 +2546,7 @@
                 restoreCabinetState();
 
                 function authPayload(extra) {
-                    var base = {};
+                    var base = { pool: CABINET_POOL };
                     if (initData) {
                         base.init_data = initData;
                     } else if (fabToken) {
@@ -3846,6 +3850,7 @@
                                 if (cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
                                     cardParams.set('folder_token', cabinetConfig.folderToken);
                                 }
+                                cardParams.set('pool', CABINET_POOL);
                                 window.location.assign(
                                     '/content-card-view?' + cardParams.toString()
                                 );
@@ -4807,7 +4812,7 @@
                     if (fabToken) {
                         params.set('fab_token', fabToken);
                     }
-                    return '/cards-cabinet?' + params.toString();
+                    return CABINET_BASE_PATH + '?' + params.toString();
                 }
 
                 function openFolderShareLinkModal(folderId) {

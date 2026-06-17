@@ -15,6 +15,18 @@ const _interactiveBestMoveHref = (() => {
 })();
 const { setupInteractiveBestMoveAfterCardPreviewRender } = await import(_interactiveBestMoveHref);
 
+const _interactivePipCountCacheQs = _interactiveBestMoveCacheQs;
+const _interactivePipCountHref = (() => {
+    const resolved = new URL('./interactive_pip_count.js', import.meta.url).href;
+    const q = _interactivePipCountCacheQs;
+    if (!q || resolved.includes('?')) return resolved;
+    return resolved + q;
+})();
+const {
+    setupInteractivePipCountAfterCardPreviewRender,
+    refreshInteractivePipCountPreviewBlocks,
+} = await import(_interactivePipCountHref);
+
 export function openCardPreviewModalImpl(editor) {
     if (!editor.cardPreviewModal) return;
     editor.cardPreviewRefs = editor.collectSavedFrameRefsForCurrentGame();
@@ -959,6 +971,7 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
         editor._contentCardViewCardId
     ) {
         setupInteractiveBestMoveAfterCardPreviewRender(editor, effectivePayload);
+        setupInteractivePipCountAfterCardPreviewRender(editor, effectivePayload);
     }
 }
 

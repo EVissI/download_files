@@ -13,6 +13,7 @@ from bot.db.models import (
     ContentCardFolder,
     ContentCardFolderItem,
     ContentCardFolderLink,
+    ContentCardPool,
     MessagesTexts,
     ServiceType,
     User,
@@ -1361,12 +1362,14 @@ class ContentCardFolderDAO(BaseDAO[ContentCardFolder]):
         parent_id: int | None,
         sort_order: int,
         admin_id: int | None,
+        folder_pool: ContentCardPool | None = None,
     ) -> ContentCardFolder:
         folder = ContentCardFolder(
             name=name[:255],
             parent_id=parent_id,
             sort_order=sort_order,
             created_by_admin_id=admin_id,
+            folder_pool=folder_pool or ContentCardPool.CARDS,
         )
         self._session.add(folder)
         await self._session.flush()

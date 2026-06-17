@@ -51,6 +51,7 @@ from bot.db.models import (
     ContentCardFolderItem,
     ContentCardFolderLink,
     ContentCardFolderSchedule,
+    ContentCardPool,
     ContentFrameTemplate,
     LabelPreset,
     ServiceType,
@@ -321,14 +322,45 @@ async def content_card_view_page(request: Request):
 @app.get("/cards-cabinet")
 async def cards_cabinet_page(request: Request):
     """Личный кабинет: сетка карточек пользователя (Telegram WebApp)."""
+    return await _render_content_cards_cabinet_page(request, ContentCardPool.CARDS)
+
+
+@app.get("/pip-count-cabinet")
+async def pip_count_cabinet_page(request: Request):
+    """Кабинет карточек «Подсчёт пипсов» (отдельный пул)."""
+    return await _render_content_cards_cabinet_page(request, ContentCardPool.PIP_COUNT)
+
+
+async def _render_content_cards_cabinet_page(
+    request: Request, card_pool: ContentCardPool
+) -> HTMLResponse:
     cache_timestamp = int(time.time())
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
+    if card_pool == ContentCardPool.PIP_COUNT:
+        cabinet_ctx = {
+            "cabinet_pool": ContentCardPool.PIP_COUNT.value,
+            "cabinet_base_path": "/pip-count-cabinet",
+            "cabinet_title": "Подсчёт пипсов",
+            "cabinet_state_key": "pip_count_cabinet_state_v1",
+            "cabinet_open_hints_key": "pip_count_cabinet_open_hints_v1",
+            "show_open_hints_toggle": False,
+        }
+    else:
+        cabinet_ctx = {
+            "cabinet_pool": ContentCardPool.CARDS.value,
+            "cabinet_base_path": "/cards-cabinet",
+            "cabinet_title": "Мои карточки",
+            "cabinet_state_key": "cards_cabinet_state_v1",
+            "cabinet_open_hints_key": "cards_cabinet_open_hints_v1",
+            "show_open_hints_toggle": True,
+        }
     response = templates.TemplateResponse(
         "cards_cabinet.html",
         {
             "request": request,
             "cache_timestamp": cache_timestamp,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
+            **cabinet_ctx,
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -721,6 +753,7 @@ class ContentCardSaveBody(BaseModel):
     frames: dict[str, Any]
     labels: list[str] | None = None
     chat_id: int | None = None
+    pool: str | None = None
 
 
 class ContentCardFileNameCheckBody(BaseModel):
@@ -750,6 +783,7 @@ class ContentCardMyListBody(BaseModel):
 
     init_data: str | None = None
     fab_token: str | None = None
+    pool: str | None = None
 
 
 class ContentCardAssignToUserBody(BaseModel):
@@ -1074,6 +1108,17 @@ async def admin_cards_cabinet_bridge(request: Request):
     return RedirectResponse(url=url, status_code=302)
 
 
+@app.get("/admin/pip-count-cabinet")
+async def admin_pip_count_cabinet_bridge(request: Request):
+    """
+    Мост FAB -> кабинет «Подсчёт пипсов».
+    """
+    admin_id = await _require_admin_session_user_id(request)
+    fab_token = await _issue_fab_cards_auth_token(admin_id)
+    url = f"/pip-count-cabinet?fab_token={fab_token}"
+    return RedirectResponse(url=url, status_code=302)
+
+
 @app.get("/admin/content-card-view/{content_card_id}")
 async def admin_content_card_view_bridge(content_card_id: int, request: Request):
     """
@@ -1175,6 +1220,7 @@ async def save_content_card(body: ContentCardSaveBody):
     safe_name = os.path.basename(body.file_name.strip())[:255] or "card"
     labels = _normalize_content_card_labels(body.labels)
     board_xgid = _extract_board_xgid_from_frames(body.frames)
+    card_pool = _parse_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
         user_dao = UserDAO(session)
@@ -1194,6 +1240,7 @@ async def save_content_card(body: ContentCardSaveBody):
                 frames=body.frames,
                 labels=labels,
                 board_xgid=board_xgid,
+                card_pool=card_pool.value,
             )
         )
         saved_id = new_card.id
@@ -1285,10 +1332,17 @@ async def content_cards_my_list(body: ContentCardMyListBody):
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     is_root_admin = user_id in settings.ROOT_ADMIN_IDS
     recent_cutoff = datetime.utcnow() - timedelta(days=1)
+    card_pool = _parse_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
         ucc_dao = UserContentCardDAO(session)
         links = await ucc_dao.get_all_by_user(user_id)
+        links = [
+            row
+            for row in links
+            if row.content_card
+            and row.content_card.card_pool == card_pool
+        ]
         links.sort(key=lambda row: row.id)
         cards = [
             {
@@ -1371,6 +1425,7 @@ async def content_cards_create_empty(body: ContentCardMyListBody):
     """
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
+    card_pool = _parse_content_card_pool(body.pool)
 
     frames = _build_empty_content_card_frames()
     safe_name = f"cabinet_new_{uuid.uuid4().hex[:12]}.json"
@@ -1393,6 +1448,7 @@ async def content_cards_create_empty(body: ContentCardMyListBody):
                 frames=frames,
                 labels=None,
                 board_xgid=None,
+                card_pool=card_pool.value,
             )
         )
         saved_id = new_card.id
@@ -1405,8 +1461,9 @@ async def content_cards_create_empty(body: ContentCardMyListBody):
         await session.commit()
 
     logger.info(
-        "Content card created (empty): id={} by user_id={}",
+        "Content card created (empty): id={} pool={} by user_id={}",
         saved_id,
+        card_pool.value,
         user_id,
     )
     return {
@@ -2042,10 +2099,12 @@ async def fetch_content_card(body: ContentCardFetchBody):
             raise HTTPException(status_code=404, detail="Карточка не найдена")
 
         is_root_admin = user_id in settings.ROOT_ADMIN_IDS
+        card_pool_val = card.card_pool.value if hasattr(card.card_pool, "value") else str(card.card_pool)
         out: dict[str, Any] = {
             "frames": card.frames,
             "is_content_card_admin": is_root_admin,
             "user_card_status": link.card_status.value if link else None,
+            "card_pool": card_pool_val,
         }
         if is_root_admin:
             raw_labels = card.labels
@@ -2330,6 +2389,7 @@ async def content_card_media_proxy(
 class FolderBaseBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
+    pool: str | None = None
 
 
 class FolderCreateBody(FolderBaseBody):
@@ -2399,17 +2459,34 @@ class FolderScheduleDeleteBody(FolderBaseBody):
 #  Helpers
 # ============================================================
 
+def _parse_content_card_pool(raw: str | None) -> ContentCardPool:
+    if raw is None or str(raw).strip() == "":
+        return ContentCardPool.CARDS
+    value = str(raw).strip().lower()
+    try:
+        return ContentCardPool(value)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Некорректный pool: {raw!r}. Допустимо: cards, pip_count",
+        ) from exc
+
+
 def _require_content_card_folder_admin(user_id: int) -> None:
     if user_id not in settings.ROOT_ADMIN_IDS:
         raise HTTPException(status_code=403, detail="Только администратор")
 
 
 def _serialize_folder(f: ContentCardFolder) -> dict:
+    pool_val = f.folder_pool
+    if hasattr(pool_val, "value"):
+        pool_val = pool_val.value
     return {
         "id": f.id,
         "name": f.name,
         "parent_id": f.parent_id,
         "sort_order": f.sort_order,
+        "folder_pool": pool_val,
         "created_by_admin_id": f.created_by_admin_id,
         "created_at": f.created_at.isoformat() if f.created_at else None,
     }
@@ -2496,10 +2573,13 @@ async def folder_tree(body: FolderBaseBody):
     """Вернуть дерево папок со счётчиками карточек. Только ROOT_ADMIN."""
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_folder_admin(user_id)
+    folder_pool = _parse_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
         dao = ContentCardFolderDAO(session)
-        folders = await dao.get_all_folders()
+        folders = [
+            f for f in await dao.get_all_folders() if f.folder_pool == folder_pool
+        ]
 
         # Считаем прямые карточки каждой папки
         counts_res = await session.execute(
@@ -2525,6 +2605,7 @@ async def folder_create(body: FolderCreateBody):
     """Создать папку. Только ROOT_ADMIN."""
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_folder_admin(user_id)
+    folder_pool = _parse_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
         async with session.begin():
@@ -2533,11 +2614,17 @@ async def folder_create(body: FolderCreateBody):
                 parent = await dao.get_folder_by_id(body.parent_id)
                 if not parent:
                     raise HTTPException(status_code=404, detail="Родительская папка не найдена")
+                if parent.folder_pool != folder_pool:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Родительская папка принадлежит другому пулу",
+                    )
             folder = await dao.create_folder(
                 name=body.name,
                 parent_id=body.parent_id,
                 sort_order=body.sort_order,
                 admin_id=user_id,
+                folder_pool=folder_pool,
             )
             return {"folder": _serialize_folder(folder)}
 
@@ -2570,6 +2657,18 @@ async def folder_move(body: FolderMoveBody):
     async with async_session_maker() as session:
         async with session.begin():
             dao = ContentCardFolderDAO(session)
+            folder = await dao.get_folder_by_id(body.folder_id)
+            if not folder:
+                raise HTTPException(status_code=404, detail="Папка не найдена")
+            if body.new_parent_id is not None:
+                new_parent = await dao.get_folder_by_id(body.new_parent_id)
+                if not new_parent:
+                    raise HTTPException(status_code=404, detail="Родительская папка не найдена")
+                if new_parent.folder_pool != folder.folder_pool:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Нельзя переместить папку в другой пул",
+                    )
             try:
                 folder = await dao.move_folder(
                     folder_id=body.folder_id,
@@ -2629,6 +2728,18 @@ async def folder_add_items(body: FolderAddItemsBody):
             folder = await dao.get_folder_by_id(body.folder_id)
             if not folder:
                 raise HTTPException(status_code=404, detail="Папка не найдена")
+            cards_res = await session.execute(
+                select(ContentCard.id, ContentCard.card_pool).where(
+                    ContentCard.id.in_(card_ids)
+                )
+            )
+            for row in cards_res.all():
+                cid, card_pool = row[0], row[1]
+                if card_pool != folder.folder_pool:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Карточка {cid} принадлежит другому пулу",
+                    )
             added = await dao.add_cards_to_folder(body.folder_id, card_ids)
     return {"ok": True, "added_count": added}
 
@@ -2841,6 +2952,10 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
         if not folder:
             raise HTTPException(status_code=404, detail="Папка не найдена")
 
+        request_pool = _parse_content_card_pool(body.pool)
+        if folder.folder_pool != request_pool:
+            raise HTTPException(status_code=404, detail="Папка не найдена в этом пуле")
+
         if body.direct_only:
             card_ids = await folder_dao.get_folder_card_ids(link.folder_id)
         else:
@@ -2856,7 +2971,7 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
         )
         direct_counts: dict[int, int] = {row[0]: row[1] for row in counts_res.all()}
         for f in all_folders:
-            if f.parent_id == link.folder_id:
+            if f.parent_id == link.folder_id and f.folder_pool == folder.folder_pool:
                 child_folders.append({
                     "id": f.id,
                     "name": f.name,
@@ -2867,11 +2982,15 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
         cards_data: list[dict] = []
         if card_ids:
             cards_res = await session.execute(
-                select(ContentCard).where(ContentCard.id.in_(card_ids))
+                select(ContentCard).where(
+                    ContentCard.id.in_(card_ids),
+                    ContentCard.card_pool == folder.folder_pool,
+                )
             )
             cards_by_id: dict[int, ContentCard] = {
                 c.id: c for c in cards_res.scalars().all()
             }
+            card_ids = [cid for cid in card_ids if cid in cards_by_id]
             for cid in card_ids:
                 c = cards_by_id.get(cid)
                 if c:

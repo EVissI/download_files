@@ -4118,6 +4118,27 @@
             }
         };
 
+        async function openPipCountCardEditor() {
+            if (typeof contentEditor === 'undefined') {
+                console.error('ContentEditor не инициализирован');
+                return;
+            }
+            try {
+                if (typeof contentEditor.openModalWithBestDuplicateCheck === 'function') {
+                    await contentEditor.openModalWithBestDuplicateCheck(null, { duplicateMode: 'board_xgid' });
+                } else if (typeof contentEditor.openModalWithData === 'function') {
+                    contentEditor.openModalWithData(null);
+                } else {
+                    throw new Error('ContentEditor не содержит методов открытия редактора');
+                }
+                if (typeof contentEditor.setupPipCountImportSession === 'function') {
+                    await contentEditor.setupPipCountImportSession();
+                }
+            } catch (e) {
+                console.error('openPipCountCardEditor:', e);
+            }
+        }
+
         // Функция открытия редактора контента
         async function openCardEditor() {
             if (typeof contentEditor !== 'undefined') {
@@ -4179,6 +4200,21 @@
 
     <!-- Admin button container -->
     <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
+        <button id="openPipCountCardEditorBtn" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}" style="
+            padding: 12px 24px;
+            margin-right: 10px;
+            background-color: #1f6f8f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        " onmouseover="this.style.backgroundColor='#185a73'" onmouseout="this.style.backgroundColor='#1f6f8f'">
+            Карточка: подсчёт пипсов
+        </button>
         <button id="openCardEditorBtn" onclick="openCardEditor()" data-version="{{ cache_timestamp }}" style="
             padding: 12px 24px;
             background-color: #28a745;

@@ -107,6 +107,13 @@ const {
 } = await import(
     new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
+const {
+    setupInteractivePipCountAfterCardPreviewRender,
+    refreshInteractivePipCountPreviewBlocks,
+    mountInteractivePipCountBlock,
+} = await import(
+    new URL('./content-editor/features/interactive_pip_count.js', import.meta.url).href + _featureModuleCacheQs
+);
 
 /**
  * Content Editor Module
@@ -1423,25 +1430,30 @@ export class ContentEditor {
 
     /** Превью кадра: сетка интерактива (dry-run); на content-card-view затем setupInteractiveBestMoveAfterCardPreviewRender пересобирает с записью ответа. */
     refreshInteractivePreviewBlocksFromCardData(inner, payload) {
-        if (!inner || !payload || !payload.cardData || typeof payload.cardData !== 'object') return;
-        let cd;
-        try {
-            cd = JSON.parse(JSON.stringify(payload.cardData));
-        } catch (e) {
-            return;
+        if (!inner || !payload) return;
+        if (payload.cardData && typeof payload.cardData === 'object') {
+            let cd;
+            try {
+                cd = JSON.parse(JSON.stringify(payload.cardData));
+            } catch (e) {
+                cd = null;
+            }
+            if (cd) {
+                inner.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
+                    const grid = el.querySelector('[data-ce-interactive-grid]');
+                    const tableType = getInteractiveTableTypeFromBlock(el);
+                    syncInteractiveBlockTitleByType(el, tableType);
+                    const maxM = countInteractiveAvailableFromCardData(cd, tableType);
+                    const rawBc = resolveInteractiveButtonCountRaw(el, payload);
+                    const btnCount = clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
+                    el.dataset.ceInteractiveButtonCount = String(btnCount);
+                    fillInteractiveEditorPreviewGrid(grid, cd, btnCount, tableType);
+                    el.style.height = 'auto';
+                    el.style.minHeight = '';
+                });
+            }
         }
-        inner.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]').forEach((el) => {
-            const grid = el.querySelector('[data-ce-interactive-grid]');
-            const tableType = getInteractiveTableTypeFromBlock(el);
-            syncInteractiveBlockTitleByType(el, tableType);
-            const maxM = countInteractiveAvailableFromCardData(cd, tableType);
-            const rawBc = resolveInteractiveButtonCountRaw(el, payload);
-            const btnCount = clampInteractiveButtonCount(rawBc, Math.max(1, maxM), 4);
-            el.dataset.ceInteractiveButtonCount = String(btnCount);
-            fillInteractiveEditorPreviewGrid(grid, cd, btnCount, tableType);
-            el.style.height = 'auto';
-            el.style.minHeight = '';
-        });
+        refreshInteractivePipCountPreviewBlocks(this, payload, inner);
     }
 
     /**
@@ -1452,6 +1464,34 @@ export class ContentEditor {
         /* Доска по умолчанию включена при открытии редактора / новой сессии. */
         this.toggleStates = { boardCanvas: true };
         this.boardMatchBannerEnabled = false;
+        this._saveCardPool = null;
+        this._pipCountImportMode = false;
+    }
+
+    /**
+     * Открытие редактора для карточки «Подсчёт пипсов» из Позиции / Ошибок.
+     */
+    async setupPipCountImportSession() {
+        this._saveCardPool = 'pip_count';
+        this._pipCountImportMode = true;
+        this.cardData = null;
+
+        if (!this.toggleStates.boardCanvas) {
+            this.toggleBoardCanvas('boardCanvas');
+        } else {
+            this.syncBoardToolToggleFromState();
+            this.renderEditorBoardDisplay();
+        }
+
+        const hidePipsCb = document.getElementById('hidePipsCheckbox');
+        if (hidePipsCb && !hidePipsCb.checked) {
+            hidePipsCb.checked = true;
+            hidePipsCb.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        if (this.canvas && !this.canvas.querySelector('[data-tool-id="interactive-pip-count"]')) {
+            this.addElementToCanvas('interactive-pip-count');
+        }
     }
 
     /**
@@ -2313,6 +2353,13 @@ export class ContentEditor {
                 type: 'interactive',
                 description: 'Выбор лучшего хода по данным таблицы hints',
                 icon: 'fa fa-gamepad'
+            },
+            {
+                id: 'interactive-pip-count',
+                name: 'Пипсы',
+                type: 'interactive',
+                description: 'Подсчёт пипсов: таймер и проверка ответа',
+                icon: 'fa fa-clock-o'
             },
             {
                 id: 'frame-templates',
@@ -3892,6 +3939,8 @@ export class ContentEditor {
             defaultHeight = 'auto';
         } else if (toolId === 'interactive-best-move') {
             defaultHeight = this.isMobile() ? 140 : 180;
+        } else if (toolId === 'interactive-pip-count') {
+            defaultHeight = 'auto';
         } else {
             // Other elements have fixed height based on mobile/desktop
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
@@ -3928,6 +3977,9 @@ export class ContentEditor {
             } else if (toolId === 'interactive-best-move') {
                 element.style.height = 'auto';
                 element.style.minHeight = (this.isMobile() ? 120 : 132) + 'px';
+            } else if (toolId === 'interactive-pip-count') {
+                element.style.height = 'auto';
+                element.style.minHeight = (this.isMobile() ? 160 : 200) + 'px';
             } else {
                 element.style.height = defaultHeight + 'px';
             }
@@ -3946,7 +3998,7 @@ export class ContentEditor {
                 this.refreshInteractiveBestMoveElementsFromCardData();
             }
 
-            // Если новый элемент был вставлен под выделенным — сдвигаем вниз блоки, оказавшиеся под точкой вставки.
+            // Если новый элемент был вставлен под выделенным
             if (position.anchor) {
                 this.repositionElementsBelow(elementId);
             } else {
@@ -4108,6 +4160,54 @@ export class ContentEditor {
                     </div>`;
                 /* refreshInteractiveBestMoveElementsFromCardData вызывается после appendChild в addElementToCanvas —
                    иначе блок ещё не в DOM и querySelector не находит интерактив (interactiveBlocksCount: 0). */
+                break;
+            }
+
+            case 'interactive-pip-count': {
+                element.classList.add('ce-interactive-pip-count');
+                if (element.dataset.cePipCountShowTimer == null || element.dataset.cePipCountShowTimer === '') {
+                    element.dataset.cePipCountShowTimer = 'true';
+                }
+                if (element.dataset.cePipCountFeedbackOk == null || element.dataset.cePipCountFeedbackOk === '') {
+                    element.dataset.cePipCountFeedbackOk = 'Правильно';
+                }
+                if (element.dataset.cePipCountFeedbackBad == null || element.dataset.cePipCountFeedbackBad === '') {
+                    element.dataset.cePipCountFeedbackBad = 'Неправильно';
+                }
+                element.innerHTML = `
+                    <div class="ce-interactive-pip-count__inner">
+                        <p class="ce-interactive-pip-count__title">Подсчёт пипсов</p>
+                        <div class="ce-interactive-pip-count__controls" data-ce-pip-count-controls>
+                            <div class="ce-interactive-pip-count__timer-row" data-ce-pip-timer-row>
+                                <button type="button" class="ce-interactive-pip-count__btn" data-ce-pip-start>Пуск</button>
+                                <span class="ce-interactive-pip-count__timer" data-ce-pip-timer-display>00:00</span>
+                            </div>
+                            <div class="ce-interactive-pip-count__inputs">
+                                <label class="ce-interactive-pip-count__field">
+                                    <span class="ce-interactive-pip-count__field-label">Верхний</span>
+                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-upper inputmode="numeric">
+                                </label>
+                                <label class="ce-interactive-pip-count__field">
+                                    <span class="ce-interactive-pip-count__field-label">Нижний</span>
+                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-lower inputmode="numeric">
+                                </label>
+                            </div>
+                            <button type="button" class="ce-interactive-pip-count__btn ce-interactive-pip-count__btn--stop" data-ce-pip-stop>Стоп</button>
+                            <pre class="ce-interactive-pip-count__result" data-ce-pip-result style="display:none"></pre>
+                        </div>
+                    </div>`;
+                let boardSnap = null;
+                if (typeof window.getHintViewerBoardSnapshot === 'function') {
+                    try {
+                        boardSnap = window.getHintViewerBoardSnapshot();
+                    } catch (_e) {
+                        boardSnap = null;
+                    }
+                }
+                mountInteractivePipCountBlock(element, {
+                    dryRun: true,
+                    payload: { board: boardSnap },
+                });
                 break;
             }
 
@@ -4832,6 +4932,30 @@ export class ContentEditor {
                            oninput="contentEditor.updateElementProperty('interactiveFeedbackBad', this.value)">
                 </div>
                 ` : ''}
+                ${element.dataset.toolId === 'interactive-pip-count' ? `
+                <div class="property-item">
+                    <label>
+                        <input type="checkbox" id="propPipCountShowTimer"
+                            ${(element.dataset.cePipCountShowTimer !== '0' && element.dataset.cePipCountShowTimer !== 'false') ? 'checked' : ''}
+                            onchange="contentEditor.updateElementProperty('pipCountShowTimer', this.checked)">
+                        Показывать таймер
+                    </label>
+                </div>
+                <div class="property-item">
+                    <label>Текст при верном ответе:</label>
+                    <input type="text" id="propPipCountFeedbackOk" class="ce-property-input-fluid" maxlength="500"
+                           value="${this.escapeHtml(element.dataset.cePipCountFeedbackOk !== undefined && element.dataset.cePipCountFeedbackOk !== null ? String(element.dataset.cePipCountFeedbackOk) : 'Правильно')}"
+                           placeholder="Правильно"
+                           oninput="contentEditor.updateElementProperty('pipCountFeedbackOk', this.value)">
+                </div>
+                <div class="property-item">
+                    <label>Текст при неверном ответе:</label>
+                    <input type="text" id="propPipCountFeedbackBad" class="ce-property-input-fluid" maxlength="500"
+                           value="${this.escapeHtml(element.dataset.cePipCountFeedbackBad !== undefined && element.dataset.cePipCountFeedbackBad !== null ? String(element.dataset.cePipCountFeedbackBad) : 'Неправильно')}"
+                           placeholder="Неправильно"
+                           oninput="contentEditor.updateElementProperty('pipCountFeedbackBad', this.value)">
+                </div>
+                ` : ''}
             </div>
             
             <div class="action-buttons">
@@ -4866,6 +4990,23 @@ export class ContentEditor {
             case 'interactiveFeedbackBad':
                 if (this.selectedElement.dataset.toolId === 'interactive-best-move') {
                     this.selectedElement.dataset.ceInteractiveFeedbackBad = value != null ? String(value).slice(0, 500) : '';
+                }
+                break;
+            case 'pipCountShowTimer':
+                if (this.selectedElement.dataset.toolId === 'interactive-pip-count') {
+                    this.selectedElement.dataset.cePipCountShowTimer = value ? 'true' : 'false';
+                    const row = this.selectedElement.querySelector('[data-ce-pip-timer-row]');
+                    if (row) row.style.display = value ? '' : 'none';
+                }
+                break;
+            case 'pipCountFeedbackOk':
+                if (this.selectedElement.dataset.toolId === 'interactive-pip-count') {
+                    this.selectedElement.dataset.cePipCountFeedbackOk = value != null ? String(value).slice(0, 500) : '';
+                }
+                break;
+            case 'pipCountFeedbackBad':
+                if (this.selectedElement.dataset.toolId === 'interactive-pip-count') {
+                    this.selectedElement.dataset.cePipCountFeedbackBad = value != null ? String(value).slice(0, 500) : '';
                 }
                 break;
             case 'interactiveButtonCount':
@@ -5769,6 +5910,9 @@ export class ContentEditor {
                 case 'interactive-best-move':
                     delete item.style.height;
                     break;
+                case 'interactive-pip-count':
+                    delete item.style.height;
+                    break;
                 case 'board-illustration': {
                     const s3b = el.dataset.boardImageS3Key || '';
                     const img = el.querySelector('img');
@@ -6359,8 +6503,101 @@ export class ContentEditor {
         }
     }
 
+    derivePipCountSolutionFrameId(baseFrameId) {
+        const s = String(baseFrameId || '');
+        const m = s.match(/^(.+)_f(\d+)$/);
+        if (m) {
+            return `${m[1]}_f${parseInt(m[2], 10) + 1}`;
+        }
+        return `${s}_pip_solution`;
+    }
+
+    buildPipCountSolutionPlaceholderFramePayload(sourcePayload, solutionFrameId, saveSlotIndex) {
+        let board = null;
+        let editor = {
+            boardCanvasToggle: false,
+            canvasBackground: '#ffffff',
+            canvasBackgroundPattern: null,
+            showBoardMatchBanner: false,
+        };
+        if (sourcePayload && typeof sourcePayload === 'object') {
+            if (sourcePayload.board) {
+                try {
+                    board = JSON.parse(JSON.stringify(sourcePayload.board));
+                } catch (e) {
+                    board = sourcePayload.board;
+                }
+                if (board && typeof board === 'object') {
+                    board = { ...board, frameId: solutionFrameId };
+                }
+            }
+            if (sourcePayload.editor && typeof sourcePayload.editor === 'object') {
+                editor = {
+                    boardCanvasToggle: false,
+                    canvasBackground: sourcePayload.editor.canvasBackground || editor.canvasBackground,
+                    canvasBackgroundPattern:
+                        sourcePayload.editor.canvasBackgroundPattern != null
+                            ? sourcePayload.editor.canvasBackgroundPattern
+                            : null,
+                    showBoardMatchBanner: !!sourcePayload.editor.showBoardMatchBanner,
+                };
+            }
+        }
+        return {
+            version: 1,
+            frameId: solutionFrameId,
+            saveSlotIndex,
+            savedAt: new Date().toISOString(),
+            board,
+            cardData: null,
+            editor,
+            elements: [
+                {
+                    id: 'pip_count_solution_placeholder',
+                    toolId: 'question-text',
+                    style: {
+                        top: '48px',
+                        left: '24px',
+                        width: 'calc(100% - 48px)',
+                    },
+                    textHtml: 'Оптимальный способ подсчёта',
+                },
+            ],
+        };
+    }
+
+    /**
+     * При сохранении pip-count карточки в облако добавляет второй кадр-заглушку, если сохранён только один.
+     */
+    ensurePipCountSolutionFrameBeforeCloudSave(refs) {
+        if (this._saveCardPool !== 'pip_count' || !Array.isArray(refs) || refs.length !== 1) {
+            return refs;
+        }
+        const firstRef = refs[0];
+        let sourcePayload = null;
+        try {
+            const raw = localStorage.getItem(firstRef.storageKey);
+            sourcePayload = raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return refs;
+        }
+        if (!sourcePayload) return refs;
+
+        const solutionFrameId = this.derivePipCountSolutionFrameId(firstRef.frameId);
+        const saveSlotIndex = this.allocateNextSaveSlotIndex(solutionFrameId);
+        const solutionPayload = this.buildPipCountSolutionPlaceholderFramePayload(
+            sourcePayload,
+            solutionFrameId,
+            saveSlotIndex
+        );
+        const key = this.frameStorageKey(solutionFrameId, saveSlotIndex);
+        localStorage.setItem(key, JSON.stringify(solutionPayload));
+        return this.collectSavedFrameRefsForCurrentGame();
+    }
+
     async saveCardToCloud() {
-        const refs = this.collectSavedFrameRefsForCurrentGame();
+        let refs = this.collectSavedFrameRefsForCurrentGame();
+        refs = this.ensurePipCountSolutionFrameBeforeCloudSave(refs);
         if (!refs.length) {
             this.showNotification('Нет сохранённых кадров для этой игры', 'warning');
             return false;
@@ -6417,7 +6654,9 @@ export class ContentEditor {
             }
             if (typeof window.getHintViewerCurrentCardData === 'function') {
                 try {
-                    shCardData = window.getHintViewerCurrentCardData();
+                    if (!this._pipCountImportMode) {
+                        shCardData = window.getHintViewerCurrentCardData();
+                    }
                     if (shCardData != null) shCardData = JSON.parse(JSON.stringify(shCardData));
                 } catch (e) {
                     shCardData = null;
@@ -6449,6 +6688,7 @@ export class ContentEditor {
                     frames: framesWrapper,
                     labels: labels.length ? labels : null,
                     chat_id,
+                    pool: this._saveCardPool || 'cards',
                 }),
             });
             let data = {};
@@ -7840,7 +8080,8 @@ export class ContentEditor {
                 item.style.height &&
                 !(previewMode && isTextual) &&
                 !isPreviewImage &&
-                toolId !== 'interactive-best-move'
+                toolId !== 'interactive-best-move' &&
+                toolId !== 'interactive-pip-count'
             ) {
                 element.style.height = item.style.height;
             }

@@ -3203,6 +3203,22 @@
     </div>
 
     <div class="admin-comment-container">
+        <button id="openPokazPipCountCardEditorBtn" onclick="openPipCountCardEditor()" style="
+            display: none;
+            margin-right: 10px;
+            padding: 8px 12px;
+            background-color: #1f6f8f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        " onmouseover="this.style.backgroundColor='#185a73'" onmouseout="this.style.backgroundColor='#1f6f8f'">
+            Карточка: подсчёт пипсов
+        </button>
         <button id="openPokazCardEditorBtn" onclick="openPokazCardEditor()" style="
             display: none;
             margin-right: 10px;
@@ -3301,6 +3317,28 @@
                 first: { ...positions.first },
                 second: { ...positions.second }
             };
+        }
+
+        /** Меняет местами белые и чёрные шашки (включая бар) */
+        function swapCheckerColors() {
+            const tempFirst = JSON.parse(JSON.stringify(positions.first));
+            const tempSecond = JSON.parse(JSON.stringify(positions.second));
+            positions.first = tempSecond;
+            positions.second = tempFirst;
+        }
+
+        /** Меняет местами цвет хода и владельца куба */
+        function swapTurnAndCubeColors() {
+            const turnSelect = document.getElementById('turn-select');
+            if (turnSelect && turnSelect.value) {
+                turnSelect.value = turnSelect.value === 'white' ? 'black' : 'white';
+                updateTurnSelect();
+            }
+            const cubeOwnerSelect = document.getElementById('cube-owner-select');
+            if (cubeOwnerSelect && cubeOwnerSelect.value) {
+                cubeOwnerSelect.value = cubeOwnerSelect.value === 'white' ? 'black' : 'white';
+                updateCubeOwnerSelect();
+            }
         }
 
         /** Записывает ход в историю */
@@ -4575,6 +4613,8 @@
                     pokazIsAdmin = true;
                     const btn = document.getElementById('openPokazCardEditorBtn');
                     if (btn) btn.style.display = 'inline-block';
+                    const pipBtn = document.getElementById('openPokazPipCountCardEditorBtn');
+                    if (pipBtn) pipBtn.style.display = 'inline-block';
                 }
             } catch (e) {
                 console.error('checkPokazAdminStatus:', e);
@@ -6680,6 +6720,8 @@
                     lowerPlayerButton.classList.add('black');
                     lowerPlayerButton.setAttribute('data-color', 'black');
                 }
+                swapCheckerColors();
+                swapTurnAndCubeColors();
                 // Автоматически выбрать соответствующую шашку в checker-selector
                 const newLowerColor = lowerPlayerButton.dataset.color;
                 setSelectedCheckerColor(newLowerColor);
@@ -6689,8 +6731,12 @@
                     const targetPositions = newLowerColor === 'white' ? positions.first : positions.second;
                     if (select) select.value = targetPositions[point.toString()] || 0;
                 }
+                const whiteBarSelect = document.getElementById('white-bar-select');
+                const blackBarSelect = document.getElementById('black-bar-select');
+                if (whiteBarSelect) whiteBarSelect.value = String(positions.first.bar || 0);
+                if (blackBarSelect) blackBarSelect.value = String(positions.second.bar || 0);
                 updateBarSelects();
-                drawBoard();
+                updateBoard();
             });
         }
 
@@ -7027,6 +7073,29 @@
             } catch (e) {
                 console.error('getHintViewerCurrentCardData(pokaz):', e);
                 return null;
+            }
+        };
+
+        window.openPipCountCardEditor = async function () {
+            if (!pokazIsAdmin) return;
+            if (typeof contentEditor === 'undefined') {
+                showMessageModal('Редактор карточек не инициализирован', 'error');
+                return;
+            }
+            try {
+                if (typeof contentEditor.openModalWithBestDuplicateCheck === 'function') {
+                    await contentEditor.openModalWithBestDuplicateCheck(null, { duplicateMode: 'board_xgid' });
+                } else if (typeof contentEditor.openModalWithData === 'function') {
+                    contentEditor.openModalWithData(null);
+                } else {
+                    throw new Error('ContentEditor не содержит методов открытия редактора');
+                }
+                if (typeof contentEditor.setupPipCountImportSession === 'function') {
+                    await contentEditor.setupPipCountImportSession();
+                }
+            } catch (e) {
+                console.error('openPipCountCardEditor failed:', e);
+                showMessageModal('Ошибка открытия редактора подсчёта пипсов: ' + String(e.message || e), 'error');
             }
         };
 

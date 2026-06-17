@@ -4161,3 +4161,114 @@ button.content-card-admin-info-file-link:hover {
 .ce-interactive-feedback-modal__btn:hover {
     background: #5d7ec9;
 }
+
+/* Интерактив «Подсчёт пипсов» */
+.ce-interactive-pip-count {
+    background: rgba(20, 28, 38, 0.92);
+    border: 1px solid #3d4f63;
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+}
+
+.ce-interactive-pip-count__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ce-interactive-pip-count__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e8eef5;
+    text-align: center;
+}
+
+.ce-interactive-pip-count__timer-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.ce-interactive-pip-count__timer {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #f0f4fa;
+    min-width: 4.5em;
+    text-align: center;
+}
+
+.ce-interactive-pip-count__inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.ce-interactive-pip-count__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: #c5d0de;
+}
+
+.ce-interactive-pip-count__input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #4a5d72;
+    background: #0f141c;
+    color: #fff;
+    font-size: 16px;
+}
+
+.ce-interactive-pip-count__btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #5a7ab0;
+    background: #3d5f94;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ce-interactive-pip-count__btn:hover:not(:disabled) {
+    background: #4a6ea8;
+}
+
+.ce-interactive-pip-count__btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.ce-interactive-pip-count__btn--stop {
+    width: 100%;
+    background: #8b3a3a;
+    border-color: #a64a4a;
+}
+
+.ce-interactive-pip-count__btn--stop:hover:not(:disabled) {
+    background: #a04444;
+}
+
+.ce-interactive-pip-count__result {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #0f141c;
+    border: 1px solid #334155;
+    color: #dbe4f0;
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    font-family: inherit;
+}
+
+.card-preview-surface-inner .canvas-element.ce-interactive-pip-count.card-preview-canvas-clone {
+    width: 100% !important;
+    max-width: 100%;
+}

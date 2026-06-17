@@ -292,6 +292,16 @@
                 return String(params.get('folder_token') || '');
             }
 
+            function getCardPool() {
+                var params = new URLSearchParams(window.location.search || '');
+                var fromUrl = String(params.get('pool') || '').trim();
+                if (fromUrl) return fromUrl;
+                if (window.__CONTENT_CARD_POOL__) {
+                    return String(window.__CONTENT_CARD_POOL__);
+                }
+                return 'cards';
+            }
+
             function buildCabinetReturnUrl() {
                 var params = new URLSearchParams();
                 var fabToken = getFabToken();
@@ -303,7 +313,9 @@
                     params.set('folder_token', folderToken);
                 }
                 var qs = params.toString();
-                return '/cards-cabinet' + (qs ? '?' + qs : '');
+                var pool = getCardPool();
+                var basePath = pool === 'pip_count' ? '/pip-count-cabinet' : '/cards-cabinet';
+                return basePath + (qs ? '?' + qs : '');
             }
 
             function getCardNumber() {
