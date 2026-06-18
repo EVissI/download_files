@@ -735,6 +735,13 @@ class ContentCardPool(str, enum.Enum):
     PIP_COUNT = "pip_count"
 
 
+content_card_pool_enum = Enum(
+    ContentCardPool,
+    name="contentcardpool",
+    values_callable=lambda enum_cls: [item.value for item in enum_cls],
+)
+
+
 class ContentCard(Base):
     """
     Сохранённая карточка редактора контента (hint viewer и т.п.).
@@ -769,7 +776,7 @@ class ContentCard(Base):
     board_xgid: Mapped[str | None] = mapped_column(Text, nullable=True)
     labels: Mapped[list[str] | None] = mapped_column(ARRAY[str](String(255)), nullable=True)
     card_pool: Mapped["ContentCardPool"] = mapped_column(
-        Enum(ContentCardPool, name="contentcardpool"),
+        content_card_pool_enum,
         nullable=False,
         default=ContentCardPool.CARDS,
         server_default=ContentCardPool.CARDS.value,
@@ -878,7 +885,7 @@ class ContentCardFolder(Base):
     )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     folder_pool: Mapped["ContentCardPool"] = mapped_column(
-        Enum(ContentCardPool, name="contentcardpool"),
+        content_card_pool_enum,
         nullable=False,
         default=ContentCardPool.CARDS,
         server_default=ContentCardPool.CARDS.value,
