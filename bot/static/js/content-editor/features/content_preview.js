@@ -963,13 +963,8 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
         editor.refreshCardPreviewScale(hostRoot);
     }, 120);
 
-    /* Страница просмотра карточки: кнопки и запись ответа — всегда после отрисовки хоста (не зависит от наличия #cardPreviewMeta в refreshCardPreviewUI). */
-    if (
-        !hostRoot &&
-        typeof window !== 'undefined' &&
-        window.__CONTENT_CARD_VIEW_ONLY__ === true &&
-        editor._contentCardViewCardId
-    ) {
+    /* Страница просмотра карточки и превью из редактора: интерактив после отрисовки хоста. */
+    if (!hostRoot) {
         setupInteractiveBestMoveAfterCardPreviewRender(editor, effectivePayload);
         setupInteractivePipCountAfterCardPreviewRender(editor, effectivePayload);
     }

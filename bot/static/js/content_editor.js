@@ -1489,6 +1489,20 @@ export class ContentEditor {
             hidePipsCb.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
+        if (typeof window.getHintViewerBoardSnapshot === 'function') {
+            try {
+                const snap = window.getHintViewerBoardSnapshot();
+                if (snap && typeof snap === 'object' && snap.error !== 'no_game_data') {
+                    this._contentCardSharedContext = {
+                        board: JSON.parse(JSON.stringify(snap)),
+                        cardData: null,
+                    };
+                }
+            } catch (_e) {
+                /* noop */
+            }
+        }
+
         if (this.canvas && !this.canvas.querySelector('[data-tool-id="interactive-pip-count"]')) {
             this.addElementToCanvas('interactive-pip-count');
         }
@@ -6644,12 +6658,33 @@ export class ContentEditor {
             framesWrapper = { version: 1, frames };
             let shBoard = null;
             let shCardData = null;
+            if (frames.length > 0) {
+                const firstPayload = frames[0].payload;
+                if (
+                    firstPayload &&
+                    firstPayload.board &&
+                    typeof firstPayload.board === 'object' &&
+                    firstPayload.board.error !== 'no_game_data'
+                ) {
+                    try {
+                        shBoard = JSON.parse(JSON.stringify(firstPayload.board));
+                    } catch (e) {
+                        shBoard = firstPayload.board;
+                    }
+                }
+            }
             if (typeof window.getHintViewerBoardSnapshot === 'function') {
                 try {
-                    shBoard = window.getHintViewerBoardSnapshot();
-                    if (shBoard != null) shBoard = JSON.parse(JSON.stringify(shBoard));
+                    const liveBoard = window.getHintViewerBoardSnapshot();
+                    if (
+                        liveBoard != null &&
+                        typeof liveBoard === 'object' &&
+                        liveBoard.error !== 'no_game_data'
+                    ) {
+                        shBoard = JSON.parse(JSON.stringify(liveBoard));
+                    }
                 } catch (e) {
-                    shBoard = null;
+                    /* сохраняем board из кадра */
                 }
             }
             if (typeof window.getHintViewerCurrentCardData === 'function') {
@@ -7981,6 +8016,14 @@ export class ContentEditor {
         this.syncLiveHintBoardCanvasOverlay();
         this.refreshTableElementsFromCardData();
 
+        this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-count"]').forEach((el) => {
+            mountInteractivePipCountBlock(el, {
+                dryRun: true,
+                payload: p,
+                sharedContext: this._contentCardSharedContext,
+            });
+        });
+
         const tryTightStackAfterRestore = (attempt = 0) => {
             if (!this.canvas) return;
             const ready = this.canvas.getBoundingClientRect().width > 0;
@@ -8153,6 +8196,41 @@ export class ContentEditor {
                     <div class="ce-interactive-best-move__inner">
                         <p class="ce-interactive-best-move__title">${titleText}</p>
                         <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
+                    </div>`;
+                break;
+            }
+            case 'interactive-pip-count': {
+                element.classList.add('ce-interactive-pip-count');
+                if (!String(element.dataset.cePipCountShowTimer || '').trim()) {
+                    element.dataset.cePipCountShowTimer = 'true';
+                }
+                if (!String(element.dataset.cePipCountFeedbackOk || '').trim()) {
+                    element.dataset.cePipCountFeedbackOk = 'Правильно';
+                }
+                if (!String(element.dataset.cePipCountFeedbackBad || '').trim()) {
+                    element.dataset.cePipCountFeedbackBad = 'Неправильно';
+                }
+                element.innerHTML = `
+                    <div class="ce-interactive-pip-count__inner">
+                        <p class="ce-interactive-pip-count__title">Подсчёт пипсов</p>
+                        <div class="ce-interactive-pip-count__controls" data-ce-pip-count-controls>
+                            <div class="ce-interactive-pip-count__timer-row" data-ce-pip-timer-row>
+                                <button type="button" class="ce-interactive-pip-count__btn" data-ce-pip-start>Пуск</button>
+                                <span class="ce-interactive-pip-count__timer" data-ce-pip-timer-display>00:00</span>
+                            </div>
+                            <div class="ce-interactive-pip-count__inputs">
+                                <label class="ce-interactive-pip-count__field">
+                                    <span class="ce-interactive-pip-count__field-label">Верхний</span>
+                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-upper inputmode="numeric">
+                                </label>
+                                <label class="ce-interactive-pip-count__field">
+                                    <span class="ce-interactive-pip-count__field-label">Нижний</span>
+                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-lower inputmode="numeric">
+                                </label>
+                            </div>
+                            <button type="button" class="ce-interactive-pip-count__btn ce-interactive-pip-count__btn--stop" data-ce-pip-stop>Стоп</button>
+                            <pre class="ce-interactive-pip-count__result" data-ce-pip-result style="display:none"></pre>
+                        </div>
                     </div>`;
                 break;
             }

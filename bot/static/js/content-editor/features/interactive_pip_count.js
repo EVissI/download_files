@@ -206,22 +206,33 @@ export function mountInteractivePipCountBlock(block, options = {}) {
 }
 
 export function setupInteractivePipCountAfterCardPreviewRender(editor, payload) {
-    if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
-    if (!editor || !editor._contentCardViewCardId) return;
+    if (typeof window === 'undefined') return;
     const host = document.getElementById('cardPreviewFrameHost');
     if (!host) return;
+
+    const viewOnly = window.__CONTENT_CARD_VIEW_ONLY__ === true;
+    const editorPreview =
+        !viewOnly &&
+        editor &&
+        editor.cardPreviewModal &&
+        editor.cardPreviewModal.style.display === 'flex';
+
+    if (!viewOnly && !editorPreview) return;
+    if (viewOnly && (!editor || !editor._contentCardViewCardId)) return;
 
     const sharedContext =
         editor._contentCardSharedContext && typeof editor._contentCardSharedContext === 'object'
             ? editor._contentCardSharedContext
             : null;
 
+    const recordStats = viewOnly && !!editor._contentCardViewCardId;
+
     const blocks = host.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-count"]');
     blocks.forEach((block) => {
         block.dataset.cePipCountBound = '';
         mountInteractivePipCountBlock(block, {
             dryRun: false,
-            recordEditor: editor,
+            recordEditor: recordStats ? editor : null,
             payload,
             sharedContext,
         });
