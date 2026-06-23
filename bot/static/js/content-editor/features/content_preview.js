@@ -23,13 +23,10 @@ const _interactivePipCountHref = (() => {
     return resolved + q;
 })();
 
-let _pipCountPreviewModulePromise = null;
-function getPipCountPreviewModule() {
-    if (!_pipCountPreviewModulePromise) {
-        _pipCountPreviewModulePromise = import(_interactivePipCountHref);
-    }
-    return _pipCountPreviewModulePromise;
-}
+const {
+    setupInteractivePipCountAfterCardPreviewRender,
+    refreshInteractivePipCountPreviewBlocks,
+} = await import(_interactivePipCountHref);
 
 export function openCardPreviewModalImpl(editor) {
     if (!editor.cardPreviewModal) return;
@@ -976,11 +973,7 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
         if (viewOnly) {
             setupInteractiveBestMoveAfterCardPreviewRender(editor, effectivePayload);
         }
-        void getPipCountPreviewModule().then(({ setupInteractivePipCountAfterCardPreviewRender }) => {
-            if (typeof setupInteractivePipCountAfterCardPreviewRender === 'function') {
-                setupInteractivePipCountAfterCardPreviewRender(editor, effectivePayload);
-            }
-        });
+        setupInteractivePipCountAfterCardPreviewRender(editor, effectivePayload);
     }
 }
 

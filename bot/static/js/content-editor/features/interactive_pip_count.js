@@ -12,6 +12,9 @@ const PIP_ACTION_IDLE = 'idle';
 const PIP_ACTION_RUNNING = 'running';
 const PIP_ACTION_STOPPED = 'stopped';
 
+/** @type {WeakMap<HTMLElement, object>} */
+const pipRuntimeByBlock = new WeakMap();
+
 function pad2(n) {
     return n < 10 ? '0' + n : String(n);
 }
@@ -57,26 +60,27 @@ function setTimerDisplay(block, text) {
     if (el) el.textContent = text;
 }
 
-function stopControlEvent(e) {
-    if (e && typeof e.stopPropagation === 'function') {
-        e.stopPropagation();
+function getOrCreateRuntime(block) {
+    let rt = pipRuntimeByBlock.get(block);
+    if (!rt) {
+        rt = {
+            state: PIP_ACTION_IDLE,
+            startedAt: null,
+            timerInterval: null,
+            dryRun: false,
+            recordEditor: null,
+            reference: null,
+            payload: null,
+            sharedContext: null,
+            lastGestureAt: 0,
+        };
+        pipRuntimeByBlock.set(block, rt);
     }
-    if (e && typeof e.preventDefault === 'function' && e.type === 'touchstart') {
-        e.preventDefault();
-    }
+    return rt;
 }
 
-function wireControlEvents(el, handler) {
-    if (!el) return;
-    ['pointerdown', 'mousedown', 'touchstart'].forEach((type) => {
-        el.addEventListener(type, stopControlEvent, { passive: type !== 'touchstart' });
-    });
-    if (typeof handler === 'function') {
-        el.addEventListener('click', handler);
-    }
-}
-
-function setActionButtonState(actionBtn, state) {
+function setActionButtonState(block, state) {
+    const actionBtn = block.querySelector('[data-ce-pip-action]');
     if (!actionBtn) return;
     actionBtn.dataset.cePipState = state;
     if (state === PIP_ACTION_RUNNING) {
@@ -97,161 +101,208 @@ function setActionButtonState(actionBtn, state) {
     }
 }
 
-function bindInteractivePipCountBlock(block, options = {}) {
-    if (!block || block.dataset.cePipCountBound === '1') return;
-    block.dataset.cePipCountBound = '1';
+function clearTimerInterval(rt) {
+    if (rt.timerInterval) {
+        clearInterval(rt.timerInterval);
+        rt.timerInterval = null;
+    }
+}
 
-    const dryRun = !!options.dryRun;
-    const recordEditor = options.recordEditor || null;
-    const reference = options.reference || null;
-    const payload = options.payload || null;
-    const sharedContext = options.sharedContext || null;
+function resolveRef(block, rt) {
+    if (rt.reference) return rt.reference;
+    return resolveReferencePipsFromPayload(rt.payload, rt.sharedContext);
+}
 
-    const actionBtn = block.querySelector('[data-ce-pip-action]');
+function setInputsDisabled(block, disabled) {
+    const upperInput = block.querySelector('[data-ce-pip-upper]');
+    const lowerInput = block.querySelector('[data-ce-pip-lower]');
+    if (upperInput) upperInput.disabled = disabled;
+    if (lowerInput) lowerInput.disabled = disabled;
+}
+
+function handlePipStart(block, rt) {
+    if (rt.state !== PIP_ACTION_IDLE) return;
+    rt.state = PIP_ACTION_RUNNING;
+    rt.startedAt = Date.now();
+    setTimerDisplay(block, '00:00');
+    clearTimerInterval(rt);
+    rt.timerInterval = setInterval(() => {
+        if (!rt.startedAt) return;
+        setTimerDisplay(block, formatElapsedMs(Date.now() - rt.startedAt));
+    }, 250);
+    setActionButtonState(block, PIP_ACTION_RUNNING);
+    const upperInput = block.querySelector('[data-ce-pip-upper]');
+    if (upperInput) {
+        try {
+            upperInput.focus();
+        } catch (_e) {
+            /* noop */
+        }
+    }
+}
+
+function handlePipStop(block, rt) {
+    if (rt.state !== PIP_ACTION_RUNNING) return;
+    rt.state = PIP_ACTION_STOPPED;
+    clearTimerInterval(rt);
+    const elapsed = rt.startedAt ? formatElapsedMs(Date.now() - rt.startedAt) : '00:00';
+
     const upperInput = block.querySelector('[data-ce-pip-upper]');
     const lowerInput = block.querySelector('[data-ce-pip-lower]');
     const resultEl = block.querySelector('[data-ce-pip-result]');
-    const timerRow = block.querySelector('[data-ce-pip-timer-row]');
 
+    const ref = resolveRef(block, rt);
+    const userUpper = parseInputPips(upperInput && upperInput.value);
+    const userLower = parseInputPips(lowerInput && lowerInput.value);
+
+    let correct = false;
+    const detailLines = [];
+
+    if (!ref) {
+        detailLines.push('Нет данных доски для проверки.');
+    } else {
+        const upperOk = userUpper === ref.upperPips;
+        const lowerOk = userLower === ref.lowerPips;
+        correct = upperOk && lowerOk;
+        detailLines.push('Время: ' + elapsed);
+        detailLines.push(
+            'Верхний: ваш ' +
+                (userUpper != null ? userUpper : '—') +
+                ', верно ' +
+                ref.upperPips +
+                (upperOk ? ' ✓' : ' ✗')
+        );
+        detailLines.push(
+            'Нижний: ваш ' +
+                (userLower != null ? userLower : '—') +
+                ', верно ' +
+                ref.lowerPips +
+                (lowerOk ? ' ✓' : ' ✗')
+        );
+    }
+
+    if (resultEl) {
+        resultEl.style.display = '';
+        resultEl.textContent = detailLines.join('\n');
+    }
+
+    setActionButtonState(block, PIP_ACTION_STOPPED);
+    setInputsDisabled(block, true);
+
+    const { ok, bad } = getFeedbackTexts(block);
+    if (!rt.dryRun && rt.recordEditor && rt.recordEditor._contentCardViewCardId) {
+        const auth =
+            typeof rt.recordEditor.getContentCardApiAuthPayload === 'function'
+                ? rt.recordEditor.getContentCardApiAuthPayload()
+                : null;
+        if (auth) {
+            void fetch('/api/content_cards/interactive/record', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...auth,
+                    content_card_id: Number(rt.recordEditor._contentCardViewCardId),
+                    correct,
+                }),
+            }).catch((err) => console.warn('interactive/record (pip-count):', err));
+        }
+    }
+
+    if (!rt.dryRun) {
+        openInteractiveBestMoveFeedbackModal(correct ? ok : bad);
+    }
+}
+
+function unbindPipActionButton(rt) {
+    if (rt && rt.actionAbort) {
+        rt.actionAbort.abort();
+        rt.actionAbort = null;
+    }
+    if (rt) {
+        rt.actionOnClick = null;
+    }
+}
+
+function bindPipActionButton(block, rt) {
+    unbindPipActionButton(rt);
+    const actionBtn = block.querySelector('[data-ce-pip-action]');
+    if (!actionBtn) return;
+
+    const controller = new AbortController();
+    rt.actionAbort = controller;
+    const signal = controller.signal;
+
+    const onMousedown = (e) => {
+        if (e && typeof e.stopPropagation === 'function') {
+            e.stopPropagation();
+        }
+    };
+
+    const onAction = (e) => {
+        const now = Date.now();
+        if (now - (rt.lastGestureAt || 0) < 320) return;
+        rt.lastGestureAt = now;
+
+        if (e && typeof e.stopPropagation === 'function') {
+            e.stopPropagation();
+        }
+        if (e && typeof e.preventDefault === 'function' && e.type === 'click') {
+            e.preventDefault();
+        }
+        if (rt.state === PIP_ACTION_IDLE) {
+            handlePipStart(block, rt);
+        } else if (rt.state === PIP_ACTION_RUNNING) {
+            handlePipStop(block, rt);
+        }
+    };
+
+    rt.actionOnClick = onAction;
+
+    actionBtn.addEventListener('mousedown', onMousedown, { signal });
+    actionBtn.addEventListener('click', onAction, { signal });
+    actionBtn.addEventListener('touchend', onAction, { signal, passive: false });
+
+    // Telegram Desktop WebView иногда не доставляет addEventListener('click').
+    actionBtn.onclick = (e) => {
+        onAction(e || window.event);
+        return false;
+    };
+}
+
+function syncPipCountBlockUi(block, options = {}) {
+    const rt = getOrCreateRuntime(block);
+    clearTimerInterval(rt);
+    rt.state = PIP_ACTION_IDLE;
+    rt.startedAt = null;
+    rt.dryRun = !!options.dryRun;
+    rt.recordEditor = options.recordEditor || null;
+    rt.reference = options.reference || null;
+    rt.payload = options.payload || null;
+    rt.sharedContext = options.sharedContext || null;
+    rt.lastGestureAt = 0;
+
+    const timerRow = block.querySelector('[data-ce-pip-timer-row]');
     if (timerRow) {
         timerRow.style.display = isShowTimer(block) ? '' : 'none';
     }
 
-    let startedAt = null;
-    let timerInterval = null;
-    let actionState = PIP_ACTION_IDLE;
-
-    function clearTimerInterval() {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
+    const resultEl = block.querySelector('[data-ce-pip-result]');
+    if (resultEl) {
+        resultEl.style.display = 'none';
+        resultEl.textContent = '';
     }
 
-    function getElapsedMs() {
-        if (!startedAt) return 0;
-        return Date.now() - startedAt;
-    }
+    setActionButtonState(block, PIP_ACTION_IDLE);
+    setInputsDisabled(block, false);
+    setTimerDisplay(block, '00:00');
+    bindPipActionButton(block, rt);
 
-    function updateTimerTick() {
-        setTimerDisplay(block, formatElapsedMs(getElapsedMs()));
-    }
-
-    function resolveRef() {
-        if (reference) return reference;
-        return resolveReferencePipsFromPayload(payload, sharedContext);
-    }
-
-    function setInputsDisabled(disabled) {
-        if (upperInput) upperInput.disabled = disabled;
-        if (lowerInput) lowerInput.disabled = disabled;
-    }
-
-    function handleStart() {
-        if (actionState !== PIP_ACTION_IDLE) return;
-        actionState = PIP_ACTION_RUNNING;
-        startedAt = Date.now();
-        setTimerDisplay(block, '00:00');
-        clearTimerInterval();
-        timerInterval = setInterval(updateTimerTick, 250);
-        setActionButtonState(actionBtn, PIP_ACTION_RUNNING);
-        if (upperInput) {
-            try {
-                upperInput.focus();
-            } catch (_e) {
-                /* noop */
-            }
-        }
-    }
-
-    function handleStop() {
-        if (actionState !== PIP_ACTION_RUNNING) return;
-        actionState = PIP_ACTION_STOPPED;
-        clearTimerInterval();
-        const elapsed = formatElapsedMs(getElapsedMs());
-
-        const ref = resolveRef();
-        const userUpper = parseInputPips(upperInput && upperInput.value);
-        const userLower = parseInputPips(lowerInput && lowerInput.value);
-
-        let correct = false;
-        const detailLines = [];
-
-        if (!ref) {
-            detailLines.push('Нет данных доски для проверки.');
-        } else {
-            const upperOk = userUpper === ref.upperPips;
-            const lowerOk = userLower === ref.lowerPips;
-            correct = upperOk && lowerOk;
-            detailLines.push('Время: ' + elapsed);
-            detailLines.push(
-                'Верхний: ваш ' +
-                    (userUpper != null ? userUpper : '—') +
-                    ', верно ' +
-                    ref.upperPips +
-                    (upperOk ? ' ✓' : ' ✗')
-            );
-            detailLines.push(
-                'Нижний: ваш ' +
-                    (userLower != null ? userLower : '—') +
-                    ', верно ' +
-                    ref.lowerPips +
-                    (lowerOk ? ' ✓' : ' ✗')
-            );
-        }
-
-        if (resultEl) {
-            resultEl.style.display = '';
-            resultEl.textContent = detailLines.join('\n');
-        }
-
-        setActionButtonState(actionBtn, PIP_ACTION_STOPPED);
-        setInputsDisabled(true);
-
-        const { ok, bad } = getFeedbackTexts(block);
-        if (!dryRun && recordEditor && recordEditor._contentCardViewCardId) {
-            const auth =
-                typeof recordEditor.getContentCardApiAuthPayload === 'function'
-                    ? recordEditor.getContentCardApiAuthPayload()
-                    : null;
-            if (auth) {
-                void fetch('/api/content_cards/interactive/record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...auth,
-                        content_card_id: Number(recordEditor._contentCardViewCardId),
-                        correct,
-                    }),
-                }).catch((err) => console.warn('interactive/record (pip-count):', err));
-            }
-        }
-
-        if (!dryRun) {
-            openInteractiveBestMoveFeedbackModal(correct ? ok : bad);
-        }
-    }
-
-    setActionButtonState(actionBtn, PIP_ACTION_IDLE);
-    setInputsDisabled(false);
-
-    wireControlEvents(actionBtn, (e) => {
-        stopControlEvent(e);
-        if (actionState === PIP_ACTION_IDLE) {
-            handleStart();
-        } else if (actionState === PIP_ACTION_RUNNING) {
-            handleStop();
-        }
-    });
-
-    [upperInput, lowerInput].forEach((inp) => {
-        wireControlEvents(inp);
-    });
+    block.dataset.cePipCountBound = '1';
 }
 
 export function mountInteractivePipCountBlock(block, options = {}) {
     if (!block) return;
-    bindInteractivePipCountBlock(block, options);
+    syncPipCountBlockUi(block, options);
 }
 
 export function setupInteractivePipCountAfterCardPreviewRender(editor, payload) {
@@ -276,9 +327,7 @@ export function setupInteractivePipCountAfterCardPreviewRender(editor, payload) 
 
     const recordStats = viewOnly && !!editor._contentCardViewCardId;
 
-    const blocks = host.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-count"]');
-    blocks.forEach((block) => {
-        block.dataset.cePipCountBound = '';
+    host.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-count"]').forEach((block) => {
         mountInteractivePipCountBlock(block, {
             dryRun: false,
             recordEditor: recordStats ? editor : null,
@@ -296,7 +345,6 @@ export function refreshInteractivePipCountPreviewBlocks(editor, payload, rootEl)
             ? editor._contentCardSharedContext
             : null;
     host.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-count"]').forEach((block) => {
-        block.dataset.cePipCountBound = '';
         mountInteractivePipCountBlock(block, {
             dryRun: true,
             payload,

@@ -109,16 +109,13 @@ const {
     new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
 
-let _pipCountFeaturesPromise = null;
-function getPipCountFeatures() {
-    if (!_pipCountFeaturesPromise) {
-        _pipCountFeaturesPromise = import(
-            new URL('./content-editor/features/interactive_pip_count.js', import.meta.url).href +
-                _featureModuleCacheQs
-        );
-    }
-    return _pipCountFeaturesPromise;
-}
+const {
+    setupInteractivePipCountAfterCardPreviewRender,
+    refreshInteractivePipCountPreviewBlocks,
+    mountInteractivePipCountBlock,
+} = await import(
+    new URL('./content-editor/features/interactive_pip_count.js', import.meta.url).href + _featureModuleCacheQs
+);
 
 /**
  * Content Editor Module
@@ -1458,11 +1455,7 @@ export class ContentEditor {
                 });
             }
         }
-        void getPipCountFeatures().then(({ refreshInteractivePipCountPreviewBlocks: refreshPip }) => {
-            if (typeof refreshPip === 'function') {
-                refreshPip(this, payload, inner);
-            }
-        });
+        refreshInteractivePipCountPreviewBlocks(this, payload, inner);
     }
 
     /**
@@ -4228,13 +4221,9 @@ export class ContentEditor {
                         boardSnap = null;
                     }
                 }
-                void getPipCountFeatures().then(({ mountInteractivePipCountBlock: mountPip }) => {
-                    if (typeof mountPip === 'function') {
-                        mountPip(element, {
-                            dryRun: true,
-                            payload: { board: boardSnap },
-                        });
-                    }
+                mountInteractivePipCountBlock(element, {
+                    dryRun: true,
+                    payload: { board: boardSnap },
                 });
                 break;
             }
@@ -8033,14 +8022,10 @@ export class ContentEditor {
         this.refreshTableElementsFromCardData();
 
         this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-count"]').forEach((el) => {
-            void getPipCountFeatures().then(({ mountInteractivePipCountBlock: mountPip }) => {
-                if (typeof mountPip === 'function') {
-                    mountPip(el, {
-                        dryRun: true,
-                        payload: p,
-                        sharedContext: this._contentCardSharedContext,
-                    });
-                }
+            mountInteractivePipCountBlock(el, {
+                dryRun: true,
+                payload: p,
+                sharedContext: this._contentCardSharedContext,
             });
         });
 

@@ -2311,6 +2311,12 @@ button.content-card-admin-info-file-link:hover {
     box-shadow: none !important;
 }
 
+.card-preview-surface-inner .canvas-element.ce-interactive-pip-count.card-preview-canvas-clone:hover {
+    transform: none;
+    box-shadow: none !important;
+    cursor: default;
+}
+
 .card-preview-surface-inner .text-content,
 .card-preview-surface-inner .link-text {
     outline: none !important;
@@ -4231,7 +4237,19 @@ button.content-card-admin-info-file-link:hover {
     touch-action: manipulation;
 }
 
+.ce-interactive-pip-count__inner,
+.ce-interactive-pip-count__controls,
+.ce-interactive-pip-count__timer-row,
+.ce-interactive-pip-count__field,
+.ce-interactive-pip-count__btn,
+.ce-interactive-pip-count__input {
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+
 .ce-interactive-pip-count__btn {
+    position: relative;
+    z-index: 2;
     padding: 8px 16px;
     border-radius: 8px;
     border: 1px solid #5a7ab0;
@@ -4239,8 +4257,6 @@ button.content-card-admin-info-file-link:hover {
     color: #fff;
     font-weight: 600;
     cursor: pointer;
-    pointer-events: auto;
-    touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -4276,9 +4292,19 @@ button.content-card-admin-info-file-link:hover {
 }
 
 .card-preview-surface-inner .canvas-element.ce-interactive-pip-count.card-preview-canvas-clone {
+    pointer-events: auto !important;
+    user-select: auto;
+    touch-action: manipulation;
+    cursor: default;
+    position: relative;
+    z-index: 8;
+    width: 100% !important;
+    max-width: 100%;
+}
+
+.canvas-element.ce-interactive-pip-count {
     pointer-events: auto;
     user-select: auto;
     touch-action: manipulation;
-    width: 100% !important;
-    max-width: 100%;
+    cursor: default;
 }
