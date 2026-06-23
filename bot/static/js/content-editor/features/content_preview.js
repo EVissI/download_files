@@ -22,10 +22,14 @@ const _interactivePipCountHref = (() => {
     if (!q || resolved.includes('?')) return resolved;
     return resolved + q;
 })();
-const {
-    setupInteractivePipCountAfterCardPreviewRender,
-    refreshInteractivePipCountPreviewBlocks,
-} = await import(_interactivePipCountHref);
+
+let _pipCountPreviewModulePromise = null;
+function getPipCountPreviewModule() {
+    if (!_pipCountPreviewModulePromise) {
+        _pipCountPreviewModulePromise = import(_interactivePipCountHref);
+    }
+    return _pipCountPreviewModulePromise;
+}
 
 export function openCardPreviewModalImpl(editor) {
     if (!editor.cardPreviewModal) return;
@@ -965,8 +969,18 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
 
     /* Страница просмотра карточки и превью из редактора: интерактив после отрисовки хоста. */
     if (!hostRoot) {
-        setupInteractiveBestMoveAfterCardPreviewRender(editor, effectivePayload);
-        setupInteractivePipCountAfterCardPreviewRender(editor, effectivePayload);
+        const viewOnly =
+            typeof window !== 'undefined' &&
+            window.__CONTENT_CARD_VIEW_ONLY__ === true &&
+            editor._contentCardViewCardId;
+        if (viewOnly) {
+            setupInteractiveBestMoveAfterCardPreviewRender(editor, effectivePayload);
+        }
+        void getPipCountPreviewModule().then(({ setupInteractivePipCountAfterCardPreviewRender }) => {
+            if (typeof setupInteractivePipCountAfterCardPreviewRender === 'function') {
+                setupInteractivePipCountAfterCardPreviewRender(editor, effectivePayload);
+            }
+        });
     }
 }
 

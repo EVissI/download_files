@@ -26,6 +26,7 @@ import {
     beginTextBlockHeightDragImpl,
     setupTextEditingImpl,
 } from '/static/js/content-editor/features/text_resize.js';
+import { waitForTelegramWebAppInitData } from '/static/js/content-editor/infra/storage_telegram_bridge.js';
 
 /* Фича-модули со статическим import не наследуют ?t= от content_editor.js — кешируются отдельно.
    Пробрасываем тот же query, что у динамического import content_editor.js из bootstrap/core. */
@@ -107,13 +108,17 @@ const {
 } = await import(
     new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
 );
-const {
-    setupInteractivePipCountAfterCardPreviewRender,
-    refreshInteractivePipCountPreviewBlocks,
-    mountInteractivePipCountBlock,
-} = await import(
-    new URL('./content-editor/features/interactive_pip_count.js', import.meta.url).href + _featureModuleCacheQs
-);
+
+let _pipCountFeaturesPromise = null;
+function getPipCountFeatures() {
+    if (!_pipCountFeaturesPromise) {
+        _pipCountFeaturesPromise = import(
+            new URL('./content-editor/features/interactive_pip_count.js', import.meta.url).href +
+                _featureModuleCacheQs
+        );
+    }
+    return _pipCountFeaturesPromise;
+}
 
 /**
  * Content Editor Module
@@ -1453,7 +1458,11 @@ export class ContentEditor {
                 });
             }
         }
-        refreshInteractivePipCountPreviewBlocks(this, payload, inner);
+        void getPipCountFeatures().then(({ refreshInteractivePipCountPreviewBlocks: refreshPip }) => {
+            if (typeof refreshPip === 'function') {
+                refreshPip(this, payload, inner);
+            }
+        });
     }
 
     /**
@@ -1670,9 +1679,11 @@ export class ContentEditor {
         } catch (e) {
             console.error('openModalWithDuplicateSourceCheck:', e);
             this.showNotification(
-                e.message || 'Не удалось проверить, нет ли карточки с таким файлом',
-                'error'
+                (e.message || 'Не удалось проверить, нет ли карточки с таким файлом') +
+                    '. Редактор открыт без проверки.',
+                'warning'
             );
+            this.openModalWithData(cardData);
             return;
         }
         this.openModalWithData(cardData);
@@ -4218,9 +4229,13 @@ export class ContentEditor {
                         boardSnap = null;
                     }
                 }
-                mountInteractivePipCountBlock(element, {
-                    dryRun: true,
-                    payload: { board: boardSnap },
+                void getPipCountFeatures().then(({ mountInteractivePipCountBlock: mountPip }) => {
+                    if (typeof mountPip === 'function') {
+                        mountPip(element, {
+                            dryRun: true,
+                            payload: { board: boardSnap },
+                        });
+                    }
                 });
                 break;
             }
@@ -6108,7 +6123,7 @@ export class ContentEditor {
     async checkDuplicateSourceFileOnServer() {
         let initData = '';
         if (window.Telegram && window.Telegram.WebApp) {
-            initData = window.Telegram.WebApp.initData || '';
+            initData = await waitForTelegramWebAppInitData(5000, 50);
         }
         if (!initData) {
             return { exists: false, content_card_id: null, file_name: '' };
@@ -6144,7 +6159,7 @@ export class ContentEditor {
     async checkDuplicateBoardXgidOnServer(boardXgid) {
         let initData = '';
         if (window.Telegram && window.Telegram.WebApp) {
-            initData = window.Telegram.WebApp.initData || '';
+            initData = await waitForTelegramWebAppInitData(5000, 50);
         }
         if (!initData) {
             return { exists: false, content_card_id: null };
@@ -6218,9 +6233,11 @@ export class ContentEditor {
         } catch (e) {
             console.error('openModalWithDuplicateBoardXgidCheck:', e);
             this.showNotification(
-                e.message || 'Не удалось проверить, нет ли карточки с такой позицией',
-                'error'
+                (e.message || 'Не удалось проверить, нет ли карточки с такой позицией') +
+                    '. Редактор открыт без проверки.',
+                'warning'
             );
+            this.openModalWithData(cardData);
             return;
         }
         this.openModalWithData(cardData);
@@ -8017,10 +8034,14 @@ export class ContentEditor {
         this.refreshTableElementsFromCardData();
 
         this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-count"]').forEach((el) => {
-            mountInteractivePipCountBlock(el, {
-                dryRun: true,
-                payload: p,
-                sharedContext: this._contentCardSharedContext,
+            void getPipCountFeatures().then(({ mountInteractivePipCountBlock: mountPip }) => {
+                if (typeof mountPip === 'function') {
+                    mountPip(el, {
+                        dryRun: true,
+                        payload: p,
+                        sharedContext: this._contentCardSharedContext,
+                    });
+                }
             });
         });
 
