@@ -2,8 +2,26 @@
  * Интерактив «Подсчёт пипсов»: таймер, поля ввода, проверка по снимку доски.
  */
 
-import { openInteractiveBestMoveFeedbackModal } from './interactive_best_move.js';
-import { resolveReferencePipsFromPayload } from './pip_count_utils.js';
+/* Статический import без ?t= в WebView кешируется отдельно — пробрасываем query из этого модуля. */
+const _featureCacheQs = (() => {
+    try {
+        return new URL(import.meta.url).search || '';
+    } catch (_e) {
+        return '';
+    }
+})();
+
+function withFeatureCacheQs(relativePath) {
+    const resolved = new URL(relativePath, import.meta.url).href;
+    const q = _featureCacheQs;
+    if (!q || resolved.includes('?')) return resolved;
+    return resolved + q;
+}
+
+const { openInteractiveBestMoveFeedbackModal } = await import(
+    withFeatureCacheQs('./interactive_feedback_modal.js')
+);
+const { resolveReferencePipsFromPayload } = await import(withFeatureCacheQs('./pip_count_utils.js'));
 
 export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK = 'Правильно';
 export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD = 'Неправильно';
