@@ -133,6 +133,100 @@ function setInputsDisabled(block, disabled) {
     if (lowerInput) lowerInput.disabled = disabled;
 }
 
+function findCardPreviewBoardOverlay(block) {
+    if (typeof document === 'undefined') return null;
+    const wrap =
+        block && block.closest ? block.closest('.card-preview-surface-wrap') : null;
+    if (wrap) return wrap.querySelector('.card-preview-board-overlay');
+    const host = document.getElementById('cardPreviewFrameHost');
+    return host ? host.querySelector('.card-preview-board-overlay') : null;
+}
+
+function findEditorBoardDisplay() {
+    if (typeof document === 'undefined') return null;
+    const host = document.getElementById('editorBoardDisplayHost');
+    return host ? host.querySelector('.editor-board-display') : null;
+}
+
+function setPreviewBoardPipGate(overlay, expanded) {
+    if (!overlay) return;
+    const toggle = overlay.querySelector('.card-preview-board-toggle');
+    const collapsed = !expanded;
+    overlay.classList.toggle('card-preview-board-overlay--collapsed', collapsed);
+    overlay.classList.toggle('card-preview-board-overlay--pip-locked', collapsed);
+    if (toggle) {
+        toggle.disabled = collapsed;
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    }
+    if (!collapsed) {
+        requestAnimationFrame(() => {
+            try {
+                if (typeof window !== 'undefined' && window.contentEditor) {
+                    window.contentEditor.refreshCardPreviewScale();
+                }
+            } catch (_e) {
+                /* noop */
+            }
+        });
+    }
+}
+
+function setEditorBoardPipGate(display, expanded) {
+    if (!display) return;
+    const toggle = display.querySelector('.editor-board-toggle');
+    const collapsed = !expanded;
+    display.classList.toggle('editor-board-display--collapsed', collapsed);
+    display.classList.toggle('editor-board-display--pip-locked', collapsed);
+    if (toggle) {
+        toggle.disabled = collapsed;
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    }
+}
+
+function isBoardExpandedForPipState(pipState) {
+    return pipState === PIP_ACTION_RUNNING || pipState === PIP_ACTION_STOPPED;
+}
+
+export function applyPipCountBoardGateForBlock(block, pipState) {
+    const expanded = isBoardExpandedForPipState(pipState);
+    setPreviewBoardPipGate(findCardPreviewBoardOverlay(block), expanded);
+    if (block && block.closest && block.closest('#canvas, #editorCanvasContentLayer')) {
+        setEditorBoardPipGate(findEditorBoardDisplay(), expanded);
+    }
+}
+
+export function applyPipCountBoardGateForPreviewHost(hostRoot, pipState) {
+    const host = hostRoot || document.getElementById('cardPreviewFrameHost');
+    if (!host) return;
+    setPreviewBoardPipGate(host.querySelector('.card-preview-board-overlay'), isBoardExpandedForPipState(pipState));
+}
+
+export function syncPipCountBoardGatesInScope(rootEl) {
+    if (typeof document === 'undefined') return;
+    const scope = rootEl && rootEl.querySelectorAll ? rootEl : document;
+    const blocks = scope.querySelectorAll
+        ? scope.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-count"]')
+        : [];
+    if (!blocks.length) return;
+
+    let hostState = PIP_ACTION_IDLE;
+    blocks.forEach((block) => {
+        const rt = pipRuntimeByBlock.get(block);
+        const state = rt ? rt.state : PIP_ACTION_IDLE;
+        applyPipCountBoardGateForBlock(block, state);
+        if (state === PIP_ACTION_RUNNING) {
+            hostState = PIP_ACTION_RUNNING;
+        } else if (state === PIP_ACTION_STOPPED && hostState !== PIP_ACTION_RUNNING) {
+            hostState = PIP_ACTION_STOPPED;
+        }
+    });
+
+    const host = document.getElementById('cardPreviewFrameHost');
+    if (host && host.querySelector('.canvas-element[data-tool-id="interactive-pip-count"]')) {
+        applyPipCountBoardGateForPreviewHost(host, hostState);
+    }
+}
+
 function handlePipStart(block, rt) {
     if (rt.state !== PIP_ACTION_IDLE) return;
     rt.state = PIP_ACTION_RUNNING;
@@ -144,6 +238,8 @@ function handlePipStart(block, rt) {
         setTimerDisplay(block, formatElapsedMs(Date.now() - rt.startedAt));
     }, 250);
     setActionButtonState(block, PIP_ACTION_RUNNING);
+    setInputsDisabled(block, false);
+    applyPipCountBoardGateForBlock(block, PIP_ACTION_RUNNING);
     const upperInput = block.querySelector('[data-ce-pip-upper]');
     if (upperInput) {
         try {
@@ -201,6 +297,7 @@ function handlePipStop(block, rt) {
 
     setActionButtonState(block, PIP_ACTION_STOPPED);
     setInputsDisabled(block, true);
+    applyPipCountBoardGateForBlock(block, PIP_ACTION_STOPPED);
 
     const { ok, bad } = getFeedbackTexts(block);
     if (!rt.dryRun && rt.recordEditor && rt.recordEditor._contentCardViewCardId) {
@@ -301,9 +398,10 @@ function syncPipCountBlockUi(block, options = {}) {
     }
 
     setActionButtonState(block, PIP_ACTION_IDLE);
-    setInputsDisabled(block, false);
+    setInputsDisabled(block, true);
     setTimerDisplay(block, '00:00');
     bindPipActionButton(block, rt);
+    applyPipCountBoardGateForBlock(block, PIP_ACTION_IDLE);
 
     block.dataset.cePipCountBound = '1';
 }
@@ -343,6 +441,7 @@ export function setupInteractivePipCountAfterCardPreviewRender(editor, payload) 
             sharedContext,
         });
     });
+    applyPipCountBoardGateForPreviewHost(host, PIP_ACTION_IDLE);
 }
 
 export function refreshInteractivePipCountPreviewBlocks(editor, payload, rootEl) {
@@ -359,4 +458,7 @@ export function refreshInteractivePipCountPreviewBlocks(editor, payload, rootEl)
             sharedContext,
         });
     });
+    if (host.querySelector('.canvas-element[data-tool-id="interactive-pip-count"]')) {
+        applyPipCountBoardGateForPreviewHost(host, PIP_ACTION_IDLE);
+    }
 }

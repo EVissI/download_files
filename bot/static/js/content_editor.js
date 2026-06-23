@@ -113,6 +113,7 @@ const {
     setupInteractivePipCountAfterCardPreviewRender,
     refreshInteractivePipCountPreviewBlocks,
     mountInteractivePipCountBlock,
+    syncPipCountBoardGatesInScope,
 } = await import(
     new URL('./content-editor/features/interactive_pip_count.js', import.meta.url).href + _featureModuleCacheQs
 );
@@ -3708,6 +3709,7 @@ export class ContentEditor {
             .catch((err) => {
                 console.error('renderEditorBoardDisplay:', err);
             });
+        syncPipCountBoardGatesInScope(this.canvas);
     }
 
     setupEditorBoardCollapse(host) {
@@ -3719,6 +3721,13 @@ export class ContentEditor {
         display.classList.toggle('editor-board-display--collapsed', collapsedInitial);
         toggle.setAttribute('aria-expanded', collapsedInitial ? 'false' : 'true');
         const onToggle = (e) => {
+            if (display.classList.contains('editor-board-display--pip-locked')) {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                return;
+            }
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -6928,6 +6937,13 @@ export class ContentEditor {
         if (toggle.dataset.ceBoardCollapseBound === '1') return;
         toggle.dataset.ceBoardCollapseBound = '1';
         const onToggle = (e) => {
+            if (overlay.classList.contains('card-preview-board-overlay--pip-locked')) {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                return;
+            }
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -6944,6 +6960,7 @@ export class ContentEditor {
                 onToggle(e);
             }
         });
+        syncPipCountBoardGatesInScope(host);
     }
 
     /**

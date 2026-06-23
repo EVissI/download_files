@@ -365,6 +365,21 @@
     opacity: 0;
 }
 
+.editor-board-display--pip-locked .editor-board-toggle {
+    display: none;
+}
+
+.editor-board-display--pip-locked.editor-board-display--collapsed .editor-board-display-body {
+    max-height: 0;
+    opacity: 0;
+}
+
+.ce-interactive-pip-count__input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: #0a0e14;
+}
+
 .editor-board-match-banner {
     box-sizing: border-box;
     width: 100%;
@@ -1981,6 +1996,15 @@ button.content-card-admin-info-file-link:hover {
 }
 
 .card-preview-board-overlay.card-preview-board-overlay--collapsed .card-preview-board-collapsible {
+    max-height: 0;
+    opacity: 0;
+}
+
+.card-preview-board-overlay--pip-locked .card-preview-board-toggle-row {
+    display: none;
+}
+
+.card-preview-board-overlay--pip-locked.card-preview-board-overlay--collapsed .card-preview-board-collapsible {
     max-height: 0;
     opacity: 0;
 }

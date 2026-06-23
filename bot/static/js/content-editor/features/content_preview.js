@@ -847,6 +847,13 @@ export function setupCardPreviewBoardCollapseImpl(editor, overlay) {
     overlay.classList.toggle('card-preview-board-overlay--collapsed', collapsedInitial);
     toggle.setAttribute('aria-expanded', collapsedInitial ? 'false' : 'true');
     const onToggle = (e) => {
+        if (overlay.classList.contains('card-preview-board-overlay--pip-locked')) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            return;
+        }
         if (e) {
             e.preventDefault();
             e.stopPropagation();
