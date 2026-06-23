@@ -66,13 +66,6 @@ function getFeedbackTexts(block) {
     };
 }
 
-function isShowTimer(block) {
-    const v = block && block.dataset ? block.dataset.cePipCountShowTimer : null;
-    if (v == null || v === '') return true;
-    const s = String(v).trim().toLowerCase();
-    return s !== '0' && s !== 'false' && s !== 'no';
-}
-
 function setTimerDisplay(block, text) {
     const el = block.querySelector('[data-ce-pip-timer-display]');
     if (el) el.textContent = text;
@@ -128,7 +121,9 @@ function clearTimerInterval(rt) {
 
 function resolveRef(block, rt) {
     if (rt.reference) return rt.reference;
-    return resolveReferencePipsFromPayload(rt.payload, rt.sharedContext);
+    const fromStored = resolveReferencePipsFromPayload(rt.payload, rt.sharedContext);
+    if (fromStored) return fromStored;
+    return resolveReferencePipsFromPayload(null, null);
 }
 
 function setInputsDisabled(block, disabled) {
@@ -298,11 +293,6 @@ function syncPipCountBlockUi(block, options = {}) {
     rt.payload = options.payload || null;
     rt.sharedContext = options.sharedContext || null;
     rt.lastGestureAt = 0;
-
-    const timerRow = block.querySelector('[data-ce-pip-timer-row]');
-    if (timerRow) {
-        timerRow.style.display = isShowTimer(block) ? '' : 'none';
-    }
 
     const resultEl = block.querySelector('[data-ce-pip-result]');
     if (resultEl) {

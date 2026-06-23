@@ -4183,9 +4183,6 @@ export class ContentEditor {
 
             case 'interactive-pip-count': {
                 element.classList.add('ce-interactive-pip-count');
-                if (element.dataset.cePipCountShowTimer == null || element.dataset.cePipCountShowTimer === '') {
-                    element.dataset.cePipCountShowTimer = 'true';
-                }
                 if (element.dataset.cePipCountFeedbackOk == null || element.dataset.cePipCountFeedbackOk === '') {
                     element.dataset.cePipCountFeedbackOk = 'Правильно';
                 }
@@ -4223,7 +4220,8 @@ export class ContentEditor {
                 }
                 mountInteractivePipCountBlock(element, {
                     dryRun: true,
-                    payload: { board: boardSnap },
+                    payload: boardSnap ? { board: boardSnap } : null,
+                    sharedContext: this._contentCardSharedContext,
                 });
                 break;
             }
@@ -4951,14 +4949,6 @@ export class ContentEditor {
                 ` : ''}
                 ${element.dataset.toolId === 'interactive-pip-count' ? `
                 <div class="property-item">
-                    <label>
-                        <input type="checkbox" id="propPipCountShowTimer"
-                            ${(element.dataset.cePipCountShowTimer !== '0' && element.dataset.cePipCountShowTimer !== 'false') ? 'checked' : ''}
-                            onchange="contentEditor.updateElementProperty('pipCountShowTimer', this.checked)">
-                        Показывать таймер
-                    </label>
-                </div>
-                <div class="property-item">
                     <label>Текст при верном ответе:</label>
                     <input type="text" id="propPipCountFeedbackOk" class="ce-property-input-fluid" maxlength="500"
                            value="${this.escapeHtml(element.dataset.cePipCountFeedbackOk !== undefined && element.dataset.cePipCountFeedbackOk !== null ? String(element.dataset.cePipCountFeedbackOk) : 'Правильно')}"
@@ -5007,13 +4997,6 @@ export class ContentEditor {
             case 'interactiveFeedbackBad':
                 if (this.selectedElement.dataset.toolId === 'interactive-best-move') {
                     this.selectedElement.dataset.ceInteractiveFeedbackBad = value != null ? String(value).slice(0, 500) : '';
-                }
-                break;
-            case 'pipCountShowTimer':
-                if (this.selectedElement.dataset.toolId === 'interactive-pip-count') {
-                    this.selectedElement.dataset.cePipCountShowTimer = value ? 'true' : 'false';
-                    const row = this.selectedElement.querySelector('[data-ce-pip-timer-row]');
-                    if (row) row.style.display = value ? '' : 'none';
                 }
                 break;
             case 'pipCountFeedbackOk':
@@ -8206,9 +8189,6 @@ export class ContentEditor {
             }
             case 'interactive-pip-count': {
                 element.classList.add('ce-interactive-pip-count');
-                if (!String(element.dataset.cePipCountShowTimer || '').trim()) {
-                    element.dataset.cePipCountShowTimer = 'true';
-                }
                 if (!String(element.dataset.cePipCountFeedbackOk || '').trim()) {
                     element.dataset.cePipCountFeedbackOk = 'Правильно';
                 }
