@@ -4204,7 +4204,7 @@ export class ContentEditor {
                         <p class="ce-interactive-pip-count__title">Подсчёт пипсов</p>
                         <div class="ce-interactive-pip-count__controls" data-ce-pip-count-controls>
                             <div class="ce-interactive-pip-count__timer-row" data-ce-pip-timer-row>
-                                <button type="button" class="ce-interactive-pip-count__btn" data-ce-pip-start>Пуск</button>
+                                <button type="button" class="ce-interactive-pip-count__btn" data-ce-pip-action data-ce-pip-state="idle" aria-label="Пуск">Пуск</button>
                                 <span class="ce-interactive-pip-count__timer" data-ce-pip-timer-display>00:00</span>
                             </div>
                             <div class="ce-interactive-pip-count__inputs">
@@ -4217,7 +4217,6 @@ export class ContentEditor {
                                     <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-lower inputmode="numeric">
                                 </label>
                             </div>
-                            <button type="button" class="ce-interactive-pip-count__btn ce-interactive-pip-count__btn--stop" data-ce-pip-stop>Стоп</button>
                             <pre class="ce-interactive-pip-count__result" data-ce-pip-result style="display:none"></pre>
                         </div>
                     </div>`;
@@ -8236,7 +8235,7 @@ export class ContentEditor {
                         <p class="ce-interactive-pip-count__title">Подсчёт пипсов</p>
                         <div class="ce-interactive-pip-count__controls" data-ce-pip-count-controls>
                             <div class="ce-interactive-pip-count__timer-row" data-ce-pip-timer-row>
-                                <button type="button" class="ce-interactive-pip-count__btn" data-ce-pip-start>Пуск</button>
+                                <button type="button" class="ce-interactive-pip-count__btn" data-ce-pip-action data-ce-pip-state="idle" aria-label="Пуск">Пуск</button>
                                 <span class="ce-interactive-pip-count__timer" data-ce-pip-timer-display>00:00</span>
                             </div>
                             <div class="ce-interactive-pip-count__inputs">
@@ -8249,7 +8248,6 @@ export class ContentEditor {
                                     <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-lower inputmode="numeric">
                                 </label>
                             </div>
-                            <button type="button" class="ce-interactive-pip-count__btn ce-interactive-pip-count__btn--stop" data-ce-pip-stop>Стоп</button>
                             <pre class="ce-interactive-pip-count__result" data-ce-pip-result style="display:none"></pre>
                         </div>
                     </div>`;
