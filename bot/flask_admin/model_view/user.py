@@ -313,7 +313,7 @@ class UserModelView(ModelView):
             )
             if issued_count == 0:
                 all_in_pool = session.execute(
-                    select(ContentCard.id).where(ContentCard.card_pool == card_pool).limit(1)
+                    select(ContentCard.id).where(ContentCard.card_pool == card_pool.value).limit(1)
                 ).first()
                 if not all_in_pool:
                     flash(empty_pool_msg, "warning")

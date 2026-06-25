@@ -10,6 +10,7 @@ from flask import flash, redirect, url_for
 from flask_appbuilder import ModelView, expose, has_access, permission_name
 from flask_appbuilder.models.filters import BaseFilter
 from flask_appbuilder.models.sqla.filters import SQLAFilterConverter, get_field_setup_query
+from flask_appbuilder.models.sqla.filters import FilterEqual
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
 from loguru import logger
@@ -105,19 +106,65 @@ class ContentCardSQLAInterface(SQLAInterface):
         return col_name == "labels"
 
 
+class _PoolScopedContentCardSQLAInterface(ContentCardSQLAInterface):
+    """
+    FAB строит список через datamodel.query(), а не ModelView.get_query().
+    Жёсткий фильтр по card_pool здесь гарантирует разные списки для двух view.
+    """
+
+    fixed_card_pool: ContentCardPool
+
+    def _apply_pool_scope(self, query):
+        return query.filter(ContentCard.card_pool == self.fixed_card_pool.value)
+
+    def query_count(self, query, filters=None, select_columns=None):
+        return super().query_count(
+            self._apply_pool_scope(query), filters, select_columns
+        )
+
+    def apply_all(
+        self,
+        query,
+        filters=None,
+        order_column="",
+        order_direction="",
+        page=None,
+        page_size=None,
+        select_columns=None,
+        outer_default_load=False,
+    ):
+        return super().apply_all(
+            self._apply_pool_scope(query),
+            filters,
+            order_column,
+            order_direction,
+            page,
+            page_size,
+            select_columns,
+            outer_default_load,
+        )
+
+
+class CardsPoolContentCardSQLAInterface(_PoolScopedContentCardSQLAInterface):
+    fixed_card_pool = ContentCardPool.CARDS
+
+
+class PipCountPoolContentCardSQLAInterface(_PoolScopedContentCardSQLAInterface):
+    fixed_card_pool = ContentCardPool.PIP_COUNT
+
+
 class _ContentCardModelViewBase(ModelView):
     """Общая логика просмотра карточек редактора."""
 
-    datamodel = ContentCardSQLAInterface(ContentCard)
     base_permissions = ["can_list", "can_show", "can_delete"]
 
     show_template = "show_content_card.html"
 
     page_size = 30
-    list_columns = ["id", "file_name", "notes", "labels"]
-    show_columns = ["id", "file_name", "notes", "labels"]
+    list_columns = ["id", "file_name", "card_pool_display", "notes", "labels"]
+    show_columns = ["id", "file_name", "card_pool_display", "notes", "labels"]
     search_columns = ["id", "file_name", "notes", "labels"]
-    order_columns = ["id", "file_name"]
+    order_columns = ["id", "file_name", "card_pool"]
 
     search_form_extra_fields = {
         "labels": StringField(
@@ -133,6 +180,8 @@ class _ContentCardModelViewBase(ModelView):
     label_columns = {
         "id": _("ID"),
         "file_name": _("Имя файла"),
+        "card_pool": _("Пул"),
+        "card_pool_display": _("Пул"),
         "notes": _("Примечания"),
         "labels": _("Метки"),
     }
@@ -246,19 +295,17 @@ class _ContentCardModelViewBase(ModelView):
 class ContentCardModelView(_ContentCardModelViewBase):
     """Карточки пула «Карточки» (ходы / куб)."""
 
+    datamodel = CardsPoolContentCardSQLAInterface(ContentCard)
     list_title = _("Карточки")
     show_title = _("Карточка")
-
-    def get_query(self):
-        return super().get_query().filter(ContentCard.card_pool == ContentCardPool.CARDS)
+    base_filters = [["card_pool", FilterEqual, ContentCardPool.CARDS.value]]
 
 
 class PipCountContentCardModelView(_ContentCardModelViewBase):
     """Карточки пула «Подсчёт пипсов»."""
 
+    datamodel = PipCountPoolContentCardSQLAInterface(ContentCard)
     list_title = _("Карточки: подсчёт пипсов")
     show_title = _("Карточка (пипсы)")
-
-    def get_query(self):
-        return super().get_query().filter(ContentCard.card_pool == ContentCardPool.PIP_COUNT)
+    base_filters = [["card_pool", FilterEqual, ContentCardPool.PIP_COUNT.value]]
 

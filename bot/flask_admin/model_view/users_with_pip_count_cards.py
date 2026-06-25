@@ -40,7 +40,7 @@ class UsersWithPipCountCardsView(BaseView):
                 )
                 .join(UserContentCard, UserContentCard.user_id == User.id)
                 .join(ContentCard, ContentCard.id == UserContentCard.content_card_id)
-                .where(ContentCard.card_pool == ContentCardPool.PIP_COUNT)
+                .where(ContentCard.card_pool == ContentCardPool.PIP_COUNT.value)
                 .group_by(User.id, User.username, User.admin_insert_name)
                 .order_by(func.count(UserContentCard.id).desc(), User.id.asc())
             )

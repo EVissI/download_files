@@ -63,7 +63,7 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
 
             all_card_ids_result = await session.execute(
                 select(ContentCard.id)
-                .where(ContentCard.card_pool == card_pool)
+                .where(ContentCard.card_pool == card_pool.value)
                 .order_by(ContentCard.id.asc())
             )
             all_card_ids = [

@@ -813,6 +813,15 @@ class ContentCard(Base):
         passive_deletes=True,
     )
 
+    @property
+    @renders("card_pool_display")
+    def card_pool_display(self) -> str:
+        pool = self.card_pool
+        val = pool.value if hasattr(pool, "value") else str(pool)
+        if val == ContentCardPool.PIP_COUNT.value:
+            return "Подсчёт пипсов"
+        return "Карточки"
+
 
 class PromocodeContentCard(Base):
     """Связь промокода с карточками и порядком выдачи."""
