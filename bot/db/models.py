@@ -671,6 +671,20 @@ class WebAppSetting(Base):
     )
 
 
+class ContentCardPool(str, enum.Enum):
+    """Пул карточек: обычные «Карточки» или «Подсчёт пипсов»."""
+
+    CARDS = "cards"
+    PIP_COUNT = "pip_count"
+
+
+content_card_pool_enum = Enum(
+    ContentCardPool,
+    name="contentcardpool",
+    values_callable=lambda enum_cls: [item.value for item in enum_cls],
+)
+
+
 class ContentCardIssueSchedule(Base):
     """Расписание автовыдачи карточек конкретному пользователю (по МСК)."""
 
@@ -683,6 +697,12 @@ class ContentCardIssueSchedule(Base):
     cards_per_run: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     weekdays: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     issue_time_msk: Mapped[str] = mapped_column(String(5), nullable=False)
+    card_pool: Mapped["ContentCardPool"] = mapped_column(
+        content_card_pool_enum,
+        nullable=False,
+        default=ContentCardPool.CARDS,
+        server_default=ContentCardPool.CARDS.value,
+    )
     scheduler_job_id: Mapped[str | None] = mapped_column(
         String(128), unique=True, nullable=True
     )
@@ -727,19 +747,13 @@ class ContentCardIssueSchedule(Base):
         )
         return f"{self.target_user_id} | {title} | {username}"
 
-
-class ContentCardPool(str, enum.Enum):
-    """Пул карточек: обычные «Карточки» или «Подсчёт пипсов»."""
-
-    CARDS = "cards"
-    PIP_COUNT = "pip_count"
-
-
-content_card_pool_enum = Enum(
-    ContentCardPool,
-    name="contentcardpool",
-    values_callable=lambda enum_cls: [item.value for item in enum_cls],
-)
+    @property
+    @renders("card_pool_display")
+    def card_pool_display(self) -> str:
+        pool = self.card_pool
+        if pool == ContentCardPool.PIP_COUNT:
+            return "Подсчёт пипсов"
+        return "Карточки"
 
 
 class ContentCard(Base):

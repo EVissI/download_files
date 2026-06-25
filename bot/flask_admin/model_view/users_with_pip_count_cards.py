@@ -10,7 +10,6 @@ from bot.db.models import ContentCard, ContentCardPool, User, UserContentCard
 
 
 def _user_id_background(last_card_at: datetime | None) -> str:
-    """Зелёный — последняя карточка < 24 ч назад, иначе оранжевый."""
     if last_card_at is None:
         return "#ffe0b2"
     if last_card_at.tzinfo is None:
@@ -20,12 +19,10 @@ def _user_id_background(last_card_at: datetime | None) -> str:
     return "#ffe0b2"
 
 
-class UsersWithCardsView(BaseView):
-    """
-    Read-only список пользователей, у которых есть карточки.
-    """
+class UsersWithPipCountCardsView(BaseView):
+    """Read-only: пользователи с выданными карточками пула «Подсчёт пипсов»."""
 
-    route_base = "/users_with_cards"
+    route_base = "/users_with_pip_count_cards"
     default_view = "list"
 
     @expose("/")
@@ -43,7 +40,7 @@ class UsersWithCardsView(BaseView):
                 )
                 .join(UserContentCard, UserContentCard.user_id == User.id)
                 .join(ContentCard, ContentCard.id == UserContentCard.content_card_id)
-                .where(ContentCard.card_pool == ContentCardPool.CARDS)
+                .where(ContentCard.card_pool == ContentCardPool.PIP_COUNT)
                 .group_by(User.id, User.username, User.admin_insert_name)
                 .order_by(func.count(UserContentCard.id).desc(), User.id.asc())
             )
@@ -71,7 +68,6 @@ class UsersWithCardsView(BaseView):
                     }
                 )
         except Exception as e:
-            logger.exception("UsersWithCardsView list error: {}", e)
+            logger.exception("UsersWithPipCountCardsView list error: {}", e)
 
-        return self.render_template("users_with_cards.html", rows=rows)
-
+        return self.render_template("users_with_pip_count_cards.html", rows=rows)

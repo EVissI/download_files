@@ -24,8 +24,11 @@
 </div>
 <div class="well" style="margin-top: 1em;">
     <h4>Карточки пользователя</h4>
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#grantCardsModal">
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#grantCardsModal" style="margin-right: 8px;">
         Выдать карточки
+    </button>
+    <button type="button" class="btn btn-info" data-toggle="modal" data-target="#grantPipCountCardsModal">
+        Выдать карточки (пипсы)
     </button>
 </div>
 
@@ -55,12 +58,50 @@
                         >
                     </div>
                     <p class="text-muted" style="margin-bottom: 0;">
-                        Карточки выдаются по возрастанию ID, пропуская уже имеющиеся у пользователя.
+                        Карточки выдаются по возрастанию ID из пула «Карточки», пропуская уже имеющиеся у пользователя.
                     </p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Отмена</button>
                     <button type="submit" class="btn btn-primary">Выдать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="grantPipCountCardsModal" tabindex="-1" role="dialog" aria-labelledby="grantPipCountCardsModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="post" action="{{ url_for(user_fab_endpoint ~ '.grant_pip_count_cards', pk=pk) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="grantPipCountCardsModalLabel">Выдать карточки «Подсчёт пипсов»</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="pip_cards_quantity">Сколько карточек выдать</label>
+                        <input
+                            id="pip_cards_quantity"
+                            name="cards_quantity"
+                            type="number"
+                            min="1"
+                            step="1"
+                            class="form-control"
+                            required
+                            placeholder="Например, 5"
+                        >
+                    </div>
+                    <p class="text-muted" style="margin-bottom: 0;">
+                        Карточки выдаются по возрастанию ID из пула «Подсчёт пипсов», пропуская уже имеющиеся у пользователя.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-info">Выдать</button>
                 </div>
             </form>
         </div>

@@ -9,6 +9,7 @@ from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_wtf.csrf import generate_csrf
 from bot.db.models import (
     ContentCard,
+    ContentCardPool,
     Promocode,
     User,
     UserAnalizePayment,
@@ -17,6 +18,7 @@ from bot.db.models import (
 )
 from bot.config import create_bot_for_sync_context
 from bot.config import settings
+from bot.flask_admin.content_card_grant import grant_content_cards_from_pool_sync
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
@@ -33,11 +35,16 @@ def _run_telegram_sync(action):
     asyncio.run(_runner())
 
 
-def _cards_cabinet_webapp_markup():
+def _cards_cabinet_webapp_markup(cabinet_path: str = "/cards-cabinet"):
     base = settings.MINI_APP_URL.rstrip("/")
-    url = f"{base}/cards-cabinet"
+    url = f"{base}{cabinet_path}"
+    button_text = (
+        "Открыть кабинет пипсов"
+        if cabinet_path.rstrip("/") == "/pip-count-cabinet"
+        else "Открыть кабинет"
+    )
     kb = InlineKeyboardBuilder()
-    kb.button(text="Открыть кабинет", web_app=WebAppInfo(url=url))
+    kb.button(text=button_text, web_app=WebAppInfo(url=url))
     kb.adjust(1)
     return kb.as_markup()
 
@@ -262,6 +269,15 @@ class UserModelView(ModelView):
     @has_access
     @permission_name("show")
     def grant_cards(self, pk: int):
+        return self._grant_cards_for_pool(pk, ContentCardPool.CARDS)
+
+    @expose("/grant_pip_count_cards/<int:pk>", methods=["POST"])
+    @has_access
+    @permission_name("show")
+    def grant_pip_count_cards(self, pk: int):
+        return self._grant_cards_for_pool(pk, ContentCardPool.PIP_COUNT)
+
+    def _grant_cards_for_pool(self, pk: int, card_pool: ContentCardPool):
         user = self.datamodel.get(pk)
         if not user:
             flash("Пользователь не найден", "danger")
@@ -277,67 +293,62 @@ class UserModelView(ModelView):
             flash("Введите корректное количество карточек (целое число > 0).", "warning")
             return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
+        is_pip = card_pool == ContentCardPool.PIP_COUNT
+        pool_label = "карточек (пипсы)" if is_pip else "карточек"
+        cabinet_path = "/pip-count-cabinet" if is_pip else "/cards-cabinet"
+        empty_pool_msg = (
+            "В системе нет карточек пула «Подсчёт пипсов» для выдачи."
+            if is_pip
+            else "В системе нет карточек для выдачи."
+        )
+
         session = self.datamodel.session
         issued_count = 0
         try:
-            all_card_ids_result = session.execute(
-                select(ContentCard.id).order_by(ContentCard.id.asc())
+            issued_count = grant_content_cards_from_pool_sync(
+                session,
+                user_id=pk,
+                quantity=cards_quantity,
+                card_pool=card_pool,
             )
-            all_card_ids = [
-                row[0] for row in all_card_ids_result.all() if row[0] is not None
-            ]
-            if not all_card_ids:
-                flash("В системе нет карточек для выдачи.", "warning")
+            if issued_count == 0:
+                all_in_pool = session.execute(
+                    select(ContentCard.id).where(ContentCard.card_pool == card_pool).limit(1)
+                ).first()
+                if not all_in_pool:
+                    flash(empty_pool_msg, "warning")
+                else:
+                    flash(
+                        "У пользователя уже есть все доступные карточки из этого пула.",
+                        "warning",
+                    )
                 return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
-
-            existing_card_ids_result = session.execute(
-                select(UserContentCard.content_card_id).where(
-                    UserContentCard.user_id == pk
-                )
-            )
-            existing_card_ids = {
-                row[0] for row in existing_card_ids_result.all() if row[0] is not None
-            }
-
-            available_card_ids = [
-                card_id for card_id in all_card_ids if card_id not in existing_card_ids
-            ]
-            if not available_card_ids:
-                flash("У пользователя уже есть все доступные карточки.", "warning")
-                return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
-
-            to_issue_ids = available_card_ids[:cards_quantity]
-            for card_id in to_issue_ids:
-                session.add(UserContentCard(user_id=pk, content_card_id=card_id))
-            session.commit()
-            issued_count = len(to_issue_ids)
         except SQLAlchemyError as e:
             session.rollback()
             flash(f"Ошибка выдачи карточек: {e}", "danger")
             return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
-        if issued_count > 0:
-            try:
-                async def _send(tg_bot: Bot) -> None:
-                    await tg_bot.send_message(
-                        chat_id=pk,
-                        text=(
-                            f"Вам зачислено {issued_count} карточек.\n"
-                            "Посмотрите их в личном кабинете."
-                        ),
-                        reply_markup=_cards_cabinet_webapp_markup(),
-                    )
+        try:
+            async def _send(tg_bot: Bot) -> None:
+                await tg_bot.send_message(
+                    chat_id=pk,
+                    text=(
+                        f"Вам зачислено {issued_count} {pool_label}.\n"
+                        "Посмотрите их в личном кабинете."
+                    ),
+                    reply_markup=_cards_cabinet_webapp_markup(cabinet_path),
+                )
 
-                _run_telegram_sync(_send)
-            except Exception as e:
-                flash(f"Карточки выданы, но сообщение в Telegram не отправлено: {e}", "warning")
+            _run_telegram_sync(_send)
+        except Exception as e:
+            flash(f"Карточки выданы, но сообщение в Telegram не отправлено: {e}", "warning")
 
         if issued_count < cards_quantity:
             flash(
-                f"Выдано {issued_count} карточек из {cards_quantity}: больше доступных карточек нет.",
+                f"Выдано {issued_count} из {cards_quantity}: больше доступных карточек в пуле нет.",
                 "warning",
             )
         else:
-            flash(f"Пользователю выдано {issued_count} карточек.", "success")
+            flash(f"Пользователю выдано {issued_count} {pool_label}.", "success")
 
         return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))

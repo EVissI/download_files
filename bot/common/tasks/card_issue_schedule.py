@@ -8,13 +8,18 @@ from sqlalchemy import select
 from bot.common.utils.notify import notify_user
 from bot.config import settings
 from bot.db.database import async_session_maker
-from bot.db.models import ContentCard, ContentCardIssueSchedule, User, UserContentCard
+from bot.db.models import ContentCard, ContentCardIssueSchedule, ContentCardPool, User, UserContentCard
 
 
-def _cards_cabinet_webapp_markup() -> InlineKeyboardMarkup:
-    cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
+def _cabinet_webapp_markup(card_pool: ContentCardPool) -> InlineKeyboardMarkup:
+    if card_pool == ContentCardPool.PIP_COUNT:
+        cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/pip-count-cabinet"
+        button_text = "Открыть кабинет пипсов"
+    else:
+        cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
+        button_text = "Открыть кабинет"
     kb = InlineKeyboardBuilder()
-    kb.button(text="Открыть кабинет", web_app=WebAppInfo(url=cabinet_url))
+    kb.button(text=button_text, web_app=WebAppInfo(url=cabinet_url))
     kb.adjust(1)
     return kb.as_markup()
 
@@ -23,7 +28,7 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
     """
     Выдаёт карточки по расписанию:
     - конкретному пользователю target_user_id;
-    - cards_per_run карточек;
+    - cards_per_run карточек из выбранного пула;
     - по возрастанию ID, пропуская уже выданные.
     """
     async with async_session_maker() as session:
@@ -37,6 +42,13 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
                 return
             target_user_id = int(schedule.target_user_id)
             cards_per_run = max(1, int(schedule.cards_per_run))
+            card_pool = schedule.card_pool or ContentCardPool.CARDS
+            if isinstance(card_pool, str):
+                card_pool = (
+                    ContentCardPool.PIP_COUNT
+                    if card_pool == ContentCardPool.PIP_COUNT.value
+                    else ContentCardPool.CARDS
+                )
 
             user_exists = await session.scalar(
                 select(User.id).where(User.id == target_user_id).limit(1)
@@ -50,7 +62,9 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
                 return
 
             all_card_ids_result = await session.execute(
-                select(ContentCard.id).order_by(ContentCard.id.asc())
+                select(ContentCard.id)
+                .where(ContentCard.card_pool == card_pool)
+                .order_by(ContentCard.id.asc())
             )
             all_card_ids = [
                 int(card_id)
@@ -94,18 +108,24 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
             schedule.last_run_at = datetime.now(timezone.utc)
             await session.commit()
 
+            pool_label = (
+                "карточек (пипсы)"
+                if card_pool == ContentCardPool.PIP_COUNT
+                else "карточек"
+            )
             await notify_user(
                 target_user_id,
                 (
-                    f"Вам зачислено {issued_count} карточек.\n"
+                    f"Вам зачислено {issued_count} {pool_label}.\n"
                     "Посмотрите их в личном кабинете."
                 ),
-                _cards_cabinet_webapp_markup(),
+                _cabinet_webapp_markup(card_pool),
             )
             logger.info(
-                "Card issue schedule {} granted {} cards to user {}",
+                "Card issue schedule {} granted {} {} cards to user {}",
                 schedule_id,
                 issued_count,
+                card_pool.value,
                 target_user_id,
             )
         except Exception as exc:

@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
 import logging
 
-from bot.flask_admin.model_view.content_cards import ContentCardModelView
+from bot.flask_admin.model_view.content_cards import ContentCardModelView, PipCountContentCardModelView
 from bot.flask_admin.model_view.content_card_issue_schedule import (
     ContentCardIssueScheduleModelView,
 )
@@ -25,6 +25,7 @@ from bot.flask_admin.model_view.user import (
     UserAnalizePaymentInline,
 )
 from bot.flask_admin.model_view.users_with_cards import UsersWithCardsView
+from bot.flask_admin.model_view.users_with_pip_count_cards import UsersWithPipCountCardsView
 from bot.flask_admin.model_view.webapp_settings import WebAppSettingsModelView
 
 logger = logging.getLogger(__name__)
@@ -163,6 +164,11 @@ def register_models(appbuilder, db):
     )
     appbuilder.add_view(ContentCardModelView, "Карточки", icon="fa-clone")
     appbuilder.add_view(
+        PipCountContentCardModelView,
+        "Карточки (пипсы)",
+        icon="fa-calculator",
+    )
+    appbuilder.add_view(
         ContentCardIssueScheduleModelView,
         "Выдача карточек по расписанию",
         icon="fa-clock-o",
@@ -172,10 +178,20 @@ def register_models(appbuilder, db):
         "Пользователи с карточками",
         icon="fa-table",
     )
+    appbuilder.add_view(
+        UsersWithPipCountCardsView,
+        "Пользователи с карточками (пипсы)",
+        icon="fa-table",
+    )
     appbuilder.add_link(
         "Кабинет карточек",
         href="/admin/cards-cabinet",
         icon="fa-th-large",
+    )
+    appbuilder.add_link(
+        "Кабинет пипсов",
+        href="/admin/pip-count-cabinet",
+        icon="fa-th",
     )
 
 

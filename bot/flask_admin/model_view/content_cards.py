@@ -18,7 +18,7 @@ from wtforms import StringField, validators
 
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.config import SUPPORT_TG_ID, create_bot_for_sync_context, settings
-from bot.db.models import ContentCard
+from bot.db.models import ContentCard, ContentCardPool
 
 # Разделитель для array_to_string: непечатный символ, чтобы не сливать реальные метки
 _LABELS_JOIN_DELIM = "\x1f"
@@ -105,14 +105,11 @@ class ContentCardSQLAInterface(SQLAInterface):
         return col_name == "labels"
 
 
-class ContentCardModelView(ModelView):
-    """Карточки редактора контента — только просмотр и список."""
+class _ContentCardModelViewBase(ModelView):
+    """Общая логика просмотра карточек редактора."""
 
     datamodel = ContentCardSQLAInterface(ContentCard)
     base_permissions = ["can_list", "can_show", "can_delete"]
-
-    list_title = _("Карточки")
-    show_title = _("Карточка")
 
     show_template = "show_content_card.html"
 
@@ -122,7 +119,6 @@ class ContentCardModelView(ModelView):
     search_columns = ["id", "file_name", "notes", "labels"]
     order_columns = ["id", "file_name"]
 
-    # ARRAY не конвертируется в поле поиска автоматически — явное поле, иначе KeyError в SearchWidget
     search_form_extra_fields = {
         "labels": StringField(
             _("Метки"),
@@ -245,3 +241,24 @@ class ContentCardModelView(ModelView):
             flash(f"Ошибка отправки в Telegram: {e}", "danger")
 
         return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+
+class ContentCardModelView(_ContentCardModelViewBase):
+    """Карточки пула «Карточки» (ходы / куб)."""
+
+    list_title = _("Карточки")
+    show_title = _("Карточка")
+
+    def get_query(self):
+        return super().get_query().filter(ContentCard.card_pool == ContentCardPool.CARDS)
+
+
+class PipCountContentCardModelView(_ContentCardModelViewBase):
+    """Карточки пула «Подсчёт пипсов»."""
+
+    list_title = _("Карточки: подсчёт пипсов")
+    show_title = _("Карточка (пипсы)")
+
+    def get_query(self):
+        return super().get_query().filter(ContentCard.card_pool == ContentCardPool.PIP_COUNT)
+

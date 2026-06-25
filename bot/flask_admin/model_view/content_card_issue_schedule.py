@@ -8,6 +8,7 @@ from loguru import logger
 from wtforms import (
     BooleanField,
     IntegerField,
+    SelectField,
     SelectMultipleField,
     StringField,
     ValidationError,
@@ -17,7 +18,7 @@ from wtforms.validators import DataRequired, NumberRange, Regexp
 
 from bot.common.tasks.card_issue_schedule import run_content_card_issue_schedule
 from bot.config import scheduler
-from bot.db.models import ContentCardIssueSchedule
+from bot.db.models import ContentCardIssueSchedule, ContentCardPool
 
 
 WEEKDAY_CHOICES = [
@@ -58,6 +59,7 @@ class ContentCardIssueScheduleModelView(ModelView):
     list_columns = [
         "id",
         "target_user_display",
+        "card_pool_display",
         "cards_per_run",
         "weekdays_display",
         "issue_time_msk",
@@ -67,6 +69,7 @@ class ContentCardIssueScheduleModelView(ModelView):
     show_columns = [
         "id",
         "target_user_display",
+        "card_pool_display",
         "cards_per_run",
         "weekdays_display",
         "issue_time_msk",
@@ -76,8 +79,22 @@ class ContentCardIssueScheduleModelView(ModelView):
         "created_at",
         "updated_at",
     ]
-    add_columns = ["target_user", "cards_per_run", "weekdays", "issue_time_msk", "is_active"]
-    edit_columns = ["target_user", "cards_per_run", "weekdays", "issue_time_msk", "is_active"]
+    add_columns = [
+        "target_user",
+        "card_pool",
+        "cards_per_run",
+        "weekdays",
+        "issue_time_msk",
+        "is_active",
+    ]
+    edit_columns = [
+        "target_user",
+        "card_pool",
+        "cards_per_run",
+        "weekdays",
+        "issue_time_msk",
+        "is_active",
+    ]
     search_columns = ["target_user_id", "issue_time_msk", "scheduler_job_id"]
     order_columns = ["id", "target_user_id", "issue_time_msk", "last_run_at", "is_active"]
 
@@ -86,6 +103,8 @@ class ContentCardIssueScheduleModelView(ModelView):
         "target_user": _("Пользователь"),
         "target_user_id": _("ID пользователя"),
         "target_user_display": _("Пользователь"),
+        "card_pool": _("Пул карточек"),
+        "card_pool_display": _("Пул карточек"),
         "cards_per_run": _("Карточек за запуск"),
         "weekdays": _("Дни недели"),
         "weekdays_display": _("Дни недели"),
@@ -100,12 +119,22 @@ class ContentCardIssueScheduleModelView(ModelView):
     description_columns = {
         "target_user": _("Пользователь, которому по расписанию выдаются карточки."),
         "target_user_id": _("Пользователь, которому по расписанию выдаются карточки."),
+        "card_pool": _("Из какого пула выдавать карточки: обычные или «Подсчёт пипсов»."),
         "cards_per_run": _("Сколько новых карточек выдать за один запуск."),
         "weekdays": _("Выберите дни недели запуска."),
         "issue_time_msk": _("Формат: ЧЧ:ММ (Europe/Moscow)."),
     }
 
     add_form_extra_fields = {
+        "card_pool": SelectField(
+            _("Пул карточек"),
+            choices=[
+                (ContentCardPool.CARDS.value, _("Карточки")),
+                (ContentCardPool.PIP_COUNT.value, _("Подсчёт пипсов")),
+            ],
+            default=ContentCardPool.CARDS.value,
+            validators=[DataRequired()],
+        ),
         "cards_per_run": IntegerField(
             _("Карточек за запуск"),
             validators=[DataRequired(), NumberRange(min=1, max=3000)],
@@ -127,6 +156,19 @@ class ContentCardIssueScheduleModelView(ModelView):
         "is_active": BooleanField(_("Активно"), default=True),
     }
     edit_form_extra_fields = add_form_extra_fields
+
+    @staticmethod
+    def _normalize_card_pool(raw) -> ContentCardPool:
+        value = str(raw or ContentCardPool.CARDS.value).strip().lower()
+        if value == ContentCardPool.PIP_COUNT.value:
+            return ContentCardPool.PIP_COUNT
+        return ContentCardPool.CARDS
+
+    def pre_add(self, item):
+        item.card_pool = self._normalize_card_pool(item.card_pool)
+
+    def pre_update(self, item):
+        item.card_pool = self._normalize_card_pool(item.card_pool)
 
     def post_add(self, item):
         self._upsert_scheduler_job(item)
