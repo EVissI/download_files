@@ -2319,7 +2319,7 @@ button.content-card-admin-info-file-link:hover {
 
 /* Предпросмотр: без белой заливки редактора; без рамок и теней; inline blockStyle перебивает фон.
    Интерактив «лучший ход» (.ce-interactive-best-move) исключаем — иначе теряются фон/бордер из .ce-interactive-best-move */
-.card-preview-surface-inner .canvas-element.card-preview-canvas-clone:not(.table-element):not(.ce-interactive-best-move):not(.ce-interactive-pip-count),
+.card-preview-surface-inner .canvas-element.card-preview-canvas-clone:not(.table-element):not(.ce-interactive-best-move):not(.ce-interactive-pip-count):not(.ce-interactive-pip-double),
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone.text-element,
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone.link-element {
     background: transparent;
@@ -2336,6 +2336,12 @@ button.content-card-admin-info-file-link:hover {
 }
 
 .card-preview-surface-inner .canvas-element.ce-interactive-pip-count.card-preview-canvas-clone:hover {
+    transform: none;
+    box-shadow: none !important;
+    cursor: default;
+}
+
+.card-preview-surface-inner .canvas-element.ce-interactive-pip-double.card-preview-canvas-clone:hover {
     transform: none;
     box-shadow: none !important;
     cursor: default;
@@ -4327,6 +4333,135 @@ button.content-card-admin-info-file-link:hover {
 }
 
 .canvas-element.ce-interactive-pip-count {
+    pointer-events: auto;
+    user-select: auto;
+    touch-action: manipulation;
+    cursor: default;
+}
+
+/* Интерактив «Дабл» (pip_count) */
+.ce-interactive-pip-double {
+    background: rgba(20, 28, 38, 0.92);
+    border: 1px solid #3d4f63;
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    pointer-events: auto;
+    user-select: auto;
+    touch-action: manipulation;
+}
+
+.ce-interactive-pip-double__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ce-interactive-pip-double__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e8eef5;
+    text-align: center;
+}
+
+.ce-interactive-pip-double__timer-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.ce-interactive-pip-double__timer {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #f0f4fa;
+    min-width: 4.5em;
+    text-align: center;
+}
+
+.ce-interactive-pip-double__choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ce-interactive-pip-double__choices[hidden] {
+    display: none !important;
+}
+
+.ce-interactive-pip-double__inner,
+.ce-interactive-pip-double__controls,
+.ce-interactive-pip-double__timer-row,
+.ce-interactive-pip-double__btn,
+.ce-interactive-pip-double__choice-btn {
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+
+.ce-interactive-pip-double__btn,
+.ce-interactive-pip-double__choice-btn {
+    position: relative;
+    z-index: 2;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #5a7ab0;
+    background: #3d5f94;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.ce-interactive-pip-double__btn:hover:not(:disabled),
+.ce-interactive-pip-double__choice-btn:hover:not(:disabled) {
+    background: #4a6ea8;
+}
+
+.ce-interactive-pip-double__btn:disabled,
+.ce-interactive-pip-double__choice-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.ce-interactive-pip-double__btn--running {
+    background: #8b3a3a;
+    border-color: #a64a4a;
+}
+
+.ce-interactive-pip-double__btn--running:hover:not(:disabled) {
+    background: #a04444;
+}
+
+.ce-interactive-pip-double__result {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #0f141c;
+    border: 1px solid #334155;
+    color: #dbe4f0;
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    font-family: inherit;
+}
+
+.card-preview-surface-inner .canvas-element.ce-interactive-pip-double.card-preview-canvas-clone {
+    pointer-events: auto !important;
+    user-select: auto;
+    touch-action: manipulation;
+    cursor: default;
+    position: relative;
+    z-index: 8;
+    width: 100% !important;
+    max-width: 100%;
+}
+
+.canvas-element.ce-interactive-pip-double {
     pointer-events: auto;
     user-select: auto;
     touch-action: manipulation;

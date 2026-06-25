@@ -118,6 +118,19 @@ const {
     new URL('./content-editor/features/interactive_pip_count.js', import.meta.url).href + _featureModuleCacheQs
 );
 
+const {
+    setupInteractivePipDoubleAfterCardPreviewRender,
+    refreshInteractivePipDoublePreviewBlocks,
+    mountInteractivePipDoubleBlock,
+    getInteractivePipDoubleInnerHtml,
+    ensurePipDoubleDatasetDefaults,
+    normalizePipDoubleCorrectAnswer,
+    PIP_DOUBLE_ANSWER_OPTIONS,
+    INTERACTIVE_PIP_DOUBLE_TOOL_ID,
+} = await import(
+    new URL('./content-editor/features/interactive_pip_double.js', import.meta.url).href + _featureModuleCacheQs
+);
+
 /**
  * Content Editor Module
  * Редактор контента в стиле Photoshop
@@ -1457,6 +1470,7 @@ export class ContentEditor {
             }
         }
         refreshInteractivePipCountPreviewBlocks(this, payload, inner);
+        refreshInteractivePipDoublePreviewBlocks(this, payload, inner);
     }
 
     /**
@@ -2381,6 +2395,13 @@ export class ContentEditor {
                 icon: 'fa fa-clock-o'
             },
             {
+                id: INTERACTIVE_PIP_DOUBLE_TOOL_ID,
+                name: 'Дабл',
+                type: 'interactive',
+                description: 'Выбор действия по кубу: таймер и три варианта',
+                icon: 'fa fa-cube'
+            },
+            {
                 id: 'frame-templates',
                 name: 'Шаблоны',
                 type: 'templates',
@@ -2396,7 +2417,14 @@ export class ContentEditor {
             }
         ];
 
-        this.renderTools(tools);
+        const pipMode = this._saveCardPool === 'pip_count' || this._pipCountImportMode;
+        const visibleTools = tools.filter((tool) => {
+            if (tool.id === INTERACTIVE_PIP_DOUBLE_TOOL_ID) return pipMode;
+            if (pipMode && tool.id === 'interactive-best-move') return false;
+            return true;
+        });
+
+        this.renderTools(visibleTools);
     }
 
     renderTools(tools) {
@@ -3966,7 +3994,7 @@ export class ContentEditor {
             defaultHeight = 'auto';
         } else if (toolId === 'interactive-best-move') {
             defaultHeight = this.isMobile() ? 140 : 180;
-        } else if (toolId === 'interactive-pip-count') {
+        } else if (toolId === 'interactive-pip-count' || toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
             defaultHeight = 'auto';
         } else {
             // Other elements have fixed height based on mobile/desktop
@@ -4004,7 +4032,7 @@ export class ContentEditor {
             } else if (toolId === 'interactive-best-move') {
                 element.style.height = 'auto';
                 element.style.minHeight = (this.isMobile() ? 120 : 132) + 'px';
-            } else if (toolId === 'interactive-pip-count') {
+            } else if (toolId === 'interactive-pip-count' || toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
                 element.style.height = 'auto';
                 element.style.minHeight = (this.isMobile() ? 160 : 200) + 'px';
             } else {
@@ -4232,6 +4260,14 @@ export class ContentEditor {
                     payload: boardSnap ? { board: boardSnap } : null,
                     sharedContext: this._contentCardSharedContext,
                 });
+                break;
+            }
+
+            case INTERACTIVE_PIP_DOUBLE_TOOL_ID: {
+                element.classList.add('ce-interactive-pip-double');
+                ensurePipDoubleDatasetDefaults(element);
+                element.innerHTML = getInteractivePipDoubleInnerHtml();
+                mountInteractivePipDoubleBlock(element, { dryRun: true });
                 break;
             }
 
@@ -4972,6 +5008,34 @@ export class ContentEditor {
                            oninput="contentEditor.updateElementProperty('pipCountFeedbackBad', this.value)">
                 </div>
                 ` : ''}
+                ${element.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID ? `
+                <div class="property-item">
+                    <label>Правильный ответ:</label>
+                    <select id="propPipDoubleCorrectAnswer" onchange="contentEditor.updateElementProperty('pipDoubleCorrectAnswer', this.value)">
+                        ${PIP_DOUBLE_ANSWER_OPTIONS.map((opt) => {
+                            const selected =
+                                normalizePipDoubleCorrectAnswer(element.dataset.cePipDoubleCorrectAnswer) === opt.value
+                                    ? 'selected'
+                                    : '';
+                            return `<option value="${opt.value}" ${selected}>${this.escapeHtml(opt.label)}</option>`;
+                        }).join('')}
+                    </select>
+                </div>
+                <div class="property-item">
+                    <label>Текст при верном ответе:</label>
+                    <input type="text" id="propPipDoubleFeedbackOk" class="ce-property-input-fluid" maxlength="500"
+                           value="${this.escapeHtml(element.dataset.cePipDoubleFeedbackOk !== undefined && element.dataset.cePipDoubleFeedbackOk !== null ? String(element.dataset.cePipDoubleFeedbackOk) : 'Правильно')}"
+                           placeholder="Правильно"
+                           oninput="contentEditor.updateElementProperty('pipDoubleFeedbackOk', this.value)">
+                </div>
+                <div class="property-item">
+                    <label>Текст при неверном ответе:</label>
+                    <input type="text" id="propPipDoubleFeedbackBad" class="ce-property-input-fluid" maxlength="500"
+                           value="${this.escapeHtml(element.dataset.cePipDoubleFeedbackBad !== undefined && element.dataset.cePipDoubleFeedbackBad !== null ? String(element.dataset.cePipDoubleFeedbackBad) : 'Неправильно')}"
+                           placeholder="Неправильно"
+                           oninput="contentEditor.updateElementProperty('pipDoubleFeedbackBad', this.value)">
+                </div>
+                ` : ''}
             </div>
             
             <div class="action-buttons">
@@ -5016,6 +5080,21 @@ export class ContentEditor {
             case 'pipCountFeedbackBad':
                 if (this.selectedElement.dataset.toolId === 'interactive-pip-count') {
                     this.selectedElement.dataset.cePipCountFeedbackBad = value != null ? String(value).slice(0, 500) : '';
+                }
+                break;
+            case 'pipDoubleCorrectAnswer':
+                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
+                    this.selectedElement.dataset.cePipDoubleCorrectAnswer = normalizePipDoubleCorrectAnswer(value);
+                }
+                break;
+            case 'pipDoubleFeedbackOk':
+                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
+                    this.selectedElement.dataset.cePipDoubleFeedbackOk = value != null ? String(value).slice(0, 500) : '';
+                }
+                break;
+            case 'pipDoubleFeedbackBad':
+                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
+                    this.selectedElement.dataset.cePipDoubleFeedbackBad = value != null ? String(value).slice(0, 500) : '';
                 }
                 break;
             case 'interactiveButtonCount':
@@ -5920,6 +5999,7 @@ export class ContentEditor {
                     delete item.style.height;
                     break;
                 case 'interactive-pip-count':
+                case INTERACTIVE_PIP_DOUBLE_TOOL_ID:
                     delete item.style.height;
                     break;
                 case 'board-illustration': {
@@ -8028,6 +8108,9 @@ export class ContentEditor {
                 sharedContext: this._contentCardSharedContext,
             });
         });
+        this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-double"]').forEach((el) => {
+            mountInteractivePipDoubleBlock(el, { dryRun: true });
+        });
 
         const tryTightStackAfterRestore = (attempt = 0) => {
             if (!this.canvas) return;
@@ -8129,7 +8212,8 @@ export class ContentEditor {
                 !(previewMode && isTextual) &&
                 !isPreviewImage &&
                 toolId !== 'interactive-best-move' &&
-                toolId !== 'interactive-pip-count'
+                toolId !== 'interactive-pip-count' &&
+                toolId !== INTERACTIVE_PIP_DOUBLE_TOOL_ID
             ) {
                 element.style.height = item.style.height;
             }
@@ -8233,6 +8317,12 @@ export class ContentEditor {
                             <pre class="ce-interactive-pip-count__result" data-ce-pip-result style="display:none"></pre>
                         </div>
                     </div>`;
+                break;
+            }
+            case INTERACTIVE_PIP_DOUBLE_TOOL_ID: {
+                element.classList.add('ce-interactive-pip-double');
+                ensurePipDoubleDatasetDefaults(element);
+                element.innerHTML = getInteractivePipDoubleInnerHtml();
                 break;
             }
             case 'upload-image': {

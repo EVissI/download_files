@@ -26,6 +26,26 @@ const { resolveReferencePipsFromPayload } = await import(withFeatureCacheQs('./p
 export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK = 'Правильно';
 export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD = 'Неправильно';
 
+const PIP_INTERACTIVE_BOARD_TOOL_IDS = ['interactive-pip-count', 'interactive-pip-double'];
+
+function queryPipInteractiveBlocks(scope) {
+    const blocks = [];
+    if (!scope || !scope.querySelectorAll) return blocks;
+    PIP_INTERACTIVE_BOARD_TOOL_IDS.forEach((toolId) => {
+        scope.querySelectorAll(`.canvas-element[data-tool-id="${toolId}"]`).forEach((block) => {
+            blocks.push(block);
+        });
+    });
+    return blocks;
+}
+
+function hostHasPipInteractiveBlock(host) {
+    if (!host || !host.querySelector) return false;
+    return PIP_INTERACTIVE_BOARD_TOOL_IDS.some((toolId) =>
+        host.querySelector(`.canvas-element[data-tool-id="${toolId}"]`)
+    );
+}
+
 const PIP_ACTION_IDLE = 'idle';
 const PIP_ACTION_RUNNING = 'running';
 const PIP_ACTION_STOPPED = 'stopped';
@@ -201,18 +221,28 @@ export function applyPipCountBoardGateForPreviewHost(hostRoot, pipState) {
     setPreviewBoardPipGate(host.querySelector('.card-preview-board-overlay'), isBoardExpandedForPipState(pipState));
 }
 
+function getPipInteractiveBlockState(block) {
+    if (!block) return PIP_ACTION_IDLE;
+    const toolId = block.dataset ? block.dataset.toolId : '';
+    if (toolId === 'interactive-pip-double') {
+        const btn = block.querySelector('[data-ce-pip-double-action]');
+        const st = btn && btn.dataset ? btn.dataset.cePipDoubleState : '';
+        if (st === PIP_ACTION_RUNNING || st === PIP_ACTION_STOPPED) return st;
+        return PIP_ACTION_IDLE;
+    }
+    const rt = pipRuntimeByBlock.get(block);
+    return rt ? rt.state : PIP_ACTION_IDLE;
+}
+
 export function syncPipCountBoardGatesInScope(rootEl) {
     if (typeof document === 'undefined') return;
     const scope = rootEl && rootEl.querySelectorAll ? rootEl : document;
-    const blocks = scope.querySelectorAll
-        ? scope.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-count"]')
-        : [];
+    const blocks = queryPipInteractiveBlocks(scope);
     if (!blocks.length) return;
 
     let hostState = PIP_ACTION_IDLE;
     blocks.forEach((block) => {
-        const rt = pipRuntimeByBlock.get(block);
-        const state = rt ? rt.state : PIP_ACTION_IDLE;
+        const state = getPipInteractiveBlockState(block);
         applyPipCountBoardGateForBlock(block, state);
         if (state === PIP_ACTION_RUNNING) {
             hostState = PIP_ACTION_RUNNING;
@@ -222,7 +252,7 @@ export function syncPipCountBoardGatesInScope(rootEl) {
     });
 
     const host = document.getElementById('cardPreviewFrameHost');
-    if (host && host.querySelector('.canvas-element[data-tool-id="interactive-pip-count"]')) {
+    if (host && hostHasPipInteractiveBlock(host)) {
         applyPipCountBoardGateForPreviewHost(host, hostState);
     }
 }
