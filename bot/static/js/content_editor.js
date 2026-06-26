@@ -1565,7 +1565,7 @@ export class ContentEditor {
             this.addElementToCanvas('interactive-pip-count');
         }
 
-        this.schedulePipInteractiveCanvasLayoutSync();
+        this.schedulePipInteractiveCanvasWidthSync();
 
         if (!options.skipLoadTools) {
             this.loadTools();
@@ -2066,67 +2066,59 @@ export class ContentEditor {
         syncA11y();
     }
 
-    /** Высота интерактива пипсов/дабла = видимая высота скролл-области канваса. */
-    getPipInteractiveCanvasTargetHeight() {
-        if (!this.canvas) {
-            return Math.max(400, this.getMaxCanvasHeight());
-        }
-        const clientH = this.canvas.clientHeight || 0;
-        const rectH = Math.ceil(this.canvas.getBoundingClientRect().height || 0);
-        const viewH = Math.max(clientH, rectH);
-        if (viewH > 0) {
-            return viewH;
-        }
-        return Math.max(400, this.getMaxCanvasHeight());
+    /** Ширина контента канваса (не берём устаревший rect до раскладки модалки). */
+    getCanvasContentWidth() {
+        const fallback = this.getMaxCanvasWidth();
+        if (!this.canvas) return fallback;
+        const clientW = this.canvas.clientWidth || 0;
+        const rectW = Math.ceil(this.canvas.getBoundingClientRect().width || 0);
+        const w = Math.max(clientW, rectW);
+        return w > 0 ? w : fallback;
+    }
+
+    getPipInteractiveCanvasMinHeight() {
+        return this.isMobile() ? 160 : 200;
     }
 
     isPipInteractiveToolId(toolId) {
         return toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double';
     }
 
-    applyPipInteractiveCanvasLayout(element, options = {}) {
+    applyPipInteractiveCanvasLayout(element) {
         if (!element || !this.isPipInteractiveToolId(element.dataset.toolId)) return;
-        const h =
-            options.height != null && Number.isFinite(Number(options.height))
-                ? Math.max(1, Math.round(Number(options.height)))
-                : this.getPipInteractiveCanvasTargetHeight();
-        element.style.height = `${h}px`;
-        element.style.minHeight = `${h}px`;
-        element.style.maxHeight = `${h}px`;
-        element.dataset.cePipCanvasHeight = String(h);
+        const minH = this.getPipInteractiveCanvasMinHeight();
+        const w = this.getCanvasContentWidth();
+        element.style.left = '0px';
+        element.style.width = `${w}px`;
+        element.style.maxWidth = `${w}px`;
+        element.style.height = 'auto';
+        element.style.minHeight = `${minH}px`;
+        element.style.maxHeight = '';
         element.style.overflow = 'visible';
         element.style.boxSizing = 'border-box';
-        element.style.display = 'flex';
-        element.style.flexDirection = 'column';
         const inner = element.querySelector('.ce-interactive-pip-count__inner, .ce-interactive-pip-double__inner');
         if (inner) {
-            inner.style.flex = '1 1 auto';
-            inner.style.display = 'flex';
-            inner.style.flexDirection = 'column';
-            inner.style.minHeight = '0';
+            inner.style.width = '100%';
+            inner.style.boxSizing = 'border-box';
         }
-        const layer = this.getCanvasElementsRoot();
-        if (layer) {
-            layer.style.minHeight = `${h}px`;
-        }
-        return h;
     }
 
-    /** Дождаться раскладки модалки и выставить пип-блокам высоту канваса. */
-    schedulePipInteractiveCanvasLayoutSync(attempt = 0) {
+    /** Дождаться раскладки модалки и выставить пип-блокам полную ширину канваса. */
+    schedulePipInteractiveCanvasWidthSync(attempt = 0) {
         if (!this.canvas) return;
         const blocks = this.canvas.querySelectorAll(
             '.canvas-element[data-tool-id="interactive-pip-count"], .canvas-element[data-tool-id="interactive-pip-double"]'
         );
         if (!blocks.length) return;
 
-        const targetH = this.getPipInteractiveCanvasTargetHeight();
-        if (targetH < 120 && attempt < 20) {
-            requestAnimationFrame(() => this.schedulePipInteractiveCanvasLayoutSync(attempt + 1));
+        const targetW = this.getCanvasContentWidth();
+        const firstW = blocks[0] ? blocks[0].offsetWidth : 0;
+        if ((targetW < 80 || firstW < 80) && attempt < 20) {
+            requestAnimationFrame(() => this.schedulePipInteractiveCanvasWidthSync(attempt + 1));
             return;
         }
 
-        blocks.forEach((el) => this.applyPipInteractiveCanvasLayout(el, { height: targetH }));
+        blocks.forEach((el) => this.applyPipInteractiveCanvasLayout(el));
         this.recalculateAllElementPositions();
     }
 
@@ -2147,10 +2139,8 @@ export class ContentEditor {
             return parseInt(element.style.height, 10) || element.offsetHeight || 72;
         }
         if (this.isPipInteractiveToolId(element.dataset.toolId)) {
-            const styled = parseInt(element.style.height, 10);
-            const stored = parseInt(element.dataset.cePipCanvasHeight, 10);
-            const target = this.getPipInteractiveCanvasTargetHeight();
-            return Math.max(styled || 0, stored || 0, element.offsetHeight || 0, target);
+            const minH = this.getPipInteractiveCanvasMinHeight();
+            return Math.max(element.offsetHeight || 0, parseInt(element.style.minHeight, 10) || 0, minH);
         }
         if (element.dataset.toolId === 'interactive-best-move') {
             return Math.max(element.offsetHeight || 0, this.isMobile() ? 120 : 132);
@@ -2259,12 +2249,14 @@ export class ContentEditor {
         if (!this.canvas || !ordered || !ordered.length) return;
         const canvas = this.canvas;
         const elementsRoot = this.getCanvasElementsRoot();
-        const w = canvas.getBoundingClientRect().width;
+        const w = this.getCanvasContentWidth();
         let nextY = 0;
         ordered.forEach((el) => {
             el.style.top = `${nextY}px`;
             if (el.dataset.toolId === 'upload-image') {
                 this.applyResponsiveUploadImageLayout(el, { targetWidth: w });
+            } else if (this.isPipInteractiveToolId(el.dataset.toolId)) {
+                this.applyPipInteractiveCanvasLayout(el);
             } else {
                 el.style.left = '0px';
                 el.style.width = `${w}px`;
@@ -3909,8 +3901,6 @@ export class ContentEditor {
     }
 
     calculateVerticalPosition(elementWidth, elementHeight) {
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
 
         // Get existing elements sorted by their top position
@@ -3920,8 +3910,7 @@ export class ContentEditor {
 
         // All elements now occupy actual canvas width without margins
         const centerX = 0;
-        // Use actual canvas width for proper scaling on mobile
-        const fullWidth = canvasRect.width;
+        const fullWidth = this.getCanvasContentWidth();
 
         // Calculate vertical position with no spacing
         const startY = 0; // No top margin for first element
@@ -4094,8 +4083,6 @@ export class ContentEditor {
         element.dataset.toolId = toolId;
 
         // Get canvas dimensions
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const maxCanvasWidth = this.getMaxCanvasWidth();
         const maxCanvasHeight = this.getMaxCanvasHeight();
 
         // All elements now occupy actual canvas width without margins
@@ -4106,7 +4093,7 @@ export class ContentEditor {
         } else if (toolId === 'interactive-best-move') {
             defaultHeight = this.isMobile() ? 140 : 180;
         } else if (this.isPipInteractiveToolId(toolId)) {
-            defaultHeight = this.getPipInteractiveCanvasTargetHeight();
+            defaultHeight = 'auto';
         } else {
             // Other elements have fixed height based on mobile/desktop
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
@@ -4114,6 +4101,8 @@ export class ContentEditor {
 
         // For non-table elements, add a small delay to ensure any existing tables have rendered
         const calculatePosition = () => {
+            const fullWidth = this.getCanvasContentWidth();
+
             // Debug: Log existing elements before positioning
             if (toolId !== 'moveHintsTable') {
                 console.log('=== ELEMENT POSITIONING DEBUG ===');
@@ -4125,7 +4114,7 @@ export class ContentEditor {
             }
 
             // Position elements in vertical blocks with actual canvas width
-            const position = this.calculateVerticalPosition(canvasRect.width, defaultHeight);
+            const position = this.calculateVerticalPosition(fullWidth, defaultHeight);
 
             // Debug: Log calculated position
             if (toolId !== 'moveHintsTable') {
@@ -4136,7 +4125,7 @@ export class ContentEditor {
             element.style.top = position.y + 'px';
 
             // Set width to actual canvas width without margins and height
-            element.style.width = position.width + 'px';
+            element.style.width = fullWidth + 'px';
 
             if (defaultHeight === 'auto') {
                 element.style.height = 'auto';
@@ -4144,8 +4133,8 @@ export class ContentEditor {
                 element.style.height = 'auto';
                 element.style.minHeight = (this.isMobile() ? 120 : 132) + 'px';
             } else if (this.isPipInteractiveToolId(toolId)) {
-                element.style.height = defaultHeight + 'px';
-                element.style.minHeight = defaultHeight + 'px';
+                element.style.height = 'auto';
+                this.applyPipInteractiveCanvasLayout(element);
             } else {
                 element.style.height = defaultHeight + 'px';
             }
@@ -4164,7 +4153,7 @@ export class ContentEditor {
                 this.refreshInteractiveBestMoveElementsFromCardData();
             }
             if (this.isPipInteractiveToolId(toolId)) {
-                this.applyPipInteractiveCanvasLayout(element, { height: defaultHeight });
+                this.applyPipInteractiveCanvasLayout(element);
             }
 
             // Если новый элемент был вставлен под выделенным
@@ -8232,7 +8221,7 @@ export class ContentEditor {
             mountInteractivePipDoubleBlock(el, { dryRun: true });
             this.applyPipInteractiveCanvasLayout(el);
         });
-        this.schedulePipInteractiveCanvasLayoutSync();
+        this.schedulePipInteractiveCanvasWidthSync();
 
         const tryTightStackAfterRestore = (attempt = 0) => {
             if (!this.canvas) return;
@@ -8682,11 +8671,7 @@ export class ContentEditor {
 
     handleWindowResize() {
         this.syncDesktopPanelLayout();
-        // Get current canvas dimensions
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const maxCanvasWidth = this.getMaxCanvasWidth();
-        // Use actual canvas width for proper mobile scaling
-        const fullWidth = canvasRect.width;
+        const fullWidth = this.getCanvasContentWidth();
 
         // Update all canvas elements to match new canvas width
         const canvasElements = this.canvas.querySelectorAll('.canvas-element');
@@ -8765,7 +8750,7 @@ export class ContentEditor {
             .filter(el => !el.id.includes('boardLabel'))
             .sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top));
 
-        const canvasRect = this.canvas.getBoundingClientRect();
+        const fullWidth = this.getCanvasContentWidth();
         const elementSpacing = 0; // No spacing between elements
         let nextY = 0; // Start from top
 
@@ -8784,7 +8769,7 @@ export class ContentEditor {
                     }
                 }
             } else if (element.dataset.toolId === 'upload-image') {
-                this.applyResponsiveUploadImageLayout(element, { targetWidth: canvasRect.width });
+                this.applyResponsiveUploadImageLayout(element, { targetWidth: fullWidth });
                 elementHeight = parseInt(element.style.height, 10) || 200;
             } else if (element.dataset.toolId === 'attach-file') {
                 elementHeight = parseInt(element.style.height, 10) || 72;
@@ -8801,7 +8786,7 @@ export class ContentEditor {
             element.style.top = nextY + 'px';
             if (element.dataset.toolId !== 'upload-image') {
                 element.style.left = '0px';
-                element.style.width = canvasRect.width + 'px';
+                element.style.width = fullWidth + 'px';
             }
 
             // Move to next position
