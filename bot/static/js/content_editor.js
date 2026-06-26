@@ -1565,6 +1565,15 @@ export class ContentEditor {
             this.addElementToCanvas('interactive-pip-count');
         }
 
+        this.canvas
+            .querySelectorAll(
+                '.canvas-element[data-tool-id="interactive-pip-count"], .canvas-element[data-tool-id="interactive-pip-double"]'
+            )
+            .forEach((el) => this.applyPipInteractiveCanvasLayout(el));
+        requestAnimationFrame(() => {
+            if (this.canvas) this.recalculateAllElementPositions();
+        });
+
         if (!options.skipLoadTools) {
             this.loadTools();
         }
@@ -2064,6 +2073,24 @@ export class ContentEditor {
         syncA11y();
     }
 
+    /** Минимальная высота интерактивов пипсов / дабла на холсте редактора. */
+    getPipInteractiveCanvasMinHeight() {
+        return this.isMobile() ? 160 : 200;
+    }
+
+    isPipInteractiveToolId(toolId) {
+        return toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double';
+    }
+
+    applyPipInteractiveCanvasLayout(element) {
+        if (!element || !this.isPipInteractiveToolId(element.dataset.toolId)) return;
+        const minH = this.getPipInteractiveCanvasMinHeight();
+        element.style.height = 'auto';
+        element.style.minHeight = minH + 'px';
+        element.style.overflow = 'visible';
+        element.style.boxSizing = 'border-box';
+    }
+
     /** Высота блока при пересчёте вертикального стека (как в recalculateAllElementPositions). */
     getElementStackHeight(element) {
         if (element.classList.contains('table-element')) {
@@ -2079,6 +2106,13 @@ export class ContentEditor {
         }
         if (element.dataset.toolId === 'attach-file') {
             return parseInt(element.style.height, 10) || element.offsetHeight || 72;
+        }
+        if (this.isPipInteractiveToolId(element.dataset.toolId)) {
+            const minH = this.getPipInteractiveCanvasMinHeight();
+            return Math.max(element.offsetHeight || 0, parseInt(element.style.minHeight, 10) || 0, minH);
+        }
+        if (element.dataset.toolId === 'interactive-best-move') {
+            return Math.max(element.offsetHeight || 0, this.isMobile() ? 120 : 132);
         }
         return parseInt(element.style.height, 10) || element.offsetHeight || 150;
     }
@@ -3781,7 +3815,6 @@ export class ContentEditor {
             .catch((err) => {
                 console.error('renderEditorBoardDisplay:', err);
             });
-        syncPipCountBoardGatesInScope(this.canvas);
     }
 
     setupEditorBoardCollapse(host) {
@@ -3793,13 +3826,6 @@ export class ContentEditor {
         display.classList.toggle('editor-board-display--collapsed', collapsedInitial);
         toggle.setAttribute('aria-expanded', collapsedInitial ? 'false' : 'true');
         const onToggle = (e) => {
-            if (display.classList.contains('editor-board-display--pip-locked')) {
-                if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                return;
-            }
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -4076,9 +4102,9 @@ export class ContentEditor {
             } else if (toolId === 'interactive-best-move') {
                 element.style.height = 'auto';
                 element.style.minHeight = (this.isMobile() ? 120 : 132) + 'px';
-            } else if (toolId === 'interactive-pip-count' || toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
+            } else if (toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double') {
                 element.style.height = 'auto';
-                element.style.minHeight = (this.isMobile() ? 160 : 200) + 'px';
+                this.applyPipInteractiveCanvasLayout(element);
             } else {
                 element.style.height = defaultHeight + 'px';
             }
@@ -4096,6 +4122,9 @@ export class ContentEditor {
             if (toolId === 'interactive-best-move') {
                 this.refreshInteractiveBestMoveElementsFromCardData();
             }
+            if (this.isPipInteractiveToolId(toolId)) {
+                this.applyPipInteractiveCanvasLayout(element);
+            }
 
             // Если новый элемент был вставлен под выделенным
             if (position.anchor) {
@@ -4109,7 +4138,10 @@ export class ContentEditor {
 
             // Expand canvas if needed for the new element
             setTimeout(() => {
-                const elementBottom = parseInt(element.style.top) + element.offsetHeight;
+                if (this.isPipInteractiveToolId(toolId)) {
+                    this.applyPipInteractiveCanvasLayout(element);
+                }
+                const elementBottom = parseInt(element.style.top, 10) + this.getElementStackHeight(element);
                 this.expandCanvasIfNeeded(elementBottom);
             }, 100);
 
@@ -8152,9 +8184,11 @@ export class ContentEditor {
                 payload: p,
                 sharedContext: this._contentCardSharedContext,
             });
+            this.applyPipInteractiveCanvasLayout(el);
         });
         this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-double"]').forEach((el) => {
             mountInteractivePipDoubleBlock(el, { dryRun: true });
+            this.applyPipInteractiveCanvasLayout(el);
         });
 
         const tryTightStackAfterRestore = (attempt = 0) => {
@@ -8709,6 +8743,9 @@ export class ContentEditor {
                 elementHeight = parseInt(element.style.height, 10) || 72;
             } else if (element.dataset.toolId === 'interactive-best-move') {
                 elementHeight = Math.max(element.offsetHeight || 0, this.isMobile() ? 120 : 132);
+            } else if (this.isPipInteractiveToolId(element.dataset.toolId)) {
+                this.applyPipInteractiveCanvasLayout(element);
+                elementHeight = this.getElementStackHeight(element);
             } else {
                 elementHeight = parseInt(element.style.height) || element.offsetHeight || 150;
             }

@@ -4332,11 +4332,23 @@ button.content-card-admin-info-file-link:hover {
     max-width: 100%;
 }
 
-.canvas-element.ce-interactive-pip-count {
+.canvas-element.ce-interactive-pip-count,
+.canvas-element.ce-interactive-pip-double {
     pointer-events: auto;
     user-select: auto;
     touch-action: manipulation;
     cursor: default;
+    height: auto;
+    min-height: 200px;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    .canvas-element.ce-interactive-pip-count,
+    .canvas-element.ce-interactive-pip-double {
+        min-height: 160px;
+    }
 }
 
 /* Интерактив «Дабл» (pip_count) */
@@ -4459,11 +4471,4 @@ button.content-card-admin-info-file-link:hover {
     z-index: 8;
     width: 100% !important;
     max-width: 100%;
-}
-
-.canvas-element.ce-interactive-pip-double {
-    pointer-events: auto;
-    user-select: auto;
-    touch-action: manipulation;
-    cursor: default;
 }

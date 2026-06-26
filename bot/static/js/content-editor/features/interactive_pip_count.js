@@ -162,10 +162,8 @@ function findCardPreviewBoardOverlay(block) {
     return host ? host.querySelector('.card-preview-board-overlay') : null;
 }
 
-function findEditorBoardDisplay() {
-    if (typeof document === 'undefined') return null;
-    const host = document.getElementById('editorBoardDisplayHost');
-    return host ? host.querySelector('.editor-board-display') : null;
+function isBlockInEditorCanvas(block) {
+    return !!(block && block.closest && block.closest('#canvas, #editorCanvasContentLayer'));
 }
 
 function setPreviewBoardPipGate(overlay, expanded) {
@@ -191,28 +189,16 @@ function setPreviewBoardPipGate(overlay, expanded) {
     }
 }
 
-function setEditorBoardPipGate(display, expanded) {
-    if (!display) return;
-    const toggle = display.querySelector('.editor-board-toggle');
-    const collapsed = !expanded;
-    display.classList.toggle('editor-board-display--collapsed', collapsed);
-    display.classList.toggle('editor-board-display--pip-locked', collapsed);
-    if (toggle) {
-        toggle.disabled = collapsed;
-        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    }
-}
-
 function isBoardExpandedForPipState(pipState) {
     return pipState === PIP_ACTION_RUNNING || pipState === PIP_ACTION_STOPPED;
 }
 
 export function applyPipCountBoardGateForBlock(block, pipState) {
+    if (isBlockInEditorCanvas(block)) {
+        return;
+    }
     const expanded = isBoardExpandedForPipState(pipState);
     setPreviewBoardPipGate(findCardPreviewBoardOverlay(block), expanded);
-    if (block && block.closest && block.closest('#canvas, #editorCanvasContentLayer')) {
-        setEditorBoardPipGate(findEditorBoardDisplay(), expanded);
-    }
 }
 
 export function applyPipCountBoardGateForPreviewHost(hostRoot, pipState) {
@@ -237,6 +223,10 @@ function getPipInteractiveBlockState(block) {
 export function syncPipCountBoardGatesInScope(rootEl) {
     if (typeof document === 'undefined') return;
     const scope = rootEl && rootEl.querySelectorAll ? rootEl : document;
+    /* В редакторе доска не блокируется — только предпросмотр / просмотр карточки. */
+    if (scope.id === 'canvas') {
+        return;
+    }
     const blocks = queryPipInteractiveBlocks(scope);
     if (!blocks.length) return;
 
