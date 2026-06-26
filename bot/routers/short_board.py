@@ -39,6 +39,7 @@ from bot.common.service.webapp_settings_service import get_webapp_fullscreen_ena
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 import json
+import time
 
 
 class ShortBoardDialog(StatesGroup):
@@ -257,6 +258,7 @@ async def get_board_viewer_web(request: Request, game_id: str = None):
         raise HTTPException(status_code=400, detail="game_id parameter is required")
 
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("player")
+    cache_timestamp = int(time.time())
 
     return templates.TemplateResponse(
         "board_viewer.html",
@@ -264,6 +266,7 @@ async def get_board_viewer_web(request: Request, game_id: str = None):
             "request": request,
             "game_id": game_id,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
+            "cache_timestamp": cache_timestamp,
         },
     )
 

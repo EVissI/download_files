@@ -600,8 +600,11 @@
             background-color: #5a6268;
         }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script type="module" src="/static/js/content-editor/bootstrap/index.js?t={{ cache_timestamp }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const prevBtn = document.getElementById('prevBtn');
@@ -2225,7 +2228,160 @@
             }
         }
 
+        function boardViewerPositionsToRedBlack(raw) {
+            if (!raw || typeof raw !== 'object') return null;
+            if (raw.red && raw.black) {
+                return {
+                    red: JSON.parse(JSON.stringify(raw.red)),
+                    black: JSON.parse(JSON.stringify(raw.black)),
+                };
+            }
+            if (raw.first && raw.second) {
+                return {
+                    red: JSON.parse(JSON.stringify(raw.first)),
+                    black: JSON.parse(JSON.stringify(raw.second)),
+                };
+            }
+            return null;
+        }
+
+        function getBoardViewerPositionsForFrame() {
+            if (!dataLoaded || !data) return null;
+            const idx = current;
+            if (idx === 0) {
+                const game = availableGames.find((g) => g.game_number === currentGameNum);
+                if (!game) return null;
+                return boardViewerPositionsToRedBlack(getInitialPositions(inverted, game.is_long_game));
+            }
+            const prev = data[idx - 1];
+            if (!prev) return null;
+            const raw = inverted ? prev.inverted_positions : prev.positions;
+            return boardViewerPositionsToRedBlack(raw);
+        }
+
+        window.getHintViewerBoardSnapshot = function () {
+            try {
+                const gid = game_id || 'default';
+                if (!dataLoaded || !data || current === undefined) {
+                    return {
+                        frameId: `${gid}_g_na_f_na`,
+                        gameId: gid,
+                        error: 'no_game_data',
+                    };
+                }
+                const gNum = currentGameNum != null ? currentGameNum : 'na';
+                const idx = current;
+                const frameId = `${gid}_g${gNum}_f${idx}`;
+                const positions = getBoardViewerPositionsForFrame();
+                const row = data[idx] || null;
+                let player = row && row.turn ? row.turn : null;
+                if (player === 'first') player = 'red';
+                else if (player === 'second') player = 'black';
+
+                return {
+                    frameId,
+                    gameId: gid,
+                    currentGameNum,
+                    frameIndex: idx,
+                    invertColors: !!inverted,
+                    xgid: '',
+                    positions,
+                    turn: row
+                        ? {
+                              turn: row.turn,
+                              action: row.action,
+                              player,
+                              player_name:
+                                  row.turn === 'first'
+                                      ? redPlayer
+                                      : row.turn === 'second'
+                                        ? blackPlayer
+                                        : null,
+                              dice: row.dice,
+                              cube: row.cube,
+                          }
+                        : null,
+                };
+            } catch (e) {
+                console.error('getHintViewerBoardSnapshot (board_viewer):', e);
+                return { error: String(e.message || e) };
+            }
+        };
+
+        async function checkAdminStatus() {
+            try {
+                const tg = window.Telegram && window.Telegram.WebApp;
+                const initData = tg && tg.initData ? tg.initData : '';
+                if (!initData) {
+                    return;
+                }
+
+                const response = await fetch('/api/check_admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.is_admin) {
+                        const adminContainer = document.getElementById('adminButtonContainer');
+                        if (adminContainer) {
+                            adminContainer.style.display = 'block';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking admin status:', error);
+            }
+        }
+
+        async function openPipCountCardEditor() {
+            if (typeof contentEditor === 'undefined') {
+                console.error('ContentEditor не инициализирован');
+                return;
+            }
+            try {
+                if (typeof contentEditor.openModalWithBestDuplicateCheck === 'function') {
+                    await contentEditor.openModalWithBestDuplicateCheck(null, {
+                        duplicateMode: 'board_xgid',
+                        pipCountImport: true,
+                    });
+                } else if (typeof contentEditor.openModalWithData === 'function') {
+                    contentEditor.openModalWithData(null, { pipCountImport: true });
+                } else {
+                    throw new Error('ContentEditor не содержит методов открытия редактора');
+                }
+                if (typeof contentEditor.setupPipCountImportSession === 'function') {
+                    await contentEditor.setupPipCountImportSession({ skipLoadTools: true });
+                }
+            } catch (e) {
+                console.error('openPipCountCardEditor:', e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            checkAdminStatus();
+        });
+
     </script>
+
+    <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
+        <button id="openPipCountCardEditorBtn" type="button" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}" style="
+            padding: 12px 24px;
+            background-color: #1f6f8f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        " onmouseover="this.style.backgroundColor='#185a73'" onmouseout="this.style.backgroundColor='#1f6f8f'">
+            Карточки: подсчет пипсов
+        </button>
+    </div>
 </body>
 
 </html>
