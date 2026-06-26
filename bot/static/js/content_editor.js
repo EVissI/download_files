@@ -8806,6 +8806,13 @@ export class ContentEditor {
     setupCanvasEvents() {
         // Клик по элементу для выделения и открытия свойств
         this.canvas.addEventListener('mousedown', (e) => {
+            if (
+                e.target.closest(
+                    '[data-ce-pip-upper], [data-ce-pip-lower], [data-ce-pip-action], .ce-interactive-pip-count__field, .ce-interactive-pip-count__btn'
+                )
+            ) {
+                return;
+            }
             const canvasElement = e.target.closest('.canvas-element');
             if (canvasElement && !e.target.classList.contains('control-btn')) {
                 this.selectElement(canvasElement);

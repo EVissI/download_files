@@ -4246,6 +4246,7 @@ button.content-card-admin-info-file-link:hover {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
+    pointer-events: auto;
 }
 
 .ce-interactive-pip-count__field {
@@ -4254,6 +4255,14 @@ button.content-card-admin-info-file-link:hover {
     gap: 4px;
     font-size: 13px;
     color: #c5d0de;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.ce-interactive-pip-count__field-label {
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .ce-interactive-pip-count__input {
@@ -4267,14 +4276,20 @@ button.content-card-admin-info-file-link:hover {
     font-size: 16px;
     pointer-events: auto;
     touch-action: manipulation;
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: text;
+}
+
+.ce-interactive-pip-count__input--locked {
+    opacity: 0.55;
+    cursor: pointer;
 }
 
 .ce-interactive-pip-count__inner,
 .ce-interactive-pip-count__controls,
 .ce-interactive-pip-count__timer-row,
-.ce-interactive-pip-count__field,
-.ce-interactive-pip-count__btn,
-.ce-interactive-pip-count__input {
+.ce-interactive-pip-count__btn {
     pointer-events: auto;
     touch-action: manipulation;
 }
@@ -4395,6 +4410,19 @@ button.content-card-admin-info-file-link:hover {
     left: 0;
     right: 0;
     width: auto;
+}
+
+.canvas-element.ce-interactive-pip-count .ce-interactive-pip-count__input {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.card-preview-surface-inner .ce-interactive-pip-count__controls,
+.card-preview-surface-inner .ce-interactive-pip-count__inputs,
+.card-preview-surface-inner .ce-interactive-pip-count__field,
+.card-preview-surface-inner .ce-interactive-pip-count__field-label,
+.card-preview-surface-inner .ce-interactive-pip-count__input {
+    pointer-events: auto;
 }
 
 .canvas-element.ce-interactive-pip-double {

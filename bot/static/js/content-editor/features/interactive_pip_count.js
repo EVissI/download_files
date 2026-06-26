@@ -156,7 +156,28 @@ function unbindPipInputMobileMirror(rt) {
     }
 }
 
-function bindPipInputMobileMirror(block, rt) {
+function setInputsInteractionState(block, pipState) {
+    const inputs = block.querySelectorAll('[data-ce-pip-upper], [data-ce-pip-lower]');
+    inputs.forEach((input) => {
+        if (pipState === PIP_ACTION_RUNNING) {
+            input.disabled = false;
+            input.readOnly = false;
+            input.classList.remove('ce-interactive-pip-count__input--locked');
+            return;
+        }
+        if (pipState === PIP_ACTION_IDLE) {
+            input.disabled = false;
+            input.readOnly = true;
+            input.classList.add('ce-interactive-pip-count__input--locked');
+            return;
+        }
+        input.disabled = true;
+        input.readOnly = false;
+        input.classList.remove('ce-interactive-pip-count__input--locked');
+    });
+}
+
+function bindPipInputInteractions(block, rt) {
     unbindPipInputMobileMirror(rt);
     const inputs = block.querySelectorAll('[data-ce-pip-upper], [data-ce-pip-lower]');
     if (!inputs.length) return;
@@ -165,16 +186,22 @@ function bindPipInputMobileMirror(block, rt) {
     rt.inputMirrorAbort = controller;
     const { signal } = controller;
 
+    const stopCanvasBubble = (e) => {
+        if (e && typeof e.stopPropagation === 'function') {
+            e.stopPropagation();
+        }
+    };
+
     inputs.forEach((input) => {
-        const stopBubble = (e) => {
-            if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-        };
-        input.addEventListener('mousedown', stopBubble, { signal });
-        input.addEventListener('click', stopBubble, { signal });
+        input.addEventListener('mousedown', stopCanvasBubble, { signal });
+        input.addEventListener('touchstart', stopCanvasBubble, { signal, passive: true });
 
         input.addEventListener(
             'focus',
             () => {
+                if (rt.state === PIP_ACTION_IDLE) {
+                    handlePipStart(block, rt, { focusInput: input });
+                }
                 showPipInputMirror(input);
             },
             { signal }
@@ -205,6 +232,12 @@ function bindPipInputMobileMirror(block, rt) {
             },
             { signal }
         );
+    });
+
+    const fields = block.querySelectorAll('.ce-interactive-pip-count__field');
+    fields.forEach((field) => {
+        field.addEventListener('mousedown', stopCanvasBubble, { signal });
+        field.addEventListener('touchstart', stopCanvasBubble, { signal, passive: true });
     });
 }
 
@@ -302,10 +335,7 @@ function resolveRef(block, rt) {
 }
 
 function setInputsDisabled(block, disabled) {
-    const upperInput = block.querySelector('[data-ce-pip-upper]');
-    const lowerInput = block.querySelector('[data-ce-pip-lower]');
-    if (upperInput) upperInput.disabled = disabled;
-    if (lowerInput) lowerInput.disabled = disabled;
+    setInputsInteractionState(block, disabled ? PIP_ACTION_STOPPED : PIP_ACTION_RUNNING);
 }
 
 function findCardPreviewBoardOverlay(block) {
@@ -402,7 +432,7 @@ export function syncPipCountBoardGatesInScope(rootEl) {
     }
 }
 
-function handlePipStart(block, rt) {
+function handlePipStart(block, rt, options = {}) {
     if (rt.state !== PIP_ACTION_IDLE) return;
     rt.state = PIP_ACTION_RUNNING;
     rt.startedAt = Date.now();
@@ -413,12 +443,15 @@ function handlePipStart(block, rt) {
         setTimerDisplay(block, formatElapsedMs(Date.now() - rt.startedAt));
     }, 250);
     setActionButtonState(block, PIP_ACTION_RUNNING);
-    setInputsDisabled(block, false);
+    setInputsInteractionState(block, PIP_ACTION_RUNNING);
     applyPipCountBoardGateForBlock(block, PIP_ACTION_RUNNING);
-    const upperInput = block.querySelector('[data-ce-pip-upper]');
-    if (upperInput) {
+    const focusInput =
+        options.focusInput && block.contains(options.focusInput)
+            ? options.focusInput
+            : block.querySelector('[data-ce-pip-upper]');
+    if (focusInput) {
         try {
-            upperInput.focus();
+            focusInput.focus();
         } catch (_e) {
             /* noop */
         }
@@ -573,10 +606,10 @@ function syncPipCountBlockUi(block, options = {}) {
     }
 
     setActionButtonState(block, PIP_ACTION_IDLE);
-    setInputsDisabled(block, true);
+    setInputsInteractionState(block, PIP_ACTION_IDLE);
     setTimerDisplay(block, '00:00');
     bindPipActionButton(block, rt);
-    bindPipInputMobileMirror(block, rt);
+    bindPipInputInteractions(block, rt);
     applyPipCountBoardGateForBlock(block, PIP_ACTION_IDLE);
 
     block.dataset.cePipCountBound = '1';
