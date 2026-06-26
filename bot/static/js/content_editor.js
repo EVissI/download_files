@@ -1536,6 +1536,86 @@ export class ContentEditor {
         this._pipCountImportMode = false;
     }
 
+    /** Страницы hint_viewer / pokaz / board_viewer — снимок доски с страницы, не из карточки. */
+    _isEditorHostWithLiveBoardPage() {
+        return typeof window !== 'undefined' && typeof window.getHintViewerBoardSnapshot === 'function';
+    }
+
+    _isContentCardViewPreviewModal() {
+        return !!(this.cardPreviewModal && this.cardPreviewModal.id === 'contentCardViewRoot');
+    }
+
+    /** Черновики кадров редактора в localStorage для текущей игры (hint / pokaz). */
+    clearSavedFramesForCurrentGame() {
+        const refs = this.collectSavedFrameRefsForCurrentGame();
+        refs.forEach((ref) => {
+            if (!ref || !ref.storageKey) return;
+            try {
+                localStorage.removeItem(ref.storageKey);
+            } catch (e) {
+                console.warn('clearSavedFramesForCurrentGame:', ref.storageKey, e);
+            }
+        });
+        this.cardPreviewRefs = [];
+        this.cardPreviewIndex = 0;
+    }
+
+    _resetHidePipsCheckboxIfChecked() {
+        const hidePipsCb = document.getElementById('hidePipsCheckbox');
+        if (!hidePipsCb || !hidePipsCb.checked) return;
+        hidePipsCb.checked = false;
+        hidePipsCb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    /**
+     * Сброс редактора при закрытии модалки: холст, сессия, черновики предпросмотра.
+     * @param {{ preserveSharedContext?: boolean, clearStoredFrames?: boolean }} [options]
+     */
+    resetEditorOnClose(options = {}) {
+        const preserveSharedContext = options.preserveSharedContext === true;
+        const clearStoredFrames = options.clearStoredFrames === true;
+
+        this.resetEditorSessionDefaults();
+        this.elements = [];
+        if (this.canvas) {
+            this.resetCanvasDomStructure();
+            this.canvas.style.backgroundColor = '#ffffff';
+            this.applyCanvasPatternConfig(null);
+        }
+        this.selectedElement = null;
+        this.applyPropertiesEmptyState();
+        this.toggleStates = { boardCanvas: true };
+        this.boardMatchBannerEnabled = false;
+        this._editorSessionBoardSnapshot = null;
+        this._canvasPatternDraft = null;
+        this._previewMergePreferStoredCanvasBg = false;
+        this.elementIdCounter = 0;
+        this._resumePreviewStorageKey = null;
+        this.cardLabelsDraft = [];
+        if (this.cardLabelsModal && this.cardLabelsModal.style.display === 'flex') {
+            this.closeCardLabelsModal();
+        }
+        this._resetHidePipsCheckboxIfChecked();
+
+        if (!preserveSharedContext) {
+            this.cardData = null;
+            this._contentCardSharedContext = null;
+        }
+
+        if (clearStoredFrames) {
+            this.clearSavedFramesForCurrentGame();
+        } else {
+            this.cardPreviewRefs = [];
+            this.cardPreviewIndex = 0;
+        }
+
+        this.loadTools();
+        this.syncBoardToolToggleFromState();
+        this.syncBoardMatchBannerToolbarVisibility();
+        this.clearEditorBoardDisplay();
+        this.forceRefreshContent();
+    }
+
     /**
      * Сброс сессии при открытии модалки: обычный редактор или pip_count-импорт.
      * @param {{ fromPreviewRestore?: boolean, pipCountImport?: boolean }} [options]
@@ -1719,6 +1799,7 @@ export class ContentEditor {
         /* После openEditorFromSelectedPreview со страницы карточки editorOpenedFromContentCardView может быть false — всё равно снимаем suspend. */
         this._resumeContentCardViewOnlyAfterEditor();
         if (fromContentCardView) {
+            this.resetEditorOnClose({ preserveSharedContext: true });
             this.clearPreviewEditSession();
             document.body.style.overflow = 'hidden';
             if (this.cardPreviewModal) {
@@ -1728,8 +1809,18 @@ export class ContentEditor {
                 this.refreshCardPreviewUI();
             }
         } else {
-            document.body.style.overflow = 'auto';
+            if (
+                this.cardPreviewModal &&
+                this.cardPreviewModal.style.display === 'flex' &&
+                !this._isContentCardViewPreviewModal()
+            ) {
+                this.closeCardPreviewModal();
+            }
+            this.resetEditorOnClose({
+                clearStoredFrames: this._isEditorHostWithLiveBoardPage(),
+            });
             this.clearPreviewEditSession();
+            document.body.style.overflow = 'auto';
         }
         this.renderEditorBoardDisplay();
     }
