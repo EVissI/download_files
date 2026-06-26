@@ -738,6 +738,7 @@
         let current = 0;
         let currentGameNum = 1;
         let matchLength = 0;
+        let matchPoint = 0;
         let gameRedScore = 0;
         let gameBlackScore = 0;
         let redPlayer = 'Unknown';
@@ -876,7 +877,8 @@
                 blackPlayer = gameInfo.second ? gameInfo.second.name : 'Unknown';
                 gameRedScore = gameInfo.first ? gameInfo.first.score : 0;
                 gameBlackScore = gameInfo.second ? gameInfo.second.score : 0;
-                matchPoint = gameInfo.point_match ? gameInfo.point_match : 0
+                matchPoint = gameInfo.point_match ? gameInfo.point_match : 0;
+                matchLength = matchPoint;
                 enable_crawford_game_number = gamesArray.findIndex(game => game.is_crawford) + 1 || null;
                 dataLoaded = true;
                 const matchInfoDiv = document.getElementById('match-info');
@@ -2259,6 +2261,31 @@
             return boardViewerPositionsToRedBlack(raw);
         }
 
+        function getBoardViewerCubeVisual(row) {
+            if (!row) return null;
+            if (row.action === 'win') {
+                return { mode: 'center', value: 64 };
+            }
+            if (row.cube_owner === null || row.cube_owner === undefined) {
+                return { mode: 'center', value: 64 };
+            }
+            const cubeVal = row.cube_value != null ? Number(row.cube_value) : 64;
+            const ownerRaw = String(row.cube_owner || '').toLowerCase();
+            const player =
+                ownerRaw === 'first' || ownerRaw === 'red'
+                    ? 'red'
+                    : ownerRaw === 'second' || ownerRaw === 'black'
+                      ? 'black'
+                      : null;
+            if (cubeVal > 1) {
+                if (row.cube_location === 'center' && row.action !== 'drop') {
+                    return { mode: 'side', value: cubeVal, player };
+                }
+                return { mode: 'bar', value: cubeVal, player };
+            }
+            return { mode: 'center', value: 64 };
+        }
+
         window.getHintViewerBoardSnapshot = function () {
             try {
                 const gid = game_id || 'default';
@@ -2266,6 +2293,8 @@
                     return {
                         frameId: `${gid}_g_na_f_na`,
                         gameId: gid,
+                        currentGameNum: typeof currentGameNum !== 'undefined' ? currentGameNum : null,
+                        frameIndex: null,
                         error: 'no_game_data',
                     };
                 }
@@ -2278,33 +2307,64 @@
                 if (player === 'first') player = 'red';
                 else if (player === 'second') player = 'black';
 
+                const ml = typeof matchPoint !== 'undefined' ? matchPoint : matchLength;
+
                 return {
                     frameId,
                     gameId: gid,
-                    currentGameNum,
+                    currentGameNum: currentGameNum != null ? currentGameNum : null,
                     frameIndex: idx,
                     invertColors: !!inverted,
                     xgid: '',
                     positions,
+                    cubeVisual: getBoardViewerCubeVisual(row),
+                    scores:
+                        typeof ml !== 'undefined'
+                            ? {
+                                  matchLength: ml,
+                                  gameRedScore:
+                                      typeof gameRedScore !== 'undefined' ? gameRedScore : null,
+                                  gameBlackScore:
+                                      typeof gameBlackScore !== 'undefined' ? gameBlackScore : null,
+                              }
+                            : null,
+                    players: {
+                        red: redPlayer,
+                        black: blackPlayer,
+                    },
                     turn: row
                         ? {
                               turn: row.turn,
                               action: row.action,
                               player,
                               player_name:
-                                  row.turn === 'first'
+                                  row.player_name ||
+                                  (row.turn === 'first'
                                       ? redPlayer
                                       : row.turn === 'second'
                                         ? blackPlayer
-                                        : null,
+                                        : null),
                               dice: row.dice,
-                              cube: row.cube,
+                              cube: row.cube_value != null ? row.cube_value : row.cube,
+                              gnu_move: row.gnu_move,
                           }
                         : null,
                 };
             } catch (e) {
                 console.error('getHintViewerBoardSnapshot (board_viewer):', e);
                 return { error: String(e.message || e) };
+            }
+        };
+
+        window.getHintViewerCurrentCardData = function () {
+            try {
+                if (!dataLoaded || !data || current === undefined) {
+                    return null;
+                }
+                return data.length > 0 ? data[current] : null;
+            } catch (e) {
+                console.error('getHintViewerCurrentCardData (board_viewer):', e);
+                return null;
             }
         };
 
@@ -2354,6 +2414,11 @@
                 }
                 if (typeof contentEditor.setupPipCountImportSession === 'function') {
                     await contentEditor.setupPipCountImportSession({ skipLoadTools: true });
+                }
+                if (typeof contentEditor.renderEditorBoardDisplay === 'function') {
+                    contentEditor.boardMatchBannerEnabled = true;
+                    contentEditor.syncBoardMatchBannerToolbarVisibility();
+                    contentEditor.renderEditorBoardDisplay();
                 }
             } catch (e) {
                 console.error('openPipCountCardEditor:', e);
