@@ -2066,10 +2066,8 @@
             <h3 id="interactiveStatsModalTitle" class="shuffle-modal__title">{% if cabinet_pool == 'pip_count' %}Подсчёт пипсов{% else %}Интерактив «лучший ход»{% endif %}</h3>
             <p id="interactiveStatsModalBody" class="shuffle-modal__msg" style="min-height: 48px; color: #e8e8e8;"></p>
             <div class="shuffle-modal__actions">
-                {% if cabinet_pool == 'pip_count' %}
                 <button type="button" id="interactiveStatsModalClearBtn"
                     class="shuffle-modal__btn">Очистить</button>
-                {% endif %}
                 <button type="button" id="interactiveStatsModalCloseBtn"
                     class="shuffle-modal__btn shuffle-modal__btn--primary">Закрыть</button>
             </div>
@@ -3988,7 +3986,6 @@
                 }
 
                 function clearInteractiveStats() {
-                    if (CABINET_POOL !== 'pip_count') return;
                     if (!window.confirm('Очистить статистику? После этого можно будет снова пройти карточки.')) {
                         return;
                     }

@@ -900,7 +900,7 @@ class ContentCardDeleteBody(BaseModel):
 
 
 class ContentCardInteractiveRecordBody(BaseModel):
-    """Запись ответа в интерактиве «лучший ход»."""
+    """Запись ответа в интерактиве карточки (только первая попытка)."""
 
     init_data: str | None = None
     fab_token: str | None = None
@@ -1110,6 +1110,38 @@ def _normalize_content_card_pool(pool: str | None) -> ContentCardPool | None:
         return ContentCardPool(pool)
     except ValueError:
         return None
+
+
+async def _record_first_interactive_attempt_only(
+    session,
+    user_id: int,
+    content_card_id: int,
+    correct: bool,
+) -> bool:
+    """
+    Записывает только первую попытку по карточке.
+    Возвращает False, если попытка уже была зафиксирована.
+    """
+    existing = await session.execute(
+        select(UserContentCardInteractiveStat.id).where(
+            UserContentCardInteractiveStat.user_id == user_id,
+            UserContentCardInteractiveStat.content_card_id == content_card_id,
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        return False
+
+    incr_c = 1 if correct else 0
+    incr_w = 0 if correct else 1
+    await session.execute(
+        insert(UserContentCardInteractiveStat).values(
+            user_id=user_id,
+            content_card_id=content_card_id,
+            correct_count=incr_c,
+            wrong_count=incr_w,
+        )
+    )
+    return True
 
 
 async def _build_start_link_for_cards_activation(link_token: str) -> str:
@@ -2025,10 +2057,8 @@ async def content_cards_mark_viewed(body: ContentCardMarkViewedBody):
 
 @app.post("/api/content_cards/interactive/record")
 async def content_cards_interactive_record(body: ContentCardInteractiveRecordBody):
-    """Учёт ответа в интерактиве карточки (доступ как у fetch)."""
+    """Учёт ответа в интерактиве карточки (доступ как у fetch). Только первая попытка."""
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
-    incr_c = 1 if body.correct else 0
-    incr_w = 0 if body.correct else 1
 
     async with async_session_maker() as session:
         if not await _user_can_access_content_card_interactive(
@@ -2041,48 +2071,13 @@ async def content_cards_interactive_record(body: ContentCardInteractiveRecordBod
         if not card:
             raise HTTPException(status_code=404, detail="Карточка не найдена")
 
-        card_pool = card.card_pool
-        if not isinstance(card_pool, ContentCardPool):
-            card_pool = ContentCardPool(card_pool)
-
-        if card_pool == ContentCardPool.PIP_COUNT:
-            existing = await session.execute(
-                select(UserContentCardInteractiveStat.id).where(
-                    UserContentCardInteractiveStat.user_id == user_id,
-                    UserContentCardInteractiveStat.content_card_id == body.content_card_id,
-                )
-            )
-            if existing.scalar_one_or_none() is not None:
-                return {"ok": True, "skipped": True}
-
-            await session.execute(
-                insert(UserContentCardInteractiveStat).values(
-                    user_id=user_id,
-                    content_card_id=body.content_card_id,
-                    correct_count=incr_c,
-                    wrong_count=incr_w,
-                )
-            )
-            await session.commit()
-            return {"ok": True}
-
-        stmt = insert(UserContentCardInteractiveStat).values(
-            user_id=user_id,
-            content_card_id=body.content_card_id,
-            correct_count=incr_c,
-            wrong_count=incr_w,
+        recorded = await _record_first_interactive_attempt_only(
+            session, user_id, body.content_card_id, body.correct
         )
-        stmt = stmt.on_conflict_do_update(
-            constraint="uq_ucc_interactive_user_id_content_card_id",
-            set_={
-                "correct_count": UserContentCardInteractiveStat.correct_count + incr_c,
-                "wrong_count": UserContentCardInteractiveStat.wrong_count + incr_w,
-                "updated_at": func.now(),
-            },
-        )
-        await session.execute(stmt)
         await session.commit()
 
+    if not recorded:
+        return {"ok": True, "skipped": True}
     return {"ok": True}
 
 
@@ -2143,23 +2138,20 @@ async def content_cards_interactive_stats_total(body: ContentCardMyListBody):
 
 @app.post("/api/content_cards/interactive/stats_clear")
 async def content_cards_interactive_stats_clear(body: ContentCardMyListBody):
-    """Сброс статистики интерактива по карточкам пула pip_count."""
+    """Сброс статистики интерактива по карточкам пула текущего кабинета."""
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     pool = _normalize_content_card_pool(body.pool)
-    if pool != ContentCardPool.PIP_COUNT:
-        raise HTTPException(
-            status_code=400,
-            detail="Сброс статистики доступен только для пула pip_count",
-        )
+    if pool is None:
+        pool = ContentCardPool.CARDS
+    if pool not in (ContentCardPool.CARDS, ContentCardPool.PIP_COUNT):
+        raise HTTPException(status_code=400, detail="Некорректный пул карточек")
 
     async with async_session_maker() as session:
-        pip_card_ids = select(ContentCard.id).where(
-            ContentCard.card_pool == ContentCardPool.PIP_COUNT
-        )
+        pool_card_ids = select(ContentCard.id).where(ContentCard.card_pool == pool)
         await session.execute(
             delete(UserContentCardInteractiveStat).where(
                 UserContentCardInteractiveStat.user_id == user_id,
-                UserContentCardInteractiveStat.content_card_id.in_(pip_card_ids),
+                UserContentCardInteractiveStat.content_card_id.in_(pool_card_ids),
             )
         )
         await session.commit()
