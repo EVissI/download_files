@@ -1542,9 +1542,13 @@ export class ContentEditor {
      * @param {{ skipLoadTools?: boolean }} [options]
      */
     async setupPipCountImportSession(options = {}) {
+        const skipAutoAddBlock = options.skipAutoAddBlock === true;
+        const skipHintBoardSnapshot = options.skipHintBoardSnapshot === true;
         this._saveCardPool = 'pip_count';
         this._pipCountImportMode = true;
-        this.cardData = null;
+        if (!this.editorOpenedFromContentCardView) {
+            this.cardData = null;
+        }
 
         if (!this.toggleStates.boardCanvas) {
             this.toggleBoardCanvas('boardCanvas');
@@ -1559,7 +1563,7 @@ export class ContentEditor {
             hidePipsCb.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
-        if (typeof window.getHintViewerBoardSnapshot === 'function') {
+        if (!skipHintBoardSnapshot && typeof window.getHintViewerBoardSnapshot === 'function') {
             try {
                 const snap = window.getHintViewerBoardSnapshot();
                 if (snap && typeof snap === 'object' && snap.error !== 'no_game_data') {
@@ -1573,7 +1577,11 @@ export class ContentEditor {
             }
         }
 
-        if (this.canvas && !this.canvas.querySelector('[data-tool-id="interactive-pip-count"]')) {
+        if (
+            !skipAutoAddBlock &&
+            this.canvas &&
+            !this.canvas.querySelector('[data-tool-id="interactive-pip-count"]')
+        ) {
             this.addElementToCanvas('interactive-pip-count');
         }
 
@@ -2545,15 +2553,10 @@ export class ContentEditor {
             }
         ];
 
-        const fromContentCardFrameEdit = this.editorOpenedFromContentCardView === true;
-        const pipImportMode = this.isPipCountImportEditorMode() && !fromContentCardFrameEdit;
-        const pipCountCardFrameEdit =
-            fromContentCardFrameEdit &&
-            typeof window !== 'undefined' &&
-            String(window.__CONTENT_CARD_POOL__ || '') === 'pip_count';
+        const pipImportMode = this.isPipCountImportEditorMode();
         const pipInteractiveToolIds = new Set(['interactive-pip-count', 'interactive-pip-double', 'interactive-pip-combo']);
         const visibleTools = tools.filter((tool) => {
-            if (pipInteractiveToolIds.has(tool.id)) return pipImportMode || pipCountCardFrameEdit;
+            if (pipInteractiveToolIds.has(tool.id)) return pipImportMode;
             if (pipImportMode && tool.id === 'interactive-best-move') return false;
             return true;
         });
@@ -8077,10 +8080,16 @@ export class ContentEditor {
         }
         this.closeCardPreviewModal();
         if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true && this._contentCardViewCardId) {
-            if (typeof this.resetEditorSessionDefaults === 'function') {
+            this.editorOpenedFromContentCardView = true;
+            const cardPool =
+                this._contentCardViewPool ||
+                (typeof window.__CONTENT_CARD_POOL__ !== 'undefined' ? String(window.__CONTENT_CARD_POOL__) : 'cards');
+            if (cardPool === 'pip_count') {
+                this._pipCountImportMode = true;
+                this._saveCardPool = 'pip_count';
+            } else if (typeof this.resetEditorSessionDefaults === 'function') {
                 this.resetEditorSessionDefaults();
             }
-            this.editorOpenedFromContentCardView = true;
         }
         this.editorOpenedFromPreview = true;
         this.previewEditStorageKey = ref.storageKey;
@@ -8088,6 +8097,22 @@ export class ContentEditor {
         this.previewEditSaveSlotIndex = ref.saveSlotIndex;
         this.openModalWithData(payload.cardData || null, { fromPreviewRestore: true });
         await this.restoreCanvasFromPayload(payload);
+        if (
+            typeof window !== 'undefined' &&
+            window.__CONTENT_CARD_VIEW_ONLY__ === true &&
+            this._contentCardViewCardId &&
+            (this._contentCardViewPool === 'pip_count' || String(window.__CONTENT_CARD_POOL__ || '') === 'pip_count')
+        ) {
+            if (typeof this.setupPipCountImportSession === 'function') {
+                await this.setupPipCountImportSession({
+                    skipLoadTools: true,
+                    skipAutoAddBlock: true,
+                    skipHintBoardSnapshot: true,
+                });
+            }
+            this.loadTools();
+            this.schedulePipInteractiveCanvasWidthSync();
+        }
     }
 
     /**

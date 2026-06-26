@@ -162,7 +162,10 @@ export async function bootstrapContentCardViewPageImpl(editor) {
 
 export function applyContentCardFetchPayloadImpl(editor, data) {
     if (data && data.card_pool) {
+        editor._contentCardViewPool = String(data.card_pool);
         window.__CONTENT_CARD_POOL__ = String(data.card_pool);
+    } else {
+        editor._contentCardViewPool = 'cards';
     }
     const infoBtn = document.getElementById('contentCardViewInfoBtn');
     const editBtn = document.getElementById('contentCardViewEditFrameBtn');

@@ -290,6 +290,20 @@ export function closeContentCardAdminInfoModalImpl(_editor) {
     modal.setAttribute('aria-hidden', 'true');
 }
 
+export function resolveContentCardViewPoolImpl(editor) {
+    if (editor && editor._contentCardViewPool) {
+        return String(editor._contentCardViewPool);
+    }
+    if (typeof window !== 'undefined' && window.__CONTENT_CARD_POOL__) {
+        return String(window.__CONTENT_CARD_POOL__);
+    }
+    if (typeof window !== 'undefined') {
+        const fromUrl = String(new URLSearchParams(window.location.search || '').get('pool') || '').trim();
+        if (fromUrl) return fromUrl;
+    }
+    return 'cards';
+}
+
 export function ensureViewOnlyEditorMountedImpl(editor) {
     if (window.__CONTENT_CARD_VIEW_ONLY__ !== true || editor._viewOnlyEditorMounted) {
         return;
@@ -328,8 +342,12 @@ export async function openEditorFromContentCardViewImpl(editor) {
     editor.applyContentCardSharedToEditorPayload(payload);
     editor._suspendContentCardViewOnlyForEditor();
     editor.closeCardPreviewModal();
-    /* Редактирование кадра из кабинета — полный редактор «Карточки», не pip-import из Позиции/Ошибок. */
-    if (typeof editor.resetEditorSessionDefaults === 'function') {
+    const cardPool = resolveContentCardViewPoolImpl(editor);
+    const isPipCountCard = cardPool === 'pip_count';
+    if (isPipCountCard) {
+        editor._pipCountImportMode = true;
+        editor._saveCardPool = 'pip_count';
+    } else if (typeof editor.resetEditorSessionDefaults === 'function') {
         editor.resetEditorSessionDefaults();
     }
     editor.editorOpenedFromContentCardView = true;
@@ -340,4 +358,13 @@ export async function openEditorFromContentCardViewImpl(editor) {
     editor._contentCardEditFrameIndex = editor.cardPreviewIndex;
     editor.openModalWithData(payload.cardData || null, { fromPreviewRestore: true });
     await editor.restoreCanvasFromPayload(payload);
+    if (isPipCountCard && typeof editor.setupPipCountImportSession === 'function') {
+        await editor.setupPipCountImportSession({
+            skipLoadTools: true,
+            skipAutoAddBlock: true,
+            skipHintBoardSnapshot: true,
+        });
+        editor.loadTools();
+        editor.schedulePipInteractiveCanvasWidthSync();
+    }
 }
