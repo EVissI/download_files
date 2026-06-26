@@ -4338,17 +4338,16 @@ button.content-card-admin-info-file-link:hover {
     user-select: auto;
     touch-action: manipulation;
     cursor: default;
-    height: auto;
-    min-height: 200px;
     overflow: visible;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
 
-@media (max-width: 768px) {
-    .canvas-element.ce-interactive-pip-count,
-    .canvas-element.ce-interactive-pip-double {
-        min-height: 160px;
-    }
+.canvas-element.ce-interactive-pip-count .ce-interactive-pip-count__inner,
+.canvas-element.ce-interactive-pip-double .ce-interactive-pip-double__inner {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 /* Интерактив «Дабл» (pip_count) */

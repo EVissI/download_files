@@ -1565,14 +1565,7 @@ export class ContentEditor {
             this.addElementToCanvas('interactive-pip-count');
         }
 
-        this.canvas
-            .querySelectorAll(
-                '.canvas-element[data-tool-id="interactive-pip-count"], .canvas-element[data-tool-id="interactive-pip-double"]'
-            )
-            .forEach((el) => this.applyPipInteractiveCanvasLayout(el));
-        requestAnimationFrame(() => {
-            if (this.canvas) this.recalculateAllElementPositions();
-        });
+        this.schedulePipInteractiveCanvasLayoutSync();
 
         if (!options.skipLoadTools) {
             this.loadTools();
@@ -2073,22 +2066,68 @@ export class ContentEditor {
         syncA11y();
     }
 
-    /** Минимальная высота интерактивов пипсов / дабла на холсте редактора. */
-    getPipInteractiveCanvasMinHeight() {
-        return this.isMobile() ? 160 : 200;
+    /** Высота интерактива пипсов/дабла = видимая высота скролл-области канваса. */
+    getPipInteractiveCanvasTargetHeight() {
+        if (!this.canvas) {
+            return Math.max(400, this.getMaxCanvasHeight());
+        }
+        const clientH = this.canvas.clientHeight || 0;
+        const rectH = Math.ceil(this.canvas.getBoundingClientRect().height || 0);
+        const viewH = Math.max(clientH, rectH);
+        if (viewH > 0) {
+            return viewH;
+        }
+        return Math.max(400, this.getMaxCanvasHeight());
     }
 
     isPipInteractiveToolId(toolId) {
         return toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double';
     }
 
-    applyPipInteractiveCanvasLayout(element) {
+    applyPipInteractiveCanvasLayout(element, options = {}) {
         if (!element || !this.isPipInteractiveToolId(element.dataset.toolId)) return;
-        const minH = this.getPipInteractiveCanvasMinHeight();
-        element.style.height = 'auto';
-        element.style.minHeight = minH + 'px';
+        const h =
+            options.height != null && Number.isFinite(Number(options.height))
+                ? Math.max(1, Math.round(Number(options.height)))
+                : this.getPipInteractiveCanvasTargetHeight();
+        element.style.height = `${h}px`;
+        element.style.minHeight = `${h}px`;
+        element.style.maxHeight = `${h}px`;
+        element.dataset.cePipCanvasHeight = String(h);
         element.style.overflow = 'visible';
         element.style.boxSizing = 'border-box';
+        element.style.display = 'flex';
+        element.style.flexDirection = 'column';
+        const inner = element.querySelector('.ce-interactive-pip-count__inner, .ce-interactive-pip-double__inner');
+        if (inner) {
+            inner.style.flex = '1 1 auto';
+            inner.style.display = 'flex';
+            inner.style.flexDirection = 'column';
+            inner.style.minHeight = '0';
+        }
+        const layer = this.getCanvasElementsRoot();
+        if (layer) {
+            layer.style.minHeight = `${h}px`;
+        }
+        return h;
+    }
+
+    /** Дождаться раскладки модалки и выставить пип-блокам высоту канваса. */
+    schedulePipInteractiveCanvasLayoutSync(attempt = 0) {
+        if (!this.canvas) return;
+        const blocks = this.canvas.querySelectorAll(
+            '.canvas-element[data-tool-id="interactive-pip-count"], .canvas-element[data-tool-id="interactive-pip-double"]'
+        );
+        if (!blocks.length) return;
+
+        const targetH = this.getPipInteractiveCanvasTargetHeight();
+        if (targetH < 120 && attempt < 20) {
+            requestAnimationFrame(() => this.schedulePipInteractiveCanvasLayoutSync(attempt + 1));
+            return;
+        }
+
+        blocks.forEach((el) => this.applyPipInteractiveCanvasLayout(el, { height: targetH }));
+        this.recalculateAllElementPositions();
     }
 
     /** Высота блока при пересчёте вертикального стека (как в recalculateAllElementPositions). */
@@ -2108,8 +2147,10 @@ export class ContentEditor {
             return parseInt(element.style.height, 10) || element.offsetHeight || 72;
         }
         if (this.isPipInteractiveToolId(element.dataset.toolId)) {
-            const minH = this.getPipInteractiveCanvasMinHeight();
-            return Math.max(element.offsetHeight || 0, parseInt(element.style.minHeight, 10) || 0, minH);
+            const styled = parseInt(element.style.height, 10);
+            const stored = parseInt(element.dataset.cePipCanvasHeight, 10);
+            const target = this.getPipInteractiveCanvasTargetHeight();
+            return Math.max(styled || 0, stored || 0, element.offsetHeight || 0, target);
         }
         if (element.dataset.toolId === 'interactive-best-move') {
             return Math.max(element.offsetHeight || 0, this.isMobile() ? 120 : 132);
@@ -4064,8 +4105,8 @@ export class ContentEditor {
             defaultHeight = 'auto';
         } else if (toolId === 'interactive-best-move') {
             defaultHeight = this.isMobile() ? 140 : 180;
-        } else if (toolId === 'interactive-pip-count' || toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
-            defaultHeight = 'auto';
+        } else if (this.isPipInteractiveToolId(toolId)) {
+            defaultHeight = this.getPipInteractiveCanvasTargetHeight();
         } else {
             // Other elements have fixed height based on mobile/desktop
             defaultHeight = this.isMobile() ? Math.min(80, maxCanvasHeight - 40) : 150;
@@ -4102,9 +4143,9 @@ export class ContentEditor {
             } else if (toolId === 'interactive-best-move') {
                 element.style.height = 'auto';
                 element.style.minHeight = (this.isMobile() ? 120 : 132) + 'px';
-            } else if (toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double') {
-                element.style.height = 'auto';
-                this.applyPipInteractiveCanvasLayout(element);
+            } else if (this.isPipInteractiveToolId(toolId)) {
+                element.style.height = defaultHeight + 'px';
+                element.style.minHeight = defaultHeight + 'px';
             } else {
                 element.style.height = defaultHeight + 'px';
             }
@@ -4123,7 +4164,7 @@ export class ContentEditor {
                 this.refreshInteractiveBestMoveElementsFromCardData();
             }
             if (this.isPipInteractiveToolId(toolId)) {
-                this.applyPipInteractiveCanvasLayout(element);
+                this.applyPipInteractiveCanvasLayout(element, { height: defaultHeight });
             }
 
             // Если новый элемент был вставлен под выделенным
@@ -4141,7 +4182,8 @@ export class ContentEditor {
                 if (this.isPipInteractiveToolId(toolId)) {
                     this.applyPipInteractiveCanvasLayout(element);
                 }
-                const elementBottom = parseInt(element.style.top, 10) + this.getElementStackHeight(element);
+                const elementBottom =
+                    parseInt(element.style.top, 10) + this.getElementStackHeight(element);
                 this.expandCanvasIfNeeded(elementBottom);
             }, 100);
 
@@ -8190,6 +8232,7 @@ export class ContentEditor {
             mountInteractivePipDoubleBlock(el, { dryRun: true });
             this.applyPipInteractiveCanvasLayout(el);
         });
+        this.schedulePipInteractiveCanvasLayoutSync();
 
         const tryTightStackAfterRestore = (attempt = 0) => {
             if (!this.canvas) return;
@@ -8692,6 +8735,10 @@ export class ContentEditor {
 
             if (toolId === 'interactive-best-move') {
                 this.syncInteractiveBestMoveElementHeight(element);
+            }
+
+            if (this.isPipInteractiveToolId(toolId)) {
+                this.applyPipInteractiveCanvasLayout(element);
             }
         });
 
