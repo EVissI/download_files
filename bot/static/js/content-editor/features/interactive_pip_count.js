@@ -208,19 +208,27 @@ function unbindPipInputMobileMirror(rt) {
     }
 }
 
+function normalizePipCountInputEl(input) {
+    if (!input) return;
+    if (input.type === 'number') {
+        input.type = 'text';
+    }
+    input.setAttribute('inputmode', 'numeric');
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('enterkeyhint', 'done');
+}
+
 function setInputsInteractionState(block, pipState) {
     const inputs = block.querySelectorAll('[data-ce-pip-upper], [data-ce-pip-lower]');
     inputs.forEach((input) => {
-        if (pipState === PIP_ACTION_RUNNING) {
+        normalizePipCountInputEl(input);
+        if (pipState === PIP_ACTION_RUNNING || pipState === PIP_ACTION_IDLE) {
             input.disabled = false;
             input.readOnly = false;
-            input.classList.remove('ce-interactive-pip-count__input--locked');
-            return;
-        }
-        if (pipState === PIP_ACTION_IDLE) {
-            input.disabled = false;
-            input.readOnly = true;
-            input.classList.add('ce-interactive-pip-count__input--locked');
+            input.classList.toggle(
+                'ce-interactive-pip-count__input--locked',
+                pipState === PIP_ACTION_IDLE
+            );
             return;
         }
         input.disabled = true;
@@ -245,15 +253,27 @@ function bindPipInputInteractions(block, rt) {
     };
 
     inputs.forEach((input) => {
-        input.addEventListener('mousedown', stopCanvasBubble, { signal });
-        input.addEventListener('touchstart', stopCanvasBubble, { signal, passive: true });
+        normalizePipCountInputEl(input);
+
+        const tryStartOnInteract = () => {
+            if (rt.state === PIP_ACTION_IDLE) {
+                handlePipStart(block, rt, { focusInput: input });
+            }
+        };
+
+        input.addEventListener('mousedown', (e) => {
+            stopCanvasBubble(e);
+            tryStartOnInteract();
+        }, { signal });
+        input.addEventListener('touchstart', (e) => {
+            stopCanvasBubble(e);
+            tryStartOnInteract();
+        }, { signal, passive: true });
 
         input.addEventListener(
             'focus',
             () => {
-                if (rt.state === PIP_ACTION_IDLE) {
-                    handlePipStart(block, rt, { focusInput: input });
-                }
+                tryStartOnInteract();
                 showPipInputMirror(input);
             },
             { signal }
@@ -262,6 +282,10 @@ function bindPipInputInteractions(block, rt) {
         input.addEventListener(
             'input',
             () => {
+                const cleaned = String(input.value || '').replace(/\D/g, '');
+                if (cleaned !== input.value) {
+                    input.value = cleaned;
+                }
                 updatePipInputMirror(input);
             },
             { signal }

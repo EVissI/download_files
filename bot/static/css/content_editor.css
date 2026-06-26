@@ -4279,6 +4279,14 @@ button.content-card-admin-info-file-link:hover {
     user-select: text;
     -webkit-user-select: text;
     cursor: text;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.ce-interactive-pip-count__input::-webkit-outer-spin-button,
+.ce-interactive-pip-count__input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .ce-interactive-pip-count__input--locked {
