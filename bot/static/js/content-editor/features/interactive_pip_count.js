@@ -478,6 +478,42 @@ export function applyPipCountBoardGateForPreviewHost(hostRoot, pipState) {
     setPreviewBoardPipGate(host.querySelector('.card-preview-board-overlay'), isBoardExpandedForPipState(pipState));
 }
 
+/** После показа/скрытия результата — пересчитать стек (absolute в редакторе, flex в превью). */
+export function syncPipInteractiveLayoutAfterChange(block) {
+    if (typeof window === 'undefined' || !block) return;
+    const editor = window.contentEditor;
+    if (!editor) return;
+
+    const toolId = block.dataset && block.dataset.toolId;
+    if (toolId && typeof editor.isPipInteractiveToolId === 'function' && editor.isPipInteractiveToolId(toolId)) {
+        if (typeof editor.applyPipInteractiveCanvasLayout === 'function') {
+            editor.applyPipInteractiveCanvasLayout(block);
+        }
+    } else {
+        block.style.height = 'auto';
+        block.style.overflow = 'visible';
+    }
+
+    const inEditorCanvas = !!(block.closest && block.closest('#canvas, #editorCanvasContentLayer'));
+    const previewInner = block.closest('.card-preview-surface-inner');
+
+    const applyLayout = () => {
+        if (inEditorCanvas && typeof editor.recalculateAllElementPositions === 'function') {
+            editor.recalculateAllElementPositions();
+            return;
+        }
+        if (previewInner && typeof editor.refreshCardPreviewScale === 'function') {
+            const hostRoot = previewInner.closest('.frame-templates-insert-preview-host');
+            editor.refreshCardPreviewScale(hostRoot || null);
+        }
+    };
+
+    requestAnimationFrame(() => {
+        applyLayout();
+        requestAnimationFrame(applyLayout);
+    });
+}
+
 function getPipInteractiveBlockState(block) {
     if (!block) return PIP_ACTION_IDLE;
     const toolId = block.dataset ? block.dataset.toolId : '';
@@ -589,6 +625,8 @@ function handlePipStop(block, rt) {
         resultEl.textContent = detailLines.join('\n');
     }
 
+    syncPipInteractiveLayoutAfterChange(block);
+
     setActionButtonState(block, PIP_ACTION_STOPPED);
     setInputsDisabled(block, true);
     applyPipCountBoardGateForBlock(block, PIP_ACTION_STOPPED);
@@ -697,6 +735,8 @@ function syncPipCountBlockUi(block, options = {}) {
     bindPipActionButton(block, rt);
     bindPipInputInteractions(block, rt);
     applyPipCountBoardGateForBlock(block, PIP_ACTION_IDLE);
+
+    syncPipInteractiveLayoutAfterChange(block);
 
     block.dataset.cePipCountBound = '1';
 }

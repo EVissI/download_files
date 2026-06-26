@@ -23,6 +23,7 @@ const { openInteractiveBestMoveFeedbackModal } = await import(
 const {
     applyPipCountBoardGateForBlock,
     applyPipCountBoardGateForPreviewHost,
+    syncPipInteractiveLayoutAfterChange,
 } = await import(withFeatureCacheQs('./interactive_pip_count.js'));
 
 export const INTERACTIVE_PIP_DOUBLE_TOOL_ID = 'interactive-pip-double';
@@ -233,6 +234,8 @@ function handleChoice(block, rt, chosenValue) {
             (correct ? ' ✓' : ' ✗');
     }
 
+    syncPipInteractiveLayoutAfterChange(block);
+
     setStartButtonState(block, ACTION_STOPPED);
     unbindChoiceButtons(rt);
     choicesElDisable(block, true);
@@ -392,6 +395,7 @@ function syncBlockUi(block, options = {}) {
     setTimerDisplay(block, '00:00');
     bindStartButton(block, rt);
     applyPipCountBoardGateForBlock(block, ACTION_IDLE);
+    syncPipInteractiveLayoutAfterChange(block);
     block.dataset.cePipDoubleBound = '1';
 }
 
