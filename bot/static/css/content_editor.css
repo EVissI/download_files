@@ -4334,7 +4334,19 @@ button.content-card-admin-info-file-link:hover {
     max-width: 100%;
 }
 
-.canvas-element.ce-interactive-pip-count,
+.canvas-element.ce-interactive-pip-count {
+    pointer-events: auto;
+    user-select: auto;
+    touch-action: manipulation;
+    cursor: default;
+    box-sizing: border-box;
+    height: auto;
+    overflow: visible;
+    left: 0;
+    right: 0;
+    width: auto;
+}
+
 .canvas-element.ce-interactive-pip-double {
     pointer-events: auto;
     user-select: auto;
@@ -4344,11 +4356,12 @@ button.content-card-admin-info-file-link:hover {
     height: auto;
     min-height: 200px;
     overflow: visible;
-    /* Ширину задаёт JS (getCanvasContentWidth); не width:100% — иначе !important бьёт inline и схлопывает блок */
+    left: 0;
+    right: 0;
+    width: auto;
 }
 
 @media (max-width: 768px) {
-    .canvas-element.ce-interactive-pip-count,
     .canvas-element.ce-interactive-pip-double {
         min-height: 160px;
     }
