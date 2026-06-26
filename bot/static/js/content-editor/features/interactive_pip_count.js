@@ -60,6 +60,7 @@ let pipInputMirrorEl = null;
 /** @type {HTMLInputElement|null} */
 let pipInputMirrorActiveInput = null;
 let pipInputMirrorViewportBound = false;
+let pipInputMirrorKeyboardWasOpen = false;
 
 function isNarrowPipInputViewport() {
     if (typeof window === 'undefined') return false;
@@ -83,21 +84,58 @@ function ensurePipInputMirrorEl() {
     return el;
 }
 
+function getLayoutViewportHeight() {
+    if (typeof window === 'undefined') return 0;
+    return window.innerHeight || document.documentElement.clientHeight || 0;
+}
+
+function isPipMobileKeyboardOpen() {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    const layoutH = getLayoutViewportHeight();
+    if (!vv || layoutH <= 0) return false;
+    return vv.height < layoutH * 0.82;
+}
+
 function positionPipInputMirror() {
     if (!pipInputMirrorEl || pipInputMirrorEl.hidden) return;
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    const top = vv ? Math.max(8, vv.offsetTop + 10) : 10;
-    pipInputMirrorEl.style.top = `${top}px`;
+    if (!vv) {
+        pipInputMirrorEl.style.top = '72px';
+        return;
+    }
+    const visibleTop = vv.offsetTop;
+    const visibleH = vv.height;
+    const offsetInVisible = Math.max(64, Math.min(visibleH * 0.2, visibleH - 72));
+    pipInputMirrorEl.style.top = `${Math.round(visibleTop + offsetInVisible)}px`;
+}
+
+function syncPipInputMirrorWithViewport() {
+    if (!pipInputMirrorEl || pipInputMirrorEl.hidden || !pipInputMirrorActiveInput) return;
+
+    const keyboardOpen = isPipMobileKeyboardOpen();
+    if (keyboardOpen) {
+        pipInputMirrorKeyboardWasOpen = true;
+        positionPipInputMirror();
+        return;
+    }
+
+    if (pipInputMirrorKeyboardWasOpen) {
+        pipInputMirrorKeyboardWasOpen = false;
+        hidePipInputMirror();
+        return;
+    }
+
+    positionPipInputMirror();
 }
 
 function bindPipInputMirrorViewport() {
     if (pipInputMirrorViewportBound || typeof window === 'undefined') return;
     pipInputMirrorViewportBound = true;
-    const reposition = () => positionPipInputMirror();
-    window.addEventListener('resize', reposition);
+    const onViewportChange = () => syncPipInputMirrorWithViewport();
+    window.addEventListener('resize', onViewportChange);
     if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', reposition);
-        window.visualViewport.addEventListener('scroll', reposition);
+        window.visualViewport.addEventListener('resize', onViewportChange);
+        window.visualViewport.addEventListener('scroll', onViewportChange);
     }
 }
 
@@ -117,6 +155,7 @@ function showPipInputMirror(input) {
     const el = ensurePipInputMirrorEl();
     if (!el) return;
     bindPipInputMirrorViewport();
+    pipInputMirrorKeyboardWasOpen = false;
     pipInputMirrorActiveInput = input;
     const labelEl = el.querySelector('.ce-pip-count-input-mirror__label');
     const valueEl = el.querySelector('.ce-pip-count-input-mirror__value');
@@ -126,6 +165,7 @@ function showPipInputMirror(input) {
     el.setAttribute('aria-hidden', 'false');
     el.classList.add('ce-pip-count-input-mirror--visible');
     positionPipInputMirror();
+    requestAnimationFrame(() => syncPipInputMirrorWithViewport());
 }
 
 function updatePipInputMirror(input) {
@@ -136,10 +176,22 @@ function updatePipInputMirror(input) {
 
 function hidePipInputMirror() {
     pipInputMirrorActiveInput = null;
+    pipInputMirrorKeyboardWasOpen = false;
     if (!pipInputMirrorEl) return;
     pipInputMirrorEl.hidden = true;
     pipInputMirrorEl.setAttribute('aria-hidden', 'true');
     pipInputMirrorEl.classList.remove('ce-pip-count-input-mirror--visible');
+}
+
+function dismissPipInputKeyboard(input) {
+    hidePipInputMirror();
+    if (input && typeof input.blur === 'function') {
+        try {
+            input.blur();
+        } catch (_e) {
+            /* noop */
+        }
+    }
 }
 
 function unbindPipInputMobileMirror(rt) {
@@ -211,6 +263,16 @@ function bindPipInputInteractions(block, rt) {
             'input',
             () => {
                 updatePipInputMirror(input);
+            },
+            { signal }
+        );
+
+        input.addEventListener(
+            'keydown',
+            (e) => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                dismissPipInputKeyboard(input);
             },
             { signal }
         );

@@ -4346,11 +4346,11 @@ export class ContentEditor {
                             <div class="ce-interactive-pip-count__inputs">
                                 <label class="ce-interactive-pip-count__field">
                                     <span class="ce-interactive-pip-count__field-label">Верхний</span>
-                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-upper inputmode="numeric">
+                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-upper inputmode="numeric" enterkeyhint="done">
                                 </label>
                                 <label class="ce-interactive-pip-count__field">
                                     <span class="ce-interactive-pip-count__field-label">Нижний</span>
-                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-lower inputmode="numeric">
+                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-lower inputmode="numeric" enterkeyhint="done">
                                 </label>
                             </div>
                             <pre class="ce-interactive-pip-count__result" data-ce-pip-result style="display:none"></pre>
@@ -8422,11 +8422,11 @@ export class ContentEditor {
                             <div class="ce-interactive-pip-count__inputs">
                                 <label class="ce-interactive-pip-count__field">
                                     <span class="ce-interactive-pip-count__field-label">Верхний</span>
-                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-upper inputmode="numeric">
+                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-upper inputmode="numeric" enterkeyhint="done">
                                 </label>
                                 <label class="ce-interactive-pip-count__field">
                                     <span class="ce-interactive-pip-count__field-label">Нижний</span>
-                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-lower inputmode="numeric">
+                                    <input type="number" class="ce-interactive-pip-count__input" data-ce-pip-lower inputmode="numeric" enterkeyhint="done">
                                 </label>
                             </div>
                             <pre class="ce-interactive-pip-count__result" data-ce-pip-result style="display:none"></pre>
