@@ -342,13 +342,8 @@ export async function openEditorFromContentCardViewImpl(editor) {
     editor.applyContentCardSharedToEditorPayload(payload);
     editor._suspendContentCardViewOnlyForEditor();
     editor.closeCardPreviewModal();
-    const cardPool = resolveContentCardViewPoolImpl(editor);
-    const isPipCountCard = cardPool === 'pip_count';
-    if (isPipCountCard) {
-        editor._pipCountImportMode = true;
-        editor._saveCardPool = 'pip_count';
-    } else if (typeof editor.resetEditorSessionDefaults === 'function') {
-        editor.resetEditorSessionDefaults();
+    if (typeof editor.prepareContentCardFrameEditSession === 'function') {
+        editor.prepareContentCardFrameEditSession();
     }
     editor.editorOpenedFromContentCardView = true;
     editor.editorOpenedFromPreview = true;
@@ -358,13 +353,4 @@ export async function openEditorFromContentCardViewImpl(editor) {
     editor._contentCardEditFrameIndex = editor.cardPreviewIndex;
     editor.openModalWithData(payload.cardData || null, { fromPreviewRestore: true });
     await editor.restoreCanvasFromPayload(payload);
-    if (isPipCountCard && typeof editor.setupPipCountImportSession === 'function') {
-        await editor.setupPipCountImportSession({
-            skipLoadTools: true,
-            skipAutoAddBlock: true,
-            skipHintBoardSnapshot: true,
-        });
-        editor.loadTools();
-        editor.schedulePipInteractiveCanvasWidthSync();
-    }
 }

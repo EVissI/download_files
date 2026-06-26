@@ -1,4 +1,28 @@
-import {
+/* Все фича-модули — только dynamic import с ?t= от bootstrap, иначе WebView кеширует старые версии. */
+const _featureModuleCacheQs = (() => {
+    try {
+        return new URL(import.meta.url).search || '';
+    } catch (_e) {
+        return '';
+    }
+})();
+function _editorFeatureUrl(relativePath) {
+    return new URL(relativePath, import.meta.url).href + _featureModuleCacheQs;
+}
+
+const [
+    contentCardViewBootstrap,
+    contentCardViewAdmin,
+    textResize,
+    storageTelegramBridge,
+] = await Promise.all([
+    import(_editorFeatureUrl('./content-editor/features/content_card_view_bootstrap.js')),
+    import(_editorFeatureUrl('./content-editor/features/content_card_view_admin.js')),
+    import(_editorFeatureUrl('./content-editor/features/text_resize.js')),
+    import(_editorFeatureUrl('./content-editor/infra/storage_telegram_bridge.js')),
+]);
+
+const {
     applyContentCardFetchPayloadImpl,
     applyContentCardSharedToEditorPayloadImpl,
     assignContentCardSharedContextFromWrapperImpl,
@@ -9,8 +33,9 @@ import {
     initContentCardViewOnlyImpl,
     mergeSharedUnderFrameCardDataImpl,
     wrapContentCardFramesWithSharedImpl,
-} from '/static/js/content-editor/features/content_card_view_bootstrap.js';
-import {
+} = contentCardViewBootstrap;
+
+const {
     buildEmptyContentCardFramePayloadImpl,
     closeContentCardAddFrameModalImpl,
     closeContentCardAdminInfoModalImpl,
@@ -20,23 +45,17 @@ import {
     openContentCardAddFrameModalImpl,
     openContentCardAdminInfoModalImpl,
     openEditorFromContentCardViewImpl,
-} from '/static/js/content-editor/features/content_card_view_admin.js';
-import {
+    resolveContentCardViewPoolImpl,
+} = contentCardViewAdmin;
+
+const {
     autoGrowTextElementContainerImpl,
     beginTextBlockHeightDragImpl,
     setupTextEditingImpl,
-} from '/static/js/content-editor/features/text_resize.js';
-import { waitForTelegramWebAppInitData } from '/static/js/content-editor/infra/storage_telegram_bridge.js';
+} = textResize;
 
-/* Фича-модули со статическим import не наследуют ?t= от content_editor.js — кешируются отдельно.
-   Пробрасываем тот же query, что у динамического import content_editor.js из bootstrap/core. */
-const _featureModuleCacheQs = (() => {
-    try {
-        return new URL(import.meta.url).search || '';
-    } catch (_e) {
-        return '';
-    }
-})();
+const { waitForTelegramWebAppInitData } = storageTelegramBridge;
+
 const {
     appendCardPreviewBoardOverlayImpl,
     cardPreviewApproveImpl,
@@ -61,9 +80,7 @@ const {
     setupCardPreviewTableCollapseImpl,
     shouldShowBoardInCardPreviewImpl,
     updateCardPreviewInnerMinHeightImpl,
-} = await import(
-    new URL('./content-editor/features/content_preview.js', import.meta.url).href + _featureModuleCacheQs
-);
+} = await import(_editorFeatureUrl('./content-editor/features/content_preview.js'));
 const {
     addPresetColorImpl,
     applyCanvasBackgroundImpl,
@@ -83,12 +100,8 @@ const {
     resolveSavedCanvasBackgroundPatternImpl,
     setupPresetColorHandlersImpl,
     switchCanvasSettingsTabImpl,
-} = await import(
-    new URL('./content-editor/features/canvas_background.js', import.meta.url).href + _featureModuleCacheQs
-);
-const { openFrameTemplatesRootModal } = await import(
-    new URL('./content-editor/features/frame_templates.js', import.meta.url).href + _featureModuleCacheQs
-);
+} = await import(_editorFeatureUrl('./content-editor/features/canvas_background.js'));
+const { openFrameTemplatesRootModal } = await import(_editorFeatureUrl('./content-editor/features/frame_templates.js'));
 const {
     fillInteractiveEditorPreviewGrid,
     fillInteractiveBestMoveEditorGridFromResult,
@@ -105,18 +118,14 @@ const {
     syncInteractiveBlockTitleByType,
     INTERACTIVE_TABLE_TYPE_HINTS,
     INTERACTIVE_TABLE_TYPE_CUBE,
-} = await import(
-    new URL('./content-editor/features/interactive_best_move.js', import.meta.url).href + _featureModuleCacheQs
-);
+} = await import(_editorFeatureUrl('./content-editor/features/interactive_best_move.js'));
 
 const {
     setupInteractivePipCountAfterCardPreviewRender,
     refreshInteractivePipCountPreviewBlocks,
     mountInteractivePipCountBlock,
     syncPipCountBoardGatesInScope,
-} = await import(
-    new URL('./content-editor/features/interactive_pip_count.js', import.meta.url).href + _featureModuleCacheQs
-);
+} = await import(_editorFeatureUrl('./content-editor/features/interactive_pip_count.js'));
 
 const {
     setupInteractivePipDoubleAfterCardPreviewRender,
@@ -127,9 +136,7 @@ const {
     normalizePipDoubleCorrectAnswer,
     PIP_DOUBLE_ANSWER_OPTIONS,
     INTERACTIVE_PIP_DOUBLE_TOOL_ID,
-} = await import(
-    new URL('./content-editor/features/interactive_pip_double.js', import.meta.url).href + _featureModuleCacheQs
-);
+} = await import(_editorFeatureUrl('./content-editor/features/interactive_pip_double.js'));
 
 const {
     setupInteractivePipComboAfterCardPreviewRender,
@@ -138,9 +145,7 @@ const {
     getInteractivePipComboInnerHtml,
     ensurePipComboDatasetDefaults,
     INTERACTIVE_PIP_COMBO_TOOL_ID,
-} = await import(
-    new URL('./content-editor/features/interactive_pip_combo.js', import.meta.url).href + _featureModuleCacheQs
-);
+} = await import(_editorFeatureUrl('./content-editor/features/interactive_pip_combo.js'));
 
 /**
  * Content Editor Module
@@ -718,8 +723,37 @@ export class ContentEditor {
         return ensureViewOnlyEditorMountedImpl(this);
     }
 
+    resolveContentCardViewPool() {
+        return resolveContentCardViewPoolImpl(this);
+    }
+
+    isPipCountContentCardContext() {
+        return this.resolveContentCardViewPool() === 'pip_count';
+    }
+
+    /** Pip-редактор при «Редактировать кадр» карточки пула pip_count (кабинет / content-card-view). */
+    prepareContentCardFrameEditSession() {
+        if (this.isPipCountContentCardContext()) {
+            this._pipCountImportMode = true;
+            this._saveCardPool = 'pip_count';
+            return true;
+        }
+        this.resetEditorSessionDefaults();
+        return false;
+    }
+
     async openEditorFromContentCardView() {
-        return openEditorFromContentCardViewImpl(this);
+        const isPipCountCard = this.prepareContentCardFrameEditSession();
+        await openEditorFromContentCardViewImpl(this);
+        if (isPipCountCard && this.modal && this.modal.style.display === 'flex') {
+            await this.setupPipCountImportSession({
+                skipLoadTools: true,
+                skipAutoAddBlock: true,
+                skipHintBoardSnapshot: true,
+            });
+            this.loadTools();
+            this.schedulePipInteractiveCanvasWidthSync();
+        }
     }
 
     createModal() {
@@ -2553,11 +2587,13 @@ export class ContentEditor {
             }
         ];
 
-        const pipImportMode = this.isPipCountImportEditorMode();
+        const pipEditorPalette =
+            this.isPipCountImportEditorMode() ||
+            (this.editorOpenedFromContentCardView && this.isPipCountContentCardContext());
         const pipInteractiveToolIds = new Set(['interactive-pip-count', 'interactive-pip-double', 'interactive-pip-combo']);
         const visibleTools = tools.filter((tool) => {
-            if (pipInteractiveToolIds.has(tool.id)) return pipImportMode;
-            if (pipImportMode && tool.id === 'interactive-best-move') return false;
+            if (pipInteractiveToolIds.has(tool.id)) return pipEditorPalette;
+            if (pipEditorPalette && tool.id === 'interactive-best-move') return false;
             return true;
         });
 
@@ -8081,14 +8117,8 @@ export class ContentEditor {
         this.closeCardPreviewModal();
         if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true && this._contentCardViewCardId) {
             this.editorOpenedFromContentCardView = true;
-            const cardPool =
-                this._contentCardViewPool ||
-                (typeof window.__CONTENT_CARD_POOL__ !== 'undefined' ? String(window.__CONTENT_CARD_POOL__) : 'cards');
-            if (cardPool === 'pip_count') {
-                this._pipCountImportMode = true;
-                this._saveCardPool = 'pip_count';
-            } else if (typeof this.resetEditorSessionDefaults === 'function') {
-                this.resetEditorSessionDefaults();
+            if (typeof this.prepareContentCardFrameEditSession === 'function') {
+                this.prepareContentCardFrameEditSession();
             }
         }
         this.editorOpenedFromPreview = true;
@@ -8097,19 +8127,12 @@ export class ContentEditor {
         this.previewEditSaveSlotIndex = ref.saveSlotIndex;
         this.openModalWithData(payload.cardData || null, { fromPreviewRestore: true });
         await this.restoreCanvasFromPayload(payload);
-        if (
-            typeof window !== 'undefined' &&
-            window.__CONTENT_CARD_VIEW_ONLY__ === true &&
-            this._contentCardViewCardId &&
-            (this._contentCardViewPool === 'pip_count' || String(window.__CONTENT_CARD_POOL__ || '') === 'pip_count')
-        ) {
-            if (typeof this.setupPipCountImportSession === 'function') {
-                await this.setupPipCountImportSession({
-                    skipLoadTools: true,
-                    skipAutoAddBlock: true,
-                    skipHintBoardSnapshot: true,
-                });
-            }
+        if (this.editorOpenedFromContentCardView && this.isPipCountContentCardContext()) {
+            await this.setupPipCountImportSession({
+                skipLoadTools: true,
+                skipAutoAddBlock: true,
+                skipHintBoardSnapshot: true,
+            });
             this.loadTools();
             this.schedulePipInteractiveCanvasWidthSync();
         }
