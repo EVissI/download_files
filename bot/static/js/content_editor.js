@@ -2070,9 +2070,17 @@ export class ContentEditor {
     getCanvasContentWidth() {
         const fallback = this.getMaxCanvasWidth();
         if (!this.canvas) return fallback;
-        const clientW = this.canvas.clientWidth || 0;
-        const rectW = Math.ceil(this.canvas.getBoundingClientRect().width || 0);
-        const w = Math.max(clientW, rectW);
+
+        const layer = this.ensureCanvasContentLayer();
+        const candidates = [
+            this.canvas.clientWidth,
+            this.canvas.offsetWidth,
+            Math.ceil(this.canvas.getBoundingClientRect().width || 0),
+        ];
+        if (layer) {
+            candidates.push(layer.clientWidth, layer.offsetWidth, Math.ceil(layer.getBoundingClientRect().width || 0));
+        }
+        const w = Math.max(0, ...candidates);
         return w > 0 ? w : fallback;
     }
 
@@ -2089,8 +2097,8 @@ export class ContentEditor {
         const minH = this.getPipInteractiveCanvasMinHeight();
         const w = this.getCanvasContentWidth();
         element.style.left = '0px';
-        element.style.width = `${w}px`;
-        element.style.maxWidth = `${w}px`;
+        element.style.setProperty('width', `${w}px`);
+        element.style.setProperty('max-width', `${w}px`);
         element.style.height = 'auto';
         element.style.minHeight = `${minH}px`;
         element.style.maxHeight = '';
@@ -2112,13 +2120,19 @@ export class ContentEditor {
         if (!blocks.length) return;
 
         const targetW = this.getCanvasContentWidth();
-        const firstW = blocks[0] ? blocks[0].offsetWidth : 0;
-        if ((targetW < 80 || firstW < 80) && attempt < 20) {
+        if (targetW < 80 && attempt < 30) {
             requestAnimationFrame(() => this.schedulePipInteractiveCanvasWidthSync(attempt + 1));
             return;
         }
 
         blocks.forEach((el) => this.applyPipInteractiveCanvasLayout(el));
+
+        const firstW = blocks[0] ? blocks[0].offsetWidth : 0;
+        if ((firstW < 80 || Math.abs(firstW - targetW) > 4) && attempt < 30) {
+            requestAnimationFrame(() => this.schedulePipInteractiveCanvasWidthSync(attempt + 1));
+            return;
+        }
+
         this.recalculateAllElementPositions();
     }
 

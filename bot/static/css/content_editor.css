@@ -336,6 +336,8 @@
 .editor-canvas-content-layer {
     position: relative;
     min-height: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .editor-board-display-host.is-visible {
@@ -4338,12 +4340,11 @@ button.content-card-admin-info-file-link:hover {
     user-select: auto;
     touch-action: manipulation;
     cursor: default;
-    width: 100% !important;
-    max-width: 100%;
     box-sizing: border-box;
     height: auto;
     min-height: 200px;
     overflow: visible;
+    /* Ширину задаёт JS (getCanvasContentWidth); не width:100% — иначе !important бьёт inline и схлопывает блок */
 }
 
 @media (max-width: 768px) {
