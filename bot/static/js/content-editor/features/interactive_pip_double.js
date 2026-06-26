@@ -160,16 +160,16 @@ function setStartButtonState(block, state) {
     if (!actionBtn) return;
     actionBtn.dataset.cePipDoubleState = state;
     if (state === ACTION_RUNNING) {
-        actionBtn.textContent = 'Стоп';
-        actionBtn.classList.add('ce-interactive-pip-double__btn--running');
-        actionBtn.disabled = false;
-        actionBtn.setAttribute('aria-label', 'Стоп');
+        actionBtn.hidden = true;
+        actionBtn.classList.remove('ce-interactive-pip-double__btn--running');
     } else if (state === ACTION_STOPPED) {
-        actionBtn.textContent = 'Стоп';
+        actionBtn.hidden = false;
+        actionBtn.textContent = 'Готово';
         actionBtn.classList.remove('ce-interactive-pip-double__btn--running');
         actionBtn.disabled = true;
         actionBtn.setAttribute('aria-label', 'Завершено');
     } else {
+        actionBtn.hidden = false;
         actionBtn.textContent = 'Пуск';
         actionBtn.classList.remove('ce-interactive-pip-double__btn--running');
         actionBtn.disabled = false;
@@ -313,25 +313,6 @@ function handleStart(block, rt) {
     applyPipCountBoardGateForBlock(block, ACTION_RUNNING);
 }
 
-function handleStopWithoutAnswer(block, rt) {
-    if (rt.state !== ACTION_RUNNING) return;
-    rt.state = ACTION_STOPPED;
-    clearTimerInterval(rt);
-    const elapsed = rt.startedAt ? formatElapsedMs(Date.now() - rt.startedAt) : '00:00';
-
-    const resultEl = block.querySelector('[data-ce-pip-double-result]');
-    if (resultEl) {
-        resultEl.style.display = '';
-        resultEl.textContent = 'Время: ' + elapsed + '\nОтвет не выбран.';
-    }
-
-    setStartButtonState(block, ACTION_STOPPED);
-    unbindChoiceButtons(rt);
-    choicesElDisable(block, true);
-    hideChoices(block);
-    applyPipCountBoardGateForBlock(block, ACTION_STOPPED);
-}
-
 function unbindStartButton(rt) {
     if (rt && rt.actionAbort) {
         rt.actionAbort.abort();
@@ -357,8 +338,6 @@ function bindStartButton(block, rt) {
         if (e && typeof e.preventDefault === 'function' && e.type === 'click') e.preventDefault();
         if (rt.state === ACTION_IDLE) {
             handleStart(block, rt);
-        } else if (rt.state === ACTION_RUNNING) {
-            handleStopWithoutAnswer(block, rt);
         }
     };
 

@@ -205,21 +205,22 @@ function setActionButtonState(block, state, phase) {
     if (!actionBtn) return;
     actionBtn.dataset.cePipComboState = state;
     if (state === ACTION_RUNNING && phase === PHASE_PIPS) {
+        actionBtn.hidden = false;
         actionBtn.textContent = 'Далее';
         actionBtn.classList.add('ce-interactive-pip-combo__btn--running');
         actionBtn.disabled = false;
         actionBtn.setAttribute('aria-label', 'Подтвердить пипсы и перейти к даблу');
     } else if (state === ACTION_RUNNING && phase === PHASE_DOUBLE) {
-        actionBtn.textContent = 'Дабл';
+        actionBtn.hidden = true;
         actionBtn.classList.remove('ce-interactive-pip-combo__btn--running');
-        actionBtn.disabled = true;
-        actionBtn.setAttribute('aria-label', 'Выберите ответ по даблу');
     } else if (state === ACTION_STOPPED) {
+        actionBtn.hidden = false;
         actionBtn.textContent = 'Готово';
         actionBtn.classList.remove('ce-interactive-pip-combo__btn--running');
         actionBtn.disabled = true;
         actionBtn.setAttribute('aria-label', 'Завершено');
     } else {
+        actionBtn.hidden = false;
         actionBtn.textContent = 'Пуск';
         actionBtn.classList.remove('ce-interactive-pip-combo__btn--running');
         actionBtn.disabled = false;
