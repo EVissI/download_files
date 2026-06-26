@@ -2545,11 +2545,16 @@ export class ContentEditor {
             }
         ];
 
-        const pipMode = this.isPipCountImportEditorMode();
+        const fromContentCardFrameEdit = this.editorOpenedFromContentCardView === true;
+        const pipImportMode = this.isPipCountImportEditorMode() && !fromContentCardFrameEdit;
+        const pipCountCardFrameEdit =
+            fromContentCardFrameEdit &&
+            typeof window !== 'undefined' &&
+            String(window.__CONTENT_CARD_POOL__ || '') === 'pip_count';
         const pipInteractiveToolIds = new Set(['interactive-pip-count', 'interactive-pip-double', 'interactive-pip-combo']);
         const visibleTools = tools.filter((tool) => {
-            if (pipInteractiveToolIds.has(tool.id)) return pipMode;
-            if (pipMode && tool.id === 'interactive-best-move') return false;
+            if (pipInteractiveToolIds.has(tool.id)) return pipImportMode || pipCountCardFrameEdit;
+            if (pipImportMode && tool.id === 'interactive-best-move') return false;
             return true;
         });
 
@@ -8071,6 +8076,12 @@ export class ContentEditor {
             this._suspendContentCardViewOnlyForEditor();
         }
         this.closeCardPreviewModal();
+        if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true && this._contentCardViewCardId) {
+            if (typeof this.resetEditorSessionDefaults === 'function') {
+                this.resetEditorSessionDefaults();
+            }
+            this.editorOpenedFromContentCardView = true;
+        }
         this.editorOpenedFromPreview = true;
         this.previewEditStorageKey = ref.storageKey;
         this.previewEditFrameId = ref.frameId;

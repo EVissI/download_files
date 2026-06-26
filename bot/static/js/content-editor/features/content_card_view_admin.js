@@ -328,6 +328,10 @@ export async function openEditorFromContentCardViewImpl(editor) {
     editor.applyContentCardSharedToEditorPayload(payload);
     editor._suspendContentCardViewOnlyForEditor();
     editor.closeCardPreviewModal();
+    /* Редактирование кадра из кабинета — полный редактор «Карточки», не pip-import из Позиции/Ошибок. */
+    if (typeof editor.resetEditorSessionDefaults === 'function') {
+        editor.resetEditorSessionDefaults();
+    }
     editor.editorOpenedFromContentCardView = true;
     editor.editorOpenedFromPreview = true;
     editor.previewEditStorageKey = '__content_card_view__';
