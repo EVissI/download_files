@@ -233,6 +233,11 @@ export class ContentEditor {
         /** Возвращаться ли из медиатеки в модалку выбора источника картинки. */
         this._imageLibraryReturnToSourceModal = true;
 
+        /** Пул при сохранении в облако (cards | pip_count). */
+        this._saveCardPool = null;
+        /** Редактор открыт кнопкой «Карточка: подсчёт пипсов». */
+        this._pipCountImportMode = false;
+
         this.init();
     }
 
@@ -1486,6 +1491,34 @@ export class ContentEditor {
     }
 
     /**
+     * Сброс сессии при открытии модалки: обычный редактор или pip_count-импорт.
+     * @param {{ fromPreviewRestore?: boolean, pipCountImport?: boolean }} [options]
+     */
+    _beginEditorSession(options = {}) {
+        if (options.fromPreviewRestore) return;
+        this.clearPreviewEditSession();
+        if (options.pipCountImport) {
+            this._pipCountImportMode = true;
+            this._saveCardPool = 'pip_count';
+            this.boardMatchBannerEnabled = false;
+            this.toggleStates = { boardCanvas: true };
+        } else {
+            this.resetEditorSessionDefaults();
+        }
+    }
+
+    _modalOpenOptionsFromEditorOptions(editorOptions = {}) {
+        const opts = {};
+        if (editorOptions && editorOptions.pipCountImport) {
+            opts.pipCountImport = true;
+        }
+        if (editorOptions && editorOptions.fromPreviewRestore) {
+            opts.fromPreviewRestore = true;
+        }
+        return opts;
+    }
+
+    /**
      * Редактор открыт кнопкой «Карточка (пипсы)» на hint viewer / pokaz.
      */
     isPipCountImportEditorMode() {
@@ -1494,8 +1527,9 @@ export class ContentEditor {
 
     /**
      * Открытие редактора для карточки «Подсчёт пипсов» из Позиции / Ошибок.
+     * @param {{ skipLoadTools?: boolean }} [options]
      */
-    async setupPipCountImportSession() {
+    async setupPipCountImportSession(options = {}) {
         this._saveCardPool = 'pip_count';
         this._pipCountImportMode = true;
         this.cardData = null;
@@ -1531,8 +1565,9 @@ export class ContentEditor {
             this.addElementToCanvas('interactive-pip-count');
         }
 
-        /* openModalWithData вызывает loadTools до setup — обновляем панель инструментов. */
-        this.loadTools();
+        if (!options.skipLoadTools) {
+            this.loadTools();
+        }
     }
 
     /**
@@ -1645,13 +1680,10 @@ export class ContentEditor {
 
     /**
      * @param {object|null} cardData
-     * @param {{ fromPreviewRestore?: boolean }} [options] — если true, не сбрасываем сессию «из предпросмотра»
+     * @param {{ fromPreviewRestore?: boolean, pipCountImport?: boolean }} [options]
      */
     openModalWithData(cardData, options = {}) {
-        if (!options.fromPreviewRestore) {
-            this.clearPreviewEditSession();
-            this.resetEditorSessionDefaults();
-        }
+        this._beginEditorSession(options);
         // Force cache-busting by adding timestamp to modal
         const timestamp = Date.now();
         if (this.modal) {
@@ -1667,7 +1699,7 @@ export class ContentEditor {
         this.resetSelectionForFreshOpen();
 
         // Сохраняем данные карточки для использования при выборе инструмента таблицы
-        this.cardData = cardData;
+        this.cardData = options.pipCountImport ? null : cardData;
 
         // Таблицы и интерактив «лучший ход» зависят от cardData — пересобрать, если холст уже был открыт
         if (this.canvas) {
@@ -1678,9 +1710,10 @@ export class ContentEditor {
         this.forceRefreshContent();
     }
 
-    async openModalWithDuplicateSourceCheck(cardData) {
+    async openModalWithDuplicateSourceCheck(cardData, editorOptions = {}) {
+        const modalOpts = this._modalOpenOptionsFromEditorOptions(editorOptions);
         if (!window || !window.Telegram || !window.Telegram.WebApp) {
-            this.openModalWithData(cardData);
+            this.openModalWithData(cardData, modalOpts);
             return;
         }
         try {
@@ -1689,7 +1722,7 @@ export class ContentEditor {
                 this.openContentCardDuplicateSourceModal(
                     dup.file_name,
                     dup.content_card_id,
-                    () => this.openModalWithData(cardData),
+                    () => this.openModalWithData(cardData, modalOpts),
                     'Всё равно открыть редактор'
                 );
                 return;
@@ -1701,10 +1734,10 @@ export class ContentEditor {
                     '. Редактор открыт без проверки.',
                 'warning'
             );
-            this.openModalWithData(cardData);
+            this.openModalWithData(cardData, modalOpts);
             return;
         }
-        this.openModalWithData(cardData);
+        this.openModalWithData(cardData, modalOpts);
     }
 
     createTableElement(element) {
@@ -2405,7 +2438,7 @@ export class ContentEditor {
                 icon: 'fa fa-clock-o'
             },
             {
-                id: INTERACTIVE_PIP_DOUBLE_TOOL_ID,
+                id: 'interactive-pip-double',
                 name: 'Дабл',
                 type: 'interactive',
                 description: 'Выбор действия по кубу: таймер и три варианта',
@@ -2428,7 +2461,7 @@ export class ContentEditor {
         ];
 
         const pipMode = this.isPipCountImportEditorMode();
-        const pipInteractiveToolIds = new Set(['interactive-pip-count', INTERACTIVE_PIP_DOUBLE_TOOL_ID]);
+        const pipInteractiveToolIds = new Set(['interactive-pip-count', 'interactive-pip-double']);
         const visibleTools = tools.filter((tool) => {
             if (pipInteractiveToolIds.has(tool.id)) return pipMode;
             if (pipMode && tool.id === 'interactive-best-move') return false;
@@ -6269,9 +6302,10 @@ export class ContentEditor {
      * Проверка дубликата по строке позиции (XGID), как в колонке content_cards.board_xgid.
      * Для конструктора позиций (pokaz), где нет исходного .mat-файла.
      */
-    async openModalWithDuplicateBoardXgidCheck(cardData) {
+    async openModalWithDuplicateBoardXgidCheck(cardData, editorOptions = {}) {
+        const modalOpts = this._modalOpenOptionsFromEditorOptions(editorOptions);
         if (!window || !window.Telegram || !window.Telegram.WebApp) {
-            this.openModalWithData(cardData);
+            this.openModalWithData(cardData, modalOpts);
             return;
         }
         let boardXgid = '';
@@ -6286,7 +6320,7 @@ export class ContentEditor {
             console.warn('openModalWithDuplicateBoardXgidCheck:', e);
         }
         if (!boardXgid) {
-            this.openModalWithData(cardData);
+            this.openModalWithData(cardData, modalOpts);
             return;
         }
         try {
@@ -6295,7 +6329,7 @@ export class ContentEditor {
                 this.openContentCardDuplicateSourceModal(
                     boardXgid,
                     dup.content_card_id,
-                    () => this.openModalWithData(cardData),
+                    () => this.openModalWithData(cardData, modalOpts),
                     'Всё равно открыть редактор',
                     'board_xgid'
                 );
@@ -6308,10 +6342,10 @@ export class ContentEditor {
                     '. Редактор открыт без проверки.',
                 'warning'
             );
-            this.openModalWithData(cardData);
+            this.openModalWithData(cardData, modalOpts);
             return;
         }
-        this.openModalWithData(cardData);
+        this.openModalWithData(cardData, modalOpts);
     }
 
     /**
@@ -6330,26 +6364,26 @@ export class ContentEditor {
             if (typeof this.openModalWithDuplicateSourceCheck !== 'function') {
                 throw new Error('Режим duplicateMode=source недоступен: нет openModalWithDuplicateSourceCheck');
             }
-            await this.openModalWithDuplicateSourceCheck(cardData);
+            await this.openModalWithDuplicateSourceCheck(cardData, options);
             return;
         }
         if (duplicateMode === 'board_xgid') {
             if (typeof this.openModalWithDuplicateBoardXgidCheck !== 'function') {
                 throw new Error('Режим duplicateMode=board_xgid недоступен: нет openModalWithDuplicateBoardXgidCheck');
             }
-            await this.openModalWithDuplicateBoardXgidCheck(cardData);
+            await this.openModalWithDuplicateBoardXgidCheck(cardData, options);
             return;
         }
         if (typeof this.openModalWithDuplicateSourceCheck === 'function') {
-            await this.openModalWithDuplicateSourceCheck(cardData);
+            await this.openModalWithDuplicateSourceCheck(cardData, options);
             return;
         }
         if (typeof this.openModalWithDuplicateBoardXgidCheck === 'function') {
-            await this.openModalWithDuplicateBoardXgidCheck(cardData);
+            await this.openModalWithDuplicateBoardXgidCheck(cardData, options);
             return;
         }
         if (typeof this.openModalWithData === 'function') {
-            this.openModalWithData(cardData);
+            this.openModalWithData(cardData, this._modalOpenOptionsFromEditorOptions(options));
             return;
         }
         throw new Error('ContentEditor не содержит методов открытия модального окна');

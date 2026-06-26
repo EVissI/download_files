@@ -7084,14 +7084,17 @@
             }
             try {
                 if (typeof contentEditor.openModalWithBestDuplicateCheck === 'function') {
-                    await contentEditor.openModalWithBestDuplicateCheck(null, { duplicateMode: 'board_xgid' });
+                    await contentEditor.openModalWithBestDuplicateCheck(null, {
+                        duplicateMode: 'board_xgid',
+                        pipCountImport: true,
+                    });
                 } else if (typeof contentEditor.openModalWithData === 'function') {
-                    contentEditor.openModalWithData(null);
+                    contentEditor.openModalWithData(null, { pipCountImport: true });
                 } else {
                     throw new Error('ContentEditor не содержит методов открытия редактора');
                 }
                 if (typeof contentEditor.setupPipCountImportSession === 'function') {
-                    await contentEditor.setupPipCountImportSession();
+                    await contentEditor.setupPipCountImportSession({ skipLoadTools: true });
                 }
             } catch (e) {
                 console.error('openPipCountCardEditor failed:', e);
