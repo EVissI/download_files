@@ -1486,6 +1486,13 @@ export class ContentEditor {
     }
 
     /**
+     * Редактор открыт кнопкой «Карточка (пипсы)» на hint viewer / pokaz.
+     */
+    isPipCountImportEditorMode() {
+        return this._pipCountImportMode === true;
+    }
+
+    /**
      * Открытие редактора для карточки «Подсчёт пипсов» из Позиции / Ошибок.
      */
     async setupPipCountImportSession() {
@@ -1523,6 +1530,9 @@ export class ContentEditor {
         if (this.canvas && !this.canvas.querySelector('[data-tool-id="interactive-pip-count"]')) {
             this.addElementToCanvas('interactive-pip-count');
         }
+
+        /* openModalWithData вызывает loadTools до setup — обновляем панель инструментов. */
+        this.loadTools();
     }
 
     /**
@@ -2417,9 +2427,10 @@ export class ContentEditor {
             }
         ];
 
-        const pipMode = this._saveCardPool === 'pip_count' || this._pipCountImportMode;
+        const pipMode = this.isPipCountImportEditorMode();
+        const pipInteractiveToolIds = new Set(['interactive-pip-count', INTERACTIVE_PIP_DOUBLE_TOOL_ID]);
         const visibleTools = tools.filter((tool) => {
-            if (tool.id === INTERACTIVE_PIP_DOUBLE_TOOL_ID) return pipMode;
+            if (pipInteractiveToolIds.has(tool.id)) return pipMode;
             if (pipMode && tool.id === 'interactive-best-move') return false;
             return true;
         });
