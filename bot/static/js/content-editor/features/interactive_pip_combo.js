@@ -323,7 +323,7 @@ function handleChoice(block, rt, chosenValue) {
     }
 
     detailLines.push(
-        'Дабл — ваш: ' +
+        'Дабл - ваш: ' +
             pipDoubleAnswerLabel(chosenValue) +
             ', верно: ' +
             pipDoubleAnswerLabel(correctAnswer) +
