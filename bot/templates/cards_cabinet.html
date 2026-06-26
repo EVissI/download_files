@@ -2063,9 +2063,13 @@
     <div id="interactiveStatsModal" class="shuffle-modal" aria-hidden="true">
         <div class="shuffle-modal__overlay" id="interactiveStatsModalOverlay"></div>
         <div class="shuffle-modal__box" role="dialog" aria-modal="true" aria-labelledby="interactiveStatsModalTitle">
-            <h3 id="interactiveStatsModalTitle" class="shuffle-modal__title">Интерактив «лучший ход»</h3>
+            <h3 id="interactiveStatsModalTitle" class="shuffle-modal__title">{% if cabinet_pool == 'pip_count' %}Подсчёт пипсов{% else %}Интерактив «лучший ход»{% endif %}</h3>
             <p id="interactiveStatsModalBody" class="shuffle-modal__msg" style="min-height: 48px; color: #e8e8e8;"></p>
             <div class="shuffle-modal__actions">
+                {% if cabinet_pool == 'pip_count' %}
+                <button type="button" id="interactiveStatsModalClearBtn"
+                    class="shuffle-modal__btn">Очистить</button>
+                {% endif %}
                 <button type="button" id="interactiveStatsModalCloseBtn"
                     class="shuffle-modal__btn shuffle-modal__btn--primary">Закрыть</button>
             </div>
@@ -2218,6 +2222,7 @@
             var interactiveStatsModalOverlay = document.getElementById('interactiveStatsModalOverlay');
             var interactiveStatsModalBody = document.getElementById('interactiveStatsModalBody');
             var interactiveStatsModalCloseBtn = document.getElementById('interactiveStatsModalCloseBtn');
+            var interactiveStatsModalClearBtn = document.getElementById('interactiveStatsModalClearBtn');
             var assignCardsModal = document.getElementById('assignCardsModal');
             var assignCardsModalOverlay = document.getElementById('assignCardsModalOverlay');
             var assignCardsModalMsg = document.getElementById('assignCardsModalMsg');
@@ -3928,11 +3933,27 @@
                     }
                 }
 
-                function openInteractiveStatsModal() {
+                function renderInteractiveStatsBody(c, w) {
+                    if (!interactiveStatsModalBody) return;
+                    var totalAttempts = c + w;
+                    var correctPct =
+                        totalAttempts > 0
+                            ? String(Math.round((c / totalAttempts) * 100))
+                            : '—';
+                    interactiveStatsModalBody.innerHTML =
+                        'Верных ответов: <strong>' +
+                        c +
+                        '</strong><br>Ошибок: <strong>' +
+                        w +
+                        '</strong><br>Процент верных решений: <strong>' +
+                        correctPct +
+                        (totalAttempts > 0 ? '%' : '') +
+                        '</strong>';
+                }
+
+                function loadInteractiveStatsModal() {
                     if (!interactiveStatsModal || !interactiveStatsModalBody) return;
                     interactiveStatsModalBody.textContent = 'Загрузка…';
-                    interactiveStatsModal.classList.add('is-open');
-                    interactiveStatsModal.setAttribute('aria-hidden', 'false');
                     fetch('/api/content_cards/interactive/stats_total', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3952,20 +3973,45 @@
                             }
                             var c = Number((res.data && res.data.correct_count) || 0);
                             var w = Number((res.data && res.data.wrong_count) || 0);
-                            var totalAttempts = c + w;
-                            var correctPct =
-                                totalAttempts > 0
-                                    ? String(Math.round((c / totalAttempts) * 100))
-                                    : '—';
-                            interactiveStatsModalBody.innerHTML =
-                                'Верных ответов: <strong>' +
-                                c +
-                                '</strong><br>Ошибок: <strong>' +
-                                w +
-                                '</strong><br>Процент верных решений: <strong>' +
-                                correctPct +
-                                (totalAttempts > 0 ? '%' : '') +
-                                '</strong>';
+                            renderInteractiveStatsBody(c, w);
+                        })
+                        .catch(function () {
+                            interactiveStatsModalBody.textContent = 'Ошибка сети';
+                        });
+                }
+
+                function openInteractiveStatsModal() {
+                    if (!interactiveStatsModal || !interactiveStatsModalBody) return;
+                    interactiveStatsModal.classList.add('is-open');
+                    interactiveStatsModal.setAttribute('aria-hidden', 'false');
+                    loadInteractiveStatsModal();
+                }
+
+                function clearInteractiveStats() {
+                    if (CABINET_POOL !== 'pip_count') return;
+                    if (!window.confirm('Очистить статистику? После этого можно будет снова пройти карточки.')) {
+                        return;
+                    }
+                    if (!interactiveStatsModalBody) return;
+                    interactiveStatsModalBody.textContent = 'Очистка…';
+                    fetch('/api/content_cards/interactive/stats_clear', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(authPayload({}))
+                    })
+                        .then(function (r) {
+                            return r.json().then(function (data) {
+                                return { ok: r.ok, data: data };
+                            });
+                        })
+                        .then(function (res) {
+                            if (!res.ok) {
+                                var d = res.data && res.data.detail;
+                                interactiveStatsModalBody.textContent =
+                                    typeof d === 'string' ? d : 'Не удалось очистить статистику';
+                                return;
+                            }
+                            renderInteractiveStatsBody(0, 0);
                         })
                         .catch(function () {
                             interactiveStatsModalBody.textContent = 'Ошибка сети';
@@ -4078,6 +4124,9 @@
                 }
                 if (interactiveStatsModalCloseBtn) {
                     interactiveStatsModalCloseBtn.addEventListener('click', closeInteractiveStatsModal);
+                }
+                if (interactiveStatsModalClearBtn) {
+                    interactiveStatsModalClearBtn.addEventListener('click', clearInteractiveStats);
                 }
                 if (cabinetInteractiveStatsBtn) {
                     cabinetInteractiveStatsBtn.addEventListener('click', function () {

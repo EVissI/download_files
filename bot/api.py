@@ -1063,6 +1063,15 @@ async def _user_can_access_content_card_interactive(
     return False
 
 
+def _normalize_content_card_pool(pool: str | None) -> ContentCardPool | None:
+    if not pool:
+        return None
+    try:
+        return ContentCardPool(pool)
+    except ValueError:
+        return None
+
+
 async def _build_start_link_for_cards_activation(link_token: str) -> str:
     me = await bot.get_me()
     if not me.username:
@@ -1976,7 +1985,7 @@ async def content_cards_mark_viewed(body: ContentCardMarkViewedBody):
 
 @app.post("/api/content_cards/interactive/record")
 async def content_cards_interactive_record(body: ContentCardInteractiveRecordBody):
-    """Учёт ответа в интерактиве «лучший ход» (доступ как у fetch)."""
+    """Учёт ответа в интерактиве карточки (доступ как у fetch)."""
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     incr_c = 1 if body.correct else 0
     incr_w = 0 if body.correct else 1
@@ -1986,6 +1995,36 @@ async def content_cards_interactive_record(body: ContentCardInteractiveRecordBod
             session, user_id, body.content_card_id
         ):
             raise HTTPException(status_code=403, detail="Нет доступа к этой карточке")
+
+        card_dao = ContentCardDAO(session)
+        card = await card_dao.find_one_or_none_by_id(body.content_card_id)
+        if not card:
+            raise HTTPException(status_code=404, detail="Карточка не найдена")
+
+        card_pool = card.card_pool
+        if not isinstance(card_pool, ContentCardPool):
+            card_pool = ContentCardPool(card_pool)
+
+        if card_pool == ContentCardPool.PIP_COUNT:
+            existing = await session.execute(
+                select(UserContentCardInteractiveStat.id).where(
+                    UserContentCardInteractiveStat.user_id == user_id,
+                    UserContentCardInteractiveStat.content_card_id == body.content_card_id,
+                )
+            )
+            if existing.scalar_one_or_none() is not None:
+                return {"ok": True, "skipped": True}
+
+            await session.execute(
+                insert(UserContentCardInteractiveStat).values(
+                    user_id=user_id,
+                    content_card_id=body.content_card_id,
+                    correct_count=incr_c,
+                    wrong_count=incr_w,
+                )
+            )
+            await session.commit()
+            return {"ok": True}
 
         stmt = insert(UserContentCardInteractiveStat).values(
             user_id=user_id,
@@ -2035,20 +2074,57 @@ async def content_cards_interactive_stats(body: ContentCardInteractiveStatsBody)
 
 @app.post("/api/content_cards/interactive/stats_total")
 async def content_cards_interactive_stats_total(body: ContentCardMyListBody):
-    """Суммарная статистика интерактива по всем карточкам текущего пользователя."""
+    """Суммарная статистика интерактива по карточкам пула текущего пользователя."""
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    pool = _normalize_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
-        q = select(
-            func.coalesce(func.sum(UserContentCardInteractiveStat.correct_count), 0),
-            func.coalesce(func.sum(UserContentCardInteractiveStat.wrong_count), 0),
-        ).where(UserContentCardInteractiveStat.user_id == user_id)
+        q = (
+            select(
+                func.coalesce(func.sum(UserContentCardInteractiveStat.correct_count), 0),
+                func.coalesce(func.sum(UserContentCardInteractiveStat.wrong_count), 0),
+            )
+            .select_from(UserContentCardInteractiveStat)
+            .join(
+                ContentCard,
+                ContentCard.id == UserContentCardInteractiveStat.content_card_id,
+            )
+            .where(UserContentCardInteractiveStat.user_id == user_id)
+        )
+        if pool is not None:
+            q = q.where(ContentCard.card_pool == pool)
         row = await session.execute(q)
         c_sum, w_sum = row.one()
         return {
             "correct_count": int(c_sum),
             "wrong_count": int(w_sum),
         }
+
+
+@app.post("/api/content_cards/interactive/stats_clear")
+async def content_cards_interactive_stats_clear(body: ContentCardMyListBody):
+    """Сброс статистики интерактива по карточкам пула pip_count."""
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    pool = _normalize_content_card_pool(body.pool)
+    if pool != ContentCardPool.PIP_COUNT:
+        raise HTTPException(
+            status_code=400,
+            detail="Сброс статистики доступен только для пула pip_count",
+        )
+
+    async with async_session_maker() as session:
+        pip_card_ids = select(ContentCard.id).where(
+            ContentCard.card_pool == ContentCardPool.PIP_COUNT
+        )
+        await session.execute(
+            delete(UserContentCardInteractiveStat).where(
+                UserContentCardInteractiveStat.user_id == user_id,
+                UserContentCardInteractiveStat.content_card_id.in_(pip_card_ids),
+            )
+        )
+        await session.commit()
+
+    return {"ok": True}
 
 
 @app.post("/api/content_cards/set_status")
