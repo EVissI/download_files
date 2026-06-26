@@ -1,7 +1,7 @@
 """add pokaz screenshot font scale
 
 Revision ID: d9e0f1a2b3c4
-Revises: c8d9e0f1a2b3
+Revises: e2f3a4b5c6d7
 Create Date: 2026-06-07 14:00:00.000000
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 revision: str = "d9e0f1a2b3c4"
-down_revision: Union[str, Sequence[str], None] = "c8d9e0f1a2b3"
+down_revision: Union[str, Sequence[str], None] = "e2f3a4b5c6d7"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
