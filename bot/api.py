@@ -21,7 +21,12 @@ from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.common.service.hint_s3_service import HintS3Storage
-from bot.common.service.webapp_settings_service import get_webapp_fullscreen_enabled
+from bot.common.service.webapp_settings_service import (
+    get_webapp_fullscreen_enabled,
+    get_pokaz_screenshot_font_scale_percent,
+    set_pokaz_screenshot_font_scale_percent,
+    clamp_hint_viewer_screenshot_font_scale_percent,
+)
 from bot.config import settings
 from bot.config import bot, scheduler, SUPPORT_TG_ID, translator_hub
 from bot.common.utils.i18n import get_text_for_locale
@@ -282,6 +287,7 @@ async def get_pokaz(
     translations = _get_pokaz_translations(lang)
     cache_timestamp = int(time.time())
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("pokaz")
+    pokaz_screenshot_font_scale_percent = await get_pokaz_screenshot_font_scale_percent()
     response = templates.TemplateResponse(
         "pokaz.html",
         {
@@ -292,12 +298,46 @@ async def get_pokaz(
             "i18n": translations,
             "cache_timestamp": cache_timestamp,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
+            "pokaz_screenshot_font_scale_percent": pokaz_screenshot_font_scale_percent,
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
+
+@app.post("/api/pokaz_screenshot_font_scale")
+async def update_pokaz_screenshot_font_scale(request: Request):
+    """Сохраняет глобальный масштаб шрифта для скриншотов pokaz (только ROOT_ADMIN)."""
+    try:
+        data = await request.json()
+        init_data = data.get("initData")
+        if not init_data:
+            raise HTTPException(status_code=400, detail="Missing initData")
+
+        user_data = verify_telegram_webapp_data(init_data)
+        if not user_data:
+            raise HTTPException(status_code=401, detail="Invalid Telegram data")
+
+        user_id = user_data.get("user", {}).get("id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Invalid user data")
+        if user_id not in settings.ROOT_ADMIN_IDS:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        font_scale_percent = clamp_hint_viewer_screenshot_font_scale_percent(
+            data.get("fontScalePercent", 100)
+        )
+        saved = await set_pokaz_screenshot_font_scale_percent(font_scale_percent)
+        return {"fontScalePercent": saved}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating pokaz screenshot font scale: {e}")
+        raise HTTPException(
+            status_code=500, detail="Error updating screenshot font scale"
+        )
 
 
 @app.get("/content-card-view")

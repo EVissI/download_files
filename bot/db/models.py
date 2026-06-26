@@ -669,6 +669,9 @@ class WebAppSetting(Base):
     hint_viewer_screenshot_font_scale_percent: Mapped[int] = mapped_column(
         Integer, nullable=False, default=100
     )
+    pokaz_screenshot_font_scale_percent: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=100
+    )
 
 
 class ContentCardPool(str, enum.Enum):

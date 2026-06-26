@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="pokaz-screenshot-font-scale" content="{{ pokaz_screenshot_font_scale_percent | default(100) }}">
     <title>{{ i18n.title }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
@@ -2233,6 +2234,26 @@
             font-size: 16px;
         }
 
+        .admin-screenshot-font-scale {
+            margin: 16px 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .admin-screenshot-font-scale select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 14px;
+        }
+
         #adminCommentBtn {
             background-color: #007bff;
             color: white;
@@ -3255,6 +3276,27 @@
                 <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()"
                     data-i18n="comment_send">Отправить</button>
             </div>
+        </div>
+    </div>
+
+    <div id="pokazScreenshotAdminContainer" style="margin: 0 0 20px; text-align: center; display: none;">
+        <div class="admin-screenshot-font-scale">
+            <label for="pokazScreenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
+            <select id="pokazScreenshotFontScaleSelect" onchange="savePokazScreenshotFontScale()">
+                <option value="80">80%</option>
+                <option value="90">90%</option>
+                <option value="100">100%</option>
+                <option value="110">110%</option>
+                <option value="120">120%</option>
+                <option value="130">130%</option>
+                <option value="140">140%</option>
+                <option value="150">150%</option>
+                <option value="160">160%</option>
+                <option value="170">170%</option>
+                <option value="180">180%</option>
+                <option value="190">190%</option>
+                <option value="200">200%</option>
+            </select>
         </div>
     </div>
 
@@ -4576,7 +4618,7 @@
         let imagesLoaded = 0;
         const totalImages = 21;
         let upperPlayerColor = 'black'; // 'black' or 'white' - который игрок сверху (при 'black' нижний игрок — белые)
-        let pokazIsAdmin = false;
+        window.pokazIsAdmin = false;
         let latestHintsData = null;
 
         // XGID string from server (if provided) - read from hidden script element
@@ -4610,11 +4652,17 @@
                 if (!response.ok) return;
                 const data = await response.json().catch(() => ({}));
                 if (data && data.is_admin) {
-                    pokazIsAdmin = true;
+                    window.pokazIsAdmin = true;
                     const btn = document.getElementById('openPokazCardEditorBtn');
                     if (btn) btn.style.display = 'inline-block';
                     const pipBtn = document.getElementById('openPokazPipCountCardEditorBtn');
                     if (pipBtn) pipBtn.style.display = 'inline-block';
+                    const screenshotAdmin = document.getElementById('pokazScreenshotAdminContainer');
+                    if (screenshotAdmin) screenshotAdmin.style.display = 'block';
+                    const fontScaleSelect = document.getElementById('pokazScreenshotFontScaleSelect');
+                    if (fontScaleSelect && typeof pokazScreenshotFontScale !== 'undefined') {
+                        fontScaleSelect.value = String(pokazScreenshotFontScale);
+                    }
                 }
             } catch (e) {
                 console.error('checkPokazAdminStatus:', e);
@@ -7077,7 +7125,7 @@
         };
 
         window.openPipCountCardEditor = async function () {
-            if (!pokazIsAdmin) return;
+            if (!window.pokazIsAdmin) return;
             if (typeof contentEditor === 'undefined') {
                 showMessageModal('Редактор карточек не инициализирован', 'error');
                 return;
@@ -7103,7 +7151,7 @@
         };
 
         window.openPokazCardEditor = async function () {
-            if (!pokazIsAdmin) return;
+            if (!window.pokazIsAdmin) return;
             if (typeof contentEditor === 'undefined') {
                 console.error('ContentEditor не инициализирован');
                 showMessageModal('Редактор карточек не инициализирован', 'error');
@@ -7199,6 +7247,100 @@
     }
 
     // Функции для работы со скриншотами (в глобальной области видимости)
+    let pokazScreenshotFontScale = (function () {
+        const meta = document.querySelector('meta[name="pokaz-screenshot-font-scale"]');
+        const parsed = parseInt(meta?.getAttribute('content') || '100', 10);
+        return Number.isNaN(parsed) ? 100 : parsed;
+    })();
+    let pokazScreenshotFontScaleBackup = [];
+
+    function isPokazScreenshotFontScaleSkipped(el) {
+        if (!el || el.nodeType !== 1) return true;
+        if (el.id === 'boardCanvas') return true;
+        if (el.closest('#boardCanvas')) return true;
+        if (el.closest('#pokazScreenshotAdminContainer')) return true;
+        if (el.tagName === 'CANVAS') return true;
+        return false;
+    }
+
+    function applyPokazScreenshotFontScale() {
+        const scale = pokazScreenshotFontScale / 100;
+        pokazScreenshotFontScaleBackup = [];
+        if (scale === 1) return;
+
+        const container = document.querySelector('.container');
+        if (!container) return;
+
+        const elements = container.querySelectorAll('*');
+        const updates = [];
+        elements.forEach((el) => {
+            if (isPokazScreenshotFontScaleSkipped(el)) return;
+            const px = parseFloat(window.getComputedStyle(el).fontSize);
+            if (!px || Number.isNaN(px)) return;
+            updates.push({
+                el,
+                fontSize: el.style.fontSize,
+                nextFontSize: `${Math.round(px * scale * 10) / 10}px`,
+            });
+        });
+        updates.forEach(({ el, fontSize, nextFontSize }) => {
+            pokazScreenshotFontScaleBackup.push({ el, fontSize });
+            el.style.fontSize = nextFontSize;
+        });
+    }
+
+    function removePokazScreenshotFontScale() {
+        pokazScreenshotFontScaleBackup.forEach(({ el, fontSize }) => {
+            el.style.fontSize = fontSize;
+        });
+        pokazScreenshotFontScaleBackup = [];
+    }
+
+    function restorePokazScreenshotAdminContainerAfterScreenshot(container, originalDisplay) {
+        if (!container) return;
+        if (window.pokazIsAdmin && originalDisplay !== null) {
+            container.style.display = originalDisplay;
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    async function savePokazScreenshotFontScale() {
+        const select = document.getElementById('pokazScreenshotFontScaleSelect');
+        if (!select) return;
+
+        const fontScalePercent = parseInt(select.value, 10);
+        pokazScreenshotFontScale = fontScalePercent;
+
+        let initData = '';
+        if (window.Telegram && window.Telegram.WebApp) {
+            initData = window.Telegram.WebApp.initData;
+        }
+        if (!initData) {
+            showMessageModal('Не удалось сохранить: нет данных Telegram', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/pokaz_screenshot_font_scale', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData, fontScalePercent })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                pokazScreenshotFontScale = data.fontScalePercent;
+                select.value = String(pokazScreenshotFontScale);
+                showMessageModal('Масштаб шрифта для скриншота сохранён', 'success');
+            } else {
+                showMessageModal('Не удалось сохранить масштаб шрифта', 'error');
+            }
+        } catch (error) {
+            console.error('Error saving pokaz screenshot font scale:', error);
+            showMessageModal('Не удалось сохранить масштаб шрифта', 'error');
+        }
+    }
+
     function takeScreenshot() {
         // Скрываем элементы управления перед созданием скриншота
         const screenshotControls = document.getElementById('screenshotControls');
@@ -7211,6 +7353,8 @@
         const modeToggleContainer = document.querySelector('.mode-toggle-container');
         const dropdowns = document.querySelectorAll('.dropdown, .point-selector-custom');
         const adminCommentContainer = document.querySelector('.admin-comment-container');
+        const pokazScreenshotAdminContainer = document.getElementById('pokazScreenshotAdminContainer');
+        const originalPokazScreenshotAdminDisplay = pokazScreenshotAdminContainer ? pokazScreenshotAdminContainer.style.display : null;
 
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
@@ -7247,6 +7391,8 @@
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
+            restorePokazScreenshotAdminContainerAfterScreenshot(pokazScreenshotAdminContainer, originalPokazScreenshotAdminDisplay);
+            removePokazScreenshotFontScale();
         }
 
         // Скрываем элементы
@@ -7259,6 +7405,7 @@
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
+        if (pokazScreenshotAdminContainer) pokazScreenshotAdminContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
 
         // Добавляем отступ сверху для текста типа игры на скриншотах
@@ -7272,6 +7419,7 @@
         // Скрываем столбец с кнопками в таблице подсказок на скриншоте
         document.body.classList.add('screenshot-mode');
 
+        applyPokazScreenshotFontScale();
         // Создаем скриншот
         html2canvas(document.body, {
             useCORS: true,
@@ -7340,6 +7488,8 @@
         const modeToggleContainer = document.querySelector('.mode-toggle-container');
         const dropdowns = document.querySelectorAll('.dropdown, .point-selector-custom');
         const adminCommentContainer = document.querySelector('.admin-comment-container');
+        const pokazScreenshotAdminContainer = document.getElementById('pokazScreenshotAdminContainer');
+        const originalPokazScreenshotAdminDisplay = pokazScreenshotAdminContainer ? pokazScreenshotAdminContainer.style.display : null;
 
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         const originalActionButtonsDisplay = actionButtons ? actionButtons.style.display : null;
@@ -7376,6 +7526,8 @@
             dropdowns.forEach((d, i) => {
                 if (originalDropdownsDisplay[i] !== undefined) d.style.display = originalDropdownsDisplay[i];
             });
+            restorePokazScreenshotAdminContainerAfterScreenshot(pokazScreenshotAdminContainer, originalPokazScreenshotAdminDisplay);
+            removePokazScreenshotFontScale();
         }
 
         if (screenshotControls) screenshotControls.style.display = 'none';
@@ -7387,6 +7539,7 @@
         if (turnDiceWrapper) turnDiceWrapper.style.display = 'none';
         if (modeToggleContainer) modeToggleContainer.style.display = 'none';
         if (adminCommentContainer) adminCommentContainer.style.display = 'none';
+        if (pokazScreenshotAdminContainer) pokazScreenshotAdminContainer.style.display = 'none';
         dropdowns.forEach(d => d.style.display = 'none');
 
         // Добавляем отступ сверху для текста типа игры на скриншотах
@@ -7399,7 +7552,9 @@
 
         document.body.classList.add('screenshot-mode');
 
+        applyPokazScreenshotFontScale();
         html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
+            removePokazScreenshotFontScale();
             document.body.classList.remove('screenshot-mode');
             canvas.toBlob(blob => {
                 const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
@@ -7499,13 +7654,19 @@
         const originalScreenshotDisplay = screenshotControls ? screenshotControls.style.display : null;
         if (screenshotControls) screenshotControls.style.display = 'none';
 
+        const pokazScreenshotAdminContainer = document.getElementById('pokazScreenshotAdminContainer');
+        const originalPokazScreenshotAdminDisplay = pokazScreenshotAdminContainer ? pokazScreenshotAdminContainer.style.display : null;
+        if (pokazScreenshotAdminContainer) pokazScreenshotAdminContainer.style.display = 'none';
+
         document.body.classList.add('screenshot-mode');
 
+        applyPokazScreenshotFontScale();
         html2canvas(document.body, {
             useCORS: true,
             allowTaint: true,
             backgroundColor: '#1a1a1a'
         }).then(canvas => {
+            removePokazScreenshotFontScale();
             document.body.classList.remove('screenshot-mode');
             canvas.toBlob(blob => {
                 const initDataUnsafe = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.initDataUnsafe : null;
@@ -7527,6 +7688,8 @@
                     adminContainer.style.display = originalAdminDisplay;
                     modal.style.display = originalModalDisplay;
                     if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
+                    restorePokazScreenshotAdminContainerAfterScreenshot(pokazScreenshotAdminContainer, originalPokazScreenshotAdminDisplay);
+                    removePokazScreenshotFontScale();
                     return;
                 }
 
@@ -7571,11 +7734,15 @@
                     }
                     modal.style.display = originalModalDisplay;
                     if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
+                    restorePokazScreenshotAdminContainerAfterScreenshot(pokazScreenshotAdminContainer, originalPokazScreenshotAdminDisplay);
+                    removePokazScreenshotFontScale();
                 }).finally(() => {
                     sendBtn.disabled = false;
                     sendBtn.innerText = originalBtnText;
                     adminContainer.style.display = originalAdminDisplay;
                     if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
+                    restorePokazScreenshotAdminContainerAfterScreenshot(pokazScreenshotAdminContainer, originalPokazScreenshotAdminDisplay);
+                    removePokazScreenshotFontScale();
                 });
             });
         }).catch(error => {
@@ -7587,6 +7754,8 @@
             sendBtn.innerText = originalBtnText;
             adminContainer.style.display = originalAdminDisplay;
             if (screenshotControls && originalScreenshotDisplay !== null) screenshotControls.style.display = originalScreenshotDisplay;
+            restorePokazScreenshotAdminContainerAfterScreenshot(pokazScreenshotAdminContainer, originalPokazScreenshotAdminDisplay);
+            removePokazScreenshotFontScale();
         });
     }
 
