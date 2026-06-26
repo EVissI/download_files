@@ -2075,10 +2075,6 @@ export class ContentEditor {
         return rectW > 0 ? rectW : 0;
     }
 
-    getPipInteractiveCanvasMinHeight() {
-        return this.isMobile() ? 160 : 200;
-    }
-
     isPipInteractiveToolId(toolId) {
         return toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double';
     }
@@ -2090,14 +2086,10 @@ export class ContentEditor {
         element.style.width = '';
         element.style.maxWidth = '';
         element.style.height = 'auto';
+        element.style.minHeight = '';
         element.style.maxHeight = '';
         element.style.overflow = 'visible';
         element.style.boxSizing = 'border-box';
-        if (element.dataset.toolId === 'interactive-pip-double') {
-            element.style.minHeight = `${this.getPipInteractiveCanvasMinHeight()}px`;
-        } else {
-            element.style.minHeight = '';
-        }
         const inner = element.querySelector('.ce-interactive-pip-count__inner, .ce-interactive-pip-double__inner');
         if (inner) {
             inner.style.width = '100%';
@@ -2147,10 +2139,6 @@ export class ContentEditor {
             return parseInt(element.style.height, 10) || element.offsetHeight || 72;
         }
         if (this.isPipInteractiveToolId(element.dataset.toolId)) {
-            if (element.dataset.toolId === 'interactive-pip-double') {
-                const minH = this.getPipInteractiveCanvasMinHeight();
-                return Math.max(element.offsetHeight || 0, parseInt(element.style.minHeight, 10) || 0, minH);
-            }
             return element.offsetHeight || 0;
         }
         if (element.dataset.toolId === 'interactive-best-move') {

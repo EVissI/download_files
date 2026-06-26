@@ -4354,17 +4354,10 @@ button.content-card-admin-info-file-link:hover {
     cursor: default;
     box-sizing: border-box;
     height: auto;
-    min-height: 200px;
     overflow: visible;
     left: 0;
     right: 0;
     width: auto;
-}
-
-@media (max-width: 768px) {
-    .canvas-element.ce-interactive-pip-double {
-        min-height: 160px;
-    }
 }
 
 .ce-interactive-pip-count__inner,
@@ -4434,7 +4427,38 @@ button.content-card-admin-info-file-link:hover {
     touch-action: manipulation;
 }
 
-.ce-interactive-pip-double__btn,
+.ce-interactive-pip-double__btn {
+    position: relative;
+    z-index: 2;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #5a7ab0;
+    background: #3d5f94;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+}
+
+.ce-interactive-pip-double__btn:hover:not(:disabled) {
+    background: #4a6ea8;
+}
+
+.ce-interactive-pip-double__btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.ce-interactive-pip-double__btn--running {
+    background: #8b3a3a;
+    border-color: #a64a4a;
+}
+
+.ce-interactive-pip-double__btn--running:hover:not(:disabled) {
+    background: #a04444;
+}
+
 .ce-interactive-pip-double__choice-btn {
     position: relative;
     z-index: 2;
@@ -4451,24 +4475,13 @@ button.content-card-admin-info-file-link:hover {
     text-align: center;
 }
 
-.ce-interactive-pip-double__btn:hover:not(:disabled),
 .ce-interactive-pip-double__choice-btn:hover:not(:disabled) {
     background: #4a6ea8;
 }
 
-.ce-interactive-pip-double__btn:disabled,
 .ce-interactive-pip-double__choice-btn:disabled {
     opacity: 0.55;
     cursor: default;
-}
-
-.ce-interactive-pip-double__btn--running {
-    background: #8b3a3a;
-    border-color: #a64a4a;
-}
-
-.ce-interactive-pip-double__btn--running:hover:not(:disabled) {
-    background: #a04444;
 }
 
 .ce-interactive-pip-double__result {

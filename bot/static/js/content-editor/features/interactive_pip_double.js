@@ -90,7 +90,7 @@ export function getInteractivePipDoubleInnerHtml() {
                         <p class="ce-interactive-pip-double__title">Дабл</p>
                         <div class="ce-interactive-pip-double__controls" data-ce-pip-double-controls>
                             <div class="ce-interactive-pip-double__timer-row" data-ce-pip-double-timer-row>
-                                <button type="button" class="ce-interactive-pip-double__btn ce-interactive-pip-double__btn--start" data-ce-pip-double-action data-ce-pip-double-state="idle" aria-label="Пуск">Пуск</button>
+                                <button type="button" class="ce-interactive-pip-double__btn" data-ce-pip-double-action data-ce-pip-double-state="idle" aria-label="Пуск">Пуск</button>
                                 <span class="ce-interactive-pip-double__timer" data-ce-pip-double-timer-display>00:00</span>
                             </div>
                             <div class="ce-interactive-pip-double__choices" data-ce-pip-double-choices hidden></div>
