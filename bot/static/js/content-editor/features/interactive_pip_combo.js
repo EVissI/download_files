@@ -214,8 +214,7 @@ function setActionButtonState(block, state, phase) {
         actionBtn.hidden = true;
         actionBtn.classList.remove('ce-interactive-pip-combo__btn--running');
     } else if (state === ACTION_STOPPED) {
-        actionBtn.hidden = false;
-        actionBtn.textContent = 'Готово';
+        actionBtn.hidden = true;
         actionBtn.classList.remove('ce-interactive-pip-combo__btn--running');
         actionBtn.disabled = true;
         actionBtn.setAttribute('aria-label', 'Завершено');

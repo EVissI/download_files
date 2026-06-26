@@ -163,8 +163,7 @@ function setStartButtonState(block, state) {
         actionBtn.hidden = true;
         actionBtn.classList.remove('ce-interactive-pip-double__btn--running');
     } else if (state === ACTION_STOPPED) {
-        actionBtn.hidden = false;
-        actionBtn.textContent = 'Готово';
+        actionBtn.hidden = true;
         actionBtn.classList.remove('ce-interactive-pip-double__btn--running');
         actionBtn.disabled = true;
         actionBtn.setAttribute('aria-label', 'Завершено');
@@ -210,6 +209,7 @@ function renderShuffledChoices(block, rt) {
 
     choicesEl.hidden = false;
     bindChoiceButtons(block, rt);
+    syncPipInteractiveLayoutAfterChange(block);
 }
 
 function handleChoice(block, rt, chosenValue) {
@@ -234,12 +234,11 @@ function handleChoice(block, rt, chosenValue) {
             (correct ? ' ✓' : ' ✗');
     }
 
-    syncPipInteractiveLayoutAfterChange(block);
-
     setStartButtonState(block, ACTION_STOPPED);
     unbindChoiceButtons(rt);
     choicesElDisable(block, true);
     applyPipCountBoardGateForBlock(block, ACTION_STOPPED);
+    syncPipInteractiveLayoutAfterChange(block);
 
     const { ok, bad } = getFeedbackTexts(block);
     if (!rt.dryRun && rt.recordEditor && rt.recordEditor._contentCardViewCardId) {
