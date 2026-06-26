@@ -131,6 +131,17 @@ const {
     new URL('./content-editor/features/interactive_pip_double.js', import.meta.url).href + _featureModuleCacheQs
 );
 
+const {
+    setupInteractivePipComboAfterCardPreviewRender,
+    refreshInteractivePipComboPreviewBlocks,
+    mountInteractivePipComboBlock,
+    getInteractivePipComboInnerHtml,
+    ensurePipComboDatasetDefaults,
+    INTERACTIVE_PIP_COMBO_TOOL_ID,
+} = await import(
+    new URL('./content-editor/features/interactive_pip_combo.js', import.meta.url).href + _featureModuleCacheQs
+);
+
 /**
  * Content Editor Module
  * Редактор контента в стиле Photoshop
@@ -1476,6 +1487,7 @@ export class ContentEditor {
         }
         refreshInteractivePipCountPreviewBlocks(this, payload, inner);
         refreshInteractivePipDoublePreviewBlocks(this, payload, inner);
+        refreshInteractivePipComboPreviewBlocks(this, payload, inner);
     }
 
     /**
@@ -2076,7 +2088,7 @@ export class ContentEditor {
     }
 
     isPipInteractiveToolId(toolId) {
-        return toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double';
+        return toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double' || toolId === INTERACTIVE_PIP_COMBO_TOOL_ID;
     }
 
     applyPipInteractiveCanvasLayout(element) {
@@ -2090,7 +2102,7 @@ export class ContentEditor {
         element.style.maxHeight = '';
         element.style.overflow = 'visible';
         element.style.boxSizing = 'border-box';
-        const inner = element.querySelector('.ce-interactive-pip-count__inner, .ce-interactive-pip-double__inner');
+        const inner = element.querySelector('.ce-interactive-pip-count__inner, .ce-interactive-pip-double__inner, .ce-interactive-pip-combo__inner');
         if (inner) {
             inner.style.width = '100%';
             inner.style.boxSizing = 'border-box';
@@ -2101,7 +2113,7 @@ export class ContentEditor {
     schedulePipInteractiveCanvasWidthSync(attempt = 0) {
         if (!this.canvas) return;
         const blocks = this.canvas.querySelectorAll(
-            '.canvas-element[data-tool-id="interactive-pip-count"], .canvas-element[data-tool-id="interactive-pip-double"]'
+            '.canvas-element[data-tool-id="interactive-pip-count"], .canvas-element[data-tool-id="interactive-pip-double"], .canvas-element[data-tool-id="interactive-pip-combo"]'
         );
         if (!blocks.length) return;
 
@@ -2511,6 +2523,13 @@ export class ContentEditor {
                 icon: 'fa fa-cube'
             },
             {
+                id: 'interactive-pip-combo',
+                name: 'Пипсы+дабл',
+                type: 'interactive',
+                description: 'Подсчёт пипсов и выбор дабла под одним таймером',
+                icon: 'fa fa-list-ol'
+            },
+            {
                 id: 'frame-templates',
                 name: 'Шаблоны',
                 type: 'templates',
@@ -2527,7 +2546,7 @@ export class ContentEditor {
         ];
 
         const pipMode = this.isPipCountImportEditorMode();
-        const pipInteractiveToolIds = new Set(['interactive-pip-count', 'interactive-pip-double']);
+        const pipInteractiveToolIds = new Set(['interactive-pip-count', 'interactive-pip-double', 'interactive-pip-combo']);
         const visibleTools = tools.filter((tool) => {
             if (pipInteractiveToolIds.has(tool.id)) return pipMode;
             if (pipMode && tool.id === 'interactive-best-move') return false;
@@ -4380,6 +4399,21 @@ export class ContentEditor {
                 break;
             }
 
+            case INTERACTIVE_PIP_COMBO_TOOL_ID: {
+                element.classList.add('ce-interactive-pip-combo');
+                ensurePipComboDatasetDefaults(element);
+                element.innerHTML = getInteractivePipComboInnerHtml();
+                const boardSnap = this.getHintViewerBoardSnapshot
+                    ? this.getHintViewerBoardSnapshot()
+                    : null;
+                mountInteractivePipComboBlock(element, {
+                    dryRun: true,
+                    payload: boardSnap ? { board: boardSnap } : null,
+                    sharedContext: this._contentCardSharedContext,
+                });
+                break;
+            }
+
             default:
                 element.innerHTML = `
                     <div style=" text-align: center; color: #666;">
@@ -5145,6 +5179,34 @@ export class ContentEditor {
                            oninput="contentEditor.updateElementProperty('pipDoubleFeedbackBad', this.value)">
                 </div>
                 ` : ''}
+                ${element.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID ? `
+                <div class="property-item">
+                    <label>Правильный ответ (дабл):</label>
+                    <select id="propPipComboDoubleCorrectAnswer" onchange="contentEditor.updateElementProperty('pipComboDoubleCorrectAnswer', this.value)">
+                        ${PIP_DOUBLE_ANSWER_OPTIONS.map((opt) => {
+                            const selected =
+                                normalizePipDoubleCorrectAnswer(element.dataset.cePipComboDoubleCorrectAnswer) === opt.value
+                                    ? 'selected'
+                                    : '';
+                            return `<option value="${opt.value}" ${selected}>${this.escapeHtml(opt.label)}</option>`;
+                        }).join('')}
+                    </select>
+                </div>
+                <div class="property-item">
+                    <label>Текст при верном ответе:</label>
+                    <input type="text" id="propPipComboFeedbackOk" class="ce-property-input-fluid" maxlength="500"
+                           value="${this.escapeHtml(element.dataset.cePipComboFeedbackOk !== undefined && element.dataset.cePipComboFeedbackOk !== null ? String(element.dataset.cePipComboFeedbackOk) : 'Правильно')}"
+                           placeholder="Правильно"
+                           oninput="contentEditor.updateElementProperty('pipComboFeedbackOk', this.value)">
+                </div>
+                <div class="property-item">
+                    <label>Текст при неверном ответе:</label>
+                    <input type="text" id="propPipComboFeedbackBad" class="ce-property-input-fluid" maxlength="500"
+                           value="${this.escapeHtml(element.dataset.cePipComboFeedbackBad !== undefined && element.dataset.cePipComboFeedbackBad !== null ? String(element.dataset.cePipComboFeedbackBad) : 'Неправильно')}"
+                           placeholder="Неправильно"
+                           oninput="contentEditor.updateElementProperty('pipComboFeedbackBad', this.value)">
+                </div>
+                ` : ''}
             </div>
             
             <div class="action-buttons">
@@ -5204,6 +5266,21 @@ export class ContentEditor {
             case 'pipDoubleFeedbackBad':
                 if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
                     this.selectedElement.dataset.cePipDoubleFeedbackBad = value != null ? String(value).slice(0, 500) : '';
+                }
+                break;
+            case 'pipComboDoubleCorrectAnswer':
+                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID) {
+                    this.selectedElement.dataset.cePipComboDoubleCorrectAnswer = normalizePipDoubleCorrectAnswer(value);
+                }
+                break;
+            case 'pipComboFeedbackOk':
+                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID) {
+                    this.selectedElement.dataset.cePipComboFeedbackOk = value != null ? String(value).slice(0, 500) : '';
+                }
+                break;
+            case 'pipComboFeedbackBad':
+                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID) {
+                    this.selectedElement.dataset.cePipComboFeedbackBad = value != null ? String(value).slice(0, 500) : '';
                 }
                 break;
             case 'interactiveButtonCount':
@@ -6109,6 +6186,7 @@ export class ContentEditor {
                     break;
                 case 'interactive-pip-count':
                 case INTERACTIVE_PIP_DOUBLE_TOOL_ID:
+                case INTERACTIVE_PIP_COMBO_TOOL_ID:
                     delete item.style.height;
                     break;
                 case 'board-illustration': {
@@ -8223,6 +8301,14 @@ export class ContentEditor {
             mountInteractivePipDoubleBlock(el, { dryRun: true });
             this.applyPipInteractiveCanvasLayout(el);
         });
+        this.canvas.querySelectorAll('.canvas-element[data-tool-id="interactive-pip-combo"]').forEach((el) => {
+            mountInteractivePipComboBlock(el, {
+                dryRun: true,
+                payload: p,
+                sharedContext: this._contentCardSharedContext,
+            });
+            this.applyPipInteractiveCanvasLayout(el);
+        });
         this.schedulePipInteractiveCanvasWidthSync();
 
         const tryTightStackAfterRestore = (attempt = 0) => {
@@ -8328,7 +8414,8 @@ export class ContentEditor {
                 !isPreviewImage &&
                 toolId !== 'interactive-best-move' &&
                 toolId !== 'interactive-pip-count' &&
-                toolId !== INTERACTIVE_PIP_DOUBLE_TOOL_ID
+                toolId !== INTERACTIVE_PIP_DOUBLE_TOOL_ID &&
+                toolId !== INTERACTIVE_PIP_COMBO_TOOL_ID
             ) {
                 element.style.height = item.style.height;
             }
@@ -8438,6 +8525,12 @@ export class ContentEditor {
                 element.classList.add('ce-interactive-pip-double');
                 ensurePipDoubleDatasetDefaults(element);
                 element.innerHTML = getInteractivePipDoubleInnerHtml();
+                break;
+            }
+            case INTERACTIVE_PIP_COMBO_TOOL_ID: {
+                element.classList.add('ce-interactive-pip-combo');
+                ensurePipComboDatasetDefaults(element);
+                element.innerHTML = getInteractivePipComboInnerHtml();
                 break;
             }
             case 'upload-image': {
@@ -8808,7 +8901,7 @@ export class ContentEditor {
         this.canvas.addEventListener('mousedown', (e) => {
             if (
                 e.target.closest(
-                    '[data-ce-pip-upper], [data-ce-pip-lower], [data-ce-pip-action], .ce-interactive-pip-count__field, .ce-interactive-pip-count__btn'
+                    '[data-ce-pip-upper], [data-ce-pip-lower], [data-ce-pip-action], [data-ce-pip-combo-action], [data-ce-pip-combo-choice], .ce-interactive-pip-count__field, .ce-interactive-pip-count__btn, .ce-interactive-pip-combo__btn, .ce-interactive-pip-double__choice-btn'
                 )
             ) {
                 return;

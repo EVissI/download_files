@@ -26,26 +26,6 @@ const { resolveReferencePipsFromPayload } = await import(withFeatureCacheQs('./p
 export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK = 'Правильно';
 export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD = 'Неправильно';
 
-const PIP_INTERACTIVE_BOARD_TOOL_IDS = ['interactive-pip-count', 'interactive-pip-double'];
-
-function queryPipInteractiveBlocks(scope) {
-    const blocks = [];
-    if (!scope || !scope.querySelectorAll) return blocks;
-    PIP_INTERACTIVE_BOARD_TOOL_IDS.forEach((toolId) => {
-        scope.querySelectorAll(`.canvas-element[data-tool-id="${toolId}"]`).forEach((block) => {
-            blocks.push(block);
-        });
-    });
-    return blocks;
-}
-
-function hostHasPipInteractiveBlock(host) {
-    if (!host || !host.querySelector) return false;
-    return PIP_INTERACTIVE_BOARD_TOOL_IDS.some((toolId) =>
-        host.querySelector(`.canvas-element[data-tool-id="${toolId}"]`)
-    );
-}
-
 const PIP_ACTION_IDLE = 'idle';
 const PIP_ACTION_RUNNING = 'running';
 const PIP_ACTION_STOPPED = 'stopped';
@@ -200,7 +180,9 @@ function unbindPipInputMobileMirror(rt) {
         rt.inputMirrorAbort = null;
     }
     if (pipInputMirrorActiveInput) {
-        const block = pipInputMirrorActiveInput.closest('.canvas-element[data-tool-id="interactive-pip-count"]');
+        const block = pipInputMirrorActiveInput.closest(
+            '.canvas-element[data-tool-id="interactive-pip-count"], .canvas-element[data-tool-id="interactive-pip-combo"]'
+        );
         const activeRt = block ? pipRuntimeByBlock.get(block) : null;
         if (activeRt === rt) {
             hidePipInputMirror();
@@ -237,10 +219,17 @@ function setInputsInteractionState(block, pipState) {
     });
 }
 
-function bindPipInputInteractions(block, rt) {
+function bindPipInputInteractions(block, rt, options = {}) {
     unbindPipInputMobileMirror(rt);
     const inputs = block.querySelectorAll('[data-ce-pip-upper], [data-ce-pip-lower]');
     if (!inputs.length) return;
+
+    const canStart =
+        typeof options.canStart === 'function' ? options.canStart : () => rt.state === PIP_ACTION_IDLE;
+    const onStart =
+        typeof options.onStart === 'function'
+            ? options.onStart
+            : (input) => handlePipStart(block, rt, { focusInput: input });
 
     const controller = new AbortController();
     rt.inputMirrorAbort = controller;
@@ -256,8 +245,8 @@ function bindPipInputInteractions(block, rt) {
         normalizePipCountInputEl(input);
 
         const tryStartOnInteract = () => {
-            if (rt.state === PIP_ACTION_IDLE) {
-                handlePipStart(block, rt, { focusInput: input });
+            if (canStart()) {
+                onStart(input);
             }
         };
 
@@ -424,59 +413,12 @@ function setInputsDisabled(block, disabled) {
     setInputsInteractionState(block, disabled ? PIP_ACTION_STOPPED : PIP_ACTION_RUNNING);
 }
 
-function findCardPreviewBoardOverlay(block) {
-    if (typeof document === 'undefined') return null;
-    const wrap =
-        block && block.closest ? block.closest('.card-preview-surface-wrap') : null;
-    if (wrap) return wrap.querySelector('.card-preview-board-overlay');
-    const host = document.getElementById('cardPreviewFrameHost');
-    return host ? host.querySelector('.card-preview-board-overlay') : null;
-}
+/** Доска в карточках пипсов всегда видна — гейт по «Пуск» отключён. */
+export function applyPipCountBoardGateForBlock(_block, _pipState) {}
 
-function isBlockInEditorCanvas(block) {
-    return !!(block && block.closest && block.closest('#canvas, #editorCanvasContentLayer'));
-}
+export function applyPipCountBoardGateForPreviewHost(_hostRoot, _pipState) {}
 
-function setPreviewBoardPipGate(overlay, expanded) {
-    if (!overlay) return;
-    const toggle = overlay.querySelector('.card-preview-board-toggle');
-    const collapsed = !expanded;
-    overlay.classList.toggle('card-preview-board-overlay--collapsed', collapsed);
-    overlay.classList.toggle('card-preview-board-overlay--pip-locked', collapsed);
-    if (toggle) {
-        toggle.disabled = collapsed;
-        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    }
-    if (!collapsed) {
-        requestAnimationFrame(() => {
-            try {
-                if (typeof window !== 'undefined' && window.contentEditor) {
-                    window.contentEditor.refreshCardPreviewScale();
-                }
-            } catch (_e) {
-                /* noop */
-            }
-        });
-    }
-}
-
-function isBoardExpandedForPipState(pipState) {
-    return pipState === PIP_ACTION_RUNNING || pipState === PIP_ACTION_STOPPED;
-}
-
-export function applyPipCountBoardGateForBlock(block, pipState) {
-    if (isBlockInEditorCanvas(block)) {
-        return;
-    }
-    const expanded = isBoardExpandedForPipState(pipState);
-    setPreviewBoardPipGate(findCardPreviewBoardOverlay(block), expanded);
-}
-
-export function applyPipCountBoardGateForPreviewHost(hostRoot, pipState) {
-    const host = hostRoot || document.getElementById('cardPreviewFrameHost');
-    if (!host) return;
-    setPreviewBoardPipGate(host.querySelector('.card-preview-board-overlay'), isBoardExpandedForPipState(pipState));
-}
+export function syncPipCountBoardGatesInScope(_rootEl) {}
 
 /** После показа/скрытия результата — пересчитать стек (absolute в редакторе, flex в превью). */
 export function syncPipInteractiveLayoutAfterChange(block) {
@@ -512,46 +454,6 @@ export function syncPipInteractiveLayoutAfterChange(block) {
         applyLayout();
         requestAnimationFrame(applyLayout);
     });
-}
-
-function getPipInteractiveBlockState(block) {
-    if (!block) return PIP_ACTION_IDLE;
-    const toolId = block.dataset ? block.dataset.toolId : '';
-    if (toolId === 'interactive-pip-double') {
-        const btn = block.querySelector('[data-ce-pip-double-action]');
-        const st = btn && btn.dataset ? btn.dataset.cePipDoubleState : '';
-        if (st === PIP_ACTION_RUNNING || st === PIP_ACTION_STOPPED) return st;
-        return PIP_ACTION_IDLE;
-    }
-    const rt = pipRuntimeByBlock.get(block);
-    return rt ? rt.state : PIP_ACTION_IDLE;
-}
-
-export function syncPipCountBoardGatesInScope(rootEl) {
-    if (typeof document === 'undefined') return;
-    const scope = rootEl && rootEl.querySelectorAll ? rootEl : document;
-    /* В редакторе доска не блокируется — только предпросмотр / просмотр карточки. */
-    if (scope.id === 'canvas') {
-        return;
-    }
-    const blocks = queryPipInteractiveBlocks(scope);
-    if (!blocks.length) return;
-
-    let hostState = PIP_ACTION_IDLE;
-    blocks.forEach((block) => {
-        const state = getPipInteractiveBlockState(block);
-        applyPipCountBoardGateForBlock(block, state);
-        if (state === PIP_ACTION_RUNNING) {
-            hostState = PIP_ACTION_RUNNING;
-        } else if (state === PIP_ACTION_STOPPED && hostState !== PIP_ACTION_RUNNING) {
-            hostState = PIP_ACTION_STOPPED;
-        }
-    });
-
-    const host = document.getElementById('cardPreviewFrameHost');
-    if (host && hostHasPipInteractiveBlock(host)) {
-        applyPipCountBoardGateForPreviewHost(host, hostState);
-    }
 }
 
 function handlePipStart(block, rt, options = {}) {
@@ -777,6 +679,18 @@ export function setupInteractivePipCountAfterCardPreviewRender(editor, payload) 
         });
     });
     applyPipCountBoardGateForPreviewHost(host, PIP_ACTION_IDLE);
+}
+
+export function bindPipNumericInputFields(block, rt, options = {}) {
+    bindPipInputInteractions(block, rt, options);
+}
+
+export function setPipNumericInputsInteractionState(block, pipState) {
+    setInputsInteractionState(block, pipState);
+}
+
+export function normalizePipNumericInputEl(input) {
+    normalizePipCountInputEl(input);
 }
 
 export function refreshInteractivePipCountPreviewBlocks(editor, payload, rootEl) {
