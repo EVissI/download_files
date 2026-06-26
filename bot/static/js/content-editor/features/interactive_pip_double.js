@@ -236,7 +236,7 @@ function handleChoice(block, rt, chosenValue) {
 
     setStartButtonState(block, ACTION_STOPPED);
     unbindChoiceButtons(rt);
-    choicesElDisable(block, true);
+    hideChoices(block);
     applyPipCountBoardGateForBlock(block, ACTION_STOPPED);
     syncPipInteractiveLayoutAfterChange(block);
 

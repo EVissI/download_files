@@ -277,7 +277,7 @@ function finishCombo(block, rt, detailLines, overallCorrect) {
     clearTimerInterval(rt);
     setActionButtonState(block, ACTION_STOPPED, rt.phase);
     unbindChoiceButtons(rt);
-    choicesElDisable(block, true);
+    hideChoices(block);
     applyPipCountBoardGateForBlock(block, ACTION_STOPPED);
     syncPipInteractiveLayoutAfterChange(block);
 
