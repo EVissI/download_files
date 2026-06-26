@@ -105,7 +105,7 @@ function positionPipInputMirror() {
     }
     const visibleTop = vv.offsetTop;
     const visibleH = vv.height;
-    const offsetInVisible = Math.max(64, Math.min(visibleH * 0.2, visibleH - 72));
+    const offsetInVisible = Math.max(64, Math.min(visibleH * 0.4, visibleH - 72));
     pipInputMirrorEl.style.top = `${Math.round(visibleTop + offsetInVisible)}px`;
 }
 
