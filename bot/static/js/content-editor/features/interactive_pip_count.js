@@ -53,6 +53,161 @@ const PIP_ACTION_STOPPED = 'stopped';
 /** @type {WeakMap<HTMLElement, object>} */
 const pipRuntimeByBlock = new WeakMap();
 
+const PIP_MOBILE_INPUT_MIRROR_MAX_WIDTH = 768;
+
+/** @type {HTMLElement|null} */
+let pipInputMirrorEl = null;
+/** @type {HTMLInputElement|null} */
+let pipInputMirrorActiveInput = null;
+let pipInputMirrorViewportBound = false;
+
+function isNarrowPipInputViewport() {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= PIP_MOBILE_INPUT_MIRROR_MAX_WIDTH;
+}
+
+function ensurePipInputMirrorEl() {
+    if (pipInputMirrorEl) return pipInputMirrorEl;
+    if (typeof document === 'undefined') return null;
+    const el = document.createElement('div');
+    el.className = 'ce-pip-count-input-mirror';
+    el.hidden = true;
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML =
+        '<span class="ce-pip-count-input-mirror__label"></span>' +
+        '<span class="ce-pip-count-input-mirror__value"></span>';
+    document.body.appendChild(el);
+    pipInputMirrorEl = el;
+    return el;
+}
+
+function positionPipInputMirror() {
+    if (!pipInputMirrorEl || pipInputMirrorEl.hidden) return;
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    const top = vv ? Math.max(8, vv.offsetTop + 10) : 10;
+    pipInputMirrorEl.style.top = `${top}px`;
+}
+
+function bindPipInputMirrorViewport() {
+    if (pipInputMirrorViewportBound || typeof window === 'undefined') return;
+    pipInputMirrorViewportBound = true;
+    const reposition = () => positionPipInputMirror();
+    window.addEventListener('resize', reposition);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', reposition);
+        window.visualViewport.addEventListener('scroll', reposition);
+    }
+}
+
+function getPipInputFieldLabel(input) {
+    const field = input && input.closest ? input.closest('.ce-interactive-pip-count__field') : null;
+    const labelEl = field ? field.querySelector('.ce-interactive-pip-count__field-label') : null;
+    return labelEl ? String(labelEl.textContent || '').trim() : '';
+}
+
+function formatPipInputMirrorValue(raw) {
+    const t = String(raw ?? '');
+    return t !== '' ? t : '—';
+}
+
+function showPipInputMirror(input) {
+    if (!input || !isNarrowPipInputViewport()) return;
+    const el = ensurePipInputMirrorEl();
+    if (!el) return;
+    bindPipInputMirrorViewport();
+    pipInputMirrorActiveInput = input;
+    const labelEl = el.querySelector('.ce-pip-count-input-mirror__label');
+    const valueEl = el.querySelector('.ce-pip-count-input-mirror__value');
+    if (labelEl) labelEl.textContent = getPipInputFieldLabel(input) || 'Ввод';
+    if (valueEl) valueEl.textContent = formatPipInputMirrorValue(input.value);
+    el.hidden = false;
+    el.setAttribute('aria-hidden', 'false');
+    el.classList.add('ce-pip-count-input-mirror--visible');
+    positionPipInputMirror();
+}
+
+function updatePipInputMirror(input) {
+    if (!pipInputMirrorEl || pipInputMirrorEl.hidden || pipInputMirrorActiveInput !== input) return;
+    const valueEl = pipInputMirrorEl.querySelector('.ce-pip-count-input-mirror__value');
+    if (valueEl) valueEl.textContent = formatPipInputMirrorValue(input.value);
+}
+
+function hidePipInputMirror() {
+    pipInputMirrorActiveInput = null;
+    if (!pipInputMirrorEl) return;
+    pipInputMirrorEl.hidden = true;
+    pipInputMirrorEl.setAttribute('aria-hidden', 'true');
+    pipInputMirrorEl.classList.remove('ce-pip-count-input-mirror--visible');
+}
+
+function unbindPipInputMobileMirror(rt) {
+    if (rt && rt.inputMirrorAbort) {
+        rt.inputMirrorAbort.abort();
+        rt.inputMirrorAbort = null;
+    }
+    if (pipInputMirrorActiveInput) {
+        const block = pipInputMirrorActiveInput.closest('.canvas-element[data-tool-id="interactive-pip-count"]');
+        const activeRt = block ? pipRuntimeByBlock.get(block) : null;
+        if (activeRt === rt) {
+            hidePipInputMirror();
+        }
+    }
+}
+
+function bindPipInputMobileMirror(block, rt) {
+    unbindPipInputMobileMirror(rt);
+    const inputs = block.querySelectorAll('[data-ce-pip-upper], [data-ce-pip-lower]');
+    if (!inputs.length) return;
+
+    const controller = new AbortController();
+    rt.inputMirrorAbort = controller;
+    const { signal } = controller;
+
+    inputs.forEach((input) => {
+        const stopBubble = (e) => {
+            if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        };
+        input.addEventListener('mousedown', stopBubble, { signal });
+        input.addEventListener('click', stopBubble, { signal });
+
+        input.addEventListener(
+            'focus',
+            () => {
+                showPipInputMirror(input);
+            },
+            { signal }
+        );
+
+        input.addEventListener(
+            'input',
+            () => {
+                updatePipInputMirror(input);
+            },
+            { signal }
+        );
+
+        input.addEventListener(
+            'blur',
+            () => {
+                setTimeout(() => {
+                    const active = document.activeElement;
+                    if (
+                        active &&
+                        active.matches &&
+                        active.matches('[data-ce-pip-upper], [data-ce-pip-lower]')
+                    ) {
+                        return;
+                    }
+                    hidePipInputMirror();
+                }, 80);
+            },
+            { signal }
+        );
+    });
+}
+
 function pad2(n) {
     return n < 10 ? '0' + n : String(n);
 }
@@ -421,6 +576,7 @@ function syncPipCountBlockUi(block, options = {}) {
     setInputsDisabled(block, true);
     setTimerDisplay(block, '00:00');
     bindPipActionButton(block, rt);
+    bindPipInputMobileMirror(block, rt);
     applyPipCountBoardGateForBlock(block, PIP_ACTION_IDLE);
 
     block.dataset.cePipCountBound = '1';
