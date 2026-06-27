@@ -2500,7 +2500,7 @@ button.content-card-admin-info-file-link:hover {
 
 .property-item-pip-result-template .ce-pip-result-template-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
     margin-bottom: 4px;
@@ -2508,12 +2508,33 @@ button.content-card-admin-info-file-link:hover {
 
 .property-item-pip-result-template .ce-pip-result-template-head label {
     margin-bottom: 0;
+    flex: 1 1 auto;
 }
 
-.property-item-pip-result-template .ce-pip-result-template-default-btn {
+.property-item-pip-result-template .ce-pip-result-template-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.property-item-pip-result-template .ce-pip-result-template-default-btn,
+.property-item-pip-result-template .ce-pip-result-template-color-btn {
     padding: 4px 10px;
     font-size: 11px;
+}
+
+.property-item-pip-result-template .ce-pip-result-template-color-input {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border: 0;
+    padding: 0;
 }
 
 .property-item-pip-result-template .ce-property-textarea {

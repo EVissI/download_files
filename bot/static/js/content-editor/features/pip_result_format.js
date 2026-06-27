@@ -26,7 +26,7 @@ export const DEFAULT_PIP_COMBO_RESULT_TEMPLATE = `Время: {time}
 Правильно: {choice_correct} {choice_mark}`;
 
 export const PIP_RESULT_TEMPLATE_PLACEHOLDER_HINT =
-    'Переменные: {time}, {no_board}, {upper_row}, {lower_row}, {upper_user}, {upper_correct}, {upper_mark}, {lower_user}, {lower_correct}, {lower_mark}, {choice_user}, {choice_correct}, {choice_mark}. Пустое поле — шаблон по умолчанию.';
+    'Переменные: {time}, {no_board}, {upper_row}, {lower_row}, {upper_user}, {upper_correct}, {upper_mark}, {lower_user}, {lower_correct}, {lower_mark}, {choice_user}, {choice_correct}, {choice_mark}. Цвет: выделите текст и нажмите «Цвет» или тег <span style="color:#RRGGBB">...</span>. Пустое поле — шаблон по умолчанию.';
 
 const DEFAULT_TEMPLATE_BY_KIND = {
     [PIP_RESULT_TEMPLATE_KIND_COUNT]: DEFAULT_PIP_COUNT_RESULT_TEMPLATE,
@@ -40,6 +40,92 @@ function mark(ok) {
 
 function formatUserValue(v) {
     return v != null ? String(v) : '—';
+}
+
+function escapeHtml(text) {
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function normalizeColorForStyle(raw) {
+    const c = String(raw || '').trim();
+    if (/^#[0-9a-fA-F]{3}$/.test(c) || /^#[0-9a-fA-F]{6}$/.test(c)) {
+        return c.toLowerCase();
+    }
+    const rgbMatch = c.match(/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i);
+    if (rgbMatch) {
+        const parts = rgbMatch.slice(1, 4).map((n) => Number(n));
+        if (parts.every((n) => n >= 0 && n <= 255)) {
+            return `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`;
+        }
+    }
+    return null;
+}
+
+function colorFromSpanStyle(style) {
+    const raw = String(style || '').trim();
+    const colorOnly = raw.match(/^\s*color\s*:\s*(.+?)\s*;?\s*$/i);
+    if (colorOnly) {
+        return normalizeColorForStyle(colorOnly[1]);
+    }
+    const inline = raw.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+    if (inline) {
+        return normalizeColorForStyle(inline[1].trim());
+    }
+    return null;
+}
+
+/** Разрешён только span с color; остальные теги снимаются, текст сохраняется. */
+export function sanitizePipResultHtml(html) {
+    const str = String(html ?? '');
+    if (!str.includes('<')) {
+        return escapeHtml(str);
+    }
+    if (typeof DOMParser === 'undefined') {
+        return escapeHtml(str.replace(/<[^>]+>/g, ''));
+    }
+    const doc = new DOMParser().parseFromString('<div>' + str + '</div>', 'text/html');
+    const root = doc.body && doc.body.firstElementChild;
+    if (!root) {
+        return escapeHtml(str);
+    }
+
+    function serializeNode(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return escapeHtml(node.textContent || '');
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return '';
+        }
+        const tag = node.tagName ? node.tagName.toUpperCase() : '';
+        if (tag === 'SPAN') {
+            const color = colorFromSpanStyle(node.getAttribute('style') || '');
+            if (color) {
+                const inner = Array.from(node.childNodes).map(serializeNode).join('');
+                return `<span style="color:${escapeHtml(color)}">${inner}</span>`;
+            }
+        }
+        return Array.from(node.childNodes).map(serializeNode).join('');
+    }
+
+    return Array.from(root.childNodes).map(serializeNode).join('');
+}
+
+/** Вывод результата pip-интерактива (поддержка цветных span). */
+export function setPipInteractiveResultContent(el, rawHtml) {
+    if (!el) return;
+    el.innerHTML = sanitizePipResultHtml(rawHtml);
+}
+
+export function wrapPipResultTemplateSelection(text, color) {
+    const selected = String(text ?? '');
+    if (!selected) return null;
+    const normalized = normalizeColorForStyle(color);
+    if (!normalized) return null;
+    return `<span style="color:${normalized}">${selected}</span>`;
 }
 
 export function getDefaultPipResultTemplate(kind) {
@@ -66,7 +152,7 @@ export function resolvePipResultTemplate(block, kind) {
 export function applyPipResultTemplate(template, vars) {
     let out = String(template || '');
     Object.keys(vars).forEach((key) => {
-        const value = vars[key] != null ? String(vars[key]) : '';
+        const value = vars[key] != null ? escapeHtml(String(vars[key])) : '';
         out = out.split('{' + key + '}').join(value);
     });
     return out.replace(/\n{3,}/g, '\n\n').trimEnd();

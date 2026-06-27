@@ -153,6 +153,8 @@ const {
     getDefaultPipResultTemplate,
     pipResultTemplateKindFromToolId,
     buildPipResultPreview,
+    sanitizePipResultHtml,
+    wrapPipResultTemplateSelection,
     PIP_RESULT_TEMPLATE_PLACEHOLDER_HINT,
 } = await import(_editorFeatureUrl('./content-editor/features/pip_result_format.js'));
 
@@ -2313,21 +2315,63 @@ export class ContentEditor {
         const stored =
             element.dataset.cePipResultTemplate != null ? String(element.dataset.cePipResultTemplate) : '';
         const effectiveTpl = stored.trim() || defaultTpl;
-        const preview = buildPipResultPreview(kind, effectiveTpl);
+        const previewHtml = sanitizePipResultHtml(buildPipResultPreview(kind, effectiveTpl));
         return `
                 <div class="property-item property-item-pip-result-template">
                     <div class="ce-pip-result-template-head">
                         <label>Шаблон результата:</label>
-                        <button type="button" class="action-btn ce-pip-result-template-default-btn"
-                                onclick="contentEditor.resetPipResultTemplateToDefault()">По умолчанию</button>
+                        <div class="ce-pip-result-template-actions">
+                            <button type="button" class="action-btn ce-pip-result-template-color-btn"
+                                    title="Окрасить выделенный текст"
+                                    onmousedown="contentEditor.savePipResultTemplateSelection(); event.preventDefault();"
+                                    onclick="contentEditor.openPipResultTemplateColorPicker()">Цвет</button>
+                            <input type="color" id="propPipResultTemplateColor" class="ce-pip-result-template-color-input"
+                                   value="#667eea" tabindex="-1" aria-hidden="true"
+                                   onchange="contentEditor.onPipResultTemplateColorPicked(this.value)">
+                            <button type="button" class="action-btn ce-pip-result-template-default-btn"
+                                    onclick="contentEditor.resetPipResultTemplateToDefault()">По умолчанию</button>
+                        </div>
                     </div>
                     <textarea id="propPipResultTemplate" class="ce-property-textarea" rows="9" maxlength="4000"
                               placeholder="${this.escapeHtml(defaultTpl)}"
                               oninput="contentEditor.updateElementProperty('pipResultTemplate', this.value)">${this.escapeHtml(stored)}</textarea>
                     <p class="ce-pip-result-template-hint">${this.escapeHtml(PIP_RESULT_TEMPLATE_PLACEHOLDER_HINT)}</p>
                     <label class="ce-pip-result-template-preview-label">Пример:</label>
-                    <pre class="ce-pip-result-template-preview" id="propPipResultTemplatePreview">${this.escapeHtml(preview)}</pre>
+                    <pre class="ce-pip-result-template-preview" id="propPipResultTemplatePreview">${previewHtml}</pre>
                 </div>`;
+    }
+
+    savePipResultTemplateSelection() {
+        const textarea = document.getElementById('propPipResultTemplate');
+        if (!textarea) return;
+        this._pipResultTemplateSel = {
+            start: textarea.selectionStart,
+            end: textarea.selectionEnd,
+        };
+    }
+
+    openPipResultTemplateColorPicker() {
+        const input = document.getElementById('propPipResultTemplateColor');
+        if (input) input.click();
+    }
+
+    onPipResultTemplateColorPicked(color) {
+        const textarea = document.getElementById('propPipResultTemplate');
+        const sel = this._pipResultTemplateSel;
+        if (!textarea || !sel || sel.start === sel.end) return;
+
+        const selected = textarea.value.slice(sel.start, sel.end);
+        const wrapped = wrapPipResultTemplateSelection(selected, color);
+        if (!wrapped) return;
+
+        const newVal = textarea.value.slice(0, sel.start) + wrapped + textarea.value.slice(sel.end);
+        textarea.value = newVal;
+        this.updateElementProperty('pipResultTemplate', newVal);
+
+        const cursor = sel.start + wrapped.length;
+        textarea.focus();
+        textarea.setSelectionRange(cursor, cursor);
+        this._pipResultTemplateSel = { start: sel.start, end: cursor };
     }
 
     refreshPipResultTemplatePreview() {
@@ -2338,7 +2382,7 @@ export class ContentEditor {
         if (!kind || !previewEl || !textarea) return;
         const defaultTpl = getDefaultPipResultTemplate(kind);
         const effectiveTpl = String(textarea.value || '').trim() || defaultTpl;
-        previewEl.textContent = buildPipResultPreview(kind, effectiveTpl);
+        previewEl.innerHTML = sanitizePipResultHtml(buildPipResultPreview(kind, effectiveTpl));
     }
 
     resetPipResultTemplateToDefault() {

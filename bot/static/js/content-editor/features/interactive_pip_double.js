@@ -22,7 +22,7 @@ const {
     applyPipCountBoardGateForPreviewHost,
     syncPipInteractiveLayoutAfterChange,
 } = await import(withFeatureCacheQs('./interactive_pip_count.js'));
-const { buildDoubleResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
+const { buildDoubleResultText, setPipInteractiveResultContent } = await import(withFeatureCacheQs('./pip_result_format.js'));
 
 export const INTERACTIVE_PIP_DOUBLE_TOOL_ID = 'interactive-pip-double';
 export const INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME = 'Решение по кубу';
@@ -201,12 +201,15 @@ function handleChoice(block, rt, chosenValue) {
     const resultEl = block.querySelector('[data-ce-pip-double-result]');
     if (resultEl) {
         resultEl.style.display = '';
-        resultEl.textContent = buildDoubleResultText(
-            elapsed,
-            pipDoubleAnswerLabel(chosenValue),
-            pipDoubleAnswerLabel(correctAnswer),
-            correct,
-            block
+        setPipInteractiveResultContent(
+            resultEl,
+            buildDoubleResultText(
+                elapsed,
+                pipDoubleAnswerLabel(chosenValue),
+                pipDoubleAnswerLabel(correctAnswer),
+                correct,
+                block
+            )
         );
     }
 
@@ -335,7 +338,7 @@ function syncBlockUi(block, options = {}) {
     const resultEl = block.querySelector('[data-ce-pip-double-result]');
     if (resultEl) {
         resultEl.style.display = 'none';
-        resultEl.textContent = '';
+        resultEl.innerHTML = '';
     }
 
     hideChoices(block);

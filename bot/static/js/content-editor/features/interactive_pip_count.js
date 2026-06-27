@@ -19,7 +19,7 @@ function withFeatureCacheQs(relativePath) {
 }
 
 const { resolveReferencePipsFromPayload } = await import(withFeatureCacheQs('./pip_count_utils.js'));
-const { buildPipCountResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
+const { buildPipCountResultText, setPipInteractiveResultContent } = await import(withFeatureCacheQs('./pip_result_format.js'));
 
 const PIP_ACTION_IDLE = 'idle';
 const PIP_ACTION_RUNNING = 'running';
@@ -485,7 +485,10 @@ function handlePipStop(block, rt) {
 
     if (resultEl) {
         resultEl.style.display = '';
-        resultEl.textContent = buildPipCountResultText(elapsed, ref, userUpper, userLower, block);
+        setPipInteractiveResultContent(
+            resultEl,
+            buildPipCountResultText(elapsed, ref, userUpper, userLower, block)
+        );
     }
 
     syncPipInteractiveLayoutAfterChange(block);
@@ -584,7 +587,7 @@ function syncPipCountBlockUi(block, options = {}) {
     const resultEl = block.querySelector('[data-ce-pip-result]');
     if (resultEl) {
         resultEl.style.display = 'none';
-        resultEl.textContent = '';
+        resultEl.innerHTML = '';
     }
 
     setActionButtonState(block, PIP_ACTION_IDLE);

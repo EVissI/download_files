@@ -31,7 +31,7 @@ const {
     bindPipNumericInputFields,
     setPipNumericInputsInteractionState,
 } = await import(withFeatureCacheQs('./interactive_pip_count.js'));
-const { buildComboResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
+const { buildComboResultText, setPipInteractiveResultContent } = await import(withFeatureCacheQs('./pip_result_format.js'));
 
 export const INTERACTIVE_PIP_COMBO_TOOL_ID = 'interactive-pip-combo';
 export const INTERACTIVE_PIP_COMBO_DISPLAY_NAME = 'Пипсы+' + INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME;
@@ -249,7 +249,7 @@ function finishCombo(block, rt, resultText, overallCorrect) {
     const resultEl = block.querySelector('[data-ce-pip-combo-result]');
     if (resultEl) {
         resultEl.style.display = '';
-        resultEl.textContent = resultText;
+        setPipInteractiveResultContent(resultEl, resultText);
     }
 
     rt.state = ACTION_STOPPED;
@@ -459,7 +459,7 @@ function syncBlockUi(block, options = {}) {
     const resultEl = block.querySelector('[data-ce-pip-combo-result]');
     if (resultEl) {
         resultEl.style.display = 'none';
-        resultEl.textContent = '';
+        resultEl.innerHTML = '';
     }
 
     resetInputs(block);
