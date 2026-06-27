@@ -88,7 +88,7 @@
 
         .turn-label {
             text-align: center;
-            margin-top: 10px;
+            margin-bottom: 10px;
             color: #007bff;
             font-size: 20px;
             font-weight: bold;
@@ -1372,6 +1372,9 @@
 
         .hints-table.active {
             display: block;
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            border: 1px solid #444;
         }
 
         .hints-table-body {
@@ -1460,6 +1463,10 @@
             display: none;
         }
 
+        body.screenshot-mode .hints-table-toggle {
+            display: none;
+        }
+
         .hints-content {
             display: none;
         }
@@ -1479,6 +1486,7 @@
             margin: 0 auto;
             border-collapse: collapse;
             width: 100%;
+            max-width: 800px;
             background-color: #333;
             border-radius: 6px;
             overflow: hidden;
@@ -1487,10 +1495,10 @@
         th,
         td {
             border: 1px solid #555;
-            padding: 2px 5px;
+            padding: 20px 30px;
             text-align: left;
             color: white;
-            word-spacing: 5px;
+            word-spacing: 16px;
         }
 
         td:nth-child(2),
@@ -1503,6 +1511,9 @@
             background-color: #444;
             font-weight: bold;
             text-align: center;
+            font-size: 18px;
+            padding: 6px 12px;
+            word-spacing: normal;
         }
 
         .hints-content table th {
@@ -1525,6 +1536,22 @@
 
         .hint-row-selected {
             background-color: #007bff !important;
+        }
+
+        .hint-best {
+            background-color: #2e7d32 !important;
+        }
+
+        .hint-good {
+            background-color: #fbc02d !important;
+        }
+
+        .hint-good td {
+            color: #1a1a1a !important;
+        }
+
+        .hint-poor {
+            background-color: #d32f2f !important;
         }
 
         .eye-button {
@@ -2471,6 +2498,38 @@
                 padding-right: 1rem;
                 box-sizing: border-box;
             }
+
+            table {
+                font-size: 24px;
+            }
+
+            th,
+            td {
+                padding: 8px 12px;
+                word-spacing: 12px;
+            }
+
+            th {
+                font-size: 18px;
+                padding: 6px 10px;
+                word-spacing: normal;
+            }
+
+            .hints-table.active {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            table {
+                font-size: 16px;
+            }
+
+            th,
+            td {
+                padding: 6px 8px;
+                word-spacing: 4px;
+            }
         }
 
         /* ---------- Адаптивная верстка ---------- */
@@ -3176,8 +3235,8 @@
                 <i class="fa fa-chevron-down"></i>
             </button>
             <div class="hints-table-content">
-                <div id="hintsTable" class="hints-content"></div>
                 <div id="turn-label" class="turn-label"></div>
+                <div id="hintsTable" class="hints-content"></div>
             </div>
         </div>
     </div>
@@ -3447,13 +3506,14 @@
                             ? '(' + (hint.eq - firstEq).toFixed(3) + ')'
                             : eq;
                         const move = hint.move || '-';
-                        let rowStyle = '';
+                        let rowClass = '';
                         if (selectedHintIndex === index) {
-                            rowStyle = ' class="hint-row-selected"';
+                            rowClass = 'hint-row-selected';
                         } else if (index === 0 && selectedHintIndex === undefined) {
-                            rowStyle = ' style="background-color: green;"';
+                            rowClass = 'hint-best';
                         }
-                        tableHtml += `<tr data-hint-index="${index}"${rowStyle}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td><td><button class="eye-button" type="button"><i class="fa fa-eye"></i></button></td></tr>`;
+                        const rowClassAttr = rowClass ? ` class="${rowClass}"` : '';
+                        tableHtml += `<tr data-hint-index="${index}"${rowClassAttr}><td>${move}</td><td>${prob1}</td><td>${prob2}</td><td>${displayEq}</td><td><button class="eye-button" type="button"><i class="fa fa-eye"></i></button></td></tr>`;
                     }
                 });
                 tableHtml += '</table>';
@@ -3466,7 +3526,8 @@
                     const rawAction1 = (hint.action_1 || '').toLowerCase().trim();
                     const rawAction2 = (hint.action_2 || '').toLowerCase().trim();
                     displayAction = translateCubeAction(displayAction);
-                    const rowStyle = index === 0 ? ' style="background-color: green;"' : '';
+                    const rowClass = index === 0 ? 'hint-best' : '';
+                    const rowClassAttr = rowClass ? ` class="${rowClass}"` : '';
                     let actionCell = '';
                     if (rawAction1 === 'no double') {
                         actionCell = `<button class="eye-button cube-eye-btn" type="button" data-cube-action="no-double" title="${i18n.random_dice || 'Случайные кубики'}"><i class="fa fa-eye"></i></button>`;
@@ -3475,7 +3536,7 @@
                     } else {
                         actionCell = '';
                     }
-                    tableHtml += `<tr${rowStyle} data-action-1="${rawAction1}" data-action-2="${rawAction2}"><td>${displayAction}</td><td>${eq}</td><td>${actionCell}</td></tr>`;
+                    tableHtml += `<tr${rowClassAttr} data-action-1="${rawAction1}" data-action-2="${rawAction2}"><td>${displayAction}</td><td>${eq}</td><td>${actionCell}</td></tr>`;
                 });
                 if (firstHint.prefer_action) {
                     let preferText = translateCubeAction(firstHint.prefer_action);
