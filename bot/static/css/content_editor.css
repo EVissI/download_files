@@ -2498,6 +2498,24 @@ button.content-card-admin-info-file-link:hover {
     margin-top: 2px;
 }
 
+.property-item-pip-result-template .ce-pip-result-template-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.property-item-pip-result-template .ce-pip-result-template-head label {
+    margin-bottom: 0;
+}
+
+.property-item-pip-result-template .ce-pip-result-template-default-btn {
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
 .property-item-pip-result-template .ce-property-textarea {
     width: 100%;
     max-width: 100%;

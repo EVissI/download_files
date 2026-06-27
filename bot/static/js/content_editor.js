@@ -2316,7 +2316,11 @@ export class ContentEditor {
         const preview = buildPipResultPreview(kind, effectiveTpl);
         return `
                 <div class="property-item property-item-pip-result-template">
-                    <label>Шаблон результата:</label>
+                    <div class="ce-pip-result-template-head">
+                        <label>Шаблон результата:</label>
+                        <button type="button" class="action-btn ce-pip-result-template-default-btn"
+                                onclick="contentEditor.resetPipResultTemplateToDefault()">По умолчанию</button>
+                    </div>
                     <textarea id="propPipResultTemplate" class="ce-property-textarea" rows="9" maxlength="4000"
                               placeholder="${this.escapeHtml(defaultTpl)}"
                               oninput="contentEditor.updateElementProperty('pipResultTemplate', this.value)">${this.escapeHtml(stored)}</textarea>
@@ -2335,6 +2339,17 @@ export class ContentEditor {
         const defaultTpl = getDefaultPipResultTemplate(kind);
         const effectiveTpl = String(textarea.value || '').trim() || defaultTpl;
         previewEl.textContent = buildPipResultPreview(kind, effectiveTpl);
+    }
+
+    resetPipResultTemplateToDefault() {
+        if (!this.selectedElement) return;
+        const kind = this.getPipResultTemplateKind(this.selectedElement);
+        if (!kind) return;
+        const defaultTpl = getDefaultPipResultTemplate(kind);
+        const textarea = document.getElementById('propPipResultTemplate');
+        if (textarea) textarea.value = defaultTpl;
+        this.selectedElement.dataset.cePipResultTemplate = defaultTpl;
+        this.refreshPipResultTemplatePreview();
     }
 
     applyPipInteractiveCanvasLayout(element) {
