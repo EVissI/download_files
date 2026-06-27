@@ -35,6 +35,7 @@ const {
     INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK,
     INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD,
 } = await import(withFeatureCacheQs('./interactive_pip_count.js'));
+const { buildComboResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
 
 export const INTERACTIVE_PIP_COMBO_TOOL_ID = 'interactive-pip-combo';
 
@@ -266,11 +267,11 @@ function recordComboStats(block, rt, correct) {
     }).catch((err) => console.warn('interactive/record (pip-combo):', err));
 }
 
-function finishCombo(block, rt, detailLines, overallCorrect) {
+function finishCombo(block, rt, resultText, overallCorrect) {
     const resultEl = block.querySelector('[data-ce-pip-combo-result]');
     if (resultEl) {
         resultEl.style.display = '';
-        resultEl.textContent = detailLines.join('\n');
+        resultEl.textContent = resultText;
     }
 
     rt.state = ACTION_STOPPED;
@@ -297,43 +298,29 @@ function handleChoice(block, rt, chosenValue) {
     const correctAnswer = normalizePipDoubleCorrectAnswer(block.dataset.cePipComboDoubleCorrectAnswer);
     const doubleCorrect = normalizePipDoubleCorrectAnswer(chosenValue) === correctAnswer;
 
-    const detailLines = ['Время: ' + elapsed];
     let pipsCorrect = false;
-
-    if (!ref) {
-        detailLines.push('Нет данных доски для проверки пипсов.');
-    } else {
+    if (ref) {
         const upperOk = rt.savedUpper === ref.upperPips;
         const lowerOk = rt.savedLower === ref.lowerPips;
         pipsCorrect = upperOk && lowerOk;
-        detailLines.push(
-            'Верхний: ваш ' +
-                (rt.savedUpper != null ? rt.savedUpper : '—') +
-                ', верно ' +
-                ref.upperPips +
-                (upperOk ? ' ✓' : ' ✗')
-        );
-        detailLines.push(
-            'Нижний: ваш ' +
-                (rt.savedLower != null ? rt.savedLower : '—') +
-                ', верно ' +
-                ref.lowerPips +
-                (lowerOk ? ' ✓' : ' ✗')
-        );
     }
 
-    detailLines.push(
-        'Дабл - ваш: ' +
-            pipDoubleAnswerLabel(chosenValue) +
-            ', верно: ' +
-            pipDoubleAnswerLabel(correctAnswer) +
-            (doubleCorrect ? ' ✓' : ' ✗')
-    );
-
     const overallCorrect = !!ref && pipsCorrect && doubleCorrect;
-    detailLines.push('Итого: ' + (overallCorrect ? 'верно ✓' : 'неверно ✗'));
 
-    finishCombo(block, rt, detailLines, overallCorrect);
+    finishCombo(
+        block,
+        rt,
+        buildComboResultText(
+            elapsed,
+            ref,
+            rt.savedUpper,
+            rt.savedLower,
+            pipDoubleAnswerLabel(chosenValue),
+            pipDoubleAnswerLabel(correctAnswer),
+            doubleCorrect
+        ),
+        overallCorrect
+    );
 }
 
 function bindChoiceButtons(block, rt) {

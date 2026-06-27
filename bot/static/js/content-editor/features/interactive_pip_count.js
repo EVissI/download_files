@@ -22,6 +22,7 @@ const { openInteractiveBestMoveFeedbackModal } = await import(
     withFeatureCacheQs('./interactive_feedback_modal.js')
 );
 const { resolveReferencePipsFromPayload } = await import(withFeatureCacheQs('./pip_count_utils.js'));
+const { buildPipCountResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
 
 export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK = 'Правильно';
 export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD = 'Неправильно';
@@ -497,34 +498,15 @@ function handlePipStop(block, rt) {
     const userLower = parseInputPips(lowerInput && lowerInput.value);
 
     let correct = false;
-    const detailLines = [];
-
-    if (!ref) {
-        detailLines.push('Нет данных доски для проверки.');
-    } else {
+    if (ref) {
         const upperOk = userUpper === ref.upperPips;
         const lowerOk = userLower === ref.lowerPips;
         correct = upperOk && lowerOk;
-        detailLines.push('Время: ' + elapsed);
-        detailLines.push(
-            'Верхний: ваш ' +
-                (userUpper != null ? userUpper : '—') +
-                ', верно ' +
-                ref.upperPips +
-                (upperOk ? ' ✓' : ' ✗')
-        );
-        detailLines.push(
-            'Нижний: ваш ' +
-                (userLower != null ? userLower : '—') +
-                ', верно ' +
-                ref.lowerPips +
-                (lowerOk ? ' ✓' : ' ✗')
-        );
     }
 
     if (resultEl) {
         resultEl.style.display = '';
-        resultEl.textContent = detailLines.join('\n');
+        resultEl.textContent = buildPipCountResultText(elapsed, ref, userUpper, userLower);
     }
 
     syncPipInteractiveLayoutAfterChange(block);

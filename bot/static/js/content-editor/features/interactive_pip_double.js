@@ -25,6 +25,7 @@ const {
     applyPipCountBoardGateForPreviewHost,
     syncPipInteractiveLayoutAfterChange,
 } = await import(withFeatureCacheQs('./interactive_pip_count.js'));
+const { buildDoubleResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
 
 export const INTERACTIVE_PIP_DOUBLE_TOOL_ID = 'interactive-pip-double';
 
@@ -224,14 +225,12 @@ function handleChoice(block, rt, chosenValue) {
     const resultEl = block.querySelector('[data-ce-pip-double-result]');
     if (resultEl) {
         resultEl.style.display = '';
-        resultEl.textContent =
-            'Время: ' +
-            elapsed +
-            '\nВаш ответ: ' +
-            pipDoubleAnswerLabel(chosenValue) +
-            '\nВерно: ' +
-            pipDoubleAnswerLabel(correctAnswer) +
-            (correct ? ' ✓' : ' ✗');
+        resultEl.textContent = buildDoubleResultText(
+            elapsed,
+            pipDoubleAnswerLabel(chosenValue),
+            pipDoubleAnswerLabel(correctAnswer),
+            correct
+        );
     }
 
     setStartButtonState(block, ACTION_STOPPED);
