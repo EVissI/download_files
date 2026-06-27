@@ -18,14 +18,8 @@ function withFeatureCacheQs(relativePath) {
     return resolved + q;
 }
 
-const { openInteractiveBestMoveFeedbackModal } = await import(
-    withFeatureCacheQs('./interactive_feedback_modal.js')
-);
 const { resolveReferencePipsFromPayload } = await import(withFeatureCacheQs('./pip_count_utils.js'));
 const { buildPipCountResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
-
-export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK = 'Правильно';
-export const INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD = 'Неправильно';
 
 const PIP_ACTION_IDLE = 'idle';
 const PIP_ACTION_RUNNING = 'running';
@@ -335,21 +329,6 @@ function parseInputPips(raw) {
     return Number.isFinite(n) ? n : null;
 }
 
-function getFeedbackTexts(block) {
-    const okRaw =
-        block && block.dataset && block.dataset.cePipCountFeedbackOk != null
-            ? String(block.dataset.cePipCountFeedbackOk).trim()
-            : '';
-    const badRaw =
-        block && block.dataset && block.dataset.cePipCountFeedbackBad != null
-            ? String(block.dataset.cePipCountFeedbackBad).trim()
-            : '';
-    return {
-        ok: okRaw || INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK,
-        bad: badRaw || INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD,
-    };
-}
-
 function setTimerDisplay(block, text) {
     const el = block.querySelector('[data-ce-pip-timer-display]');
     if (el) el.textContent = text;
@@ -515,7 +494,6 @@ function handlePipStop(block, rt) {
     setInputsDisabled(block, true);
     applyPipCountBoardGateForBlock(block, PIP_ACTION_STOPPED);
 
-    const { ok, bad } = getFeedbackTexts(block);
     if (!rt.dryRun && rt.recordEditor && rt.recordEditor._contentCardViewCardId) {
         const auth =
             typeof rt.recordEditor.getContentCardApiAuthPayload === 'function'
@@ -532,10 +510,6 @@ function handlePipStop(block, rt) {
                 }),
             }).catch((err) => console.warn('interactive/record (pip-count):', err));
         }
-    }
-
-    if (!rt.dryRun) {
-        openInteractiveBestMoveFeedbackModal(correct ? ok : bad);
     }
 }
 

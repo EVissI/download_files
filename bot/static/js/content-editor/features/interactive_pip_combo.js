@@ -17,9 +17,6 @@ function withFeatureCacheQs(relativePath) {
     return resolved + q;
 }
 
-const { openInteractiveBestMoveFeedbackModal } = await import(
-    withFeatureCacheQs('./interactive_feedback_modal.js')
-);
 const { resolveReferencePipsFromPayload } = await import(withFeatureCacheQs('./pip_count_utils.js'));
 const {
     PIP_DOUBLE_ANSWER_OPTIONS,
@@ -33,8 +30,6 @@ const {
     syncPipInteractiveLayoutAfterChange,
     bindPipNumericInputFields,
     setPipNumericInputsInteractionState,
-    INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK,
-    INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD,
 } = await import(withFeatureCacheQs('./interactive_pip_count.js'));
 const { buildComboResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
 
@@ -84,12 +79,6 @@ export function ensurePipComboDatasetDefaults(block) {
     block.dataset.cePipComboDoubleCorrectAnswer = normalizePipDoubleCorrectAnswer(
         block.dataset.cePipComboDoubleCorrectAnswer
     );
-    if (!String(block.dataset.cePipComboFeedbackOk || '').trim()) {
-        block.dataset.cePipComboFeedbackOk = INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK;
-    }
-    if (!String(block.dataset.cePipComboFeedbackBad || '').trim()) {
-        block.dataset.cePipComboFeedbackBad = INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD;
-    }
     const titleEl = block.querySelector('.ce-interactive-pip-combo__title');
     if (titleEl) titleEl.textContent = INTERACTIVE_PIP_COMBO_DISPLAY_NAME;
 }
@@ -119,21 +108,6 @@ export function getInteractivePipComboInnerHtml() {
                             <pre class="ce-interactive-pip-combo__result" data-ce-pip-combo-result style="display:none"></pre>
                         </div>
                     </div>`;
-}
-
-function getFeedbackTexts(block) {
-    const okRaw =
-        block && block.dataset && block.dataset.cePipComboFeedbackOk != null
-            ? String(block.dataset.cePipComboFeedbackOk).trim()
-            : '';
-    const badRaw =
-        block && block.dataset && block.dataset.cePipComboFeedbackBad != null
-            ? String(block.dataset.cePipComboFeedbackBad).trim()
-            : '';
-    return {
-        ok: okRaw || INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_OK,
-        bad: badRaw || INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD,
-    };
 }
 
 function setTimerDisplay(block, text) {
@@ -286,12 +260,7 @@ function finishCombo(block, rt, resultText, overallCorrect) {
     applyPipCountBoardGateForBlock(block, ACTION_STOPPED);
     syncPipInteractiveLayoutAfterChange(block);
 
-    const { ok, bad } = getFeedbackTexts(block);
     recordComboStats(block, rt, overallCorrect);
-
-    if (!rt.dryRun) {
-        openInteractiveBestMoveFeedbackModal(overallCorrect ? ok : bad);
-    }
 }
 
 function handleChoice(block, rt, chosenValue) {

@@ -4553,12 +4553,6 @@ export class ContentEditor {
 
             case 'interactive-pip-count': {
                 element.classList.add('ce-interactive-pip-count');
-                if (element.dataset.cePipCountFeedbackOk == null || element.dataset.cePipCountFeedbackOk === '') {
-                    element.dataset.cePipCountFeedbackOk = 'Правильно';
-                }
-                if (element.dataset.cePipCountFeedbackBad == null || element.dataset.cePipCountFeedbackBad === '') {
-                    element.dataset.cePipCountFeedbackBad = 'Неправильно';
-                }
                 element.innerHTML = `
                     <div class="ce-interactive-pip-count__inner">
                         <p class="ce-interactive-pip-count__title">Подсчёт пипсов</p>
@@ -5340,22 +5334,6 @@ export class ContentEditor {
                            oninput="contentEditor.updateElementProperty('interactiveFeedbackBad', this.value)">
                 </div>
                 ` : ''}
-                ${element.dataset.toolId === 'interactive-pip-count' ? `
-                <div class="property-item">
-                    <label>Текст при верном ответе:</label>
-                    <input type="text" id="propPipCountFeedbackOk" class="ce-property-input-fluid" maxlength="500"
-                           value="${this.escapeHtml(element.dataset.cePipCountFeedbackOk !== undefined && element.dataset.cePipCountFeedbackOk !== null ? String(element.dataset.cePipCountFeedbackOk) : 'Правильно')}"
-                           placeholder="Правильно"
-                           oninput="contentEditor.updateElementProperty('pipCountFeedbackOk', this.value)">
-                </div>
-                <div class="property-item">
-                    <label>Текст при неверном ответе:</label>
-                    <input type="text" id="propPipCountFeedbackBad" class="ce-property-input-fluid" maxlength="500"
-                           value="${this.escapeHtml(element.dataset.cePipCountFeedbackBad !== undefined && element.dataset.cePipCountFeedbackBad !== null ? String(element.dataset.cePipCountFeedbackBad) : 'Неправильно')}"
-                           placeholder="Неправильно"
-                           oninput="contentEditor.updateElementProperty('pipCountFeedbackBad', this.value)">
-                </div>
-                ` : ''}
                 ${element.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID ? `
                 <div class="property-item">
                     <label>Правильный ответ:</label>
@@ -5368,20 +5346,6 @@ export class ContentEditor {
                             return `<option value="${opt.value}" ${selected}>${this.escapeHtml(opt.label)}</option>`;
                         }).join('')}
                     </select>
-                </div>
-                <div class="property-item">
-                    <label>Текст при верном ответе:</label>
-                    <input type="text" id="propPipDoubleFeedbackOk" class="ce-property-input-fluid" maxlength="500"
-                           value="${this.escapeHtml(element.dataset.cePipDoubleFeedbackOk !== undefined && element.dataset.cePipDoubleFeedbackOk !== null ? String(element.dataset.cePipDoubleFeedbackOk) : 'Правильно')}"
-                           placeholder="Правильно"
-                           oninput="contentEditor.updateElementProperty('pipDoubleFeedbackOk', this.value)">
-                </div>
-                <div class="property-item">
-                    <label>Текст при неверном ответе:</label>
-                    <input type="text" id="propPipDoubleFeedbackBad" class="ce-property-input-fluid" maxlength="500"
-                           value="${this.escapeHtml(element.dataset.cePipDoubleFeedbackBad !== undefined && element.dataset.cePipDoubleFeedbackBad !== null ? String(element.dataset.cePipDoubleFeedbackBad) : 'Неправильно')}"
-                           placeholder="Неправильно"
-                           oninput="contentEditor.updateElementProperty('pipDoubleFeedbackBad', this.value)">
                 </div>
                 ` : ''}
                 ${element.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID ? `
@@ -5396,20 +5360,6 @@ export class ContentEditor {
                             return `<option value="${opt.value}" ${selected}>${this.escapeHtml(opt.label)}</option>`;
                         }).join('')}
                     </select>
-                </div>
-                <div class="property-item">
-                    <label>Текст при верном ответе:</label>
-                    <input type="text" id="propPipComboFeedbackOk" class="ce-property-input-fluid" maxlength="500"
-                           value="${this.escapeHtml(element.dataset.cePipComboFeedbackOk !== undefined && element.dataset.cePipComboFeedbackOk !== null ? String(element.dataset.cePipComboFeedbackOk) : 'Правильно')}"
-                           placeholder="Правильно"
-                           oninput="contentEditor.updateElementProperty('pipComboFeedbackOk', this.value)">
-                </div>
-                <div class="property-item">
-                    <label>Текст при неверном ответе:</label>
-                    <input type="text" id="propPipComboFeedbackBad" class="ce-property-input-fluid" maxlength="500"
-                           value="${this.escapeHtml(element.dataset.cePipComboFeedbackBad !== undefined && element.dataset.cePipComboFeedbackBad !== null ? String(element.dataset.cePipComboFeedbackBad) : 'Неправильно')}"
-                           placeholder="Неправильно"
-                           oninput="contentEditor.updateElementProperty('pipComboFeedbackBad', this.value)">
                 </div>
                 ` : ''}
             </div>
@@ -5443,44 +5393,14 @@ export class ContentEditor {
                     this.selectedElement.dataset.ceInteractiveFeedbackBad = value != null ? String(value).slice(0, 500) : '';
                 }
                 break;
-            case 'pipCountFeedbackOk':
-                if (this.selectedElement.dataset.toolId === 'interactive-pip-count') {
-                    this.selectedElement.dataset.cePipCountFeedbackOk = value != null ? String(value).slice(0, 500) : '';
-                }
-                break;
-            case 'pipCountFeedbackBad':
-                if (this.selectedElement.dataset.toolId === 'interactive-pip-count') {
-                    this.selectedElement.dataset.cePipCountFeedbackBad = value != null ? String(value).slice(0, 500) : '';
-                }
-                break;
             case 'pipDoubleCorrectAnswer':
                 if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
                     this.selectedElement.dataset.cePipDoubleCorrectAnswer = normalizePipDoubleCorrectAnswer(value);
                 }
                 break;
-            case 'pipDoubleFeedbackOk':
-                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
-                    this.selectedElement.dataset.cePipDoubleFeedbackOk = value != null ? String(value).slice(0, 500) : '';
-                }
-                break;
-            case 'pipDoubleFeedbackBad':
-                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID) {
-                    this.selectedElement.dataset.cePipDoubleFeedbackBad = value != null ? String(value).slice(0, 500) : '';
-                }
-                break;
             case 'pipComboDoubleCorrectAnswer':
                 if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID) {
                     this.selectedElement.dataset.cePipComboDoubleCorrectAnswer = normalizePipDoubleCorrectAnswer(value);
-                }
-                break;
-            case 'pipComboFeedbackOk':
-                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID) {
-                    this.selectedElement.dataset.cePipComboFeedbackOk = value != null ? String(value).slice(0, 500) : '';
-                }
-                break;
-            case 'pipComboFeedbackBad':
-                if (this.selectedElement.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID) {
-                    this.selectedElement.dataset.cePipComboFeedbackBad = value != null ? String(value).slice(0, 500) : '';
                 }
                 break;
             case 'interactiveButtonCount':
@@ -8707,12 +8627,6 @@ export class ContentEditor {
             }
             case 'interactive-pip-count': {
                 element.classList.add('ce-interactive-pip-count');
-                if (!String(element.dataset.cePipCountFeedbackOk || '').trim()) {
-                    element.dataset.cePipCountFeedbackOk = 'Правильно';
-                }
-                if (!String(element.dataset.cePipCountFeedbackBad || '').trim()) {
-                    element.dataset.cePipCountFeedbackBad = 'Неправильно';
-                }
                 element.innerHTML = `
                     <div class="ce-interactive-pip-count__inner">
                         <p class="ce-interactive-pip-count__title">Подсчёт пипсов</p>

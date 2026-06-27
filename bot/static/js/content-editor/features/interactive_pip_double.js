@@ -17,9 +17,6 @@ function withFeatureCacheQs(relativePath) {
     return resolved + q;
 }
 
-const { openInteractiveBestMoveFeedbackModal } = await import(
-    withFeatureCacheQs('./interactive_feedback_modal.js')
-);
 const {
     applyPipCountBoardGateForBlock,
     applyPipCountBoardGateForPreviewHost,
@@ -39,9 +36,6 @@ export const PIP_DOUBLE_ANSWER_OPTIONS = [
     { value: PIP_DOUBLE_ANSWER_DOUBLE_TAKE, label: 'Double/take' },
     { value: PIP_DOUBLE_ANSWER_DOUBLE_PASS, label: 'Double/pass' },
 ];
-
-export const INTERACTIVE_PIP_DOUBLE_FEEDBACK_DEFAULT_OK = 'Правильно';
-export const INTERACTIVE_PIP_DOUBLE_FEEDBACK_DEFAULT_BAD = 'Неправильно';
 
 const ACTION_IDLE = 'idle';
 const ACTION_RUNNING = 'running';
@@ -79,12 +73,6 @@ export function ensurePipDoubleDatasetDefaults(block) {
     block.dataset.cePipDoubleCorrectAnswer = normalizePipDoubleCorrectAnswer(
         block.dataset.cePipDoubleCorrectAnswer
     );
-    if (!String(block.dataset.cePipDoubleFeedbackOk || '').trim()) {
-        block.dataset.cePipDoubleFeedbackOk = INTERACTIVE_PIP_DOUBLE_FEEDBACK_DEFAULT_OK;
-    }
-    if (!String(block.dataset.cePipDoubleFeedbackBad || '').trim()) {
-        block.dataset.cePipDoubleFeedbackBad = INTERACTIVE_PIP_DOUBLE_FEEDBACK_DEFAULT_BAD;
-    }
     const titleEl = block.querySelector('.ce-interactive-pip-double__title');
     if (titleEl) titleEl.textContent = INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME;
 }
@@ -113,21 +101,6 @@ function shuffleArray(arr) {
         copy[j] = tmp;
     }
     return copy;
-}
-
-function getFeedbackTexts(block) {
-    const okRaw =
-        block && block.dataset && block.dataset.cePipDoubleFeedbackOk != null
-            ? String(block.dataset.cePipDoubleFeedbackOk).trim()
-            : '';
-    const badRaw =
-        block && block.dataset && block.dataset.cePipDoubleFeedbackBad != null
-            ? String(block.dataset.cePipDoubleFeedbackBad).trim()
-            : '';
-    return {
-        ok: okRaw || INTERACTIVE_PIP_DOUBLE_FEEDBACK_DEFAULT_OK,
-        bad: badRaw || INTERACTIVE_PIP_DOUBLE_FEEDBACK_DEFAULT_BAD,
-    };
 }
 
 function setTimerDisplay(block, text) {
@@ -242,7 +215,6 @@ function handleChoice(block, rt, chosenValue) {
     applyPipCountBoardGateForBlock(block, ACTION_STOPPED);
     syncPipInteractiveLayoutAfterChange(block);
 
-    const { ok, bad } = getFeedbackTexts(block);
     if (!rt.dryRun && rt.recordEditor && rt.recordEditor._contentCardViewCardId) {
         const auth =
             typeof rt.recordEditor.getContentCardApiAuthPayload === 'function'
@@ -259,10 +231,6 @@ function handleChoice(block, rt, chosenValue) {
                 }),
             }).catch((err) => console.warn('interactive/record (pip-double):', err));
         }
-    }
-
-    if (!rt.dryRun) {
-        openInteractiveBestMoveFeedbackModal(correct ? ok : bad);
     }
 }
 
