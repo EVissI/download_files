@@ -1203,8 +1203,76 @@ export class ContentEditor {
                 </div>`;
     }
 
+    resolveEditorCabinetConfig() {
+        let pool = 'cards';
+        if (this._saveCardPool === 'pip_count' || this.isPipCountImportEditorMode()) {
+            pool = 'pip_count';
+        } else if (this._contentCardViewPool || this.editorOpenedFromContentCardView) {
+            pool = this.resolveContentCardViewPool();
+        } else if (typeof window !== 'undefined' && window.__CONTENT_CARD_POOL__) {
+            pool = String(window.__CONTENT_CARD_POOL__);
+        }
+        const isPip = pool === 'pip_count';
+        return {
+            pool,
+            basePath: isPip ? '/pip-count-cabinet' : '/cards-cabinet',
+            label: isPip ? 'Кабинет «Подсчёт пипсов»' : 'Кабинет карточек',
+        };
+    }
+
+    buildEditorCabinetUrl() {
+        const { basePath } = this.resolveEditorCabinetConfig();
+        const params = new URLSearchParams();
+        if (typeof window !== 'undefined') {
+            const pageParams = new URLSearchParams(window.location.search || '');
+            const fabToken = pageParams.get('fab_token');
+            const folderToken = pageParams.get('folder_token');
+            if (fabToken) params.set('fab_token', fabToken);
+            if (folderToken) params.set('folder_token', folderToken);
+        }
+        const qs = params.toString();
+        return basePath + (qs ? '?' + qs : '');
+    }
+
+    openEditorCabinet() {
+        if (typeof window === 'undefined') return;
+        window.location.assign(this.buildEditorCabinetUrl());
+    }
+
+    getPropertiesCabinetButtonHtml() {
+        const cfg = this.resolveEditorCabinetConfig();
+        const label = this.escapeHtml(cfg.label);
+        return `<button type="button" class="action-btn properties-cabinet-btn" onclick="contentEditor.openEditorCabinet()" title="${label}" aria-label="${label}">
+                    <i class="fa fa-folder-open-o" aria-hidden="true"></i>
+                    <span class="properties-cabinet-btn__label">${label}</span>
+                </button>`;
+    }
+
+    getPropertiesEditorActionsHtml(options = {}) {
+        const withDelete = options.withDelete === true;
+        const deleteHtml = withDelete
+            ? `<button type="button" class="action-btn danger" onclick="contentEditor.deleteElement('${options.elementId || ''}')" title="Удалить элемент" aria-label="Удалить элемент">
+                    <i class="fa fa-trash" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
+               </button>`
+            : '';
+        const frameActions = this.getPropertiesFrameActionsInnerHtml();
+        if (withDelete) {
+            return `<div class="properties-editor-actions">
+                        ${this.getPropertiesCabinetButtonHtml()}
+                        <div class="action-buttons">
+                            ${deleteHtml}
+                            ${frameActions}
+                        </div>
+                    </div>`;
+        }
+        return `<div class="properties-editor-actions action-buttons-col">
+                    ${this.getPropertiesCabinetButtonHtml()}
+                    ${frameActions}
+                </div>`;
+    }
+
     getPropertiesEmptyStateHtml() {
-        return `<div class="action-buttons action-buttons-col">${this.getPropertiesFrameActionsInnerHtml()}</div>`;
+        return this.getPropertiesEditorActionsHtml();
     }
 
     applyPropertiesEmptyState() {
@@ -5344,12 +5412,7 @@ export class ContentEditor {
                 ` : ''}
             </div>
             
-            <div class="action-buttons">
-                <button class="action-btn danger" onclick="contentEditor.deleteElement('${element.id}')" title="Удалить элемент" aria-label="Удалить элемент">
-                    <i class="fa fa-trash" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
-                </button>
-                ${this.getPropertiesFrameActionsInnerHtml()}
-            </div>
+            ${this.getPropertiesEditorActionsHtml({ withDelete: true, elementId: element.id })}
         `;
         if (element.classList.contains('text-element')) {
             this.syncTextStylePresetDropdown();
