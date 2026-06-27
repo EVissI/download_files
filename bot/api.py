@@ -785,6 +785,37 @@ def _cards_cabinet_webapp_markup(view_url: str) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def _cabinet_webapp_markup_for_pool(
+    pool: ContentCardPool = ContentCardPool.CARDS,
+) -> InlineKeyboardMarkup:
+    """Кнопка кабинета с URL и подписью по пулу карточек."""
+    base = settings.MINI_APP_URL.rstrip("/")
+    path = (
+        "/pip-count-cabinet"
+        if pool == ContentCardPool.PIP_COUNT
+        else "/cards-cabinet"
+    )
+    button_text = (
+        "Открыть кабинет пипсов"
+        if pool == ContentCardPool.PIP_COUNT
+        else "Открыть личный кабинет"
+    )
+    kb = InlineKeyboardBuilder()
+    kb.button(text=button_text, web_app=WebAppInfo(url=f"{base}{path}"))
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def _notification_pool_from_assigned_cards(
+    body_pool: str | None, card_pools: set[ContentCardPool]
+) -> ContentCardPool:
+    if body_pool:
+        return _parse_content_card_pool(body_pool)
+    if card_pools == {ContentCardPool.PIP_COUNT}:
+        return ContentCardPool.PIP_COUNT
+    return ContentCardPool.CARDS
+
+
 class ContentCardSaveBody(BaseModel):
     """Сохранение карточки редактора (hint viewer): проверка через Telegram init_data."""
 
@@ -833,6 +864,7 @@ class ContentCardAssignToUserBody(BaseModel):
     fab_token: str | None = None
     target_user_id: int = Field(..., ge=1)
     content_card_ids: list[int] = Field(..., min_length=1, max_length=3000)
+    pool: str | None = None
 
 
 class ContentCardGenerateLinkBody(BaseModel):
@@ -1623,6 +1655,7 @@ async def content_cards_assign_to_user(body: ContentCardAssignToUserBody):
     issued_count = 0
     already_had_count = 0
     invalid_count = 0
+    notify_pool = ContentCardPool.CARDS
     async with async_session_maker() as session:
         target_exists = await session.scalar(
             select(User.id).where(User.id == body.target_user_id).limit(1)
@@ -1631,11 +1664,23 @@ async def content_cards_assign_to_user(body: ContentCardAssignToUserBody):
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 
         existing_cards_result = await session.execute(
-            select(ContentCard.id).where(ContentCard.id.in_(card_ids_ordered_unique))
+            select(ContentCard.id, ContentCard.card_pool).where(
+                ContentCard.id.in_(card_ids_ordered_unique)
+            )
         )
-        existing_card_ids = {
-            int(row_id) for row_id in existing_cards_result.scalars().all() if row_id is not None
-        }
+        existing_card_ids: set[int] = set()
+        card_pools_by_id: dict[int, ContentCardPool] = {}
+        for row_id, row_pool in existing_cards_result.all():
+            if row_id is None:
+                continue
+            cid = int(row_id)
+            existing_card_ids.add(cid)
+            if row_pool is not None:
+                card_pools_by_id[cid] = (
+                    row_pool
+                    if isinstance(row_pool, ContentCardPool)
+                    else ContentCardPool(str(row_pool))
+                )
         selected_existing_ids = [
             card_id for card_id in card_ids_ordered_unique if card_id in existing_card_ids
         ]
@@ -1656,6 +1701,7 @@ async def content_cards_assign_to_user(body: ContentCardAssignToUserBody):
         }
         already_had_count = len(already_has_ids)
 
+        issued_card_ids: list[int] = []
         for card_id in selected_existing_ids:
             if card_id in already_has_ids:
                 continue
@@ -1666,22 +1712,29 @@ async def content_cards_assign_to_user(body: ContentCardAssignToUserBody):
                 )
             )
             issued_count += 1
+            issued_card_ids.append(card_id)
 
         if issued_count > 0:
             await session.commit()
+
+        pools_for_notify = {
+            card_pools_by_id[cid]
+            for cid in (issued_card_ids or selected_existing_ids)
+            if cid in card_pools_by_id
+        }
+        notify_pool = _notification_pool_from_assigned_cards(body.pool, pools_for_notify)
 
     notify_sent = False
     notify_error = None
     if issued_count > 0:
         try:
-            cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
             await bot.send_message(
                 chat_id=body.target_user_id,
                 text=(
                     f"Вам зачислено {issued_count} карточек, "
                     "посмотреть их можете в личном кабинете."
                 ),
-                reply_markup=_cards_cabinet_webapp_markup(cabinet_url),
+                reply_markup=_cabinet_webapp_markup_for_pool(notify_pool),
             )
             notify_sent = True
         except Exception as e:
