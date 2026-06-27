@@ -22,15 +22,21 @@ def get_pip_count_cabinet_entry_kb() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-@pip_count_cabinet_entry_router.message(Command("pip_count_cabinet"))
-async def handle_pip_count_cabinet_command(message: Message):
-    """Вход в кабинет pip-count (пока только для ROOT_ADMIN_IDS)."""
+async def send_pip_count_cabinet_entry(message: Message) -> bool:
+    """Открывает кабинет pip-count. Доступно только ROOT_ADMIN_IDS."""
     user_id = message.from_user.id if message.from_user else None
     if user_id is None or user_id not in settings.ROOT_ADMIN_IDS:
         await message.answer("Команда доступна только администраторам.")
-        return
+        return False
 
     await message.answer(
         "Кабинет «Подсчёт пипсов»:",
         reply_markup=get_pip_count_cabinet_entry_kb(),
     )
+    return True
+
+
+@pip_count_cabinet_entry_router.message(Command("pip_count_cabinet"))
+async def handle_pip_count_cabinet_command(message: Message):
+    """Вход в кабинет pip-count (пока только для ROOT_ADMIN_IDS)."""
+    await send_pip_count_cabinet_entry(message)
