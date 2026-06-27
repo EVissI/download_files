@@ -1,5 +1,5 @@
 /**
- * Интерактив «Пипсы и дабл»: один таймер, сначала ввод пипсов, затем выбор дабла, общий результат.
+ * Интерактив «Пипсы+Решение по кубу»: один таймер, сначала ввод пипсов, затем выбор по кубу, общий результат.
  */
 
 const _featureCacheQs = (() => {
@@ -25,6 +25,7 @@ const {
     PIP_DOUBLE_ANSWER_OPTIONS,
     normalizePipDoubleCorrectAnswer,
     pipDoubleAnswerLabel,
+    INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME,
 } = await import(withFeatureCacheQs('./interactive_pip_double.js'));
 const {
     applyPipCountBoardGateForBlock,
@@ -38,6 +39,7 @@ const {
 const { buildComboResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
 
 export const INTERACTIVE_PIP_COMBO_TOOL_ID = 'interactive-pip-combo';
+export const INTERACTIVE_PIP_COMBO_DISPLAY_NAME = 'Пипсы+' + INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME;
 
 const ACTION_IDLE = 'idle';
 const ACTION_RUNNING = 'running';
@@ -88,12 +90,14 @@ export function ensurePipComboDatasetDefaults(block) {
     if (!String(block.dataset.cePipComboFeedbackBad || '').trim()) {
         block.dataset.cePipComboFeedbackBad = INTERACTIVE_PIP_COUNT_FEEDBACK_DEFAULT_BAD;
     }
+    const titleEl = block.querySelector('.ce-interactive-pip-combo__title');
+    if (titleEl) titleEl.textContent = INTERACTIVE_PIP_COMBO_DISPLAY_NAME;
 }
 
 export function getInteractivePipComboInnerHtml() {
     return `
                     <div class="ce-interactive-pip-combo__inner">
-                        <p class="ce-interactive-pip-combo__title">Пипсы и дабл</p>
+                        <p class="ce-interactive-pip-combo__title">${INTERACTIVE_PIP_COMBO_DISPLAY_NAME}</p>
                         <div class="ce-interactive-pip-combo__controls" data-ce-pip-combo-controls>
                             <div class="ce-interactive-pip-combo__timer-row" data-ce-pip-combo-timer-row>
                                 <button type="button" class="ce-interactive-pip-combo__btn" data-ce-pip-combo-action data-ce-pip-combo-state="idle" aria-label="Пуск">Пуск</button>
@@ -210,7 +214,7 @@ function setActionButtonState(block, state, phase) {
         actionBtn.textContent = 'Далее';
         actionBtn.classList.add('ce-interactive-pip-combo__btn--running');
         actionBtn.disabled = false;
-        actionBtn.setAttribute('aria-label', 'Подтвердить пипсы и перейти к даблу');
+        actionBtn.setAttribute('aria-label', 'Подтвердить пипсы и перейти к решению по кубу');
     } else if (state === ACTION_RUNNING && phase === PHASE_DOUBLE) {
         actionBtn.hidden = true;
         actionBtn.classList.remove('ce-interactive-pip-combo__btn--running');

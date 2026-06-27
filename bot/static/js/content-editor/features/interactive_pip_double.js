@@ -1,5 +1,5 @@
 /**
- * Интерактив «Дабл» (пул pip_count): таймер и выбор из трёх действий по кубу.
+ * Интерактив «Решение по кубу» (пул pip_count): таймер и выбор из трёх действий по кубу.
  */
 
 const _featureCacheQs = (() => {
@@ -28,6 +28,7 @@ const {
 const { buildDoubleResultText } = await import(withFeatureCacheQs('./pip_result_format.js'));
 
 export const INTERACTIVE_PIP_DOUBLE_TOOL_ID = 'interactive-pip-double';
+export const INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME = 'Решение по кубу';
 
 export const PIP_DOUBLE_ANSWER_NO_DOUBLE = 'no_double';
 export const PIP_DOUBLE_ANSWER_DOUBLE_TAKE = 'double_take';
@@ -84,12 +85,14 @@ export function ensurePipDoubleDatasetDefaults(block) {
     if (!String(block.dataset.cePipDoubleFeedbackBad || '').trim()) {
         block.dataset.cePipDoubleFeedbackBad = INTERACTIVE_PIP_DOUBLE_FEEDBACK_DEFAULT_BAD;
     }
+    const titleEl = block.querySelector('.ce-interactive-pip-double__title');
+    if (titleEl) titleEl.textContent = INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME;
 }
 
 export function getInteractivePipDoubleInnerHtml() {
     return `
                     <div class="ce-interactive-pip-double__inner">
-                        <p class="ce-interactive-pip-double__title">Дабл</p>
+                        <p class="ce-interactive-pip-double__title">${INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME}</p>
                         <div class="ce-interactive-pip-double__controls" data-ce-pip-double-controls>
                             <div class="ce-interactive-pip-double__timer-row" data-ce-pip-double-timer-row>
                                 <button type="button" class="ce-interactive-pip-double__btn" data-ce-pip-double-action data-ce-pip-double-state="idle" aria-label="Пуск">Пуск</button>

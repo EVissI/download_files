@@ -136,6 +136,7 @@ const {
     normalizePipDoubleCorrectAnswer,
     PIP_DOUBLE_ANSWER_OPTIONS,
     INTERACTIVE_PIP_DOUBLE_TOOL_ID,
+    INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME,
 } = await import(_editorFeatureUrl('./content-editor/features/interactive_pip_double.js'));
 
 const {
@@ -145,6 +146,7 @@ const {
     getInteractivePipComboInnerHtml,
     ensurePipComboDatasetDefaults,
     INTERACTIVE_PIP_COMBO_TOOL_ID,
+    INTERACTIVE_PIP_COMBO_DISPLAY_NAME,
 } = await import(_editorFeatureUrl('./content-editor/features/interactive_pip_combo.js'));
 
 /**
@@ -2718,16 +2720,16 @@ export class ContentEditor {
             },
             {
                 id: 'interactive-pip-double',
-                name: 'Дабл',
+                name: INTERACTIVE_PIP_DOUBLE_DISPLAY_NAME,
                 type: 'interactive',
-                description: 'Выбор действия по кубу: таймер и три варианта',
+                description: 'Решение по кубу: таймер и три варианта',
                 icon: 'fa fa-cube'
             },
             {
                 id: 'interactive-pip-combo',
-                name: 'Пипсы+дабл',
+                name: INTERACTIVE_PIP_COMBO_DISPLAY_NAME,
                 type: 'interactive',
-                description: 'Подсчёт пипсов и выбор дабла под одним таймером',
+                description: 'Подсчёт пипсов и решение по кубу под одним таймером',
                 icon: 'fa fa-list-ol'
             },
             {
@@ -5384,7 +5386,7 @@ export class ContentEditor {
                 ` : ''}
                 ${element.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID ? `
                 <div class="property-item">
-                    <label>Правильный ответ (дабл):</label>
+                    <label>Правильный ответ (решение по кубу):</label>
                     <select id="propPipComboDoubleCorrectAnswer" onchange="contentEditor.updateElementProperty('pipComboDoubleCorrectAnswer', this.value)">
                         ${PIP_DOUBLE_ANSWER_OPTIONS.map((opt) => {
                             const selected =
