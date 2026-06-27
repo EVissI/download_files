@@ -149,6 +149,13 @@ const {
     INTERACTIVE_PIP_COMBO_DISPLAY_NAME,
 } = await import(_editorFeatureUrl('./content-editor/features/interactive_pip_combo.js'));
 
+const {
+    getDefaultPipResultTemplate,
+    pipResultTemplateKindFromToolId,
+    buildPipResultPreview,
+    PIP_RESULT_TEMPLATE_PLACEHOLDER_HINT,
+} = await import(_editorFeatureUrl('./content-editor/features/pip_result_format.js'));
+
 /**
  * Content Editor Module
  * Редактор контента в стиле Photoshop
@@ -2292,6 +2299,42 @@ export class ContentEditor {
 
     isPipInteractiveToolId(toolId) {
         return toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double' || toolId === INTERACTIVE_PIP_COMBO_TOOL_ID;
+    }
+
+    getPipResultTemplateKind(element) {
+        if (!element) return null;
+        return pipResultTemplateKindFromToolId(element.dataset.toolId);
+    }
+
+    renderPipResultTemplatePropertyHtml(element) {
+        const kind = this.getPipResultTemplateKind(element);
+        if (!kind) return '';
+        const defaultTpl = getDefaultPipResultTemplate(kind);
+        const stored =
+            element.dataset.cePipResultTemplate != null ? String(element.dataset.cePipResultTemplate) : '';
+        const effectiveTpl = stored.trim() || defaultTpl;
+        const preview = buildPipResultPreview(kind, effectiveTpl);
+        return `
+                <div class="property-item property-item-pip-result-template">
+                    <label>Шаблон результата:</label>
+                    <textarea id="propPipResultTemplate" class="ce-property-textarea" rows="9" maxlength="4000"
+                              placeholder="${this.escapeHtml(defaultTpl)}"
+                              oninput="contentEditor.updateElementProperty('pipResultTemplate', this.value)">${this.escapeHtml(stored)}</textarea>
+                    <p class="ce-pip-result-template-hint">${this.escapeHtml(PIP_RESULT_TEMPLATE_PLACEHOLDER_HINT)}</p>
+                    <label class="ce-pip-result-template-preview-label">Пример:</label>
+                    <pre class="ce-pip-result-template-preview" id="propPipResultTemplatePreview">${this.escapeHtml(preview)}</pre>
+                </div>`;
+    }
+
+    refreshPipResultTemplatePreview() {
+        if (!this.selectedElement) return;
+        const kind = this.getPipResultTemplateKind(this.selectedElement);
+        const previewEl = document.getElementById('propPipResultTemplatePreview');
+        const textarea = document.getElementById('propPipResultTemplate');
+        if (!kind || !previewEl || !textarea) return;
+        const defaultTpl = getDefaultPipResultTemplate(kind);
+        const effectiveTpl = String(textarea.value || '').trim() || defaultTpl;
+        previewEl.textContent = buildPipResultPreview(kind, effectiveTpl);
     }
 
     applyPipInteractiveCanvasLayout(element) {
@@ -5334,6 +5377,7 @@ export class ContentEditor {
                            oninput="contentEditor.updateElementProperty('interactiveFeedbackBad', this.value)">
                 </div>
                 ` : ''}
+                ${element.dataset.toolId === 'interactive-pip-count' ? this.renderPipResultTemplatePropertyHtml(element) : ''}
                 ${element.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID ? `
                 <div class="property-item">
                     <label>Правильный ответ:</label>
@@ -5347,6 +5391,7 @@ export class ContentEditor {
                         }).join('')}
                     </select>
                 </div>
+                ${this.renderPipResultTemplatePropertyHtml(element)}
                 ` : ''}
                 ${element.dataset.toolId === INTERACTIVE_PIP_COMBO_TOOL_ID ? `
                 <div class="property-item">
@@ -5361,6 +5406,7 @@ export class ContentEditor {
                         }).join('')}
                     </select>
                 </div>
+                ${this.renderPipResultTemplatePropertyHtml(element)}
                 ` : ''}
             </div>
             
@@ -5391,6 +5437,17 @@ export class ContentEditor {
             case 'interactiveFeedbackBad':
                 if (this.selectedElement.dataset.toolId === 'interactive-best-move') {
                     this.selectedElement.dataset.ceInteractiveFeedbackBad = value != null ? String(value).slice(0, 500) : '';
+                }
+                break;
+            case 'pipResultTemplate':
+                if (this.isPipInteractiveToolId(this.selectedElement.dataset.toolId)) {
+                    const next = value != null ? String(value).slice(0, 4000) : '';
+                    if (next.trim()) {
+                        this.selectedElement.dataset.cePipResultTemplate = next;
+                    } else {
+                        delete this.selectedElement.dataset.cePipResultTemplate;
+                    }
+                    this.refreshPipResultTemplatePreview();
                 }
                 break;
             case 'pipDoubleCorrectAnswer':

@@ -205,7 +205,8 @@ function handleChoice(block, rt, chosenValue) {
             elapsed,
             pipDoubleAnswerLabel(chosenValue),
             pipDoubleAnswerLabel(correctAnswer),
-            correct
+            correct,
+            block
         );
     }
 

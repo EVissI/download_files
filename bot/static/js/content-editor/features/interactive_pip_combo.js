@@ -290,7 +290,8 @@ function handleChoice(block, rt, chosenValue) {
             rt.savedLower,
             pipDoubleAnswerLabel(chosenValue),
             pipDoubleAnswerLabel(correctAnswer),
-            doubleCorrect
+            doubleCorrect,
+            block
         ),
         overallCorrect
     );

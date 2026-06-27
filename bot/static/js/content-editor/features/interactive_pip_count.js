@@ -485,7 +485,7 @@ function handlePipStop(block, rt) {
 
     if (resultEl) {
         resultEl.style.display = '';
-        resultEl.textContent = buildPipCountResultText(elapsed, ref, userUpper, userLower);
+        resultEl.textContent = buildPipCountResultText(elapsed, ref, userUpper, userLower, block);
     }
 
     syncPipInteractiveLayoutAfterChange(block);
