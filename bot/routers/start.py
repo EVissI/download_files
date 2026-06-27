@@ -11,6 +11,7 @@ from aiogram.types import (
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandObject, CommandStart
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import (
@@ -21,7 +22,7 @@ from bot.db.dao import (
     MessagesTextsDAO,
     UserDAO,
 )
-from bot.db.models import ContentCardActivationLinkStatus, User
+from bot.db.models import ContentCard, ContentCardActivationLinkStatus, ContentCardPool, User
 from bot.db.schemas import SUser
 from bot.config import settings, translator_hub
 from html import escape
@@ -50,6 +51,76 @@ CARD_LINK_ACTIVATE_PREFIX = "activate_card_link:"
 GALLERY_IMG_START_PREFIX = "imglink_"
 GALLERY_IMG_REDIS_PREFIX = "cabinet_gallery_img_share:"
 FOLDER_LINK_START_PREFIX = "folderlink_"
+
+
+def _normalize_card_pool(raw) -> ContentCardPool:
+    if isinstance(raw, ContentCardPool):
+        return raw
+    if raw is None:
+        return ContentCardPool.CARDS
+    try:
+        return ContentCardPool(str(raw).strip().lower())
+    except ValueError:
+        return ContentCardPool.CARDS
+
+
+def _cabinet_base_path_for_pool(pool: ContentCardPool) -> str:
+    return (
+        "/pip-count-cabinet"
+        if pool == ContentCardPool.PIP_COUNT
+        else "/cards-cabinet"
+    )
+
+
+def _cabinet_open_button_text(pool: ContentCardPool) -> str:
+    if pool == ContentCardPool.PIP_COUNT:
+        return "Открыть кабинет «Подсчёт пипсов»"
+    return "Открыть кабинет"
+
+
+async def _resolve_pool_for_card_ids(
+    session: AsyncSession, card_ids: list[int]
+) -> ContentCardPool:
+    normalized = _normalize_card_ids(card_ids)
+    if not normalized:
+        return ContentCardPool.CARDS
+    result = await session.execute(
+        select(ContentCard.card_pool).where(ContentCard.id.in_(normalized))
+    )
+    pools = {
+        _normalize_card_pool(row[0])
+        for row in result.all()
+        if row and row[0] is not None
+    }
+    if pools == {ContentCardPool.PIP_COUNT}:
+        return ContentCardPool.PIP_COUNT
+    return ContentCardPool.CARDS
+
+
+def _cabinet_webapp_markup_for_pool(
+    pool: ContentCardPool = ContentCardPool.CARDS,
+    *,
+    folder_token: str | None = None,
+) -> InlineKeyboardMarkup:
+    cabinet_url = (
+        f"{settings.MINI_APP_URL.rstrip('/')}"
+        f"{_cabinet_base_path_for_pool(pool)}"
+    )
+    if folder_token:
+        cabinet_url += f"?folder_token={quote(folder_token, safe='')}"
+        button_text = "Открыть папку"
+    else:
+        button_text = _cabinet_open_button_text(pool)
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=button_text,
+                    web_app=WebAppInfo(url=cabinet_url),
+                )
+            ]
+        ]
+    )
 
 
 def _is_cards_cabinet_deeplink(start_payload: str | None) -> bool:
@@ -116,31 +187,12 @@ def _extract_card_link_token(start_payload: str | None) -> str | None:
     return token or None
 
 
-def _cards_cabinet_webapp_markup() -> InlineKeyboardMarkup:
-    cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Открыть кабинет",
-                    web_app=WebAppInfo(url=cabinet_url),
-                )
-            ]
-        ]
-    )
-
-
-def _confirm_link_activation_markup(link_token: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Активировать",
-                    callback_data=f"{CARD_LINK_ACTIVATE_PREFIX}{link_token}",
-                )
-            ]
-        ]
-    )
+def _extract_folder_link_token(start_payload: str | None) -> str | None:
+    payload = str(start_payload or "").strip()
+    if not payload.startswith(FOLDER_LINK_START_PREFIX):
+        return None
+    token = payload[len(FOLDER_LINK_START_PREFIX) :].strip()
+    return token or None
 
 
 def _normalize_card_ids(card_ids: list[int] | None) -> list[int]:
@@ -158,25 +210,13 @@ def _normalize_card_ids(card_ids: list[int] | None) -> list[int]:
     return normalized
 
 
-def _extract_folder_link_token(start_payload: str | None) -> str | None:
-    payload = str(start_payload or "").strip()
-    if not payload.startswith(FOLDER_LINK_START_PREFIX):
-        return None
-    token = payload[len(FOLDER_LINK_START_PREFIX) :].strip()
-    return token or None
-
-
-def _folder_cabinet_webapp_markup(folder_token: str) -> InlineKeyboardMarkup:
-    cabinet_url = (
-        f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
-        f"?folder_token={quote(folder_token, safe='')}"
-    )
+def _confirm_link_activation_markup(link_token: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Открыть папку",
-                    web_app=WebAppInfo(url=cabinet_url),
+                    text="Активировать",
+                    callback_data=f"{CARD_LINK_ACTIVATE_PREFIX}{link_token}",
                 )
             ]
         ]
@@ -263,7 +303,10 @@ async def _send_folder_link_prompt_if_needed(
         text = f"Вам доступна папка «{folder.name}». Карточек: {cards_count}."
     await message.answer(
         text,
-        reply_markup=_folder_cabinet_webapp_markup(link_token),
+        reply_markup=_cabinet_webapp_markup_for_pool(
+            _normalize_card_pool(folder.folder_pool),
+            folder_token=link_token,
+        ),
     )
     await _notify_admins_folder_link_opened(
         message,
@@ -476,10 +519,15 @@ async def activate_cards_from_link(
     issued_count = int(result.get("issued_count") or 0)
     total_count = int(result.get("total_count") or 0)
     link_id = int(result.get("link_id") or 0)
+    activation_link = await link_dao.find_one_by_link(link_token)
+    card_pool = await _resolve_pool_for_card_ids(
+        session_with_commit,
+        _normalize_card_ids(activation_link.card_ids if activation_link else []),
+    )
     if callback.message:
         await callback.message.edit_text(
             f"Вам доступны {total_count} карточек, посмотреть их можете в кабинете",
-            reply_markup=_cards_cabinet_webapp_markup(),
+            reply_markup=_cabinet_webapp_markup_for_pool(card_pool),
         )
 
     user_ref = (
