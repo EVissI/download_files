@@ -15,7 +15,6 @@ from bot.db.models import User
 from loguru import logger
 from bot.db.redis import sync_redis_client
 from bot.common.general_states import GeneralStates
-from bot.routers.pip_count_cabinet_entry_router import send_pip_count_cabinet_entry
 from bot.db.schemas import SUser
 import asyncio
 from redis import Redis
@@ -202,15 +201,6 @@ async def set_notification_callback(callback: CallbackQuery, state: FSMContext):
     except Exception as e:
         logger.exception(f"Ошибка в set_notification_callback: {e}")
         await callback.answer("Ошибка при установке уведомления.", show_alert=True)
-
-@commands_router.message(
-    F.text == AdminKeyboard.admin_text_kb['pip_count_cabinet'],
-    StateFilter(GeneralStates.admin_panel),
-)
-async def pip_count_cabinet_admin_button(message: Message):
-    """Кнопка «Подсчёт пипсов» в админ-панели — тот же вход, что /pip_count_cabinet."""
-    await send_pip_count_cabinet_entry(message)
-
 
 @commands_router.message(F.text == AdminKeyboard.admin_text_kb['monitor'])
 async def monitor(message: Message, state: FSMContext):

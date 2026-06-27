@@ -8,9 +8,13 @@ keyboard-admin-reply-admin_panel = Админпанель
 keyboard-user-reply-hint_viewer = 👁️ Ошибки
 keyboard-user-reply-pokaz = 🎯 Позиция
 keyboard-user-reply-cards_cabinet = 🗂️ Карточки
+keyboard-user-reply-pip_count_cabinet = 🧮 Подсчёт пипсов
 user-cards-cabinet-select_action = Для входа в кабинет карточек, перейдите по кнопке ниже ⬇
 user-cards-cabinet-open_button = Открыть кабинет карточек
 user-cards-cabinet-no_cards = Для получения карточек можно обратиться <a href="https://t.me/Learn_bg">@Learn_bg</a>
+user-pip-count-cabinet-select_action = Для входа в кабинет «Подсчёт пипсов», перейдите по кнопке ниже ⬇
+user-pip-count-cabinet-open_button = Открыть кабинет «Подсчёт пипсов»
+user-pip-count-cabinet-no_cards = Для получения карточек можно обратиться <a href="https://t.me/Learn_bg">@Learn_bg</a>
 user-pokaz-select_action = Для входа в редактор, перейдите по ссылке ниже ⬇
 user-pokaz-open_editor = Открыть редактор позиций
 

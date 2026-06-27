@@ -18,6 +18,7 @@ class MainKeyboard:
             'hint_viewer': i18n.keyboard.user.reply.hint_viewer(),
             'pokaz': i18n.keyboard.user.reply.pokaz(),
             'cards_cabinet': i18n.keyboard.user.reply.cards_cabinet(),
+            'pip_count_cabinet': i18n.keyboard.user.reply.pip_count_cabinet(),
             'profile': i18n.keyboard.user.reply.profile(),
         }
     

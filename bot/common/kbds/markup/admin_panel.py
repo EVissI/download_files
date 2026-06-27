@@ -13,7 +13,6 @@ class AdminKeyboard:
         'users_setting':'Пользователи',
         'users_group': 'Группы пользователей',
         'message_for_new': 'Сообщение для новых пользователей',
-        'pip_count_cabinet': 'Подсчёт пипсов',
         'back':'Назад',
     }
 
@@ -29,7 +28,7 @@ class AdminKeyboard:
                 continue
             kb.add(KeyboardButton(text=text))
         kb.add(KeyboardButton(text=AdminKeyboard.admin_text_kb['back']))
-        kb.adjust(2, 2, 2, 2, 1)
+        kb.adjust(2, 2, 2, 1, 1, 1)
         return kb.as_markup(resize_keyboard=True)
 
     @staticmethod

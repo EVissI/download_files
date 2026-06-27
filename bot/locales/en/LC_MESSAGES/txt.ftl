@@ -7,9 +7,13 @@ keyboard-admin-reply-admin_panel = Admin Panel
 keyboard-user-reply-short_board_view = 📊 Pleer
 keyboard-user-reply-pokaz = 🎯 Position
 keyboard-user-reply-cards_cabinet = 🗂️ Cards
+keyboard-user-reply-pip_count_cabinet = 🧮 Pip count
 user-cards-cabinet-select_action = To open your cards cabinet, tap the button below ⬇
 user-cards-cabinet-open_button = Open cards cabinet
 user-cards-cabinet-no_cards = To get cards, contact <a href="https://t.me/Learn_bg">@Learn_bg</a>
+user-pip-count-cabinet-select_action = To open the Pip count cabinet, tap the button below ⬇
+user-pip-count-cabinet-open_button = Open Pip count cabinet
+user-pip-count-cabinet-no_cards = To get cards, contact <a href="https://t.me/Learn_bg">@Learn_bg</a>
 user-pokaz-select_action = Select an action:
 user-pokaz-open_editor = Open position editor
 keyboard-reply-cancel = Cancel
