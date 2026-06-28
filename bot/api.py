@@ -847,6 +847,7 @@ class ContentCardFetchBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
+    folder_token: str | None = None
 
 
 class ContentCardMyListBody(BaseModel):
@@ -921,6 +922,7 @@ class ContentCardMarkViewedBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
+    folder_token: str | None = None
 
 
 class ContentCardDeleteBody(BaseModel):
@@ -937,6 +939,7 @@ class ContentCardInteractiveRecordBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
+    folder_token: str | None = None
     correct: bool
 
 
@@ -946,6 +949,7 @@ class ContentCardInteractiveStatsBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
+    folder_token: str | None = None
 
 
 class ContentCardSetStatusBody(BaseModel):
@@ -1120,10 +1124,44 @@ async def _issue_fab_cards_auth_token(user_id: int) -> str:
     return fab_token
 
 
-async def _user_can_access_content_card_interactive(
-    session, user_id: int, content_card_id: int
+async def _user_can_access_content_card_via_folder(
+    session,
+    content_card_id: int,
+    folder_token: str | None,
 ) -> bool:
-    """Доступ как у fetch: выдача user_content_cards или ROOT_ADMIN и существующая карточка."""
+    """Карточка напрямую в папке, открытой по активной folder_token-ссылке."""
+    token = str(folder_token or "").strip()
+    if not token:
+        return False
+
+    link_dao = ContentCardFolderLinkDAO(session)
+    folder_link = await link_dao.find_by_token(token)
+    if not folder_link:
+        return False
+
+    folder_dao = ContentCardFolderDAO(session)
+    folder = await folder_dao.get_folder_by_id(folder_link.folder_id)
+    if not folder:
+        return False
+
+    direct_ids = await folder_dao.get_folder_card_ids(folder_link.folder_id)
+    if content_card_id not in direct_ids:
+        return False
+
+    card_dao = ContentCardDAO(session)
+    card = await card_dao.find_one_or_none_by_id(content_card_id)
+    if not card:
+        return False
+    return card.card_pool == folder.folder_pool
+
+
+async def _user_can_access_content_card(
+    session,
+    user_id: int,
+    content_card_id: int,
+    folder_token: str | None = None,
+) -> bool:
+    """Доступ: user_content_cards, ROOT_ADMIN или карточка в папке по folder_token."""
     ucc_dao = UserContentCardDAO(session)
     link = await ucc_dao.find_one_by_user_and_card(user_id, content_card_id)
     if link:
@@ -1132,7 +1170,17 @@ async def _user_can_access_content_card_interactive(
         card_dao = ContentCardDAO(session)
         card = await card_dao.find_one_or_none_by_id(content_card_id)
         return card is not None
-    return False
+    return await _user_can_access_content_card_via_folder(
+        session, content_card_id, folder_token
+    )
+
+
+async def _user_can_access_content_card_interactive(
+    session, user_id: int, content_card_id: int, folder_token: str | None = None
+) -> bool:
+    return await _user_can_access_content_card(
+        session, user_id, content_card_id, folder_token
+    )
 
 
 def _normalize_content_card_pool(pool: str | None) -> ContentCardPool | None:
@@ -2099,6 +2147,10 @@ async def content_cards_mark_viewed(body: ContentCardMarkViewedBody):
         ucc_dao = UserContentCardDAO(session)
         link = await ucc_dao.find_one_by_user_and_card(user_id, body.content_card_id)
         if not link:
+            if await _user_can_access_content_card_via_folder(
+                session, body.content_card_id, body.folder_token
+            ):
+                return {"ok": True, "skipped": True}
             raise HTTPException(status_code=403, detail="Нет доступа к этой карточке")
 
         if link.card_status == UserContentCardStatus.UNVIEWED:
@@ -2115,7 +2167,7 @@ async def content_cards_interactive_record(body: ContentCardInteractiveRecordBod
 
     async with async_session_maker() as session:
         if not await _user_can_access_content_card_interactive(
-            session, user_id, body.content_card_id
+            session, user_id, body.content_card_id, body.folder_token
         ):
             raise HTTPException(status_code=403, detail="Нет доступа к этой карточке")
 
@@ -2141,7 +2193,7 @@ async def content_cards_interactive_stats(body: ContentCardInteractiveStatsBody)
 
     async with async_session_maker() as session:
         if not await _user_can_access_content_card_interactive(
-            session, user_id, body.content_card_id
+            session, user_id, body.content_card_id, body.folder_token
         ):
             raise HTTPException(status_code=403, detail="Нет доступа к этой карточке")
 
@@ -2238,8 +2290,8 @@ async def content_cards_set_status(body: ContentCardSetStatusBody):
 @app.post("/api/content_cards/fetch")
 async def fetch_content_card(body: ContentCardFetchBody):
     """
-    Данные карточки для страницы просмотра: есть связь user_content_cards
-    или пользователь в ROOT_ADMIN_IDS.
+    Данные карточки для страницы просмотра: связь user_content_cards,
+    доступ по folder_token или пользователь в ROOT_ADMIN_IDS.
     Поля file_name, labels и notes отдаются только если user_id в ROOT_ADMIN_IDS.
     """
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
@@ -2249,7 +2301,9 @@ async def fetch_content_card(body: ContentCardFetchBody):
         link = await ucc_dao.find_one_by_user_and_card(
             user_id, body.content_card_id
         )
-        if not link and user_id not in settings.ROOT_ADMIN_IDS:
+        if not link and not await _user_can_access_content_card(
+            session, user_id, body.content_card_id, body.folder_token
+        ):
             raise HTTPException(
                 status_code=403, detail="Нет доступа к этой карточке"
             )
@@ -2597,6 +2651,13 @@ class FolderGenerateLinkBody(FolderBaseBody):
 class FolderLinkResolveBody(FolderBaseBody):
     folder_token: str
     direct_only: bool = False
+
+
+class FolderNavigateLinkBody(FolderBaseBody):
+    """Переход в соседнюю папку (родитель или прямой потомок) по текущей ссылке."""
+
+    folder_token: str
+    target_folder_id: int = Field(..., ge=1)
 
 
 class FolderScheduleGetBody(FolderBaseBody):
@@ -3090,6 +3151,52 @@ async def folder_generate_link(body: FolderGenerateLinkBody):
     return {**link_payload, "start_link": start_link}
 
 
+@app.post("/api/content_cards/folders/navigate_link")
+async def folder_navigate_link(body: FolderNavigateLinkBody):
+    """
+    Ссылка на соседнюю папку (прямой потомок или родитель) для пользователя,
+    у которого уже есть доступ по folder_token.
+    """
+    await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+
+    token = str(body.folder_token or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="folder_token обязателен")
+
+    async with async_session_maker() as session:
+        link_dao = ContentCardFolderLinkDAO(session)
+        current_link = await link_dao.find_by_token(token)
+        if not current_link:
+            raise HTTPException(status_code=404, detail="Ссылка не найдена или неактивна")
+
+        folder_dao = ContentCardFolderDAO(session)
+        current_folder = await folder_dao.get_folder_by_id(current_link.folder_id)
+        target_folder = await folder_dao.get_folder_by_id(body.target_folder_id)
+        if not current_folder or not target_folder:
+            raise HTTPException(status_code=404, detail="Папка не найдена")
+
+        request_pool = _parse_content_card_pool(body.pool)
+        if (
+            current_folder.folder_pool != request_pool
+            or target_folder.folder_pool != request_pool
+        ):
+            raise HTTPException(status_code=404, detail="Папка не найдена в этом пуле")
+
+        is_child = target_folder.parent_id == current_folder.id
+        is_parent = (
+            current_folder.parent_id is not None
+            and target_folder.id == current_folder.parent_id
+        )
+        if not is_child and not is_parent:
+            raise HTTPException(status_code=403, detail="Нет доступа к этой папке")
+
+        target_link = await link_dao.get_or_create_link(
+            body.target_folder_id,
+            admin_id=None,
+        )
+        return _serialize_folder_link(target_link)
+
+
 @app.post("/api/content_cards/folders/link_resolve")
 async def folder_link_resolve(body: FolderLinkResolveBody):
     """
@@ -3133,11 +3240,13 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
         direct_counts: dict[int, int] = {row[0]: row[1] for row in counts_res.all()}
         for f in all_folders:
             if f.parent_id == link.folder_id and f.folder_pool == folder.folder_pool:
+                child_link = await link_dao.get_link_for_folder(f.id)
                 child_folders.append({
                     "id": f.id,
                     "name": f.name,
                     "parent_id": f.parent_id,
                     "direct_cards_count": direct_counts.get(f.id, 0),
+                    "link_token": child_link.link_token if child_link else None,
                 })
 
         cards_data: list[dict] = []

@@ -330,11 +330,15 @@
             function authPayload(extra) {
                 var initData = getInitData();
                 var fabToken = getFabToken();
+                var folderToken = getFolderToken();
                 var base = {};
                 if (initData) {
                     base.init_data = initData;
                 } else if (fabToken) {
                     base.fab_token = fabToken;
+                }
+                if (folderToken) {
+                    base.folder_token = folderToken;
                 }
                 if (extra && typeof extra === 'object') {
                     Object.keys(extra).forEach(function (k) { base[k] = extra[k]; });

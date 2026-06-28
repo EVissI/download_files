@@ -120,6 +120,11 @@ export async function bootstrapContentCardViewPageImpl(editor) {
     }
     try {
         const authPayload = initData ? { init_data: initData } : { fab_token: fabToken };
+        const pageParams = new URLSearchParams(window.location.search || '');
+        const folderToken = String(pageParams.get('folder_token') || '').trim();
+        if (folderToken) {
+            authPayload.folder_token = folderToken;
+        }
         const r = await fetch('/api/content_cards/fetch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

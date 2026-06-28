@@ -2555,6 +2555,9 @@
                     } else if (fabToken) {
                         base.fab_token = fabToken;
                     }
+                    if (cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
+                        base.folder_token = cabinetConfig.folderToken;
+                    }
                     if (extra && typeof extra === 'object') {
                         Object.keys(extra).forEach(function (k) { base[k] = extra[k]; });
                     }
@@ -4326,7 +4329,7 @@
                         var cnt = child.direct_cards_count || 0;
                         chip.textContent = child.name + (cnt ? ' (' + cnt + ')' : '');
                         chip.addEventListener('click', function () {
-                            navigateToFolder(child.id);
+                            navigateToFolder(child.id, child.link_token || '');
                         });
                         folderViewSubfolders.appendChild(chip);
                     });
@@ -4395,17 +4398,17 @@
 
                 function updateFolderNavButtons(payload, config) {
                     var folder = payload && payload.folder;
-                    var showHome = config.mode === 'folder' && isRootAdminUser;
+                    var inFolderView = config.mode === 'folder';
                     var parentId = folder && folder.parent_id != null ? Number(folder.parent_id) : null;
                     cabinetParentFolderId = parentId;
 
                     if (cabinetHomeBtn) {
-                        cabinetHomeBtn.classList.toggle('is-visible', showHome);
+                        cabinetHomeBtn.classList.toggle('is-visible', inFolderView && isRootAdminUser);
                     }
                     if (cabinetBackToParentBtn) {
                         cabinetBackToParentBtn.classList.toggle(
                             'is-visible',
-                            showHome && parentId != null && parentId > 0
+                            inFolderView && parentId != null && parentId > 0
                         );
                     }
                 }
@@ -4881,7 +4884,24 @@
                     });
                 }
 
-                function navigateToFolder(folderId) {
+                function navigateToFolder(folderId, childLinkToken) {
+                    if (childLinkToken) {
+                        window.location.assign(buildFolderShareUrl(childLinkToken));
+                        return;
+                    }
+                    if (cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
+                        folderApiPost('navigate_link', {
+                            folder_token: cabinetConfig.folderToken,
+                            target_folder_id: folderId,
+                        }).then(function (data) {
+                            var token = data && data.link_token;
+                            if (!token) throw new Error('Не удалось открыть папку');
+                            window.location.assign(buildFolderShareUrl(token));
+                        }).catch(function (e) {
+                            showErr(e.message || String(e));
+                        });
+                        return;
+                    }
                     folderApiPost('generate_link', { folder_id: folderId }).then(function (data) {
                         var token = data && data.link_token;
                         if (!token) throw new Error('Не удалось открыть папку');

@@ -7623,10 +7623,12 @@ export class ContentEditor {
 
     getContentCardApiAuthPayload() {
         const initData = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
-        if (initData) return { init_data: initData };
         const params = new URLSearchParams(window.location.search || '');
+        const folderToken = String(params.get('folder_token') || '').trim();
+        const extra = folderToken ? { folder_token: folderToken } : {};
+        if (initData) return { init_data: initData, ...extra };
         const fabToken = String(params.get('fab_token') || '');
-        if (fabToken) return { fab_token: fabToken };
+        if (fabToken) return { fab_token: fabToken, ...extra };
         return null;
     }
 
