@@ -198,6 +198,15 @@
     color: #ffffff;
 }
 
+.tool-item-icon.tool-item-icon--action:hover {
+    background: #4a3035;
+    border-color: #c25555;
+}
+
+.tool-item-icon.tool-item-icon--action:hover i {
+    color: #ffb4b4;
+}
+
 .tool-item {
     background: #3a3a3a;
     border: 1px solid #505050;

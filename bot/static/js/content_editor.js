@@ -778,7 +778,6 @@ export class ContentEditor {
                     <div class="content-editor-container">
                         <div class="content-editor-header">
                             <h2>Редактор контента</h2>
-                            <button class="close-btn" onclick="contentEditor.closeModal()">&times;</button>
                         </div>
                         <div class="content-editor-body">
                             <div class="toolbar toolbar-tools">
@@ -1128,6 +1127,9 @@ export class ContentEditor {
         this.canvas = document.getElementById('canvas');
         this.editorBoardDisplayHost = null;
         this.ensureEditorBoardDisplayHost();
+        const staleHeaderCloseBtn = this.modal && this.modal.querySelector('.content-editor-header .close-btn');
+        if (staleHeaderCloseBtn) staleHeaderCloseBtn.remove();
+
         this.toolsList = document.getElementById('toolsList');
         this.propertiesContent = document.getElementById('propertiesContent');
         this.propertiesToolsDock = document.getElementById('propertiesToolsDock');
@@ -2847,6 +2849,13 @@ export class ContentEditor {
                 type: 'settings',
                 description: 'Настройки фона канваса',
                 icon: 'fa fa-cog'
+            },
+            {
+                id: 'editor-close',
+                name: 'Закрыть',
+                type: 'action',
+                description: 'Закрыть редактор',
+                icon: 'fa fa-times'
             }
         ];
 
@@ -2864,10 +2873,11 @@ export class ContentEditor {
     }
 
     renderTools(tools) {
+        if (!this.toolsList) return;
         this.toolsList.innerHTML = `
             <div class="tools-grid">
                 ${tools.map(tool => `
-                    <div class="tool-item-icon ${tool.id === 'boardCanvas' ? 'toggle-button' : ''}" 
+                    <div class="tool-item-icon${tool.id === 'boardCanvas' ? ' toggle-button' : ''}${tool.id === 'editor-close' ? ' tool-item-icon--action' : ''}" 
                          data-tool-id="${tool.id}"
                          onclick="contentEditor.selectTool('${tool.id}')"
                          title="${tool.name}">
@@ -2879,6 +2889,11 @@ export class ContentEditor {
     }
 
     selectTool(toolId) {
+        if (toolId === 'editor-close') {
+            this.closeModal();
+            return;
+        }
+
         // Особое поведение для boardCanvas - toggle режим
         if (toolId === 'boardCanvas') {
             this.toggleBoardCanvas(toolId);
