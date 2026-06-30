@@ -1685,7 +1685,7 @@ export class ContentEditor {
 
         if (clearStoredFrames) {
             this.clearSavedFramesForCurrentGame();
-        } else {
+        } else if (!preserveSharedContext) {
             this.cardPreviewRefs = [];
             this.cardPreviewIndex = 0;
         }
@@ -1880,7 +1880,15 @@ export class ContentEditor {
         /* После openEditorFromSelectedPreview со страницы карточки editorOpenedFromContentCardView может быть false — всё равно снимаем suspend. */
         this._resumeContentCardViewOnlyAfterEditor();
         if (fromContentCardView) {
+            const savedFrameIndex = this._contentCardEditFrameIndex;
             this.resetEditorOnClose({ preserveSharedContext: true });
+            if (
+                savedFrameIndex != null &&
+                savedFrameIndex >= 0 &&
+                this.cardPreviewRefs.length > 0
+            ) {
+                this.cardPreviewIndex = Math.min(savedFrameIndex, this.cardPreviewRefs.length - 1);
+            }
             this.clearPreviewEditSession();
             document.body.style.overflow = 'hidden';
             if (this.cardPreviewModal) {
@@ -8326,6 +8334,7 @@ export class ContentEditor {
         this.closeCardPreviewModal();
         if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true && this._contentCardViewCardId) {
             this.editorOpenedFromContentCardView = true;
+            this._contentCardEditFrameIndex = this.cardPreviewIndex;
             if (typeof this.prepareContentCardFrameEditSession === 'function') {
                 this.prepareContentCardFrameEditSession();
             }
