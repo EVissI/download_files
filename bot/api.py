@@ -880,6 +880,7 @@ class LabelPresetCreateBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
     value: str = Field(..., min_length=1, max_length=255)
+    pool: str | None = None
 
 
 class LabelPresetDeleteBody(BaseModel):
@@ -1908,14 +1909,17 @@ async def content_cards_assign_preview(body: ContentCardAssignToUserBody):
 @app.post("/api/content_cards/label_presets")
 async def content_cards_label_presets(body: ContentCardMyListBody):
     """
-    Список пресетов меток из БД (тот же контур, что all_labels) — для подстановки в UI меток.
+    Список пресетов меток из БД (отдельно для каждого пула cards / pip_count).
     """
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
+    card_pool = _parse_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
         result = await session.execute(
-            select(LabelPreset.id, LabelPreset.value).order_by(LabelPreset.value)
+            select(LabelPreset.id, LabelPreset.value)
+            .where(LabelPreset.card_pool == card_pool)
+            .order_by(LabelPreset.value)
         )
         rows = result.all()
 
@@ -1930,9 +1934,10 @@ async def content_cards_label_preset_create(body: LabelPresetCreateBody):
     val = str(body.value or "").strip()[:255]
     if not val:
         raise HTTPException(status_code=400, detail="Пустое значение пресета")
+    card_pool = _parse_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
-        preset = LabelPreset(value=val)
+        preset = LabelPreset(value=val, card_pool=card_pool)
         session.add(preset)
         try:
             await session.commit()
@@ -1941,7 +1946,7 @@ async def content_cards_label_preset_create(body: LabelPresetCreateBody):
             await session.rollback()
             raise HTTPException(
                 status_code=409,
-                detail="Такой пресет уже существует",
+                detail="Такой пресет уже существует в этом пуле",
             )
 
     return {"id": preset.id, "value": preset.value}

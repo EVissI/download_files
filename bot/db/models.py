@@ -596,21 +596,6 @@ class MessagesTexts(Base):
     text_en: Mapped[str] = mapped_column(String(1000))
 
 
-class LabelPreset(Base):
-    """
-    Пресеты текстов для меток карточек (ContentCard.labels): админ задаёт список,
-    при редактировании меток можно подставлять значения из пресетов.
-    """
-
-    __tablename__ = "label_presets"
-    __table_args__ = (
-        UniqueConstraint("value", name="uq_label_presets_value"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    value: Mapped[str] = mapped_column(String(255), nullable=False)
-
-
 class TextStylePreset(Base):
     """
     Пресеты стилей для текстовых блоков редактора контента.
@@ -686,6 +671,27 @@ content_card_pool_enum = Enum(
     name="contentcardpool",
     values_callable=lambda enum_cls: [item.value for item in enum_cls],
 )
+
+
+class LabelPreset(Base):
+    """
+    Пресеты текстов для меток карточек (ContentCard.labels): отдельный список на каждый пул
+    (cards / pip_count).
+    """
+
+    __tablename__ = "label_presets"
+    __table_args__ = (
+        UniqueConstraint("card_pool", "value", name="uq_label_presets_pool_value"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    value: Mapped[str] = mapped_column(String(255), nullable=False)
+    card_pool: Mapped["ContentCardPool"] = mapped_column(
+        content_card_pool_enum,
+        nullable=False,
+        default=ContentCardPool.CARDS,
+        server_default=ContentCardPool.CARDS.value,
+    )
 
 
 class ContentCardIssueSchedule(Base):

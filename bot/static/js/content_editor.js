@@ -7550,7 +7550,7 @@ export class ContentEditor {
     }
 
     async fetchLabelPresetsFromServer() {
-        const auth = this.getContentCardApiAuthPayload();
+        const auth = this.getLabelPresetsApiPayload();
         if (!auth) {
             this._labelPresetsList = [];
             return false;
@@ -7653,6 +7653,13 @@ export class ContentEditor {
         const fabToken = String(params.get('fab_token') || '');
         if (fabToken) return { fab_token: fabToken, ...extra };
         return null;
+    }
+
+    getLabelPresetsApiPayload(extra = {}) {
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) return null;
+        const { pool } = this.resolveEditorCabinetConfig();
+        return { ...auth, pool, ...extra };
     }
 
     renderTextStylePresetSelectOptions() {
@@ -8156,7 +8163,7 @@ export class ContentEditor {
 
     async createLabelPresetFromInput() {
         const inp = document.getElementById('labelPresetNewInput');
-        const auth = this.getContentCardApiAuthPayload();
+        const auth = this.getLabelPresetsApiPayload();
         if (!inp || !auth) return;
         const text = String(inp.value || '').trim();
         if (!text) {
@@ -8216,7 +8223,7 @@ export class ContentEditor {
         if (!Number.isFinite(presetId) || presetId < 1) return;
         const ok = await this.confirmPresetDanger('Удалить этот пресет?');
         if (!ok) return;
-        const auth = this.getContentCardApiAuthPayload();
+        const auth = this.getLabelPresetsApiPayload();
         if (!auth) return;
         try {
             const r = await fetch('/api/content_cards/label_presets/delete', {
