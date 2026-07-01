@@ -61,6 +61,12 @@ def get_effective_telegram_proxies(*, refresh: bool = False) -> list[str]:
         urls = fetch_active_proxy_urls_sync()
         _proxies_cache = urls
         _cache_loaded_at = time.monotonic()
+        if urls:
+            logger.debug(
+                "Loaded telegram proxies from DB (count={}): {}",
+                len(urls),
+                ", ".join(mask_proxy_url(u) for u in urls),
+            )
     except Exception as e:
         logger.warning("Failed to load Telegram proxies from DB: {}", e)
         _proxies_cache = []
