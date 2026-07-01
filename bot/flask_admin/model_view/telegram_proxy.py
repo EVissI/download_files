@@ -8,10 +8,10 @@ from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
 from flask_wtf.csrf import generate_csrf
 from loguru import logger
-from wtforms import BooleanField, DateTimeLocalField, IntegerField, StringField
+from wtforms import BooleanField, DateTimeLocalField, IntegerField, StringField, ValidationError
 from wtforms.validators import DataRequired, NumberRange, Optional
 
-from bot.common.proxy_utils import mask_proxy_url
+from bot.common.proxy_utils import mask_proxy_url, normalize_proxy_url
 from bot.common.service.telegram_proxy_service import (
     record_proxy_connection_success_sync,
     send_proxy_test_message,
@@ -177,7 +177,15 @@ class TelegramProxyModelView(ModelView):
 
     def _normalize_item(self, item: TelegramProxy) -> None:
         item.name = str(item.name or "").strip()
-        item.url = str(item.url or "").strip()
+        raw_url = str(item.url or "").strip()
+        normalized_url = normalize_proxy_url(raw_url)
+        if not normalized_url:
+            raise ValidationError(
+                _(
+                    "Некорректный URL прокси. Пример: socks5://user:pass@host:62137"
+                )
+            )
+        item.url = normalized_url
         if item.expires_at is not None:
             expires_at = item.expires_at
             if expires_at.tzinfo is None:

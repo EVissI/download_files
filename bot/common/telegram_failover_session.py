@@ -8,8 +8,14 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.methods.base import TelegramMethod
 from aiogram.client.session.base import TelegramType
+from loguru import logger
 
-from bot.common.proxy_utils import is_proxy_or_network_error
+from bot.common.proxy_utils import (
+    is_proxy_or_network_error,
+    is_valid_proxy_url,
+    mask_proxy_url,
+    normalize_proxy_url,
+)
 from bot.common.service.telegram_proxy_service import (
     record_proxy_connection_failure_sync,
     record_proxy_connection_success_sync,
@@ -51,13 +57,29 @@ class FailoverAiohttpSession(AiohttpSession):
         last_error: TelegramNetworkError | None = None
         index = 0
         while index < len(proxies):
-            proxy_url = proxies[index]
+            proxy_url = normalize_proxy_url(proxies[index]) or proxies[index]
+            if not is_valid_proxy_url(proxy_url):
+                logger.error(
+                    "Skip invalid telegram proxy URL in failover: {}",
+                    mask_proxy_url(str(proxies[index])),
+                )
+                index += 1
+                continue
+
             try:
                 if self.proxy != proxy_url:
                     self.proxy = proxy_url
                 result = await super().make_request(bot, method, timeout=timeout)
                 record_proxy_connection_success_sync(proxy_url)
                 return result
+            except ValueError as exc:
+                logger.error(
+                    "Invalid telegram proxy URL {}: {}",
+                    mask_proxy_url(proxy_url),
+                    exc,
+                )
+                last_error = self._as_network_error(method, exc)
+                index += 1
             except Exception as exc:
                 if not is_proxy_or_network_error(exc):
                     raise

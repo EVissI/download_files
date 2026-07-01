@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from loguru import logger
 
-from bot.common.proxy_utils import mask_proxy_url
+from bot.common.proxy_utils import mask_proxy_url, normalize_proxy_url
 from bot.config import settings
 
 if TYPE_CHECKING:
@@ -43,7 +43,7 @@ def _is_proxy_usable(proxy: TelegramProxy, *, now: datetime | None = None) -> bo
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         if expires_at <= check_time:
             return False
-    return bool(str(proxy.url or "").strip())
+    return normalize_proxy_url(str(proxy.url or "")) is not None
 
 
 def _proxy_urls_from_rows(rows: Iterable[TelegramProxy]) -> list[str]:
@@ -52,8 +52,17 @@ def _proxy_urls_from_rows(rows: Iterable[TelegramProxy]) -> list[str]:
     for row in rows:
         if not _is_proxy_usable(row, now=now):
             continue
-        url = str(row.url).strip()
-        if url and url not in urls:
+        url = normalize_proxy_url(str(row.url or ""))
+        if url is None:
+            if row.is_active and str(row.url or "").strip():
+                logger.warning(
+                    "Skip invalid telegram proxy URL: id={} name={!r} raw={!r}",
+                    row.id,
+                    row.name,
+                    str(row.url or ""),
+                )
+            continue
+        if url not in urls:
             urls.append(url)
     return urls
 
@@ -97,7 +106,7 @@ MAX_PROXY_CONNECTION_FAILURES = 10
 def _find_proxy_row_by_url(session: Session, proxy_url: str):
     from bot.db.models import TelegramProxy
 
-    normalized = str(proxy_url or "").strip()
+    normalized = normalize_proxy_url(str(proxy_url or "")) or str(proxy_url or "").strip()
     if not normalized:
         return None
 
