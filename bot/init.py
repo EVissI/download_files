@@ -18,7 +18,7 @@ from bot.common.tasks.telegram_proxy_expiry import notify_telegram_proxy_expiry
 from bot.db.pg_backup import backup_postgres_to_yandex_disk
 from bot.routers.setup import setup_router
 from bot.config import setup_logger, bot, admins, scheduler
-from bot.common.telegram_proxy_config import warm_telegram_proxy_cache
+from bot.common.telegram_proxy_config import log_telegram_proxy_config
 from bot.db.redis import redis_client
 
 setup_logger("bot")
@@ -90,7 +90,7 @@ async def stop_bot():
 
 async def main():
     await redis_client.connect()
-    warm_telegram_proxy_cache()
+    log_telegram_proxy_config()
     storage = RedisStorage(
         redis_client.redis,
         key_builder=DefaultKeyBuilder(with_bot_id=True, with_destiny=True),

@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Iterable
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from loguru import logger
+
 from bot.common.proxy_utils import mask_proxy_url
 from bot.config import settings
 
@@ -74,7 +76,18 @@ def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
             .order_by(TelegramProxy.priority.asc(), TelegramProxy.id.asc())
             .all()
         )
-        return _proxy_urls_from_rows(rows)
+        urls = _proxy_urls_from_rows(rows)
+        for row in rows:
+            logger.info(
+                "telegram_proxies row: id={} name={!r} priority={} active={} usable={} url={}",
+                row.id,
+                row.name,
+                row.priority,
+                row.is_active,
+                _is_proxy_usable(row),
+                mask_proxy_url(str(row.url or "")),
+            )
+        return urls
 
 
 async def fetch_proxies_needing_expiry_warning() -> list[TelegramProxy]:

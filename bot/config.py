@@ -103,8 +103,9 @@ def _build_bot() -> Bot:
         token=settings.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    if settings.TELEGRAM_PROXY:
-        kwargs["session"] = AiohttpSession(proxy=settings.TELEGRAM_PROXY)
+    env_proxy = (settings.TELEGRAM_PROXY or "").strip()
+    if env_proxy:
+        kwargs["session"] = AiohttpSession(proxy=env_proxy)
     else:
         kwargs["session"] = FailoverAiohttpSession()
     return Bot(**kwargs)

@@ -7,12 +7,18 @@ from typing import Optional
 
 from loguru import logger
 
+from bot.common.proxy_utils import mask_proxy_url
 from bot.config import settings
 
 _CACHE_TTL_SECONDS = 30
 _UNSET = object()
 _proxies_cache: object = _UNSET
 _cache_loaded_at: float = 0.0
+
+
+def get_env_telegram_proxy() -> str | None:
+    value = (settings.TELEGRAM_PROXY or "").strip()
+    return value or None
 
 
 def clear_telegram_proxy_cache() -> None:
@@ -26,14 +32,37 @@ def warm_telegram_proxy_cache() -> list[str]:
     return get_effective_telegram_proxies(refresh=True)
 
 
+def log_telegram_proxy_config() -> list[str]:
+    """Логирует источник и список прокси при старте."""
+    env_proxy = get_env_telegram_proxy()
+    if env_proxy:
+        logger.warning(
+            "TELEGRAM_PROXY из env переопределяет БД: {}",
+            mask_proxy_url(env_proxy),
+        )
+        return [env_proxy]
+
+    urls = get_effective_telegram_proxies(refresh=True)
+    if urls:
+        logger.info(
+            "Telegram proxies from DB (count={}): {}",
+            len(urls),
+            ", ".join(mask_proxy_url(u) for u in urls),
+        )
+    else:
+        logger.info("Telegram proxies: none (direct connection to api.telegram.org)")
+    return urls
+
+
 def get_effective_telegram_proxies(*, refresh: bool = False) -> list[str]:
     """
     Список прокси для Telegram API (порядок = приоритет failover).
     1) TELEGRAM_PROXY в локальном .env (переопределение, один URL)
     2) активные записи telegram_proxies в PostgreSQL
     """
-    if settings.TELEGRAM_PROXY:
-        return [settings.TELEGRAM_PROXY.strip()]
+    env_proxy = get_env_telegram_proxy()
+    if env_proxy:
+        return [env_proxy]
 
     global _proxies_cache, _cache_loaded_at
     if not refresh and _proxies_cache is not _UNSET:
@@ -60,7 +89,7 @@ def get_effective_telegram_proxy(*, refresh: bool = False) -> Optional[str]:
 
 
 def telegram_proxy_source() -> str:
-    if settings.TELEGRAM_PROXY:
+    if get_env_telegram_proxy():
         return "env"
     if get_effective_telegram_proxies():
         return "db"
