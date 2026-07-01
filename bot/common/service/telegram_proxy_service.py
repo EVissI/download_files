@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-import re
 from datetime import datetime, timedelta, timezone
-from typing import Iterable
-from urllib.parse import urlparse, urlunparse
+from typing import TYPE_CHECKING, Iterable
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from bot.common.proxy_utils import mask_proxy_url
 from bot.config import settings
-from bot.db.database import async_session_maker
-from bot.db.models import TelegramProxy
+
+if TYPE_CHECKING:
+    from bot.db.models import TelegramProxy
 
 _sync_engine = None
 _sync_session_maker: sessionmaker[Session] | None = None
@@ -28,24 +28,6 @@ def _get_sync_session() -> Session:
         _sync_engine = create_engine(settings.DB_URL_SYNC, pool_pre_ping=True)
         _sync_session_maker = sessionmaker(bind=_sync_engine)
     return _sync_session_maker()
-
-
-def mask_proxy_url(url: str) -> str:
-    """Скрывает пароль в URL прокси для логов и уведомлений."""
-    try:
-        parsed = urlparse(url)
-        if parsed.password:
-            netloc = parsed.hostname or ""
-            if parsed.username:
-                netloc = f"{parsed.username}:***@{netloc}"
-            if parsed.port:
-                netloc = f"{netloc}:{parsed.port}"
-            return urlunparse(
-                (parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment)
-            )
-    except Exception:
-        pass
-    return re.sub(r":([^:@/]+)@", ":***@", url, count=1)
 
 
 def _is_proxy_usable(proxy: TelegramProxy, *, now: datetime | None = None) -> bool:
@@ -74,6 +56,8 @@ def _proxy_urls_from_rows(rows: Iterable[TelegramProxy]) -> list[str]:
 
 
 def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
+    from bot.db.models import TelegramProxy
+
     if session is not None:
         rows = (
             session.query(TelegramProxy)
@@ -95,6 +79,9 @@ def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
 
 async def fetch_proxies_needing_expiry_warning() -> list[TelegramProxy]:
     """Прокси, у которых до истечения ≤2 суток и предупреждение ещё не отправляли."""
+    from bot.db.database import async_session_maker
+    from bot.db.models import TelegramProxy
+
     now = _utcnow()
     window_end = now + timedelta(days=2)
     async with async_session_maker() as session:
@@ -113,6 +100,9 @@ async def fetch_proxies_needing_expiry_warning() -> list[TelegramProxy]:
 
 
 async def mark_expiry_warning_sent(proxy_id: int) -> None:
+    from bot.db.database import async_session_maker
+    from bot.db.models import TelegramProxy
+
     async with async_session_maker() as session:
         row = await session.get(TelegramProxy, proxy_id)
         if row is None:

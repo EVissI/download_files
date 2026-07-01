@@ -6,10 +6,10 @@ from zoneinfo import ZoneInfo
 
 from loguru import logger
 
+from bot.common.proxy_utils import mask_proxy_url
 from bot.common.service.telegram_proxy_service import (
     fetch_proxies_needing_expiry_warning,
     mark_expiry_warning_sent,
-    mask_proxy_url,
 )
 from bot.config import admins, bot
 

@@ -11,7 +11,8 @@ from loguru import logger
 from wtforms import BooleanField, DateTimeLocalField, IntegerField, StringField
 from wtforms.validators import DataRequired, NumberRange, Optional
 
-from bot.common.service.telegram_proxy_service import mask_proxy_url, send_proxy_test_message
+from bot.common.proxy_utils import mask_proxy_url
+from bot.common.service.telegram_proxy_service import send_proxy_test_message
 from bot.common.telegram_proxy_config import clear_telegram_proxy_cache, get_effective_telegram_proxies
 from bot.config import admins, format_telegram_api_error
 from bot.db.models import TelegramProxy

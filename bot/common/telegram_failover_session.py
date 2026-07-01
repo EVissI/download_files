@@ -10,7 +10,7 @@ from aiogram.methods.base import TelegramMethod
 from aiogram.client.session.base import TelegramType
 from loguru import logger
 
-from bot.common.service.telegram_proxy_service import mask_proxy_url
+from bot.common.proxy_utils import mask_proxy_url
 from bot.common.telegram_proxy_config import get_effective_telegram_proxies
 from bot.config import settings
 
