@@ -60,7 +60,16 @@ def is_proxy_or_network_error(exc: BaseException) -> bool:
         return True
 
     name = type(exc).__name__
-    if "Proxy" in name or "ClientConnector" in name or "ClientOSError" in name:
+    if (
+        "Proxy" in name
+        or "ClientConnector" in name
+        or "ClientConnection" in name
+        or "ClientOSError" in name
+    ):
+        return True
+
+    message = str(exc)
+    if "Connector is closed" in message:
         return True
 
     try:

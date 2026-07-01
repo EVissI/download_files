@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Optional
 
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -49,6 +50,11 @@ def _next_proxy_to_try(proxies: list[str], tried: set[str]) -> str | None:
 class FailoverAiohttpSession(AiohttpSession):
     """Пробует прокси по очереди из БД. Без прокси запросы не выполняются."""
 
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._request_lock = asyncio.Lock()
+        self._active_proxy_url: str | None = None
+
     @staticmethod
     def _as_network_error(
         method: TelegramMethod[TelegramType],
@@ -61,12 +67,23 @@ class FailoverAiohttpSession(AiohttpSession):
             message=f"{type(exc).__name__}: {exc}",
         )
 
-    async def _switch_proxy(self, proxy_url: str) -> None:
-        await self.close()
+    async def _set_proxy_if_needed(self, proxy_url: str) -> None:
+        """Меняет прокси только при необходимости; close делает aiogram в create_session."""
+        if self._active_proxy_url == proxy_url:
+            return
         self.proxy = proxy_url
-        self._should_reset_connector = True
+        self._active_proxy_url = proxy_url
 
     async def make_request(
+        self,
+        bot,
+        method: TelegramMethod[TelegramType],
+        timeout: Optional[int] = None,
+    ) -> TelegramType:
+        async with self._request_lock:
+            return await self._make_request_locked(bot, method, timeout)
+
+    async def _make_request_locked(
         self,
         bot,
         method: TelegramMethod[TelegramType],
@@ -76,9 +93,14 @@ class FailoverAiohttpSession(AiohttpSession):
 
         last_error: TelegramNetworkError | None = None
         tried: set[str] = set()
+        refresh_db = True
+        proxies: list[str] = []
 
         while True:
-            proxies = _prioritize_proxies(get_effective_telegram_proxies(refresh=True))
+            if refresh_db:
+                proxies = _prioritize_proxies(get_effective_telegram_proxies(refresh=True))
+                refresh_db = False
+
             if not proxies:
                 raise TelegramNetworkError(
                     method=method,
@@ -90,15 +112,23 @@ class FailoverAiohttpSession(AiohttpSession):
                 break
 
             tried.add(proxy_url)
-            logger.info(
-                "Telegram proxy attempt {}/{}: {}",
-                len(tried),
-                len(proxies),
-                mask_proxy_url(proxy_url),
-            )
+            if len(tried) == 1 and len(proxies) > 1:
+                logger.debug(
+                    "Telegram proxy attempt {}/{}: {}",
+                    len(tried),
+                    len(proxies),
+                    mask_proxy_url(proxy_url),
+                )
+            elif len(tried) > 1:
+                logger.info(
+                    "Telegram proxy attempt {}/{}: {}",
+                    len(tried),
+                    len(proxies),
+                    mask_proxy_url(proxy_url),
+                )
 
             try:
-                await self._switch_proxy(proxy_url)
+                await self._set_proxy_if_needed(proxy_url)
                 result = await super().make_request(bot, method, timeout=timeout)
                 record_proxy_connection_success_sync(proxy_url)
                 _last_working_proxy_url = proxy_url
@@ -110,7 +140,6 @@ class FailoverAiohttpSession(AiohttpSession):
                     exc,
                 )
                 last_error = self._as_network_error(method, exc)
-                await self.close()
                 if _last_working_proxy_url == proxy_url:
                     _last_working_proxy_url = None
             except Exception as exc:
@@ -124,10 +153,10 @@ class FailoverAiohttpSession(AiohttpSession):
                     mask_proxy_url(proxy_url),
                     exc,
                 )
-                await self.close()
                 if _last_working_proxy_url == proxy_url:
                     _last_working_proxy_url = None
                 record_proxy_connection_failure_sync(proxy_url)
+                refresh_db = True
 
             remaining = _next_proxy_to_try(proxies, tried)
             if remaining:
