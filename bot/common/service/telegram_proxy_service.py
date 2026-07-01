@@ -208,6 +208,10 @@ def record_proxy_connection_failure_sync(proxy_url: str) -> bool:
                 )
 
             session.commit()
+            if deactivated:
+                from bot.common.telegram_proxy_config import clear_telegram_proxy_cache
+
+                clear_telegram_proxy_cache()
             return deactivated
     except Exception as exc:
         logger.exception(
