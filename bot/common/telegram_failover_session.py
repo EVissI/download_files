@@ -13,8 +13,14 @@ from aiogram.methods.base import TelegramMethod
 from aiogram.client.session.base import TelegramType
 from loguru import logger
 
-from bot.common.proxy_utils import mask_proxy_url
-from bot.common.telegram_proxy_config import get_effective_telegram_proxies
+from bot.common.service.telegram_proxy_service import (
+    record_proxy_connection_failure_sync,
+    record_proxy_connection_success_sync,
+)
+from bot.common.telegram_proxy_config import (
+    clear_telegram_proxy_cache,
+    get_effective_telegram_proxies,
+)
 
 
 class FailoverAiohttpSession(AiohttpSession):
@@ -44,25 +50,30 @@ class FailoverAiohttpSession(AiohttpSession):
             return await super().make_request(bot, method, timeout=timeout)
 
         last_error: TelegramNetworkError | None = None
-        for index, proxy_url in enumerate(proxies):
+        index = 0
+        while index < len(proxies):
+            proxy_url = proxies[index]
             try:
                 if self.proxy != proxy_url:
                     self.proxy = proxy_url
-                return await super().make_request(bot, method, timeout=timeout)
+                result = await super().make_request(bot, method, timeout=timeout)
+                record_proxy_connection_success_sync(proxy_url)
+                return result
             except TelegramNetworkError as exc:
                 last_error = exc
-                logger.warning(
-                    "Telegram proxy failed ({}/{}): {} — {}",
-                    index + 1,
-                    len(proxies),
-                    mask_proxy_url(proxy_url),
-                    exc,
-                )
                 self._should_reset_connector = True
+                deactivated = record_proxy_connection_failure_sync(proxy_url)
+                if deactivated:
+                    clear_telegram_proxy_cache()
+                    proxies = get_effective_telegram_proxies(refresh=True)
+                    index = 0
+                    if not proxies:
+                        break
+                    continue
+                index += 1
 
         logger.warning(
-            "All {} Telegram proxies failed, retrying without proxy",
-            len(proxies),
+            "All Telegram proxies failed, retrying without proxy",
         )
         try:
             await self._reset_direct_connector()

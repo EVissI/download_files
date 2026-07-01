@@ -90,6 +90,76 @@ def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
         return urls
 
 
+MAX_PROXY_CONNECTION_FAILURES = 10
+
+
+def _find_proxy_row_by_url(session: Session, proxy_url: str):
+    from bot.db.models import TelegramProxy
+
+    normalized = str(proxy_url or "").strip()
+    if not normalized:
+        return None
+    return (
+        session.query(TelegramProxy)
+        .filter(TelegramProxy.url == normalized)
+        .order_by(TelegramProxy.id.asc())
+        .first()
+    )
+
+
+def record_proxy_connection_success_sync(proxy_url: str) -> None:
+    """Сбрасывает счётчик ошибок после успешного запроса через прокси."""
+    with _get_sync_session() as session:
+        row = _find_proxy_row_by_url(session, proxy_url)
+        if row is None or not row.connection_failure_count:
+            return
+        row.connection_failure_count = 0
+        session.commit()
+
+
+def record_proxy_connection_failure_sync(proxy_url: str) -> bool:
+    """
+    Увеличивает счётчик ошибок подключения.
+    После MAX_PROXY_CONNECTION_FAILURES помечает прокси неактивным.
+    Возвращает True, если прокси только что деактивирован.
+    """
+    with _get_sync_session() as session:
+        row = _find_proxy_row_by_url(session, proxy_url)
+        if row is None:
+            logger.warning(
+                "Proxy connection failure for unknown URL: {}",
+                mask_proxy_url(proxy_url),
+            )
+            return False
+
+        row.connection_failure_count = int(row.connection_failure_count or 0) + 1
+        failures = row.connection_failure_count
+        deactivated = False
+
+        if failures >= MAX_PROXY_CONNECTION_FAILURES and row.is_active:
+            row.is_active = False
+            deactivated = True
+            logger.error(
+                "Telegram proxy deactivated after {} failures: id={} name={!r} url={}",
+                failures,
+                row.id,
+                row.name,
+                mask_proxy_url(row.url),
+            )
+        else:
+            logger.warning(
+                "Telegram proxy failure {}/{}: id={} name={!r} url={}",
+                failures,
+                MAX_PROXY_CONNECTION_FAILURES,
+                row.id,
+                row.name,
+                mask_proxy_url(row.url),
+            )
+
+        session.commit()
+        return deactivated
+
+
 async def fetch_proxies_needing_expiry_warning() -> list[TelegramProxy]:
     """Прокси, у которых до истечения ≤2 суток и предупреждение ещё не отправляли."""
     from bot.db.database import async_session_maker

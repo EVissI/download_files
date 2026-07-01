@@ -12,7 +12,10 @@ from wtforms import BooleanField, DateTimeLocalField, IntegerField, StringField
 from wtforms.validators import DataRequired, NumberRange, Optional
 
 from bot.common.proxy_utils import mask_proxy_url
-from bot.common.service.telegram_proxy_service import send_proxy_test_message
+from bot.common.service.telegram_proxy_service import (
+    record_proxy_connection_success_sync,
+    send_proxy_test_message,
+)
 from bot.common.telegram_proxy_config import clear_telegram_proxy_cache, get_effective_telegram_proxies
 from bot.config import admins, format_telegram_api_error
 from bot.db.models import TelegramProxy
@@ -136,6 +139,7 @@ class TelegramProxyModelView(ModelView):
 
         try:
             sent_count = _run_telegram_sync(_send)
+            record_proxy_connection_success_sync(proxy_url)
             flash(
                 _(
                     "Тестовое сообщение через прокси «%(name)s» отправлено "
@@ -164,9 +168,12 @@ class TelegramProxyModelView(ModelView):
     def pre_update(self, item):
         old = self.datamodel.get(item.id)
         old_expires = old.expires_at if old else None
+        was_active = bool(old.is_active) if old else False
         self._normalize_item(item)
         if item.expires_at != old_expires:
             item.expiry_warning_sent_at = None
+        if item.is_active and not was_active:
+            item.connection_failure_count = 0
 
     def _normalize_item(self, item: TelegramProxy) -> None:
         item.name = str(item.name or "").strip()
