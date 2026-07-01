@@ -1637,12 +1637,15 @@ async def content_cards_create_empty(body: ContentCardMyListBody):
 
 @app.post("/api/content_cards/all_labels")
 async def content_cards_all_labels(body: ContentCardMyListBody):
-    """Все уникальные метки карточек (только ROOT_ADMIN_IDS)."""
+    """Все уникальные метки карточек в указанном пуле (только ROOT_ADMIN_IDS)."""
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
+    card_pool = _parse_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
-        rows = await session.execute(select(ContentCard.labels))
+        rows = await session.execute(
+            select(ContentCard.labels).where(ContentCard.card_pool == card_pool)
+        )
         labels_set: set[str] = set()
         for (labels,) in rows.all():
             if not labels:
