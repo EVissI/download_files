@@ -106,7 +106,46 @@ def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
         return urls
 
 
-MAX_PROXY_CONNECTION_FAILURES = 10
+CONSECUTIVE_FAILURES_TO_DEACTIVATE = 3
+
+
+def is_proxy_url_active_sync(proxy_url: str) -> bool:
+    """Проверяет, что прокси активен и пригоден к использованию (is_active, срок, URL)."""
+    from bot.db.models import TelegramProxy
+
+    normalized = normalize_proxy_url(str(proxy_url or "")) or str(proxy_url or "").strip()
+    if not normalized:
+        return False
+
+    try:
+        with _get_sync_session() as session:
+            row = _find_proxy_row_by_url(session, normalized)
+            if row is None:
+                return False
+            return _is_proxy_usable(row)
+    except Exception as exc:
+        logger.warning(
+            "Failed to check telegram proxy activity for {}: {}",
+            mask_proxy_url(normalized),
+            exc,
+        )
+        return False
+
+
+def select_next_active_proxy_url_sync(
+    *,
+    exclude_url: str | None = None,
+) -> str | None:
+    """Следующий активный прокси по priority; exclude_url пропускается."""
+    excluded = normalize_proxy_url(str(exclude_url or "")) if exclude_url else None
+    for url in fetch_active_proxy_urls_sync():
+        normalized = normalize_proxy_url(url)
+        if not normalized:
+            continue
+        if excluded and normalized == excluded:
+            continue
+        return normalized
+    return None
 
 
 def _find_proxy_row_by_url(session: Session, proxy_url: str):
@@ -170,7 +209,7 @@ def record_proxy_connection_success_sync(proxy_url: str) -> None:
 def record_proxy_connection_failure_sync(proxy_url: str) -> bool:
     """
     Увеличивает счётчик ошибок подключения.
-    После MAX_PROXY_CONNECTION_FAILURES помечает прокси неактивным.
+    После CONSECUTIVE_FAILURES_TO_DEACTIVATE помечает прокси неактивным.
     Возвращает True, если прокси только что деактивирован.
     """
     try:
@@ -187,11 +226,11 @@ def record_proxy_connection_failure_sync(proxy_url: str) -> bool:
             failures = row.connection_failure_count
             deactivated = False
 
-            if failures >= MAX_PROXY_CONNECTION_FAILURES and row.is_active:
+            if failures >= CONSECUTIVE_FAILURES_TO_DEACTIVATE and row.is_active:
                 row.is_active = False
                 deactivated = True
                 logger.error(
-                    "Telegram proxy deactivated after {} failures: id={} name={!r} url={}",
+                    "Telegram proxy deactivated after {} consecutive failures: id={} name={!r} url={}",
                     failures,
                     row.id,
                     row.name,
@@ -201,7 +240,7 @@ def record_proxy_connection_failure_sync(proxy_url: str) -> bool:
                 logger.warning(
                     "Telegram proxy failure {}/{}: id={} name={!r} url={}",
                     failures,
-                    MAX_PROXY_CONNECTION_FAILURES,
+                    CONSECUTIVE_FAILURES_TO_DEACTIVATE,
                     row.id,
                     row.name,
                     mask_proxy_url(row.url),

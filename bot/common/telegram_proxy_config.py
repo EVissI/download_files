@@ -10,7 +10,7 @@ from loguru import logger
 
 from bot.common.proxy_utils import mask_proxy_url
 
-_CACHE_TTL_SECONDS = 30
+_CACHE_TTL_SECONDS = 5
 _UNSET = object()
 _proxies_cache: object = _UNSET
 _cache_loaded_at: float = 0.0
