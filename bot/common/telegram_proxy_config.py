@@ -44,7 +44,7 @@ def log_telegram_proxy_config() -> list[str]:
             ", ".join(mask_proxy_url(u) for u in urls),
         )
     else:
-        logger.info("Telegram proxies: none (direct connection to api.telegram.org)")
+        logger.warning("Telegram proxies: none configured in DB (bot requires proxy)")
     return urls
 
 

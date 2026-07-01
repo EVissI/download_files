@@ -12,6 +12,7 @@ from bot.common.middlewares.minimum_update_process_time import (
     MinimumUpdateProcessTimeMiddleware,
 ) 
 MIN_UPDATE_PROCESS_SECONDS = 0.3 #сек
+from bot.common.func.scheduler_jobs import upsert_scheduler_job
 from bot.common.tasks.deactivate import expire_analiz_balances
 from bot.common.tasks.cleanup_screenshots import cleanup_screenshots
 from bot.common.tasks.telegram_proxy_expiry import notify_telegram_proxy_expiry
@@ -33,11 +34,10 @@ async def set_commands():
 
 
 def setup_telegram_proxy_scheduler():
-    scheduler.add_job(
+    upsert_scheduler_job(
         notify_telegram_proxy_expiry,
         CronTrigger(hour=10, minute=0),
-        id="telegram_proxy_expiry_warning",
-        replace_existing=True,
+        "telegram_proxy_expiry_warning",
     )
 
 

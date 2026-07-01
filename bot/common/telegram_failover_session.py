@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import ssl
 from typing import Optional
 
-import certifi
-from aiohttp import TCPConnector
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.methods.base import TelegramMethod
 from aiogram.client.session.base import TelegramType
-from loguru import logger
 
 from bot.common.proxy_utils import is_proxy_or_network_error
 from bot.common.service.telegram_proxy_service import (
@@ -25,19 +21,7 @@ from bot.common.telegram_proxy_config import (
 
 
 class FailoverAiohttpSession(AiohttpSession):
-    """Пробует прокси по очереди из БД; если все недоступны — прямое подключение."""
-
-    async def _reset_direct_connector(self) -> None:
-        limit = self._connector_init.get("limit", 100)
-        self._connector_type = TCPConnector
-        self._connector_init = {
-            "ssl": ssl.create_default_context(cafile=certifi.where()),
-            "limit": limit,
-            "ttl_dns_cache": 3600,
-        }
-        self._proxy = None
-        self._should_reset_connector = True
-        await self.close()
+    """Пробует прокси по очереди из БД. Без прокси запросы не выполняются."""
 
     @staticmethod
     def _as_network_error(
@@ -51,19 +35,18 @@ class FailoverAiohttpSession(AiohttpSession):
             message=f"{type(exc).__name__}: {exc}",
         )
 
-    async def _request_via_proxies(
+    async def make_request(
         self,
         bot,
         method: TelegramMethod[TelegramType],
-        timeout: Optional[int],
-        *,
-        allow_direct_fallback: bool,
+        timeout: Optional[int] = None,
     ) -> TelegramType:
         proxies = get_effective_telegram_proxies()
         if not proxies:
-            if allow_direct_fallback:
-                await self._reset_direct_connector()
-            return await super().make_request(bot, method, timeout=timeout)
+            raise TelegramNetworkError(
+                method=method,
+                message="No active Telegram proxies configured in DB",
+            )
 
         last_error: TelegramNetworkError | None = None
         index = 0
@@ -90,29 +73,9 @@ class FailoverAiohttpSession(AiohttpSession):
                     continue
                 index += 1
 
-        if not allow_direct_fallback:
-            if last_error is not None:
-                raise last_error
-            return await super().make_request(bot, method, timeout=timeout)
-
-        logger.warning("All Telegram proxies failed, retrying without proxy")
-        try:
-            await self._reset_direct_connector()
-            return await super().make_request(bot, method, timeout=timeout)
-        except Exception as exc:
-            if last_error is not None and is_proxy_or_network_error(exc):
-                raise last_error from exc
-            raise
-
-    async def make_request(
-        self,
-        bot,
-        method: TelegramMethod[TelegramType],
-        timeout: Optional[int] = None,
-    ) -> TelegramType:
-        return await self._request_via_proxies(
-            bot,
-            method,
-            timeout,
-            allow_direct_fallback=True,
+        if last_error is not None:
+            raise last_error
+        raise TelegramNetworkError(
+            method=method,
+            message="All Telegram proxies are unavailable",
         )
