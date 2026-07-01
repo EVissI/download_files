@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Iterable
+from urllib.parse import urlparse
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -99,22 +100,56 @@ def _find_proxy_row_by_url(session: Session, proxy_url: str):
     normalized = str(proxy_url or "").strip()
     if not normalized:
         return None
-    return (
+
+    row = (
         session.query(TelegramProxy)
         .filter(TelegramProxy.url == normalized)
         .order_by(TelegramProxy.id.asc())
         .first()
     )
+    if row is not None:
+        return row
+
+    active_rows = (
+        session.query(TelegramProxy)
+        .filter(TelegramProxy.is_active.is_(True))
+        .order_by(TelegramProxy.priority.asc(), TelegramProxy.id.asc())
+        .all()
+    )
+    if len(active_rows) == 1:
+        return active_rows[0]
+
+    parsed = urlparse(normalized)
+    host_port = (parsed.hostname, parsed.port)
+    if not parsed.hostname:
+        return None
+
+    for candidate in active_rows:
+        candidate_parsed = urlparse(str(candidate.url or "").strip())
+        if (
+            candidate_parsed.hostname == host_port[0]
+            and candidate_parsed.port == host_port[1]
+        ):
+            return candidate
+
+    return None
 
 
 def record_proxy_connection_success_sync(proxy_url: str) -> None:
     """Сбрасывает счётчик ошибок после успешного запроса через прокси."""
-    with _get_sync_session() as session:
-        row = _find_proxy_row_by_url(session, proxy_url)
-        if row is None or not row.connection_failure_count:
-            return
-        row.connection_failure_count = 0
-        session.commit()
+    try:
+        with _get_sync_session() as session:
+            row = _find_proxy_row_by_url(session, proxy_url)
+            if row is None or not row.connection_failure_count:
+                return
+            row.connection_failure_count = 0
+            session.commit()
+    except Exception as exc:
+        logger.exception(
+            "Failed to reset proxy failure counter for {}: {}",
+            mask_proxy_url(proxy_url),
+            exc,
+        )
 
 
 def record_proxy_connection_failure_sync(proxy_url: str) -> bool:
@@ -123,41 +158,49 @@ def record_proxy_connection_failure_sync(proxy_url: str) -> bool:
     После MAX_PROXY_CONNECTION_FAILURES помечает прокси неактивным.
     Возвращает True, если прокси только что деактивирован.
     """
-    with _get_sync_session() as session:
-        row = _find_proxy_row_by_url(session, proxy_url)
-        if row is None:
-            logger.warning(
-                "Proxy connection failure for unknown URL: {}",
-                mask_proxy_url(proxy_url),
-            )
-            return False
+    try:
+        with _get_sync_session() as session:
+            row = _find_proxy_row_by_url(session, proxy_url)
+            if row is None:
+                logger.warning(
+                    "Proxy connection failure for unknown URL: {}",
+                    mask_proxy_url(proxy_url),
+                )
+                return False
 
-        row.connection_failure_count = int(row.connection_failure_count or 0) + 1
-        failures = row.connection_failure_count
-        deactivated = False
+            row.connection_failure_count = int(row.connection_failure_count or 0) + 1
+            failures = row.connection_failure_count
+            deactivated = False
 
-        if failures >= MAX_PROXY_CONNECTION_FAILURES and row.is_active:
-            row.is_active = False
-            deactivated = True
-            logger.error(
-                "Telegram proxy deactivated after {} failures: id={} name={!r} url={}",
-                failures,
-                row.id,
-                row.name,
-                mask_proxy_url(row.url),
-            )
-        else:
-            logger.warning(
-                "Telegram proxy failure {}/{}: id={} name={!r} url={}",
-                failures,
-                MAX_PROXY_CONNECTION_FAILURES,
-                row.id,
-                row.name,
-                mask_proxy_url(row.url),
-            )
+            if failures >= MAX_PROXY_CONNECTION_FAILURES and row.is_active:
+                row.is_active = False
+                deactivated = True
+                logger.error(
+                    "Telegram proxy deactivated after {} failures: id={} name={!r} url={}",
+                    failures,
+                    row.id,
+                    row.name,
+                    mask_proxy_url(row.url),
+                )
+            else:
+                logger.warning(
+                    "Telegram proxy failure {}/{}: id={} name={!r} url={}",
+                    failures,
+                    MAX_PROXY_CONNECTION_FAILURES,
+                    row.id,
+                    row.name,
+                    mask_proxy_url(row.url),
+                )
 
-        session.commit()
-        return deactivated
+            session.commit()
+            return deactivated
+    except Exception as exc:
+        logger.exception(
+            "Failed to record proxy connection failure for {}: {}",
+            mask_proxy_url(proxy_url),
+            exc,
+        )
+        return False
 
 
 async def fetch_proxies_needing_expiry_warning() -> list[TelegramProxy]:

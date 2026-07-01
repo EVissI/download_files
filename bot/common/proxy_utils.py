@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from urllib.parse import urlparse, urlunparse
 
@@ -22,3 +23,25 @@ def mask_proxy_url(url: str) -> str:
     except Exception:
         pass
     return re.sub(r":([^:@/]+)@", ":***@", url, count=1)
+
+
+def is_proxy_or_network_error(exc: BaseException) -> bool:
+    """Ошибки прокси/сети, в т.ч. ProxyError без обёртки aiogram."""
+    from aiogram.exceptions import TelegramNetworkError
+
+    if isinstance(exc, (TelegramNetworkError, asyncio.TimeoutError, ConnectionError, OSError)):
+        return True
+
+    name = type(exc).__name__
+    if "Proxy" in name or "ClientConnector" in name or "ClientOSError" in name:
+        return True
+
+    try:
+        from aiohttp import ClientError
+
+        if isinstance(exc, ClientError):
+            return True
+    except ImportError:
+        pass
+
+    return False
