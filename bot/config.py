@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     REMOTE_REDIS_HOST: str = "localhost"
     WORKERS_COUNT: int = 1
 
-    # HTTP/SOCKS прокси для api.telegram.org (aiohttp-socks). Задаётся на сервере бота;
-    # при старте публикуется в Redis — воркеры читают оттуда (см. telegram_proxy_config).
+    # HTTP/SOCKS прокси для api.telegram.org (aiohttp-socks).
+    # Основной источник — FAB «Прокси Telegram» (БД). TELEGRAM_PROXY — локальное переопределение.
     TELEGRAM_PROXY: Optional[str] = None
 
     @property
@@ -97,12 +97,16 @@ def format_telegram_api_error(exc: BaseException) -> str:
 
 
 def _build_bot() -> Bot:
+    from bot.common.telegram_failover_session import FailoverAiohttpSession
+
     kwargs = dict(
         token=settings.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     if settings.TELEGRAM_PROXY:
         kwargs["session"] = AiohttpSession(proxy=settings.TELEGRAM_PROXY)
+    else:
+        kwargs["session"] = FailoverAiohttpSession()
     return Bot(**kwargs)
 
 

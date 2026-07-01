@@ -14,10 +14,11 @@ from bot.common.middlewares.minimum_update_process_time import (
 MIN_UPDATE_PROCESS_SECONDS = 0.3 #сек
 from bot.common.tasks.deactivate import expire_analiz_balances
 from bot.common.tasks.cleanup_screenshots import cleanup_screenshots
+from bot.common.tasks.telegram_proxy_expiry import notify_telegram_proxy_expiry
 from bot.db.pg_backup import backup_postgres_to_yandex_disk
 from bot.routers.setup import setup_router
 from bot.config import setup_logger, bot, admins, scheduler
-from bot.common.telegram_proxy_config import publish_telegram_proxy_to_redis
+from bot.common.telegram_proxy_config import warm_telegram_proxy_cache
 from bot.db.redis import redis_client
 
 setup_logger("bot")
@@ -29,6 +30,15 @@ from loguru import logger
 async def set_commands():
     commands = [BotCommand(command="start", description="Start button")]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+
+
+def setup_telegram_proxy_scheduler():
+    scheduler.add_job(
+        notify_telegram_proxy_expiry,
+        CronTrigger(hour=10, minute=0),
+        id="telegram_proxy_expiry_warning",
+        replace_existing=True,
+    )
 
 
 def setup_expire_scheduler():
@@ -57,6 +67,7 @@ def setup_expire_scheduler():
 async def start_bot():
     await set_commands()
     # setup_expire_scheduler()
+    setup_telegram_proxy_scheduler()
     # await schedule_gift_job_from_db()
     scheduler.start()
     for admin_id in admins:
@@ -79,7 +90,7 @@ async def stop_bot():
 
 async def main():
     await redis_client.connect()
-    await publish_telegram_proxy_to_redis()
+    warm_telegram_proxy_cache()
     storage = RedisStorage(
         redis_client.redis,
         key_builder=DefaultKeyBuilder(with_bot_id=True, with_destiny=True),

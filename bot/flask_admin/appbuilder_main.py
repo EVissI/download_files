@@ -26,6 +26,7 @@ from bot.flask_admin.model_view.user import (
 )
 from bot.flask_admin.model_view.users_with_cards import UsersWithCardsView
 from bot.flask_admin.model_view.users_with_pip_count_cards import UsersWithPipCountCardsView
+from bot.flask_admin.model_view.telegram_proxy import TelegramProxyModelView
 from bot.flask_admin.model_view.webapp_settings import WebAppSettingsModelView
 
 logger = logging.getLogger(__name__)
@@ -161,6 +162,11 @@ def register_models(appbuilder, db):
         WebAppSettingsModelView,
         "Настройки WebApp",
         icon="fa-cog",
+    )
+    appbuilder.add_view(
+        TelegramProxyModelView,
+        "Прокси Telegram",
+        icon="fa-random",
     )
     appbuilder.add_view(ContentCardModelView, "Карточки", icon="fa-clone")
     appbuilder.add_view(

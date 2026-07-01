@@ -659,6 +659,46 @@ class WebAppSetting(Base):
     )
 
 
+class TelegramProxy(Base):
+    """HTTP/SOCKS прокси для api.telegram.org, управляется через FAB."""
+
+    __tablename__ = "telegram_proxies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    expiry_warning_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    @property
+    @renders("status_display")
+    def status_display(self) -> str:
+        now = datetime.now(timezone.utc)
+        if not self.is_active:
+            return "Выключен"
+        if self.expires_at is not None and self.expires_at <= now:
+            return "Истёк"
+        return "Активен"
+
+    @property
+    @renders("expires_at_display")
+    def expires_at_display(self) -> str:
+        if self.expires_at is None:
+            return "—"
+        return self.expires_at.astimezone(timezone(timedelta(hours=3))).strftime(
+            "%d.%m.%Y %H:%M"
+        )
+
+    def __repr__(self) -> str:
+        return f"{self.id} | {self.name}"
+
+
 class ContentCardPool(str, enum.Enum):
     """Пул карточек: обычные «Карточки» или «Подсчёт пипсов»."""
 

@@ -1,86 +1,74 @@
-"""Единый TELEGRAM_PROXY: задаётся в .env основного бота, воркеры читают из Redis."""
+"""Список TELEGRAM_PROXY: БД (FAB) с in-memory кэшем, env — локальное переопределение."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+import time
+from typing import Optional
 
 from loguru import logger
 
 from bot.config import settings
 
-if TYPE_CHECKING:
-    from redis import Redis
-
-TELEGRAM_PROXY_REDIS_KEY = "config:telegram_proxy"
-
+_CACHE_TTL_SECONDS = 30
 _UNSET = object()
-_redis_proxy_cache: object = _UNSET
+_proxies_cache: object = _UNSET
+_cache_loaded_at: float = 0.0
 
 
-def get_effective_telegram_proxy(
-    *,
-    redis: Redis | None = None,
-    refresh: bool = False,
-) -> Optional[str]:
+def clear_telegram_proxy_cache() -> None:
+    global _proxies_cache, _cache_loaded_at
+    _proxies_cache = _UNSET
+    _cache_loaded_at = 0.0
+
+
+def warm_telegram_proxy_cache() -> list[str]:
+    """Предзагрузка списка прокси из БД (например, при старте бота)."""
+    return get_effective_telegram_proxies(refresh=True)
+
+
+def get_effective_telegram_proxies(*, refresh: bool = False) -> list[str]:
     """
-    Прокси для Telegram API.
-    1) TELEGRAM_PROXY в локальном .env (переопределение)
-    2) ключ config:telegram_proxy в Redis (публикует основной бот при старте)
+    Список прокси для Telegram API (порядок = приоритет failover).
+    1) TELEGRAM_PROXY в локальном .env (переопределение, один URL)
+    2) активные записи telegram_proxies в PostgreSQL
     """
     if settings.TELEGRAM_PROXY:
-        return settings.TELEGRAM_PROXY
+        return [settings.TELEGRAM_PROXY.strip()]
 
-    global _redis_proxy_cache
-    if not refresh and _redis_proxy_cache is not _UNSET:
-        return _redis_proxy_cache or None
+    global _proxies_cache, _cache_loaded_at
+    if not refresh and _proxies_cache is not _UNSET:
+        if time.monotonic() - _cache_loaded_at < _CACHE_TTL_SECONDS:
+            return list(_proxies_cache or [])
 
-    client = redis
-    if client is None:
-        from bot.db.redis import sync_redis_client
-
-        client = sync_redis_client
+    from bot.common.service.telegram_proxy_service import fetch_active_proxy_urls_sync
 
     try:
-        value = client.get(TELEGRAM_PROXY_REDIS_KEY)
-        _redis_proxy_cache = value or ""
+        urls = fetch_active_proxy_urls_sync()
+        _proxies_cache = urls
+        _cache_loaded_at = time.monotonic()
     except Exception as e:
-        logger.warning("Failed to load Telegram proxy from Redis: {}", e)
-        _redis_proxy_cache = ""
-        return None
+        logger.warning("Failed to load Telegram proxies from DB: {}", e)
+        _proxies_cache = []
+        return []
 
-    return value or None
+    return list(_proxies_cache or [])
 
 
-def telegram_proxy_source(*, redis: Redis | None = None) -> str:
+def get_effective_telegram_proxy(*, refresh: bool = False) -> Optional[str]:
+    proxies = get_effective_telegram_proxies(refresh=refresh)
+    return proxies[0] if proxies else None
+
+
+def telegram_proxy_source() -> str:
     if settings.TELEGRAM_PROXY:
         return "env"
-    if get_effective_telegram_proxy(redis=redis):
-        return "redis"
+    if get_effective_telegram_proxies():
+        return "db"
     return "none"
 
 
-def telegram_requests_proxies(
-    *, redis: Redis | None = None, refresh: bool = False
-) -> Optional[dict[str, str]]:
-    proxy = get_effective_telegram_proxy(redis=redis, refresh=refresh)
+def telegram_requests_proxies(*, refresh: bool = False) -> Optional[dict[str, str]]:
+    proxy = get_effective_telegram_proxy(refresh=refresh)
     if not proxy:
         return None
     return {"http": proxy, "https": proxy}
-
-
-async def publish_telegram_proxy_to_redis() -> None:
-    """Вызывается при старте основного бота — воркеры подхватят прокси из Redis."""
-    from bot.db.redis import redis_client
-
-    await redis_client.connect()
-    if settings.TELEGRAM_PROXY:
-        await redis_client.set(TELEGRAM_PROXY_REDIS_KEY, settings.TELEGRAM_PROXY)
-        logger.info("Telegram proxy published to Redis for workers")
-    else:
-        await redis_client.delete(TELEGRAM_PROXY_REDIS_KEY)
-        _clear_redis_proxy_cache()
-
-
-def _clear_redis_proxy_cache() -> None:
-    global _redis_proxy_cache
-    _redis_proxy_cache = _UNSET

@@ -1,0 +1,17 @@
+{% extends "appbuilder/general/model/show.html" %}
+
+{% block show_form %}
+{{ super() }}
+<div class="well" style="margin-top: 1em;">
+    <h4>Действия</h4>
+    <form method="post" action="{{ url_for(tp_fab_endpoint ~ '.test_proxy', pk=pk) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+        <button type="submit" class="btn btn-primary">
+            Проверить прокси
+        </button>
+    </form>
+    <p class="help-block" style="margin-top: 8px;">
+        Отправит тестовое сообщение в Telegram через этот прокси всем админам из ROOT_ADMIN_IDS.
+    </p>
+</div>
+{% endblock %}
