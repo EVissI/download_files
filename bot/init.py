@@ -20,7 +20,11 @@ from bot.db.pg_backup import backup_postgres_to_yandex_disk
 from bot.routers.setup import setup_router
 from bot.config import setup_logger, bot, admins, scheduler
 from bot.common.telegram_proxy_config import log_telegram_proxy_config
-from bot.common.telegram_failover_session import prepare_bot_session_proxy
+from bot.common.telegram_failover_session import (
+    FailoverAiohttpSession,
+    prepare_bot_session_proxy,
+    run_telegram_proxy_db_sync_loop,
+)
 from bot.db.redis import redis_client
 
 setup_logger("bot")
@@ -71,6 +75,8 @@ async def start_bot():
     setup_telegram_proxy_scheduler()
     # await schedule_gift_job_from_db()
     scheduler.start()
+    if isinstance(bot.session, FailoverAiohttpSession):
+        bot.session.start_db_sync_task()
     for admin_id in admins:
         try:
             await bot.send_message(admin_id, f"Я запущен🥳.")
@@ -80,6 +86,8 @@ async def start_bot():
 
 
 async def stop_bot():
+    if isinstance(bot.session, FailoverAiohttpSession):
+        bot.session.stop_db_sync_task()
     await redis_client.close()
     try:
         for admin_id in admins:

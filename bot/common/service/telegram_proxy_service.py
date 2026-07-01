@@ -67,7 +67,8 @@ def _proxy_urls_from_rows(rows: Iterable[TelegramProxy]) -> list[str]:
     return urls
 
 
-def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
+def fetch_usable_proxies_sync(session: Session | None = None) -> list["TelegramProxy"]:
+    """Активные и пригодные прокси из БД, отсортированные по priority."""
     from bot.db.models import TelegramProxy
 
     if session is not None:
@@ -77,7 +78,7 @@ def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
             .order_by(TelegramProxy.priority.asc(), TelegramProxy.id.asc())
             .all()
         )
-        return _proxy_urls_from_rows(rows)
+        return [row for row in rows if _is_proxy_usable(row)]
 
     with _get_sync_session() as db_session:
         rows = (
@@ -86,24 +87,70 @@ def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
             .order_by(TelegramProxy.priority.asc(), TelegramProxy.id.asc())
             .all()
         )
-        urls = _proxy_urls_from_rows(rows)
-        if urls:
-            logger.debug(
-                "Active telegram proxies loaded (count={}): {}",
-                len(urls),
-                ", ".join(mask_proxy_url(u) for u in urls),
-            )
-        for row in rows:
-            logger.debug(
-                "telegram_proxies row: id={} name={!r} priority={} active={} usable={} url={}",
-                row.id,
-                row.name,
-                row.priority,
-                row.is_active,
-                _is_proxy_usable(row),
-                mask_proxy_url(str(row.url or "")),
-            )
-        return urls
+        return [row for row in rows if _is_proxy_usable(row)]
+
+
+def resolve_session_proxy_sync(
+    current_proxy_id: int | None = None,
+    current_proxy_url: str | None = None,
+    *,
+    exclude_ids: set[int] | None = None,
+) -> tuple[int, str, str] | None:
+    """
+    Определяет, какой прокси должен использовать бот, по актуальным данным БД.
+    Возвращает (id, normalized_url, name) или None.
+    """
+    usable = fetch_usable_proxies_sync()
+    if exclude_ids:
+        usable = [row for row in usable if row.id not in exclude_ids]
+    if not usable:
+        return None
+
+    if current_proxy_id is not None:
+        for row in usable:
+            if row.id == current_proxy_id:
+                url = normalize_proxy_url(str(row.url or ""))
+                if url:
+                    return row.id, url, row.name
+
+    current = normalize_proxy_url(str(current_proxy_url or "")) if current_proxy_url else None
+    if current:
+        for row in usable:
+            url = normalize_proxy_url(str(row.url or ""))
+            if url == current:
+                return row.id, url, row.name
+
+    row = usable[0]
+    url = normalize_proxy_url(str(row.url or ""))
+    if not url:
+        return None
+    return row.id, url, row.name
+
+
+def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
+    rows = fetch_usable_proxies_sync(session)
+    urls: list[str] = []
+    for row in rows:
+        url = normalize_proxy_url(str(row.url or ""))
+        if url and url not in urls:
+            urls.append(url)
+    if urls:
+        logger.debug(
+            "Active telegram proxies loaded (count={}): {}",
+            len(urls),
+            ", ".join(mask_proxy_url(u) for u in urls),
+        )
+    for row in rows:
+        logger.debug(
+            "telegram_proxies row: id={} name={!r} priority={} active={} usable={} url={}",
+            row.id,
+            row.name,
+            row.priority,
+            row.is_active,
+            _is_proxy_usable(row),
+            mask_proxy_url(str(row.url or "")),
+        )
+    return urls
 
 
 CONSECUTIVE_FAILURES_TO_DEACTIVATE = 3
@@ -135,17 +182,33 @@ def is_proxy_url_active_sync(proxy_url: str) -> bool:
 def select_next_active_proxy_url_sync(
     *,
     exclude_url: str | None = None,
+    exclude_ids: set[int] | None = None,
 ) -> str | None:
-    """Следующий активный прокси по priority; exclude_url пропускается."""
-    excluded = normalize_proxy_url(str(exclude_url or "")) if exclude_url else None
-    for url in fetch_active_proxy_urls_sync():
-        normalized = normalize_proxy_url(url)
-        if not normalized:
-            continue
-        if excluded and normalized == excluded:
-            continue
-        return normalized
-    return None
+    """Следующий активный прокси по priority."""
+    excluded = set(exclude_ids or ())
+    if exclude_url:
+        normalized = normalize_proxy_url(str(exclude_url or ""))
+        if normalized:
+            try:
+                with _get_sync_session() as session:
+                    row = _find_proxy_row_by_url(session, normalized)
+                    if row is not None:
+                        excluded.add(row.id)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to resolve excluded proxy id for {}: {}",
+                    mask_proxy_url(normalized),
+                    exc,
+                )
+
+    resolved = resolve_session_proxy_sync(
+        current_proxy_id=None,
+        current_proxy_url=None,
+        exclude_ids=excluded or None,
+    )
+    if resolved is None:
+        return None
+    return resolved[1]
 
 
 def _find_proxy_row_by_url(session: Session, proxy_url: str):
