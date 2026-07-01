@@ -88,13 +88,13 @@ def fetch_active_proxy_urls_sync(session: Session | None = None) -> list[str]:
         )
         urls = _proxy_urls_from_rows(rows)
         if urls:
-            logger.info(
+            logger.debug(
                 "Active telegram proxies loaded (count={}): {}",
                 len(urls),
                 ", ".join(mask_proxy_url(u) for u in urls),
             )
         for row in rows:
-            logger.info(
+            logger.debug(
                 "telegram_proxies row: id={} name={!r} priority={} active={} usable={} url={}",
                 row.id,
                 row.name,

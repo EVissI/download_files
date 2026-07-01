@@ -20,6 +20,7 @@ from bot.db.pg_backup import backup_postgres_to_yandex_disk
 from bot.routers.setup import setup_router
 from bot.config import setup_logger, bot, admins, scheduler
 from bot.common.telegram_proxy_config import log_telegram_proxy_config
+from bot.common.telegram_failover_session import prepare_bot_session_proxy
 from bot.db.redis import redis_client
 
 setup_logger("bot")
@@ -91,6 +92,9 @@ async def stop_bot():
 async def main():
     await redis_client.connect()
     log_telegram_proxy_config()
+    prepared = prepare_bot_session_proxy(bot.session)
+    if prepared:
+        logger.info("Telegram session proxy prepared at startup")
     storage = RedisStorage(
         redis_client.redis,
         key_builder=DefaultKeyBuilder(with_bot_id=True, with_destiny=True),
