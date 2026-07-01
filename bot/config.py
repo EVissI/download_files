@@ -4,11 +4,10 @@ from loguru import logger
 from bot.common.utils.i18n import create_translator_hub
 from fluentogram import TranslatorHub
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List, Optional
+from typing import List
 
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
-from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
@@ -55,10 +54,6 @@ class Settings(BaseSettings):
     REMOTE_REDIS_HOST: str = "localhost"
     WORKERS_COUNT: int = 1
 
-    # HTTP/SOCKS прокси для api.telegram.org (aiohttp-socks).
-    # Основной источник — FAB «Прокси Telegram» (БД). TELEGRAM_PROXY — локальное переопределение.
-    TELEGRAM_PROXY: Optional[str] = None
-
     @property
     def DB_URL(self):
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:5432/{self.POSTGRES_DB}"
@@ -99,16 +94,11 @@ def format_telegram_api_error(exc: BaseException) -> str:
 def _build_bot() -> Bot:
     from bot.common.telegram_failover_session import FailoverAiohttpSession
 
-    kwargs = dict(
+    return Bot(
         token=settings.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        session=FailoverAiohttpSession(),
     )
-    env_proxy = (settings.TELEGRAM_PROXY or "").strip()
-    if env_proxy:
-        kwargs["session"] = AiohttpSession(proxy=env_proxy)
-    else:
-        kwargs["session"] = FailoverAiohttpSession()
-    return Bot(**kwargs)
 
 
 def create_bot_for_sync_context() -> Bot:

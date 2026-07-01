@@ -14,7 +14,7 @@ from aiogram.client.session.base import TelegramType
 from loguru import logger
 
 from bot.common.proxy_utils import mask_proxy_url
-from bot.common.telegram_proxy_config import get_effective_telegram_proxies, get_env_telegram_proxy
+from bot.common.telegram_proxy_config import get_effective_telegram_proxies
 
 
 class FailoverAiohttpSession(AiohttpSession):
@@ -38,12 +38,6 @@ class FailoverAiohttpSession(AiohttpSession):
         method: TelegramMethod[TelegramType],
         timeout: Optional[int] = None,
     ) -> TelegramType:
-        env_proxy = get_env_telegram_proxy()
-        if env_proxy:
-            if self.proxy != env_proxy:
-                self.proxy = env_proxy
-            return await super().make_request(bot, method, timeout=timeout)
-
         proxies = get_effective_telegram_proxies()
         if not proxies:
             await self._reset_direct_connector()

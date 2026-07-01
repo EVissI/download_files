@@ -1,24 +1,19 @@
-"""Список TELEGRAM_PROXY: БД (FAB) с in-memory кэшем, env — локальное переопределение."""
+"""Список прокси Telegram: только БД (FAB) с in-memory кэшем."""
 
 from __future__ import annotations
 
+import os
 import time
 from typing import Optional
 
 from loguru import logger
 
 from bot.common.proxy_utils import mask_proxy_url
-from bot.config import settings
 
 _CACHE_TTL_SECONDS = 30
 _UNSET = object()
 _proxies_cache: object = _UNSET
 _cache_loaded_at: float = 0.0
-
-
-def get_env_telegram_proxy() -> str | None:
-    value = (settings.TELEGRAM_PROXY or "").strip()
-    return value or None
 
 
 def clear_telegram_proxy_cache() -> None:
@@ -33,14 +28,13 @@ def warm_telegram_proxy_cache() -> list[str]:
 
 
 def log_telegram_proxy_config() -> list[str]:
-    """Логирует источник и список прокси при старте."""
-    env_proxy = get_env_telegram_proxy()
-    if env_proxy:
+    """Логирует список прокси при старте."""
+    legacy_env = (os.getenv("TELEGRAM_PROXY") or "").strip()
+    if legacy_env:
         logger.warning(
-            "TELEGRAM_PROXY из env переопределяет БД: {}",
-            mask_proxy_url(env_proxy),
+            "TELEGRAM_PROXY в окружении ({}) игнорируется — прокси берутся только из БД (FAB)",
+            mask_proxy_url(legacy_env),
         )
-        return [env_proxy]
 
     urls = get_effective_telegram_proxies(refresh=True)
     if urls:
@@ -55,15 +49,7 @@ def log_telegram_proxy_config() -> list[str]:
 
 
 def get_effective_telegram_proxies(*, refresh: bool = False) -> list[str]:
-    """
-    Список прокси для Telegram API (порядок = приоритет failover).
-    1) TELEGRAM_PROXY в локальном .env (переопределение, один URL)
-    2) активные записи telegram_proxies в PostgreSQL
-    """
-    env_proxy = get_env_telegram_proxy()
-    if env_proxy:
-        return [env_proxy]
-
+    """Активные прокси из telegram_proxies, порядок = приоритет failover."""
     global _proxies_cache, _cache_loaded_at
     if not refresh and _proxies_cache is not _UNSET:
         if time.monotonic() - _cache_loaded_at < _CACHE_TTL_SECONDS:
@@ -89,8 +75,6 @@ def get_effective_telegram_proxy(*, refresh: bool = False) -> Optional[str]:
 
 
 def telegram_proxy_source() -> str:
-    if get_env_telegram_proxy():
-        return "env"
     if get_effective_telegram_proxies():
         return "db"
     return "none"
