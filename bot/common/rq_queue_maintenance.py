@@ -20,8 +20,8 @@ WORKER_COUNT_CACHE_KEY = "cache:worker_count"
 WORKER_ALIVE_GRACE_SECONDS = 90
 
 QUEUE_TITLES = {
-    "backgammon_analysis": "Одиночные игры",
-    "backgammon_batch_analysis": "Пакеты игр",
+    "backgammon_analysis": "Одиночный анализ",
+    "backgammon_batch_analysis": "Пакет",
 }
 
 
