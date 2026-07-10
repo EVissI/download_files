@@ -571,6 +571,14 @@ class UserGroup(Base):
         cascade="all, delete-orphan",
     )
 
+    @property
+    @renders("members_count")
+    def members_count(self) -> str:
+        return str(len(self.users or []))
+
+    def __repr__(self) -> str:
+        return self.name or f"Group #{self.id}"
+
 
 class UserInGroup(Base):
     __tablename__ = "user_in_groups"
