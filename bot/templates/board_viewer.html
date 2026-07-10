@@ -599,6 +599,115 @@
         .cancel-btn:hover {
             background-color: #5a6268;
         }
+
+        /* Модальное окно сообщений */
+        .msg-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .msg-modal-overlay.show {
+            display: flex;
+        }
+
+        .msg-modal {
+            background-color: #2d2d2d;
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            min-width: 280px;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: msgModalFadeIn 0.25s ease-out;
+        }
+
+        @keyframes msgModalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-modal-header {
+            display: flex;
+            align-items: flex-start;
+            padding: 16px 20px 12px;
+            gap: 12px;
+        }
+
+        .msg-modal-icon {
+            flex-shrink: 0;
+            font-size: 32px;
+            line-height: 1;
+        }
+
+        .msg-modal-icon.success {
+            color: #4caf50;
+        }
+
+        .msg-modal-icon.error {
+            color: #f44336;
+        }
+
+        .msg-modal-icon.warning {
+            color: #ff9800;
+        }
+
+        .msg-modal-icon.info {
+            color: #2196f3;
+        }
+
+        .msg-modal-content {
+            color: white;
+            font-size: 15px;
+            line-height: 1.5;
+            margin: 0;
+            flex: 1;
+        }
+
+        .msg-modal-footer {
+            padding: 12px 20px 16px;
+            text-align: right;
+        }
+
+        .msg-modal-ok-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .msg-modal-ok-btn:hover {
+            background-color: #0056b3;
+        }
+
+        #checkboxes tr.screenshot-action-row {
+            cursor: pointer;
+        }
+
+        #checkboxes tr.screenshot-action-row:hover td:first-child {
+            color: #66b3ff;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
@@ -635,6 +744,28 @@
             if (supportBtn) {
                 supportBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
             }
+
+            const screenshotActions = {
+                take: takeScreenshot,
+                save: saveScreenshot,
+                upload: uploadScreenshots,
+            };
+            document.querySelectorAll('#checkboxes tr.screenshot-action-row').forEach((row) => {
+                const action = row.dataset.screenshotAction;
+                const handler = screenshotActions[action];
+                if (!handler) return;
+                row.addEventListener('click', (event) => {
+                    if (event.target.closest('button')) return;
+                    handler();
+                });
+                const button = row.querySelector('button');
+                if (button) {
+                    button.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        handler();
+                    });
+                }
+            });
         });
     </script>
 </head>
@@ -673,19 +804,19 @@
             </div>
             <div id="checkboxes">
                 <table style="border: none; border-collapse: collapse; width: 100%;">
-                    <tr>
+                    <tr class="screenshot-action-row" data-screenshot-action="take">
                         <td style="text-align: left; border: none;">Выслать скриншот экрана</td>
-                        <td style="text-align: right; border: none;"><button onclick="takeScreenshot()"
+                        <td style="text-align: right; border: none;"><button type="button"
                                 id="screenshotBtn" title="Take Screenshot"></button></td>
                     </tr>
-                    <tr>
+                    <tr class="screenshot-action-row" data-screenshot-action="save">
                         <td style="text-align: left; border: none;">Добавить скриншот в буфер обмена</td>
-                        <td style="text-align: right; border: none;"><button onclick="saveScreenshot()"
+                        <td style="text-align: right; border: none;"><button type="button"
                                 id="screenSaveBtn" title="Save Screenshot"></button></td>
                     </tr>
-                    <tr>
+                    <tr class="screenshot-action-row" data-screenshot-action="upload">
                         <td style="text-align: left; border: none;">Выслать архив со скриншотами</td>
-                        <td style="text-align: right; border: none;"><button onclick="uploadScreenshots()"
+                        <td style="text-align: right; border: none;"><button type="button"
                                 id="screenUploadBtn" title="Upload Screenshots"></button></td>
                     </tr>
                     <tr>
@@ -1737,6 +1868,37 @@
         }
 
         // Screenshot logic from hint_viewer
+        const MSG_MODAL_ICONS = {
+            success: 'fa-check-circle',
+            error: 'fa-times-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+
+        function showMessageModal(message, type) {
+            type = type || 'info';
+            const overlay = document.getElementById('msgModalOverlay');
+            const iconEl = document.getElementById('msgModalIcon');
+            const contentEl = document.getElementById('msgModalContent');
+            const okBtn = document.getElementById('msgModalOkBtn');
+            if (!overlay || !iconEl || !contentEl || !okBtn) return;
+
+            iconEl.className = 'msg-modal-icon ' + type;
+            iconEl.innerHTML = '<i class="fa ' + (MSG_MODAL_ICONS[type] || MSG_MODAL_ICONS.info) + '"></i>';
+            contentEl.textContent = message;
+
+            const closeModal = () => {
+                overlay.classList.remove('show');
+                okBtn.onclick = null;
+                overlay.onclick = null;
+            };
+
+            okBtn.onclick = closeModal;
+            overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+
+            overlay.classList.add('show');
+        }
+
         function showFadingMessage(message) {
             const msgDiv = document.createElement('div');
             msgDiv.style.position = 'fixed';
@@ -1758,6 +1920,15 @@
             }, 1000);
         }
 
+        function restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalDisplay) {
+            if (!adminButtonContainer) return;
+            if (originalDisplay !== null && originalDisplay !== '') {
+                adminButtonContainer.style.display = originalDisplay;
+            } else {
+                adminButtonContainer.style.display = 'none';
+            }
+        }
+
         function saveScreenshot() {
             // Hide controls and game selector before taking screenshot
             const controls = document.getElementById('controls');
@@ -1771,6 +1942,7 @@
             const blackPips = document.getElementById('black-pips');
             const redPips = document.getElementById('red-pips');
             const supportContainer = document.querySelector('.support-container');
+            const adminButtonContainer = document.getElementById('adminButtonContainer');
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
@@ -1780,6 +1952,9 @@
             const originalCheckboxesDisplay = checkboxes ? checkboxes.style.display : 'none';
             const originalAnimationControlsDisplay = animationControls ? animationControls.style.display : 'none';
             const originalSupportDisplay = supportContainer ? supportContainer.style.display : 'none';
+            const originalAdminButtonContainerDisplay = adminButtonContainer
+                ? adminButtonContainer.style.display
+                : null;
             const originalBlackPipsDisplay = blackPips ? blackPips.style.display : 'none';
             const originalRedPipsDisplay = redPips ? redPips.style.display : 'none';
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : 'none';
@@ -1795,6 +1970,7 @@
             if (checkboxes) checkboxes.style.display = 'none';
             if (animationControls) animationControls.style.display = 'none';
             if (supportContainer) supportContainer.style.display = 'none';
+            if (adminButtonContainer) adminButtonContainer.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfoDiv) {
@@ -1837,6 +2013,10 @@
                 if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
                 if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
                 if (supportContainer) supportContainer.style.display = originalSupportDisplay;
+                restoreAdminButtonContainerAfterScreenshot(
+                    adminButtonContainer,
+                    originalAdminButtonContainerDisplay
+                );
                 if (blackPips) blackPips.style.display = originalBlackPipsDisplay;
                 if (redPips) redPips.style.display = originalRedPipsDisplay;
                 if (playersInfoDiv) {
@@ -1867,15 +2047,21 @@
                     fetch(`/api/save_screenshot?chat_id=${chat_id}`, {
                         method: 'POST',
                         body: formData
-                    }).then(response => {
+                    }).then(async response => {
                         if (response.ok) {
-                            showFadingMessage('Скриншот сохранен в буфер');
+                            showMessageModal('Скриншот сохранен в буфер', 'success');
+                        } else if (response.status === 402) {
+                            const data = await response.json();
+                            const msg = (data.detail && typeof data.detail === 'string')
+                                ? data.detail
+                                : 'Недостаточно баланса для сохранения скриншота. Активируйте промокод или приобретите услугу.';
+                            showMessageModal(msg, 'warning');
                         } else {
-                            showFadingMessage('Ошибка при сохранении скриншота');
+                            showMessageModal('Ошибка при сохранении скриншота', 'error');
                         }
                     }).catch(error => {
                         console.error('Error saving screenshot:', error);
-                        showFadingMessage('Ошибка при сохранении скриншота');
+                        showMessageModal('Ошибка при сохранении скриншота', 'error');
                     });
                 });
             }).catch(error => {
@@ -1889,6 +2075,10 @@
                 if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
                 if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
                 if (supportContainer) supportContainer.style.display = originalSupportDisplay;
+                restoreAdminButtonContainerAfterScreenshot(
+                    adminButtonContainer,
+                    originalAdminButtonContainerDisplay
+                );
                 if (blackPips) blackPips.style.display = originalBlackPipsDisplay;
                 if (redPips) redPips.style.display = originalRedPipsDisplay;
                 if (playersInfoDiv) {
@@ -1898,20 +2088,26 @@
                 if (matchInfoDiv) {
                     matchInfoDiv.innerHTML = originalMatchInfoHTML;
                 }
-                showFadingMessage('Ошибка при создания скриншота');
+                showMessageModal('Ошибка при создании скриншота', 'error');
             });
         }
 
         function uploadScreenshots() {
-            fetch(`/api/upload_screenshots?chat_id=${chat_id}`, { method: 'POST' }).then(response => {
+            fetch(`/api/upload_screenshots?chat_id=${chat_id}`, { method: 'POST' }).then(async response => {
                 if (response.ok) {
-                    showFadingMessage('Скриншоты отправлены');
+                    showMessageModal('Скриншоты отправлены', 'success');
+                } else if (response.status === 402) {
+                    const data = await response.json();
+                    const msg = (data.detail && typeof data.detail === 'string')
+                        ? data.detail
+                        : 'Недостаточно баланса для отправки скриншотов. Активируйте промокод или приобретите услугу.';
+                    showMessageModal(msg, 'warning');
                 } else {
-                    showFadingMessage('Ошибка при отправке скриншотов');
+                    showMessageModal('Ошибка при отправке скриншотов', 'error');
                 }
             }).catch(error => {
                 console.error('Error uploading screenshots:', error);
-                showFadingMessage('Ошибка при отправке скриншотов');
+                showMessageModal('Ошибка при отправке скриншотов', 'error');
             });
         }
 
@@ -1928,6 +2124,7 @@
             const blackPips = document.getElementById('black-pips');
             const redPips = document.getElementById('red-pips');
             const supportContainer = document.querySelector('.support-container');
+            const adminButtonContainer = document.getElementById('adminButtonContainer');
             const originalControlsDisplay = controls.style.display;
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : 'none';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : 'none';
@@ -1939,6 +2136,9 @@
             const originalBlackPipsDisplay = blackPips ? blackPips.style.display : 'none';
             const originalRedPipsDisplay = redPips ? redPips.style.display : 'none';
             const originalSupportDisplay = supportContainer ? supportContainer.style.display : 'none';
+            const originalAdminButtonContainerDisplay = adminButtonContainer
+                ? adminButtonContainer.style.display
+                : null;
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : 'none';
             const originalPlayersInfoHTML = playersInfoDiv ? playersInfoDiv.innerHTML : '';
             const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
@@ -1952,6 +2152,7 @@
             if (checkboxes) checkboxes.style.display = 'none';
             if (animationControls) animationControls.style.display = 'none';
             if (supportContainer) supportContainer.style.display = 'none';
+            if (adminButtonContainer) adminButtonContainer.style.display = 'none';
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfoDiv) {
@@ -1989,6 +2190,11 @@
                 if (invertBtn) invertBtn.style.display = originalInvertDisplay;
                 if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
                 if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
+                if (supportContainer) supportContainer.style.display = originalSupportDisplay;
+                restoreAdminButtonContainerAfterScreenshot(
+                    adminButtonContainer,
+                    originalAdminButtonContainerDisplay
+                );
                 if (blackPips) blackPips.style.display = originalBlackPipsDisplay;
                 if (redPips) redPips.style.display = originalRedPipsDisplay;
                 if (playersInfoDiv) {
@@ -2006,15 +2212,30 @@
                     fetch(`/api/send_screenshot?chat_id=${chat_id}`, {
                         method: 'POST',
                         body: formData
-                    }).then(response => {
+                    }).then(async response => {
                         if (response.ok) {
-                            showFadingMessage('Скриншот отправлен');
+                            showMessageModal('Скриншот отправлен', 'success');
+                        } else if (response.status === 402) {
+                            const data = await response.json();
+                            const msg = (data.detail && typeof data.detail === 'string')
+                                ? data.detail
+                                : 'Недостаточно баланса для отправки скриншота. Активируйте промокод или приобретите услугу.';
+                            showMessageModal(msg, 'warning');
                         } else {
-                            showFadingMessage('Ошибка при отправке скриншота');
+                            const text = await response.text();
+                            try {
+                                const errorData = JSON.parse(text);
+                                showMessageModal(
+                                    'Ошибка при отправке скриншота: ' + (errorData.detail || text),
+                                    'error'
+                                );
+                            } catch (e) {
+                                showMessageModal('Ошибка при отправке скриншота', 'error');
+                            }
                         }
                     }).catch(error => {
                         console.error('Error sending screenshot:', error);
-                        showFadingMessage('Ошибка при отправке скриншота');
+                        showMessageModal('Ошибка при отправке скриншота', 'error');
                     });
                 });
             }).catch(error => {
@@ -2028,6 +2249,10 @@
                 if (checkboxes) checkboxes.style.display = originalCheckboxesDisplay;
                 if (animationControls) animationControls.style.display = originalAnimationControlsDisplay;
                 if (supportContainer) supportContainer.style.display = originalSupportDisplay;
+                restoreAdminButtonContainerAfterScreenshot(
+                    adminButtonContainer,
+                    originalAdminButtonContainerDisplay
+                );
                 if (blackPips) blackPips.style.display = originalBlackPipsDisplay;
                 if (redPips) redPips.style.display = originalRedPipsDisplay;
                 if (playersInfoDiv) {
@@ -2037,7 +2262,7 @@
                 if (matchInfoDiv) {
                     matchInfoDiv.innerHTML = originalMatchInfoHTML;
                 }
-                showFadingMessage('Ошибка при создании скриншота');
+                showMessageModal('Ошибка при создании скриншота', 'error');
             });
         }
 
@@ -2430,6 +2655,18 @@
         });
 
     </script>
+
+    <div id="msgModalOverlay" class="msg-modal-overlay">
+        <div class="msg-modal">
+            <div class="msg-modal-header">
+                <div class="msg-modal-icon" id="msgModalIcon"></div>
+                <p class="msg-modal-content" id="msgModalContent"></p>
+            </div>
+            <div class="msg-modal-footer">
+                <button type="button" class="msg-modal-ok-btn" id="msgModalOkBtn">ОК</button>
+            </div>
+        </div>
+    </div>
 
     <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
         <button id="openPipCountCardEditorBtn" type="button" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}" style="
