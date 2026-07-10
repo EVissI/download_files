@@ -15,7 +15,6 @@ from sqlalchemy.orm import selectinload
 
 from bot.config import create_bot_for_sync_context, scheduler, settings
 from bot.db.models import Broadcast, BroadcastStatus, BroadcastUser, User, UserGroup, UserInGroup
-from bot.routers.admin.notify import run_broadcast_job
 
 MEMBERS_PAGE_SIZE = 25
 MSK = ZoneInfo("Europe/Moscow")
@@ -229,6 +228,8 @@ def _create_scheduled_broadcast(
         )
 
     session.commit()
+    from bot.routers.admin.notify import run_broadcast_job
+
     scheduler.add_job(
         run_broadcast_job,
         "date",
@@ -281,7 +282,10 @@ def _format_run_time_msk(run_time: datetime) -> str:
     return run_time.astimezone(MSK).strftime("%d.%m.%Y %H:%M (МСК)")
 
 
-class UserGroupModelView(ModelView):
+class FabUserGroupsModelView(ModelView):
+    """Группы пользователей (уникальное имя класса — blueprint FAB)."""
+
+    route_base = "/fabusergroups"
     datamodel = SQLAInterface(UserGroup)
     show_template = "show_user_group.html"
 

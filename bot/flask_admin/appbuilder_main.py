@@ -24,7 +24,7 @@ from bot.flask_admin.model_view.user import (
     UserPromocodeInline,
     UserAnalizePaymentInline,
 )
-from bot.flask_admin.model_view.user_group import UserGroupModelView
+from bot.flask_admin.model_view.user_group import FabUserGroupsModelView
 from bot.flask_admin.model_view.users_with_cards import UsersWithCardsView
 from bot.flask_admin.model_view.users_with_pip_count_cards import UsersWithPipCountCardsView
 from bot.flask_admin.model_view.telegram_proxy import TelegramProxyModelView
@@ -156,7 +156,7 @@ def register_models(appbuilder, db):
     appbuilder.add_view_no_menu(UserAnalizePaymentInline)
     appbuilder.add_view(UserModelView, "Пользователи", icon="fa-users")
     appbuilder.add_view(
-        UserGroupModelView,
+        FabUserGroupsModelView,
         "Группы пользователей",
         icon="fa-object-group",
     )
