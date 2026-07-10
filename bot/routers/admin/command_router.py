@@ -224,7 +224,6 @@ async def monitor(message: Message, state: FSMContext):
             get_live_worker_stats,
             redis_conn,
             cleanup_registry=True,
-            include_worker_details=True,
         )
 
         lines: list[str] = ["Мониторинг очередей:"]
@@ -249,15 +248,6 @@ async def monitor(message: Message, state: FSMContext):
         lines.append(
             f"Итого: {stats.total_waiting} в ожидании, {stats.total_active} активных задач"
         )
-
-        if stats.workers:
-            lines.append("")
-            lines.append("Живые обработчики:")
-            for item in sorted(stats.workers, key=lambda w: (w["hostname"], str(w["pid"]))):
-                lines.append(
-                    f"• {item['name']} ({item['hostname']}:{item['pid']}) "
-                    f"[{item['state']}] — {item['queues']}, hb {item['last_heartbeat']}"
-                )
 
         keyboard = InlineKeyboardBuilder()
         keyboard.button(
