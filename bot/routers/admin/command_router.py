@@ -18,11 +18,14 @@ from bot.common.general_states import GeneralStates
 from bot.db.schemas import SUser
 import asyncio
 from redis import Redis
-from rq import Queue, Worker
-from rq.registry import StartedJobRegistry
 from bot.config import settings, admins, scheduler
 from bot.common.tasks.monitor_notification import check_for_user
-from bot.common.rq_queue_maintenance import cleanup_rq_queues, HINT_QUEUE_NAMES
+from bot.common.rq_queue_maintenance import (
+    HINT_QUEUE_NAMES,
+    QUEUE_TITLES,
+    cleanup_rq_queues,
+    get_live_worker_stats,
+)
 import uuid
 from sqlalchemy import delete as sqlalchemy_delete
 from bot.db.models import UserContentCard
@@ -138,19 +141,25 @@ async def clear_rq_cache(message: Message):
             "✅ Очистка RQ выполнена.",
             f"Кэш worker_count: {'удалён' if result['cache_deleted'] else 'не был в Redis'}.",
             (
-                "Воркеров (глобально): "
+                "Живых обработчиков: "
+                f"{result['alive_before']} → {result['alive_after']}"
+            ),
+            (
+                "Записей в реестре: "
                 f"{result['workers_before_global']} → {result['workers_after_global']}"
             ),
         ]
-        queue_titles = {
-            "backgammon_analysis": "Одиночные игры",
-            "backgammon_batch_analysis": "Пакеты игр",
-        }
+        if result.get("stale_removed_from_registry"):
+            lines.append(
+                f"Удалено неактуальных записей: {result['stale_removed_from_registry']}"
+            )
         for qname in HINT_QUEUE_NAMES:
             stats = result["per_queue"][qname]
-            title = queue_titles.get(qname, qname)
+            live = result.get("per_queue_live", {}).get(qname, {})
+            title = QUEUE_TITLES.get(qname, qname)
             lines.append(
-                f"{title}: {stats['before']} → {stats['after']} воркеров в реестре"
+                f"{title}: реестр {stats['before']} → {stats['after']}, "
+                f"ожидание={live.get('waiting', '—')}, активно={live.get('active', '—')}"
             )
 
         await message.answer("\n".join(lines))
@@ -204,44 +213,59 @@ async def set_notification_callback(callback: CallbackQuery, state: FSMContext):
 
 @commands_router.message(F.text == AdminKeyboard.admin_text_kb['monitor'])
 async def monitor(message: Message, state: FSMContext):
-    """Показывает текущую загрузку RQ очередей и количество воркеров. Только для админов."""
+    """Показывает текущую загрузку RQ очередей и количество живых воркеров. Только для админов."""
     try:
         if message.from_user is None or message.from_user.id not in admins:
             return await message.reply("Доступ запрещен.")
 
         redis_conn = Redis.from_url(settings.REDIS_URL, decode_responses=False)
-        queue_names = ["backgammon_analysis", "backgammon_batch_analysis"]
 
-        total_waiting = 0
-        total_active = 0
-        lines: list[str] = []
-        names = {
-            "backgammon_analysis": "Одиночные игры",
-            "backgammon_batch_analysis": "Пакеты игр",
-        }
-        for qname in queue_names:
-            q = Queue(qname, connection=redis_conn)
-            registry = StartedJobRegistry(queue=q)
-            active = len(registry)
-            total_active += active
-            lines.append(f"{names.get(qname, qname)}: Активно={active}")
-
-        worker_count = await asyncio.to_thread(
-            lambda: len(Worker.all(connection=redis_conn))
+        stats = await asyncio.to_thread(
+            get_live_worker_stats,
+            redis_conn,
+            cleanup_registry=True,
+            include_worker_details=True,
         )
 
-        msg = "Мониторинг очередей: \n" + "\n".join(lines)
-        total_waiting = worker_count - total_active
-        msg += f"\n\nВсего обработчиков: {worker_count}\nВсего в ожидании: {total_waiting}, активно: {total_active}"
+        lines: list[str] = ["Мониторинг очередей:"]
+        for qname in HINT_QUEUE_NAMES:
+            qstats = stats.per_queue[qname]
+            title = QUEUE_TITLES.get(qname, qname)
+            lines.append(
+                f"{title}: ожидание={qstats['waiting']}, активно={qstats['active']}"
+            )
 
-        # Создаем кнопку для установки уведомления
+        lines.append("")
+        lines.append(f"Обработчиков (живых): {stats.alive_count}")
+        if stats.registry_before != stats.registry_after or stats.stale_removed_from_registry:
+            lines.append(
+                "Записей в реестре: "
+                f"{stats.registry_before} → {stats.registry_after}"
+            )
+        if stats.stale_removed_from_registry:
+            lines.append(
+                f"Удалено неактуальных записей: {stats.stale_removed_from_registry}"
+            )
+        lines.append(
+            f"Итого: {stats.total_waiting} в ожидании, {stats.total_active} активных задач"
+        )
+
+        if stats.workers:
+            lines.append("")
+            lines.append("Живые обработчики:")
+            for item in sorted(stats.workers, key=lambda w: (w["hostname"], str(w["pid"]))):
+                lines.append(
+                    f"• {item['name']} ({item['hostname']}:{item['pid']}) "
+                    f"[{item['state']}] — {item['queues']}, hb {item['last_heartbeat']}"
+                )
+
         keyboard = InlineKeyboardBuilder()
         keyboard.button(
             text="🔔 Установить уведомление", callback_data="monitor:set_notification"
         )
         keyboard.adjust(1)
 
-        await message.answer(msg, reply_markup=keyboard.as_markup())
+        await message.answer("\n".join(lines), reply_markup=keyboard.as_markup())
     except Exception as e:
         logger.exception(f"Ошибка в /monitor: {e}")
         await message.answer("Ошибка при получении статуса очередей.")

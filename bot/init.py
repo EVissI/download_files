@@ -15,6 +15,7 @@ MIN_UPDATE_PROCESS_SECONDS = 0.3 #сек
 from bot.common.func.scheduler_jobs import upsert_scheduler_job
 from bot.common.tasks.deactivate import expire_analiz_balances
 from bot.common.tasks.cleanup_screenshots import cleanup_screenshots
+from bot.common.rq_queue_maintenance import periodic_rq_registry_cleanup
 from bot.common.tasks.telegram_proxy_expiry import notify_telegram_proxy_expiry
 from bot.db.pg_backup import backup_postgres_to_yandex_disk
 from bot.routers.setup import setup_router
@@ -36,6 +37,17 @@ from loguru import logger
 async def set_commands():
     commands = [BotCommand(command="start", description="Start button")]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+
+
+def setup_rq_maintenance_scheduler():
+    upsert_scheduler_job(
+        periodic_rq_registry_cleanup,
+        "interval",
+        "rq_registry_cleanup",
+        minutes=3,
+        coalesce=True,
+        max_instances=1,
+    )
 
 
 def setup_telegram_proxy_scheduler():
@@ -73,6 +85,7 @@ async def start_bot():
     await set_commands()
     # setup_expire_scheduler()
     setup_telegram_proxy_scheduler()
+    setup_rq_maintenance_scheduler()
     # await schedule_gift_job_from_db()
     scheduler.start()
     if isinstance(bot.session, FailoverAiohttpSession):

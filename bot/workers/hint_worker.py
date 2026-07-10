@@ -1,4 +1,5 @@
 import os
+import socket
 import sys
 import logging
 import tempfile
@@ -223,9 +224,16 @@ if __name__ == "__main__":
     try:
         queue_analysis = Queue("backgammon_analysis", connection=redis_conn)
         queue_batch = Queue("backgammon_batch_analysis", connection=redis_conn)
-        worker = Worker([queue_analysis, queue_batch], connection=redis_conn)
+        worker_name = f"hint-{socket.gethostname()}-{os.getpid()}"
+        worker = Worker(
+            [queue_analysis, queue_batch],
+            connection=redis_conn,
+            name=worker_name,
+        )
         logger.info(
-            "🚀 Starting Worker on queues 'backgammon_analysis' and 'backgammon_batch_analysis'..."
+            "🚀 Starting Worker '%s' on queues 'backgammon_analysis' and "
+            "'backgammon_batch_analysis'...",
+            worker_name,
         )
         worker.work()
     except Exception as e:

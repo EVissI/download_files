@@ -30,7 +30,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from rq import Queue, Worker
+from rq import Queue
 from rq.registry import StartedJobRegistry
 from rq.job import Job
 from redis import Redis
@@ -126,25 +126,23 @@ def load_analysis_json_from_s3(game_id: str, game_num: str | None = None):
     return json.loads(s3.download_bytes(key).decode("utf-8"))
 
 
-from bot.common.rq_queue_maintenance import WORKER_COUNT_CACHE_KEY
+from bot.common.rq_queue_maintenance import WORKER_COUNT_CACHE_KEY, get_live_worker_count
 
-WORKER_CACHE_TTL = 10
+WORKER_CACHE_TTL = 3
 
 
 async def get_worker_count_cached(redis_conn: Redis, queue_name: str) -> int:
     """
-    Версия для синхронного Redis клиента (redis-py).
+    Кэшированное число живых RQ-воркеров (обе очереди hint, без «мёртвых» записей).
     """
     cached_count = redis_conn.get(WORKER_COUNT_CACHE_KEY)
 
     if cached_count is not None:
         return int(cached_count)
 
-    def fetch_workers():
-        q = Queue(queue_name, connection=redis_conn)
-        return len(Worker.all(queue=q))
-
-    count = await asyncio.to_thread(fetch_workers)
+    count = await asyncio.to_thread(
+        get_live_worker_count, redis_conn, cleanup_registry=False
+    )
 
     redis_conn.set(WORKER_COUNT_CACHE_KEY, count, ex=WORKER_CACHE_TTL)
 
