@@ -4,8 +4,9 @@ from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import declarative_base
 import logging
+from pathlib import Path
 
-from bot.flask_admin.model_view.content_cards import ContentCardModelView, PipCountContentCardModelView
+from bot.config import settings
 from bot.flask_admin.model_view.content_card_issue_schedule import (
     ContentCardIssueScheduleModelView,
 )
@@ -30,9 +31,11 @@ from bot.flask_admin.model_view.users_with_pip_count_cards import UsersWithPipCo
 from bot.flask_admin.model_view.telegram_proxy import TelegramProxyModelView
 from bot.flask_admin.model_view.webapp_settings import WebAppSettingsModelView
 
+from bot.flask_admin.model_view.content_cards import ContentCardModelView, PipCountContentCardModelView
+
 logger = logging.getLogger(__name__)
 
-from bot.config import settings
+_FAB_TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
 
 # === СИНХРОННАЯ БД ДЛЯ FLASK-APPBUILDER ===
@@ -108,7 +111,7 @@ class CustomIndexView(IndexView):
 def create_app():
     """Создание Flask-AppBuilder приложения с аутентификацией"""
 
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder=str(_FAB_TEMPLATES_DIR))
 
     # === КОНФИГУРАЦИЯ ===
     app.config["SQLALCHEMY_DATABASE_URI"] = settings.DB_URL.replace(

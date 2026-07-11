@@ -1,10 +1,14 @@
 {% extends "appbuilder/baselayout.html" %}
+{% import 'appbuilder/general/lib.html' as lib %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
-            <h2 style="margin: 18px 0 14px;">Пользователи с карточками</h2>
+            <div style="margin: 14px 0 10px;">
+                {{ lib.lnk_main_menu() }}
+            </div>
+            <h2 style="margin: 0 0 14px;">Пользователи с карточками</h2>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered table-hover">
                     <thead>
