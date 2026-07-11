@@ -1194,26 +1194,21 @@ export class ContentEditor {
         }
     }
 
-    /** Кнопки «Сохранить кадр» / «Предпросмотр» или «Сохранить» из режима предпросмотра (без обёртки). */
-    getPropertiesFrameActionsInnerHtml() {
+    /** Кнопка «Предпросмотр» в панели свойств (остальные действия — в инструментах). */
+    getPropertiesPreviewActionHtml() {
         if (this.editorOpenedFromPreview || this.editorOpenedFromContentCardView) {
-            return `<div class="properties-frame-actions-row">
-                        <button type="button" class="action-btn save-from-preview-btn" onclick="contentEditor.confirmSaveFromPreviewEditor()"
-                                title="Сохранить" aria-label="Сохранить">
-                            <i class="fa fa-save" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
-                        </button>
-                    </div>`;
+            return '';
         }
         return `<div class="properties-frame-actions-row">
-                    <button type="button" class="action-btn save-frame-inline-btn" onclick="contentEditor.openSaveFrameConfirm()"
-                            title="Сохранить кадр" aria-label="Сохранить кадр">
-                        <i class="fa fa-save" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
-                    </button>
                     <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openCardPreviewModal()"
                             title="Предпросмотр" aria-label="Предпросмотр">
                         <i class="fa fa-eye" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
                     </button>
                 </div>`;
+    }
+
+    getPropertiesEmptyStateHtml() {
+        return this.getPropertiesPreviewActionHtml();
     }
 
     resolveEditorCabinetConfig() {
@@ -1252,40 +1247,53 @@ export class ContentEditor {
         window.location.assign(this.buildEditorCabinetUrl());
     }
 
-    getPropertiesCabinetButtonHtml() {
-        const cfg = this.resolveEditorCabinetConfig();
-        const label = this.escapeHtml(cfg.label);
-        return `<button type="button" class="action-btn properties-cabinet-btn" onclick="contentEditor.openEditorCabinet()" title="${label}" aria-label="${label}">
-                    <i class="fa fa-folder-open-o" aria-hidden="true"></i>
-                    <span class="properties-cabinet-btn__label">${label}</span>
-                </button>`;
+    getEditorActionTools() {
+        const saveDescription =
+            this.editorOpenedFromPreview || this.editorOpenedFromContentCardView
+                ? 'Сохранить'
+                : 'Сохранить кадр';
+        return [
+            {
+                id: 'editor-open-cabinet',
+                name: 'Открыть кабинет',
+                type: 'action',
+                description: this.resolveEditorCabinetConfig().label,
+                icon: 'fa fa-folder-open-o',
+            },
+            {
+                id: 'editor-delete',
+                name: 'Удалить',
+                type: 'action',
+                description: 'Удалить элемент',
+                icon: 'fa fa-trash',
+            },
+            {
+                id: 'editor-save',
+                name: 'Сохранить',
+                type: 'action',
+                description: saveDescription,
+                icon: 'fa fa-save',
+            },
+        ];
     }
 
-    getPropertiesEditorActionsHtml(options = {}) {
-        const withDelete = options.withDelete === true;
-        const deleteHtml = withDelete
-            ? `<button type="button" class="action-btn danger" onclick="contentEditor.deleteElement('${options.elementId || ''}')" title="Удалить элемент" aria-label="Удалить элемент">
-                    <i class="fa fa-trash" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
-               </button>`
-            : '';
-        const frameActions = this.getPropertiesFrameActionsInnerHtml();
-        if (withDelete) {
-            return `<div class="properties-editor-actions">
-                        ${this.getPropertiesCabinetButtonHtml()}
-                        <div class="action-buttons">
-                            ${deleteHtml}
-                            ${frameActions}
-                        </div>
-                    </div>`;
+    updateEditorActionToolsState() {
+        if (!this.toolsList) return;
+        const deleteBtn = this.toolsList.querySelector('[data-tool-id="editor-delete"]');
+        if (deleteBtn) {
+            const disabled = !this.selectedElement;
+            deleteBtn.classList.toggle('tool-item-icon--disabled', disabled);
+            deleteBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
         }
-        return `<div class="properties-editor-actions action-buttons-col">
-                    ${this.getPropertiesCabinetButtonHtml()}
-                    ${frameActions}
-                </div>`;
-    }
-
-    getPropertiesEmptyStateHtml() {
-        return this.getPropertiesEditorActionsHtml();
+        const saveBtn = this.toolsList.querySelector('[data-tool-id="editor-save"]');
+        if (saveBtn) {
+            const saveTitle =
+                this.editorOpenedFromPreview || this.editorOpenedFromContentCardView
+                    ? 'Сохранить'
+                    : 'Сохранить кадр';
+            saveBtn.title = saveTitle;
+            saveBtn.setAttribute('aria-label', saveTitle);
+        }
     }
 
     applyPropertiesEmptyState() {
@@ -1788,9 +1796,8 @@ export class ContentEditor {
     }
 
     /**
-     * При каждом открытии редактора начинаем с одинакового состояния панели свойств,
-     * чтобы кнопки «Сохранить кадр / Предпросмотр» (и далее удаление/пресеты)
-     * были доступны одинаково из всех страниц.
+     * При каждом открытии редактора начинаем с одинакового состояния панели свойств;
+     * кнопки «Сохранить / Удалить / Кабинет» — в панели инструментов.
      */
     resetSelectionForFreshOpen() {
         this.selectedElement = null;
@@ -1800,6 +1807,7 @@ export class ContentEditor {
             });
         }
         this.applyPropertiesEmptyState();
+        this.updateEditorActionToolsState();
     }
 
     ensurePreviewUiParity() {
@@ -2857,15 +2865,17 @@ export class ContentEditor {
                 type: 'settings',
                 description: 'Настройки фона канваса',
                 icon: 'fa fa-cog'
-            },
-            {
-                id: 'editor-close',
-                name: 'Закрыть',
-                type: 'action',
-                description: 'Закрыть редактор',
-                icon: 'fa fa-times'
             }
         ];
+
+        const editorActionTools = this.getEditorActionTools();
+        const closeTool = {
+            id: 'editor-close',
+            name: 'Закрыть',
+            type: 'action',
+            description: 'Закрыть редактор',
+            icon: 'fa fa-times',
+        };
 
         const pipEditorPalette =
             this.isPipCountImportEditorMode() ||
@@ -2876,22 +2886,28 @@ export class ContentEditor {
             if (pipEditorPalette && tool.id === 'interactive-best-move') return false;
             return true;
         });
+        visibleTools.push(...editorActionTools, closeTool);
 
         this.renderTools(visibleTools);
+        this.updateEditorActionToolsState();
     }
 
     renderTools(tools) {
         if (!this.toolsList) return;
         this.toolsList.innerHTML = `
             <div class="tools-grid">
-                ${tools.map(tool => `
-                    <div class="tool-item-icon${tool.id === 'boardCanvas' ? ' toggle-button' : ''}${tool.id === 'editor-close' ? ' tool-item-icon--action' : ''}" 
+                ${tools.map(tool => {
+                    const isAction = tool.type === 'action';
+                    const isDeleteDisabled = tool.id === 'editor-delete' && !this.selectedElement;
+                    return `
+                    <div class="tool-item-icon${tool.id === 'boardCanvas' ? ' toggle-button' : ''}${isAction ? ' tool-item-icon--action' : ''}${isDeleteDisabled ? ' tool-item-icon--disabled' : ''}" 
                          data-tool-id="${tool.id}"
                          onclick="contentEditor.selectTool('${tool.id}')"
-                         title="${tool.name}">
+                         title="${tool.name}"
+                         ${isDeleteDisabled ? 'aria-disabled="true"' : ''}>
                         <i class="${tool.icon}"></i>
-                    </div>
-                `).join('')}
+                    </div>`;
+                }).join('')}
             </div>
         `;
     }
@@ -2899,6 +2915,26 @@ export class ContentEditor {
     selectTool(toolId) {
         if (toolId === 'editor-close') {
             this.closeModal();
+            return;
+        }
+
+        if (toolId === 'editor-open-cabinet') {
+            this.openEditorCabinet();
+            return;
+        }
+
+        if (toolId === 'editor-delete') {
+            if (!this.selectedElement) return;
+            this.deleteElement(this.selectedElement.id);
+            return;
+        }
+
+        if (toolId === 'editor-save') {
+            if (this.editorOpenedFromPreview || this.editorOpenedFromContentCardView) {
+                this.confirmSaveFromPreviewEditor();
+            } else {
+                this.openSaveFrameConfirm();
+            }
             return;
         }
 
@@ -5156,6 +5192,7 @@ export class ContentEditor {
 
         // Показываем свойства элемента
         this.showElementProperties(element);
+        this.updateEditorActionToolsState();
     }
 
     clampNumericValue(value, min, max, fallback) {
@@ -5491,8 +5528,6 @@ export class ContentEditor {
                 ${this.renderPipResultTemplatePropertyHtml(element)}
                 ` : ''}
             </div>
-            
-            ${this.getPropertiesEditorActionsHtml({ withDelete: true, elementId: element.id })}
         `;
         if (element.classList.contains('text-element')) {
             this.syncTextStylePresetDropdown();
@@ -5828,6 +5863,7 @@ export class ContentEditor {
             if (this.selectedElement && this.selectedElement.id === elementId) {
                 this.selectedElement = null;
                 this.applyPropertiesEmptyState();
+                this.updateEditorActionToolsState();
             }
 
             // Move elements below the deleted element up

@@ -207,6 +207,18 @@
     color: #ffb4b4;
 }
 
+.tool-item-icon.tool-item-icon--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.tool-item-icon.tool-item-icon--disabled:hover {
+    background: #3a3a3a;
+    border-color: #505050;
+    transform: none;
+}
+
 .tool-item {
     background: #3a3a3a;
     border: 1px solid #505050;
