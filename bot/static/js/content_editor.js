@@ -1194,21 +1194,8 @@ export class ContentEditor {
         }
     }
 
-    /** Кнопка «Предпросмотр» в панели свойств (остальные действия — в инструментах). */
-    getPropertiesPreviewActionHtml() {
-        if (this.editorOpenedFromPreview || this.editorOpenedFromContentCardView) {
-            return '';
-        }
-        return `<div class="properties-frame-actions-row">
-                    <button type="button" class="action-btn save-card-inline-btn" onclick="contentEditor.openCardPreviewModal()"
-                            title="Предпросмотр" aria-label="Предпросмотр">
-                        <i class="fa fa-eye" aria-hidden="true" style="font-size: 14px; width: 14px;"></i>
-                    </button>
-                </div>`;
-    }
-
     getPropertiesEmptyStateHtml() {
-        return this.getPropertiesPreviewActionHtml();
+        return '';
     }
 
     resolveEditorCabinetConfig() {
@@ -1252,7 +1239,7 @@ export class ContentEditor {
             this.editorOpenedFromPreview || this.editorOpenedFromContentCardView
                 ? 'Сохранить'
                 : 'Сохранить кадр';
-        return [
+        const actions = [
             {
                 id: 'editor-open-cabinet',
                 name: 'Открыть кабинет',
@@ -1275,6 +1262,16 @@ export class ContentEditor {
                 icon: 'fa fa-save',
             },
         ];
+        if (!this.editorOpenedFromPreview && !this.editorOpenedFromContentCardView) {
+            actions.push({
+                id: 'editor-preview',
+                name: 'Предпросмотр',
+                type: 'action',
+                description: 'Предпросмотр карточки',
+                icon: 'fa fa-eye',
+            });
+        }
+        return actions;
     }
 
     updateEditorActionToolsState() {
@@ -1797,7 +1794,7 @@ export class ContentEditor {
 
     /**
      * При каждом открытии редактора начинаем с одинакового состояния панели свойств;
-     * кнопки «Сохранить / Удалить / Кабинет» — в панели инструментов.
+     * кнопки «Сохранить / Предпросмотр / Удалить / Кабинет» — в панели инструментов.
      */
     resetSelectionForFreshOpen() {
         this.selectedElement = null;
@@ -2935,6 +2932,11 @@ export class ContentEditor {
             } else {
                 this.openSaveFrameConfirm();
             }
+            return;
+        }
+
+        if (toolId === 'editor-preview') {
+            this.openCardPreviewModal();
             return;
         }
 
