@@ -1820,17 +1820,13 @@
 
         /* Стили для кнопок скриншотов */
         .screenshot-controls {
-            display: none;
+            display: flex;
             flex-direction: row;
             gap: 12px;
             justify-content: center;
             align-items: center;
             padding: 5px 0;
             margin-top: 0;
-        }
-
-        .screenshot-controls.active {
-            display: flex;
         }
 
         .board-open-controls {
@@ -6536,12 +6532,6 @@
                         attachCubeTableEyeButtons(hintsTable);
                     }
                     if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
-
-                    // Показываем кнопки скриншотов после появления таблицы
-                    const screenshotControls = document.getElementById('screenshotControls');
-                    if (screenshotControls) {
-                        screenshotControls.classList.add('active');
-                    }
                 })
                 .catch(error => {
                     const hintsData = { error: error.message };
@@ -6553,12 +6543,6 @@
                     hintsTable.innerHTML = html;
                     hintsTable.classList.add('active');
                     hintsTableContainer.classList.add('active');
-
-                    // Показываем кнопки скриншотов даже при ошибке
-                    const screenshotControls = document.getElementById('screenshotControls');
-                    if (screenshotControls) {
-                        screenshotControls.classList.add('active');
-                    }
                 });
         });
 
@@ -6637,12 +6621,6 @@
             hintsTableContainer.classList.remove('active');
             hintsTable.classList.remove('active');
             if (typeof updateGameTypeButtonMode === 'function') updateGameTypeButtonMode();
-
-            // Скрываем кнопки скриншотов при очистке
-            const screenshotControls = document.getElementById('screenshotControls');
-            if (screenshotControls) {
-                screenshotControls.classList.remove('active');
-            }
 
             // hideXGID(); // DEBUG - удалить потом
             drawBoard();
