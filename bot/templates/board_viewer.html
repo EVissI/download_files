@@ -63,7 +63,18 @@
         .board-panel {
             width: 100%;
             max-width: 800px;
-            margin: 10px auto 0;
+            margin: 16px auto 0;
+            padding-top: 4px;
+        }
+
+        #controls {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            flex-wrap: wrap;
+            min-height: 48px;
+            margin-bottom: 8px;
         }
 
         .game-info {
@@ -167,14 +178,6 @@
             margin-left: auto;
         }
 
-        #controls {
-            position: relative;
-            display: flex;
-            align-items: center;
-            width: 100%;
-            flex-wrap: wrap;
-        }
-
         .center-controls {
             position: absolute;
             left: 50%;
@@ -274,7 +277,9 @@
 
         .board-footer {
             position: relative;
-            margin-top: -20px;
+            margin-top: 10px;
+            padding: 4px 0;
+            min-height: calc(var(--board-point-font-size) + var(--board-pip-padding-y) * 2 + 8px);
         }
 
         .move-info {
@@ -282,6 +287,8 @@
             font-weight: bold;
             color: #007bff;
             text-align: center;
+            padding: 0 56px;
+            line-height: 1.3;
         }
 
         .animation-controls {
@@ -509,7 +516,8 @@
             color: #ffffff;
             position: absolute;
             right: 0;
-            top: 0;
+            top: 50%;
+            transform: translateY(-50%);
             margin: 0;
         }
 
@@ -518,7 +526,8 @@
             color: #000000;
             position: absolute;
             right: 0;
-            top: 0;
+            top: 50%;
+            transform: translateY(-50%);
             margin: 0;
         }
 
