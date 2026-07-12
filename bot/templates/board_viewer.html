@@ -31,9 +31,34 @@
             border-radius: 8px;
             background-color: #2a2a2a;
             max-width: 100%;
-            height: 100%;
+            height: auto;
             display: block;
+            box-sizing: border-box;
+        }
+
+        .board-block {
+            width: 100%;
+            max-width: 800px;
             margin: 0 auto 20px;
+        }
+
+        .board-block .header,
+        .board-block .board-footer {
+            width: 100%;
+        }
+
+        #boardCanvas {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            aspect-ratio: 1;
+            margin: 0;
+        }
+
+        .board-panel {
+            width: 100%;
+            max-width: 800px;
+            margin: 10px auto 0;
         }
 
         .game-info {
@@ -254,13 +279,6 @@
             text-align: center;
         }
 
-        .pips-below-board {
-            position: absolute;
-            right: 0;
-            top: 0;
-            margin: 0;
-        }
-
         .animation-controls {
             display: flex;
             justify-content: center;
@@ -297,9 +315,10 @@
                 padding: 8px 16px;
             }
 
-            canvas {
+            canvas,
+            #boardCanvas {
                 width: 100%;
-                height: 100%;
+                height: auto;
             }
 
             #top-row {
@@ -380,9 +399,10 @@
                 font-size: 1.5rem;
             }
 
-            canvas {
+            canvas,
+            #boardCanvas {
                 width: 100%;
-                height: 100%;
+                height: auto;
             }
 
             button {
@@ -453,7 +473,12 @@
 
 
         #players-info {
-            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        #match-info {
+            width: 100%;
             margin: 0 auto;
         }
 
@@ -507,6 +532,10 @@
             text-align: right;
             display: block;
             width: fit-content;
+            position: absolute;
+            right: 0;
+            top: 0;
+            margin: 0;
         }
 
         /* Support Button and Modal */
@@ -772,26 +801,31 @@
 
 <body>
     <div class="container">
-        <div class="header">
-            <div id="match-info"></div>
-            <div id="players-info"></div>
-            <div id="top-row">
-                <span id="crawfordLabel" style="visibility: hidden;">Кроуфорд</span>
-                <div class="center-select">
-                    <select id="gameSelect">
-                        <option value="0">Game 1</option>
-                    </select>
-                </div>
-                <div class="pips-container">
-                    <div id="black-pips" class="pips-above-board">0</div>
+        <div class="board-block">
+            <div class="header">
+                <div id="match-info"></div>
+                <div id="players-info"></div>
+                <div id="top-row">
+                    <span id="crawfordLabel" style="visibility: hidden;">Кроуфорд</span>
+                    <div class="center-select">
+                        <select id="gameSelect">
+                            <option value="0">Game 1</option>
+                        </select>
+                    </div>
+                    <div class="pips-container">
+                        <div id="black-pips" class="pips-above-board">0</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <canvas id="boardCanvas" width="800" height="800"></canvas>
+            <canvas id="boardCanvas" width="800" height="800"></canvas>
 
-        <div class="board-footer">
-            <div class="move-info" id="moveInfo">Initial Position</div>
-            <div id="red-pips" class="pips-below-board">0</div>
+            <div class="board-footer">
+                <div class="move-info" id="moveInfo">Initial Position</div>
+                <div id="red-pips" class="pips-below-board">0</div>
+            </div>
+        </div>
+
+        <div class="board-panel">
             <div id="controls">
                 <button onclick="toggleInvert()" id="invertBtn" title="Invert Board"></button>
                 <div class="center-controls">
@@ -1930,13 +1964,7 @@
         }
 
         const BOARD_VIEWER_SCREENSHOT_SELECTORS = [
-            '#match-info',
-            '#players-info',
-            '#top-row',
-            '#boardCanvas',
-            '#moveInfo',
-            '#red-pips',
-            '#black-pips',
+            '.board-block',
         ];
 
         function isBoardViewerScreenshotElementVisible(el) {
@@ -2022,10 +2050,18 @@
 
         function captureBoardViewerScreenshot() {
             window.scrollTo(0, 0);
+            const boardBlock = document.querySelector('.board-block');
             return new Promise((resolve, reject) => {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
-                        html2canvas(document.body, getBoardViewerHtml2CanvasOptions())
+                        const target = boardBlock || document.body;
+                        const options = boardBlock ? {
+                            useCORS: true,
+                            allowTaint: true,
+                            backgroundColor: '#1a1a1a',
+                            scale: Math.min(window.devicePixelRatio || 1, 2),
+                        } : getBoardViewerHtml2CanvasOptions();
+                        html2canvas(target, options)
                             .then(resolve)
                             .catch(reject);
                     });
