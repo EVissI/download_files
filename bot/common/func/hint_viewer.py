@@ -388,17 +388,14 @@ def json_to_gnubg_commands(
             i += 1
             continue
         elif act == "double":
-            if skip_flag:
-                tokens.append({"cmd": "roll", "type": "cmd", "target": None})
-                skip_flag = False
+            # skip означает пропуск хода в .mat; cube-действия не требуют roll
+            skip_flag = False
             tokens.append({"cmd": "hint", "type": "cube_hint", "target": i})
             tokens.append({"cmd": "double", "type": "cmd", "target": None})
             i += 1
             continue
         elif act in ("take", "drop"):
-            if skip_flag:
-                tokens.append({"cmd": "roll", "type": "cmd", "target": None})
-                skip_flag = False
+            skip_flag = False
             tokens.append({"cmd": "hint", "type": "cube_hint", "target": i})
             if act == "take":
                 tokens.append({"cmd": "take", "type": "cmd", "target": None})
@@ -439,7 +436,8 @@ def json_to_gnubg_commands(
                             "target": i,
                         }
                     )
-                    skip_flag = False
+            if skip_flag:
+                skip_flag = False
 
             # Добавляем ходы, если есть
             if moves:
