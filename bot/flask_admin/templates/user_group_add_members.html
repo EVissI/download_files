@@ -6,7 +6,7 @@
         <h3 class="panel-title">Добавить пользователей в группу «{{ group_name }}»</h3>
     </div>
     <div class="panel-body">
-        <a href="{{ url_for(ug_fab_endpoint ~ '.show', pk=pk) }}" class="btn btn-default" style="margin-bottom: 16px;">
+        <a href="{{ url_for(ug_fab_endpoint ~ '.show', pk=pk) }}" class="btn btn-default ug-members-back-link" style="margin-bottom: 16px;">
             ← Назад к группе
         </a>
 
@@ -84,17 +84,21 @@
             <nav aria-label="Пагинация пользователей">
                 <ul class="pagination">
                     <li class="{{ 'disabled' if page == 0 else '' }}">
-                        <a href="{{ url_for(ug_fab_endpoint ~ '.add_members', pk=pk, page=page - 1, search=search) if page > 0 else '#' }}">«</a>
+                        <a href="{{ url_for(ug_fab_endpoint ~ '.add_members', pk=pk, page=page - 1, search=search) if page > 0 else '#' }}" class="ug-members-page-link">«</a>
                     </li>
                     <li class="disabled">
                         <span>Страница {{ page + 1 }} из {{ total_pages }}</span>
                     </li>
                     <li class="{{ 'disabled' if page + 1 >= total_pages else '' }}">
-                        <a href="{{ url_for(ug_fab_endpoint ~ '.add_members', pk=pk, page=page + 1, search=search) if page + 1 < total_pages else '#' }}">»</a>
+                        <a href="{{ url_for(ug_fab_endpoint ~ '.add_members', pk=pk, page=page + 1, search=search) if page + 1 < total_pages else '#' }}" class="ug-members-page-link">»</a>
                     </li>
                 </ul>
             </nav>
             {% endif %}
+
+            <p id="ugMembersSelectedCount" class="text-muted" style="margin: 12px 0 8px; display: none;">
+                Выбрано пользователей: <strong id="ugMembersSelectedCountValue">0</strong>
+            </p>
 
             <button type="submit" class="btn btn-primary">
                 Добавить выбранных в группу
@@ -102,4 +106,80 @@
         </form>
     </div>
 </div>
+
+<script>
+(function () {
+    var storageKey = 'ug_add_members_selected_{{ pk }}';
+    var form = document.querySelector('form[method="post"][action*="add_members"]');
+    if (!form) return;
+
+    function readSelected() {
+        try {
+            var raw = sessionStorage.getItem(storageKey);
+            var parsed = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(parsed)) return new Set();
+            return new Set(parsed.map(function (v) { return parseInt(v, 10); }).filter(function (v) { return !isNaN(v); }));
+        } catch (e) {
+            return new Set();
+        }
+    }
+
+    function writeSelected(selected) {
+        sessionStorage.setItem(storageKey, JSON.stringify(Array.from(selected)));
+    }
+
+    function updateCounter(selected) {
+        var wrap = document.getElementById('ugMembersSelectedCount');
+        var valueEl = document.getElementById('ugMembersSelectedCountValue');
+        if (!wrap || !valueEl) return;
+        var count = selected.size;
+        valueEl.textContent = String(count);
+        wrap.style.display = count > 0 ? 'block' : 'none';
+    }
+
+    var selected = readSelected();
+
+    form.querySelectorAll('input[type="checkbox"][name="user_ids"]').forEach(function (checkbox) {
+        var userId = parseInt(checkbox.value, 10);
+        if (selected.has(userId)) {
+            checkbox.checked = true;
+        }
+        checkbox.addEventListener('change', function () {
+            if (checkbox.checked) {
+                selected.add(userId);
+            } else {
+                selected.delete(userId);
+            }
+            writeSelected(selected);
+            updateCounter(selected);
+        });
+    });
+
+    updateCounter(selected);
+
+    form.addEventListener('submit', function () {
+        form.querySelectorAll('input[type="checkbox"][name="user_ids"]').forEach(function (checkbox) {
+            checkbox.removeAttribute('name');
+        });
+        form.querySelectorAll('input[data-ug-persisted-user-id]').forEach(function (node) {
+            node.remove();
+        });
+        selected.forEach(function (userId) {
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'user_ids';
+            hidden.value = String(userId);
+            hidden.setAttribute('data-ug-persisted-user-id', '1');
+            form.appendChild(hidden);
+        });
+        sessionStorage.removeItem(storageKey);
+    });
+
+    document.querySelectorAll('.ug-members-back-link').forEach(function (link) {
+        link.addEventListener('click', function () {
+            sessionStorage.removeItem(storageKey);
+        });
+    });
+})();
+</script>
 {% endblock %}

@@ -20,6 +20,12 @@ MEMBERS_PAGE_SIZE = 25
 MSK = ZoneInfo("Europe/Moscow")
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_VIDEO_TYPES = {"video/mp4", "video/quicktime", "video/webm"}
+ALLOWED_DOCUMENT_TYPES = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+ALLOWED_DOCUMENT_EXTENSIONS = {".pdf", ".doc", ".docx"}
 MAX_MEDIA_SIZE_BYTES = 20 * 1024 * 1024
 
 
@@ -120,6 +126,13 @@ def _default_broadcast_name(group_name: str) -> str:
     return f"Группа «{group_name}» — {stamp}"
 
 
+def _is_allowed_document(content_type: str, filename: str) -> bool:
+    if content_type in ALLOWED_DOCUMENT_TYPES:
+        return True
+    ext = os.path.splitext(filename)[1].lower()
+    return ext in ALLOWED_DOCUMENT_EXTENSIONS
+
+
 async def _upload_media_to_telegram(
     file_bytes: bytes, filename: str, content_type: str
 ) -> tuple[str, str]:
@@ -140,7 +153,17 @@ async def _upload_media_to_telegram(
                 caption="[служебное] медиа для рассылки из веб-админки",
             )
             return message.video.file_id, "video"
-        raise ValueError("Поддерживаются только изображения (JPEG, PNG, WebP, GIF) и видео (MP4, MOV, WebM).")
+        if _is_allowed_document(content_type, filename):
+            message = await tg_bot.send_document(
+                chat_id=admin_id,
+                document=BufferedInputFile(file_bytes, filename=filename),
+                caption="[служебное] медиа для рассылки из веб-админки",
+            )
+            return message.document.file_id, "document"
+        raise ValueError(
+            "Поддерживаются изображения (JPEG, PNG, WebP, GIF), "
+            "видео (MP4, MOV, WebM) и документы (PDF, DOC, DOCX)."
+        )
     finally:
         await tg_bot.session.close()
 
@@ -157,6 +180,8 @@ async def _send_to_user(
             await tg_bot.send_photo(chat_id=user_id, photo=media_id, caption=text)
         elif media_id and media_type == "video":
             await tg_bot.send_video(chat_id=user_id, video=media_id, caption=text)
+        elif media_id and media_type == "document":
+            await tg_bot.send_document(chat_id=user_id, document=media_id, caption=text)
         else:
             await tg_bot.send_message(chat_id=user_id, text=text)
         return True

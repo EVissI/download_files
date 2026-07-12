@@ -63,7 +63,7 @@ async def notify_user(user_id: int, text: str, media_id: str = None, media_type:
         user_id: ID пользователя
         text: Текст сообщения
         media_id: file_id медиафайла (опционально)
-        media_type: Тип медиа ('photo' или 'video', опционально)
+        media_type: Тип медиа ('photo', 'video' или 'document', опционально)
     """
     try:
         if media_id and media_type:
@@ -77,6 +77,12 @@ async def notify_user(user_id: int, text: str, media_id: str = None, media_type:
                 await bot.send_video(
                     chat_id=user_id,
                     video=media_id,
+                    caption=text
+                )
+            elif media_type == "document":
+                await bot.send_document(
+                    chat_id=user_id,
+                    document=media_id,
                     caption=text
                 )
             else:
@@ -108,7 +114,7 @@ async def broadcast_message(user_ids: list[int], text: str, media_id: str = None
         user_ids: Список ID пользователей
         text: Текст сообщения
         media_id: file_id медиафайла (опционально)
-        media_type: Тип медиа ('photo' или 'video', опционально)
+        media_type: Тип медиа ('photo', 'video' или 'document', опционально)
     """
     if not user_ids:
         logger.info("Список пользователей для рассылки пуст.")
