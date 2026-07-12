@@ -1385,7 +1385,7 @@ def _debug_is_admin_uploader(user_info, user_id: int) -> bool:
 
 
 def _debug_build_single_analysis_json_zip(game_id: str) -> bytes | None:
-    """DEBUG: собирает zip со сводным JSON и JSON отдельных игр из S3."""
+    """DEBUG: собирает zip со сводным JSON, JSON игр и stdout.log каждой игры из S3."""
     s3 = HintS3Storage.from_settings()
     zip_buffer = io.BytesIO()
     added = 0
@@ -1399,7 +1399,10 @@ def _debug_build_single_analysis_json_zip(game_id: str) -> bytes | None:
         resp = s3._client.list_objects_v2(Bucket=s3._bucket, Prefix=prefix)
         for obj in resp.get("Contents") or []:
             key = (obj.get("Key") or "").strip()
-            if not key.endswith(".json"):
+            if not (
+                key.endswith(".json")
+                or key.endswith(".stdout.log")
+            ):
                 continue
             rel = key[len(prefix) :].lstrip("/")
             if not rel:
@@ -1445,7 +1448,7 @@ async def _debug_send_admin_single_analysis_json_zip(
             chat_id=user_id,
             document=doc,
             caption=(
-                f"[DEBUG] JSON архив одиночного анализа\n"
+                f"[DEBUG] JSON + stdout архив одиночного анализа\n"
                 f"{red_player or '—'} vs {black_player or '—'}"
             ),
         )

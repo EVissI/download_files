@@ -1309,6 +1309,13 @@ def parse_mat_games(content):
     return games
 
 
+def _append_gnubg_stdout_log(log_parts: list[str], header: str, text: str) -> None:
+    """DEBUG: накопление полного stdout gnubg — пишется в game_N.stdout.log для admin zip."""
+    if not text:
+        return
+    log_parts.append(f"=== {header} ===\n{text.rstrip()}\n\n")
+
+
 def process_single_game(game_data, output_dir, game_number):
     """
     Обрабатывает одну игру и сохраняет результат в отдельный файл.
@@ -1355,8 +1362,14 @@ def process_single_game(game_data, output_dir, game_number):
     retry_count = 0
     max_retries = 3
     temp_file = os.path.join(output_dir, f"temp_{game_number}.json")
+    stdout_log_parts: list[str] = []
 
     while retry_count <= max_retries:
+        if retry_count > 0:
+            stdout_log_parts.append(
+                f"{'=' * 48}\nRETRY ATTEMPT {retry_count}\n{'=' * 48}\n\n"
+            )
+
         # Запускаем gnubg для этой игры
         child = pexpect.spawn("gnubg -t", encoding="utf-8", timeout=2)
         command_delay = 0
@@ -1364,7 +1377,7 @@ def process_single_game(game_data, output_dir, game_number):
             time.sleep(0.2)
             try:
                 start_out = child.read_nonblocking(size=4096, timeout=0.2)
-                # logger.debug(f"Game {game_number} gnubg start output: {start_out}")
+                _append_gnubg_stdout_log(stdout_log_parts, "gnubg startup", start_out or "")
             except Exception:
                 pass
 
@@ -1388,10 +1401,6 @@ def process_single_game(game_data, output_dir, game_number):
                     except Exception:
                         break
 
-                if out:
-                    pass
-                    # logger.debug(f"Game {game_number} gnubg output after '{line}':\n{out}")
-
                 if token["type"] in ("hint", "cube_hint"):
                     target_idx = token.get("target")
 
@@ -1412,6 +1421,16 @@ def process_single_game(game_data, output_dir, game_number):
                         # logger.debug(
                         #     f"Game {game_number} no hints parsed for target {target_idx}, raw output length={len(out)}"
                         # )
+
+                _append_gnubg_stdout_log(stdout_log_parts, f">>> {line}", out)
+
+            try:
+                remaining = child.read_nonblocking(size=65536, timeout=0.1)
+                _append_gnubg_stdout_log(
+                    stdout_log_parts, "gnubg remaining output", remaining or ""
+                )
+            except Exception:
+                pass
 
             # Проверяем необходимость повтора
             temp_data = {"moves": aug, "_retry_count": retry_count}
@@ -1434,6 +1453,11 @@ def process_single_game(game_data, output_dir, game_number):
                 time.sleep(0.1)
                 child.sendline("y")
                 time.sleep(0.5)
+                try:
+                    exit_out = child.read_nonblocking(size=65536, timeout=0.5)
+                    _append_gnubg_stdout_log(stdout_log_parts, "gnubg exit", exit_out or "")
+                except Exception:
+                    pass
             except Exception:
                 pass
 
@@ -1709,6 +1733,12 @@ def process_single_game(game_data, output_dir, game_number):
     with open(game_output_file, "w", encoding="utf-8") as f:
         json.dump(game_data_json, f, indent=2, ensure_ascii=False)
     logger.info(f"Game {game_number} processed and saved to {game_output_file}")
+
+    # DEBUG: полный stdout gnubg по игре — попадает в S3 и admin zip
+    stdout_log_file = os.path.join(output_dir, f"game_{game_number}.stdout.log")
+    with open(stdout_log_file, "w", encoding="utf-8") as log_f:
+        log_f.write("".join(stdout_log_parts))
+    logger.info(f"Game {game_number} gnubg stdout saved to {stdout_log_file}")
 
     return game_output_file
 
