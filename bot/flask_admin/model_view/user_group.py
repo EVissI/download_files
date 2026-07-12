@@ -253,16 +253,7 @@ def _create_scheduled_broadcast(
         )
 
     session.commit()
-    from bot.routers.admin.notify import run_broadcast_job
-
-    scheduler.add_job(
-        run_broadcast_job,
-        "date",
-        run_date=run_time,
-        args=[broadcast.id],
-        id=f"broadcast_{broadcast.id}",
-        replace_existing=True,
-    )
+    _reschedule_broadcast_job(broadcast.id, run_time)
     return broadcast
 
 
@@ -305,6 +296,92 @@ def _format_run_time_msk(run_time: datetime) -> str:
     if run_time.tzinfo is None:
         run_time = run_time.replace(tzinfo=MSK)
     return run_time.astimezone(MSK).strftime("%d.%m.%Y %H:%M (МСК)")
+
+
+def _format_run_time_input_msk(run_time: datetime) -> str:
+    if run_time.tzinfo is None:
+        run_time = run_time.replace(tzinfo=MSK)
+    return run_time.astimezone(MSK).strftime("%Y-%m-%dT%H:%M")
+
+
+def _get_scheduled_group_broadcast(
+    session, broadcast_id: int, group_id: int
+) -> Broadcast | None:
+    broadcast = session.get(Broadcast, broadcast_id)
+    if (
+        not broadcast
+        or broadcast.status != BroadcastStatus.SCHEDULED
+        or broadcast.group != "user_group"
+        or broadcast.group_id != group_id
+    ):
+        return None
+    return broadcast
+
+
+def _reschedule_broadcast_job(broadcast_id: int, run_time: datetime) -> None:
+    from bot.routers.admin.notify import run_broadcast_job
+
+    job_id = f"broadcast_{broadcast_id}"
+    job = scheduler.get_job(job_id)
+    if job:
+        scheduler.remove_job(job_id)
+    scheduler.add_job(
+        run_broadcast_job,
+        "date",
+        run_date=run_time,
+        args=[broadcast_id],
+        id=job_id,
+        replace_existing=True,
+    )
+
+
+def _update_scheduled_broadcast(
+    session,
+    broadcast: Broadcast,
+    *,
+    broadcast_name: str,
+    text: str,
+    user_ids: list[int],
+    run_time: datetime,
+    media_id: str | None = None,
+    media_type: str | None = None,
+    clear_media: bool = False,
+) -> None:
+    broadcast.name = broadcast_name
+    broadcast.text = text
+    broadcast.run_time = run_time
+    if clear_media:
+        broadcast.media_id = None
+        broadcast.media_type = None
+    elif media_id is not None:
+        broadcast.media_id = media_id
+        broadcast.media_type = media_type
+
+    session.execute(
+        delete(BroadcastUser).where(BroadcastUser.broadcast_id == broadcast.id)
+    )
+    if user_ids:
+        session.execute(
+            insert(BroadcastUser),
+            [
+                {"broadcast_id": broadcast.id, "user_id": user_id}
+                for user_id in user_ids
+            ],
+        )
+
+    session.commit()
+    _reschedule_broadcast_job(broadcast.id, run_time)
+
+
+def _media_type_label(media_type: str | None) -> str:
+    labels = {
+        "photo": "Фото",
+        "video": "Видео",
+        "document": "Документ",
+    }
+    if not media_type:
+        return "нет"
+    return labels.get(media_type, media_type)
 
 
 class FabUserGroupsModelView(ModelView):
@@ -350,6 +427,7 @@ class FabUserGroupsModelView(ModelView):
                     _get_scheduled_broadcasts_for_group(session, int(pk)),
                 )
                 kwargs.setdefault("format_run_time_msk", _format_run_time_msk)
+                kwargs.setdefault("media_type_label", _media_type_label)
         return super().render_template(template, **kwargs)
 
     @expose("/add_members/<int:pk>", methods=["GET", "POST"])
@@ -583,6 +661,149 @@ class FabUserGroupsModelView(ModelView):
             "success" if successful else "warning",
         )
         return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+    @expose("/edit_broadcast/<int:pk>/<int:broadcast_id>", methods=["GET", "POST"])
+    @has_access
+    @permission_name("show")
+    def edit_broadcast(self, pk: int, broadcast_id: int):
+        group = self.datamodel.get(pk)
+        if not group:
+            flash("Группа не найдена", "danger")
+            return redirect(url_for(f"{self.endpoint}.list"))
+
+        session = self.datamodel.session
+        broadcast = _get_scheduled_group_broadcast(session, broadcast_id, pk)
+        if not broadcast:
+            flash("Запланированная рассылка не найдена или уже не может быть изменена.", "warning")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        if request.method == "POST":
+            message_text = (request.form.get("message_text") or "").strip()
+            if not message_text:
+                flash("Текст сообщения не может быть пустым.", "warning")
+                return redirect(
+                    url_for(
+                        f"{self.endpoint}.edit_broadcast",
+                        pk=str(pk),
+                        broadcast_id=str(broadcast_id),
+                    )
+                )
+
+            broadcast_name = (request.form.get("broadcast_name") or "").strip()
+            if not broadcast_name:
+                broadcast_name = _default_broadcast_name(group.name)
+
+            scheduled_at_raw = (request.form.get("scheduled_at") or "").strip()
+            try:
+                run_time = _parse_scheduled_at(scheduled_at_raw)
+            except ValueError as exc:
+                flash(str(exc), "warning")
+                return redirect(
+                    url_for(
+                        f"{self.endpoint}.edit_broadcast",
+                        pk=str(pk),
+                        broadcast_id=str(broadcast_id),
+                    )
+                )
+
+            now_msk = datetime.now(MSK)
+            if run_time <= now_msk:
+                flash("Время рассылки должно быть позже текущего момента (МСК).", "warning")
+                return redirect(
+                    url_for(
+                        f"{self.endpoint}.edit_broadcast",
+                        pk=str(pk),
+                        broadcast_id=str(broadcast_id),
+                    )
+                )
+
+            members = _get_group_members(session, pk)
+            if not members:
+                flash("В группе нет участников для рассылки.", "warning")
+                return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+            user_ids = [member.id for member in members]
+            clear_media = request.form.get("remove_media") == "1"
+            new_media_id = None
+            new_media_type = None
+
+            try:
+                file_bytes, filename, content_type = _read_uploaded_media()
+                if file_bytes:
+                    async def _upload():
+                        return await _upload_media_to_telegram(
+                            file_bytes, filename, content_type
+                        )
+
+                    new_media_id, new_media_type = _run_telegram_sync(_upload)
+                    clear_media = False
+            except ValueError as exc:
+                flash(str(exc), "warning")
+                return redirect(
+                    url_for(
+                        f"{self.endpoint}.edit_broadcast",
+                        pk=str(pk),
+                        broadcast_id=str(broadcast_id),
+                    )
+                )
+            except Exception as exc:
+                flash(f"Не удалось загрузить медиа в Telegram: {exc}", "danger")
+                return redirect(
+                    url_for(
+                        f"{self.endpoint}.edit_broadcast",
+                        pk=str(pk),
+                        broadcast_id=str(broadcast_id),
+                    )
+                )
+
+            try:
+                _update_scheduled_broadcast(
+                    session,
+                    broadcast,
+                    broadcast_name=broadcast_name,
+                    text=message_text,
+                    user_ids=user_ids,
+                    run_time=run_time,
+                    media_id=new_media_id,
+                    media_type=new_media_type,
+                    clear_media=clear_media,
+                )
+            except SQLAlchemyError as exc:
+                session.rollback()
+                flash(f"Ошибка сохранения рассылки: {exc}", "danger")
+                return redirect(
+                    url_for(
+                        f"{self.endpoint}.edit_broadcast",
+                        pk=str(pk),
+                        broadcast_id=str(broadcast_id),
+                    )
+                )
+            except Exception as exc:
+                session.rollback()
+                flash(f"Ошибка сохранения рассылки: {exc}", "danger")
+                return redirect(
+                    url_for(
+                        f"{self.endpoint}.edit_broadcast",
+                        pk=str(pk),
+                        broadcast_id=str(broadcast_id),
+                    )
+                )
+
+            flash(
+                f"Рассылка «{broadcast_name}» обновлена. Отправка: {_format_run_time_msk(run_time)}.",
+                "success",
+            )
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        return self.render_template(
+            "user_group_edit_broadcast.html",
+            pk=pk,
+            broadcast_id=broadcast_id,
+            group_name=group.name,
+            broadcast=broadcast,
+            scheduled_at_value=_format_run_time_input_msk(broadcast.run_time),
+            media_type_label=_media_type_label(broadcast.media_type),
+        )
 
     @expose("/cancel_broadcast/<int:pk>/<int:broadcast_id>", methods=["POST"])
     @has_access

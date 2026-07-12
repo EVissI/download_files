@@ -162,13 +162,20 @@
                     <td>{{ item.text[:80] }}{% if item.text|length > 80 %}...{% endif %}</td>
                     <td>
                         {% if item.media_id %}
-                        {{ item.media_type or 'да' }}
+                        {{ media_type_label(item.media_type) }}
                         {% else %}
                         нет
                         {% endif %}
                     </td>
                     <td>{{ format_run_time_msk(item.run_time) }}</td>
-                    <td>
+                    <td style="white-space: nowrap;">
+                        <a
+                            href="{{ url_for(ug_fab_endpoint ~ '.edit_broadcast', pk=pk, broadcast_id=item.id) }}"
+                            class="btn btn-primary btn-xs"
+                            style="margin-right: 4px;"
+                        >
+                            Изменить
+                        </a>
                         <form
                             method="post"
                             action="{{ url_for(ug_fab_endpoint ~ '.cancel_broadcast', pk=pk, broadcast_id=item.id) }}"
