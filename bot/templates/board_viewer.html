@@ -40,6 +40,11 @@
             width: 100%;
             max-width: 800px;
             margin: 0 auto 20px;
+            --board-ui-scale: 1;
+            --board-point-font-size: calc(30px * var(--board-ui-scale));
+            --board-pip-padding-y: calc(3px * var(--board-ui-scale));
+            --board-pip-padding-x: calc(6px * var(--board-ui-scale));
+            --board-pip-radius: calc(4px * var(--board-ui-scale));
         }
 
         .board-block .header,
@@ -309,12 +314,6 @@
                 font-size: 2rem;
             }
 
-            .pips-above-board,
-            .pips-below-board {
-                font-size: 16px;
-                padding: 8px 16px;
-            }
-
             canvas,
             #boardCanvas {
                 width: 100%;
@@ -482,40 +481,32 @@
             margin: 0 auto;
         }
 
-        .pips-above-board {
-            background-color: #000000;
-            color: #ffffff;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
+        .pips-above-board,
+        .pips-above-board-inverted,
+        .pips-below-board,
+        .pips-below-board-inverted {
+            font-size: var(--board-point-font-size);
+            padding: var(--board-pip-padding-y) var(--board-pip-padding-x);
+            border-radius: var(--board-pip-radius);
             font-weight: bold;
             text-align: right;
             display: block;
             width: fit-content;
+        }
+
+        .pips-above-board {
+            background-color: #000000;
+            color: #ffffff;
         }
 
         .pips-above-board-inverted {
             background-color: #ffffff;
             color: #000000;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
         }
 
         .pips-below-board-inverted {
             background-color: #000000;
             color: #ffffff;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
             position: absolute;
             right: 0;
             top: 0;
@@ -525,13 +516,6 @@
         .pips-below-board {
             background-color: #ffffff;
             color: #000000;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
             position: absolute;
             right: 0;
             top: 0;
@@ -920,8 +904,26 @@
 
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
+        const BOARD_CANVAS_LOGICAL_SIZE = 800;
+        const BOARD_POINT_NUMBER_FONT_PX = 30;
         const matchInfoDiv = document.getElementById('match-info');
         const playersInfoDiv = document.getElementById('players-info');
+
+        function updateBoardViewerUiScale() {
+            const boardBlock = document.querySelector('.board-block');
+            if (!boardBlock || !canvas) return;
+            const renderedWidth = canvas.getBoundingClientRect().width;
+            if (!renderedWidth) return;
+            const scale = renderedWidth / BOARD_CANVAS_LOGICAL_SIZE;
+            boardBlock.style.setProperty('--board-ui-scale', scale.toFixed(4));
+        }
+
+        if (typeof ResizeObserver !== 'undefined') {
+            const boardScaleObserver = new ResizeObserver(() => updateBoardViewerUiScale());
+            boardScaleObserver.observe(canvas);
+        }
+        window.addEventListener('resize', updateBoardViewerUiScale);
+        updateBoardViewerUiScale();
 
         // Load images
         const boardImg = new Image();
@@ -1083,7 +1085,7 @@
         }
 
         function drawCheckers(player, img, positions, currentPlayer) {
-            ctx.font = 'bold 30px Arial';
+            ctx.font = `bold ${BOARD_POINT_NUMBER_FONT_PX}px Arial`;
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -1248,6 +1250,8 @@
         function drawBoard() {
             if (!dataLoaded) return;
 
+            updateBoardViewerUiScale();
+
             const hidePips = hidePipsCheckbox && hidePipsCheckbox.checked;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1285,7 +1289,7 @@
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(650, 800, 150, 50);
                     ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 20px Arial';
+                    ctx.font = `bold ${BOARD_POINT_NUMBER_FONT_PX}px Arial`;
                     ctx.textAlign = 'center';
                     ctx.fillText(`${redPips}`, 725, -20);
 
@@ -1303,7 +1307,7 @@
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(650, -50, 150, 50);
                     ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 20px Arial';
+                    ctx.font = `bold ${BOARD_POINT_NUMBER_FONT_PX}px Arial`;
                     ctx.textAlign = 'center';
                     ctx.fillText(`${blackPips}`, 725, -20);
 
