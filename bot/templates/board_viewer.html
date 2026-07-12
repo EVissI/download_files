@@ -1929,6 +1929,110 @@
             }
         }
 
+        const BOARD_VIEWER_SCREENSHOT_SELECTORS = [
+            '#match-info',
+            '#players-info',
+            '#top-row',
+            '#boardCanvas',
+            '#moveInfo',
+            '#red-pips',
+            '#black-pips',
+        ];
+
+        function isBoardViewerScreenshotElementVisible(el) {
+            if (!el) return false;
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+                return false;
+            }
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 || rect.height > 0;
+        }
+
+        function measureBoardViewerScreenshotBounds(extraPadding) {
+            extraPadding = extraPadding == null ? 12 : extraPadding;
+            const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+            const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            const elements = [];
+
+            BOARD_VIEWER_SCREENSHOT_SELECTORS.forEach((selector) => {
+                document.querySelectorAll(selector).forEach((el) => {
+                    if (isBoardViewerScreenshotElementVisible(el)) {
+                        elements.push(el);
+                    }
+                });
+            });
+
+            if (!elements.length) {
+                const container = document.querySelector('.container');
+                if (container) elements.push(container);
+            }
+
+            let top = Infinity;
+            let left = Infinity;
+            let bottom = -Infinity;
+            let right = -Infinity;
+
+            elements.forEach((el) => {
+                const rect = el.getBoundingClientRect();
+                top = Math.min(top, rect.top);
+                left = Math.min(left, rect.left);
+                bottom = Math.max(bottom, rect.bottom);
+                right = Math.max(right, rect.right);
+            });
+
+            if (!Number.isFinite(top)) {
+                return {
+                    x: 0,
+                    y: 0,
+                    width: document.documentElement.clientWidth,
+                    height: document.documentElement.clientHeight,
+                    windowWidth: document.documentElement.clientWidth,
+                    windowHeight: document.documentElement.clientHeight,
+                };
+            }
+
+            return {
+                x: Math.max(0, Math.floor(left + scrollX - extraPadding)),
+                y: Math.max(0, Math.floor(top + scrollY - extraPadding)),
+                width: Math.max(1, Math.ceil(right - left + extraPadding * 2)),
+                height: Math.max(1, Math.ceil(bottom - top + extraPadding * 2)),
+                windowWidth: document.documentElement.clientWidth,
+                windowHeight: document.documentElement.clientHeight,
+            };
+        }
+
+        function getBoardViewerHtml2CanvasOptions() {
+            const bounds = measureBoardViewerScreenshotBounds();
+            return {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#1a1a1a',
+                x: bounds.x,
+                y: bounds.y,
+                width: bounds.width,
+                height: bounds.height,
+                windowWidth: bounds.windowWidth,
+                windowHeight: bounds.windowHeight,
+                scrollX: 0,
+                scrollY: 0,
+                scale: Math.min(window.devicePixelRatio || 1, 2),
+            };
+        }
+
+        function captureBoardViewerScreenshot() {
+            window.scrollTo(0, 0);
+            return new Promise((resolve, reject) => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        html2canvas(document.body, getBoardViewerHtml2CanvasOptions())
+                            .then(resolve)
+                            .catch(reject);
+                    });
+                });
+            });
+        }
+
         function saveScreenshot() {
             // Hide controls and game selector before taking screenshot
             const controls = document.getElementById('controls');
@@ -1998,13 +2102,7 @@
                 if (redPips) redPips.style.display = 'none';
             }
 
-            const screenshotHeight = window.innerWidth > 480 ? 900 : 600;
-            html2canvas(document.body, {
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#1a1a1a',
-                height: screenshotHeight
-            }).then(canvas => {
+            captureBoardViewerScreenshot().then(canvas => {
                 // Restore after screenshot
                 if (screenSaveBtn) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
@@ -2174,13 +2272,7 @@
                 if (redPips) redPips.style.display = 'none';
             }
 
-            const screenshotHeight = window.innerWidth > 480 ? 900 : 600;
-            html2canvas(document.body, {
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#1a1a1a',
-                height: screenshotHeight
-            }).then(canvas => {
+            captureBoardViewerScreenshot().then(canvas => {
                 // Restore after screenshot
                 controls.style.display = originalControlsDisplay;
                 if (gameSelect) gameSelect.style.display = originalGameSelectDisplay;
