@@ -1377,6 +1377,90 @@ async def check_batch_job_status(
         remove_active_job(message.from_user.id, job_id)
 
 
+# DEBUG: блок для отладки — zip с JSON игры админу при одиночном анализе (удалить когда не нужно)
+def _debug_is_admin_uploader(user_info, user_id: int) -> bool:
+    if user_id in admins:
+        return True
+    return getattr(user_info, "role", None) == User.Role.ADMIN.value
+
+
+def _debug_build_single_analysis_json_zip(game_id: str) -> bytes | None:
+    """DEBUG: собирает zip со сводным JSON и JSON отдельных игр из S3."""
+    s3 = HintS3Storage.from_settings()
+    zip_buffer = io.BytesIO()
+    added = 0
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        summary_key = s3.summary_json_key(game_id)
+        if s3.exists(summary_key):
+            zf.writestr(f"{game_id}.json", s3.download_bytes(summary_key))
+            added += 1
+
+        prefix = s3.games_prefix(game_id)
+        resp = s3._client.list_objects_v2(Bucket=s3._bucket, Prefix=prefix)
+        for obj in resp.get("Contents") or []:
+            key = (obj.get("Key") or "").strip()
+            if not key.endswith(".json"):
+                continue
+            rel = key[len(prefix) :].lstrip("/")
+            if not rel:
+                continue
+            zf.writestr(f"games/{rel}", s3.download_bytes(key))
+            added += 1
+
+    if added == 0:
+        return None
+    zip_buffer.seek(0)
+    return zip_buffer.getvalue()
+
+
+async def _debug_send_admin_single_analysis_json_zip(
+    message: Message,
+    game_id: str,
+    red_player: str | None,
+    black_player: str | None,
+    user_info,
+) -> None:
+    """DEBUG: отправляет zip с JSON админу, если одиночный анализ запускал админ."""
+    user_id = message.from_user.id
+    if not _debug_is_admin_uploader(user_info, user_id):
+        return
+    try:
+        zip_data = await asyncio.to_thread(
+            _debug_build_single_analysis_json_zip, game_id
+        )
+        if not zip_data:
+            logger.warning(
+                "DEBUG admin json zip: JSON файлы не найдены для game_id={}", game_id
+            )
+            return
+
+        safe_name = lambda s: "".join(
+            c if c.isalnum() or c in "._-" else "_" for c in (s or "player")
+        )
+        filename = (
+            f"debug_{game_id}_{safe_name(red_player)}_vs_{safe_name(black_player)}_jsons.zip"
+        )
+        doc = BufferedInputFile(zip_data, filename=filename)
+        await message.bot.send_document(
+            chat_id=user_id,
+            document=doc,
+            caption=(
+                f"[DEBUG] JSON архив одиночного анализа\n"
+                f"{red_player or '—'} vs {black_player or '—'}"
+            ),
+        )
+        logger.info(
+            "DEBUG admin json zip sent: user_id={} game_id={}", user_id, game_id
+        )
+    except Exception as e:
+        logger.exception(
+            "DEBUG failed to send admin json zip game_id={}: {}", game_id, e
+        )
+
+
+# DEBUG: конец блока отладки одиночного анализа
+
+
 async def check_job_status(
     message: Message,
     job_id: str,
@@ -1508,6 +1592,15 @@ async def check_job_status(
                                 )
                             )
                             await session_without_commit.commit()
+
+                        # DEBUG: zip с JSON игры админу-загрузчику (удалить вместе с _debug_* выше)
+                        await _debug_send_admin_single_analysis_json_zip(
+                            message,
+                            game_id,
+                            job_info.get("red_player"),
+                            job_info.get("black_player"),
+                            user_info,
+                        )
                     else:
                         error_msg = result.get("error", "Неизвестная ошибка")
                         await message.answer(f"❌ Ошибка при анализе: {error_msg}")
