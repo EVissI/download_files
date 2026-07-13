@@ -2653,6 +2653,39 @@
             animationSpeed = parseFloat(e.target.value);
         });
 
+        function isBoardViewerTypingTarget(target) {
+            if (!target) return false;
+            const tag = target.tagName;
+            if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return true;
+            return !!target.isContentEditable;
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (isBoardViewerTypingTarget(event.target)) return;
+
+            const supportModal = document.getElementById('supportModal');
+            if (supportModal && supportModal.style.display === 'block') return;
+
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const code = event.code;
+
+            if (code === 'ArrowLeft' || code === 'KeyA') {
+                if (prevBtn && !prevBtn.disabled) {
+                    event.preventDefault();
+                    prevTurn();
+                }
+                return;
+            }
+
+            if (code === 'ArrowRight' || code === 'KeyD') {
+                if (nextBtn && !nextBtn.disabled) {
+                    event.preventDefault();
+                    nextTurn();
+                }
+            }
+        });
+
         // Draw board when images are loaded
         let imagesLoaded = 0;
         const totalImages = 21;
