@@ -23,6 +23,13 @@
             box-sizing: border-box;
         }
 
+        .board-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
         h1 {
             display: none;
         }
@@ -847,9 +854,63 @@
             }
         }
 
-        @media (min-width: 1024px) {
+        @media (min-width: 1025px) {
             .container {
-                max-width: 1140px;
+                max-width: 1400px;
+                padding: 1rem 1.5rem 1.5rem;
+            }
+
+            .board-layout {
+                flex-direction: row;
+                align-items: flex-start;
+                justify-content: center;
+                gap: 32px;
+            }
+
+            .board-block {
+                flex: 1 1 0;
+                min-width: 0;
+                width: auto;
+                max-width: min(820px, calc(100% - 300px));
+                margin: 2rem 0 20px;
+            }
+
+            .board-panel {
+                flex: 0 0 280px;
+                width: 280px;
+                max-width: 280px;
+                margin: 2rem 0 0;
+                padding-top: 0;
+            }
+
+            #controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+                min-height: auto;
+                margin-bottom: 0;
+            }
+
+            .center-controls {
+                position: static;
+                transform: none;
+                left: auto;
+                justify-content: center;
+            }
+
+            .board-toolbar {
+                width: 100%;
+            }
+
+            #adminButtonContainer {
+                width: 100%;
+                margin: 12px 0 0 !important;
+                text-align: center;
+            }
+
+            #openPipCountCardEditorBtn {
+                width: 100%;
+                box-sizing: border-box;
             }
         }
 
@@ -934,73 +995,91 @@
 
 <body>
     <div class="container">
-        <div class="board-block">
-            <div class="header">
-                <div id="match-info"></div>
-                <div id="players-info"></div>
-                <div id="top-row">
-                    <span id="crawfordLabel" style="visibility: hidden;">Кроуфорд</span>
-                    <div class="center-select">
-                        <select id="gameSelect">
-                            <option value="0">Game 1</option>
-                        </select>
-                    </div>
-                    <div class="pips-container">
-                        <div id="black-pips" class="pips-above-board">0</div>
+        <div class="board-layout">
+            <div class="board-block">
+                <div class="header">
+                    <div id="match-info"></div>
+                    <div id="players-info"></div>
+                    <div id="top-row">
+                        <span id="crawfordLabel" style="visibility: hidden;">Кроуфорд</span>
+                        <div class="center-select">
+                            <select id="gameSelect">
+                                <option value="0">Game 1</option>
+                            </select>
+                        </div>
+                        <div class="pips-container">
+                            <div id="black-pips" class="pips-above-board">0</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <canvas id="boardCanvas" width="800" height="800"></canvas>
+                <canvas id="boardCanvas" width="800" height="800"></canvas>
 
-            <div class="board-footer">
-                <div class="move-info" id="moveInfo">Initial Position</div>
-                <div id="red-pips" class="pips-below-board">0</div>
+                <div class="board-footer">
+                    <div class="move-info" id="moveInfo">Initial Position</div>
+                    <div id="red-pips" class="pips-below-board">0</div>
+                </div>
             </div>
-        </div>
 
-        <div class="board-panel">
-            <div id="controls">
-                <button onclick="toggleInvert()" id="invertBtn" title="Invert Board"></button>
-                <div class="center-controls">
-                    <button onclick="prevTurn()" id="prevBtn" title="Previous Move"></button>
-                    <div class="turn-display">
-                        <span id="turnLabel">1</span>
+            <div class="board-panel">
+                <div id="controls">
+                    <button onclick="toggleInvert()" id="invertBtn" title="Invert Board"></button>
+                    <div class="center-controls">
+                        <button onclick="prevTurn()" id="prevBtn" title="Previous Move"></button>
+                        <div class="turn-display">
+                            <span id="turnLabel">1</span>
+                        </div>
+                        <button onclick="nextTurn()" id="nextBtn" title="Next Move"></button>
                     </div>
-                    <button onclick="nextTurn()" id="nextBtn" title="Next Move"></button>
                 </div>
-            </div>
-            <div id="boardToolbar" class="board-toolbar">
-                <div class="board-toolbar-row screenshot-controls-row">
-                    <button type="button" id="screenshotBtn" title="Выслать скриншот экрана" aria-label="Выслать скриншот экрана"></button>
-                    <button type="button" id="screenSaveBtn" title="Добавить скриншот в буфер обмена" aria-label="Добавить скриншот в буфер обмена"></button>
-                    <button type="button" id="screenUploadBtn" title="Выслать архив со скриншотами" aria-label="Выслать архив со скриншотами"></button>
+                <div id="boardToolbar" class="board-toolbar">
+                    <div class="board-toolbar-row screenshot-controls-row">
+                        <button type="button" id="screenshotBtn" title="Выслать скриншот экрана" aria-label="Выслать скриншот экрана"></button>
+                        <button type="button" id="screenSaveBtn" title="Добавить скриншот в буфер обмена" aria-label="Добавить скриншот в буфер обмена"></button>
+                        <button type="button" id="screenUploadBtn" title="Выслать архив со скриншотами" aria-label="Выслать архив со скриншотами"></button>
+                    </div>
+                    <div class="board-toolbar-row board-options-row">
+                        <input type="checkbox" id="hideInfoCheckbox" class="board-visually-hidden" tabindex="-1" aria-hidden="true">
+                        <button type="button" id="hideInfoToggle" class="board-option-toggle" title="Убрать данные матча на скриншоте" aria-label="Убрать данные матча на скриншоте" aria-pressed="false">
+                            <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                        </button>
+                        <input type="checkbox" id="skipAnimationCheckbox" class="board-visually-hidden" tabindex="-1" aria-hidden="true">
+                        <button type="button" id="skipAnimationToggle" class="board-option-toggle" title="Убрать анимацию шашек" aria-label="Убрать анимацию шашек" aria-pressed="false">
+                            <i class="fa fa-forward" aria-hidden="true"></i>
+                        </button>
+                        <input type="checkbox" id="hidePipsCheckbox" class="board-visually-hidden" tabindex="-1" aria-hidden="true">
+                        <button type="button" id="hidePipsToggle" class="board-option-toggle" title="Убрать отображение пипсов" aria-label="Убрать отображение пипсов" aria-pressed="false">
+                            <i class="fa fa-sort-numeric-asc" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" id="supportBtn" class="board-option-action" onclick="openSupportModal()" title="Отправить скрин в тех поддержку" aria-label="Отправить скрин в тех поддержку">
+                            <i class="fa fa-camera" aria-hidden="true"></i>
+                        </button>
+                        <label class="board-option-speed" title="Скорость анимации">
+                            <i class="fa fa-tachometer" aria-hidden="true"></i>
+                            <select id="animationSpeedSlider" aria-label="Скорость анимации">
+                                <option value="0.4">0.4</option>
+                                <option value="0.7">0.7</option>
+                                <option value="1.0" selected>1.0</option>
+                                <option value="1.3">1.3</option>
+                                <option value="1.6">1.6</option>
+                            </select>
+                        </label>
+                    </div>
                 </div>
-                <div class="board-toolbar-row board-options-row">
-                    <input type="checkbox" id="hideInfoCheckbox" class="board-visually-hidden" tabindex="-1" aria-hidden="true">
-                    <button type="button" id="hideInfoToggle" class="board-option-toggle" title="Убрать данные матча на скриншоте" aria-label="Убрать данные матча на скриншоте" aria-pressed="false">
-                        <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
+                    <button id="openPipCountCardEditorBtn" type="button" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}" style="
+                        padding: 12px 24px;
+                        background-color: #1f6f8f;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                        transition: background-color 0.3s;
+                    " onmouseover="this.style.backgroundColor='#185a73'" onmouseout="this.style.backgroundColor='#1f6f8f'">
+                        Карточки: подсчет пипсов
                     </button>
-                    <input type="checkbox" id="skipAnimationCheckbox" class="board-visually-hidden" tabindex="-1" aria-hidden="true">
-                    <button type="button" id="skipAnimationToggle" class="board-option-toggle" title="Убрать анимацию шашек" aria-label="Убрать анимацию шашек" aria-pressed="false">
-                        <i class="fa fa-forward" aria-hidden="true"></i>
-                    </button>
-                    <input type="checkbox" id="hidePipsCheckbox" class="board-visually-hidden" tabindex="-1" aria-hidden="true">
-                    <button type="button" id="hidePipsToggle" class="board-option-toggle" title="Убрать отображение пипсов" aria-label="Убрать отображение пипсов" aria-pressed="false">
-                        <i class="fa fa-sort-numeric-asc" aria-hidden="true"></i>
-                    </button>
-                    <button type="button" id="supportBtn" class="board-option-action" onclick="openSupportModal()" title="Отправить скрин в тех поддержку" aria-label="Отправить скрин в тех поддержку">
-                        <i class="fa fa-camera" aria-hidden="true"></i>
-                    </button>
-                    <label class="board-option-speed" title="Скорость анимации">
-                        <i class="fa fa-tachometer" aria-hidden="true"></i>
-                        <select id="animationSpeedSlider" aria-label="Скорость анимации">
-                            <option value="0.4">0.4</option>
-                            <option value="0.7">0.7</option>
-                            <option value="1.0" selected>1.0</option>
-                            <option value="1.3">1.3</option>
-                            <option value="1.6">1.6</option>
-                        </select>
-                    </label>
                 </div>
             </div>
         </div>
@@ -2909,23 +2988,6 @@
                 <button type="button" class="msg-modal-ok-btn" id="msgModalOkBtn">ОК</button>
             </div>
         </div>
-    </div>
-
-    <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
-        <button id="openPipCountCardEditorBtn" type="button" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}" style="
-            padding: 12px 24px;
-            background-color: #1f6f8f;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s;
-        " onmouseover="this.style.backgroundColor='#185a73'" onmouseout="this.style.backgroundColor='#1f6f8f'">
-            Карточки: подсчет пипсов
-        </button>
     </div>
 </body>
 
