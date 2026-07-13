@@ -407,12 +407,19 @@
 
         .board-option-speed select {
             border: none;
-            background: transparent;
+            background-color: #2a2a2a;
             color: #e5e7eb;
             font-size: 13px;
-            padding: 2px 0;
+            padding: 2px 4px;
             min-width: 3rem;
             cursor: pointer;
+            border-radius: 4px;
+            color-scheme: dark;
+        }
+
+        .board-option-speed select option {
+            background-color: #2d2d2d;
+            color: #e5e7eb;
         }
 
         .board-visually-hidden {
@@ -862,7 +869,7 @@
 
             .board-layout {
                 flex-direction: row;
-                align-items: flex-start;
+                align-items: stretch;
                 justify-content: center;
                 gap: 32px;
             }
@@ -879,8 +886,13 @@
                 flex: 0 0 280px;
                 width: 280px;
                 max-width: 280px;
-                margin: 2rem 0 0;
+                margin: 2rem 0 20px;
                 padding-top: 0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                align-self: stretch;
             }
 
             #controls {
