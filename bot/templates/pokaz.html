@@ -71,6 +71,11 @@
             margin-left: auto;
             margin-right: auto;
             box-sizing: border-box;
+            --board-ui-scale: 1;
+            --board-point-font-size: calc(30px * var(--board-ui-scale));
+            --board-pip-padding-y: calc(3px * var(--board-ui-scale));
+            --board-pip-padding-x: calc(6px * var(--board-ui-scale));
+            --board-pip-radius: calc(4px * var(--board-ui-scale));
         }
 
         .game-type-label {
@@ -2037,12 +2042,15 @@
         }
 
         /* pip display styles (mimic hint_viewer/board_viewer) */
-        .pips-above-board {
-            background-color: #000000;
-            color: #ffffff;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 9px;
+        .pips-above-board,
+        .pips-above-board-white,
+        .pips-above-board-inverted,
+        .pips-below-board,
+        .pips-below-board-black,
+        .pips-below-board-inverted {
+            font-size: var(--board-point-font-size);
+            padding: var(--board-pip-padding-y) var(--board-pip-padding-x);
+            border-radius: var(--board-pip-radius);
             font-weight: bold;
             text-align: center;
             display: block;
@@ -2050,42 +2058,26 @@
             margin-left: auto;
         }
 
-        /* same placement as .pips-above-board, but for white (upper player = white) */
+        .pips-above-board {
+            background-color: #000000;
+            color: #ffffff;
+        }
+
         .pips-above-board-white {
             background-color: #ffffff;
             color: #000000;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: bold;
-            text-align: center;
-            display: block;
-            width: fit-content;
-            margin-left: auto;
         }
 
         .pips-above-board-inverted {
             background-color: #ffffff;
             color: #000000;
-            padding: 2px 3px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: bold;
             text-align: right;
-            display: block;
-            width: fit-content;
         }
 
         .pips-below-board-inverted {
             background-color: #000000;
             color: #ffffff;
-            padding: 2px 3px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: bold;
             text-align: right;
-            display: block;
-            width: fit-content;
             position: absolute;
             right: 0;
             top: 0;
@@ -2095,28 +2087,11 @@
         .pips-below-board {
             background-color: #ffffff;
             color: #000000;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: bold;
-            text-align: center;
-            display: block;
-            width: fit-content;
-            margin-left: auto;
         }
 
-        /* same placement as .pips-below-board, but for black (lower player = black) */
         .pips-below-board-black {
             background-color: #000000;
             color: #ffffff;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: bold;
-            text-align: center;
-            display: block;
-            width: fit-content;
-            margin-left: auto;
         }
 
         .player-position-toggle {
@@ -3929,6 +3904,8 @@
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
         const boardWrapper = document.querySelector('.board-wrapper');
+        const BOARD_CANVAS_LOGICAL_SIZE = 800;
+        const BOARD_POINT_NUMBER_FONT_PX = 30;
 
         // Load images
         const boardImg = new Image();
@@ -4191,19 +4168,26 @@
         }
 
         function updateDomPipsScale() {
-            const scale = canvas.offsetWidth / 800;
-            const fontSize = 27 * scale;
-            const padV = 6 * scale;
-            const padH = 24 * scale;
-            const borderRadius = 12 * scale;
+            if (!boardWrapper || !canvas) return;
+            const renderedWidth = canvas.getBoundingClientRect().width;
+            if (!renderedWidth) return;
+            const scale = renderedWidth / BOARD_CANVAS_LOGICAL_SIZE;
+            boardWrapper.style.setProperty('--board-ui-scale', scale.toFixed(4));
             ['black-pips', 'red-pips'].forEach((id) => {
                 const el = document.getElementById(id);
                 if (!el) return;
-                el.style.fontSize = `${Math.round(fontSize * 10) / 10}px`;
-                el.style.padding = `${Math.round(padV * 10) / 10}px ${Math.round(padH * 10) / 10}px`;
-                el.style.borderRadius = `${Math.round(borderRadius * 10) / 10}px`;
+                el.style.fontSize = '';
+                el.style.padding = '';
+                el.style.borderRadius = '';
             });
         }
+
+        if (typeof ResizeObserver !== 'undefined' && canvas) {
+            const boardScaleObserver = new ResizeObserver(() => updateDomPipsScale());
+            boardScaleObserver.observe(canvas);
+        }
+        window.addEventListener('resize', updateDomPipsScale);
+        updateDomPipsScale();
 
         function updateAllDropdownPositions() {
             const scale = canvas.offsetWidth / 800;
@@ -4256,7 +4240,7 @@
         }
 
         function drawCheckers(player, img, positions, currentPlayer) {
-            ctx.font = 'bold 1.875rem Arial';
+            ctx.font = `bold ${BOARD_POINT_NUMBER_FONT_PX}px Arial`;
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -4363,7 +4347,6 @@
         function drawPipBox(x, y, pips, isWhite) {
             const boxWidth = 60;
             const boxHeight = 40;
-            const fontSize = 30;
 
             // Draw background
             ctx.fillStyle = isWhite ? '#ffffff' : '#000000';
@@ -4371,7 +4354,7 @@
 
             // Draw text
             ctx.fillStyle = isWhite ? '#000000' : '#ffffff';
-            ctx.font = `bold ${fontSize}px Arial`;
+            ctx.font = `bold ${BOARD_POINT_NUMBER_FONT_PX}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(`${pips}`, x, y);
@@ -4512,7 +4495,7 @@
                         ctx.fillStyle = '#000000';
                         ctx.fillRect(650, -50, 150, 50);
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 20px Arial';
+                        ctx.font = `bold ${BOARD_POINT_NUMBER_FONT_PX}px Arial`;
                         ctx.textAlign = 'center';
                         ctx.fillText(`${blackPips}`, 725, -20);
 
@@ -4524,7 +4507,7 @@
                         ctx.fillStyle = '#000000';
                         ctx.fillRect(650, -50, 150, 50);
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 20px Arial';
+                        ctx.font = `bold ${BOARD_POINT_NUMBER_FONT_PX}px Arial`;
                         ctx.textAlign = 'center';
                         ctx.fillText(`${whitePips}`, 725, -20);
 
@@ -4570,7 +4553,7 @@
             const upperOffY = 200;  // Top position
             const lowerOffY = 600;  // Bottom position
 
-            ctx.font = 'bold 30px Arial';
+            ctx.font = `bold ${BOARD_POINT_NUMBER_FONT_PX}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
