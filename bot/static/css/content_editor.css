@@ -664,6 +664,14 @@
     text-align: center;
 }
 
+.save-frame-confirm-message {
+    margin: -8px 0 16px 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #c8c8c8;
+    text-align: center;
+}
+
 .save-frame-confirm-actions {
     display: flex;
     gap: 10px;
@@ -696,6 +704,15 @@
 
 .save-frame-ok-btn:hover {
     background: #15803d;
+}
+
+.save-frame-ok-btn--danger {
+    background: #991b1b;
+    border-color: #ef4444;
+}
+
+.save-frame-ok-btn--danger:hover {
+    background: #b91c1c;
 }
 
 /* Модалка: прикрепить или записать аудио */

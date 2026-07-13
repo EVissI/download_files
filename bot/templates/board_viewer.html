@@ -17,9 +17,10 @@
         }
 
         .container {
-            max-width: 1200px;
+            width: 100%;
             margin: 0 auto;
             padding: 0 20px;
+            box-sizing: border-box;
         }
 
         h1 {
@@ -30,16 +31,18 @@
             border: 2px solid #333;
             border-radius: 8px;
             background-color: #2a2a2a;
-            max-width: 100%;
-            height: auto;
+            width: 100%;
+            aspect-ratio: 1 / 1;
             display: block;
             box-sizing: border-box;
         }
 
         .board-block {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto 20px;
+            position: relative;
+            width: calc(99% * 0.5);
+            max-width: calc(99% * 0.5);
+            margin: 1.5rem auto 20px;
+            box-sizing: border-box;
             --board-ui-scale: 1;
             --board-point-font-size: calc(30px * var(--board-ui-scale));
             --board-pip-padding-y: calc(3px * var(--board-ui-scale));
@@ -56,15 +59,16 @@
             width: 100%;
             max-width: 100%;
             height: auto;
-            aspect-ratio: 1;
+            aspect-ratio: 1 / 1;
             margin: 0;
         }
 
         .board-panel {
-            width: 100%;
-            max-width: 800px;
+            width: calc(99% * 0.5);
+            max-width: calc(99% * 0.5);
             margin: 16px auto 0;
             padding-top: 4px;
+            box-sizing: border-box;
         }
 
         #controls {
@@ -730,6 +734,46 @@
 
         #checkboxes tr.screenshot-action-row:hover td:first-child {
             color: #66b3ff;
+        }
+
+        @media (min-width: 601px) {
+            .container {
+                max-width: 960px;
+                padding: 0 1rem 1.5rem;
+            }
+
+            .board-block {
+                margin-top: 2rem;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 1140px;
+            }
+        }
+
+        /* Мобильные и планшеты: доска на всю доступную ширину */
+        @media (max-width: 1024px) {
+            .container {
+                padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+                padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+            }
+
+            .board-block,
+            .board-panel {
+                width: 100%;
+                max-width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+            }
+
+            #boardCanvas {
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+                aspect-ratio: 1 / 1;
+            }
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">

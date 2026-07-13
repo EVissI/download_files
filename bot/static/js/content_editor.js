@@ -231,6 +231,7 @@ export class ContentEditor {
         this._labelPresetsTarget = 'card';
         this._adminLabelsDraft = [];
         this._duplicateSourceConfirmAction = null;
+        this._editorActionConfirmCallback = null;
         /** Пресеты стилей текста (общие для админов). */
         this._textStylePresetsList = [];
         this._textStylePresetsLoaded = false;
@@ -829,6 +830,23 @@ export class ContentEditor {
             `);
         }
         this.saveFrameConfirmModal = document.getElementById('saveFrameConfirmModal');
+
+        if (!document.getElementById('editorActionConfirmModal')) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="editorActionConfirmModal" class="save-frame-confirm-modal" style="display: none;" aria-hidden="true">
+                    <div class="save-frame-confirm-overlay" onclick="contentEditor.cancelEditorActionConfirm()"></div>
+                    <div class="save-frame-confirm-box" role="dialog" aria-modal="true" aria-labelledby="editorActionConfirmTitle">
+                        <h3 id="editorActionConfirmTitle" class="save-frame-confirm-title"></h3>
+                        <p id="editorActionConfirmMessage" class="save-frame-confirm-message"></p>
+                        <div class="save-frame-confirm-actions">
+                            <button type="button" class="save-frame-cancel-btn" onclick="contentEditor.cancelEditorActionConfirm()">Отмена</button>
+                            <button type="button" id="editorActionConfirmOkBtn" class="save-frame-ok-btn" onclick="contentEditor.confirmEditorActionConfirm()">OK</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+        this.editorActionConfirmModal = document.getElementById('editorActionConfirmModal');
 
         if (!document.getElementById('audioSourceModal')) {
             document.body.insertAdjacentHTML(
@@ -2911,7 +2929,12 @@ export class ContentEditor {
 
     selectTool(toolId) {
         if (toolId === 'editor-close') {
-            this.closeModal();
+            this.openEditorActionConfirm({
+                title: 'Закрыть редактор',
+                message: 'Закрыть редактор? Несохранённые изменения могут быть потеряны.',
+                confirmText: 'Закрыть',
+                onConfirm: () => this.closeModal(),
+            });
             return;
         }
 
@@ -2922,7 +2945,14 @@ export class ContentEditor {
 
         if (toolId === 'editor-delete') {
             if (!this.selectedElement) return;
-            this.deleteElement(this.selectedElement.id);
+            const elementId = this.selectedElement.id;
+            this.openEditorActionConfirm({
+                title: 'Удалить элемент',
+                message: 'Удалить выбранный элемент с канваса?',
+                confirmText: 'Удалить',
+                danger: true,
+                onConfirm: () => this.deleteElement(elementId),
+            });
             return;
         }
 
@@ -5919,6 +5949,10 @@ export class ContentEditor {
                 this.cancelSaveFrame();
                 return;
             }
+            if (this.editorActionConfirmModal && this.editorActionConfirmModal.style.display === 'flex') {
+                this.cancelEditorActionConfirm();
+                return;
+            }
             const dupModal = document.getElementById('contentCardDuplicateSourceModal');
             if (dupModal && dupModal.style.display === 'flex') {
                 this.closeContentCardDuplicateSourceModal();
@@ -5969,6 +6003,37 @@ export class ContentEditor {
         if (!this.saveFrameConfirmModal) return;
         this.saveFrameConfirmModal.style.display = 'none';
         this.saveFrameConfirmModal.setAttribute('aria-hidden', 'true');
+    }
+
+    openEditorActionConfirm({ title, message, confirmText = 'OK', danger = false, onConfirm }) {
+        if (!this.editorActionConfirmModal) return;
+        this._editorActionConfirmCallback = typeof onConfirm === 'function' ? onConfirm : null;
+        const titleEl = document.getElementById('editorActionConfirmTitle');
+        const msgEl = document.getElementById('editorActionConfirmMessage');
+        const okBtn = document.getElementById('editorActionConfirmOkBtn');
+        if (titleEl) titleEl.textContent = title || '';
+        if (msgEl) msgEl.textContent = message || '';
+        if (okBtn) {
+            okBtn.textContent = confirmText;
+            okBtn.classList.toggle('save-frame-ok-btn--danger', !!danger);
+        }
+        this.editorActionConfirmModal.style.display = 'flex';
+        this.editorActionConfirmModal.setAttribute('aria-hidden', 'false');
+    }
+
+    cancelEditorActionConfirm() {
+        if (!this.editorActionConfirmModal) return;
+        this.editorActionConfirmModal.style.display = 'none';
+        this.editorActionConfirmModal.setAttribute('aria-hidden', 'true');
+        this._editorActionConfirmCallback = null;
+        const okBtn = document.getElementById('editorActionConfirmOkBtn');
+        if (okBtn) okBtn.classList.remove('save-frame-ok-btn--danger');
+    }
+
+    confirmEditorActionConfirm() {
+        const callback = this._editorActionConfirmCallback;
+        this.cancelEditorActionConfirm();
+        if (callback) callback();
     }
 
     sanitizeFrameIdForStorageKey(frameId) {
