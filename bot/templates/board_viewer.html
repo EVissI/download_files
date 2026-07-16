@@ -1085,11 +1085,12 @@
             if (screenSaveBtn) screenSaveBtn.addEventListener('click', saveScreenshot);
             if (screenUploadBtn) screenUploadBtn.addEventListener('click', uploadScreenshots);
 
-            function bindBoardOptionToggle(toggleBtn, checkbox) {
+            function bindBoardOptionToggle(toggleBtn, checkbox, invertDisplay) {
                 if (!toggleBtn || !checkbox) return;
                 const sync = () => {
-                    toggleBtn.classList.toggle('active', checkbox.checked);
-                    toggleBtn.setAttribute('aria-pressed', checkbox.checked ? 'true' : 'false');
+                    const isOn = invertDisplay ? !checkbox.checked : checkbox.checked;
+                    toggleBtn.classList.toggle('active', isOn);
+                    toggleBtn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
                 };
                 toggleBtn.addEventListener('click', () => {
                     checkbox.checked = !checkbox.checked;
@@ -1099,9 +1100,9 @@
                 sync();
             }
 
-            bindBoardOptionToggle(document.getElementById('hideInfoToggle'), document.getElementById('hideInfoCheckbox'));
-            bindBoardOptionToggle(document.getElementById('skipAnimationToggle'), document.getElementById('skipAnimationCheckbox'));
-            bindBoardOptionToggle(document.getElementById('hidePipsToggle'), document.getElementById('hidePipsCheckbox'));
+            bindBoardOptionToggle(document.getElementById('hideInfoToggle'), document.getElementById('hideInfoCheckbox'), true);
+            bindBoardOptionToggle(document.getElementById('skipAnimationToggle'), document.getElementById('skipAnimationCheckbox'), true);
+            bindBoardOptionToggle(document.getElementById('hidePipsToggle'), document.getElementById('hidePipsCheckbox'), true);
         });
     </script>
 </head>
@@ -1152,15 +1153,15 @@
                     </div>
                     <div class="board-toolbar-row board-options-row">
                         <input type="checkbox" id="hideInfoCheckbox" class="board-visually-hidden" tabindex="-1" aria-hidden="true">
-                        <button type="button" id="hideInfoToggle" class="board-option-toggle" title="Убрать данные матча на скриншоте" aria-label="Убрать данные матча на скриншоте" aria-pressed="false">
+                        <button type="button" id="hideInfoToggle" class="board-option-toggle" title="Данные матча на скриншоте" aria-label="Данные матча на скриншоте" aria-pressed="false">
                             <i class="fa fa-file-text-o" aria-hidden="true"></i>
                         </button>
                         <input type="checkbox" id="skipAnimationCheckbox" class="board-visually-hidden" tabindex="-1" aria-hidden="true">
-                        <button type="button" id="skipAnimationToggle" class="board-option-toggle" title="Убрать анимацию шашек" aria-label="Убрать анимацию шашек" aria-pressed="false">
-                            <i class="fa fa-forward" aria-hidden="true"></i>
+                        <button type="button" id="skipAnimationToggle" class="board-option-toggle" title="Анимация шашек" aria-label="Анимация шашек" aria-pressed="false">
+                            <i class="fa fa-play" aria-hidden="true"></i>
                         </button>
                         <input type="checkbox" id="hidePipsCheckbox" class="board-visually-hidden" tabindex="-1" aria-hidden="true">
-                        <button type="button" id="hidePipsToggle" class="board-option-toggle" title="Убрать отображение пипсов" aria-label="Убрать отображение пипсов" aria-pressed="false">
+                        <button type="button" id="hidePipsToggle" class="board-option-toggle" title="Отображение пипсов" aria-label="Отображение пипсов" aria-pressed="false">
                             <i class="fa fa-sort-numeric-asc" aria-hidden="true"></i>
                         </button>
                         <button type="button" id="supportBtn" class="board-option-action" onclick="openSupportModal()" title="Отправить скрин в тех поддержку" aria-label="Отправить скрин в тех поддержку">
@@ -2720,6 +2721,7 @@
             }
             hideInfoCheckbox.addEventListener('change', () => {
                 localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                syncBoardOptionToggleVisual('hideInfoToggle', hideInfoCheckbox, true);
             });
         }
 
@@ -2732,12 +2734,36 @@
             hidePipsCheckbox.addEventListener('change', () => {
                 localStorage.setItem('hidePipsCheckbox', hidePipsCheckbox.checked);
                 drawBoard();
+                syncBoardOptionToggleVisual('hidePipsToggle', hidePipsCheckbox, true);
             });
         }
 
-        document.getElementById('skipAnimationCheckbox').addEventListener('change', (e) => {
-            skipAnimationEnabled = e.target.checked;
-        });
+        const skipAnimationCheckbox = document.getElementById('skipAnimationCheckbox');
+        if (skipAnimationCheckbox) {
+            skipAnimationEnabled = skipAnimationCheckbox.checked;
+            skipAnimationCheckbox.addEventListener('change', (e) => {
+                skipAnimationEnabled = e.target.checked;
+                syncBoardOptionToggleVisual('skipAnimationToggle', skipAnimationCheckbox, true);
+            });
+        }
+
+        function syncBoardOptionToggleVisual(toggleId, checkbox, invertDisplay) {
+            const toggleBtn = document.getElementById(toggleId);
+            if (!toggleBtn || !checkbox) return;
+            const isOn = invertDisplay ? !checkbox.checked : checkbox.checked;
+            toggleBtn.classList.toggle('active', isOn);
+            toggleBtn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+        }
+
+        if (hideInfoCheckbox) {
+            syncBoardOptionToggleVisual('hideInfoToggle', hideInfoCheckbox, true);
+        }
+        if (hidePipsCheckbox) {
+            syncBoardOptionToggleVisual('hidePipsToggle', hidePipsCheckbox, true);
+        }
+        if (skipAnimationCheckbox) {
+            syncBoardOptionToggleVisual('skipAnimationToggle', skipAnimationCheckbox, true);
+        }
 
         document.getElementById('animationSpeedSlider').addEventListener('change', (e) => {
             animationSpeed = parseFloat(e.target.value);
