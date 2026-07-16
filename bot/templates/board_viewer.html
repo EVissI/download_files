@@ -194,9 +194,34 @@
         }
 
         .center-select {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
+            flex-shrink: 0;
+        }
+
+        .match-header-row {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        #match-type {
+            flex: 0 0 auto;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .match-header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        #match-score {
+            flex: 0 0 auto;
+            white-space: nowrap;
         }
 
         .pips-container {
@@ -683,9 +708,10 @@
             margin: 0 auto;
         }
 
-        #match-info {
-            width: 100%;
-            margin: 0 auto;
+        #match-type,
+        #match-score {
+            width: auto;
+            margin: 0;
         }
 
         .pips-above-board,
@@ -1112,15 +1138,20 @@
         <div class="board-layout">
             <div class="board-block">
                 <div class="header">
-                    <div id="match-info"></div>
+                    <div id="match-header" class="match-header-row">
+                        <span id="match-type"></span>
+                        <div class="match-header-controls">
+                            <div class="center-select">
+                                <select id="gameSelect">
+                                    <option value="0">Game 1</option>
+                                </select>
+                            </div>
+                            <span id="match-score"></span>
+                        </div>
+                    </div>
                     <div id="players-info"></div>
                     <div id="top-row">
                         <span id="crawfordLabel" style="visibility: hidden;">Кроуфорд</span>
-                        <div class="center-select">
-                            <select id="gameSelect">
-                                <option value="0">Game 1</option>
-                            </select>
-                        </div>
                         <div class="pips-container">
                             <div id="black-pips" class="pips-above-board">0</div>
                         </div>
@@ -1225,8 +1256,50 @@
         const ctx = canvas.getContext('2d');
         const BOARD_CANVAS_LOGICAL_SIZE = 800;
         const BOARD_POINT_NUMBER_FONT_PX = 30;
-        const matchInfoDiv = document.getElementById('match-info');
+        const matchTypeEl = document.getElementById('match-type');
+        const matchScoreEl = document.getElementById('match-score');
         const playersInfoDiv = document.getElementById('players-info');
+
+        function updateMatchHeader(options = {}) {
+            if (!matchTypeEl || !matchScoreEl) return;
+
+            const pointMatch = options.pointMatch !== undefined ? options.pointMatch : matchPoint;
+            const redScore = options.redScore !== undefined ? options.redScore : gameRedScore;
+            const blackScore = options.blackScore !== undefined ? options.blackScore : gameBlackScore;
+            const gameSelectWrap = document.querySelector('.center-select');
+
+            matchTypeEl.textContent = pointMatch === 0 ? 'Манигейм' : `Матч до ${pointMatch}`;
+            matchScoreEl.textContent = `Счет: ${redScore} - ${blackScore}`;
+
+            if (gameSelectWrap) {
+                gameSelectWrap.style.display = pointMatch === 0 ? 'none' : '';
+            }
+        }
+
+        function getMatchHeaderSnapshot() {
+            const gameSelectWrap = document.querySelector('.center-select');
+            return {
+                matchType: matchTypeEl ? matchTypeEl.textContent : '',
+                matchScore: matchScoreEl ? matchScoreEl.textContent : '',
+                gameSelectDisplay: gameSelectWrap ? gameSelectWrap.style.display : '',
+            };
+        }
+
+        function restoreMatchHeaderSnapshot(snapshot) {
+            if (!snapshot) return;
+            if (matchTypeEl) matchTypeEl.textContent = snapshot.matchType;
+            if (matchScoreEl) matchScoreEl.textContent = snapshot.matchScore;
+            const gameSelectWrap = document.querySelector('.center-select');
+            if (gameSelectWrap) gameSelectWrap.style.display = snapshot.gameSelectDisplay;
+        }
+
+        function setMatchHeaderForScreenshot() {
+            if (!matchTypeEl || !matchScoreEl) return;
+            matchTypeEl.textContent = matchPoint > 0 ? `Матч до ${matchPoint}` : 'Манигейм';
+            matchScoreEl.textContent = `Счет: ${gameRedScore} - ${gameBlackScore}`;
+            const gameSelectWrap = document.querySelector('.center-select');
+            if (gameSelectWrap) gameSelectWrap.style.display = 'none';
+        }
 
         function updateBoardViewerUiScale() {
             const boardBlock = document.querySelector('.board-block');
@@ -1367,10 +1440,11 @@
                 matchLength = matchPoint;
                 enable_crawford_game_number = gamesArray.findIndex(game => game.is_crawford) + 1 || null;
                 dataLoaded = true;
-                const matchInfoDiv = document.getElementById('match-info');
-                const matchText = matchPoint === 0 ? 'Манигейм' : `Матч до ${matchPoint}`;
-                const gameSpan = matchPoint === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                updateMatchHeader({
+                    pointMatch: matchPoint,
+                    redScore: gameRedScore,
+                    blackScore: gameBlackScore,
+                });
                 const playersInfoDiv = document.getElementById('players-info');
                 playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                 updateGameSelect();
@@ -1943,10 +2017,11 @@
                         drawBoard();
                         updateInfo();
                         const game = availableGames[currentGameNum - 1];
-                        const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
-                        const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
-                        document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
+                        updateMatchHeader({
+                            pointMatch: game.point_match,
+                            redScore: game.first_score,
+                            blackScore: game.second_score,
+                        });
                         redPlayer = game.first_player;
                         blackPlayer = game.second_player;
                         gameRedScore = game.first_score;
@@ -1983,10 +2058,11 @@
                     drawBoard();
                     updateInfo();
                     const game = availableGames[currentGameNum - 1];
-                    const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
-                    const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
-                    document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
+                    updateMatchHeader({
+                        pointMatch: game.point_match,
+                        redScore: game.first_score,
+                        blackScore: game.second_score,
+                    });
                     redPlayer = game.first_player;
                     blackPlayer = game.second_player;
                     gameRedScore = game.first_score;
@@ -2069,10 +2145,11 @@
                                     updateButtons();
                                     updateInfo();
                                     const game = availableGames[currentGameNum - 1];
-                                    const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
-                                    const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
-                                    document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
+                                    updateMatchHeader({
+                                        pointMatch: game.point_match,
+                                        redScore: game.first_score,
+                                        blackScore: game.second_score,
+                                    });
                                     redPlayer = game.first_player;
                                     blackPlayer = game.second_player;
                                     gameRedScore = game.first_score;
@@ -2148,10 +2225,11 @@
                     updateButtons();
                     updateInfo();
                     const game = availableGames[currentGameNum - 1];
-                    const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
-                    const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
-                    document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
+                    updateMatchHeader({
+                        pointMatch: game.point_match,
+                        redScore: game.first_score,
+                        blackScore: game.second_score,
+                    });
                     redPlayer = game.first_player;
                     blackPlayer = game.second_player;
                     gameRedScore = game.first_score;
@@ -2418,7 +2496,7 @@
             const originalRedPipsDisplay = redPips ? redPips.style.display : '';
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : '';
             const originalPlayersInfoHTML = playersInfoDiv ? playersInfoDiv.innerHTML : '';
-            const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
+            const originalMatchHeaderSnapshot = getMatchHeaderSnapshot();
 
             if (controls) controls.style.display = 'none';
             if (gameSelect) gameSelect.style.display = 'none';
@@ -2433,15 +2511,7 @@
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = 'none';
                 }
-                if (matchInfoDiv) {
-                    if (matchPoint > 0) {
-                        const crawfordVisible = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
-                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; position: relative;"><span>Матч до ${matchPoint}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span><span style="position: absolute; right: 0; visibility: ${crawfordVisible};">Кроуфорд</span></div>`;
-                    } else {
-                        matchInfoDiv.innerHTML = 'Манигейм';
-                    }
-                }
-                if (gameSelect) gameSelect.style.display = 'none';
+                setMatchHeaderForScreenshot();
                 if (crawfordLabel) {
                     crawfordLabel.style.position = 'absolute';
                     crawfordLabel.style.right = '10px';
@@ -2474,9 +2544,7 @@
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
                 }
-                if (matchInfoDiv) {
-                    matchInfoDiv.innerHTML = originalMatchInfoHTML;
-                }
+                restoreMatchHeaderSnapshot(originalMatchHeaderSnapshot);
                 // Restore crawfordLabel style
                 if (crawfordLabel) {
                     crawfordLabel.style.position = '';
@@ -2527,9 +2595,7 @@
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
                 }
-                if (matchInfoDiv) {
-                    matchInfoDiv.innerHTML = originalMatchInfoHTML;
-                }
+                restoreMatchHeaderSnapshot(originalMatchHeaderSnapshot);
                 showMessageModal('Ошибка при создании скриншота', 'error');
             });
         }
@@ -2578,7 +2644,7 @@
                 : null;
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : '';
             const originalPlayersInfoHTML = playersInfoDiv ? playersInfoDiv.innerHTML : '';
-            const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
+            const originalMatchHeaderSnapshot = getMatchHeaderSnapshot();
 
             if (controls) controls.style.display = 'none';
             if (gameSelect) gameSelect.style.display = 'none';
@@ -2593,15 +2659,7 @@
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = 'none';
                 }
-                if (matchInfoDiv) {
-                    if (matchPoint > 0) {
-                        const crawfordVisible = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
-                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; position: relative;"><span>Матч до ${matchPoint}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span><span style="position: absolute; right: 0; visibility: ${crawfordVisible};">Кроуфорд</span></div>`;
-                    } else {
-                        matchInfoDiv.innerHTML = 'Манигейм';
-                    }
-                }
-                if (gameSelect) gameSelect.style.display = 'none';
+                setMatchHeaderForScreenshot();
             }
 
             if (hidePipsCheckbox && hidePipsCheckbox.checked) {
@@ -2628,9 +2686,7 @@
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
                 }
-                if (matchInfoDiv) {
-                    matchInfoDiv.innerHTML = originalMatchInfoHTML;
-                }
+                restoreMatchHeaderSnapshot(originalMatchHeaderSnapshot);
 
                 canvas.toBlob(blob => {
                     const file = new File([blob], 'screenshot.png', { type: 'image/png' });
@@ -2684,9 +2740,7 @@
                     playersInfoDiv.style.display = originalPlayersInfoDisplay;
                     playersInfoDiv.innerHTML = originalPlayersInfoHTML;
                 }
-                if (matchInfoDiv) {
-                    matchInfoDiv.innerHTML = originalMatchInfoHTML;
-                }
+                restoreMatchHeaderSnapshot(originalMatchHeaderSnapshot);
                 showMessageModal('Ошибка при создании скриншота', 'error');
             });
         }
@@ -2700,14 +2754,14 @@
             gameBlackScore = availableGames[gameIndex].second_score;
             current = 0;
             inverted = false;
-            const matchInfoDiv = document.getElementById('match-info');
             const game = availableGames[gameIndex];
-            const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
-            const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+            updateMatchHeader({
+                pointMatch: game.point_match,
+                redScore: gameRedScore,
+                blackScore: gameBlackScore,
+            });
             let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
             document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
-            document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
             drawBoard();
             updateButtons();
             updateInfo();
