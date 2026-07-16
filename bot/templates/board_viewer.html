@@ -197,6 +197,10 @@
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            white-space: nowrap;
         }
 
         .pips-container {
@@ -1117,9 +1121,11 @@
                     <div id="top-row">
                         <span id="crawfordLabel" style="visibility: hidden;">Кроуфорд</span>
                         <div class="center-select">
+                            <span id="match-type"></span>
                             <select id="gameSelect">
                                 <option value="0">Game 1</option>
                             </select>
+                            <span id="match-score"></span>
                         </div>
                         <div class="pips-container">
                             <div id="black-pips" class="pips-above-board">0</div>
@@ -1370,14 +1376,17 @@
                 const matchInfoDiv = document.getElementById('match-info');
                 const matchText = matchPoint === 0 ? 'Манигейм' : `Матч до ${matchPoint}`;
                 const gameSpan = matchPoint === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                matchInfoDiv.innerHTML = gameSpan;
+                const matchTypeEl = document.getElementById('match-type');
+                const matchScoreEl = document.getElementById('match-score');
+                if (matchTypeEl) matchTypeEl.textContent = matchText;
+                if (matchScoreEl) matchScoreEl.textContent = `Счет: ${gameRedScore} - ${gameBlackScore}`;
                 const playersInfoDiv = document.getElementById('players-info');
                 playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
                 updateGameSelect();
                 document.getElementById('gameSelect').value = currentGameNum - 1;
-                if (matchPoint === 0) {
-                    document.querySelector('.center-select').style.display = 'none';
-                }
+                const gameSelectEl = document.getElementById('gameSelect');
+                if (gameSelectEl) gameSelectEl.style.display = matchPoint === 0 ? 'none' : 'block';
                 updateButtons();
                 drawBoard();
                 updateInfo();
@@ -1945,8 +1954,13 @@
                         const game = availableGames[currentGameNum - 1];
                         const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
                         const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                        matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
-                        document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
+                        matchInfoDiv.innerHTML = gameSpan;
+                        const matchTypeEl = document.getElementById('match-type');
+                        const matchScoreEl = document.getElementById('match-score');
+                        if (matchTypeEl) matchTypeEl.textContent = matchText;
+                        if (matchScoreEl) matchScoreEl.textContent = `Счет: ${game.first_score} - ${game.second_score}`;
+                        const gameSelectEl = document.getElementById('gameSelect');
+                        if (gameSelectEl) gameSelectEl.style.display = game.point_match === 0 ? 'none' : 'block';
                         redPlayer = game.first_player;
                         blackPlayer = game.second_player;
                         gameRedScore = game.first_score;
@@ -1985,8 +1999,13 @@
                     const game = availableGames[currentGameNum - 1];
                     const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
                     const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
-                    document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
+                    matchInfoDiv.innerHTML = gameSpan;
+                    const matchTypeEl = document.getElementById('match-type');
+                    const matchScoreEl = document.getElementById('match-score');
+                    if (matchTypeEl) matchTypeEl.textContent = matchText;
+                    if (matchScoreEl) matchScoreEl.textContent = `Счет: ${game.first_score} - ${game.second_score}`;
+                    const gameSelectEl = document.getElementById('gameSelect');
+                    if (gameSelectEl) gameSelectEl.style.display = game.point_match === 0 ? 'none' : 'block';
                     redPlayer = game.first_player;
                     blackPlayer = game.second_player;
                     gameRedScore = game.first_score;
@@ -2071,8 +2090,13 @@
                                     const game = availableGames[currentGameNum - 1];
                                     const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
                                     const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
-                                    document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
+                                    matchInfoDiv.innerHTML = gameSpan;
+                                    const matchTypeEl = document.getElementById('match-type');
+                                    const matchScoreEl = document.getElementById('match-score');
+                                    if (matchTypeEl) matchTypeEl.textContent = matchText;
+                                    if (matchScoreEl) matchScoreEl.textContent = `Счет: ${game.first_score} - ${game.second_score}`;
+                                    const gameSelectEl = document.getElementById('gameSelect');
+                                    if (gameSelectEl) gameSelectEl.style.display = game.point_match === 0 ? 'none' : 'block';
                                     redPlayer = game.first_player;
                                     blackPlayer = game.second_player;
                                     gameRedScore = game.first_score;
@@ -2150,8 +2174,13 @@
                     const game = availableGames[currentGameNum - 1];
                     const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
                     const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${game.first_score} - ${game.second_score}</span></div>`;
-                    document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
+                    matchInfoDiv.innerHTML = gameSpan;
+                    const matchTypeEl = document.getElementById('match-type');
+                    const matchScoreEl = document.getElementById('match-score');
+                    if (matchTypeEl) matchTypeEl.textContent = matchText;
+                    if (matchScoreEl) matchScoreEl.textContent = `Счет: ${game.first_score} - ${game.second_score}`;
+                    const gameSelectEl = document.getElementById('gameSelect');
+                    if (gameSelectEl) gameSelectEl.style.display = game.point_match === 0 ? 'none' : 'block';
                     redPlayer = game.first_player;
                     blackPlayer = game.second_player;
                     gameRedScore = game.first_score;
@@ -2403,6 +2432,8 @@
             const blackPips = document.getElementById('black-pips');
             const redPips = document.getElementById('red-pips');
             const adminButtonContainer = document.getElementById('adminButtonContainer');
+            const matchTypeEl = document.getElementById('match-type');
+            const matchScoreEl = document.getElementById('match-score');
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalControlsDisplay = controls ? controls.style.display : '';
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : '';
@@ -2419,6 +2450,8 @@
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : '';
             const originalPlayersInfoHTML = playersInfoDiv ? playersInfoDiv.innerHTML : '';
             const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
+            const originalMatchTypeDisplay = matchTypeEl ? matchTypeEl.style.display : '';
+            const originalMatchScoreDisplay = matchScoreEl ? matchScoreEl.style.display : '';
 
             if (controls) controls.style.display = 'none';
             if (gameSelect) gameSelect.style.display = 'none';
@@ -2433,6 +2466,8 @@
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = 'none';
                 }
+                if (matchTypeEl) matchTypeEl.style.display = 'none';
+                if (matchScoreEl) matchScoreEl.style.display = 'none';
                 if (matchInfoDiv) {
                     if (matchPoint > 0) {
                         const crawfordVisible = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
@@ -2477,6 +2512,8 @@
                 if (matchInfoDiv) {
                     matchInfoDiv.innerHTML = originalMatchInfoHTML;
                 }
+                if (matchTypeEl) matchTypeEl.style.display = originalMatchTypeDisplay;
+                if (matchScoreEl) matchScoreEl.style.display = originalMatchScoreDisplay;
                 // Restore crawfordLabel style
                 if (crawfordLabel) {
                     crawfordLabel.style.position = '';
@@ -2530,6 +2567,8 @@
                 if (matchInfoDiv) {
                     matchInfoDiv.innerHTML = originalMatchInfoHTML;
                 }
+                if (matchTypeEl) matchTypeEl.style.display = originalMatchTypeDisplay;
+                if (matchScoreEl) matchScoreEl.style.display = originalMatchScoreDisplay;
                 showMessageModal('Ошибка при создании скриншота', 'error');
             });
         }
@@ -2564,6 +2603,8 @@
             const blackPips = document.getElementById('black-pips');
             const redPips = document.getElementById('red-pips');
             const adminButtonContainer = document.getElementById('adminButtonContainer');
+            const matchTypeEl = document.getElementById('match-type');
+            const matchScoreEl = document.getElementById('match-score');
             const originalControlsDisplay = controls ? controls.style.display : '';
             const originalGameSelectDisplay = gameSelect ? gameSelect.style.display : '';
             const originalScreenSaveBtnDisplay = screenSaveBtn ? screenSaveBtn.style.display : '';
@@ -2579,6 +2620,8 @@
             const originalPlayersInfoDisplay = playersInfoDiv ? playersInfoDiv.style.display : '';
             const originalPlayersInfoHTML = playersInfoDiv ? playersInfoDiv.innerHTML : '';
             const originalMatchInfoHTML = matchInfoDiv ? matchInfoDiv.innerHTML : '';
+            const originalMatchTypeDisplay = matchTypeEl ? matchTypeEl.style.display : '';
+            const originalMatchScoreDisplay = matchScoreEl ? matchScoreEl.style.display : '';
 
             if (controls) controls.style.display = 'none';
             if (gameSelect) gameSelect.style.display = 'none';
@@ -2593,6 +2636,8 @@
                 if (playersInfoDiv) {
                     playersInfoDiv.style.display = 'none';
                 }
+                if (matchTypeEl) matchTypeEl.style.display = 'none';
+                if (matchScoreEl) matchScoreEl.style.display = 'none';
                 if (matchInfoDiv) {
                     if (matchPoint > 0) {
                         const crawfordVisible = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
@@ -2631,6 +2676,8 @@
                 if (matchInfoDiv) {
                     matchInfoDiv.innerHTML = originalMatchInfoHTML;
                 }
+                if (matchTypeEl) matchTypeEl.style.display = originalMatchTypeDisplay;
+                if (matchScoreEl) matchScoreEl.style.display = originalMatchScoreDisplay;
 
                 canvas.toBlob(blob => {
                     const file = new File([blob], 'screenshot.png', { type: 'image/png' });
@@ -2687,6 +2734,8 @@
                 if (matchInfoDiv) {
                     matchInfoDiv.innerHTML = originalMatchInfoHTML;
                 }
+                if (matchTypeEl) matchTypeEl.style.display = originalMatchTypeDisplay;
+                if (matchScoreEl) matchScoreEl.style.display = originalMatchScoreDisplay;
                 showMessageModal('Ошибка при создании скриншота', 'error');
             });
         }
@@ -2704,10 +2753,15 @@
             const game = availableGames[gameIndex];
             const matchText = game.point_match === 0 ? 'Манигейм' : `Матч до ${game.point_match}`;
             const gameSpan = game.point_match === 0 ? '' : `<span>Игра ${currentGameNum}</span>`;
-            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>${matchText}</span>${gameSpan}<span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+            matchInfoDiv.innerHTML = gameSpan;
+            const matchTypeEl = document.getElementById('match-type');
+            const matchScoreEl = document.getElementById('match-score');
+            if (matchTypeEl) matchTypeEl.textContent = matchText;
+            if (matchScoreEl) matchScoreEl.textContent = `Счет: ${gameRedScore} - ${gameBlackScore}`;
             let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
             document.getElementById('crawfordLabel').style.visibility = crawfordVisibility;
-            document.querySelector('.center-select').style.display = game.point_match === 0 ? 'none' : 'block';
+            const gameSelectEl = document.getElementById('gameSelect');
+            if (gameSelectEl) gameSelectEl.style.display = game.point_match === 0 ? 'none' : 'block';
             drawBoard();
             updateButtons();
             updateInfo();
