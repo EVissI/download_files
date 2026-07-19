@@ -1,4 +1,4 @@
-"""AiohttpSession с динамическим failover прокси во время polling."""
+"""AiohttpSession: polling БД для текущего прокси + failover при ошибках подключения."""
 
 from __future__ import annotations
 
@@ -13,7 +13,6 @@ from loguru import logger
 
 from bot.common.proxy_utils import (
     is_proxy_or_network_error,
-    is_valid_proxy_url,
     mask_proxy_url,
     normalize_proxy_url,
 )
@@ -51,7 +50,12 @@ async def run_telegram_proxy_db_sync_loop(
     *,
     interval: float = DB_SYNC_INTERVAL_SECONDS,
 ) -> None:
-    """Фоновая синхронизация прокси с БД (важно во время long polling getUpdates)."""
+    """
+    Polling актуального прокси из БД.
+
+    Нужен во время long polling getUpdates: иначе смена URL/статуса в FAB
+    не применится, пока висит текущий запрос.
+    """
     if not isinstance(session, FailoverAiohttpSession):
         return
 
@@ -59,14 +63,17 @@ async def run_telegram_proxy_db_sync_loop(
         try:
             await session.sync_from_db()
         except NoActiveTelegramProxyError:
-            logger.warning("Telegram proxy DB sync: no active proxies in DB")
+            logger.warning("Telegram proxy DB poll: no active proxies in DB")
         except Exception as exc:
-            logger.warning("Telegram proxy DB sync failed: {}", exc)
+            logger.warning("Telegram proxy DB poll failed: {}", exc)
         await asyncio.sleep(interval)
 
 
 class FailoverAiohttpSession(AiohttpSession):
-    """Текущий прокси для всех запросов; при 3 ошибках подряд — switch."""
+    """
+    Текущий прокси обновляется polling'ом из БД.
+    При ошибках подключения — переключение на другой прокси, пока запрос не пройдёт.
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -75,6 +82,7 @@ class FailoverAiohttpSession(AiohttpSession):
         self._active_proxy_url: str | None = None
         self._consecutive_failures = 0
         self._db_sync_task: asyncio.Task | None = None
+        self._proxy_generation = 0
 
     def start_db_sync_task(self) -> None:
         if self._db_sync_task is not None and not self._db_sync_task.done():
@@ -110,19 +118,38 @@ class FailoverAiohttpSession(AiohttpSession):
             message=f"{type(exc).__name__}: {exc}",
         )
 
-    async def _apply_proxy(self, proxy_id: int, proxy_url: str) -> None:
+    async def _apply_proxy(
+        self,
+        proxy_id: int,
+        proxy_url: str,
+        *,
+        interrupt_inflight: bool,
+    ) -> None:
+        """Применяет прокси. При смене URL закрывает сессию, чтобы сорвать long poll."""
         if self._active_proxy_id == proxy_id and self._active_proxy_url == proxy_url:
             return
+
         self.proxy = proxy_url
         self._active_proxy_id = proxy_id
         self._active_proxy_url = proxy_url
+        self._proxy_generation += 1
+        self._consecutive_failures = 0
+
+        if interrupt_inflight:
+            # Прерываем висящий getUpdates / другие запросы на старом коннекторе.
+            await self.close()
 
     async def sync_from_db(
         self,
         *,
         exclude_ids: set[int] | None = None,
+        interrupt_inflight: bool = True,
     ) -> str:
-        """Читает актуальное состояние прокси из БД и переключает сессию при необходимости."""
+        """
+        Polling: читает БД и обновляет текущий прокси.
+        - тот же id, новый URL → применяем новые значения;
+        - текущий неактивен/истёк → берём следующий из БД.
+        """
         clear_telegram_proxy_cache()
         resolved = await asyncio.to_thread(
             resolve_session_proxy_sync,
@@ -132,8 +159,13 @@ class FailoverAiohttpSession(AiohttpSession):
         )
         if resolved is None:
             async with self._state_lock:
+                changed = (
+                    self._active_proxy_id is not None or self._active_proxy_url is not None
+                )
                 self._active_proxy_id = None
                 self._active_proxy_url = None
+                if changed and interrupt_inflight:
+                    await self.close()
             raise NoActiveTelegramProxyError(
                 "No active Telegram proxies configured in DB"
             )
@@ -148,7 +180,7 @@ class FailoverAiohttpSession(AiohttpSession):
             if previous_id is not None:
                 if previous_id != proxy_id:
                     logger.warning(
-                        "Telegram proxy switched from DB: id={} {} -> id={} {} ({})",
+                        "Telegram proxy switched from DB poll: id={} {} -> id={} {} ({})",
                         previous_id,
                         mask_proxy_url(previous_url or ""),
                         proxy_id,
@@ -157,7 +189,7 @@ class FailoverAiohttpSession(AiohttpSession):
                     )
                 elif previous_url != proxy_url:
                     logger.warning(
-                        "Telegram proxy URL updated from DB: id={} {} -> {} ({})",
+                        "Telegram proxy updated from DB poll: id={} {} -> {} ({})",
                         proxy_id,
                         mask_proxy_url(previous_url or ""),
                         mask_proxy_url(proxy_url),
@@ -165,25 +197,33 @@ class FailoverAiohttpSession(AiohttpSession):
                     )
             else:
                 logger.info(
-                    "Telegram proxy selected from DB: id={} {} ({})",
+                    "Telegram proxy selected from DB poll: id={} {} ({})",
                     proxy_id,
                     mask_proxy_url(proxy_url),
                     proxy_name,
                 )
 
-            await self._apply_proxy(proxy_id, proxy_url)
-            self._consecutive_failures = 0
+            await self._apply_proxy(
+                proxy_id,
+                proxy_url,
+                interrupt_inflight=interrupt_inflight,
+            )
             return proxy_url
 
-    async def _switch_to_next_proxy(self, *, failed_proxy_id: int | None) -> str | None:
-        clear_telegram_proxy_cache()
-        exclude_ids = {failed_proxy_id} if failed_proxy_id is not None else None
+    async def _switch_to_next_proxy(
+        self,
+        *,
+        exclude_ids: set[int] | None,
+    ) -> str | None:
         try:
-            return await self.sync_from_db(exclude_ids=exclude_ids)
+            return await self.sync_from_db(
+                exclude_ids=exclude_ids,
+                interrupt_inflight=True,
+            )
         except NoActiveTelegramProxyError:
             logger.error(
-                "No backup telegram proxy after failures on id={}",
-                failed_proxy_id,
+                "No backup telegram proxy after failures (excluded={})",
+                sorted(exclude_ids) if exclude_ids else [],
             )
             return None
 
@@ -193,88 +233,115 @@ class FailoverAiohttpSession(AiohttpSession):
         method: TelegramMethod[TelegramType],
         timeout: Optional[int] = None,
     ) -> TelegramType:
+        """
+        Запросы идут через текущий прокси (из polling).
+        При ошибках подключения переключаемся на другой из БД, пока запрос не пройдёт.
+        """
         last_error: TelegramNetworkError | None = None
         excluded_proxy_ids: set[int] = set()
 
         while True:
-            try:
-                await self.sync_from_db(
-                    exclude_ids=excluded_proxy_ids or None,
-                )
-            except NoActiveTelegramProxyError:
-                if last_error is not None:
-                    raise last_error
-                raise TelegramNetworkError(
-                    method=method,
-                    message="No active Telegram proxies configured in DB",
-                )
+            async with self._state_lock:
+                proxy_id = self._active_proxy_id
+                proxy_url = self._active_proxy_url
+                generation = self._proxy_generation
 
-            proxy_id = self._active_proxy_id
-            proxy_url = self._active_proxy_url
             if proxy_id is None or proxy_url is None:
-                break
-            if proxy_id in excluded_proxy_ids:
-                break
-
-            switched_proxy = False
-            for attempt in range(1, CONSECUTIVE_FAILURES_TO_DEACTIVATE + 1):
                 try:
-                    result = await super().make_request(bot, method, timeout=timeout)
-                    async with self._state_lock:
-                        if self._active_proxy_id == proxy_id:
-                            self._consecutive_failures = 0
-                        record_proxy_connection_success_sync(proxy_url)
-                    return result
-                except ValueError as exc:
-                    logger.error(
-                        "Invalid telegram proxy URL {}: {}",
-                        mask_proxy_url(proxy_url),
-                        exc,
+                    await self.sync_from_db(
+                        exclude_ids=excluded_proxy_ids or None,
+                        interrupt_inflight=False,
                     )
-                    last_error = self._as_network_error(method, exc)
-                    excluded_proxy_ids.add(proxy_id)
-                    switched_proxy = True
-                    break
-                except Exception as exc:
-                    if not is_proxy_or_network_error(exc):
-                        raise
-                    last_error = self._as_network_error(method, exc)
-                    logger.warning(
-                        "Telegram proxy error ({}/{}): id={} {} — {}",
-                        attempt,
-                        CONSECUTIVE_FAILURES_TO_DEACTIVATE,
-                        proxy_id,
-                        mask_proxy_url(proxy_url),
-                        exc,
+                except NoActiveTelegramProxyError:
+                    if last_error is not None:
+                        raise last_error
+                    raise TelegramNetworkError(
+                        method=method,
+                        message="No active Telegram proxies configured in DB",
                     )
-
-                    async with self._state_lock:
-                        if self._active_proxy_id != proxy_id:
-                            switched_proxy = True
-                            break
-
-                        self._consecutive_failures += 1
-                        deactivated = record_proxy_connection_failure_sync(proxy_url)
-
-                        if (
-                            self._consecutive_failures
-                            >= CONSECUTIVE_FAILURES_TO_DEACTIVATE
-                            or deactivated
-                        ):
-                            excluded_proxy_ids.add(proxy_id)
-                            next_proxy = await self._switch_to_next_proxy(
-                                failed_proxy_id=proxy_id,
-                            )
-                            switched_proxy = True
-                            if next_proxy is None:
-                                raise last_error
-                            break
-
-            if switched_proxy:
                 continue
 
-            if last_error is not None:
-                raise last_error
+            if proxy_id in excluded_proxy_ids:
+                next_proxy = await self._switch_to_next_proxy(
+                    exclude_ids=excluded_proxy_ids,
+                )
+                if next_proxy is None:
+                    break
+                continue
+
+            try:
+                result = await super().make_request(bot, method, timeout=timeout)
+                async with self._state_lock:
+                    if self._active_proxy_id == proxy_id:
+                        self._consecutive_failures = 0
+                await asyncio.to_thread(
+                    record_proxy_connection_success_sync,
+                    proxy_url,
+                )
+                return result
+            except ValueError as exc:
+                logger.error(
+                    "Invalid telegram proxy URL {}: {}",
+                    mask_proxy_url(proxy_url),
+                    exc,
+                )
+                last_error = self._as_network_error(method, exc)
+                excluded_proxy_ids.add(proxy_id)
+                next_proxy = await self._switch_to_next_proxy(
+                    exclude_ids=excluded_proxy_ids,
+                )
+                if next_proxy is None:
+                    raise last_error
+                continue
+            except Exception as exc:
+                if not is_proxy_or_network_error(exc):
+                    raise
+
+                async with self._state_lock:
+                    # Polling уже сменил прокси (в т.ч. сорвав long poll) — просто ретрай.
+                    if (
+                        self._proxy_generation != generation
+                        or self._active_proxy_id != proxy_id
+                    ):
+                        continue
+
+                last_error = self._as_network_error(method, exc)
+                logger.warning(
+                    "Telegram proxy connection error: id={} {} — switching to another",
+                    proxy_id,
+                    mask_proxy_url(proxy_url),
+                )
+                logger.warning("Telegram proxy error detail: {}", exc)
+
+                deactivated = await asyncio.to_thread(
+                    record_proxy_connection_failure_sync,
+                    proxy_url,
+                )
+
+                async with self._state_lock:
+                    if (
+                        self._proxy_generation != generation
+                        or self._active_proxy_id != proxy_id
+                    ):
+                        continue
+                    self._consecutive_failures += 1
+                    if (
+                        self._consecutive_failures >= CONSECUTIVE_FAILURES_TO_DEACTIVATE
+                        or deactivated
+                    ):
+                        logger.error(
+                            "Telegram proxy id={} reached {} failures — excluded from this cycle",
+                            proxy_id,
+                            CONSECUTIVE_FAILURES_TO_DEACTIVATE,
+                        )
+
+                excluded_proxy_ids.add(proxy_id)
+                next_proxy = await self._switch_to_next_proxy(
+                    exclude_ids=excluded_proxy_ids,
+                )
+                if next_proxy is None:
+                    raise last_error
+                continue
 
         if last_error is not None:
             raise last_error

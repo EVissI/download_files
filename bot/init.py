@@ -24,7 +24,6 @@ from bot.common.telegram_proxy_config import log_telegram_proxy_config
 from bot.common.telegram_failover_session import (
     FailoverAiohttpSession,
     prepare_bot_session_proxy,
-    run_telegram_proxy_db_sync_loop,
 )
 from bot.db.redis import redis_client
 
