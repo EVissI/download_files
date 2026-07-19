@@ -1596,14 +1596,14 @@ async def check_job_status(
                             )
                             await session_without_commit.commit()
 
-                        # DEBUG: zip с JSON игры админу-загрузчику (удалить вместе с _debug_* выше)
-                        await _debug_send_admin_single_analysis_json_zip(
-                            message,
-                            game_id,
-                            job_info.get("red_player"),
-                            job_info.get("black_player"),
-                            user_info,
-                        )
+                        # # DEBUG: zip с JSON игры админу-загрузчику (удалить вместе с _debug_* выше)
+                        # await _debug_send_admin_single_analysis_json_zip(
+                        #     message,
+                        #     game_id,
+                        #     job_info.get("red_player"),
+                        #     job_info.get("black_player"),
+                        #     user_info,
+                        # )
                     else:
                         error_msg = result.get("error", "Неизвестная ошибка")
                         await message.answer(f"❌ Ошибка при анализе: {error_msg}")
