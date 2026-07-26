@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ cabinet_title|default('Мои карточки') }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         html,
@@ -445,6 +446,37 @@
 
         .label-filter-select:focus {
             border-color: #5f8fbd;
+        }
+
+        .label-filter-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .label-scroll-bottom-btn {
+            display: none;
+            width: 38px;
+            height: 38px;
+            border: 1px solid #4a4a4a;
+            border-radius: 10px;
+            background: #2d2d2d;
+            color: #ddd;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            font-size: 0.95rem;
+            line-height: 1;
+        }
+
+        .label-scroll-bottom-btn.is-visible {
+            display: inline-flex;
+        }
+
+        .label-scroll-bottom-btn:active {
+            background: #3a3a3a;
         }
 
         .label-presets-open-btn {
@@ -1816,8 +1848,14 @@
                 <select id="label-filter" class="label-filter-select" title="Фильтр по метке">
                     <option value="">Все метки</option>
                 </select>
-                <button id="label-presets-open-btn" class="label-presets-open-btn" type="button"
-                    title="Открыть пресеты меток" aria-label="Открыть пресеты меток">Пресеты</button>
+                <div class="label-filter-actions">
+                    <button id="scroll-to-bottom-btn" class="label-scroll-bottom-btn" type="button"
+                        title="В низ списка" aria-label="В низ списка">
+                        <i class="fa fa-arrow-down" aria-hidden="true"></i>
+                    </button>
+                    <button id="label-presets-open-btn" class="label-presets-open-btn" type="button"
+                        title="Открыть пресеты меток" aria-label="Открыть пресеты меток">Пресеты</button>
+                </div>
             </div>
         </div>
         <div id="err" class="err" style="display:none;"></div>
@@ -2194,6 +2232,7 @@
             var statusFilter = document.getElementById('status-filter');
             var labelFilterWrap = document.getElementById('label-filter-wrap');
             var labelFilter = document.getElementById('label-filter');
+            var scrollToBottomBtn = document.getElementById('scroll-to-bottom-btn');
             var labelPresetsOpenBtn = document.getElementById('label-presets-open-btn');
             var labelPresetsModalCabinet = document.getElementById('labelPresetsModalCabinet');
             var labelPresetsModalCabinetOverlay = document.getElementById('labelPresetsModalCabinetOverlay');
@@ -3629,6 +3668,22 @@
                         renderCards();
                     });
                 }
+                if (scrollToBottomBtn) {
+                    scrollToBottomBtn.addEventListener('click', function () {
+                        var lastCard = gridEl && gridEl.lastElementChild;
+                        if (lastCard && typeof lastCard.scrollIntoView === 'function') {
+                            lastCard.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                            return;
+                        }
+                        window.scrollTo({
+                            top: Math.max(
+                                document.documentElement.scrollHeight || 0,
+                                document.body.scrollHeight || 0
+                            ),
+                            behavior: 'smooth'
+                        });
+                    });
+                }
                 if (labelPresetsOpenBtn) {
                     labelPresetsOpenBtn.addEventListener('click', openLabelPresetsModalCabinet);
                 }
@@ -4308,6 +4363,7 @@
                     if (sendSelectedBtn) sendSelectedBtn.classList.add('is-visible');
                     if (generateLinkBtn) generateLinkBtn.classList.add('is-visible');
                     if (quickSelectInput) quickSelectInput.classList.add('is-visible');
+                    if (scrollToBottomBtn) scrollToBottomBtn.classList.add('is-visible');
                     if (labelPresetsOpenBtn) labelPresetsOpenBtn.classList.add('is-visible');
                 }
 
