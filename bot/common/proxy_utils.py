@@ -11,8 +11,11 @@ _VALID_PROXY_SCHEMES = frozenset({"http", "https", "socks4", "socks5", "socks5h"
 
 def normalize_proxy_url(url: str) -> str | None:
     """
-    Нормализует URL прокси для aiohttp-socks.
+    Нормализует URL прокси для aiohttp-socks / aiogram.
     Без схемы добавляет socks5:// (user:pass@host:port).
+
+    socks5h → socks5: aiohttp-socks не принимает схему socks5h,
+    а aiogram AiohttpSession и так ставит rdns=True (DNS через прокси).
     """
     raw = str(url or "").strip()
     if not raw:
@@ -27,6 +30,10 @@ def normalize_proxy_url(url: str) -> str | None:
         return None
     if parsed.port is None:
         return None
+
+    # parse_proxy_url() в aiohttp-socks принимает только socks4/socks5/http/https
+    if scheme == "socks5h":
+        candidate = urlunparse(parsed._replace(scheme="socks5"))
     return candidate
 
 
