@@ -55,6 +55,15 @@ async def make_admin(message: Message, session_without_commit):
         user.role = User.Role.ADMIN.value
         await session_without_commit.commit()
 
+        try:
+            from bot.init import set_admin_commands_for_user
+
+            await set_admin_commands_for_user(user_id)
+        except Exception as cmd_err:
+            logger.warning(
+                f"Не удалось установить admin-команды для {user_id}: {cmd_err}"
+            )
+
         await message.answer(f"Пользователь с ID {user_id} теперь администратор.")
     except Exception as e:
         logger.error(f"Ошибка при выполнении команды /makeadmin: {e}")

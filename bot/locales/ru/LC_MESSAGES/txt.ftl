@@ -5,6 +5,7 @@ keyboard-user-reply-autoanalyze = 🔮 Анализ
 keyboard-user-reply-profile = 🧍‍♂️ Профиль
 keyboard-user-reply-short_board_view = 📊 Плеер
 keyboard-admin-reply-admin_panel = Админпанель
+keyboard-admin-reply-fab_admin = 🖥 Веб-админка
 keyboard-user-reply-hint_viewer = 👁️ Ошибки
 keyboard-user-reply-pokaz = 🎯 Позиция
 keyboard-user-reply-cards_cabinet = 🗂️ Карточки

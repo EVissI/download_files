@@ -28,14 +28,47 @@ from bot.common.telegram_failover_session import (
 from bot.db.redis import redis_client
 
 setup_logger("bot")
-from aiogram.types import BotCommand, BotCommandScopeDefault
+from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
 from bot.config import translator_hub
+from bot.db.database import async_session_maker
+from bot.db.dao import UserDAO
+from bot.db.models import User
+from bot.db.schemas import SUser
 from loguru import logger
 
 
+DEFAULT_BOT_COMMANDS = [
+    BotCommand(command="start", description="Start button"),
+]
+ADMIN_BOT_COMMANDS = DEFAULT_BOT_COMMANDS + [
+    BotCommand(command="admin_menu", description="Веб-админка"),
+]
+
+
+async def set_admin_commands_for_user(user_id: int) -> None:
+    """Показывает /admin_menu в меню Telegram только этому админу."""
+    await bot.set_my_commands(
+        ADMIN_BOT_COMMANDS,
+        scope=BotCommandScopeChat(chat_id=user_id),
+    )
+
+
 async def set_commands():
-    commands = [BotCommand(command="start", description="Start button")]
-    await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+    await bot.set_my_commands(DEFAULT_BOT_COMMANDS, scope=BotCommandScopeDefault())
+    try:
+        async with async_session_maker() as session:
+            admin_users = await UserDAO(session).find_all(
+                filters=SUser(role=User.Role.ADMIN.value)
+            )
+        for admin_user in admin_users:
+            try:
+                await set_admin_commands_for_user(int(admin_user.id))
+            except Exception as e:
+                logger.warning(
+                    f"Не удалось установить admin-команды для {admin_user.id}: {e}"
+                )
+    except Exception as e:
+        logger.warning(f"Не удалось загрузить админов для set_my_commands: {e}")
 
 
 def setup_rq_maintenance_scheduler():

@@ -32,9 +32,9 @@ class AdminKeyboard:
         return kb.as_markup(resize_keyboard=True)
 
     @staticmethod
-    def get_inline_admin_web(chat_id: int) -> InlineKeyboardMarkup:
+    def get_inline_admin_web(chat_id: int | None = None) -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
-        admin_url = f"{settings.MINI_APP_URL}/admin/login"
+        admin_url = f"{settings.MINI_APP_URL.rstrip('/')}/admin/login"
         kb.button(text="🚀 Войти в Админ-панель", web_app=WebAppInfo(url=admin_url))
-        kb.adjust(1)    
+        kb.adjust(1)
         return kb.as_markup()

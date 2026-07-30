@@ -171,6 +171,8 @@ class KeyboardUser:
 class KeyboardAdminReply:
     @staticmethod
     def admin_panel() -> Literal["""Admin Panel"""]: ...
+    @staticmethod
+    def fab_admin() -> Literal["""🖥 Web Admin"""]: ...
 
 class KeyboardAdmin:
     reply: KeyboardAdminReply

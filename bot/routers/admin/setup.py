@@ -1,5 +1,5 @@
-﻿from aiogram import Router,F
-from aiogram.filters import StateFilter
+﻿from aiogram import Router, F
+from aiogram.filters import Command, StateFilter
 from aiogram.types import Message
 from bot.common.filters.role_filter import RoleFilter
 from bot.common.filters.user_info import UserInfo
@@ -44,14 +44,19 @@ async def handle_admin_panel(message: Message, state: FSMContext):
     Handles the admin panel command from the main keyboard.
     """
     await message.answer(
-        "Выберите раздел или используйте кнопку ниже для входа в веб-админку:",
-        reply_markup=AdminKeyboard.get_inline_admin_web(message.from_user.id)
-    )
-    await message.answer(
         "Разделы управления:",
         reply_markup=AdminKeyboard.build()
     )
     await state.set_state(GeneralStates.admin_panel)
+
+
+@admin_setup_router.message(Command("admin_menu"))
+async def handle_admin_menu_command(message: Message):
+    """Открывает веб-админку (миниапп). Доступна только админам."""
+    await message.answer(
+        "Откройте веб-админку по кнопке ниже:",
+        reply_markup=AdminKeyboard.get_inline_admin_web(message.from_user.id),
+    )
 
 @admin_setup_router.message(F.text == AdminKeyboard.get_kb_text()['back'], StateFilter(GeneralStates.admin_panel), UserInfo())
 async def handle_admin_back(message: Message, state: FSMContext, i18n: TranslatorRunner, user_info: User):
