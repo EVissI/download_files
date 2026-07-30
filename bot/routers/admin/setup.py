@@ -51,8 +51,14 @@ async def handle_admin_panel(message: Message, state: FSMContext):
 
 
 @admin_setup_router.message(Command("admin_menu"))
-async def handle_admin_menu_command(message: Message):
-    """Открывает веб-админку (миниапп). Доступна только админам."""
+@admin_setup_router.message(
+    F.text.in_(get_all_locales_for_key(translator_hub, "keyboard-admin-reply-fab_admin"))
+)
+async def handle_admin_web_entry(message: Message):
+    """
+    Открывает веб-админку через inline WebApp-кнопку.
+    Reply web_app не подходит: Telegram не передаёт initData из reply-клавиатуры.
+    """
     await message.answer(
         "Откройте веб-админку по кнопке ниже:",
         reply_markup=AdminKeyboard.get_inline_admin_web(message.from_user.id),

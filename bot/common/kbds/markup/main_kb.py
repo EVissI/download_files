@@ -1,8 +1,7 @@
 ﻿
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
-from bot.config import settings
 from bot.db.models import User
 
 from fluentogram import TranslatorRunner
@@ -39,19 +38,13 @@ class MainKeyboard:
 
         is_admin = user_role == User.Role.ADMIN.value
         if is_admin:
-            admin_texts = MainKeyboard.get_admin_kb_text(i18n)
-            kb.add(KeyboardButton(text=admin_texts['admin_panel']))
-            kb.add(
-                KeyboardButton(
-                    text=admin_texts['fab_admin'],
-                    web_app=WebAppInfo(
-                        url=f"{settings.MINI_APP_URL.rstrip('/')}/admin/login"
-                    ),
-                )
-            )
+            for text in MainKeyboard.get_admin_kb_text(i18n).values():
+                kb.add(KeyboardButton(text=text))
 
         # Пользовательские кнопки парами; админ-кнопки — каждая на своей строке
         # (веб-админка под «Админпанель»).
+        # Важно: web_app на ReplyKeyboard не передаёт initData (ограничение Telegram),
+        # поэтому «Веб-админка» — обычная текстовая кнопка → дальше inline WebApp.
         row_sizes: list[int] = [2] * (len(user_texts) // 2)
         if len(user_texts) % 2:
             row_sizes.append(1)
