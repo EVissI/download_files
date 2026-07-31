@@ -126,6 +126,77 @@ def load_analysis_json_from_s3(game_id: str, game_num: str | None = None):
     return json.loads(s3.download_bytes(key).decode("utf-8"))
 
 
+async def build_hint_viewer_result_keyboard(
+    message_dao: MessagesTextsDAO,
+    lang_code: str,
+    game_id: str,
+    red_player: str,
+    black_player: str,
+    user_id: int | None = None,
+) -> InlineKeyboardMarkup:
+    """Кнопки WebApp режимов + статистика; для ROOT_ADMIN — «Анализ матча»."""
+    mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
+    mini_app_url_both_errors = (
+        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
+    )
+    mini_app_url_red_errors = (
+        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
+    )
+    mini_app_url_black_errors = (
+        f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
+    )
+    rows: list[list[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(
+                text=await message_dao.get_text("hint_viewer_all_moves_b", lang_code),
+                web_app=WebAppInfo(url=mini_app_url_all),
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=await message_dao.get_text("hint_viewer_both_errors_b", lang_code),
+                web_app=WebAppInfo(url=mini_app_url_both_errors),
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=await message_dao.get_text(
+                    "hint_viewer_player_error_b",
+                    lang_code,
+                    player=red_player,
+                ),
+                web_app=WebAppInfo(url=mini_app_url_red_errors),
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=await message_dao.get_text(
+                    "hint_viewer_player_error_b",
+                    lang_code,
+                    player=black_player,
+                ),
+                web_app=WebAppInfo(url=mini_app_url_black_errors),
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=await message_dao.get_text("hint_viewer_show_stat", lang_code),
+                callback_data=f"show_stats:{game_id}",
+            ),
+        ],
+    ]
+    if user_id is not None and user_id in settings.ROOT_ADMIN_IDS:
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text="Отправить в Анализ матча",
+                    callback_data=f"save_match_analysis:{game_id}",
+                ),
+            ]
+        )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 from bot.common.rq_queue_maintenance import WORKER_COUNT_CACHE_KEY, get_live_worker_count
 
 WORKER_CACHE_TTL = 3
@@ -616,6 +687,54 @@ async def handle_show_stats(
             except OSError:
                 pass
         await waiting_manager.stop()
+
+
+@hint_viewer_router.callback_query(
+    F.data.startswith("save_match_analysis:"), UserInfo()
+)
+async def handle_save_match_analysis(callback: CallbackQuery, user_info: User):
+    """Админ: сохранить готовый hint-анализ в кабинет «Анализ матча»."""
+    user_id = int(callback.from_user.id)
+    if user_id not in settings.ROOT_ADMIN_IDS:
+        await callback.answer("Только для администраторов", show_alert=True)
+        return
+
+    parts = (callback.data or "").split(":", 1)
+    game_id = parts[1].strip() if len(parts) > 1 else ""
+    if not game_id:
+        await callback.answer("Нет game_id", show_alert=True)
+        return
+
+    await callback.answer("Сохраняю…")
+    try:
+        from bot.routers.match_analysis_router import save_match_analysis_from_game_id
+
+        result = await save_match_analysis_from_game_id(game_id, user_id)
+    except FileNotFoundError:
+        await callback.message.answer(
+            "❌ Анализ не найден в хранилище (истёк или ещё не готов)."
+        )
+        return
+    except Exception as e:
+        logger.exception(f"save_match_analysis failed game_id={game_id}: {e}")
+        await callback.message.answer(f"❌ Ошибка сохранения: {e}")
+        return
+
+    kb = InlineKeyboardBuilder()
+    kb.button(
+        text="Открыть матч",
+        web_app=WebAppInfo(url=result["view_url"]),
+    )
+    kb.button(
+        text="Кабинет «Анализ матча»",
+        web_app=WebAppInfo(url=result["cabinet_url"]),
+    )
+    kb.adjust(1)
+    await callback.message.answer(
+        f"✅ Сохранено в «Анализ матча» #{result['id']}: <b>{result['title']}</b>",
+        parse_mode="HTML",
+        reply_markup=kb.as_markup(),
+    )
 
 
 @hint_viewer_router.callback_query(F.data.startswith("hint_player:"), UserInfo())
@@ -1236,65 +1355,13 @@ async def _notify_batch_file_telegram(
             f"✅ <b>{fname}</b> обработан!\n{red_player} vs {black_player}{next_suffix}",
             parse_mode="HTML",
         )
-        mini_app_url_all = (
-            f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
-        )
-        mini_app_url_both_errors = (
-            f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
-        )
-        mini_app_url_red_errors = (
-            f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
-        )
-        mini_app_url_black_errors = (
-            f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
-        )
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text=await message_dao.get_text(
-                            "hint_viewer_all_moves_b", user_info.lang_code
-                        ),
-                        web_app=WebAppInfo(url=mini_app_url_all),
-                    ),
-                ],
-                [
-                    InlineKeyboardButton(
-                        text=await message_dao.get_text(
-                            "hint_viewer_both_errors_b", user_info.lang_code
-                        ),
-                        web_app=WebAppInfo(url=mini_app_url_both_errors),
-                    ),
-                ],
-                [
-                    InlineKeyboardButton(
-                        text=await message_dao.get_text(
-                            "hint_viewer_player_error_b",
-                            user_info.lang_code,
-                            player=red_player,
-                        ),
-                        web_app=WebAppInfo(url=mini_app_url_red_errors),
-                    ),
-                ],
-                [
-                    InlineKeyboardButton(
-                        text=await message_dao.get_text(
-                            "hint_viewer_player_error_b",
-                            user_info.lang_code,
-                            player=black_player,
-                        ),
-                        web_app=WebAppInfo(url=mini_app_url_black_errors),
-                    ),
-                ],
-                [
-                    InlineKeyboardButton(
-                        text=await message_dao.get_text(
-                            "hint_viewer_show_stat", user_info.lang_code
-                        ),
-                        callback_data=f"show_stats:{game_id}",
-                    ),
-                ],
-            ]
+        keyboard = await build_hint_viewer_result_keyboard(
+            message_dao,
+            user_info.lang_code,
+            game_id,
+            red_player,
+            black_player,
+            user_id=message.from_user.id,
         )
         await message.answer(
             text=await message_dao.get_text(
@@ -1513,67 +1580,13 @@ async def check_job_status(
                             red_player = job_info["red_player"]
                             black_player = job_info["black_player"]
 
-                            mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
-                            mini_app_url_both_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
-                            mini_app_url_red_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=2"
-                            mini_app_url_black_errors = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=3"
-
-                            keyboard = InlineKeyboardMarkup(
-                                inline_keyboard=[
-                                    [
-                                        InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_all_moves_b",
-                                                user_info.lang_code,
-                                            ),
-                                            web_app=WebAppInfo(url=mini_app_url_all),
-                                        ),
-                                    ],
-                                    [
-                                        InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_both_errors_b",
-                                                user_info.lang_code,
-                                            ),
-                                            web_app=WebAppInfo(
-                                                url=mini_app_url_both_errors
-                                            ),
-                                        ),
-                                    ],
-                                    [
-                                        InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_player_error_b",
-                                                user_info.lang_code,
-                                                player=red_player,
-                                            ),
-                                            web_app=WebAppInfo(
-                                                url=mini_app_url_red_errors
-                                            ),
-                                        ),
-                                    ],
-                                    [
-                                        InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_player_error_b",
-                                                user_info.lang_code,
-                                                player=black_player,
-                                            ),
-                                            web_app=WebAppInfo(
-                                                url=mini_app_url_black_errors
-                                            ),
-                                        ),
-                                    ],
-                                    [
-                                        InlineKeyboardButton(
-                                            text=await message_dao.get_text(
-                                                "hint_viewer_show_stat",
-                                                user_info.lang_code,
-                                            ),
-                                            callback_data=f"show_stats:{game_id}",
-                                        ),
-                                    ],
-                                ]
+                            keyboard = await build_hint_viewer_result_keyboard(
+                                message_dao,
+                                user_info.lang_code,
+                                game_id,
+                                red_player,
+                                black_player,
+                                user_id=message.from_user.id,
                             )
 
                             await message.answer(

@@ -4359,11 +4359,7 @@
 
         function updateMatchAnalysisAudioUi() {
             const panel = document.getElementById('matchAnalysisAudioPanel');
-            const saveBtn = document.getElementById('saveToMatchAnalysisBtn');
             const cabinetLink = document.getElementById('openMatchAnalysisCabinetBtn');
-            if (saveBtn) {
-                saveBtn.style.display = matchAnalysisMode ? 'none' : '';
-            }
             if (cabinetLink) {
                 cabinetLink.style.display = matchAnalysisMode ? '' : 'none';
             }
@@ -4387,46 +4383,6 @@
             if (matchAnalysisAudioEl) {
                 matchAnalysisAudioEl.pause();
                 matchAnalysisAudioEl = null;
-            }
-        }
-
-        async function saveCurrentAnalysisToMatchAnalysis() {
-            const initData = getTelegramInitData();
-            if (!initData) {
-                showMessageModal('Нет Telegram initData', 'error');
-                return;
-            }
-            if (!gameId || gameId === 'default') {
-                showMessageModal('Нет game_id для сохранения', 'error');
-                return;
-            }
-            const btn = document.getElementById('saveToMatchAnalysisBtn');
-            if (btn) btn.disabled = true;
-            try {
-                const resp = await fetch('/api/match_analysis/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        init_data: initData,
-                        game_id: gameId,
-                    }),
-                });
-                const payload = await resp.json().catch(() => ({}));
-                if (!resp.ok) {
-                    throw new Error(payload.detail || ('HTTP ' + resp.status));
-                }
-                showMessageModal(
-                    'Сохранено в «Анализ матча» #' + payload.id + ': ' + (payload.title || ''),
-                    'info'
-                );
-                if (payload.view_url && window.Telegram && Telegram.WebApp) {
-                    // остаёмся на текущей странице; URL для кабинета в ответе
-                }
-            } catch (e) {
-                console.error(e);
-                showMessageModal('Ошибка сохранения: ' + (e.message || e), 'error');
-            } finally {
-                if (btn) btn.disabled = false;
             }
         }
 
@@ -4627,20 +4583,6 @@
 
     <!-- Admin button container -->
     <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
-        <button id="saveToMatchAnalysisBtn" onclick="saveCurrentAnalysisToMatchAnalysis()" data-version="{{ cache_timestamp }}" style="
-            padding: 12px 24px;
-            margin: 0 6px 10px 0;
-            background-color: #6f42c1;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        ">
-            Отправить в Анализ матча
-        </button>
         <button id="openMatchAnalysisCabinetBtn" onclick="openMatchAnalysisCabinet()" style="
             display: none;
             padding: 12px 24px;

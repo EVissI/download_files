@@ -138,6 +138,48 @@ def _build_analysis_document(game_id: str, summary: dict[str, Any]) -> dict[str,
     }
 
 
+async def save_match_analysis_from_game_id(
+    game_id: str,
+    user_id: int,
+    *,
+    title: str | None = None,
+    notes: str | None = None,
+) -> dict[str, Any]:
+    """
+    Сохраняет анализ из S3 hints в match_analyses.
+    Возвращает {id, title, view_url, cabinet_url}.
+    """
+    game_id = (game_id or "").strip()
+    if not game_id:
+        raise ValueError("game_id обязателен")
+
+    summary = await asyncio.to_thread(load_analysis_json_from_s3, game_id, None)
+    analysis_doc = await asyncio.to_thread(_build_analysis_document, game_id, summary)
+    resolved_title = (title or "").strip() or _build_title_from_summary(summary, game_id)
+
+    async with async_session_maker() as session:
+        dao = MatchAnalysisDAO(session)
+        row = await dao.add(
+            SMatchAnalysisCreate(
+                title=resolved_title,
+                source_game_id=game_id,
+                created_by_user_id=user_id,
+                notes=notes,
+                analysis=analysis_doc,
+            )
+        )
+        row_id = row.id
+        await session.commit()
+
+    base = settings.MINI_APP_URL.rstrip("/")
+    return {
+        "id": row_id,
+        "title": resolved_title,
+        "view_url": f"{base}/match-analysis-view?id={row_id}&error=0",
+        "cabinet_url": f"{base}/match-analysis-cabinet",
+    }
+
+
 def _find_game_and_move(
     analysis: dict[str, Any], game_number: int, move_index: int
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -250,38 +292,19 @@ async def match_analysis_save(body: MatchAnalysisSaveBody):
         raise HTTPException(status_code=400, detail="game_id обязателен")
 
     try:
-        summary = await asyncio.to_thread(load_analysis_json_from_s3, game_id, None)
-        analysis_doc = await asyncio.to_thread(
-            _build_analysis_document, game_id, summary
+        return await save_match_analysis_from_game_id(
+            game_id,
+            uid,
+            title=body.title,
+            notes=body.notes,
         )
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"match_analysis save load failed game_id={game_id}: {e}")
         raise HTTPException(status_code=500, detail="Не удалось загрузить анализ из S3")
-
-    title = (body.title or "").strip() or _build_title_from_summary(summary, game_id)
-    async with async_session_maker() as session:
-        dao = MatchAnalysisDAO(session)
-        row = await dao.add(
-            SMatchAnalysisCreate(
-                title=title,
-                source_game_id=game_id,
-                created_by_user_id=uid,
-                notes=body.notes,
-                analysis=analysis_doc,
-            )
-        )
-        await session.commit()
-        row_id = row.id
-
-    base = settings.MINI_APP_URL.rstrip("/")
-    return {
-        "id": row_id,
-        "title": title,
-        "view_url": f"{base}/match-analysis-view?id={row_id}&error=0",
-        "cabinet_url": f"{base}/match-analysis-cabinet",
-    }
 
 
 @match_analysis_api_router.post("/api/match_analysis/list")
@@ -329,8 +352,9 @@ async def match_analysis_update_meta(body: MatchAnalysisUpdateMetaBody):
             row.title = title[:255]
         if body.notes is not None:
             row.notes = body.notes
+        out = {"id": row.id, "title": row.title, "notes": row.notes}
         await session.commit()
-        return {"id": row.id, "title": row.title, "notes": row.notes}
+        return out
 
 
 @match_analysis_api_router.post("/api/match_analysis/delete")

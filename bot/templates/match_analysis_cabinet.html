@@ -111,7 +111,7 @@
         function renderItems(items) {
             const root = document.getElementById('list');
             if (!items.length) {
-                root.innerHTML = '<div class="empty">Пока нет сохранённых анализов. Откройте Ошибки и нажмите «Отправить в Анализ матча».</div>';
+                root.innerHTML = '<div class="empty">Пока нет сохранённых анализов. После анализа в Ошибках нажмите «Отправить в Анализ матча» в Telegram.</div>';
                 return;
             }
             root.innerHTML = items.map((it) => {
