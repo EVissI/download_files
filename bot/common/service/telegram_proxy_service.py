@@ -370,9 +370,9 @@ async def send_proxy_test_message(
     from aiogram.client.session.aiohttp import AiohttpSession
     from aiogram.enums import ParseMode
 
-    url = str(proxy_url or "").strip()
+    url = normalize_proxy_url(str(proxy_url or ""))
     if not url:
-        raise ValueError("URL прокси не задан")
+        raise ValueError("URL прокси не задан или некорректен")
 
     recipients = [int(chat_id) for chat_id in chat_ids]
     if not recipients:

@@ -144,6 +144,14 @@ class SContentCardCreate(BaseModel):
     card_pool: Optional[str] = None
 
 
+class SMatchAnalysisCreate(BaseModel):
+    title: str = Field(max_length=255)
+    source_game_id: str = Field(max_length=128)
+    created_by_user_id: Optional[int] = None
+    notes: Optional[str] = None
+    analysis: dict[str, Any]
+
+
 class SUserContentCardCreate(BaseModel):
     user_id: int
     content_card_id: int

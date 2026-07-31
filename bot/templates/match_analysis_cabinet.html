@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="webapp-fullscreen" content="{% if webapp_fullscreen_enabled %}1{% else %}0{% endif %}">
+    <title>Анализ матча</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #1a1a1a;
+            --card: #2d2d2d;
+            --border: #444;
+            --text: #f2f2f2;
+            --muted: #aaa;
+            --accent: #6f42c1;
+            --danger: #c0392b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 16px;
+        }
+        h1 { font-size: 1.35rem; margin: 0 0 12px; }
+        .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 16px; }
+        .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        button, .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        button.danger { background: var(--danger); }
+        button:disabled { opacity: 0.5; cursor: default; }
+        #status { color: var(--muted); margin-bottom: 12px; min-height: 1.2em; }
+        .list { display: flex; flex-direction: column; gap: 10px; }
+        .item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            cursor: pointer;
+            text-align: left;
+        }
+        .item:hover { border-color: var(--accent); }
+        .item-title { font-weight: bold; margin-bottom: 4px; }
+        .item-meta { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
+        .item-actions { margin-top: 8px; display: flex; gap: 8px; }
+        .item-actions button { padding: 6px 10px; font-size: 12px; }
+        .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>Анализ матча</h1>
+    <div class="sub">Сохранённые матчи с аудио-комментариями (только админ)</div>
+    <div class="toolbar">
+        <button type="button" onclick="loadList()">Обновить</button>
+    </div>
+    <div id="status">Загрузка…</div>
+    <div id="list" class="list"></div>
+
+    <script>
+        function getInitData() {
+            try {
+                return (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function setStatus(text) {
+            document.getElementById('status').textContent = text || '';
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function openView(id) {
+            window.location.href = '/match-analysis-view?id=' + encodeURIComponent(id) + '&error=0';
+        }
+
+        async function deleteItem(id, title) {
+            if (!confirm('Удалить «' + title + '» (#' + id + ')?')) return;
+            setStatus('Удаление…');
+            try {
+                const resp = await fetch('/api/match_analysis/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ init_data: getInitData(), id: id }),
+                });
+                const payload = await resp.json().catch(() => ({}));
+                if (!resp.ok) throw new Error(payload.detail || ('HTTP ' + resp.status));
+                await loadList();
+            } catch (e) {
+                setStatus('Ошибка удаления: ' + (e.message || e));
+            }
+        }
+
+        function renderItems(items) {
+            const root = document.getElementById('list');
+            if (!items.length) {
+                root.innerHTML = '<div class="empty">Пока нет сохранённых анализов. Откройте Ошибки и нажмите «Отправить в Анализ матча».</div>';
+                return;
+            }
+            root.innerHTML = items.map((it) => {
+                const players = [it.red_player, it.black_player].filter(Boolean).join(' vs ');
+                const meta = [
+                    '#' + it.id,
+                    players,
+                    it.match_length ? ('матч до ' + it.match_length) : null,
+                    it.games_count != null ? ('игр: ' + it.games_count) : null,
+                    it.audio_count ? ('аудио: ' + it.audio_count) : null,
+                    it.created_at ? it.created_at.replace('T', ' ').slice(0, 19) : null,
+                ].filter(Boolean).join(' · ');
+                return (
+                    '<div class="item" data-id="' + it.id + '">' +
+                    '<div class="item-title">' + escapeHtml(it.title) + '</div>' +
+                    '<div class="item-meta">' + escapeHtml(meta) + '</div>' +
+                    (it.notes ? '<div class="item-meta">' + escapeHtml(it.notes) + '</div>' : '') +
+                    '<div class="item-actions">' +
+                    '<button type="button" onclick="event.stopPropagation(); openView(' + it.id + ')">Открыть</button>' +
+                    '<button type="button" class="danger" onclick="event.stopPropagation(); deleteItem(' + it.id + ', ' + JSON.stringify(it.title) + ')">Удалить</button>' +
+                    '</div></div>'
+                );
+            }).join('');
+            root.querySelectorAll('.item').forEach((el) => {
+                el.addEventListener('click', () => openView(el.getAttribute('data-id')));
+            });
+        }
+
+        async function loadList() {
+            setStatus('Загрузка…');
+            const initData = getInitData();
+            if (!initData) {
+                setStatus('Откройте кабинет через Telegram-команду /match_analysis');
+                return;
+            }
+            try {
+                if (window.Telegram && Telegram.WebApp) {
+                    Telegram.WebApp.ready();
+                    const fsMeta = document.querySelector('meta[name="webapp-fullscreen"]');
+                    if (fsMeta && fsMeta.getAttribute('content') === '1') {
+                        try { Telegram.WebApp.expand(); } catch (e) {}
+                    }
+                }
+                const resp = await fetch('/api/match_analysis/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ init_data: initData }),
+                });
+                const payload = await resp.json().catch(() => ({}));
+                if (!resp.ok) throw new Error(payload.detail || ('HTTP ' + resp.status));
+                renderItems(payload.items || []);
+                setStatus('Найдено: ' + ((payload.items || []).length));
+            } catch (e) {
+                setStatus('Ошибка: ' + (e.message || e));
+                document.getElementById('list').innerHTML = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadList);
+    </script>
+</body>
+</html>

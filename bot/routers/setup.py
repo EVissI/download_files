@@ -16,6 +16,7 @@ from bot.routers.support_reply_router import support_reply_router
 from bot.routers.pokaz_entry_router import pokaz_entry_router
 from bot.routers.cards_cabinet_entry_router import cards_cabinet_entry_router
 from bot.routers.pip_count_cabinet_entry_router import pip_count_cabinet_entry_router
+from bot.routers.match_analysis_entry_router import match_analysis_entry_router
 
 setup_router = Router()
 
@@ -38,5 +39,6 @@ setup_router.include_routers(
     pokaz_router,
     cards_cabinet_entry_router,
     pip_count_cabinet_entry_router,
+    match_analysis_entry_router,
     pokaz_entry_router,
 )

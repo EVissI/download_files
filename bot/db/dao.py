@@ -14,6 +14,7 @@ from bot.db.models import (
     ContentCardFolderItem,
     ContentCardFolderLink,
     ContentCardPool,
+    MatchAnalysis,
     MessagesTexts,
     ServiceType,
     User,
@@ -2115,4 +2116,18 @@ class MessagesTextsDAO(BaseDAO[MessagesTexts]):
             logger.error(
                 f"Ошибка при получении записи MessagesTexts по коду '{code}': {e}"
             )
+            raise
+
+
+class MatchAnalysisDAO(BaseDAO[MatchAnalysis]):
+    model = MatchAnalysis
+
+    async def list_all_ordered(self) -> list[MatchAnalysis]:
+        """Все сохранённые анализы, новые сверху (без тяжёлого analysis в выборке — грузим целиком)."""
+        try:
+            query = select(self.model).order_by(self.model.id.desc())
+            result = await self._session.execute(query)
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при списке MatchAnalysis: {e}")
             raise

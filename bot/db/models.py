@@ -1200,3 +1200,22 @@ class UserContentCardInteractiveStat(Base):
     wrong_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+
+
+class MatchAnalysis(Base):
+    """
+    Сохранённый анализ матча (hint viewer) для кабинета «Анализ матча».
+    analysis — полный JSON: game_info + games[].moves (с optional audioS3Key на ходе).
+    Аудиофайлы лежат в S3 (match_analysis/media/...), в JSON только ключи.
+    """
+
+    __tablename__ = "match_analyses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_game_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    analysis: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="hint-screenshot-font-scale" content="{{ hint_viewer_screenshot_font_scale_percent | default(100) }}">
+    <meta name="match-analysis-mode" content="{% if match_analysis_mode|default(false) %}1{% else %}0{% endif %}">
     <title>Backgammon Game Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
@@ -992,7 +993,19 @@
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
         const error = urlParams.get('error') || '0';
+        const matchAnalysisIdParam = urlParams.get('id') || urlParams.get('match_analysis_id');
+        let matchAnalysisId = matchAnalysisIdParam ? parseInt(matchAnalysisIdParam, 10) : null;
+        if (matchAnalysisId != null && Number.isNaN(matchAnalysisId)) matchAnalysisId = null;
+        const matchAnalysisModeFromServer = (function () {
+            const meta = document.querySelector('meta[name="match-analysis-mode"]');
+            return (meta && meta.getAttribute('content') === '1');
+        })();
+        const matchAnalysisMode = matchAnalysisModeFromServer || !!matchAnalysisId;
+        let matchAnalysisDoc = null;
+        let matchAnalysisTitle = '';
         window.hintViewerIsAdmin = false;
+        window.matchAnalysisMode = matchAnalysisMode;
+        window.matchAnalysisId = matchAnalysisId;
         let hintViewerScreenshotFontScale = (function () {
             const meta = document.querySelector('meta[name="hint-screenshot-font-scale"]');
             const parsed = parseInt(meta?.getAttribute('content') || '100', 10);
@@ -1278,104 +1291,250 @@
         const topBar = document.getElementById('top-bar');
         infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
-        // Загружаем список доступных игр
-        fetch(`/api/analysis/${gameId}`)
-            .then(response => {
+        function getTelegramInitData() {
+            try {
+                return (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function fetchGameJson(gameNum) {
+            if (matchAnalysisDoc) {
+                const g = (matchAnalysisDoc.games || []).find(
+                    (x) => String(x.game_number) === String(gameNum)
+                );
+                if (!g) {
+                    return Promise.reject(new Error('Game not found in match analysis'));
+                }
+                return Promise.resolve({
+                    game_info: g.game_info || {},
+                    moves: g.moves || [],
+                });
+            }
+            return fetch(`/api/analysis/${gameId}?game_num=${gameNum}`).then((response) => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return response.json();
-            })
-            .then(json => {
-                const gameInfo = json.game_info;
-                availableGames = json.games || [];
-                redPlayer = gameInfo.red_player || 'Unknown';
-                blackPlayer = gameInfo.black_player || 'Unknown';
-                invertColors = gameInfo.invert_colors || false;
-                matchLength = gameInfo.match_length || 0;
-                enable_crawford_game_number = parseInt(gameInfo.enable_crawford_game) || null;
-                console.log('enable_crawford_game_number:', enable_crawford_game_number)
-                const scores = gameInfo.scores || {};
-                const redScore = scores.Red || 0;
-                const blackScore = scores.Black || 0;
-                chatId = gameInfo.chat_id || chatId;
-                try { window.hintViewerChatId = chatId; } catch (e) {}
-                matFileName = gameInfo.mat_file_name || '';
-                try { window.hintViewerMatFileName = matFileName; } catch (e) {}
-                hasErrorsInMatch = false;
+            });
+        }
 
-                // Создаем выпадающий список для выбора игры только если это матч
-                if (availableGames.length > 0 && matchLength > 0) {
-                    let selectHtml = '<select id="gameSelect" class="game-select" onchange="loadGame(this.value)">';
-                    selectHtml += '<option value="">Выберите игру</option>';
-                    availableGames.forEach(game => {
-                        selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
-                    });
-                    selectHtml += '</select>';
-                    currentGameNum = parseInt(availableGames[0].game_number);
-                    gameRedScore = scores.Red || 0;
-                    gameBlackScore = scores.Black || 0;
-                    matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
-                    let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
-                    console.log('currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + selectHtml + '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox"><div id="black-pips" class="pips-above-board">0</div></div>';
+        function processLoadedMoves(json) {
+            const gameInfo = json.game_info || {};
 
-                    const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
-                    if (hideInfoCheckbox) {
-                        const savedState = localStorage.getItem('hideInfoCheckbox');
-                        if (savedState === 'true') {
-                            hideInfoCheckbox.checked = true;
-                        }
-                        hideInfoCheckbox.addEventListener('change', () => {
-                            localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
-                        });
+            data = (json.moves || [])
+                .map((item, idx) => {
+                    const copy = Object.assign({}, item);
+                    copy._moveIndex = idx;
+                    return copy;
+                })
+                .filter((item) => item.turn !== undefined || item.action === 'win');
+            data = data.filter(
+                (it) =>
+                    (Array.isArray(it.moves) ||
+                        it.action === 'win' ||
+                        it.action === 'double' ||
+                        it.action === 'take') &&
+                    it.action !== 'pass'
+            );
+
+            current = 0;
+            dataLoaded = true;
+
+            data.forEach((item) => {
+                if (item.hints && item.hints.length > 0) {
+                    const firstEq = item.hints[0].eq;
+                    const madeHint = item.hints.find(
+                        (h) =>
+                            h.move &&
+                            h.move.replace(/\*/g, '') ===
+                                (item.gnu_move || '').trim().replace(/\*/g, '')
+                    );
+                    if (madeHint) {
+                        const diff = firstEq - madeHint.eq;
+                        item.is_error = diff >= eqThreshold;
+                    } else {
+                        item.is_error = false;
                     }
-
-                    // Автоматически загружаем первую игру
-                    if (availableGames.length > 0) {
-                        loadGame(availableGames[0].game_number);
-                    }
-                } else if (availableGames.length > 0) {
-                    matchInfoDiv.innerHTML = "Манигейм";
-                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
-
-                    const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
-                    if (hideInfoCheckbox) {
-                        const savedState = localStorage.getItem('hideInfoCheckbox');
-                        if (savedState === 'true') {
-                            hideInfoCheckbox.checked = true;
-                        }
-                        hideInfoCheckbox.addEventListener('change', () => {
-                            localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
-                        });
-                    }
-
-                    // Автоматически загружаем единственную игру
-                    loadGame(availableGames[0].game_number);
                 } else {
-                    matchInfoDiv.innerHTML = "";
-                    playersInfoDiv.innerHTML = "";
-                    topBar.innerHTML = '<span id="crawfordLabel" style="visibility: hidden;"></span>' + '<input type="checkbox" id="hideInfoCheckbox">' + '<div id="black-pips" class="pips-above-board">0</div>';
-
-                    const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
-                    if (hideInfoCheckbox) {
-                        const savedState = localStorage.getItem('hideInfoCheckbox');
-                        if (savedState === 'true') {
-                            hideInfoCheckbox.checked = true;
-                        }
-                        hideInfoCheckbox.addEventListener('change', () => {
-                            localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
-                        });
-                    }
-
-                    infoDiv.innerHTML = '<div class="error">No games found in this analysis.</div>';
+                    item.is_error = false;
                 }
+                const hasCubeError =
+                    (item.action === 'double' ||
+                        item.action === 'take' ||
+                        item.action === 'drop') &&
+                    item.is_best_move_cube === false;
+                const hasMoveError =
+                    Array.isArray(item.moves) &&
+                    item.moves.length > 0 &&
+                    item.is_best_move === false &&
+                    item.is_error;
+
+                item.is_visible =
+                    error === '0' ||
+                    (error === '1' &&
+                        (hasMoveError ||
+                            hasCubeError ||
+                            (item.action === 'win' && item.is_error))) ||
+                    (error === '2' &&
+                        ((item.player_name === redPlayer &&
+                            (hasMoveError || hasCubeError)) ||
+                            (item.action === 'win' && item.is_error))) ||
+                    (error === '3' &&
+                        ((item.player_name === blackPlayer &&
+                            (hasMoveError || hasCubeError)) ||
+                            (item.action === 'win' && item.is_error)));
+            });
+
+            return gameInfo;
+        }
+
+        function bootstrapAnalysisSummary(json) {
+            const gameInfo = json.game_info || {};
+            availableGames = json.games || [];
+            if (matchAnalysisDoc) {
+                availableGames = (matchAnalysisDoc.games || []).map((g) => ({
+                    game_number: g.game_number,
+                }));
+            }
+            redPlayer = gameInfo.red_player || 'Unknown';
+            blackPlayer = gameInfo.black_player || 'Unknown';
+            invertColors = gameInfo.invert_colors || false;
+            matchLength = gameInfo.match_length || 0;
+            enable_crawford_game_number = parseInt(gameInfo.enable_crawford_game) || null;
+            const scores = gameInfo.scores || {};
+            chatId = gameInfo.chat_id || chatId;
+            try {
+                window.hintViewerChatId = chatId;
+            } catch (e) {}
+            matFileName = gameInfo.mat_file_name || matchAnalysisTitle || '';
+            try {
+                window.hintViewerMatFileName = matFileName;
+            } catch (e) {}
+            hasErrorsInMatch = false;
+            return scores;
+        }
+
+        function startAnalysisBootstrap(json) {
+            const scores = bootstrapAnalysisSummary(json);
+            const redScore = scores.Red || 0;
+            const blackScore = scores.Black || 0;
+
+            if (availableGames.length > 0 && matchLength > 0) {
+                let selectHtml = '<select id="gameSelect" class="game-select" onchange="loadGame(this.value)">';
+                selectHtml += '<option value="">Выберите игру</option>';
+                availableGames.forEach((game) => {
+                    selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
+                });
+                selectHtml += '</select>';
+                currentGameNum = parseInt(availableGames[0].game_number);
+                gameRedScore = scores.Red || 0;
+                gameBlackScore = scores.Black || 0;
+                matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
+                playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
+                let crawfordVisibility =
+                    enable_crawford_game_number &&
+                    currentGameNum === enable_crawford_game_number
+                        ? 'visible'
+                        : 'hidden';
+                topBar.innerHTML =
+                    '<span id="crawfordLabel" style="visibility: ' +
+                    crawfordVisibility +
+                    ';">Кроуфорд</span>' +
+                    selectHtml +
+                    '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox"><div id="black-pips" class="pips-above-board">0</div></div>';
+
+                const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                if (hideInfoCheckbox) {
+                    const savedState = localStorage.getItem('hideInfoCheckbox');
+                    if (savedState === 'true') {
+                        hideInfoCheckbox.checked = true;
+                    }
+                    hideInfoCheckbox.addEventListener('change', () => {
+                        localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                    });
+                }
+
+                if (availableGames.length > 0) {
+                    loadGame(availableGames[0].game_number);
+                }
+            } else if (availableGames.length > 0) {
+                currentGameNum = parseInt(availableGames[0].game_number);
+                gameRedScore = redScore;
+                gameBlackScore = blackScore;
+                matchInfoDiv.innerHTML = 'Манигейм';
+                playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
+                topBar.innerHTML =
+                    '<span id="crawfordLabel" style="visibility: hidden;"></span>' +
+                    '<input type="checkbox" id="hideInfoCheckbox">' +
+                    '<div id="black-pips" class="pips-above-board">0</div>';
+                const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                if (hideInfoCheckbox) {
+                    const savedState = localStorage.getItem('hideInfoCheckbox');
+                    if (savedState === 'true') {
+                        hideInfoCheckbox.checked = true;
+                    }
+                    hideInfoCheckbox.addEventListener('change', () => {
+                        localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                    });
+                }
+                loadGame(availableGames[0].game_number);
+            } else {
+                matchInfoDiv.innerHTML = '';
+                playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
+                topBar.innerHTML =
+                    '<span id="crawfordLabel" style="visibility: hidden;"></span>' +
+                    '<input type="checkbox" id="hideInfoCheckbox">' +
+                    '<div id="black-pips" class="pips-above-board">0</div>';
+                infoDiv.innerHTML = '<div class="loading">Нет игр в анализе</div>';
+            }
+            updateMatchAnalysisAudioUi();
+        }
+
+        // Загружаем список доступных игр (S3 hints или сохранённый MatchAnalysis)
+        const analysisBootstrapPromise = matchAnalysisMode && matchAnalysisId
+            ? fetch('/api/match_analysis/fetch', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      init_data: getTelegramInitData(),
+                      id: matchAnalysisId,
+                  }),
+              }).then(async (response) => {
+                  if (!response.ok) {
+                      const err = await response.json().catch(() => ({}));
+                      throw new Error(err.detail || `HTTP ${response.status}`);
+                  }
+                  return response.json();
+              }).then((payload) => {
+                  matchAnalysisDoc = payload.analysis || {};
+                  matchAnalysisTitle = payload.title || '';
+                  window.matchAnalysisId = matchAnalysisId;
+                  return {
+                      game_info: matchAnalysisDoc.game_info || {},
+                      games: (matchAnalysisDoc.games || []).map((g) => ({
+                          game_number: g.game_number,
+                      })),
+                  };
+              })
+            : fetch(`/api/analysis/${gameId}`).then((response) => {
+                  if (!response.ok) {
+                      throw new Error(`HTTP error! status: ${response.status}`);
+                  }
+                  return response.json();
+              });
+
+        analysisBootstrapPromise
+            .then((json) => {
+                startAnalysisBootstrap(json);
             })
-            .catch(error => {
-                console.error('Error loading games list:', error);
-                infoDiv.innerHTML = '<div class="error">Error loading game data. Please check the game ID and try again.</div>';
+            .catch((err) => {
+                console.error('Error loading analysis:', err);
+                infoDiv.innerHTML =
+                    '<div class="loading">Ошибка загрузки анализа: ' +
+                    (err.message || err) +
+                    '</div>';
             });
 
         function loadGame(gameNum) {
@@ -1398,67 +1557,23 @@
                 }
                 infoDiv.innerHTML = '<div class="loading">Loading game data...</div>';
 
-                fetch(`/api/analysis/${gameId}?game_num=${gameNum}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
+                fetchGameJson(gameNum)
                     .then(json => {
-                        const gameInfo = json.game_info;
+                        const gameInfo = processLoadedMoves(json);
 
-                        data = json.moves.filter(item => item.turn !== undefined || item.action === 'win');
-                        data = data.filter(it => ((Array.isArray(it.moves)) || it.action === 'win' || it.action === 'double' || it.action === 'take') && it.action !== 'pass');
-
-                        // Сбросить current при загрузке новой игры
-                        current = 0;
-                        dataLoaded = true;
-
-                        // Добавьте поле is_visible
-                        data.forEach(item => {
-                            if (item.hints && item.hints.length > 0) {
-                                const firstEq = item.hints[0].eq;
-                                const madeHint = item.hints.find(h => h.move && h.move.replace(/\*/g, '') === item.gnu_move.trim().replace(/\*/g, ''));
-                                if (madeHint) {
-                                    const diff = firstEq - madeHint.eq;
-                                    item.is_error = diff >= eqThreshold;
-                                } else {
-                                    item.is_error = false;
-                                }
-                            } else {
-                                item.is_error = false;
-                            }
-                            // Определяем, есть ли ошибка по кубу
-                            const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') && 
-                                                item.is_best_move_cube === false;
-                            // Определяем, есть ли ошибка по ходу
-                            const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) && 
-                                               item.is_best_move === false && item.is_error;
-                            
-                            item.is_visible = (error === '0') ||
-                                (error === '1' && (hasMoveError || hasCubeError || (item.action === 'win' && item.is_error))) ||
-                                (error === '2' && ((item.player_name === redPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error))) ||
-                                (error === '3' && ((item.player_name === blackPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error)));
-                        });
-
-                        // Проверить, есть ли видимые ходы помимо win
                         const hasNonWinVisible = data.some(item => item.is_visible && item.action !== 'win');
                         if (hasNonWinVisible) {
                             hasErrorsInMatch = true;
                         } else if (error !== '0') {
-                            // Автоматически перейти к следующей игре
                             const nextGame = availableGames.find(g => g.game_number > currentGameNum);
                             if (nextGame) {
                                 loadGame(nextGame.game_number);
                             } else {
-                                // Конец матча, проверить, были ли ошибки в матче
                                 if (!hasErrorsInMatch) {
                                     showMessageModal('В матче нет ошибок', 'info');
                                 }
                             }
                         }
-
 
                         const gameScores = gameInfo.scores || {};
                         gameRedScore = gameScores.Red || 0;
@@ -1470,7 +1585,6 @@
                             playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
                         }
                         let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
-                        console.log('loadGame currentGameNum:', currentGameNum, 'enable_crawford_game_number:', enable_crawford_game_number, 'crawfordVisibility:', crawfordVisibility);
                         topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div class="right-group">' + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div></div>';
 
                         const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
@@ -1496,7 +1610,6 @@
                             });
                         }
 
-                        // Инициализация настроек из localStorage для модального окна
                         const initSettingsFromLocalStorage = () => {
                             const skipAnimState = localStorage.getItem('skipAnimationCheckbox');
                             const skipAnimCheckbox = document.getElementById('skipAnimationCheckbox');
@@ -1621,6 +1734,7 @@
                             if (imagesLoaded === 27) {
                                 render(current, invertColors);
                                 updateButtons();
+                                updateMatchAnalysisAudioUi();
                                 infoDiv.innerHTML = '';
                                 // Auto-select move hints
                                 moveHintsTable.classList.add('active');
@@ -1631,6 +1745,7 @@
                         } else {
                             infoDiv.innerHTML = '<div class="error">No game data found for this game.</div>';
                         }
+                        updateMatchAnalysisAudioUi();
                         resolve();
                     })
                     .catch(error => {
@@ -2485,8 +2600,7 @@
                 let finalRedScore, finalBlackScore;
                 if (nextGame) {
                     // Загрузить scores из файла следующей игры
-                    fetch(`/api/analysis/${gameId}?game_num=${nextGame.game_number}`)
-                        .then(response => response.json())
+                    fetchGameJson(nextGame.game_number)
                         .then(json => {
                             const nextScores = json.game_info.scores || {};
                             finalRedScore = nextScores.Red || 0;
@@ -3153,8 +3267,7 @@
                 let finalRedScore, finalBlackScore;
                 if (nextGame) {
                     // Загрузить scores из файла следующей игры
-                    fetch(`/api/analysis/${gameId}?game_num=${nextGame.game_number}`)
-                        .then(response => response.json())
+                    fetchGameJson(nextGame.game_number)
                         .then(json => {
                             const nextScores = json.game_info.scores || {};
                             finalRedScore = nextScores.Red || 0;
@@ -3439,6 +3552,7 @@
                 prevBtn.disabled = true;
                 nextBtn.disabled = true;
             }
+            updateMatchAnalysisAudioUi();
         }
 
         function takeScreenshot() {
@@ -4042,6 +4156,13 @@
                         if (fontScaleSelect) {
                             fontScaleSelect.value = String(hintViewerScreenshotFontScale);
                         }
+                        if (matchAnalysisMode) {
+                            const pipBtn = document.getElementById('openPipCountCardEditorBtn');
+                            const cardBtn = document.getElementById('openCardEditorBtn');
+                            if (pipBtn) pipBtn.style.display = 'none';
+                            if (cardBtn) cardBtn.style.display = 'none';
+                        }
+                        updateMatchAnalysisAudioUi();
                         console.log('Admin access granted for user:', data.user_id);
                     }
                 } else {
@@ -4200,6 +4321,251 @@
             }
         }
 
+        // ---- Анализ матча: сохранение + аудио на ходе ----
+        let matchAnalysisAudioEl = null;
+        let matchAnalysisMediaRecorder = null;
+        let matchAnalysisRecordChunks = [];
+
+        function buildMatchAnalysisMediaUrl(s3Key) {
+            return '/api/match_analysis/media?key=' + encodeURIComponent(s3Key);
+        }
+
+        function getCurrentMoveAudioMeta() {
+            if (!dataLoaded || !data || current === undefined || !data[current]) {
+                return { moveIndex: null, audioS3Key: null, audioName: null };
+            }
+            const row = data[current];
+            return {
+                moveIndex: typeof row._moveIndex === 'number' ? row._moveIndex : null,
+                audioS3Key: row.audioS3Key || null,
+                audioName: row.audioName || null,
+            };
+        }
+
+        function syncMoveAudioInDoc(gameNumber, moveIndex, audioS3Key, audioName) {
+            if (!matchAnalysisDoc || !Array.isArray(matchAnalysisDoc.games)) return;
+            const g = matchAnalysisDoc.games.find(
+                (x) => String(x.game_number) === String(gameNumber)
+            );
+            if (!g || !Array.isArray(g.moves) || moveIndex == null) return;
+            if (!g.moves[moveIndex]) return;
+            g.moves[moveIndex].audioS3Key = audioS3Key;
+            g.moves[moveIndex].audioName = audioName;
+            if (data && data[current] && data[current]._moveIndex === moveIndex) {
+                data[current].audioS3Key = audioS3Key;
+                data[current].audioName = audioName;
+            }
+        }
+
+        function updateMatchAnalysisAudioUi() {
+            const panel = document.getElementById('matchAnalysisAudioPanel');
+            const saveBtn = document.getElementById('saveToMatchAnalysisBtn');
+            const cabinetLink = document.getElementById('openMatchAnalysisCabinetBtn');
+            if (saveBtn) {
+                saveBtn.style.display = matchAnalysisMode ? 'none' : '';
+            }
+            if (cabinetLink) {
+                cabinetLink.style.display = matchAnalysisMode ? '' : 'none';
+            }
+            if (!panel) return;
+            if (!matchAnalysisMode) {
+                panel.style.display = 'none';
+                return;
+            }
+            panel.style.display = 'block';
+            const meta = getCurrentMoveAudioMeta();
+            const statusEl = document.getElementById('matchAnalysisAudioStatus');
+            const playBtn = document.getElementById('matchAnalysisAudioPlayBtn');
+            const deleteBtn = document.getElementById('matchAnalysisAudioDeleteBtn');
+            if (statusEl) {
+                statusEl.textContent = meta.audioS3Key
+                    ? 'Аудио: ' + (meta.audioName || meta.audioS3Key.split('/').pop())
+                    : 'Аудио не прикреплено';
+            }
+            if (playBtn) playBtn.disabled = !meta.audioS3Key;
+            if (deleteBtn) deleteBtn.disabled = !meta.audioS3Key;
+            if (matchAnalysisAudioEl) {
+                matchAnalysisAudioEl.pause();
+                matchAnalysisAudioEl = null;
+            }
+        }
+
+        async function saveCurrentAnalysisToMatchAnalysis() {
+            const initData = getTelegramInitData();
+            if (!initData) {
+                showMessageModal('Нет Telegram initData', 'error');
+                return;
+            }
+            if (!gameId || gameId === 'default') {
+                showMessageModal('Нет game_id для сохранения', 'error');
+                return;
+            }
+            const btn = document.getElementById('saveToMatchAnalysisBtn');
+            if (btn) btn.disabled = true;
+            try {
+                const resp = await fetch('/api/match_analysis/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        init_data: initData,
+                        game_id: gameId,
+                    }),
+                });
+                const payload = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    throw new Error(payload.detail || ('HTTP ' + resp.status));
+                }
+                showMessageModal(
+                    'Сохранено в «Анализ матча» #' + payload.id + ': ' + (payload.title || ''),
+                    'info'
+                );
+                if (payload.view_url && window.Telegram && Telegram.WebApp) {
+                    // остаёмся на текущей странице; URL для кабинета в ответе
+                }
+            } catch (e) {
+                console.error(e);
+                showMessageModal('Ошибка сохранения: ' + (e.message || e), 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function toggleMatchAnalysisAudioPlay() {
+            const meta = getCurrentMoveAudioMeta();
+            if (!meta.audioS3Key) return;
+            if (matchAnalysisAudioEl && !matchAnalysisAudioEl.paused) {
+                matchAnalysisAudioEl.pause();
+                return;
+            }
+            matchAnalysisAudioEl = new Audio(buildMatchAnalysisMediaUrl(meta.audioS3Key));
+            matchAnalysisAudioEl.play().catch((e) => {
+                console.error(e);
+                showMessageModal('Не удалось воспроизвести аудио', 'error');
+            });
+        }
+
+        function matchAnalysisPickAudioFile() {
+            const input = document.getElementById('matchAnalysisAudioFileInput');
+            if (input) input.click();
+        }
+
+        async function matchAnalysisOnAudioFileSelected(ev) {
+            const file = ev.target && ev.target.files && ev.target.files[0];
+            if (ev.target) ev.target.value = '';
+            if (!file) return;
+            await uploadMatchAnalysisAudioBlob(file, file.name || 'audio.webm');
+        }
+
+        async function uploadMatchAnalysisAudioBlob(blob, filename) {
+            const initData = getTelegramInitData();
+            const meta = getCurrentMoveAudioMeta();
+            if (!matchAnalysisId || meta.moveIndex == null) {
+                showMessageModal('Не выбран ход для аудио', 'error');
+                return;
+            }
+            if (!initData) {
+                showMessageModal('Нет Telegram initData', 'error');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('init_data', initData);
+            fd.append('match_analysis_id', String(matchAnalysisId));
+            fd.append('game_number', String(currentGameNum));
+            fd.append('move_index', String(meta.moveIndex));
+            fd.append('file', blob, filename);
+            try {
+                const resp = await fetch('/api/match_analysis/audio/upload', {
+                    method: 'POST',
+                    body: fd,
+                });
+                const payload = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    throw new Error(payload.detail || ('HTTP ' + resp.status));
+                }
+                syncMoveAudioInDoc(
+                    currentGameNum,
+                    meta.moveIndex,
+                    payload.s3_key,
+                    payload.audio_name
+                );
+                updateMatchAnalysisAudioUi();
+                showMessageModal('Аудио прикреплено', 'info');
+            } catch (e) {
+                console.error(e);
+                showMessageModal('Ошибка загрузки аудио: ' + (e.message || e), 'error');
+            }
+        }
+
+        async function deleteMatchAnalysisAudio() {
+            const initData = getTelegramInitData();
+            const meta = getCurrentMoveAudioMeta();
+            if (!matchAnalysisId || meta.moveIndex == null || !meta.audioS3Key) return;
+            try {
+                const resp = await fetch('/api/match_analysis/audio/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        init_data: initData,
+                        id: matchAnalysisId,
+                        game_number: currentGameNum,
+                        move_index: meta.moveIndex,
+                        delete_s3: true,
+                    }),
+                });
+                const payload = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    throw new Error(payload.detail || ('HTTP ' + resp.status));
+                }
+                syncMoveAudioInDoc(currentGameNum, meta.moveIndex, null, null);
+                updateMatchAnalysisAudioUi();
+            } catch (e) {
+                console.error(e);
+                showMessageModal('Ошибка удаления аудио: ' + (e.message || e), 'error');
+            }
+        }
+
+        async function startMatchAnalysisRecording() {
+            if (matchAnalysisMediaRecorder && matchAnalysisMediaRecorder.state === 'recording') {
+                matchAnalysisMediaRecorder.stop();
+                return;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                matchAnalysisRecordChunks = [];
+                const mime = MediaRecorder.isTypeSupported('audio/webm')
+                    ? 'audio/webm'
+                    : MediaRecorder.isTypeSupported('audio/ogg')
+                      ? 'audio/ogg'
+                      : '';
+                matchAnalysisMediaRecorder = mime
+                    ? new MediaRecorder(stream, { mimeType: mime })
+                    : new MediaRecorder(stream);
+                matchAnalysisMediaRecorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size) matchAnalysisRecordChunks.push(e.data);
+                };
+                matchAnalysisMediaRecorder.onstop = async () => {
+                    stream.getTracks().forEach((t) => t.stop());
+                    const type = matchAnalysisMediaRecorder.mimeType || 'audio/webm';
+                    const blob = new Blob(matchAnalysisRecordChunks, { type });
+                    const ext = type.includes('ogg') ? 'ogg' : type.includes('mp4') ? 'mp4' : 'webm';
+                    const recBtn = document.getElementById('matchAnalysisAudioRecordBtn');
+                    if (recBtn) recBtn.textContent = 'Записать';
+                    await uploadMatchAnalysisAudioBlob(blob, 'voice_' + Date.now() + '.' + ext);
+                    matchAnalysisMediaRecorder = null;
+                };
+                matchAnalysisMediaRecorder.start();
+                const recBtn = document.getElementById('matchAnalysisAudioRecordBtn');
+                if (recBtn) recBtn.textContent = 'Стоп';
+            } catch (e) {
+                console.error(e);
+                showMessageModal('Не удалось начать запись: ' + (e.message || e), 'error');
+            }
+        }
+
+        function openMatchAnalysisCabinet() {
+            window.location.href = '/match-analysis-cabinet';
+        }
+
         // Функция открытия редактора контента
         async function openCardEditor() {
             if (typeof contentEditor !== 'undefined') {
@@ -4261,6 +4627,34 @@
 
     <!-- Admin button container -->
     <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
+        <button id="saveToMatchAnalysisBtn" onclick="saveCurrentAnalysisToMatchAnalysis()" data-version="{{ cache_timestamp }}" style="
+            padding: 12px 24px;
+            margin: 0 6px 10px 0;
+            background-color: #6f42c1;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        ">
+            Отправить в Анализ матча
+        </button>
+        <button id="openMatchAnalysisCabinetBtn" onclick="openMatchAnalysisCabinet()" style="
+            display: none;
+            padding: 12px 24px;
+            margin: 0 6px 10px 0;
+            background-color: #6f42c1;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        ">
+            Кабинет «Анализ матча»
+        </button>
         <button id="openPipCountCardEditorBtn" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}" style="
             padding: 12px 24px;
             margin-right: 10px;
@@ -4290,6 +4684,17 @@
         " onmouseover="this.style.backgroundColor='#218838'" onmouseout="this.style.backgroundColor='#28a745'">
             Открыть редактор карточек
         </button>
+        <div id="matchAnalysisAudioPanel" style="display:none; margin: 16px auto; max-width: 520px; background:#2d2d2d; border:1px solid #555; border-radius:8px; padding:12px; text-align:left;">
+            <div style="font-weight:bold; margin-bottom:8px;">Аудио-комментарий к ходу</div>
+            <div id="matchAnalysisAudioStatus" style="margin-bottom:10px; color:#ccc;">Аудио не прикреплено</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <button type="button" id="matchAnalysisAudioPlayBtn" onclick="toggleMatchAnalysisAudioPlay()" disabled style="padding:8px 12px;">🔊 Play</button>
+                <button type="button" onclick="matchAnalysisPickAudioFile()" style="padding:8px 12px;">Прикрепить</button>
+                <button type="button" id="matchAnalysisAudioRecordBtn" onclick="startMatchAnalysisRecording()" style="padding:8px 12px;">Записать</button>
+                <button type="button" id="matchAnalysisAudioDeleteBtn" onclick="deleteMatchAnalysisAudio()" disabled style="padding:8px 12px;">Удалить</button>
+            </div>
+            <input type="file" id="matchAnalysisAudioFileInput" accept="audio/*" style="display:none" onchange="matchAnalysisOnAudioFileSelected(event)">
+        </div>
         <div class="admin-screenshot-font-scale">
             <label for="screenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
             <select id="screenshotFontScaleSelect" onchange="saveHintViewerScreenshotFontScale()">

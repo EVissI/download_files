@@ -18,6 +18,7 @@ class HintS3Storage:
 
     PREFIX = "hints"
     CONTENT_CARDS_MEDIA_PREFIX = "content_cards/media"
+    MATCH_ANALYSIS_MEDIA_PREFIX = "match_analysis/media"
     CABINET_GALLERY_FOLDER = "cabinet_gallery"
 
     def __init__(self):
@@ -94,6 +95,29 @@ class HintS3Storage:
         if not fn or ".." in fn or "/" in fn:
             fn = "file.bin"
         return f"{HintS3Storage.CONTENT_CARDS_MEDIA_PREFIX}/{user_id}/{fn}"
+
+    @staticmethod
+    def match_analysis_media_key(user_id: int, filename: str) -> str:
+        """Аудио/медиа для «Анализ матча»: ``match_analysis/media/{user_id}/{filename}``."""
+        fn = filename.replace("\\", "/").split("/")[-1].strip()
+        if not fn or ".." in fn or "/" in fn:
+            fn = "file.bin"
+        return f"{HintS3Storage.MATCH_ANALYSIS_MEDIA_PREFIX}/{user_id}/{fn}"
+
+    @classmethod
+    def is_match_analysis_media_key(cls, key: str) -> bool:
+        """Публичный ключ медиа анализа матча."""
+        parts = (key or "").strip().split("/")
+        if len(parts) != 4:
+            return False
+        if parts[0] != "match_analysis" or parts[1] != "media":
+            return False
+        if not parts[2].isdigit():
+            return False
+        name = parts[3]
+        if not name or len(name) > 220 or ".." in name:
+            return False
+        return all(c.isalnum() or c in "._-" for c in name)
 
     def put_source_mat(self, game_id: str, local_path: str) -> str:
         """Загружает локальный .mat в hints/{game_id}.mat, возвращает ключ объекта."""

@@ -708,6 +708,7 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
             "cache_timestamp": cache_timestamp,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
             "hint_viewer_screenshot_font_scale_percent": hint_viewer_screenshot_font_scale_percent,
+            "match_analysis_mode": False,
         },
     )
 

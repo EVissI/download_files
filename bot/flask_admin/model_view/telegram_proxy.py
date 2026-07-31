@@ -155,8 +155,14 @@ class TelegramProxyModelView(ModelView):
             )
         except Exception as exc:
             logger.exception("test_proxy id={}: {}", pk, exc)
+            detail = format_telegram_api_error(exc)
+            hint = ""
+            if "Unexpected SOCKS version number" in str(exc):
+                hint = (
+                    " Порт не отвечает протоколом SOCKS5 с этого сервера."
+                )
             flash(
-                f"Прокси «{item.name}» не сработал: {format_telegram_api_error(exc)}",
+                f"Прокси «{item.name}» не сработал: {detail}.{hint}",
                 "danger",
             )
 
