@@ -15,6 +15,7 @@
             --text: #f2f2f2;
             --muted: #aaa;
             --accent: #6f42c1;
+            --danger: #c0392b;
         }
         * { box-sizing: border-box; }
         body {
@@ -58,6 +59,13 @@
             line-height: 1;
         }
         .item-edit:hover { color: var(--accent); background: rgba(111, 66, 193, 0.15); }
+        .item-delete:hover { color: var(--danger); background: rgba(192, 57, 43, 0.15); }
+        .item-actions {
+            display: flex;
+            flex-shrink: 0;
+            gap: 2px;
+            align-items: center;
+        }
         .empty { color: var(--muted); padding: 24px 0; text-align: center; }
         .error { color: #e74c3c; padding: 8px 0; font-size: 0.9rem; }
 
@@ -84,6 +92,13 @@
             margin: 0 0 14px;
             font-size: 1.1rem;
         }
+        .modal p {
+            margin: 0 0 14px;
+            color: var(--muted);
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .modal p strong { color: var(--text); }
         .modal input {
             width: 100%;
             padding: 10px 12px;
@@ -109,6 +124,7 @@
             color: #fff;
         }
         .modal-actions button.primary { background: var(--accent); }
+        .modal-actions button.danger { background: var(--danger); }
         .modal-actions button:disabled { opacity: 0.5; cursor: default; }
     </style>
 </head>
@@ -128,8 +144,20 @@
         </div>
     </div>
 
+    <div id="deleteModal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal">
+            <h2>Удалить матч?</h2>
+            <p>Матч <strong id="deleteModalName"></strong> будет удалён без возможности восстановления.</p>
+            <div class="modal-actions">
+                <button type="button" onclick="closeDeleteModal()">Отмена</button>
+                <button type="button" class="danger" id="deleteConfirmBtn" onclick="confirmDelete()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let renameTargetId = null;
+        let deleteTargetId = null;
         let itemsCache = [];
 
         function getInitData() {
@@ -193,6 +221,49 @@
             document.getElementById('renameModal').classList.remove('open');
         }
 
+        function openDeleteModal(id, event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            const it = itemsCache.find((x) => String(x.id) === String(id));
+            if (!it) return;
+            deleteTargetId = it.id;
+            document.getElementById('deleteModalName').textContent = cardTitle(it);
+            document.getElementById('deleteModal').classList.add('open');
+        }
+
+        function closeDeleteModal() {
+            deleteTargetId = null;
+            document.getElementById('deleteModal').classList.remove('open');
+        }
+
+        async function confirmDelete() {
+            if (deleteTargetId == null) return;
+            const btn = document.getElementById('deleteConfirmBtn');
+            btn.disabled = true;
+            showError('');
+            try {
+                const resp = await fetch('/api/match_analysis/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        init_data: getInitData(),
+                        id: deleteTargetId,
+                    }),
+                });
+                const payload = await resp.json().catch(() => ({}));
+                if (!resp.ok) throw new Error(payload.detail || ('HTTP ' + resp.status));
+                itemsCache = itemsCache.filter((x) => String(x.id) !== String(deleteTargetId));
+                closeDeleteModal();
+                renderItems(itemsCache);
+            } catch (e) {
+                showError('Ошибка удаления: ' + (e.message || e));
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         async function saveRename() {
             if (renameTargetId == null) return;
             const title = (document.getElementById('renameInput').value || '').trim();
@@ -238,20 +309,30 @@
                 return (
                     '<div class="item" data-id="' + it.id + '">' +
                     '<div class="item-title">' + escapeHtml(name) + '</div>' +
+                    '<div class="item-actions">' +
                     '<button type="button" class="item-edit" title="Переименовать" ' +
                     'aria-label="Переименовать" data-edit-id="' + it.id + '">' +
                     '<i class="fa fa-pencil" aria-hidden="true"></i>' +
                     '</button>' +
-                    '</div>'
+                    '<button type="button" class="item-edit item-delete" title="Удалить" ' +
+                    'aria-label="Удалить" data-delete-id="' + it.id + '">' +
+                    '<i class="fa fa-trash" aria-hidden="true"></i>' +
+                    '</button>' +
+                    '</div></div>'
                 );
             }).join('');
 
             root.querySelectorAll('.item').forEach((el) => {
                 el.addEventListener('click', () => openView(el.getAttribute('data-id')));
             });
-            root.querySelectorAll('.item-edit').forEach((btn) => {
+            root.querySelectorAll('.item-edit[data-edit-id]').forEach((btn) => {
                 btn.addEventListener('click', (e) => {
                     openRenameModal(btn.getAttribute('data-edit-id'), e);
+                });
+            });
+            root.querySelectorAll('.item-delete').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    openDeleteModal(btn.getAttribute('data-delete-id'), e);
                 });
             });
         }
@@ -288,12 +369,21 @@
         document.getElementById('renameModal').addEventListener('click', (e) => {
             if (e.target.id === 'renameModal') closeRenameModal();
         });
+        document.getElementById('deleteModal').addEventListener('click', (e) => {
+            if (e.target.id === 'deleteModal') closeDeleteModal();
+        });
         document.getElementById('renameInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 saveRename();
             } else if (e.key === 'Escape') {
                 closeRenameModal();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            if (document.getElementById('deleteModal').classList.contains('open')) {
+                closeDeleteModal();
             }
         });
 
