@@ -24,6 +24,8 @@
             margin: 0 auto;
             padding: 0 20px;
             box-sizing: border-box;
+            /* Колонка = текущая ширина доски; все блоки ниже совпадают с ней */
+            --viewer-col-width: calc(99% * 0.5);
         }
 
         h1 {
@@ -40,12 +42,23 @@
             box-sizing: border-box;
         }
 
+        .board-block,
+        #top-row,
+        .hints-table,
+        .viewer-below-board,
+        .support-container,
+        #adminButtonContainer {
+            width: var(--viewer-col-width);
+            max-width: var(--viewer-col-width);
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+        }
+
         .board-block {
             position: relative;
-            width: calc(99% * 0.5);
-            max-width: calc(99% * 0.5);
-            margin: 1.5rem auto 20px;
-            box-sizing: border-box;
+            margin-top: 1.5rem;
+            margin-bottom: 20px;
             --board-ui-scale: 1;
             --board-point-font-size: calc(30px * var(--board-ui-scale));
             --board-pip-padding-y: calc(3px * var(--board-ui-scale));
@@ -128,7 +141,7 @@
             margin: 0 auto;
             border-collapse: collapse;
             width: 100%;
-            max-width: 800px;
+            max-width: 100%;
             background-color: #333;
             border-radius: 6px;
             overflow: hidden;
@@ -183,12 +196,11 @@
         }
 
         #top-row {
-            margin: 0px 0 10px 0;
+            margin-top: 10px;
+            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
-            margin-top: 10px;
             align-items: center;
-            width: 100%;
         }
 
         #controls {
@@ -636,7 +648,8 @@
             align-items: center;
             justify-content: flex-start;
             gap: 10px;
-            margin: 0 0 20px 0;
+            margin-top: 0;
+            margin-bottom: 20px;
             color: #ccc;
             font-size: 16px;
         }
@@ -946,15 +959,6 @@
             .board-block {
                 margin-top: 2rem;
             }
-
-            #top-row,
-            .hints-table,
-            .screenshot-controls,
-            .support-container {
-                max-width: 960px;
-                margin-left: auto;
-                margin-right: auto;
-            }
         }
 
         @media (min-width: 1024px) {
@@ -963,16 +967,20 @@
             }
         }
 
-        /* Мобильные и планшеты: доска на всю доступную ширину */
+        /* Мобильные и планшеты: доска и все блоки на всю доступную ширину */
         @media (max-width: 1024px) {
             .container {
+                --viewer-col-width: 100%;
                 padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
                 padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
             }
 
-            .board-block {
-                width: 100%;
-                max-width: 100%;
+            .board-block,
+            #top-row,
+            .hints-table,
+            .viewer-below-board,
+            .support-container,
+            #adminButtonContainer {
                 margin-left: 0;
                 margin-right: 0;
             }
@@ -1145,7 +1153,7 @@
 
         <!-- animation-controls перенесены в модальное окно настроек -->
 
-        <div style="display: flex; align-items: center; justify-content: space-between; margin: 20px 0 10px 0;">
+        <div class="viewer-below-board" style="display: flex; align-items: center; justify-content: space-between; margin: 20px 0 10px 0;">
             <div class="settings-container" style="margin: 0;">
                 <button id="settingsBtn" onclick="openSettingsModal()" title="Настройки">⚙️</button>
                 <span>Настройки</span>
@@ -4582,7 +4590,7 @@
     </script>
 
     <!-- Admin button container -->
-    <div id="adminButtonContainer" style="margin: 20px 0; text-align: center; display: none;">
+    <div id="adminButtonContainer" style="margin-top: 20px; margin-bottom: 20px; text-align: center; display: none;">
         <button id="openMatchAnalysisCabinetBtn" onclick="openMatchAnalysisCabinet()" style="
             display: none;
             padding: 12px 24px;
@@ -4626,7 +4634,7 @@
         " onmouseover="this.style.backgroundColor='#218838'" onmouseout="this.style.backgroundColor='#28a745'">
             Открыть редактор карточек
         </button>
-        <div id="matchAnalysisAudioPanel" style="display:none; margin: 16px auto; max-width: 520px; background:#2d2d2d; border:1px solid #555; border-radius:8px; padding:12px; text-align:left;">
+        <div id="matchAnalysisAudioPanel" style="display:none; margin: 16px 0; width: 100%; box-sizing: border-box; background:#2d2d2d; border:1px solid #555; border-radius:8px; padding:12px; text-align:left;">
             <div style="font-weight:bold; margin-bottom:8px;">Аудио-комментарий к ходу</div>
             <div id="matchAnalysisAudioStatus" style="margin-bottom:10px; color:#ccc;">Аудио не прикреплено</div>
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
