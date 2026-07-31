@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="webapp-fullscreen" content="{% if webapp_fullscreen_enabled %}1{% else %}0{% endif %}">
     <title>Анализ матча</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -14,7 +15,6 @@
             --text: #f2f2f2;
             --muted: #aaa;
             --accent: #6f42c1;
-            --danger: #c0392b;
         }
         * { box-sizing: border-box; }
         body {
@@ -25,48 +25,113 @@
             min-height: 100vh;
             padding: 16px;
         }
-        h1 { font-size: 1.35rem; margin: 0 0 12px; }
-        .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 16px; }
-        .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-        button, .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 10px 14px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        button.danger { background: var(--danger); }
-        button:disabled { opacity: 0.5; cursor: default; }
-        #status { color: var(--muted); margin-bottom: 12px; min-height: 1.2em; }
+        h1 { font-size: 1.35rem; margin: 0 0 16px; }
         .list { display: flex; flex-direction: column; gap: 10px; }
         .item {
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 12px 14px;
+            padding: 14px 16px;
             cursor: pointer;
             text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .item:hover { border-color: var(--accent); }
-        .item-title { font-weight: bold; margin-bottom: 4px; }
-        .item-meta { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
-        .item-actions { margin-top: 8px; display: flex; gap: 8px; }
-        .item-actions button { padding: 6px 10px; font-size: 12px; }
+        .item-title {
+            font-weight: bold;
+            font-size: 1rem;
+            flex: 1;
+            min-width: 0;
+            word-break: break-word;
+        }
+        .item-edit {
+            flex-shrink: 0;
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            font-size: 18px;
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            line-height: 1;
+        }
+        .item-edit:hover { color: var(--accent); background: rgba(111, 66, 193, 0.15); }
         .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+        .error { color: #e74c3c; padding: 8px 0; font-size: 0.9rem; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .modal h2 {
+            margin: 0 0 14px;
+            font-size: 1.1rem;
+        }
+        .modal input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: #1a1a1a;
+            color: var(--text);
+            font-size: 16px;
+            margin-bottom: 14px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .modal-actions button {
+            border: none;
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #444;
+            color: #fff;
+        }
+        .modal-actions button.primary { background: var(--accent); }
+        .modal-actions button:disabled { opacity: 0.5; cursor: default; }
     </style>
 </head>
 <body>
     <h1>Анализ матча</h1>
-    <div class="sub">Сохранённые матчи с аудио-комментариями (только админ)</div>
-    <div class="toolbar">
-        <button type="button" onclick="loadList()">Обновить</button>
-    </div>
-    <div id="status">Загрузка…</div>
+    <div id="error" class="error" style="display:none;"></div>
     <div id="list" class="list"></div>
 
+    <div id="renameModal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal">
+            <h2>Название матча</h2>
+            <input type="text" id="renameInput" maxlength="255" autocomplete="off">
+            <div class="modal-actions">
+                <button type="button" onclick="closeRenameModal()">Отмена</button>
+                <button type="button" class="primary" id="renameSaveBtn" onclick="saveRename()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        let renameTargetId = null;
+        let itemsCache = [];
+
         function getInitData() {
             try {
                 return (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || '';
@@ -75,8 +140,15 @@
             }
         }
 
-        function setStatus(text) {
-            document.getElementById('status').textContent = text || '';
+        function showError(text) {
+            const el = document.getElementById('error');
+            if (!text) {
+                el.style.display = 'none';
+                el.textContent = '';
+                return;
+            }
+            el.style.display = 'block';
+            el.textContent = text;
         }
 
         function escapeHtml(s) {
@@ -87,64 +159,108 @@
                 .replace(/"/g, '&quot;');
         }
 
+        function cardTitle(it) {
+            const players = [it.red_player, it.black_player].filter(Boolean).join(' vs ');
+            const t = (it.title && String(it.title).trim()) || '';
+            // Старые сохранения с именем .mat — показываем игроков; переименованные — title
+            if (t && !/\.mat$/i.test(t)) return t;
+            return players || t || ('Матч #' + it.id);
+        }
+
         function openView(id) {
             window.location.href = '/match-analysis-view?id=' + encodeURIComponent(id) + '&error=0';
         }
 
-        async function deleteItem(id, title) {
-            if (!confirm('Удалить «' + title + '» (#' + id + ')?')) return;
-            setStatus('Удаление…');
+        function openRenameModal(id, event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            const it = itemsCache.find((x) => String(x.id) === String(id));
+            if (!it) return;
+            renameTargetId = it.id;
+            const input = document.getElementById('renameInput');
+            input.value = cardTitle(it);
+            document.getElementById('renameModal').classList.add('open');
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 50);
+        }
+
+        function closeRenameModal() {
+            renameTargetId = null;
+            document.getElementById('renameModal').classList.remove('open');
+        }
+
+        async function saveRename() {
+            if (renameTargetId == null) return;
+            const title = (document.getElementById('renameInput').value || '').trim();
+            if (!title) {
+                showError('Название не может быть пустым');
+                return;
+            }
+            const btn = document.getElementById('renameSaveBtn');
+            btn.disabled = true;
+            showError('');
             try {
-                const resp = await fetch('/api/match_analysis/delete', {
+                const resp = await fetch('/api/match_analysis/update_meta', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ init_data: getInitData(), id: id }),
+                    body: JSON.stringify({
+                        init_data: getInitData(),
+                        id: renameTargetId,
+                        title: title,
+                    }),
                 });
                 const payload = await resp.json().catch(() => ({}));
                 if (!resp.ok) throw new Error(payload.detail || ('HTTP ' + resp.status));
-                await loadList();
+                const it = itemsCache.find((x) => String(x.id) === String(renameTargetId));
+                if (it) it.title = payload.title || title;
+                closeRenameModal();
+                renderItems(itemsCache);
             } catch (e) {
-                setStatus('Ошибка удаления: ' + (e.message || e));
+                showError('Ошибка сохранения: ' + (e.message || e));
+            } finally {
+                btn.disabled = false;
             }
         }
 
         function renderItems(items) {
+            itemsCache = items || [];
             const root = document.getElementById('list');
-            if (!items.length) {
-                root.innerHTML = '<div class="empty">Пока нет сохранённых анализов. После анализа в Ошибках нажмите «Отправить в Анализ матча» в Telegram.</div>';
+            if (!itemsCache.length) {
+                root.innerHTML = '<div class="empty">Пока нет сохранённых анализов</div>';
                 return;
             }
-            root.innerHTML = items.map((it) => {
-                const players = [it.red_player, it.black_player].filter(Boolean).join(' vs ');
-                const meta = [
-                    '#' + it.id,
-                    players,
-                    it.match_length ? ('матч до ' + it.match_length) : null,
-                    it.games_count != null ? ('игр: ' + it.games_count) : null,
-                    it.audio_count ? ('аудио: ' + it.audio_count) : null,
-                    it.created_at ? it.created_at.replace('T', ' ').slice(0, 19) : null,
-                ].filter(Boolean).join(' · ');
+            root.innerHTML = itemsCache.map((it) => {
+                const name = cardTitle(it);
                 return (
                     '<div class="item" data-id="' + it.id + '">' +
-                    '<div class="item-title">' + escapeHtml(it.title) + '</div>' +
-                    '<div class="item-meta">' + escapeHtml(meta) + '</div>' +
-                    (it.notes ? '<div class="item-meta">' + escapeHtml(it.notes) + '</div>' : '') +
-                    '<div class="item-actions">' +
-                    '<button type="button" onclick="event.stopPropagation(); openView(' + it.id + ')">Открыть</button>' +
-                    '<button type="button" class="danger" onclick="event.stopPropagation(); deleteItem(' + it.id + ', ' + JSON.stringify(it.title) + ')">Удалить</button>' +
-                    '</div></div>'
+                    '<div class="item-title">' + escapeHtml(name) + '</div>' +
+                    '<button type="button" class="item-edit" title="Переименовать" ' +
+                    'aria-label="Переименовать" data-edit-id="' + it.id + '">' +
+                    '<i class="fa fa-pencil" aria-hidden="true"></i>' +
+                    '</button>' +
+                    '</div>'
                 );
             }).join('');
+
             root.querySelectorAll('.item').forEach((el) => {
                 el.addEventListener('click', () => openView(el.getAttribute('data-id')));
+            });
+            root.querySelectorAll('.item-edit').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    openRenameModal(btn.getAttribute('data-edit-id'), e);
+                });
             });
         }
 
         async function loadList() {
-            setStatus('Загрузка…');
+            showError('');
             const initData = getInitData();
             if (!initData) {
-                setStatus('Откройте кабинет через Telegram-команду /match_analysis');
+                showError('Откройте кабинет через Telegram-команду /match_analysis');
                 return;
             }
             try {
@@ -163,12 +279,23 @@
                 const payload = await resp.json().catch(() => ({}));
                 if (!resp.ok) throw new Error(payload.detail || ('HTTP ' + resp.status));
                 renderItems(payload.items || []);
-                setStatus('Найдено: ' + ((payload.items || []).length));
             } catch (e) {
-                setStatus('Ошибка: ' + (e.message || e));
+                showError('Ошибка: ' + (e.message || e));
                 document.getElementById('list').innerHTML = '';
             }
         }
+
+        document.getElementById('renameModal').addEventListener('click', (e) => {
+            if (e.target.id === 'renameModal') closeRenameModal();
+        });
+        document.getElementById('renameInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveRename();
+            } else if (e.key === 'Escape') {
+                closeRenameModal();
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', loadList);
     </script>

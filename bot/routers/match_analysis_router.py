@@ -100,12 +100,14 @@ def _guess_upload_extension(filename: str | None, content_type: str | None) -> s
 
 def _build_title_from_summary(summary: dict[str, Any], game_id: str) -> str:
     gi = summary.get("game_info") or {}
+    red = (gi.get("red_player") or "").strip()
+    black = (gi.get("black_player") or "").strip()
+    if red or black:
+        return f"{red or 'Red'} vs {black or 'Black'}"[:255]
     mat_name = (gi.get("mat_file_name") or "").strip()
     if mat_name:
         return mat_name[:255]
-    red = (gi.get("red_player") or "Red").strip()
-    black = (gi.get("black_player") or "Black").strip()
-    return f"{red} vs {black} ({game_id})"[:255]
+    return f"Матч {game_id}"[:255]
 
 
 def _build_analysis_document(game_id: str, summary: dict[str, Any]) -> dict[str, Any]:
