@@ -42,6 +42,7 @@ DEFAULT_BOT_COMMANDS = [
 ]
 ADMIN_BOT_COMMANDS = DEFAULT_BOT_COMMANDS + [
     BotCommand(command="admin_menu", description="Веб-админка"),
+    BotCommand(command="card_bg", description="Фон кадров: фото или 0"),
 ]
 
 
