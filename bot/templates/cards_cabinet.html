@@ -783,6 +783,25 @@
             transition: background 0.15s, border-color 0.15s;
         }
 
+        .tile.tile--match {
+            font-size: 0.62rem;
+            font-weight: 600;
+            line-height: 1.2;
+            padding: 10px 6px;
+            text-align: center;
+            white-space: normal;
+            word-break: break-word;
+            overflow: hidden;
+        }
+
+        .wrap.wrap--no-footer {
+            padding-bottom: 16px;
+        }
+
+        .cabinet-footer.is-feature-hidden {
+            display: none;
+        }
+
         .tile:active {
             background: #3d5a80;
             border-color: #5a7aaa;
@@ -2356,6 +2375,20 @@
             </div>
         </div>
     </div>
+    <div id="matchRenameModal" class="link-modal" aria-hidden="true">
+        <div id="matchRenameModalOverlay" class="link-modal__overlay"></div>
+        <div class="link-modal__box" role="dialog" aria-modal="true" aria-labelledby="matchRenameModalTitle">
+            <h3 id="matchRenameModalTitle" class="link-modal__title">Переименовать</h3>
+            <input id="matchRenameModalInput" class="link-modal__input" type="text" maxlength="255"
+                placeholder="Название матча" autocomplete="off">
+            <p id="matchRenameModalMsg" class="link-modal__msg"></p>
+            <div class="link-modal__actions">
+                <button id="matchRenameModalCancelBtn" type="button" class="link-modal__btn">Отмена</button>
+                <button id="matchRenameModalSubmitBtn" type="button"
+                    class="link-modal__btn link-modal__btn--primary">Сохранить</button>
+            </div>
+        </div>
+    </div>
     <div id="folderNameModal" class="link-modal" aria-hidden="true">
         <div id="folderNameModalOverlay" class="link-modal__overlay"></div>
         <div class="link-modal__box" role="dialog" aria-modal="true" aria-labelledby="folderNameModalTitle">
@@ -2491,12 +2524,30 @@
             var initData = '';
             var _urlParams = new URLSearchParams(window.location.search || '');
             var fabToken = _urlParams.get('fab_token') || '';
+            var CABINET_KIND = {{ cabinet_kind|default('content_cards')|tojson }};
+            var IS_MATCH_ANALYSIS = CABINET_KIND === 'match_analysis';
+            var FEATURES = Object.assign({
+                enable_gallery: true,
+                enable_admin_fab: true,
+                enable_search: true,
+                enable_folders: true,
+                enable_labels: true,
+                enable_status_filter: true,
+                enable_shuffle: true,
+                enable_selection: true,
+                enable_bulk_bg: true,
+                enable_interactive_stats: true,
+                enable_create_empty: true,
+            }, {{ cabinet_features|default({})|tojson }} || {});
             var CABINET_POOL = {{ cabinet_pool|default('cards')|tojson }};
             var CABINET_BASE_PATH = {{ cabinet_base_path|default('/cards-cabinet')|tojson }};
             var CABINET_DEFAULT_TITLE = {{ cabinet_title|default('Мои карточки')|tojson }};
             var cabinetStateKey = {{ cabinet_state_key|default('cards_cabinet_state_v1')|tojson }};
             var openHintsStateKey = {{ cabinet_open_hints_key|default('cards_cabinet_open_hints_v1')|tojson }};
             var cabinetConfig = (function () {
+                if (IS_MATCH_ANALYSIS) {
+                    return { mode: 'main' };
+                }
                 var folderToken = _urlParams.get('folder_token') || '';
                 if (folderToken) {
                     return { mode: 'folder', folderToken: folderToken };
@@ -2607,6 +2658,56 @@
             var generateLinkModalCopyBtn = document.getElementById('generateLinkModalCopyBtn');
             var cabinetInteractiveStatsBtn = document.getElementById('cabinet-interactive-stats-btn');
             var cabinetGalleryBtn = document.getElementById('cabinet-gallery-btn');
+            var matchRenameModal = document.getElementById('matchRenameModal');
+            var matchRenameModalOverlay = document.getElementById('matchRenameModalOverlay');
+            var matchRenameModalInput = document.getElementById('matchRenameModalInput');
+            var matchRenameModalMsg = document.getElementById('matchRenameModalMsg');
+            var matchRenameModalCancelBtn = document.getElementById('matchRenameModalCancelBtn');
+            var matchRenameModalSubmitBtn = document.getElementById('matchRenameModalSubmitBtn');
+            var matchRenameTargetId = null;
+
+            function applyCabinetFeatureGating() {
+                function hideEl(el) {
+                    if (el) el.style.display = 'none';
+                }
+                if (!FEATURES.enable_gallery) hideEl(cabinetGalleryBtn);
+                if (!FEATURES.enable_shuffle) hideEl(shuffleCardsBtn);
+                if (!FEATURES.enable_interactive_stats) hideEl(cabinetInteractiveStatsBtn);
+                if (!FEATURES.enable_folders) {
+                    hideEl(manageFoldersBtn);
+                    hideEl(cabinetHomeBtn);
+                    hideEl(cabinetBackToParentBtn);
+                    hideEl(addToFolderBtn);
+                }
+                if (!FEATURES.enable_status_filter) {
+                    hideEl(document.querySelector('.status-filter-wrap'));
+                }
+                if (!FEATURES.enable_labels) {
+                    hideEl(labelFilterWrap);
+                }
+                if (!FEATURES.enable_bulk_bg) {
+                    hideEl(cardBgOpenBtn);
+                }
+                if (!FEATURES.enable_selection) {
+                    hideEl(selectModeBtn);
+                    hideEl(generateLinkBtn);
+                    hideEl(sendSelectedBtn);
+                    hideEl(quickSelectInput);
+                    hideEl(idToggleBtn);
+                    var footer = document.querySelector('.cabinet-footer');
+                    if (footer) footer.classList.add('is-feature-hidden');
+                    var wrapEl = document.querySelector('.wrap');
+                    if (wrapEl) wrapEl.classList.add('wrap--no-footer');
+                }
+                if (!FEATURES.enable_search) {
+                    hideEl(document.querySelector('.search-wrap'));
+                } else if (IS_MATCH_ANALYSIS && searchInput) {
+                    searchInput.removeAttribute('inputmode');
+                    searchInput.removeAttribute('pattern');
+                    searchInput.placeholder = 'Поиск по названию или игрокам';
+                }
+            }
+            applyCabinetFeatureGating();
             var cabinetGalleryModal = document.getElementById('cabinetGalleryModal');
             var cabinetGalleryModalOverlay = document.getElementById('cabinetGalleryModalOverlay');
             var cabinetGalleryModalClose = document.getElementById('cabinetGalleryModalClose');
@@ -2832,7 +2933,9 @@
                     if (!raw) return;
                     var state = JSON.parse(raw);
                     if (searchInput && state && typeof state.search === 'string') {
-                        searchInput.value = state.search.replace(/\D+/g, '');
+                        searchInput.value = IS_MATCH_ANALYSIS
+                            ? state.search
+                            : state.search.replace(/\D+/g, '');
                     }
                     if (statusFilter && state && typeof state.status === 'string') {
                         statusFilter.value = state.status;
@@ -2907,20 +3010,25 @@
                     resolvedInitData ||
                     (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ||
                     '';
-                if (!initData && !fabToken) {
+                if (IS_MATCH_ANALYSIS) {
+                    if (!initData) {
+                        showErr('Откройте кабинет через Telegram-команду /match_analysis');
+                        return;
+                    }
+                } else if (!initData && !fabToken) {
                     showErr('Откройте страницу из Telegram или через FAB-мост.');
                     return;
                 }
                 restoreCabinetState();
 
                 function authPayload(extra) {
-                    var base = { pool: CABINET_POOL };
+                    var base = IS_MATCH_ANALYSIS ? {} : { pool: CABINET_POOL };
                     if (initData) {
                         base.init_data = initData;
                     } else if (fabToken) {
                         base.fab_token = fabToken;
                     }
-                    if (cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
+                    if (!IS_MATCH_ANALYSIS && cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
                         base.folder_token = cabinetConfig.folderToken;
                     }
                     if (extra && typeof extra === 'object') {
@@ -4338,9 +4446,11 @@
 
                 if (searchInput) {
                     searchInput.addEventListener('input', function () {
-                        var digitsOnly = this.value.replace(/\D+/g, '');
-                        if (this.value !== digitsOnly) {
-                            this.value = digitsOnly;
+                        if (!IS_MATCH_ANALYSIS) {
+                            var digitsOnly = this.value.replace(/\D+/g, '');
+                            if (this.value !== digitsOnly) {
+                                this.value = digitsOnly;
+                            }
                         }
                         saveCabinetState();
                         renderCards();
@@ -4487,7 +4597,7 @@
                 }
 
                 function createEmptyContentCard() {
-                    if (!isRootAdminUser) return;
+                    if (!isRootAdminUser || !FEATURES.enable_create_empty) return;
                     showCabinetConfirm('Создать новую пустую карточку?', 'Новая карточка', {
                         confirmLabel: 'Создать',
                     }).then(function (ok) {
@@ -4533,7 +4643,7 @@
                 }
 
                 function deleteContentCard(cardId) {
-                    if (!isRootAdminUser) return;
+                    if (!isRootAdminUser || IS_MATCH_ANALYSIS) return;
                     var cardIdNum = Number(cardId);
                     if (!Number.isFinite(cardIdNum) || cardIdNum <= 0) return;
                     var fromFolder = isCabinetFolderView();
@@ -4583,9 +4693,203 @@
                     });
                 }
 
+                function matchAnalysisCardTitle(row) {
+                    var t = String((row && row.title) || '').trim();
+                    if (t) return t;
+                    var red = String((row && row.red_player) || '').trim();
+                    var black = String((row && row.black_player) || '').trim();
+                    if (red || black) {
+                        return (red || 'Red') + ' vs ' + (black || 'Black');
+                    }
+                    var id = (row && row.content_card_id) != null ? row.content_card_id : '';
+                    return 'Матч #' + id;
+                }
+
+                function truncateMatchTitle(text, maxLen) {
+                    var s = String(text || '');
+                    var max = maxLen || 28;
+                    if (s.length <= max) return s;
+                    return s.slice(0, Math.max(1, max - 1)) + '…';
+                }
+
+                function closeMatchRenameModal() {
+                    matchRenameTargetId = null;
+                    if (matchRenameModal) {
+                        matchRenameModal.classList.remove('is-open');
+                        matchRenameModal.setAttribute('aria-hidden', 'true');
+                    }
+                    if (matchRenameModalMsg) matchRenameModalMsg.textContent = '';
+                    if (matchRenameModalInput) matchRenameModalInput.value = '';
+                }
+
+                function openMatchRenameModal(matchId, currentTitle) {
+                    matchRenameTargetId = Number(matchId);
+                    if (!Number.isFinite(matchRenameTargetId) || matchRenameTargetId <= 0) return;
+                    if (matchRenameModalMsg) matchRenameModalMsg.textContent = '';
+                    if (matchRenameModalInput) {
+                        matchRenameModalInput.value = String(currentTitle || '');
+                    }
+                    if (matchRenameModal) {
+                        matchRenameModal.classList.add('is-open');
+                        matchRenameModal.setAttribute('aria-hidden', 'false');
+                    }
+                    if (matchRenameModalInput) {
+                        setTimeout(function () {
+                            matchRenameModalInput.focus();
+                            matchRenameModalInput.select();
+                        }, 0);
+                    }
+                }
+
+                function saveMatchRename() {
+                    if (matchRenameTargetId == null) return;
+                    var title = matchRenameModalInput
+                        ? String(matchRenameModalInput.value || '').trim()
+                        : '';
+                    if (!title) {
+                        if (matchRenameModalMsg) {
+                            matchRenameModalMsg.textContent = 'Название не может быть пустым';
+                        }
+                        return;
+                    }
+                    if (matchRenameModalSubmitBtn) matchRenameModalSubmitBtn.disabled = true;
+                    if (matchRenameModalMsg) matchRenameModalMsg.textContent = '';
+                    fetch('/api/match_analysis/update_meta', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            init_data: initData,
+                            id: matchRenameTargetId,
+                            title: title,
+                        }),
+                    })
+                        .then(function (r) {
+                            return parseApiJsonResponse(r, 'Не удалось переименовать');
+                        })
+                        .then(function (payload) {
+                            var idStr = String(matchRenameTargetId);
+                            allCards.forEach(function (row) {
+                                if (String(row.content_card_id) === idStr) {
+                                    row.title = (payload && payload.title) || title;
+                                }
+                            });
+                            closeMatchRenameModal();
+                            renderCards();
+                        })
+                        .catch(function (e) {
+                            if (matchRenameModalMsg) {
+                                matchRenameModalMsg.textContent = e.message || String(e);
+                            }
+                        })
+                        .finally(function () {
+                            if (matchRenameModalSubmitBtn) {
+                                matchRenameModalSubmitBtn.disabled = false;
+                            }
+                        });
+                }
+
+                function deleteMatchAnalysis(matchId) {
+                    if (!isRootAdminUser) return;
+                    var matchIdNum = Number(matchId);
+                    if (!Number.isFinite(matchIdNum) || matchIdNum <= 0) return;
+                    showCabinetConfirm(
+                        'Удалить анализ матча #' + matchIdNum + '? Это действие необратимо.',
+                        'Удаление анализа',
+                        { danger: true, confirmLabel: 'Удалить' }
+                    ).then(function (ok) {
+                        if (!ok) return;
+                        fetch('/api/match_analysis/delete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ init_data: initData, id: matchIdNum }),
+                        })
+                            .then(function (r) {
+                                return parseApiJsonResponse(r, 'Не удалось удалить анализ');
+                            })
+                            .then(function () {
+                                removeCardFromLists(matchIdNum);
+                                renderCards();
+                            })
+                            .catch(function (e) {
+                                showCabinetNotice(e.message || String(e), 'Ошибка');
+                            });
+                    });
+                }
+
                 function renderCards() {
                     gridEl.innerHTML = '';
-                    var filter = searchInput ? String(searchInput.value || '') : '';
+                    var filter = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
+
+                    if (IS_MATCH_ANALYSIS) {
+                        var maCards = allCards.filter(function (row) {
+                            if (!filter) return true;
+                            var title = matchAnalysisCardTitle(row).toLowerCase();
+                            var red = String((row && row.red_player) || '').toLowerCase();
+                            var black = String((row && row.black_player) || '').toLowerCase();
+                            var idStr = String((row && row.content_card_id) || '');
+                            return (
+                                title.indexOf(filter) !== -1 ||
+                                red.indexOf(filter) !== -1 ||
+                                black.indexOf(filter) !== -1 ||
+                                idStr.indexOf(filter) !== -1
+                            );
+                        });
+                        if (!maCards.length) {
+                            gridEl.innerHTML = allCards.length
+                                ? '<p class="empty">Ничего не найдено по запросу.</p>'
+                                : '<p class="empty">Пока нет сохранённых анализов</p>';
+                            return;
+                        }
+                        maCards.forEach(function (row) {
+                            var id = row.content_card_id;
+                            var cardIdNum = Number(id);
+                            var fullTitle = matchAnalysisCardTitle(row);
+                            var btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'tile tile--match';
+                            btn.textContent = truncateMatchTitle(fullTitle, 32);
+                            btn.title = fullTitle;
+                            btn.addEventListener('click', function () {
+                                window.location.assign(
+                                    '/match-analysis-view?id=' + encodeURIComponent(String(id)) + '&error=0'
+                                );
+                            });
+                            var tileWrap = document.createElement('div');
+                            tileWrap.className = 'tile-wrap';
+                            var editBtn = document.createElement('button');
+                            editBtn.type = 'button';
+                            editBtn.className = 'tile__edit-notes';
+                            editBtn.title = 'Переименовать';
+                            editBtn.setAttribute('aria-label', 'Переименовать матч #' + id);
+                            editBtn.innerHTML =
+                                '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+                                '<path d="M4 20h4l10.5-10.5a1.4 1.4 0 0 0 0-2L14.5 3.5a1.4 1.4 0 0 0-2 0L3 13v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+                                '<path d="M13.5 5.5l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+                                '</svg>';
+                            editBtn.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                ev.preventDefault();
+                                openMatchRenameModal(cardIdNum, row.title || fullTitle);
+                            });
+                            var delBtn = document.createElement('button');
+                            delBtn.type = 'button';
+                            delBtn.className = 'tile__del';
+                            delBtn.setAttribute('aria-label', 'Удалить матч #' + id);
+                            delBtn.title = 'Удалить анализ';
+                            delBtn.textContent = '×';
+                            delBtn.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                ev.preventDefault();
+                                deleteMatchAnalysis(cardIdNum);
+                            });
+                            tileWrap.appendChild(editBtn);
+                            tileWrap.appendChild(btn);
+                            tileWrap.appendChild(delBtn);
+                            gridEl.appendChild(tileWrap);
+                        });
+                        return;
+                    }
+
                     var statusFilterValue = statusFilter ? String(statusFilter.value || '').toUpperCase() : '';
                     var labelFilterValue = labelFilter ? String(labelFilter.value || '') : '';
                     var sourceCards = shuffledCards && shuffledCards.length ? shuffledCards : allCards;
@@ -4719,7 +5023,7 @@
                             gridEl.appendChild(btn);
                         }
                     });
-                    if (isRootAdminUser) {
+                    if (isRootAdminUser && FEATURES.enable_create_empty) {
                         appendCreateCardTile();
                     }
                 }
@@ -5100,17 +5404,40 @@
 
                 function applyRootAdminCabinetUi() {
                     if (!isRootAdminUser) return;
-                    if (adminFabBtn) adminFabBtn.classList.add('is-visible');
-                    if (manageFoldersBtn) manageFoldersBtn.classList.add('is-visible');
-                    if (addToFolderBtn) addToFolderBtn.classList.add('is-visible');
-                    if (selectModeBtn) selectModeBtn.classList.add('is-visible');
-                    if (sendSelectedBtn) sendSelectedBtn.classList.add('is-visible');
-                    if (generateLinkBtn) generateLinkBtn.classList.add('is-visible');
-                    if (quickSelectInput) quickSelectInput.classList.add('is-visible');
-                    if (labelFilterWrap) labelFilterWrap.classList.add('is-visible');
-                    if (cardBgOpenBtn) cardBgOpenBtn.classList.add('is-visible');
-                    if (scrollToBottomBtn) scrollToBottomBtn.classList.add('is-visible');
-                    if (labelPresetsOpenBtn) labelPresetsOpenBtn.classList.add('is-visible');
+                    if (FEATURES.enable_admin_fab && adminFabBtn) {
+                        adminFabBtn.classList.add('is-visible');
+                    }
+                    if (IS_MATCH_ANALYSIS) return;
+                    if (FEATURES.enable_folders && manageFoldersBtn) {
+                        manageFoldersBtn.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_folders && addToFolderBtn) {
+                        addToFolderBtn.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_selection && selectModeBtn) {
+                        selectModeBtn.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_selection && sendSelectedBtn) {
+                        sendSelectedBtn.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_selection && generateLinkBtn) {
+                        generateLinkBtn.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_selection && quickSelectInput) {
+                        quickSelectInput.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_labels && labelFilterWrap) {
+                        labelFilterWrap.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_bulk_bg && cardBgOpenBtn) {
+                        cardBgOpenBtn.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_labels && scrollToBottomBtn) {
+                        scrollToBottomBtn.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_labels && labelPresetsOpenBtn) {
+                        labelPresetsOpenBtn.classList.add('is-visible');
+                    }
                 }
 
                 function hideFolderSubfoldersBar() {
@@ -5147,6 +5474,36 @@
                 }
 
                 function fetchCabinetData(config) {
+                    if (IS_MATCH_ANALYSIS) {
+                        return fetch('/api/match_analysis/list', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ init_data: initData }),
+                        })
+                            .then(function (r) {
+                                return parseApiJsonResponse(r, 'Ошибка загрузки списка');
+                            })
+                            .then(function (data) {
+                                var items = (data && data.items) || [];
+                                return {
+                                    is_root_admin: true,
+                                    folder: null,
+                                    child_folders: [],
+                                    cards: items.map(function (it, index) {
+                                        return {
+                                            content_card_id: it.id,
+                                            title: it.title || '',
+                                            red_player: it.red_player || '',
+                                            black_player: it.black_player || '',
+                                            notes: it.notes || '',
+                                            status: 'UNVIEWED',
+                                            labels: [],
+                                            __index: index,
+                                        };
+                                    }),
+                                };
+                            });
+                    }
                     if (config.mode === 'folder') {
                         return fetch('/api/content_cards/folders/link_resolve', {
                             method: 'POST',
@@ -5240,6 +5597,11 @@
                     var cards = (payload && payload.cards) || [];
                     if (!cards.length) {
                         allCards = [];
+                        if (IS_MATCH_ANALYSIS) {
+                            gridEl.innerHTML =
+                                '<p class="empty">Пока нет сохранённых анализов</p>';
+                            return;
+                        }
                         if (config.mode === 'folder') {
                             gridEl.innerHTML = '<p class="empty">В этой папке пока нет карточек.</p>';
                         } else if (!isRootAdminUser) {
@@ -5302,7 +5664,29 @@
                 reloadCabinet().catch(function (e) {
                     showErr(e.message || String(e));
                 });
-                loadAllLabelsFilter();
+                if (!IS_MATCH_ANALYSIS && FEATURES.enable_labels) {
+                    loadAllLabelsFilter();
+                }
+
+                if (matchRenameModalOverlay) {
+                    matchRenameModalOverlay.addEventListener('click', closeMatchRenameModal);
+                }
+                if (matchRenameModalCancelBtn) {
+                    matchRenameModalCancelBtn.addEventListener('click', closeMatchRenameModal);
+                }
+                if (matchRenameModalSubmitBtn) {
+                    matchRenameModalSubmitBtn.addEventListener('click', saveMatchRename);
+                }
+                if (matchRenameModalInput) {
+                    matchRenameModalInput.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            saveMatchRename();
+                        } else if (e.key === 'Escape') {
+                            closeMatchRenameModal();
+                        }
+                    });
+                }
 
                 // ============================================================
                 //  Папки

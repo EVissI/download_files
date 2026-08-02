@@ -391,23 +391,40 @@ async def _render_content_cards_cabinet_page(
 ) -> HTMLResponse:
     cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
+    content_cards_features = {
+        "enable_gallery": True,
+        "enable_admin_fab": True,
+        "enable_search": True,
+        "enable_folders": True,
+        "enable_labels": True,
+        "enable_status_filter": True,
+        "enable_shuffle": True,
+        "enable_selection": True,
+        "enable_bulk_bg": True,
+        "enable_interactive_stats": True,
+        "enable_create_empty": True,
+    }
     if card_pool == ContentCardPool.PIP_COUNT:
         cabinet_ctx = {
+            "cabinet_kind": "content_cards",
             "cabinet_pool": ContentCardPool.PIP_COUNT.value,
             "cabinet_base_path": "/pip-count-cabinet",
             "cabinet_title": "Подсчёт пипсов",
             "cabinet_state_key": "pip_count_cabinet_state_v1",
             "cabinet_open_hints_key": "pip_count_cabinet_open_hints_v1",
             "show_open_hints_toggle": False,
+            "cabinet_features": content_cards_features,
         }
     else:
         cabinet_ctx = {
+            "cabinet_kind": "content_cards",
             "cabinet_pool": ContentCardPool.CARDS.value,
             "cabinet_base_path": "/cards-cabinet",
             "cabinet_title": "Мои карточки",
             "cabinet_state_key": "cards_cabinet_state_v1",
             "cabinet_open_hints_key": "cards_cabinet_open_hints_v1",
             "show_open_hints_toggle": True,
+            "cabinet_features": content_cards_features,
         }
     response = templates.TemplateResponse(
         "cards_cabinet.html",

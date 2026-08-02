@@ -57,7 +57,7 @@ class PromocodeModelView(ModelView):
                      'activate_count_display':'Кол-во использований',
                      'duration_days_display':'Длительность',
                      'promocode_type':'Тип промокода',
-                     'cards_issue_quantity':'Выдавать карточек',
+                     'cards_issue_quantity':'Выдать карточек',
                      'max_usage':'Макс использований',
                      'activate_count':'Кол-во использований',
                      'duration_days':'Длительность',

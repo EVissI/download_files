@@ -244,11 +244,30 @@ async def match_analysis_cabinet_page(request: Request):
     cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
     response = templates.TemplateResponse(
-        "match_analysis_cabinet.html",
+        "cards_cabinet.html",
         {
             "request": request,
             "cache_timestamp": cache_timestamp,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
+            "cabinet_kind": "match_analysis",
+            "cabinet_pool": "match_analysis",
+            "cabinet_base_path": "/match-analysis-cabinet",
+            "cabinet_title": "Анализ матча",
+            "cabinet_state_key": "match_analysis_cabinet_state_v1",
+            "show_open_hints_toggle": False,
+            "cabinet_features": {
+                "enable_gallery": True,
+                "enable_admin_fab": True,
+                "enable_search": True,
+                "enable_folders": False,
+                "enable_labels": False,
+                "enable_status_filter": False,
+                "enable_shuffle": False,
+                "enable_selection": False,
+                "enable_bulk_bg": False,
+                "enable_interactive_stats": False,
+                "enable_create_empty": False,
+            },
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
