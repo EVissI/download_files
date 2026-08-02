@@ -211,11 +211,106 @@
             gap: 20px;
         }
 
+        .left-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
         .screenshot-controls {
             display: flex;
             flex-direction: column;
             gap: 20px;
             justify-content: center;
+        }
+
+        .ma-audio-controls {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            justify-content: center;
+            min-width: 72px;
+        }
+
+        .ma-audio-controls__grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .ma-audio-controls__grid > div {
+            display: flex;
+            gap: 0;
+        }
+
+        .ma-audio-controls button {
+            width: 32px;
+            height: 32px;
+            min-width: 0;
+            padding: 0;
+            margin: 0;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1;
+            background: #2f2f2f;
+            border: 1px solid #555;
+            color: #eee;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        .ma-audio-controls button:hover:not(:disabled) {
+            background: #3a3a3a;
+            border-color: #777;
+        }
+
+        .ma-audio-controls button:disabled {
+            opacity: 0.35;
+            background: #2f2f2f;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .ma-audio-controls button.is-recording {
+            background: #c0392b;
+            border-color: #e74c3c;
+            color: #fff;
+            animation: ma-audio-pulse 1.1s ease-in-out infinite;
+        }
+
+        .ma-audio-controls button.is-playing {
+            background: #1f6f8f;
+            border-color: #2a9bb8;
+            color: #fff;
+        }
+
+        .ma-audio-controls.has-audio #matchAnalysisAudioPlayBtn:not(:disabled) {
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .ma-audio-controls__status {
+            max-width: 72px;
+            font-size: 10px;
+            line-height: 1.15;
+            color: #999;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        .ma-audio-controls.has-audio .ma-audio-controls__status {
+            color: #2ecc71;
+        }
+
+        @keyframes ma-audio-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
         }
 
         .navigation-controls {
@@ -446,9 +541,19 @@
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn {
+            #supportBtn,
+            .ma-audio-controls button {
                 width: 48px;
                 height: 48px;
+            }
+
+            .ma-audio-controls button {
+                font-size: 18px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 104px;
+                font-size: 11px;
             }
         }
 
@@ -500,9 +605,23 @@
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn {
+            #supportBtn,
+            .ma-audio-controls button {
                 width: 28px;
                 height: 28px;
+            }
+
+            .ma-audio-controls button {
+                font-size: 11px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 60px;
+                font-size: 9px;
+            }
+
+            .left-controls {
+                gap: 8px;
             }
         }
 
@@ -518,9 +637,19 @@
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn {
+            #supportBtn,
+            .ma-audio-controls button {
                 width: 80px;
                 height: 80px;
+            }
+
+            .ma-audio-controls button {
+                font-size: 28px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 168px;
+                font-size: 12px;
             }
         }
 
@@ -1138,14 +1267,30 @@
 
         <div id="top-row">
             <div id="controls">
-                <div class="screenshot-controls">
-                    <div>
-                        <button onclick="toggleInvert()" id="invertBtn"></button>
-                        <button onclick="takeScreenshot()" id="screenshotBtn"></button>
+                <div class="left-controls">
+                    <div id="matchAnalysisAudioPanel" class="ma-audio-controls" style="display:none;" title="Аудио не прикреплено">
+                        <div class="ma-audio-controls__grid">
+                            <div>
+                                <button type="button" id="matchAnalysisAudioPlayBtn" onclick="toggleMatchAnalysisAudioPlay()" disabled title="Слушать"><i class="fa fa-play" aria-hidden="true"></i></button>
+                                <button type="button" id="matchAnalysisAudioAttachBtn" onclick="matchAnalysisPickAudioFile()" title="Прикрепить файл"><i class="fa fa-paperclip" aria-hidden="true"></i></button>
+                            </div>
+                            <div>
+                                <button type="button" id="matchAnalysisAudioRecordBtn" onclick="startMatchAnalysisRecording()" title="Записать"><i class="fa fa-microphone" aria-hidden="true"></i></button>
+                                <button type="button" id="matchAnalysisAudioDeleteBtn" onclick="deleteMatchAnalysisAudio()" disabled title="Удалить"><i class="fa fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div id="matchAnalysisAudioStatus" class="ma-audio-controls__status">нет аудио</div>
+                        <input type="file" id="matchAnalysisAudioFileInput" accept="audio/*" style="display:none" onchange="matchAnalysisOnAudioFileSelected(event)">
                     </div>
-                    <div>
-                        <button onclick="saveScreenshot()" id="screenSaveBtn"></button>
-                        <button onclick="uploadScreenshots()" id="screenUploadBtn"></button>
+                    <div class="screenshot-controls">
+                        <div>
+                            <button onclick="toggleInvert()" id="invertBtn"></button>
+                            <button onclick="takeScreenshot()" id="screenshotBtn"></button>
+                        </div>
+                        <div>
+                            <button onclick="saveScreenshot()" id="screenSaveBtn"></button>
+                            <button onclick="uploadScreenshots()" id="screenUploadBtn"></button>
+                        </div>
                     </div>
                 </div>
                 <div class="navigation-controls">
@@ -4379,6 +4524,26 @@
             }
         }
 
+        function setMatchAnalysisPlayButtonState(isPlaying) {
+            const playBtn = document.getElementById('matchAnalysisAudioPlayBtn');
+            if (!playBtn) return;
+            playBtn.classList.toggle('is-playing', !!isPlaying);
+            playBtn.title = isPlaying ? 'Пауза' : 'Слушать';
+            playBtn.innerHTML = isPlaying
+                ? '<i class="fa fa-pause" aria-hidden="true"></i>'
+                : '<i class="fa fa-play" aria-hidden="true"></i>';
+        }
+
+        function setMatchAnalysisRecordButtonState(isRecording) {
+            const recBtn = document.getElementById('matchAnalysisAudioRecordBtn');
+            if (!recBtn) return;
+            recBtn.classList.toggle('is-recording', !!isRecording);
+            recBtn.title = isRecording ? 'Остановить запись' : 'Записать';
+            recBtn.innerHTML = isRecording
+                ? '<i class="fa fa-stop" aria-hidden="true"></i>'
+                : '<i class="fa fa-microphone" aria-hidden="true"></i>';
+        }
+
         function updateMatchAnalysisAudioUi() {
             const panel = document.getElementById('matchAnalysisAudioPanel');
             const cabinetLink = document.getElementById('openMatchAnalysisCabinetBtn');
@@ -4390,15 +4555,19 @@
                 panel.style.display = 'none';
                 return;
             }
-            panel.style.display = 'block';
+            panel.style.display = 'flex';
             const meta = getCurrentMoveAudioMeta();
             const statusEl = document.getElementById('matchAnalysisAudioStatus');
             const playBtn = document.getElementById('matchAnalysisAudioPlayBtn');
             const deleteBtn = document.getElementById('matchAnalysisAudioDeleteBtn');
+            const audioLabel = meta.audioS3Key
+                ? (meta.audioName || meta.audioS3Key.split('/').pop() || 'аудио')
+                : '';
+            panel.classList.toggle('has-audio', !!meta.audioS3Key);
+            panel.title = meta.audioS3Key ? ('Аудио: ' + audioLabel) : 'Аудио не прикреплено';
             if (statusEl) {
-                statusEl.textContent = meta.audioS3Key
-                    ? 'Аудио: ' + (meta.audioName || meta.audioS3Key.split('/').pop())
-                    : 'Аудио не прикреплено';
+                statusEl.textContent = meta.audioS3Key ? audioLabel : 'нет аудио';
+                statusEl.title = panel.title;
             }
             if (playBtn) playBtn.disabled = !meta.audioS3Key;
             if (deleteBtn) deleteBtn.disabled = !meta.audioS3Key;
@@ -4406,6 +4575,7 @@
                 matchAnalysisAudioEl.pause();
                 matchAnalysisAudioEl = null;
             }
+            setMatchAnalysisPlayButtonState(false);
         }
 
         function toggleMatchAnalysisAudioPlay() {
@@ -4413,11 +4583,18 @@
             if (!meta.audioS3Key) return;
             if (matchAnalysisAudioEl && !matchAnalysisAudioEl.paused) {
                 matchAnalysisAudioEl.pause();
+                setMatchAnalysisPlayButtonState(false);
                 return;
             }
             matchAnalysisAudioEl = new Audio(buildMatchAnalysisMediaUrl(meta.audioS3Key));
-            matchAnalysisAudioEl.play().catch((e) => {
+            matchAnalysisAudioEl.onended = function () {
+                setMatchAnalysisPlayButtonState(false);
+            };
+            matchAnalysisAudioEl.play().then(function () {
+                setMatchAnalysisPlayButtonState(true);
+            }).catch((e) => {
                 console.error(e);
+                setMatchAnalysisPlayButtonState(false);
                 showMessageModal('Не удалось воспроизвести аудио', 'error');
             });
         }
@@ -4526,16 +4703,15 @@
                     const type = matchAnalysisMediaRecorder.mimeType || 'audio/webm';
                     const blob = new Blob(matchAnalysisRecordChunks, { type });
                     const ext = type.includes('ogg') ? 'ogg' : type.includes('mp4') ? 'mp4' : 'webm';
-                    const recBtn = document.getElementById('matchAnalysisAudioRecordBtn');
-                    if (recBtn) recBtn.textContent = 'Записать';
+                    setMatchAnalysisRecordButtonState(false);
                     await uploadMatchAnalysisAudioBlob(blob, 'voice_' + Date.now() + '.' + ext);
                     matchAnalysisMediaRecorder = null;
                 };
                 matchAnalysisMediaRecorder.start();
-                const recBtn = document.getElementById('matchAnalysisAudioRecordBtn');
-                if (recBtn) recBtn.textContent = 'Стоп';
+                setMatchAnalysisRecordButtonState(true);
             } catch (e) {
                 console.error(e);
+                setMatchAnalysisRecordButtonState(false);
                 showMessageModal('Не удалось начать запись: ' + (e.message || e), 'error');
             }
         }
@@ -4648,17 +4824,6 @@
         " onmouseover="this.style.backgroundColor='#218838'" onmouseout="this.style.backgroundColor='#28a745'">
             Открыть редактор карточек
         </button>
-        <div id="matchAnalysisAudioPanel" style="display:none; margin: 16px 0; width: 100%; box-sizing: border-box; background:#2d2d2d; border:1px solid #555; border-radius:8px; padding:12px; text-align:left;">
-            <div style="font-weight:bold; margin-bottom:8px;">Аудио-комментарий к ходу</div>
-            <div id="matchAnalysisAudioStatus" style="margin-bottom:10px; color:#ccc;">Аудио не прикреплено</div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                <button type="button" id="matchAnalysisAudioPlayBtn" onclick="toggleMatchAnalysisAudioPlay()" disabled style="padding:8px 12px;">🔊 Play</button>
-                <button type="button" onclick="matchAnalysisPickAudioFile()" style="padding:8px 12px;">Прикрепить</button>
-                <button type="button" id="matchAnalysisAudioRecordBtn" onclick="startMatchAnalysisRecording()" style="padding:8px 12px;">Записать</button>
-                <button type="button" id="matchAnalysisAudioDeleteBtn" onclick="deleteMatchAnalysisAudio()" disabled style="padding:8px 12px;">Удалить</button>
-            </div>
-            <input type="file" id="matchAnalysisAudioFileInput" accept="audio/*" style="display:none" onchange="matchAnalysisOnAudioFileSelected(event)">
-        </div>
         <div class="admin-screenshot-font-scale">
             <label for="screenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
             <select id="screenshotFontScaleSelect" onchange="saveHintViewerScreenshotFontScale()">
