@@ -2577,9 +2577,6 @@
             var cabinetStateKey = {{ cabinet_state_key|default('cards_cabinet_state_v1')|tojson }};
             var openHintsStateKey = {{ cabinet_open_hints_key|default('cards_cabinet_open_hints_v1')|tojson }};
             var cabinetConfig = (function () {
-                if (IS_MATCH_ANALYSIS) {
-                    return { mode: 'main' };
-                }
                 var folderToken = _urlParams.get('folder_token') || '';
                 if (folderToken) {
                     return { mode: 'folder', folderToken: folderToken };
@@ -2730,6 +2727,11 @@
                     if (footer) footer.classList.add('is-feature-hidden');
                     var wrapEl = document.querySelector('.wrap');
                     if (wrapEl) wrapEl.classList.add('wrap--no-footer');
+                } else if (IS_MATCH_ANALYSIS) {
+                    // Для MA: выделение нужно для папок; card-only send/link/id — нет.
+                    hideEl(generateLinkBtn);
+                    hideEl(sendSelectedBtn);
+                    hideEl(idToggleBtn);
                 }
                 if (!FEATURES.enable_search) {
                     hideEl(document.querySelector('.search-wrap'));
@@ -2737,6 +2739,18 @@
                     searchInput.removeAttribute('inputmode');
                     searchInput.removeAttribute('pattern');
                     searchInput.placeholder = 'Поиск по названию или игрокам';
+                }
+                if (IS_MATCH_ANALYSIS) {
+                    var scheduleCountLabel = document.querySelector('label[for="folderScheduleCountInput"]');
+                    if (scheduleCountLabel) scheduleCountLabel.textContent = 'Матчей за запуск';
+                    var scheduleLabelsBlock = document.getElementById('folderScheduleLabels');
+                    if (scheduleLabelsBlock) {
+                        var labelsTitle = scheduleLabelsBlock.previousElementSibling;
+                        if (labelsTitle && labelsTitle.classList.contains('shuffle-modal__label')) {
+                            labelsTitle.style.display = 'none';
+                        }
+                        scheduleLabelsBlock.style.display = 'none';
+                    }
                 }
             }
             applyCabinetFeatureGating();
@@ -3060,7 +3074,7 @@
                     } else if (fabToken) {
                         base.fab_token = fabToken;
                     }
-                    if (!IS_MATCH_ANALYSIS && cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
+                    if (cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
                         base.folder_token = cabinetConfig.folderToken;
                     }
                     if (extra && typeof extra === 'object') {
@@ -4887,21 +4901,37 @@
                     if (!isRootAdminUser) return;
                     var matchIdNum = Number(matchId);
                     if (!Number.isFinite(matchIdNum) || matchIdNum <= 0) return;
-                    showCabinetConfirm(
-                        'Удалить анализ матча #' + matchIdNum + '? Это действие необратимо.',
-                        'Удаление анализа',
-                        { danger: true, confirmLabel: 'Удалить' }
-                    ).then(function (ok) {
+                    var fromFolder = isCabinetFolderView();
+                    var confirmMessage = fromFolder
+                        ? 'Убрать матч #' + matchIdNum + ' из этой папки? Сам анализ останется.'
+                        : 'Удалить анализ матча #' + matchIdNum + '? Это действие необратимо.';
+                    var confirmTitle = fromFolder ? 'Убрать из папки' : 'Удаление анализа';
+                    var confirmLabel = fromFolder ? 'Убрать' : 'Удалить';
+                    showCabinetConfirm(confirmMessage, confirmTitle, {
+                        danger: true,
+                        confirmLabel: confirmLabel,
+                    }).then(function (ok) {
                         if (!ok) return;
-                        fetch('/api/match_analysis/delete', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ init_data: initData, id: matchIdNum }),
-                        })
-                            .then(function (r) {
-                                return parseApiJsonResponse(r, 'Не удалось удалить анализ');
+                        var requestPromise = fromFolder
+                            ? folderApiPost('remove_items', {
+                                folder_id: cabinetFolderId,
+                                card_ids: [matchIdNum],
                             })
-                            .then(function () {
+                            : fetch('/api/match_analysis/delete', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ init_data: initData, id: matchIdNum }),
+                            }).then(function (r) {
+                                return parseApiJsonResponse(r, 'Не удалось удалить анализ');
+                            });
+                        requestPromise
+                            .then(function (data) {
+                                if (fromFolder) {
+                                    var removed = (data && data.removed_count) || 0;
+                                    if (!removed) {
+                                        throw new Error('Матч не найден в этой папке');
+                                    }
+                                }
                                 removeCardFromLists(matchIdNum);
                                 renderCards();
                             })
@@ -4942,9 +4972,23 @@
                             var btn = document.createElement('button');
                             btn.type = 'button';
                             btn.className = 'tile tile--match';
+                            if (selectedCardIds[String(cardIdNum)]) {
+                                btn.classList.add('tile--selected');
+                            }
                             btn.textContent = truncateMatchTitle(fullTitle, 32);
                             btn.title = fullTitle;
                             btn.addEventListener('click', function () {
+                                if (isSelectionMode) {
+                                    var selectedKey = String(cardIdNum);
+                                    if (selectedCardIds[selectedKey]) {
+                                        delete selectedCardIds[selectedKey];
+                                    } else {
+                                        selectedCardIds[selectedKey] = true;
+                                    }
+                                    updateSelectionUi();
+                                    renderCards();
+                                    return;
+                                }
                                 window.location.assign(
                                     '/match-analysis-view?id=' + encodeURIComponent(String(id)) + '&error=0'
                                 );
@@ -4969,8 +5013,16 @@
                             var delBtn = document.createElement('button');
                             delBtn.type = 'button';
                             delBtn.className = 'tile__del';
-                            delBtn.setAttribute('aria-label', 'Удалить матч #' + id);
-                            delBtn.title = 'Удалить анализ';
+                            var fromFolder = isCabinetFolderView();
+                            delBtn.setAttribute(
+                                'aria-label',
+                                fromFolder
+                                    ? 'Убрать матч #' + id + ' из папки'
+                                    : 'Удалить матч #' + id
+                            );
+                            delBtn.title = fromFolder
+                                ? 'Убрать матч из папки'
+                                : 'Удалить анализ';
                             delBtn.textContent = '×';
                             delBtn.addEventListener('click', function (ev) {
                                 ev.stopPropagation();
@@ -5512,7 +5564,6 @@
                     if (FEATURES.enable_admin_fab && adminFabBtn) {
                         adminFabBtn.classList.add('is-visible');
                     }
-                    if (IS_MATCH_ANALYSIS) return;
                     if (FEATURES.enable_folders && manageFoldersBtn) {
                         manageFoldersBtn.classList.add('is-visible');
                     }
@@ -5522,26 +5573,28 @@
                     if (FEATURES.enable_selection && selectModeBtn) {
                         selectModeBtn.classList.add('is-visible');
                     }
-                    if (FEATURES.enable_selection && sendSelectedBtn) {
-                        sendSelectedBtn.classList.add('is-visible');
-                    }
-                    if (FEATURES.enable_selection && generateLinkBtn) {
-                        generateLinkBtn.classList.add('is-visible');
-                    }
                     if (FEATURES.enable_selection && quickSelectInput) {
                         quickSelectInput.classList.add('is-visible');
                     }
-                    if (FEATURES.enable_labels && labelFilterWrap) {
-                        labelFilterWrap.classList.add('is-visible');
-                    }
-                    if (FEATURES.enable_bulk_bg && cardBgOpenBtn) {
-                        cardBgOpenBtn.classList.add('is-visible');
-                    }
-                    if (FEATURES.enable_labels && scrollToBottomBtn) {
-                        scrollToBottomBtn.classList.add('is-visible');
-                    }
-                    if (FEATURES.enable_labels && labelPresetsOpenBtn) {
-                        labelPresetsOpenBtn.classList.add('is-visible');
+                    if (!IS_MATCH_ANALYSIS) {
+                        if (FEATURES.enable_selection && sendSelectedBtn) {
+                            sendSelectedBtn.classList.add('is-visible');
+                        }
+                        if (FEATURES.enable_selection && generateLinkBtn) {
+                            generateLinkBtn.classList.add('is-visible');
+                        }
+                        if (FEATURES.enable_labels && labelFilterWrap) {
+                            labelFilterWrap.classList.add('is-visible');
+                        }
+                        if (FEATURES.enable_bulk_bg && cardBgOpenBtn) {
+                            cardBgOpenBtn.classList.add('is-visible');
+                        }
+                        if (FEATURES.enable_labels && scrollToBottomBtn) {
+                            scrollToBottomBtn.classList.add('is-visible');
+                        }
+                        if (FEATURES.enable_labels && labelPresetsOpenBtn) {
+                            labelPresetsOpenBtn.classList.add('is-visible');
+                        }
                     }
                 }
 
@@ -5578,8 +5631,45 @@
                     return null;
                 }
 
+                function normalizeMatchAnalysisCard(it, index) {
+                    return {
+                        content_card_id: it.id,
+                        title: it.title || '',
+                        red_player: it.red_player || '',
+                        black_player: it.black_player || '',
+                        notes: it.notes || '',
+                        status: 'UNVIEWED',
+                        labels: [],
+                        __index: index,
+                    };
+                }
+
                 function fetchCabinetData(config) {
                     if (IS_MATCH_ANALYSIS) {
+                        if (config.mode === 'folder') {
+                            return fetch('/api/match_analysis/folders/link_resolve', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(authPayload({
+                                    folder_token: config.folderToken,
+                                    direct_only: true,
+                                })),
+                            })
+                                .then(function (r) {
+                                    return parseApiJsonResponse(r, 'Ошибка загрузки папки');
+                                })
+                                .then(function (data) {
+                                    var cards = (data && data.cards) || [];
+                                    return {
+                                        is_root_admin: !!(data && data.is_root_admin),
+                                        folder: data && data.folder,
+                                        child_folders: (data && data.child_folders) || [],
+                                        cards: cards.map(function (card, index) {
+                                            return normalizeMatchAnalysisCard(card, index);
+                                        }),
+                                    };
+                                });
+                        }
                         return fetch('/api/match_analysis/list', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -5595,16 +5685,7 @@
                                     folder: null,
                                     child_folders: [],
                                     cards: items.map(function (it, index) {
-                                        return {
-                                            content_card_id: it.id,
-                                            title: it.title || '',
-                                            red_player: it.red_player || '',
-                                            black_player: it.black_player || '',
-                                            notes: it.notes || '',
-                                            status: 'UNVIEWED',
-                                            labels: [],
-                                            __index: index,
-                                        };
+                                        return normalizeMatchAnalysisCard(it, index);
                                     }),
                                 };
                             });
@@ -5704,8 +5785,14 @@
                     if (!cards.length) {
                         allCards = [];
                         if (IS_MATCH_ANALYSIS) {
-                            gridEl.innerHTML =
-                                '<p class="empty">Пока нет сохранённых анализов</p>';
+                            if (config.mode === 'folder') {
+                                gridEl.innerHTML =
+                                    '<p class="empty">В этой папке пока нет матчей.</p>';
+                            } else {
+                                gridEl.innerHTML =
+                                    '<p class="empty">Пока нет сохранённых анализов</p>';
+                            }
+                            updateSelectionUi();
                             return;
                         }
                         if (config.mode === 'folder') {
@@ -6021,6 +6108,10 @@
                 }
 
                 function ensureCabinetAllLabelsLoaded() {
+                    if (IS_MATCH_ANALYSIS) {
+                        cabinetAllLabels = [];
+                        return Promise.resolve(cabinetAllLabels);
+                    }
                     if (cabinetAllLabels.length) {
                         return Promise.resolve(cabinetAllLabels);
                     }
@@ -6071,7 +6162,11 @@
                     }
                     var cardsPerRun = folderScheduleCountInput ? parseInt(folderScheduleCountInput.value, 10) : 1;
                     if (!cardsPerRun || cardsPerRun < 1) {
-                        setFolderScheduleModalMsg('Количество карточек должно быть не меньше 1.');
+                        setFolderScheduleModalMsg(
+                            IS_MATCH_ANALYSIS
+                                ? 'Количество матчей должно быть не меньше 1.'
+                                : 'Количество карточек должно быть не меньше 1.'
+                        );
                         return;
                     }
                     if (folderScheduleSaveBtn) folderScheduleSaveBtn.disabled = true;
@@ -6081,7 +6176,7 @@
                         weekdays: weekdays,
                         issue_time_msk: timeValue,
                         cards_per_run: cardsPerRun,
-                        labels: labels,
+                        labels: IS_MATCH_ANALYSIS ? [] : labels,
                         is_active: !!(folderScheduleActiveInput && folderScheduleActiveInput.checked),
                     }).then(function () {
                         closeFolderScheduleModal();
@@ -6125,7 +6220,10 @@
                 }
 
                 function folderApiPost(endpoint, extraBody) {
-                    var url = endpoint.startsWith('/') ? endpoint : '/api/content_cards/folders/' + endpoint;
+                    var basePath = IS_MATCH_ANALYSIS
+                        ? '/api/match_analysis/folders/'
+                        : '/api/content_cards/folders/';
+                    var url = endpoint.startsWith('/') ? endpoint : basePath + endpoint;
                     return fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -6881,7 +6979,9 @@
                     if (!cardIds.length) return;
                     folderActionPendingCardIds = cardIds.slice();
                     if (folderActionModalSubtitle) {
-                        folderActionModalSubtitle.textContent = 'Выбрано карточек: ' + cardIds.length;
+                        folderActionModalSubtitle.textContent = IS_MATCH_ANALYSIS
+                            ? ('Выбрано матчей: ' + cardIds.length)
+                            : ('Выбрано карточек: ' + cardIds.length);
                         folderActionModalSubtitle.style.display = '';
                     }
                     folderActionModal.classList.add('is-open');

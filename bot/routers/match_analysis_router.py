@@ -259,11 +259,11 @@ async def match_analysis_cabinet_page(request: Request):
                 "enable_gallery": True,
                 "enable_admin_fab": True,
                 "enable_search": True,
-                "enable_folders": False,
+                "enable_folders": True,
                 "enable_labels": False,
                 "enable_status_filter": False,
                 "enable_shuffle": False,
-                "enable_selection": False,
+                "enable_selection": True,
                 "enable_bulk_bg": False,
                 "enable_interactive_stats": False,
                 "enable_create_empty": False,
@@ -502,3 +502,7 @@ async def match_analysis_media_proxy(key: str = Query(...)):
         media_type=media_type,
         headers={"Cache-Control": "public, max-age=3600"},
     )
+
+
+# Регистрация API папок на том же router.
+from bot.routers import match_analysis_folder_routes as _match_analysis_folder_routes  # noqa: E402,F401

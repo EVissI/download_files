@@ -15,6 +15,9 @@ from bot.db.models import (
     ContentCardFolderLink,
     ContentCardPool,
     MatchAnalysis,
+    MatchAnalysisFolder,
+    MatchAnalysisFolderItem,
+    MatchAnalysisFolderLink,
     MessagesTexts,
     ServiceType,
     User,
@@ -2139,3 +2142,286 @@ class MatchAnalysisDAO(BaseDAO[MatchAnalysis]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при списке MatchAnalysis: {e}")
             raise
+
+
+class MatchAnalysisFolderDAO(BaseDAO[MatchAnalysisFolder]):
+    """DAO дерева папок анализов матча."""
+
+    model = MatchAnalysisFolder
+
+    async def get_all_folders(self) -> list[MatchAnalysisFolder]:
+        result = await self._session.execute(
+            select(MatchAnalysisFolder).order_by(
+                MatchAnalysisFolder.parent_id.asc().nullsfirst(),
+                MatchAnalysisFolder.sort_order.asc(),
+                MatchAnalysisFolder.id.asc(),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def get_folder_by_id(self, folder_id: int) -> MatchAnalysisFolder | None:
+        result = await self._session.execute(
+            select(MatchAnalysisFolder).where(MatchAnalysisFolder.id == folder_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_folder(
+        self,
+        name: str,
+        parent_id: int | None,
+        sort_order: int,
+        admin_id: int | None,
+    ) -> MatchAnalysisFolder:
+        folder = MatchAnalysisFolder(
+            name=name[:255],
+            parent_id=parent_id,
+            sort_order=sort_order,
+            created_by_admin_id=admin_id,
+        )
+        self._session.add(folder)
+        await self._session.flush()
+        return folder
+
+    async def update_folder(
+        self,
+        folder_id: int,
+        name: str | None = None,
+        sort_order: int | None = None,
+    ) -> MatchAnalysisFolder | None:
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return None
+        if name is not None:
+            folder.name = name[:255]
+        if sort_order is not None:
+            folder.sort_order = sort_order
+        folder.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return folder
+
+    async def move_folder(
+        self,
+        folder_id: int,
+        new_parent_id: int | None,
+        new_sort_order: int,
+    ) -> MatchAnalysisFolder | None:
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return None
+        if new_parent_id is not None:
+            if await self._is_descendant(folder_id, new_parent_id):
+                raise ValueError(
+                    f"Нельзя переместить папку {folder_id} внутрь своего потомка {new_parent_id}"
+                )
+        folder.parent_id = new_parent_id
+        folder.sort_order = new_sort_order
+        folder.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return folder
+
+    async def _collect_descendant_folder_ids(self, root_folder_id: int) -> list[int]:
+        all_folders = await self.get_all_folders()
+        children_map: dict[int | None, list[int]] = {}
+        for f in all_folders:
+            children_map.setdefault(f.parent_id, []).append(f.id)
+
+        result: list[int] = []
+        queue: list[int] = list(children_map.get(root_folder_id, []))
+        while queue:
+            current = queue.pop(0)
+            result.append(current)
+            queue.extend(children_map.get(current, []))
+        return result
+
+    async def delete_folder(self, folder_id: int) -> bool:
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return False
+        descendant_ids = await self._collect_descendant_folder_ids(folder_id)
+        ids_to_delete = descendant_ids + [folder_id]
+        await self._session.execute(
+            delete(MatchAnalysisFolder).where(MatchAnalysisFolder.id.in_(ids_to_delete))
+        )
+        await self._session.flush()
+        return True
+
+    async def _is_descendant(self, ancestor_id: int, candidate_id: int) -> bool:
+        visited: set[int] = set()
+        current_id: int | None = candidate_id
+        while current_id is not None:
+            if current_id in visited:
+                break
+            visited.add(current_id)
+            if current_id == ancestor_id:
+                return True
+            result = await self._session.execute(
+                select(MatchAnalysisFolder.parent_id).where(
+                    MatchAnalysisFolder.id == current_id
+                )
+            )
+            current_id = result.scalar_one_or_none()
+        return False
+
+    async def collect_match_ids_for_folder_tree(
+        self, root_folder_id: int, include_children: bool = True
+    ) -> list[int]:
+        all_folders = await self.get_all_folders()
+        children_map: dict[int | None, list[int]] = {}
+        for f in all_folders:
+            children_map.setdefault(f.parent_id, []).append(f.id)
+
+        folder_ids_to_process: list[int] = [root_folder_id]
+        if include_children:
+            queue: list[int] = [root_folder_id]
+            while queue:
+                current = queue.pop(0)
+                for child_id in children_map.get(current, []):
+                    if child_id not in folder_ids_to_process:
+                        folder_ids_to_process.append(child_id)
+                        queue.append(child_id)
+
+        result = await self._session.execute(
+            select(MatchAnalysisFolderItem.match_analysis_id)
+            .where(MatchAnalysisFolderItem.folder_id.in_(folder_ids_to_process))
+            .order_by(
+                MatchAnalysisFolderItem.folder_id.asc(),
+                MatchAnalysisFolderItem.sort_order.asc(),
+                MatchAnalysisFolderItem.id.asc(),
+            )
+        )
+        seen: set[int] = set()
+        deduped: list[int] = []
+        for mid in result.scalars().all():
+            if mid not in seen:
+                seen.add(mid)
+                deduped.append(mid)
+        return deduped
+
+    async def get_folder_match_ids(self, folder_id: int) -> list[int]:
+        result = await self._session.execute(
+            select(MatchAnalysisFolderItem.match_analysis_id)
+            .where(MatchAnalysisFolderItem.folder_id == folder_id)
+            .order_by(
+                MatchAnalysisFolderItem.sort_order.asc(),
+                MatchAnalysisFolderItem.id.asc(),
+            )
+        )
+        return [int(mid) for mid in result.scalars().all() if mid is not None]
+
+    async def add_matches_to_folder(self, folder_id: int, match_ids: list[int]) -> int:
+        existing_ids = set(await self.get_folder_match_ids(folder_id))
+        added = 0
+        next_order = len(existing_ids)
+        for mid in match_ids:
+            if mid in existing_ids:
+                continue
+            self._session.add(
+                MatchAnalysisFolderItem(
+                    folder_id=folder_id,
+                    match_analysis_id=mid,
+                    sort_order=next_order,
+                )
+            )
+            existing_ids.add(mid)
+            next_order += 1
+            added += 1
+        if added:
+            await self._session.flush()
+        return added
+
+    async def remove_match_from_folder(
+        self, folder_id: int, match_analysis_id: int
+    ) -> bool:
+        result = await self._session.execute(
+            select(MatchAnalysisFolderItem).where(
+                MatchAnalysisFolderItem.folder_id == folder_id,
+                MatchAnalysisFolderItem.match_analysis_id == match_analysis_id,
+            )
+        )
+        item = result.scalar_one_or_none()
+        if not item:
+            return False
+        await self._session.delete(item)
+        await self._session.flush()
+        return True
+
+    async def set_folder_items(
+        self,
+        folder_id: int,
+        match_ids_ordered: list[int],
+    ) -> None:
+        existing_res = await self._session.execute(
+            select(MatchAnalysisFolderItem).where(
+                MatchAnalysisFolderItem.folder_id == folder_id
+            )
+        )
+        existing_items = {
+            item.match_analysis_id: item for item in existing_res.scalars().all()
+        }
+        desired_ids = list(dict.fromkeys(match_ids_ordered))
+
+        for item in existing_items.values():
+            if item.match_analysis_id not in desired_ids:
+                await self._session.delete(item)
+
+        for order, mid in enumerate(desired_ids):
+            if mid in existing_items:
+                existing_items[mid].sort_order = order
+            else:
+                self._session.add(
+                    MatchAnalysisFolderItem(
+                        folder_id=folder_id,
+                        match_analysis_id=mid,
+                        sort_order=order,
+                    )
+                )
+        await self._session.flush()
+
+
+class MatchAnalysisFolderLinkDAO(BaseDAO[MatchAnalysisFolderLink]):
+    model = MatchAnalysisFolderLink
+
+    async def get_link_for_folder(
+        self, folder_id: int
+    ) -> MatchAnalysisFolderLink | None:
+        result = await self._session.execute(
+            select(MatchAnalysisFolderLink)
+            .where(
+                MatchAnalysisFolderLink.folder_id == folder_id,
+                MatchAnalysisFolderLink.is_active == True,  # noqa: E712
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_link(
+        self, folder_id: int, admin_id: int | None
+    ) -> MatchAnalysisFolderLink:
+        link = MatchAnalysisFolderLink(
+            link_token=secrets.token_urlsafe(24),
+            folder_id=folder_id,
+            is_active=True,
+            created_by_admin_id=admin_id,
+        )
+        self._session.add(link)
+        await self._session.flush()
+        return link
+
+    async def get_or_create_link(
+        self, folder_id: int, admin_id: int | None
+    ) -> MatchAnalysisFolderLink:
+        existing = await self.get_link_for_folder(folder_id)
+        if existing:
+            return existing
+        return await self.create_link(folder_id, admin_id)
+
+    async def find_by_token(self, token: str) -> MatchAnalysisFolderLink | None:
+        result = await self._session.execute(
+            select(MatchAnalysisFolderLink)
+            .where(
+                MatchAnalysisFolderLink.link_token == str(token or "").strip(),
+                MatchAnalysisFolderLink.is_active == True,  # noqa: E712
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()

@@ -18,6 +18,8 @@ from bot.db.dao import (
     ContentCardActivationLinkDAO,
     ContentCardFolderDAO,
     ContentCardFolderLinkDAO,
+    MatchAnalysisFolderDAO,
+    MatchAnalysisFolderLinkDAO,
     MessageForNewDAO,
     MessagesTextsDAO,
     UserDAO,
@@ -51,6 +53,7 @@ CARD_LINK_ACTIVATE_PREFIX = "activate_card_link:"
 GALLERY_IMG_START_PREFIX = "imglink_"
 GALLERY_IMG_REDIS_PREFIX = "cabinet_gallery_img_share:"
 FOLDER_LINK_START_PREFIX = "folderlink_"
+MA_FOLDER_LINK_START_PREFIX = "mafolderlink_"
 
 
 def _normalize_card_pool(raw) -> ContentCardPool:
@@ -131,6 +134,7 @@ def _is_cards_cabinet_deeplink(start_payload: str | None) -> bool:
     return (
         payload.startswith(CARD_LINK_START_PREFIX)
         or payload.startswith(FOLDER_LINK_START_PREFIX)
+        or payload.startswith(MA_FOLDER_LINK_START_PREFIX)
         or payload.startswith(GALLERY_IMG_START_PREFIX)
     )
 
@@ -193,6 +197,33 @@ def _extract_folder_link_token(start_payload: str | None) -> str | None:
         return None
     token = payload[len(FOLDER_LINK_START_PREFIX) :].strip()
     return token or None
+
+
+def _extract_ma_folder_link_token(start_payload: str | None) -> str | None:
+    payload = str(start_payload or "").strip()
+    if not payload.startswith(MA_FOLDER_LINK_START_PREFIX):
+        return None
+    token = payload[len(MA_FOLDER_LINK_START_PREFIX) :].strip()
+    return token or None
+
+
+def _ma_cabinet_webapp_markup(*, folder_token: str | None = None) -> InlineKeyboardMarkup:
+    cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/match-analysis-cabinet"
+    if folder_token:
+        cabinet_url += f"?folder_token={quote(folder_token, safe='')}"
+        button_text = "Открыть папку"
+    else:
+        button_text = "Открыть кабинет «Анализ матча»"
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=button_text,
+                    web_app=WebAppInfo(url=cabinet_url),
+                )
+            ]
+        ]
+    )
 
 
 def _normalize_card_ids(card_ids: list[int] | None) -> list[int]:
@@ -316,6 +347,39 @@ async def _send_folder_link_prompt_if_needed(
     )
 
 
+async def _send_ma_folder_link_prompt_if_needed(
+    message: Message,
+    session: AsyncSession,
+    start_payload: str | None,
+) -> None:
+    link_token = _extract_ma_folder_link_token(start_payload)
+    if not link_token:
+        return
+
+    link_dao = MatchAnalysisFolderLinkDAO(session)
+    folder_link = await link_dao.find_by_token(link_token)
+    if not folder_link:
+        await message.answer("Ссылка на папку недействительна или не найдена.")
+        return
+
+    folder_dao = MatchAnalysisFolderDAO(session)
+    folder = await folder_dao.get_folder_by_id(folder_link.folder_id)
+    if not folder:
+        await message.answer("Папка по ссылке не найдена.")
+        return
+
+    match_ids = await folder_dao.get_folder_match_ids(folder_link.folder_id)
+    matches_count = len(match_ids)
+    if matches_count < 1:
+        text = f"Вам доступна папка «{folder.name}»."
+    else:
+        text = f"Вам доступна папка «{folder.name}». Матчей: {matches_count}."
+    await message.answer(
+        text,
+        reply_markup=_ma_cabinet_webapp_markup(folder_token=link_token),
+    )
+
+
 async def _send_card_link_prompt_if_needed(
     message: Message,
     session: AsyncSession,
@@ -385,6 +449,7 @@ async def _handle_cards_cabinet_deeplink_start(
     await _ensure_user_on_start(message, session)
     await _send_card_link_prompt_if_needed(message, session, start_payload)
     await _send_folder_link_prompt_if_needed(message, session, start_payload)
+    await _send_ma_folder_link_prompt_if_needed(message, session, start_payload)
     await _send_gallery_image_from_start_if_needed(message, start_payload)
 
 

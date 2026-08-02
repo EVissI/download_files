@@ -1226,3 +1226,166 @@ class MatchAnalysis(Base):
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     analysis: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    folder_items: Mapped[list["MatchAnalysisFolderItem"]] = relationship(
+        "MatchAnalysisFolderItem",
+        back_populates="match_analysis",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class MatchAnalysisFolder(Base):
+    """Иерархическая папка для группировки анализов матча."""
+
+    __tablename__ = "match_analysis_folders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    parent_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("match_analysis_folders.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_by_admin_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    parent: Mapped[Optional["MatchAnalysisFolder"]] = relationship(
+        "MatchAnalysisFolder",
+        remote_side="MatchAnalysisFolder.id",
+        back_populates="children",
+    )
+    children: Mapped[list["MatchAnalysisFolder"]] = relationship(
+        "MatchAnalysisFolder",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+    )
+    items: Mapped[list["MatchAnalysisFolderItem"]] = relationship(
+        "MatchAnalysisFolderItem",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    created_by_admin: Mapped[Optional["User"]] = relationship("User")
+
+
+class MatchAnalysisFolderItem(Base):
+    """Привязка анализа матча к папке (many-to-many)."""
+
+    __tablename__ = "match_analysis_folder_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "folder_id",
+            "match_analysis_id",
+            name="uq_ma_folder_items_folder_id_match_analysis_id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("match_analysis_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    match_analysis_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("match_analyses.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["MatchAnalysisFolder"] = relationship(
+        "MatchAnalysisFolder",
+        back_populates="items",
+    )
+    match_analysis: Mapped["MatchAnalysis"] = relationship(
+        "MatchAnalysis",
+        back_populates="folder_items",
+        passive_deletes=True,
+    )
+
+
+class MatchAnalysisFolderLink(Base):
+    """Многоразовая ссылка на папку анализов матча."""
+
+    __tablename__ = "match_analysis_folder_links"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    link_token: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    folder_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("match_analysis_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=sa_true()
+    )
+    created_by_admin_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["MatchAnalysisFolder"] = relationship("MatchAnalysisFolder")
+    created_by_admin: Mapped[Optional["User"]] = relationship("User")
+
+
+class MatchAnalysisFolderSchedule(Base):
+    """Расписание автодобавления анализов матча в папку (по МСК)."""
+
+    __tablename__ = "match_analysis_folder_schedules"
+    __table_args__ = (
+        UniqueConstraint(
+            "folder_id", name="uq_match_analysis_folder_schedules_folder_id"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("match_analysis_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    items_per_run: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    weekdays: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    issue_time_msk: Mapped[str] = mapped_column(String(5), nullable=False)
+    scheduler_job_id: Mapped[str | None] = mapped_column(
+        String(128), unique=True, nullable=True
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_by_admin_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["MatchAnalysisFolder"] = relationship("MatchAnalysisFolder")
+    created_by_admin: Mapped[Optional["User"]] = relationship("User")
