@@ -432,6 +432,25 @@
             display: flex;
         }
 
+        .cabinet-admin-status {
+            grid-column: 1 / -1;
+            display: none;
+            margin: 0;
+            padding: 2px 2px 0;
+            color: #9aa3b2;
+            font-size: 0.78rem;
+            line-height: 1.3;
+        }
+
+        .cabinet-admin-status.is-visible {
+            display: block;
+        }
+
+        .cabinet-admin-status strong {
+            color: #d7dde8;
+            font-weight: 600;
+        }
+
         .label-filter-select {
             width: 62%;
             background: #2b2b2b;
@@ -2165,6 +2184,9 @@
                     <button id="label-presets-open-btn" class="label-presets-open-btn" type="button"
                         title="Открыть пресеты меток" aria-label="Открыть пресеты меток">Пресеты</button>
                 </div>
+            </div>
+            <div id="cabinet-admin-status" class="cabinet-admin-status" aria-live="polite">
+                Готовы к выдаче: <strong id="ready-for-issue-count">0</strong>
             </div>
         </div>
         <div id="err" class="err" style="display:none;"></div>
@@ -4700,6 +4722,13 @@
                         : 'Удалить карточку #' + cardIdNum + ' из базы? Это действие необратимо.';
                     var confirmTitle = fromFolder ? 'Убрать из папки' : 'Удаление карточки';
                     var confirmLabel = fromFolder ? 'Убрать' : 'Удалить';
+                    var deletedWasReady = false;
+                    for (var di = 0; di < allCards.length; di++) {
+                        if (Number(allCards[di] && allCards[di].content_card_id) === cardIdNum) {
+                            deletedWasReady = !!allCards[di].is_ready;
+                            break;
+                        }
+                    }
                     showCabinetConfirm(confirmMessage, confirmTitle, {
                         danger: true,
                         confirmLabel: confirmLabel,
@@ -4731,6 +4760,8 @@
                                     if (!removed) {
                                         throw new Error('Карточка не найдена в этой папке');
                                     }
+                                } else if (deletedWasReady) {
+                                    bumpReadyForIssueCount(-1);
                                 }
                                 removeCardFromLists(cardIdNum);
                                 renderCards();
@@ -4787,6 +4818,7 @@
                             var ready = data && typeof data.is_ready === 'boolean'
                                 ? !!data.is_ready
                                 : nextReady;
+                            var wasReady = !!row.is_ready;
                             row.is_ready = ready;
                             if (shuffledCards && shuffledCards.length) {
                                 shuffledCards.forEach(function (item) {
@@ -4794,6 +4826,9 @@
                                         item.is_ready = ready;
                                     }
                                 });
+                            }
+                            if (wasReady !== ready) {
+                                bumpReadyForIssueCount(ready ? 1 : -1);
                             }
                             renderCards();
                         })
@@ -5559,8 +5594,32 @@
                     return r.json();
                 }
 
+                var readyForIssueCount = 0;
+                var cabinetAdminStatus = document.getElementById('cabinet-admin-status');
+                var readyForIssueCountEl = document.getElementById('ready-for-issue-count');
+
+                function setReadyForIssueCount(count) {
+                    var n = Number(count);
+                    readyForIssueCount = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+                    if (readyForIssueCountEl) {
+                        readyForIssueCountEl.textContent = String(readyForIssueCount);
+                    }
+                }
+
+                function bumpReadyForIssueCount(delta) {
+                    setReadyForIssueCount(readyForIssueCount + Number(delta || 0));
+                }
+
+                function updateAdminStatusBar() {
+                    var show = !IS_MATCH_ANALYSIS && isRootAdminUser;
+                    if (cabinetAdminStatus) {
+                        cabinetAdminStatus.classList.toggle('is-visible', show);
+                    }
+                }
+
                 function applyRootAdminCabinetUi() {
                     if (!isRootAdminUser) return;
+                    updateAdminStatusBar();
                     if (FEATURES.enable_admin_fab && adminFabBtn) {
                         adminFabBtn.classList.add('is-visible');
                     }
@@ -5706,6 +5765,9 @@
                                 var cards = (data && data.cards) || [];
                                 return {
                                     is_root_admin: !!(data && data.is_root_admin),
+                                    ready_for_issue_count: Number(
+                                        (data && data.ready_for_issue_count) || 0
+                                    ),
                                     folder: data && data.folder,
                                     child_folders: (data && data.child_folders) || [],
                                     cards: cards.map(function (card, index) {
@@ -5733,6 +5795,9 @@
                             var cards = (data && data.cards) || [];
                             return {
                                 is_root_admin: !!(data && data.is_root_admin),
+                                ready_for_issue_count: Number(
+                                    (data && data.ready_for_issue_count) || 0
+                                ),
                                 folder: null,
                                 child_folders: [],
                                 cards: cards.map(function (row, index) {
@@ -5762,6 +5827,14 @@
                 function applyCabinetPayload(payload, config) {
                     isRootAdminUser = !!(payload && payload.is_root_admin);
                     applyRootAdminCabinetUi();
+                    if (!IS_MATCH_ANALYSIS) {
+                        setReadyForIssueCount(
+                            payload && payload.ready_for_issue_count != null
+                                ? payload.ready_for_issue_count
+                                : readyForIssueCount
+                        );
+                        updateAdminStatusBar();
+                    }
 
                     var headerTitle = document.querySelector('.cabinet-header h1');
                     if (config.mode === 'folder') {

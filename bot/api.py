@@ -1615,8 +1615,23 @@ async def content_cards_my_list(body: ContentCardMyListBody):
             }
             for row in links
         ]
+        ready_for_issue_count = 0
+        if is_root_admin:
+            ready_for_issue_count = int(
+                await session.scalar(
+                    select(func.count(ContentCard.id)).where(
+                        ContentCard.card_pool == card_pool,
+                        ContentCard.is_ready.is_(True),
+                    )
+                )
+                or 0
+            )
 
-    return {"cards": cards, "is_root_admin": is_root_admin}
+    return {
+        "cards": cards,
+        "is_root_admin": is_root_admin,
+        "ready_for_issue_count": ready_for_issue_count,
+    }
 
 
 @app.post("/api/content_cards/delete")
@@ -3473,12 +3488,26 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
                         "is_ready": bool(getattr(c, "is_ready", False)),
                     })
 
+        is_root_admin = user_id in settings.ROOT_ADMIN_IDS
+        ready_for_issue_count = 0
+        if is_root_admin:
+            ready_for_issue_count = int(
+                await session.scalar(
+                    select(func.count(ContentCard.id)).where(
+                        ContentCard.card_pool == folder.folder_pool,
+                        ContentCard.is_ready.is_(True),
+                    )
+                )
+                or 0
+            )
+
         return {
             "folder": _serialize_folder(folder),
             "card_ids": card_ids,
             "cards": cards_data,
             "child_folders": child_folders,
-            "is_root_admin": user_id in settings.ROOT_ADMIN_IDS,
+            "is_root_admin": is_root_admin,
+            "ready_for_issue_count": ready_for_issue_count,
         }
 
 
