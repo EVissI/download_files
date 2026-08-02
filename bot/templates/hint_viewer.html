@@ -670,6 +670,41 @@
         .header {
             display: flex;
             flex-direction: column;
+            position: relative;
+        }
+
+        .ma-cabinet-back-btn {
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 3;
+            width: 34px;
+            height: 34px;
+            min-width: 0;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: rgba(45, 45, 45, 0.92);
+            color: #ddd;
+            font-size: 16px;
+            line-height: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .ma-cabinet-back-btn:hover {
+            background: #3a3a3a;
+            border-color: #777;
+            color: #fff;
+        }
+
+        .header.has-ma-cabinet-back #match-info {
+            padding-left: 42px;
+            box-sizing: border-box;
         }
 
         #top-bar {
@@ -1169,6 +1204,7 @@
             if (el.id === 'boardCanvas') return true;
             if (el.closest('#boardCanvas')) return true;
             if (el.closest('#adminButtonContainer')) return true;
+            if (el.id === 'matchAnalysisCabinetBackBtn' || el.closest('#matchAnalysisCabinetBackBtn')) return true;
             if (el.tagName === 'CANVAS') return true;
             return false;
         }
@@ -1254,6 +1290,9 @@
         <h1>Backgammon Game Analysis</h1>
         <div class="board-block">
             <div class="header">
+                <button type="button" id="matchAnalysisCabinetBackBtn" class="ma-cabinet-back-btn" onclick="openMatchAnalysisCabinet()" title="В кабинет «Анализ матча»" aria-label="В кабинет «Анализ матча»" style="display:none;">
+                    <i class="fa fa-th-large" aria-hidden="true"></i>
+                </button>
                 <div id="match-info"></div>
                 <div id="players-info"></div>
                 <div id="top-bar"></div>
@@ -1689,7 +1728,7 @@
                     '<div id="black-pips" class="pips-above-board">0</div>';
                 infoDiv.innerHTML = '<div class="loading">Нет игр в анализе</div>';
             }
-            updateMatchAnalysisAudioUi();
+            updateMatchAnalysisChromeUi();
         }
 
         // Загружаем список доступных игр (S3 hints или сохранённый MatchAnalysis)
@@ -3645,6 +3684,7 @@
                 if (redPips && originalRedPipsDisplay !== null) redPips.style.display = originalRedPipsDisplay;
                 if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
                 restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
+                setMatchAnalysisCabinetBackVisibleForScreenshot(true);
                 removeScreenshotFontScale();
             }
 
@@ -3662,6 +3702,7 @@
             if (settingsSpan) settingsSpan.style.display = 'none';
             if (openEditorBtn) openEditorBtn.style.display = 'none';
             if (adminButtonContainer) adminButtonContainer.style.display = 'none';
+            setMatchAnalysisCabinetBackVisibleForScreenshot(false);
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
@@ -3825,6 +3866,7 @@
                 if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
                 if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
                 restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
+                setMatchAnalysisCabinetBackVisibleForScreenshot(true);
                 removeScreenshotFontScale();
             }
 
@@ -3840,6 +3882,7 @@
             if (settingsContainer) settingsContainer.style.display = 'none';
             if (openEditorBtn) openEditorBtn.style.display = 'none';
             if (adminButtonContainer) adminButtonContainer.style.display = 'none';
+            setMatchAnalysisCabinetBackVisibleForScreenshot(false);
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
                 if (playersInfo) {
@@ -4361,7 +4404,7 @@
                             if (pipBtn) pipBtn.style.display = 'none';
                             if (cardBtn) cardBtn.style.display = 'none';
                         }
-                        updateMatchAnalysisAudioUi();
+                        updateMatchAnalysisChromeUi();
                         console.log('Admin access granted for user:', data.user_id);
                     }
                 } else {
@@ -4374,6 +4417,9 @@
 
         // Check admin status when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            if (matchAnalysisMode) {
+                updateMatchAnalysisChromeUi();
+            }
             checkAdminStatus();
         });
 
@@ -4576,12 +4622,26 @@
                 : '<i class="fa fa-microphone" aria-hidden="true"></i>';
         }
 
+        function updateMatchAnalysisChromeUi() {
+            const cabinetBackBtn = document.getElementById('matchAnalysisCabinetBackBtn');
+            const headerEl = document.querySelector('.board-block .header');
+            if (cabinetBackBtn) {
+                cabinetBackBtn.style.display = matchAnalysisMode ? 'inline-flex' : 'none';
+            }
+            if (headerEl) {
+                headerEl.classList.toggle('has-ma-cabinet-back', !!matchAnalysisMode);
+            }
+            updateMatchAnalysisAudioUi();
+        }
+
+        function setMatchAnalysisCabinetBackVisibleForScreenshot(visible) {
+            const cabinetBackBtn = document.getElementById('matchAnalysisCabinetBackBtn');
+            if (!cabinetBackBtn || !matchAnalysisMode) return;
+            cabinetBackBtn.style.display = visible ? 'inline-flex' : 'none';
+        }
+
         function updateMatchAnalysisAudioUi() {
             const panel = document.getElementById('matchAnalysisAudioPanel');
-            const cabinetLink = document.getElementById('openMatchAnalysisCabinetBtn');
-            if (cabinetLink) {
-                cabinetLink.style.display = matchAnalysisMode ? '' : 'none';
-            }
             if (!panel) return;
             if (!matchAnalysisMode) {
                 panel.style.display = 'none';
@@ -4781,7 +4841,11 @@
                 // Force refresh by adding timestamp to button content
                 const timestamp = Date.now();
                 button.setAttribute('data-refresh', timestamp);
-                
+                // В режиме анализа матча редактор карточек скрыт — не возвращаем кнопку.
+                if (matchAnalysisMode) {
+                    button.style.display = 'none';
+                    return;
+                }
                 // Trigger a reflow to ensure the update is applied
                 button.style.display = 'none';
                 button.offsetHeight; // Force reflow
@@ -4813,20 +4877,6 @@
 
     <!-- Admin button container -->
     <div id="adminButtonContainer" style="margin-top: 20px; margin-bottom: 20px; text-align: center; display: none;">
-        <button id="openMatchAnalysisCabinetBtn" onclick="openMatchAnalysisCabinet()" style="
-            display: none;
-            padding: 12px 24px;
-            margin: 0 6px 10px 0;
-            background-color: #6f42c1;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        ">
-            Кабинет «Анализ матча»
-        </button>
         <button id="openPipCountCardEditorBtn" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}" style="
             padding: 12px 24px;
             margin-right: 10px;
