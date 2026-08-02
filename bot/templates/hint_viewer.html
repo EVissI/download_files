@@ -1466,6 +1466,37 @@
             }
         }
 
+        function resolveHintViewerChatId(fallback) {
+            try {
+                const tgUser =
+                    window.Telegram &&
+                    Telegram.WebApp &&
+                    Telegram.WebApp.initDataUnsafe &&
+                    Telegram.WebApp.initDataUnsafe.user;
+                if (tgUser && tgUser.id != null && tgUser.id !== '') {
+                    return String(tgUser.id);
+                }
+            } catch (e) {}
+            const fromUrl = urlParams.get('chat_id');
+            if (fromUrl) return String(fromUrl);
+            if (fallback != null && fallback !== '') return String(fallback);
+            return null;
+        }
+
+        // Текущий пользователь WebApp/URL — не владелец сохранённого анализа.
+        let chatId = resolveHintViewerChatId(null);
+        try {
+            window.hintViewerChatId = chatId;
+        } catch (e) {}
+
+        function getActiveHintViewerChatId() {
+            chatId = resolveHintViewerChatId(chatId);
+            try {
+                window.hintViewerChatId = chatId;
+            } catch (e) {}
+            return chatId;
+        }
+
         function fetchGameJson(gameNum) {
             if (matchAnalysisDoc) {
                 const g = (matchAnalysisDoc.games || []).find(
@@ -1571,7 +1602,9 @@
             matchLength = gameInfo.match_length || 0;
             enable_crawford_game_number = parseInt(gameInfo.enable_crawford_game) || null;
             const scores = gameInfo.scores || {};
-            chatId = gameInfo.chat_id || chatId;
+            // Не подменяем chat_id текущего зрителя на chat_id из JSON анализа
+            // (иначе скриншоты уходят создателю карточки из кабинета).
+            chatId = resolveHintViewerChatId(chatId || gameInfo.chat_id || null);
             try {
                 window.hintViewerChatId = chatId;
             } catch (e) {}
@@ -3655,7 +3688,7 @@
                 canvas.toBlob(blob => {
                     const formData = new FormData();
                     formData.append('photo', blob);
-                    fetch(`/api/save_screenshot?chat_id=${chatId}`, {
+                    fetch(`/api/save_screenshot?chat_id=${getActiveHintViewerChatId()}`, {
                         method: 'POST',
                         body: formData
                     }).then(response => {
@@ -3679,7 +3712,7 @@
         }
 
         function uploadScreenshots() {
-            fetch(`/api/upload_screenshots?chat_id=${chatId}`, { method: 'POST' }).then(async response => {
+            fetch(`/api/upload_screenshots?chat_id=${getActiveHintViewerChatId()}`, { method: 'POST' }).then(async response => {
                 if (response.ok) {
                     showMessageModal('Скриншоты отправлены', 'success');
                 } else if (response.status === 402) {
@@ -3837,11 +3870,10 @@
                         const formData = new FormData();
                         formData.append('photo', file);
 
-                        // Use chat_id from global variable
-                        const currentChatId = chatId;
+                        // chat_id текущего зрителя (Telegram WebApp), не создателя анализа
+                        const currentChatId = getActiveHintViewerChatId();
 
-                        // You might need to adjust this based on your backend API
-                        fetch(`/api/send_screenshot?chat_id=${chatId}`, {
+                        fetch(`/api/send_screenshot?chat_id=${currentChatId}`, {
                             method: 'POST',
                             body: formData
                         }).then(async response => {
@@ -3934,7 +3966,7 @@
                     const formData = new FormData();
                     formData.append('photo', blob);
                     formData.append('text', text);
-                    formData.append('chat_id', chatId);
+                    formData.append('chat_id', getActiveHintViewerChatId());
 
                     // Create AbortController for timeout
                     const controller = new AbortController();
@@ -4236,9 +4268,9 @@
                     return;
                 }
                 
-                // Get chat_id and lang from URL or use current
+                // Get chat_id and lang from URL or use current viewer
                 const urlParams = new URLSearchParams(window.location.search);
-                const currentChatId = urlParams.get('chat_id') || chatId || '';
+                const currentChatId = getActiveHintViewerChatId() || urlParams.get('chat_id') || '';
                 const lang = urlParams.get('lang') || '';
                 
                 // Build URL with XGID, chat_id, lang and invert (relative URL for same app navigation)
