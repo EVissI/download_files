@@ -573,6 +573,49 @@
             line-height: 1.35;
         }
 
+        .card-bg-modal__color-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            padding: 10px 12px;
+            border: 1px solid #3a3a3a;
+            border-radius: 12px;
+            background: #1c1c1c;
+        }
+
+        .card-bg-modal__color-label {
+            font-size: 0.8rem;
+            color: #cfcfcf;
+            margin-right: 4px;
+        }
+
+        .card-bg-modal__color-input {
+            width: 42px;
+            height: 34px;
+            padding: 0;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: #2d2d2d;
+            cursor: pointer;
+        }
+
+        .card-bg-modal__color-text {
+            width: 96px;
+            background: #2b2b2b;
+            color: #f0f0f0;
+            border: 1px solid #454545;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.8rem;
+            outline: none;
+        }
+
+        .card-bg-modal__color-text:focus {
+            border-color: #5f8fbd;
+        }
+
         .card-bg-modal__toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -2101,9 +2144,20 @@
         <div class="card-bg-modal__box" role="dialog" aria-modal="true" aria-labelledby="cardBgModalTitle">
             <h3 id="cardBgModalTitle" class="card-bg-modal__title">Фон кадров</h3>
             <p class="card-bg-modal__hint">
-                Картинка ставится только кадрам без фона-изображения. Цветовой фон не меняется.
-                Очистка снимает только картинку-фон у всех кадров.
+                Картинка и цвет ставятся на все кадры всех карточек (перезаписывают текущий фон).
+                При применении цвета картинка-фон снимается, чтобы цвет был виден.
+                «Обнулить фон» снимает картинку и ставит белый цвет (#ffffff).
             </p>
+            <div class="card-bg-modal__color-row">
+                <span class="card-bg-modal__color-label">Цвет фона</span>
+                <input id="cardBgColorInput" class="card-bg-modal__color-input" type="color" value="#ffffff"
+                    title="Цвет фона кадров" aria-label="Цвет фона кадров">
+                <input id="cardBgColorText" class="card-bg-modal__color-text" type="text" value="#ffffff"
+                    maxlength="7" placeholder="#ffffff" autocomplete="off" spellcheck="false">
+                <button id="cardBgApplyColorBtn" type="button" class="card-bg-modal__btn card-bg-modal__btn--primary">
+                    Применить цвет
+                </button>
+            </div>
             <div class="card-bg-modal__toolbar">
                 <button id="cardBgUploadBtn" type="button" class="card-bg-modal__btn card-bg-modal__btn--primary">
                     Загрузить в S3
@@ -2122,7 +2176,7 @@
             </button>
             <div class="card-bg-modal__actions">
                 <button id="cardBgClearBtn" type="button" class="card-bg-modal__btn card-bg-modal__btn--danger">
-                    Снять картинки-фоны
+                    Обнулить фон
                 </button>
                 <button id="cardBgCloseBtn" type="button" class="card-bg-modal__btn">Закрыть</button>
                 <button id="cardBgApplyBtn" type="button" class="card-bg-modal__btn card-bg-modal__btn--primary" disabled>
@@ -2499,6 +2553,9 @@
             var cardBgClearBtn = document.getElementById('cardBgClearBtn');
             var cardBgCloseBtn = document.getElementById('cardBgCloseBtn');
             var cardBgApplyBtn = document.getElementById('cardBgApplyBtn');
+            var cardBgColorInput = document.getElementById('cardBgColorInput');
+            var cardBgColorText = document.getElementById('cardBgColorText');
+            var cardBgApplyColorBtn = document.getElementById('cardBgApplyColorBtn');
             var cardBgSelectedKey = '';
             var cardBgSelectedName = '';
             var cardBgNextToken = null;
@@ -3501,7 +3558,16 @@
 
                 function setCardBgBusy(busy) {
                     cardBgBusy = !!busy;
-                    [cardBgUploadBtn, cardBgRefreshBtn, cardBgLoadMoreBtn, cardBgClearBtn, cardBgApplyBtn].forEach(function (btn) {
+                    [
+                        cardBgUploadBtn,
+                        cardBgRefreshBtn,
+                        cardBgLoadMoreBtn,
+                        cardBgClearBtn,
+                        cardBgApplyBtn,
+                        cardBgApplyColorBtn,
+                        cardBgColorInput,
+                        cardBgColorText,
+                    ].forEach(function (btn) {
                         if (!btn) return;
                         if (btn === cardBgApplyBtn) {
                             btn.disabled = cardBgBusy || !cardBgSelectedKey;
@@ -3509,6 +3575,72 @@
                             btn.disabled = cardBgBusy;
                         }
                     });
+                }
+
+                function normalizeCardBgColor(raw) {
+                    var s = String(raw || '').trim();
+                    var m6 = s.match(/^#([0-9A-Fa-f]{6})$/);
+                    if (m6) return '#' + m6[1].toLowerCase();
+                    var m3 = s.match(/^#([0-9A-Fa-f]{3})$/);
+                    if (m3) {
+                        return '#' + m3[1].split('').map(function (c) { return c + c; }).join('').toLowerCase();
+                    }
+                    return '';
+                }
+
+                function syncCardBgColorInputs(fromPicker) {
+                    if (!cardBgColorInput || !cardBgColorText) return;
+                    if (fromPicker) {
+                        cardBgColorText.value = cardBgColorInput.value;
+                        return;
+                    }
+                    var normalized = normalizeCardBgColor(cardBgColorText.value);
+                    if (normalized) {
+                        cardBgColorInput.value = normalized;
+                        cardBgColorText.value = normalized;
+                    }
+                }
+
+                function applyCardBgColor() {
+                    if (!isRootAdminUser || cardBgBusy) return;
+                    syncCardBgColorInputs(false);
+                    var color = normalizeCardBgColor(
+                        cardBgColorText ? cardBgColorText.value : (cardBgColorInput && cardBgColorInput.value)
+                    );
+                    if (!color) {
+                        setCardBgModalMsg('Укажите цвет в формате #rgb или #rrggbb');
+                        return;
+                    }
+                    setCardBgBusy(true);
+                    setCardBgModalMsg('Ставлю цвет фона на все кадры (картинка будет снята)…');
+                    fetch('/api/content_cards/bulk_canvas_bg/set_color', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(authPayload({ color: color })),
+                    })
+                        .then(function (r) {
+                            return r.json().catch(function () { return {}; }).then(function (j) {
+                                if (!r.ok) {
+                                    var detail = (j && j.detail) || r.statusText || 'Не удалось применить цвет';
+                                    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                                }
+                                return j;
+                            });
+                        })
+                        .then(function (data) {
+                            var msg =
+                                'Цвет ' + (data.color || color) + '. Карточек: ' + (data.cards_total || 0) +
+                                ', изменено: ' + (data.cards_updated || 0) +
+                                ', кадров: ' + (data.frames_updated || 0);
+                            setCardBgModalMsg(msg);
+                            showCabinetNotice(msg, 'Фон кадров');
+                        })
+                        .catch(function (e) {
+                            setCardBgModalMsg(e && e.message ? e.message : 'Ошибка применения цвета');
+                        })
+                        .finally(function () {
+                            setCardBgBusy(false);
+                        });
                 }
 
                 function mediaUrlForKey(key) {
@@ -3708,7 +3840,7 @@
                 function applyCardBgSelection() {
                     if (!isRootAdminUser || !cardBgSelectedKey || cardBgBusy) return;
                     setCardBgBusy(true);
-                    setCardBgModalMsg('Применяю фон к кадрам без картинки…');
+                    setCardBgModalMsg('Применяю картинку-фон ко всем кадрам…');
                     fetch('/api/content_cards/bulk_canvas_bg/set', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3745,13 +3877,13 @@
                 function clearAllCardImageBackgrounds() {
                     if (!isRootAdminUser || cardBgBusy) return;
                     showCabinetConfirm(
-                        'Снять картинку-фон у всех кадров во всех карточках? Цветовой фон останется.',
-                        'Очистка фона',
-                        { danger: true, confirmLabel: 'Снять' }
+                        'Обнулить фон у всех кадров во всех карточках? Картинка будет снята, цвет станет белым (#ffffff).',
+                        'Обнуление фона',
+                        { danger: true, confirmLabel: 'Обнулить' }
                     ).then(function (ok) {
                         if (!ok) return;
                         setCardBgBusy(true);
-                        setCardBgModalMsg('Снимаю картинки-фоны…');
+                        setCardBgModalMsg('Обнуляю фон у всех кадров…');
                         fetch('/api/content_cards/bulk_canvas_bg/clear', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -3760,7 +3892,7 @@
                             .then(function (r) {
                                 return r.json().catch(function () { return {}; }).then(function (j) {
                                     if (!r.ok) {
-                                        var detail = (j && j.detail) || r.statusText || 'Не удалось очистить';
+                                        var detail = (j && j.detail) || r.statusText || 'Не удалось обнулить';
                                         throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
                                     }
                                     return j;
@@ -3768,14 +3900,14 @@
                             })
                             .then(function (data) {
                                 var msg =
-                                    'Очищено. Карточек: ' + (data.cards_total || 0) +
+                                    'Фон обнулён. Карточек: ' + (data.cards_total || 0) +
                                     ', изменено: ' + (data.cards_updated || 0) +
                                     ', кадров: ' + (data.frames_cleared || 0);
                                 setCardBgModalMsg(msg);
                                 showCabinetNotice(msg, 'Фон кадров');
                             })
                             .catch(function (e) {
-                                setCardBgModalMsg(e && e.message ? e.message : 'Ошибка очистки');
+                                setCardBgModalMsg(e && e.message ? e.message : 'Ошибка обнуления');
                             })
                             .finally(function () {
                                 setCardBgBusy(false);
@@ -4275,6 +4407,26 @@
                 }
                 if (cardBgClearBtn) {
                     cardBgClearBtn.addEventListener('click', clearAllCardImageBackgrounds);
+                }
+                if (cardBgColorInput) {
+                    cardBgColorInput.addEventListener('input', function () {
+                        syncCardBgColorInputs(true);
+                    });
+                }
+                if (cardBgColorText) {
+                    cardBgColorText.addEventListener('change', function () {
+                        syncCardBgColorInputs(false);
+                    });
+                    cardBgColorText.addEventListener('keydown', function (ev) {
+                        if (ev.key === 'Enter') {
+                            ev.preventDefault();
+                            syncCardBgColorInputs(false);
+                            applyCardBgColor();
+                        }
+                    });
+                }
+                if (cardBgApplyColorBtn) {
+                    cardBgApplyColorBtn.addEventListener('click', applyCardBgColor);
                 }
                 if (labelPresetsOpenBtn) {
                     labelPresetsOpenBtn.addEventListener('click', openLabelPresetsModalCabinet);

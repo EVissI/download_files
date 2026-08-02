@@ -1,6 +1,6 @@
 """
-Админ-команда /card_bg: массово поставить картинку-фон кадрам без неё
-или снять картинку-фон у всех кадров (цвет canvasBackground не трогаем).
+Админ-команда /card_bg: массово поставить картинку-фон всем кадрам
+или обнулить фон (без картинки, цвет #ffffff).
 """
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ from PIL import Image
 
 from bot.common.service.content_card_bg_service import (
     build_pattern,
-    clear_all_image_backgrounds,
-    set_missing_image_backgrounds,
+    reset_all_backgrounds,
+    set_image_backgrounds_on_all,
 )
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.config import admins
@@ -37,9 +37,9 @@ async def start_card_bg(message: Message, state: FSMContext):
 
     await state.set_state(CardBgStates.waiting_input)
     await message.answer(
-        "Фон кадров карточек (только картинка, цвет не трогаем).\n\n"
-        "• Пришлите фото — поставлю фон всем кадрам без картинки-фона.\n"
-        "• Отправьте <code>0</code> — сниму картинку-фон у всех кадров.\n"
+        "Фон кадров карточек.\n\n"
+        "• Пришлите фото — поставлю картинку-фон всем кадрам.\n"
+        "• Отправьте <code>0</code> — обнулю фон (без картинки, белый цвет).\n"
         "• /cancel — отмена."
     )
 
@@ -59,13 +59,13 @@ async def process_card_bg_text(message: Message, state: FSMContext, session_with
     text = (message.text or "").strip()
     if text != "0":
         return await message.answer(
-            "Нужно фото или <code>0</code> для очистки. /cancel — отмена."
+            "Нужно фото или <code>0</code> для обнуления фона. /cancel — отмена."
         )
 
     await state.clear()
-    status = await message.answer("Снимаю картинку-фон у всех кадров…")
+    status = await message.answer("Обнуляю фон у всех кадров…")
     try:
-        cards_updated, frames_cleared, cards_total = await clear_all_image_backgrounds(
+        cards_updated, frames_cleared, cards_total = await reset_all_backgrounds(
             session_without_commit
         )
         await session_without_commit.commit()
@@ -73,7 +73,7 @@ async def process_card_bg_text(message: Message, state: FSMContext, session_with
             f"Готово.\n"
             f"Карточек просмотрено: {cards_total}\n"
             f"Карточек изменено: {cards_updated}\n"
-            f"Кадров очищено от картинки-фона: {frames_cleared}"
+            f"Кадров с обнулённым фоном: {frames_cleared}"
         )
         logger.info(
             "card_bg clear by {}: cards_updated={} frames_cleared={} total={}",
@@ -85,7 +85,7 @@ async def process_card_bg_text(message: Message, state: FSMContext, session_with
     except Exception as e:
         await session_without_commit.rollback()
         logger.exception("Ошибка /card_bg clear: {}", e)
-        await status.edit_text("Ошибка при очистке фонов. Подробности в логах.")
+        await status.edit_text("Ошибка при обнулении фонов. Подробности в логах.")
 
 
 @card_background_router.message(StateFilter(CardBgStates.waiting_input), F.photo)
@@ -95,7 +95,7 @@ async def process_card_bg_photo(message: Message, state: FSMContext, session_wit
         return await message.answer("Доступ запрещен.")
 
     await state.clear()
-    status = await message.answer("Загружаю фото и обновляю кадры без фона…")
+    status = await message.answer("Загружаю фото и обновляю все кадры…")
     try:
         photo = message.photo[-1]
         buf = BytesIO()
@@ -129,7 +129,7 @@ async def process_card_bg_photo(message: Message, state: FSMContext, session_wit
             image_width=width,
             image_height=height,
         )
-        cards_updated, frames_updated, cards_total = await set_missing_image_backgrounds(
+        cards_updated, frames_updated, cards_total = await set_image_backgrounds_on_all(
             session_without_commit, pattern
         )
         await session_without_commit.commit()
@@ -157,5 +157,5 @@ async def process_card_bg_photo(message: Message, state: FSMContext, session_wit
 @card_background_router.message(StateFilter(CardBgStates.waiting_input))
 async def process_card_bg_other(message: Message):
     await message.answer(
-        "Нужно фото или <code>0</code> для очистки. /cancel — отмена."
+        "Нужно фото или <code>0</code> для обнуления фона. /cancel — отмена."
     )

@@ -25,8 +25,10 @@ from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.common.service.content_card_bg_service import (
     build_pattern,
-    clear_all_image_backgrounds,
-    set_missing_image_backgrounds,
+    normalize_canvas_background_color,
+    reset_all_backgrounds,
+    set_color_backgrounds_on_all,
+    set_image_backgrounds_on_all,
 )
 from bot.common.service.webapp_settings_service import (
     get_webapp_fullscreen_enabled,
@@ -1076,7 +1078,7 @@ class ContentCardMediaListBody(BaseModel):
 
 
 class BulkCanvasBgAuthBody(BaseModel):
-    """auth для массовой очистки картинки-фона кадров."""
+    """auth для массового обнуления фона кадров."""
 
     init_data: str | None = None
     fab_token: str | None = None
@@ -1089,6 +1091,14 @@ class BulkCanvasBgSetBody(BaseModel):
     fab_token: str | None = None
     s3_key: str = Field(..., min_length=1, max_length=512)
     file_name: str | None = None
+
+
+class BulkCanvasBgSetColorBody(BaseModel):
+    """Массовая установка цвета фона (canvasBackground) на все кадры."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    color: str = Field(..., min_length=4, max_length=32)
 
 
 class CabinetGalleryListBody(BaseModel):
@@ -2494,7 +2504,7 @@ async def content_card_media_upload(
 @app.post("/api/content_cards/bulk_canvas_bg/set")
 async def bulk_canvas_bg_set(body: BulkCanvasBgSetBody):
     """
-    Ставит картинку-фон (cover) всем кадрам без canvasBackgroundPattern.
+    Ставит картинку-фон (cover) всем кадрам всех карточек (перезаписывает).
     Цвет canvasBackground не меняет. Только ROOT_ADMIN_IDS.
     """
     from io import BytesIO
@@ -2525,7 +2535,7 @@ async def bulk_canvas_bg_set(body: BulkCanvasBgSetBody):
         image_height=height,
     )
     async with async_session_maker() as session:
-        cards_updated, frames_updated, cards_total = await set_missing_image_backgrounds(
+        cards_updated, frames_updated, cards_total = await set_image_backgrounds_on_all(
             session, pattern
         )
         await session.commit()
@@ -2549,13 +2559,13 @@ async def bulk_canvas_bg_set(body: BulkCanvasBgSetBody):
 @app.post("/api/content_cards/bulk_canvas_bg/clear")
 async def bulk_canvas_bg_clear(body: BulkCanvasBgAuthBody):
     """
-    Снимает картинку-фон (canvasBackgroundPattern) у всех кадров.
-    Цвет canvasBackground не трогает. Только ROOT_ADMIN_IDS.
+    Обнуляет фон всех кадров: без картинки, цвет #ffffff.
+    Только ROOT_ADMIN_IDS.
     """
     uid = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(uid)
     async with async_session_maker() as session:
-        cards_updated, frames_cleared, cards_total = await clear_all_image_backgrounds(
+        cards_updated, frames_cleared, cards_total = await reset_all_backgrounds(
             session
         )
         await session.commit()
@@ -2571,6 +2581,42 @@ async def bulk_canvas_bg_clear(body: BulkCanvasBgAuthBody):
         "cards_total": cards_total,
         "cards_updated": cards_updated,
         "frames_cleared": frames_cleared,
+    }
+
+
+@app.post("/api/content_cards/bulk_canvas_bg/set_color")
+async def bulk_canvas_bg_set_color(body: BulkCanvasBgSetColorBody):
+    """
+    Ставит цвет canvasBackground всем кадрам всех карточек
+    и снимает картинку-фон, чтобы цвет был виден. Только ROOT_ADMIN_IDS.
+    """
+    uid = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(uid)
+    color = normalize_canvas_background_color(body.color)
+    if not color:
+        raise HTTPException(
+            status_code=400,
+            detail="Цвет должен быть в формате #rgb или #rrggbb",
+        )
+    async with async_session_maker() as session:
+        cards_updated, frames_updated, cards_total = await set_color_backgrounds_on_all(
+            session, color
+        )
+        await session.commit()
+    logger.info(
+        "bulk_canvas_bg set_color by {}: color={} cards_updated={} frames_updated={} total={}",
+        uid,
+        color,
+        cards_updated,
+        frames_updated,
+        cards_total,
+    )
+    return {
+        "ok": True,
+        "color": color,
+        "cards_total": cards_total,
+        "cards_updated": cards_updated,
+        "frames_updated": frames_updated,
     }
 
 
