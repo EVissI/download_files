@@ -161,8 +161,8 @@ class _ContentCardModelViewBase(ModelView):
     show_template = "show_content_card.html"
 
     page_size = 30
-    list_columns = ["id", "file_name", "card_pool_display", "notes", "labels"]
-    show_columns = ["id", "file_name", "card_pool_display", "notes", "labels"]
+    list_columns = ["id", "file_name", "card_pool_display", "is_ready", "notes", "labels"]
+    show_columns = ["id", "file_name", "card_pool_display", "is_ready", "notes", "labels"]
     search_columns = ["id", "file_name", "notes", "labels"]
     order_columns = ["id", "file_name", "card_pool"]
 
@@ -182,6 +182,7 @@ class _ContentCardModelViewBase(ModelView):
         "file_name": _("Имя файла"),
         "card_pool": _("Пул"),
         "card_pool_display": _("Пул"),
+        "is_ready": _("Готова к выдаче"),
         "notes": _("Примечания"),
         "labels": _("Метки"),
     }

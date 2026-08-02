@@ -14,6 +14,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    false as sa_false,
     true as sa_true,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -854,6 +855,12 @@ class ContentCard(Base):
         nullable=False,
         default=ContentCardPool.CARDS,
         server_default=ContentCardPool.CARDS.value,
+    )
+    is_ready: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=sa_false(),
     )
 
     users: Mapped[list["UserContentCard"]] = relationship(

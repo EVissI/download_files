@@ -861,7 +861,11 @@ class PromoCodeDAO(BaseDAO[Promocode]):
                 if cards_to_issue <= 0:
                     return False, "cards_quantity_invalid"
 
-                all_cards_query = select(ContentCard.id).order_by(ContentCard.id.asc())
+                all_cards_query = (
+                    select(ContentCard.id)
+                    .where(ContentCard.is_ready.is_(True))
+                    .order_by(ContentCard.id.asc())
+                )
                 all_cards_result = await self._session.execute(all_cards_query)
                 all_card_ids = [row[0] for row in all_cards_result.all() if row[0] is not None]
                 if not all_card_ids:
@@ -923,7 +927,11 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             if promocode.promocode_type == PromocodeType.CARDS:
                 cards_to_issue = max(0, promocode.cards_issue_quantity or 0)
                 if cards_to_issue > 0:
-                    all_cards_query = select(ContentCard.id).order_by(ContentCard.id.asc())
+                    all_cards_query = (
+                        select(ContentCard.id)
+                        .where(ContentCard.is_ready.is_(True))
+                        .order_by(ContentCard.id.asc())
+                    )
                     all_cards_result = await self._session.execute(all_cards_query)
                     all_card_ids = [row[0] for row in all_cards_result.all() if row[0] is not None]
 

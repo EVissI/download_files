@@ -23,7 +23,10 @@ def grant_content_cards_from_pool_sync(
 
     all_card_ids_result = session.execute(
         select(ContentCard.id)
-        .where(ContentCard.card_pool == card_pool.value)
+        .where(
+            ContentCard.card_pool == card_pool.value,
+            ContentCard.is_ready.is_(True),
+        )
         .order_by(ContentCard.id.asc())
     )
     all_card_ids = [row[0] for row in all_card_ids_result.all() if row[0] is not None]

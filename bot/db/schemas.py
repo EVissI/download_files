@@ -142,6 +142,7 @@ class SContentCardCreate(BaseModel):
     labels: Optional[list[str]] = None
     board_xgid: Optional[str] = None
     card_pool: Optional[str] = None
+    is_ready: bool = False
 
 
 class SMatchAnalysisCreate(BaseModel):

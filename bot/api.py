@@ -1076,13 +1076,14 @@ class ContentCardUpdateBody(BaseModel):
 
 
 class ContentCardMetaUpdateBody(BaseModel):
-    """Обновление метаданных карточки (метки/примечания) без изменения кадров."""
+    """Обновление метаданных карточки (метки/примечания/готовность) без изменения кадров."""
 
     init_data: str | None = None
     fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
     labels: list[str] | None = None
     notes: str | None = None
+    is_ready: bool | None = None
 
 
 class ContentCardMediaListBody(BaseModel):
@@ -1515,12 +1516,12 @@ async def update_content_card(body: ContentCardUpdateBody):
 @app.post("/api/content_cards/update_meta")
 async def update_content_card_meta(body: ContentCardMetaUpdateBody):
     """
-    Обновляет labels/notes у существующей карточки. Только ROOT_ADMIN_IDS.
+    Обновляет labels/notes/is_ready у существующей карточки. Только ROOT_ADMIN_IDS.
     """
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
 
-    if body.labels is None and body.notes is None:
+    if body.labels is None and body.notes is None and body.is_ready is None:
         raise HTTPException(status_code=400, detail="Нечего обновлять")
 
     updates: dict[str, Any] = {}
@@ -1529,6 +1530,8 @@ async def update_content_card_meta(body: ContentCardMetaUpdateBody):
     if body.notes is not None:
         notes = str(body.notes).strip()
         updates["notes"] = notes[:4000] if notes else None
+    if body.is_ready is not None:
+        updates["is_ready"] = bool(body.is_ready)
 
     async with async_session_maker() as session:
         card_dao = ContentCardDAO(session)
@@ -1537,8 +1540,16 @@ async def update_content_card_meta(body: ContentCardMetaUpdateBody):
             raise HTTPException(status_code=404, detail="Карточка не найдена")
         await card_dao.update(body.content_card_id, updates)
         await session.commit()
+        if "is_ready" in updates:
+            ready_value = bool(updates["is_ready"])
+        else:
+            ready_value = bool(getattr(card, "is_ready", False))
 
-    return {"ok": True, "content_card_id": body.content_card_id}
+    return {
+        "ok": True,
+        "content_card_id": body.content_card_id,
+        "is_ready": ready_value,
+    }
 
 
 @app.post("/api/content_cards/my_list")
@@ -1595,6 +1606,11 @@ async def content_cards_my_list(body: ContentCardMyListBody):
                     (row.content_card.notes or "").strip()
                     if is_root_admin and row.content_card
                     else ""
+                ),
+                "is_ready": (
+                    bool(getattr(row.content_card, "is_ready", False))
+                    if is_root_admin and row.content_card
+                    else False
                 ),
             }
             for row in links
@@ -1688,6 +1704,7 @@ async def content_cards_create_empty(body: ContentCardMyListBody):
         "ok": True,
         "content_card_id": saved_id,
         "status": UserContentCardStatus.UNVIEWED.value,
+        "is_ready": False,
     }
 
 
@@ -3453,6 +3470,7 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
                         "notes": c.notes,
                         "labels": c.labels or [],
                         "board_xgid": c.board_xgid,
+                        "is_ready": bool(getattr(c, "is_ready", False)),
                     })
 
         return {

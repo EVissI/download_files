@@ -896,6 +896,38 @@
             background: rgba(40, 50, 70, 0.95);
         }
 
+        .tile__ready {
+            position: absolute;
+            left: 2px;
+            bottom: 2px;
+            z-index: 2;
+            width: 22px;
+            height: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 6px;
+            background: rgba(30, 30, 30, 0.88);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            color: #e74c3c;
+        }
+
+        .tile__ready.is-ready {
+            color: #2ecc71;
+            border-color: rgba(46, 204, 113, 0.45);
+        }
+
+        .tile__ready:active {
+            background: rgba(50, 50, 50, 0.95);
+        }
+
+        .tile__ready i {
+            font-size: 12px;
+            line-height: 1;
+        }
+
         .link-modal__textarea {
             width: 100%;
             min-height: 96px;
@@ -4627,6 +4659,8 @@
                                     content_card_id: newId,
                                     status: status,
                                     labels: [],
+                                    notes: '',
+                                    is_ready: false,
                                     __index: allCards.length,
                                 });
                                 reindexAllCards();
@@ -4691,6 +4725,67 @@
                                 showCabinetNotice(e.message || String(e), 'Ошибка');
                             });
                     });
+                }
+
+                function setTileReadyButtonState(btn, isReady) {
+                    if (!btn) return;
+                    var ready = !!isReady;
+                    btn.classList.toggle('is-ready', ready);
+                    btn.title = ready
+                        ? 'Готова к выдаче'
+                        : 'Не готова к выдаче';
+                    btn.setAttribute(
+                        'aria-label',
+                        ready
+                            ? 'Карточка готова к выдаче'
+                            : 'Карточка не готова к выдаче'
+                    );
+                    btn.innerHTML = ready
+                        ? '<i class="fa fa-check" aria-hidden="true"></i>'
+                        : '<i class="fa fa-times" aria-hidden="true"></i>';
+                }
+
+                function toggleContentCardReady(cardId) {
+                    if (!isRootAdminUser || IS_MATCH_ANALYSIS) return;
+                    var cardIdNum = Number(cardId);
+                    if (!Number.isFinite(cardIdNum) || cardIdNum <= 0) return;
+                    var row = null;
+                    for (var i = 0; i < allCards.length; i++) {
+                        if (Number(allCards[i] && allCards[i].content_card_id) === cardIdNum) {
+                            row = allCards[i];
+                            break;
+                        }
+                    }
+                    if (!row) return;
+                    var nextReady = !row.is_ready;
+                    fetch('/api/content_cards/update_meta', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(authPayload({
+                            content_card_id: cardIdNum,
+                            is_ready: nextReady,
+                        })),
+                    })
+                        .then(function (r) {
+                            return parseApiJsonResponse(r, 'Не удалось обновить готовность');
+                        })
+                        .then(function (data) {
+                            var ready = data && typeof data.is_ready === 'boolean'
+                                ? !!data.is_ready
+                                : nextReady;
+                            row.is_ready = ready;
+                            if (shuffledCards && shuffledCards.length) {
+                                shuffledCards.forEach(function (item) {
+                                    if (Number(item && item.content_card_id) === cardIdNum) {
+                                        item.is_ready = ready;
+                                    }
+                                });
+                            }
+                            renderCards();
+                        })
+                        .catch(function (e) {
+                            showCabinetNotice(e.message || String(e), 'Ошибка');
+                        });
                 }
 
                 function matchAnalysisCardTitle(row) {
@@ -4996,6 +5091,15 @@
                                 ev.preventDefault();
                                 openCardNotesModal(cardIdNum, row.notes || '');
                             });
+                            var readyBtn = document.createElement('button');
+                            readyBtn.type = 'button';
+                            readyBtn.className = 'tile__ready';
+                            setTileReadyButtonState(readyBtn, !!row.is_ready);
+                            readyBtn.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                ev.preventDefault();
+                                toggleContentCardReady(cardIdNum);
+                            });
                             var delBtn = document.createElement('button');
                             delBtn.type = 'button';
                             delBtn.className = 'tile__del';
@@ -5016,6 +5120,7 @@
                                 deleteContentCard(cardIdNum);
                             });
                             tileWrap.appendChild(editNotesBtn);
+                            tileWrap.appendChild(readyBtn);
                             tileWrap.appendChild(btn);
                             tileWrap.appendChild(delBtn);
                             gridEl.appendChild(tileWrap);
@@ -5528,6 +5633,7 @@
                                             status: 'UNVIEWED',
                                             labels: card.labels || [],
                                             notes: (card.notes || '').trim(),
+                                            is_ready: !!card.is_ready,
                                             __index: index,
                                         };
                                     }),
