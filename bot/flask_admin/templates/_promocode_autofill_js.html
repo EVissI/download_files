@@ -1,0 +1,106 @@
+<script>
+    (function () {
+        function byNameOrId(root, key) {
+            return (
+                root.querySelector('[name="' + key + '"]') ||
+                root.querySelector('[id$="' + key + '"]')
+            );
+        }
+
+        function byLabelText(root, text) {
+            var labels = root.querySelectorAll("label");
+            var needle = String(text || "").toLowerCase();
+            for (var i = 0; i < labels.length; i++) {
+                var lbl = labels[i];
+                var t = String(lbl.textContent || "").toLowerCase();
+                if (t.indexOf(needle) === -1) continue;
+                var forId = lbl.getAttribute("for");
+                if (forId) {
+                    var direct = root.querySelector("#" + CSS.escape(forId));
+                    if (direct) return direct;
+                }
+                var wrap = fieldContainerFor(lbl) || lbl.parentElement;
+                if (wrap) {
+                    var input = wrap.querySelector("select, input");
+                    if (input) return input;
+                }
+            }
+            return null;
+        }
+
+        function fieldContainerFor(el) {
+            return el && el.closest
+                ? el.closest(".form-group, .control-group, .field-box, .formField")
+                : null;
+        }
+
+        function setFieldVisible(el, visible) {
+            var container = fieldContainerFor(el);
+            if (container) {
+                container.style.display = visible ? "" : "none";
+            }
+            if (el && !container) {
+                el.style.display = visible ? "" : "none";
+            }
+            if (el && el.id) {
+                var labels = document.querySelectorAll('label[for="' + el.id + '"]');
+                for (var i = 0; i < labels.length; i++) {
+                    var label = labels[i];
+                    var labelContainer = fieldContainerFor(label);
+                    if (labelContainer && labelContainer !== container) {
+                        labelContainer.style.display = visible ? "" : "none";
+                    } else {
+                        label.style.display = visible ? "" : "none";
+                    }
+                }
+            }
+        }
+
+        function isChecked(el) {
+            if (!el) return false;
+            if (el.type === "checkbox" || el.type === "radio") return !!el.checked;
+            var v = String(el.value || "").toLowerCase();
+            return v === "y" || v === "on" || v === "true" || v === "1";
+        }
+
+        function applyAutofillToggle(root) {
+            root = root || document;
+            var checkbox =
+                byNameOrId(root, "autofill_services") ||
+                byLabelText(root, "автозаполнение");
+            var qty =
+                byNameOrId(root, "autofill_quantity") ||
+                byLabelText(root, "кол-во для всех сервис");
+            if (!checkbox || !qty) return;
+
+            if (!qty.value) {
+                qty.value = "3000";
+            }
+            setFieldVisible(qty, isChecked(checkbox));
+        }
+
+        function init() {
+            applyAutofillToggle(document);
+
+            document.addEventListener("change", function (e) {
+                var t = e.target;
+                if (!t) return;
+                var idOrName = String(t.name || t.id || "").toLowerCase();
+                if (idOrName.indexOf("autofill_services") !== -1 || t.type === "checkbox") {
+                    applyAutofillToggle(document);
+                }
+            });
+
+            var observer = new MutationObserver(function () {
+                applyAutofillToggle(document);
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", init);
+        } else {
+            init();
+        }
+    })();
+</script>
