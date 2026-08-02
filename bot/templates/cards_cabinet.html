@@ -501,6 +501,217 @@
             background: #4a4228;
         }
 
+        .card-bg-open-btn {
+            display: none;
+            width: 38px;
+            height: 38px;
+            border: 1px solid #3d5a4a;
+            border-radius: 10px;
+            background: #24352c;
+            color: #a7f3d0;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            font-size: 0.95rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .card-bg-open-btn.is-visible {
+            display: inline-flex;
+        }
+
+        .card-bg-open-btn:active {
+            background: #2f4639;
+        }
+
+        .card-bg-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 12050;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .card-bg-modal.is-open {
+            display: flex;
+        }
+
+        .card-bg-modal__overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.62);
+        }
+
+        .card-bg-modal__box {
+            position: relative;
+            z-index: 1;
+            width: min(520px, 100%);
+            max-height: min(88vh, 720px);
+            overflow: auto;
+            background: #242424;
+            border: 1px solid #3a3a3a;
+            border-radius: 14px;
+            padding: 16px;
+            color: #f0f0f0;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        }
+
+        .card-bg-modal__title {
+            margin: 0 0 6px;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .card-bg-modal__hint {
+            margin: 0 0 12px;
+            font-size: 0.8rem;
+            color: #a3a3a3;
+            line-height: 1.35;
+        }
+
+        .card-bg-modal__toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .card-bg-modal__btn {
+            border: 1px solid #4a4a4a;
+            background: #2d2d2d;
+            color: #eee;
+            border-radius: 10px;
+            padding: 9px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .card-bg-modal__btn:active {
+            background: #3a3a3a;
+        }
+
+        .card-bg-modal__btn:disabled {
+            opacity: 0.55;
+            cursor: default;
+        }
+
+        .card-bg-modal__btn--primary {
+            border-color: #3d5a4a;
+            background: #24352c;
+            color: #a7f3d0;
+        }
+
+        .card-bg-modal__btn--danger {
+            border-color: #6b3a3a;
+            background: #3a2424;
+            color: #fecaca;
+        }
+
+        .card-bg-modal__preview {
+            display: none;
+            margin-bottom: 12px;
+            border: 1px solid #3a3a3a;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #1a1a1a;
+            min-height: 120px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-bg-modal__preview.is-visible {
+            display: flex;
+        }
+
+        .card-bg-modal__preview img {
+            display: block;
+            width: 100%;
+            max-height: 180px;
+            object-fit: contain;
+            background:
+                linear-gradient(45deg, #333 25%, transparent 25%),
+                linear-gradient(-45deg, #333 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #333 75%),
+                linear-gradient(-45deg, transparent 75%, #333 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+        }
+
+        .card-bg-modal__selected {
+            margin: 0 0 10px;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            word-break: break-all;
+        }
+
+        .card-bg-modal__msg {
+            min-height: 1.2em;
+            margin: 0 0 10px;
+            font-size: 0.8rem;
+            color: #fde68a;
+        }
+
+        .card-bg-modal__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .card-bg-modal__cell {
+            appearance: none;
+            border: 2px solid transparent;
+            background: #1c1c1c;
+            border-radius: 10px;
+            padding: 0;
+            overflow: hidden;
+            cursor: pointer;
+            text-align: left;
+            color: inherit;
+        }
+
+        .card-bg-modal__cell.is-selected {
+            border-color: #6ee7b7;
+        }
+
+        .card-bg-modal__cell img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            background: #111;
+        }
+
+        .card-bg-modal__cell-cap {
+            display: block;
+            padding: 4px 6px;
+            font-size: 0.68rem;
+            color: #a3a3a3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-bg-modal__empty {
+            grid-column: 1 / -1;
+            color: #888;
+            font-size: 0.8rem;
+            padding: 12px 4px;
+        }
+
+        .card-bg-modal__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 4px;
+        }
+
         .err {
             color: #ff8a80;
             font-size: 0.9rem;
@@ -1849,6 +2060,10 @@
                     <option value="">Все метки</option>
                 </select>
                 <div class="label-filter-actions">
+                    <button id="card-bg-open-btn" class="card-bg-open-btn" type="button"
+                        title="Фон кадров" aria-label="Фон кадров">
+                        <i class="fa fa-picture-o" aria-hidden="true"></i>
+                    </button>
                     <button id="scroll-to-bottom-btn" class="label-scroll-bottom-btn" type="button"
                         title="В низ списка" aria-label="В низ списка">
                         <i class="fa fa-arrow-down" aria-hidden="true"></i>
@@ -1878,6 +2093,41 @@
             <div id="labelPresetsModalCabinetList" class="presets-modal__list" aria-live="polite"></div>
             <div class="presets-modal__actions">
                 <button id="labelPresetsModalCabinetCloseBtn" type="button" class="presets-modal__btn">Закрыть</button>
+            </div>
+        </div>
+    </div>
+    <div id="cardBgModal" class="card-bg-modal" aria-hidden="true">
+        <div id="cardBgModalOverlay" class="card-bg-modal__overlay"></div>
+        <div class="card-bg-modal__box" role="dialog" aria-modal="true" aria-labelledby="cardBgModalTitle">
+            <h3 id="cardBgModalTitle" class="card-bg-modal__title">Фон кадров</h3>
+            <p class="card-bg-modal__hint">
+                Картинка ставится только кадрам без фона-изображения. Цветовой фон не меняется.
+                Очистка снимает только картинку-фон у всех кадров.
+            </p>
+            <div class="card-bg-modal__toolbar">
+                <button id="cardBgUploadBtn" type="button" class="card-bg-modal__btn card-bg-modal__btn--primary">
+                    Загрузить в S3
+                </button>
+                <input id="cardBgFileInput" type="file" accept="image/*" hidden>
+                <button id="cardBgRefreshBtn" type="button" class="card-bg-modal__btn">Обновить медиатеку</button>
+            </div>
+            <div id="cardBgPreview" class="card-bg-modal__preview" aria-hidden="true">
+                <img id="cardBgPreviewImg" alt="Выбранный фон">
+            </div>
+            <p id="cardBgSelectedLabel" class="card-bg-modal__selected"></p>
+            <p id="cardBgModalMsg" class="card-bg-modal__msg" aria-live="polite"></p>
+            <div id="cardBgLibraryGrid" class="card-bg-modal__grid"></div>
+            <button id="cardBgLoadMoreBtn" type="button" class="card-bg-modal__btn" style="display:none;margin-bottom:12px;">
+                Ещё
+            </button>
+            <div class="card-bg-modal__actions">
+                <button id="cardBgClearBtn" type="button" class="card-bg-modal__btn card-bg-modal__btn--danger">
+                    Снять картинки-фоны
+                </button>
+                <button id="cardBgCloseBtn" type="button" class="card-bg-modal__btn">Закрыть</button>
+                <button id="cardBgApplyBtn" type="button" class="card-bg-modal__btn card-bg-modal__btn--primary" disabled>
+                    Применить фон
+                </button>
             </div>
         </div>
     </div>
@@ -2233,7 +2483,26 @@
             var labelFilterWrap = document.getElementById('label-filter-wrap');
             var labelFilter = document.getElementById('label-filter');
             var scrollToBottomBtn = document.getElementById('scroll-to-bottom-btn');
+            var cardBgOpenBtn = document.getElementById('card-bg-open-btn');
             var labelPresetsOpenBtn = document.getElementById('label-presets-open-btn');
+            var cardBgModal = document.getElementById('cardBgModal');
+            var cardBgModalOverlay = document.getElementById('cardBgModalOverlay');
+            var cardBgUploadBtn = document.getElementById('cardBgUploadBtn');
+            var cardBgFileInput = document.getElementById('cardBgFileInput');
+            var cardBgRefreshBtn = document.getElementById('cardBgRefreshBtn');
+            var cardBgPreview = document.getElementById('cardBgPreview');
+            var cardBgPreviewImg = document.getElementById('cardBgPreviewImg');
+            var cardBgSelectedLabel = document.getElementById('cardBgSelectedLabel');
+            var cardBgModalMsg = document.getElementById('cardBgModalMsg');
+            var cardBgLibraryGrid = document.getElementById('cardBgLibraryGrid');
+            var cardBgLoadMoreBtn = document.getElementById('cardBgLoadMoreBtn');
+            var cardBgClearBtn = document.getElementById('cardBgClearBtn');
+            var cardBgCloseBtn = document.getElementById('cardBgCloseBtn');
+            var cardBgApplyBtn = document.getElementById('cardBgApplyBtn');
+            var cardBgSelectedKey = '';
+            var cardBgSelectedName = '';
+            var cardBgNextToken = null;
+            var cardBgBusy = false;
             var labelPresetsModalCabinet = document.getElementById('labelPresetsModalCabinet');
             var labelPresetsModalCabinetOverlay = document.getElementById('labelPresetsModalCabinetOverlay');
             var labelPresetsModalCabinetInput = document.getElementById('labelPresetsModalCabinetInput');
@@ -3225,6 +3494,295 @@
                     });
                 }
 
+                function setCardBgModalMsg(msg) {
+                    if (!cardBgModalMsg) return;
+                    cardBgModalMsg.textContent = String(msg || '');
+                }
+
+                function setCardBgBusy(busy) {
+                    cardBgBusy = !!busy;
+                    [cardBgUploadBtn, cardBgRefreshBtn, cardBgLoadMoreBtn, cardBgClearBtn, cardBgApplyBtn].forEach(function (btn) {
+                        if (!btn) return;
+                        if (btn === cardBgApplyBtn) {
+                            btn.disabled = cardBgBusy || !cardBgSelectedKey;
+                        } else {
+                            btn.disabled = cardBgBusy;
+                        }
+                    });
+                }
+
+                function mediaUrlForKey(key) {
+                    return '/api/content_cards/media?' + new URLSearchParams({ key: key }).toString();
+                }
+
+                function shortenCardBgFilename(name, maxLen) {
+                    var s = String(name || '').trim() || '—';
+                    var lim = maxLen || 22;
+                    if (s.length <= lim) return s;
+                    var ext = s.includes('.') ? s.slice(s.lastIndexOf('.')) : '';
+                    var base = ext ? s.slice(0, s.length - ext.length) : s;
+                    var keep = lim - ext.length - 1;
+                    if (keep < 4) return s.slice(0, lim - 1) + '…';
+                    return base.slice(0, Math.ceil(keep / 2)) + '…' + base.slice(-Math.floor(keep / 2)) + ext;
+                }
+
+                function syncCardBgSelectionUi() {
+                    if (cardBgSelectedLabel) {
+                        cardBgSelectedLabel.textContent = cardBgSelectedKey
+                            ? ('Выбрано: ' + (cardBgSelectedName || cardBgSelectedKey))
+                            : '';
+                    }
+                    if (cardBgPreview && cardBgPreviewImg) {
+                        if (cardBgSelectedKey) {
+                            cardBgPreviewImg.src = mediaUrlForKey(cardBgSelectedKey);
+                            cardBgPreview.classList.add('is-visible');
+                            cardBgPreview.setAttribute('aria-hidden', 'false');
+                        } else {
+                            cardBgPreviewImg.removeAttribute('src');
+                            cardBgPreview.classList.remove('is-visible');
+                            cardBgPreview.setAttribute('aria-hidden', 'true');
+                        }
+                    }
+                    if (cardBgApplyBtn) {
+                        cardBgApplyBtn.disabled = cardBgBusy || !cardBgSelectedKey;
+                    }
+                    if (cardBgLibraryGrid) {
+                        Array.prototype.forEach.call(
+                            cardBgLibraryGrid.querySelectorAll('.card-bg-modal__cell'),
+                            function (cell) {
+                                cell.classList.toggle(
+                                    'is-selected',
+                                    cell.dataset.s3Key === cardBgSelectedKey
+                                );
+                            }
+                        );
+                    }
+                }
+
+                function selectCardBgKey(key, filename) {
+                    cardBgSelectedKey = String(key || '').trim();
+                    cardBgSelectedName = String(filename || '').trim() || cardBgSelectedKey;
+                    setCardBgModalMsg('');
+                    syncCardBgSelectionUi();
+                }
+
+                function closeCardBgModal() {
+                    if (!cardBgModal) return;
+                    cardBgModal.classList.remove('is-open');
+                    cardBgModal.setAttribute('aria-hidden', 'true');
+                    setCardBgModalMsg('');
+                }
+
+                function appendCardBgLibraryItems(items) {
+                    if (!cardBgLibraryGrid) return;
+                    (items || []).forEach(function (it) {
+                        if (!it || !it.key) return;
+                        var cell = document.createElement('button');
+                        cell.type = 'button';
+                        cell.className = 'card-bg-modal__cell';
+                        cell.dataset.s3Key = it.key;
+                        cell.title = it.filename || it.key;
+                        if (it.key === cardBgSelectedKey) {
+                            cell.classList.add('is-selected');
+                        }
+                        var img = document.createElement('img');
+                        img.alt = '';
+                        img.loading = 'lazy';
+                        img.src = mediaUrlForKey(it.key);
+                        var cap = document.createElement('span');
+                        cap.className = 'card-bg-modal__cell-cap';
+                        cap.textContent = shortenCardBgFilename(it.filename || it.key);
+                        cell.appendChild(img);
+                        cell.appendChild(cap);
+                        cell.addEventListener('click', function () {
+                            selectCardBgKey(it.key, it.filename || '');
+                        });
+                        cardBgLibraryGrid.appendChild(cell);
+                    });
+                }
+
+                function loadCardBgLibrary(reset) {
+                    if (!isRootAdminUser) return Promise.resolve();
+                    if (reset) {
+                        cardBgNextToken = null;
+                        if (cardBgLibraryGrid) cardBgLibraryGrid.innerHTML = '';
+                    }
+                    setCardBgModalMsg(reset ? 'Загрузка медиатеки…' : 'Загрузка…');
+                    return fetch('/api/content_cards/media/list', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(authPayload({
+                            continuation_token: reset ? null : cardBgNextToken,
+                            limit: 48,
+                        })),
+                    })
+                        .then(function (r) {
+                            return r.json().catch(function () { return {}; }).then(function (j) {
+                                if (!r.ok) {
+                                    var detail = (j && j.detail) || r.statusText || 'Не удалось загрузить медиатеку';
+                                    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                                }
+                                return j;
+                            });
+                        })
+                        .then(function (data) {
+                            var items = Array.isArray(data && data.items) ? data.items.slice() : [];
+                            items.sort(function (a, b) {
+                                var ta = a && a.last_modified ? Date.parse(a.last_modified) : 0;
+                                var tb = b && b.last_modified ? Date.parse(b.last_modified) : 0;
+                                return tb - ta;
+                            });
+                            cardBgNextToken = data && data.continuation_token ? data.continuation_token : null;
+                            if (reset && !items.length && cardBgLibraryGrid) {
+                                cardBgLibraryGrid.innerHTML =
+                                    '<div class="card-bg-modal__empty">В медиатеке пока нет изображений. Загрузите файл.</div>';
+                            } else {
+                                if (reset && cardBgLibraryGrid) {
+                                    cardBgLibraryGrid.innerHTML = '';
+                                }
+                                appendCardBgLibraryItems(items);
+                            }
+                            if (cardBgLoadMoreBtn) {
+                                cardBgLoadMoreBtn.style.display = cardBgNextToken ? 'inline-flex' : 'none';
+                            }
+                            setCardBgModalMsg('');
+                            syncCardBgSelectionUi();
+                        })
+                        .catch(function (e) {
+                            setCardBgModalMsg(e && e.message ? e.message : 'Ошибка загрузки медиатеки');
+                        });
+                }
+
+                function openCardBgModal() {
+                    if (!isRootAdminUser || !cardBgModal) return;
+                    cardBgSelectedKey = '';
+                    cardBgSelectedName = '';
+                    syncCardBgSelectionUi();
+                    setCardBgModalMsg('');
+                    cardBgModal.classList.add('is-open');
+                    cardBgModal.setAttribute('aria-hidden', 'false');
+                    loadCardBgLibrary(true);
+                }
+
+                function uploadCardBgFile(file) {
+                    if (!file || cardBgBusy) return;
+                    if (!/^image\//i.test(file.type || '')) {
+                        setCardBgModalMsg('Нужен файл изображения');
+                        return;
+                    }
+                    setCardBgBusy(true);
+                    setCardBgModalMsg('Загрузка в S3…');
+                    var fd = new FormData();
+                    if (initData) {
+                        fd.append('init_data', initData);
+                    } else if (fabToken) {
+                        fd.append('fab_token', fabToken);
+                    }
+                    fd.append('file', file, file.name || 'image');
+                    fetch('/api/content_cards/media/upload', { method: 'POST', body: fd })
+                        .then(function (r) {
+                            return r.json().catch(function () { return {}; }).then(function (j) {
+                                if (!r.ok) {
+                                    var detail = (j && j.detail) || r.statusText || 'Ошибка загрузки';
+                                    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                                }
+                                return j;
+                            });
+                        })
+                        .then(function (data) {
+                            var key = data && data.s3_key;
+                            if (!key) throw new Error('Сервер не вернул s3_key');
+                            selectCardBgKey(key, file.name || key);
+                            setCardBgModalMsg('Загружено. Можно применить фон.');
+                            return loadCardBgLibrary(true);
+                        })
+                        .catch(function (e) {
+                            setCardBgModalMsg(e && e.message ? e.message : 'Ошибка загрузки');
+                        })
+                        .finally(function () {
+                            setCardBgBusy(false);
+                            if (cardBgFileInput) cardBgFileInput.value = '';
+                        });
+                }
+
+                function applyCardBgSelection() {
+                    if (!isRootAdminUser || !cardBgSelectedKey || cardBgBusy) return;
+                    setCardBgBusy(true);
+                    setCardBgModalMsg('Применяю фон к кадрам без картинки…');
+                    fetch('/api/content_cards/bulk_canvas_bg/set', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(authPayload({
+                            s3_key: cardBgSelectedKey,
+                            file_name: cardBgSelectedName || null,
+                        })),
+                    })
+                        .then(function (r) {
+                            return r.json().catch(function () { return {}; }).then(function (j) {
+                                if (!r.ok) {
+                                    var detail = (j && j.detail) || r.statusText || 'Не удалось применить фон';
+                                    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                                }
+                                return j;
+                            });
+                        })
+                        .then(function (data) {
+                            var msg =
+                                'Готово. Карточек: ' + (data.cards_total || 0) +
+                                ', изменено: ' + (data.cards_updated || 0) +
+                                ', кадров с новым фоном: ' + (data.frames_updated || 0);
+                            setCardBgModalMsg(msg);
+                            showCabinetNotice(msg, 'Фон кадров');
+                        })
+                        .catch(function (e) {
+                            setCardBgModalMsg(e && e.message ? e.message : 'Ошибка применения');
+                        })
+                        .finally(function () {
+                            setCardBgBusy(false);
+                        });
+                }
+
+                function clearAllCardImageBackgrounds() {
+                    if (!isRootAdminUser || cardBgBusy) return;
+                    showCabinetConfirm(
+                        'Снять картинку-фон у всех кадров во всех карточках? Цветовой фон останется.',
+                        'Очистка фона',
+                        { danger: true, confirmLabel: 'Снять' }
+                    ).then(function (ok) {
+                        if (!ok) return;
+                        setCardBgBusy(true);
+                        setCardBgModalMsg('Снимаю картинки-фоны…');
+                        fetch('/api/content_cards/bulk_canvas_bg/clear', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(authPayload()),
+                        })
+                            .then(function (r) {
+                                return r.json().catch(function () { return {}; }).then(function (j) {
+                                    if (!r.ok) {
+                                        var detail = (j && j.detail) || r.statusText || 'Не удалось очистить';
+                                        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                                    }
+                                    return j;
+                                });
+                            })
+                            .then(function (data) {
+                                var msg =
+                                    'Очищено. Карточек: ' + (data.cards_total || 0) +
+                                    ', изменено: ' + (data.cards_updated || 0) +
+                                    ', кадров: ' + (data.frames_cleared || 0);
+                                setCardBgModalMsg(msg);
+                                showCabinetNotice(msg, 'Фон кадров');
+                            })
+                            .catch(function (e) {
+                                setCardBgModalMsg(e && e.message ? e.message : 'Ошибка очистки');
+                            })
+                            .finally(function () {
+                                setCardBgBusy(false);
+                            });
+                    });
+                }
+
                 function selectedCardIdsCount() {
                     return Object.keys(selectedCardIds).length;
                 }
@@ -3683,6 +4241,40 @@
                             behavior: 'smooth'
                         });
                     });
+                }
+                if (cardBgOpenBtn) {
+                    cardBgOpenBtn.addEventListener('click', openCardBgModal);
+                }
+                if (cardBgModalOverlay) {
+                    cardBgModalOverlay.addEventListener('click', closeCardBgModal);
+                }
+                if (cardBgCloseBtn) {
+                    cardBgCloseBtn.addEventListener('click', closeCardBgModal);
+                }
+                if (cardBgRefreshBtn) {
+                    cardBgRefreshBtn.addEventListener('click', function () {
+                        loadCardBgLibrary(true);
+                    });
+                }
+                if (cardBgLoadMoreBtn) {
+                    cardBgLoadMoreBtn.addEventListener('click', function () {
+                        if (cardBgNextToken) loadCardBgLibrary(false);
+                    });
+                }
+                if (cardBgUploadBtn && cardBgFileInput) {
+                    cardBgUploadBtn.addEventListener('click', function () {
+                        if (!cardBgBusy) cardBgFileInput.click();
+                    });
+                    cardBgFileInput.addEventListener('change', function () {
+                        var f = cardBgFileInput.files && cardBgFileInput.files[0];
+                        if (f) uploadCardBgFile(f);
+                    });
+                }
+                if (cardBgApplyBtn) {
+                    cardBgApplyBtn.addEventListener('click', applyCardBgSelection);
+                }
+                if (cardBgClearBtn) {
+                    cardBgClearBtn.addEventListener('click', clearAllCardImageBackgrounds);
                 }
                 if (labelPresetsOpenBtn) {
                     labelPresetsOpenBtn.addEventListener('click', openLabelPresetsModalCabinet);
@@ -4363,6 +4955,8 @@
                     if (sendSelectedBtn) sendSelectedBtn.classList.add('is-visible');
                     if (generateLinkBtn) generateLinkBtn.classList.add('is-visible');
                     if (quickSelectInput) quickSelectInput.classList.add('is-visible');
+                    if (labelFilterWrap) labelFilterWrap.classList.add('is-visible');
+                    if (cardBgOpenBtn) cardBgOpenBtn.classList.add('is-visible');
                     if (scrollToBottomBtn) scrollToBottomBtn.classList.add('is-visible');
                     if (labelPresetsOpenBtn) labelPresetsOpenBtn.classList.add('is-visible');
                 }

@@ -4,10 +4,8 @@
 """
 from __future__ import annotations
 
-import copy
 import uuid
 from io import BytesIO
-from typing import Any
 
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
@@ -17,101 +15,19 @@ from aiogram.types import Message
 from loguru import logger
 from PIL import Image
 
+from bot.common.service.content_card_bg_service import (
+    build_pattern,
+    clear_all_image_backgrounds,
+    set_missing_image_backgrounds,
+)
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.config import admins
-from bot.db.dao import ContentCardDAO
 
 card_background_router = Router()
-
-# Режим как в редакторе: cover = картинка на весь кадр.
-_DEFAULT_PATTERN_MODE = "cover"
-_DEFAULT_PATTERN_INTERVAL = 100
 
 
 class CardBgStates(StatesGroup):
     waiting_input = State()
-
-
-def _has_image_background(editor: dict[str, Any] | None) -> bool:
-    """True, если у кадра задан фон картинкой (S3 или data URL). Цвет не учитываем."""
-    if not isinstance(editor, dict):
-        return False
-    pattern = editor.get("canvasBackgroundPattern")
-    if not isinstance(pattern, dict):
-        return False
-    s3_key = str(pattern.get("imageS3Key") or "").strip()
-    data_url = str(pattern.get("imageDataUrl") or "").strip()
-    return bool(s3_key or data_url)
-
-
-def _iter_frame_entries(frames_wrap: Any) -> list[dict[str, Any]]:
-    if not isinstance(frames_wrap, dict):
-        return []
-    inner = frames_wrap.get("frames")
-    if not isinstance(inner, list):
-        return []
-    return [item for item in inner if isinstance(item, dict)]
-
-
-def _ensure_editor(payload: dict[str, Any]) -> dict[str, Any]:
-    editor = payload.get("editor")
-    if not isinstance(editor, dict):
-        editor = {}
-        payload["editor"] = editor
-    return editor
-
-
-def _build_pattern(
-    *,
-    s3_key: str,
-    file_name: str,
-    image_width: int,
-    image_height: int,
-) -> dict[str, Any]:
-    return {
-        "mode": _DEFAULT_PATTERN_MODE,
-        "imageDataUrl": "",
-        "imageS3Key": s3_key,
-        "imageWidth": max(8, min(4096, int(image_width) or 64)),
-        "imageHeight": max(8, min(4096, int(image_height) or 64)),
-        "interval": _DEFAULT_PATTERN_INTERVAL,
-        "fileName": file_name or "pattern-image.jpg",
-    }
-
-
-def apply_image_bg_to_frames_missing(
-    frames_wrap: dict[str, Any],
-    pattern: dict[str, Any],
-) -> int:
-    """Ставит pattern только кадрам без картинки-фона. Цвет не меняет. Возвращает число обновлённых кадров."""
-    updated = 0
-    for item in _iter_frame_entries(frames_wrap):
-        payload = item.get("payload")
-        if not isinstance(payload, dict):
-            continue
-        editor = _ensure_editor(payload)
-        if _has_image_background(editor):
-            continue
-        editor["canvasBackgroundPattern"] = copy.deepcopy(pattern)
-        updated += 1
-    return updated
-
-
-def clear_image_bg_from_all_frames(frames_wrap: dict[str, Any]) -> int:
-    """Убирает только canvasBackgroundPattern. canvasBackground (цвет) не трогает."""
-    cleared = 0
-    for item in _iter_frame_entries(frames_wrap):
-        payload = item.get("payload")
-        if not isinstance(payload, dict):
-            continue
-        editor = payload.get("editor")
-        if not isinstance(editor, dict):
-            continue
-        if not _has_image_background(editor):
-            continue
-        editor["canvasBackgroundPattern"] = None
-        cleared += 1
-    return cleared
 
 
 @card_background_router.message(Command("card_bg"))
@@ -149,7 +65,7 @@ async def process_card_bg_text(message: Message, state: FSMContext, session_with
     await state.clear()
     status = await message.answer("Снимаю картинку-фон у всех кадров…")
     try:
-        cards_updated, frames_cleared, cards_total = await _clear_all_image_backgrounds(
+        cards_updated, frames_cleared, cards_total = await clear_all_image_backgrounds(
             session_without_commit
         )
         await session_without_commit.commit()
@@ -207,13 +123,13 @@ async def process_card_bg_photo(message: Message, state: FSMContext, session_wit
         s3 = HintS3Storage.from_settings()
         s3.upload_bytes(s3_key, raw, content_type=content_type)
 
-        pattern = _build_pattern(
+        pattern = build_pattern(
             s3_key=s3_key,
             file_name=unique_name,
             image_width=width,
             image_height=height,
         )
-        cards_updated, frames_updated, cards_total = await _set_missing_image_backgrounds(
+        cards_updated, frames_updated, cards_total = await set_missing_image_backgrounds(
             session_without_commit, pattern
         )
         await session_without_commit.commit()
@@ -243,37 +159,3 @@ async def process_card_bg_other(message: Message):
     await message.answer(
         "Нужно фото или <code>0</code> для очистки. /cancel — отмена."
     )
-
-
-async def _clear_all_image_backgrounds(session) -> tuple[int, int, int]:
-    dao = ContentCardDAO(session)
-    cards = await dao.find_all()
-    cards_updated = 0
-    frames_cleared = 0
-    for card in cards:
-        frames = copy.deepcopy(card.frames or {})
-        n = clear_image_bg_from_all_frames(frames)
-        if n <= 0:
-            continue
-        await dao.update(card.id, {"frames": frames})
-        cards_updated += 1
-        frames_cleared += n
-    return cards_updated, frames_cleared, len(cards)
-
-
-async def _set_missing_image_backgrounds(
-    session, pattern: dict[str, Any]
-) -> tuple[int, int, int]:
-    dao = ContentCardDAO(session)
-    cards = await dao.find_all()
-    cards_updated = 0
-    frames_updated = 0
-    for card in cards:
-        frames = copy.deepcopy(card.frames or {})
-        n = apply_image_bg_to_frames_missing(frames, pattern)
-        if n <= 0:
-            continue
-        await dao.update(card.id, {"frames": frames})
-        cards_updated += 1
-        frames_updated += n
-    return cards_updated, frames_updated, len(cards)

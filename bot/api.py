@@ -22,6 +22,11 @@ from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.common.service.hint_s3_service import HintS3Storage
+from bot.common.service.content_card_bg_service import (
+    build_pattern,
+    clear_all_image_backgrounds,
+    set_missing_image_backgrounds,
+)
 from bot.common.service.webapp_settings_service import (
     get_webapp_fullscreen_enabled,
     get_pokaz_screenshot_font_scale_percent,
@@ -1062,6 +1067,22 @@ class ContentCardMediaListBody(BaseModel):
     fab_token: str | None = None
     continuation_token: str | None = None
     limit: int = Field(48, ge=1, le=100)
+
+
+class BulkCanvasBgAuthBody(BaseModel):
+    """auth для массовой очистки картинки-фона кадров."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+
+
+class BulkCanvasBgSetBody(BaseModel):
+    """Массовая установка картинки-фона по уже загруженному S3-ключу."""
+
+    init_data: str | None = None
+    fab_token: str | None = None
+    s3_key: str = Field(..., min_length=1, max_length=512)
+    file_name: str | None = None
 
 
 class CabinetGalleryListBody(BaseModel):
@@ -2433,19 +2454,19 @@ async def download_content_card_hint_mat_by_token(token: str):
 
 @app.post("/api/content_cards/media/upload")
 async def content_card_media_upload(
-    init_data: str = Form(...),
+    init_data: str | None = Form(None),
+    fab_token: str | None = Form(None),
     file: UploadFile = File(...),
 ):
     """Загрузка медиа карточки в S3; только пользователи из ROOT_ADMIN_IDS."""
-    user_data = verify_telegram_webapp_data(init_data)
-    if not user_data:
+    if not (init_data and init_data.strip()) and not (fab_token and fab_token.strip()):
         raise HTTPException(
-            status_code=401, detail="Недействительные данные Telegram"
+            status_code=400, detail="Нужен init_data или fab_token",
         )
-    uid = (user_data.get("user") or {}).get("id")
-    if uid is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    uid = int(uid)
+    uid = await _resolve_content_cards_user_id(
+        init_data.strip() if init_data else None,
+        fab_token.strip() if fab_token else None,
+    )
     _require_content_card_admin(uid)
     raw = await file.read()
     if len(raw) > CC_MEDIA_MAX_BYTES:
@@ -2462,6 +2483,89 @@ async def content_card_media_upload(
         f"Content card media uploaded: key={key} user_id={uid} bytes={len(raw)}"
     )
     return {"s3_key": key, "content_type": ct}
+
+
+@app.post("/api/content_cards/bulk_canvas_bg/set")
+async def bulk_canvas_bg_set(body: BulkCanvasBgSetBody):
+    """
+    Ставит картинку-фон (cover) всем кадрам без canvasBackgroundPattern.
+    Цвет canvasBackground не меняет. Только ROOT_ADMIN_IDS.
+    """
+    from io import BytesIO
+
+    from PIL import Image
+
+    uid = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(uid)
+    key = str(body.s3_key or "").strip()
+    if not _is_public_content_card_media_key(key):
+        raise HTTPException(status_code=400, detail="Некорректный s3_key")
+    s3 = HintS3Storage.from_settings()
+    if not s3.exists(key):
+        raise HTTPException(status_code=404, detail="Файл не найден в S3")
+    try:
+        raw = s3.download_bytes(key)
+        with Image.open(BytesIO(raw)) as img:
+            width, height = img.size
+    except Exception as e:
+        logger.exception("bulk_canvas_bg_set: cannot read image {}: {}", key, e)
+        raise HTTPException(status_code=400, detail="Не удалось прочитать изображение") from e
+
+    file_name = (body.file_name or "").strip() or key.rsplit("/", 1)[-1]
+    pattern = build_pattern(
+        s3_key=key,
+        file_name=file_name,
+        image_width=width,
+        image_height=height,
+    )
+    async with async_session_maker() as session:
+        cards_updated, frames_updated, cards_total = await set_missing_image_backgrounds(
+            session, pattern
+        )
+        await session.commit()
+    logger.info(
+        "bulk_canvas_bg set by {}: key={} cards_updated={} frames_updated={} total={}",
+        uid,
+        key,
+        cards_updated,
+        frames_updated,
+        cards_total,
+    )
+    return {
+        "ok": True,
+        "s3_key": key,
+        "cards_total": cards_total,
+        "cards_updated": cards_updated,
+        "frames_updated": frames_updated,
+    }
+
+
+@app.post("/api/content_cards/bulk_canvas_bg/clear")
+async def bulk_canvas_bg_clear(body: BulkCanvasBgAuthBody):
+    """
+    Снимает картинку-фон (canvasBackgroundPattern) у всех кадров.
+    Цвет canvasBackground не трогает. Только ROOT_ADMIN_IDS.
+    """
+    uid = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
+    _require_content_card_admin(uid)
+    async with async_session_maker() as session:
+        cards_updated, frames_cleared, cards_total = await clear_all_image_backgrounds(
+            session
+        )
+        await session.commit()
+    logger.info(
+        "bulk_canvas_bg clear by {}: cards_updated={} frames_cleared={} total={}",
+        uid,
+        cards_updated,
+        frames_cleared,
+        cards_total,
+    )
+    return {
+        "ok": True,
+        "cards_total": cards_total,
+        "cards_updated": cards_updated,
+        "frames_cleared": frames_cleared,
+    }
 
 
 @app.post("/api/content_cards/media/list")
