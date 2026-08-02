@@ -502,7 +502,13 @@ export function shouldShowBoardInCardPreviewImpl(_editor, payload) {
 
 export function loadBoardPreviewImagesImpl(editor) {
     if (editor._boardPreviewAssetsPromise) return editor._boardPreviewAssetsPromise;
-    const bust = () => `?t=${Date.now()}`;
+    const v =
+        (typeof window !== 'undefined' && window.__STATIC_ASSET_V) ||
+        (typeof document !== 'undefined' &&
+            document.querySelector('meta[name="static-asset-v"]') &&
+            document.querySelector('meta[name="static-asset-v"]').getAttribute('content')) ||
+        '';
+    const bust = () => (v ? `?t=${encodeURIComponent(v)}` : '');
     const loadOne = (src) => new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
@@ -510,19 +516,19 @@ export function loadBoardPreviewImagesImpl(editor) {
         img.src = src + bust();
     });
     const paths = {
-        board: '/static/board.png',
-        black: '/static/black_checker.png',
-        white: '/static/white_checker.png',
-        double2: '/static/Double2.png',
-        double4: '/static/Double4.png',
-        double8: '/static/Double8.png',
-        double16: '/static/Double16.png',
-        double32: '/static/Double32.png',
-        double64: '/static/Double64.png'
+        board: '/static/board.webp',
+        black: '/static/black_checker.webp',
+        white: '/static/white_checker.webp',
+        double2: '/static/Double2.webp',
+        double4: '/static/Double4.webp',
+        double8: '/static/Double8.webp',
+        double16: '/static/Double16.webp',
+        double32: '/static/Double32.webp',
+        double64: '/static/Double64.webp'
     };
     for (let i = 1; i <= 6; i++) {
-        paths[`d${i}w`] = `/static/${i}w.png`;
-        paths[`d${i}b`] = `/static/${i}b.png`;
+        paths[`d${i}w`] = `/static/${i}w.webp`;
+        paths[`d${i}b`] = `/static/${i}b.webp`;
     }
     editor._boardPreviewAssetsPromise = Promise.all(
         Object.entries(paths).map(([key, url]) => loadOne(url).then((img) => [key, img]))

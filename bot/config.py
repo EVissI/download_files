@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REMOTE_REDIS_HOST: str = "localhost"
     WORKERS_COUNT: int = 1
+    # Версия статики для ?t= (если пусто — max mtime bot/static при старте процесса)
+    STATIC_ASSET_VERSION: str = ""
 
     @property
     def DB_URL(self):

@@ -28,6 +28,9 @@ from bot.routers.hint_viewer_router import load_analysis_json_from_s3
 
 match_analysis_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
+from bot.common.utils.static_assets import get_static_asset_version as _get_static_v
+
+templates.env.globals["cache_timestamp"] = _get_static_v()
 
 MA_MEDIA_MAX_BYTES = 30 * 1024 * 1024
 
@@ -236,7 +239,9 @@ def _serialize_list_item(row) -> dict[str, Any]:
 
 @match_analysis_api_router.get("/match-analysis-cabinet")
 async def match_analysis_cabinet_page(request: Request):
-    cache_timestamp = int(__import__("time").time())
+    from bot.common.utils.static_assets import get_static_asset_version
+
+    cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
     response = templates.TemplateResponse(
         "match_analysis_cabinet.html",
@@ -262,7 +267,9 @@ async def match_analysis_view_page(request: Request, id: int | None = None):
     if id is None:
         raise HTTPException(status_code=400, detail="id parameter is required")
 
-    cache_timestamp = int(__import__("time").time())
+    from bot.common.utils.static_assets import get_static_asset_version
+
+    cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("hints")
     font_scale = await get_hint_viewer_screenshot_font_scale_percent()
     response = templates.TemplateResponse(

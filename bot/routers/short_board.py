@@ -51,6 +51,9 @@ short_board_router = Router()
 # FastAPI router for web interface
 short_board_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
+from bot.common.utils.static_assets import get_static_asset_version as _get_static_v
+
+templates.env.globals["cache_timestamp"] = _get_static_v()
 
 
 @short_board_router.message(
@@ -258,7 +261,9 @@ async def get_board_viewer_web(request: Request, game_id: str = None):
         raise HTTPException(status_code=400, detail="game_id parameter is required")
 
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("player")
-    cache_timestamp = int(time.time())
+    from bot.common.utils.static_assets import get_static_asset_version
+
+    cache_timestamp = get_static_asset_version()
 
     return templates.TemplateResponse(
         "board_viewer.html",

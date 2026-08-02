@@ -94,6 +94,9 @@ hint_viewer_router = Router()
 # FastAPI router for web interface
 hint_viewer_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
+from bot.common.utils.static_assets import get_static_asset_version as _get_static_v
+
+templates.env.globals["cache_timestamp"] = _get_static_v()
 message_lock = asyncio.Lock()
 
 redis_rq = Redis.from_url(settings.REDIS_URL, decode_responses=False)
@@ -810,10 +813,10 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
     if not game_id:
         raise HTTPException(status_code=400, detail="game_id parameter is required")
 
-    # Add timestamp for cache-busting
-    import time
+    # Стабильный bust для /static (не time.time — иначе кэш браузера бесполезен)
+    from bot.common.utils.static_assets import get_static_asset_version
 
-    cache_timestamp = int(time.time())
+    cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("hints")
     hint_viewer_screenshot_font_scale_percent = (
         await get_hint_viewer_screenshot_font_scale_percent()

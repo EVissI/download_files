@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.wsgi import WSGIMiddleware
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -33,6 +34,7 @@ from bot.common.service.webapp_settings_service import (
     set_pokaz_screenshot_font_scale_percent,
     clamp_hint_viewer_screenshot_font_scale_percent,
 )
+from bot.common.utils.static_assets import get_static_asset_version
 from bot.config import settings
 from bot.config import bot, scheduler, SUPPORT_TG_ID, translator_hub
 from bot.common.utils.i18n import get_text_for_locale
@@ -105,13 +107,15 @@ static_dir = BASE_DIR / "bot" / "static"
 templates_dir = BASE_DIR / "bot" / "templates"
 
 
-class NoCacheStaticFiles(StaticFiles):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class CachedStaticFiles(StaticFiles):
+    """Долгий кэш браузера; bust через ?t=cache_timestamp в HTML/JS."""
 
     async def get_response(self, path: str, scope):
         response = await super().get_response(path, scope)
-        response.headers["Cache-Control"] = "no-cache"
+        # 7 дней + stale-while-revalidate; смена файла → новый ?t= после рестарта/STATIC_ASSET_VERSION
+        response.headers["Cache-Control"] = (
+            "public, max-age=604800, stale-while-revalidate=86400"
+        )
         return response
 
 
@@ -151,6 +155,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 
 @app.middleware("http")
@@ -171,8 +176,9 @@ async def admin_security_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-app.mount("/static", NoCacheStaticFiles(directory=str(static_dir)), name="static")
+app.mount("/static", CachedStaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(templates_dir))
+templates.env.globals["cache_timestamp"] = get_static_asset_version()
 
 # Include routers
 app.include_router(hint_viewer_api_router, prefix="")
@@ -292,7 +298,7 @@ async def get_pokaz(
     """
     lang = lang if lang in ("ru", "en") else "ru"
     translations = _get_pokaz_translations(lang)
-    cache_timestamp = int(time.time())
+    cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("pokaz")
     pokaz_screenshot_font_scale_percent = await get_pokaz_screenshot_font_scale_percent()
     response = templates.TemplateResponse(
@@ -350,7 +356,7 @@ async def update_pokaz_screenshot_font_scale(request: Request):
 @app.get("/content-card-view")
 async def content_card_view_page(request: Request):
     """Просмотр сохранённой карточки контента (кадры, только переключение)."""
-    cache_timestamp = int(time.time())
+    cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
     response = templates.TemplateResponse(
         "content_card_view.html",
@@ -381,7 +387,7 @@ async def pip_count_cabinet_page(request: Request):
 async def _render_content_cards_cabinet_page(
     request: Request, card_pool: ContentCardPool
 ) -> HTMLResponse:
-    cache_timestamp = int(time.time())
+    cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
     if card_pool == ContentCardPool.PIP_COUNT:
         cabinet_ctx = {

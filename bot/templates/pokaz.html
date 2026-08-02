@@ -1942,11 +1942,11 @@
         }
 
         #history-back-btn {
-            background-image: url('/static/left.png');
+            background-image: url('/static/left.webp');
         }
 
         #history-forward-btn {
-            background-image: url('/static/right.png');
+            background-image: url('/static/right.webp');
         }
 
         .history-nav-btn:hover:not(.disabled),
@@ -2602,6 +2602,8 @@
         }
     </style>
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
+    <meta name="static-asset-v" content="{{ cache_timestamp }}">
+    <script>window.__STATIC_ASSET_V = "{{ cache_timestamp }}";</script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script type="module" src="/static/js/content-editor/bootstrap/index.js?t={{ cache_timestamp }}"></script>
@@ -2661,13 +2663,13 @@
             const screenUploadBtn = document.getElementById('screenUploadBtn');
 
             if (screenshotBtn) {
-                screenshotBtn.style.backgroundImage = "url('/static/Screen.png?t=" + Date.now() + "')";
+                screenshotBtn.style.backgroundImage = "url('/static/Screen.webp?t={{ cache_timestamp }}')";
             }
             if (screenSaveBtn) {
-                screenSaveBtn.style.backgroundImage = "url('/static/ScreenSave.png?t=" + Date.now() + "')";
+                screenSaveBtn.style.backgroundImage = "url('/static/ScreenSave.webp?t={{ cache_timestamp }}')";
             }
             if (screenUploadBtn) {
-                screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.png?t=" + Date.now() + "')";
+                screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.webp?t={{ cache_timestamp }}')";
             }
 
             // Кнопка сворачивания таблицы hints-table
@@ -3041,12 +3043,12 @@
                             нет</div>
                         <div class="cube-selector-dropdown" id="cube-shown-dropdown">
                             <div class="cube-option empty" data-value="0" data-i18n="no">нет</div>
-                            <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
-                            <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
-                            <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
-                            <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
-                            <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
-                            <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
+                            <div class="cube-option" data-value="2"><img src="/static/Double2.webp" alt="2"></div>
+                            <div class="cube-option" data-value="4"><img src="/static/Double4.webp" alt="4"></div>
+                            <div class="cube-option" data-value="8"><img src="/static/Double8.webp" alt="8"></div>
+                            <div class="cube-option" data-value="16"><img src="/static/Double16.webp" alt="16"></div>
+                            <div class="cube-option" data-value="32"><img src="/static/Double32.webp" alt="32"></div>
+                            <div class="cube-option" data-value="64"><img src="/static/Double64.webp" alt="64"></div>
                         </div>
                         <select id="cube-shown-select" class="sr-only" style="display: none;">
                             <option value="0" selected>0</option>
@@ -3066,12 +3068,12 @@
                                 data-i18n="no">нет</div>
                             <div class="cube-selector-dropdown" id="cube-value-dropdown">
                                 <div class="cube-option empty" data-value="0" data-i18n="no">нет</div>
-                                <div class="cube-option" data-value="2"><img src="/static/Double2.png" alt="2"></div>
-                                <div class="cube-option" data-value="4"><img src="/static/Double4.png" alt="4"></div>
-                                <div class="cube-option" data-value="8"><img src="/static/Double8.png" alt="8"></div>
-                                <div class="cube-option" data-value="16"><img src="/static/Double16.png" alt="16"></div>
-                                <div class="cube-option" data-value="32"><img src="/static/Double32.png" alt="32"></div>
-                                <div class="cube-option" data-value="64"><img src="/static/Double64.png" alt="64"></div>
+                                <div class="cube-option" data-value="2"><img src="/static/Double2.webp" alt="2"></div>
+                                <div class="cube-option" data-value="4"><img src="/static/Double4.webp" alt="4"></div>
+                                <div class="cube-option" data-value="8"><img src="/static/Double8.webp" alt="8"></div>
+                                <div class="cube-option" data-value="16"><img src="/static/Double16.webp" alt="16"></div>
+                                <div class="cube-option" data-value="32"><img src="/static/Double32.webp" alt="32"></div>
+                                <div class="cube-option" data-value="64"><img src="/static/Double64.webp" alt="64"></div>
                             </div>
                             <select id="cube-value-select" class="sr-only" style="display: none;">
                                 <option value="0" selected>0</option>
@@ -3117,18 +3119,18 @@
                                 <div class="dice-selector-button empty" id="dice1-button" data-dice="1"></div>
                                 <div class="dice-selector-dropdown" id="dice1-dropdown">
                                     <div class="dice-option empty" data-value="0"></div>
-                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1"
-                                            data-black="/static/1b.png"></div>
-                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2"
-                                            data-black="/static/2b.png"></div>
-                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3"
-                                            data-black="/static/3b.png"></div>
-                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4"
-                                            data-black="/static/4b.png"></div>
-                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5"
-                                            data-black="/static/5b.png"></div>
-                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6"
-                                            data-black="/static/6b.png"></div>
+                                    <div class="dice-option" data-value="1"><img src="/static/1w.webp" alt="1"
+                                            data-black="/static/1b.webp"></div>
+                                    <div class="dice-option" data-value="2"><img src="/static/2w.webp" alt="2"
+                                            data-black="/static/2b.webp"></div>
+                                    <div class="dice-option" data-value="3"><img src="/static/3w.webp" alt="3"
+                                            data-black="/static/3b.webp"></div>
+                                    <div class="dice-option" data-value="4"><img src="/static/4w.webp" alt="4"
+                                            data-black="/static/4b.webp"></div>
+                                    <div class="dice-option" data-value="5"><img src="/static/5w.webp" alt="5"
+                                            data-black="/static/5b.webp"></div>
+                                    <div class="dice-option" data-value="6"><img src="/static/6w.webp" alt="6"
+                                            data-black="/static/6b.webp"></div>
                                 </div>
                                 <select id="dice1-select" class="sr-only" style="display: none;">
                                     <option value="0" selected>0</option>
@@ -3144,18 +3146,18 @@
                                 <div class="dice-selector-button empty" id="dice2-button" data-dice="2"></div>
                                 <div class="dice-selector-dropdown" id="dice2-dropdown">
                                     <div class="dice-option empty" data-value="0"></div>
-                                    <div class="dice-option" data-value="1"><img src="/static/1w.png" alt="1"
-                                            data-black="/static/1b.png"></div>
-                                    <div class="dice-option" data-value="2"><img src="/static/2w.png" alt="2"
-                                            data-black="/static/2b.png"></div>
-                                    <div class="dice-option" data-value="3"><img src="/static/3w.png" alt="3"
-                                            data-black="/static/3b.png"></div>
-                                    <div class="dice-option" data-value="4"><img src="/static/4w.png" alt="4"
-                                            data-black="/static/4b.png"></div>
-                                    <div class="dice-option" data-value="5"><img src="/static/5w.png" alt="5"
-                                            data-black="/static/5b.png"></div>
-                                    <div class="dice-option" data-value="6"><img src="/static/6w.png" alt="6"
-                                            data-black="/static/6b.png"></div>
+                                    <div class="dice-option" data-value="1"><img src="/static/1w.webp" alt="1"
+                                            data-black="/static/1b.webp"></div>
+                                    <div class="dice-option" data-value="2"><img src="/static/2w.webp" alt="2"
+                                            data-black="/static/2b.webp"></div>
+                                    <div class="dice-option" data-value="3"><img src="/static/3w.webp" alt="3"
+                                            data-black="/static/3b.webp"></div>
+                                    <div class="dice-option" data-value="4"><img src="/static/4w.webp" alt="4"
+                                            data-black="/static/4b.webp"></div>
+                                    <div class="dice-option" data-value="5"><img src="/static/5w.webp" alt="5"
+                                            data-black="/static/5b.webp"></div>
+                                    <div class="dice-option" data-value="6"><img src="/static/6w.webp" alt="6"
+                                            data-black="/static/6b.webp"></div>
                                 </div>
                                 <select id="dice2-select" class="sr-only" style="display: none;">
                                     <option value="0" selected>0</option>
@@ -3909,52 +3911,52 @@
 
         // Load images
         const boardImg = new Image();
-        boardImg.src = '/static/board.png';
+        boardImg.src = '/static/board.webp';
         const whiteChecker = new Image();
-        whiteChecker.src = '/static/white_checker.png';
+        whiteChecker.src = '/static/white_checker.webp';
         const blackChecker = new Image();
-        blackChecker.src = '/static/black_checker.png';
+        blackChecker.src = '/static/black_checker.webp';
 
         // Load dice images
         const Dice1w = new Image();
-        Dice1w.src = '/static/1w.png?t=' + Date.now();
+        Dice1w.src = '/static/1w.webp?t={{ cache_timestamp }}';
         const Dice2w = new Image();
-        Dice2w.src = '/static/2w.png?t=' + Date.now();
+        Dice2w.src = '/static/2w.webp?t={{ cache_timestamp }}';
         const Dice3w = new Image();
-        Dice3w.src = '/static/3w.png?t=' + Date.now();
+        Dice3w.src = '/static/3w.webp?t={{ cache_timestamp }}';
         const Dice4w = new Image();
-        Dice4w.src = '/static/4w.png?t=' + Date.now();
+        Dice4w.src = '/static/4w.webp?t={{ cache_timestamp }}';
         const Dice5w = new Image();
-        Dice5w.src = '/static/5w.png?t=' + Date.now();
+        Dice5w.src = '/static/5w.webp?t={{ cache_timestamp }}';
         const Dice6w = new Image();
-        Dice6w.src = '/static/6w.png?t=' + Date.now();
+        Dice6w.src = '/static/6w.webp?t={{ cache_timestamp }}';
 
         const Dice1b = new Image();
-        Dice1b.src = '/static/1b.png?t=' + Date.now();
+        Dice1b.src = '/static/1b.webp?t={{ cache_timestamp }}';
         const Dice2b = new Image();
-        Dice2b.src = '/static/2b.png?t=' + Date.now();
+        Dice2b.src = '/static/2b.webp?t={{ cache_timestamp }}';
         const Dice3b = new Image();
-        Dice3b.src = '/static/3b.png?t=' + Date.now();
+        Dice3b.src = '/static/3b.webp?t={{ cache_timestamp }}';
         const Dice4b = new Image();
-        Dice4b.src = '/static/4b.png?t=' + Date.now();
+        Dice4b.src = '/static/4b.webp?t={{ cache_timestamp }}';
         const Dice5b = new Image();
-        Dice5b.src = '/static/5b.png?t=' + Date.now();
+        Dice5b.src = '/static/5b.webp?t={{ cache_timestamp }}';
         const Dice6b = new Image();
-        Dice6b.src = '/static/6b.png?t=' + Date.now();
+        Dice6b.src = '/static/6b.webp?t={{ cache_timestamp }}';
 
         // Load cube images
         const Double2 = new Image();
-        Double2.src = '/static/Double2.png?t=' + Date.now();
+        Double2.src = '/static/Double2.webp?t={{ cache_timestamp }}';
         const Double4 = new Image();
-        Double4.src = '/static/Double4.png?t=' + Date.now();
+        Double4.src = '/static/Double4.webp?t={{ cache_timestamp }}';
         const Double8 = new Image();
-        Double8.src = '/static/Double8.png?t=' + Date.now();
+        Double8.src = '/static/Double8.webp?t={{ cache_timestamp }}';
         const Double16 = new Image();
-        Double16.src = '/static/Double16.png?t=' + Date.now();
+        Double16.src = '/static/Double16.webp?t={{ cache_timestamp }}';
         const Double32 = new Image();
-        Double32.src = '/static/Double32.png?t=' + Date.now();
+        Double32.src = '/static/Double32.webp?t={{ cache_timestamp }}';
         const Double64 = new Image();
-        Double64.src = '/static/Double64.png?t=' + Date.now();
+        Double64.src = '/static/Double64.webp?t={{ cache_timestamp }}';
 
         const diceImages = {
             white: {
@@ -5710,8 +5712,8 @@
             } else {
                 button.className = 'dice-selector-button';
                 const imgSrc = turn === 'white'
-                    ? `/static/${value}w.png`
-                    : `/static/${value}b.png`;
+                    ? `/static/${value}w.webp`
+                    : `/static/${value}b.webp`;
                 button.innerHTML = `<img src="${imgSrc}" alt="${value}">`;
             }
         }
@@ -5730,9 +5732,9 @@
                     dropdown.querySelectorAll('.dice-option img').forEach(img => {
                         const value = img.alt;
                         if (turn === 'white') {
-                            img.src = `/static/${value}w.png`;
+                            img.src = `/static/${value}w.webp`;
                         } else {
-                            img.src = img.getAttribute('data-black') || `/static/${value}b.png`;
+                            img.src = img.getAttribute('data-black') || `/static/${value}b.webp`;
                         }
                     });
                 }
@@ -5804,7 +5806,7 @@
                 button.innerHTML = noText;
             } else {
                 button.className = 'cube-selector-button';
-                const imgSrc = `/static/Double${value}.png`;
+                const imgSrc = `/static/Double${value}.webp`;
                 button.innerHTML = `<img src="${imgSrc}" alt="${value}">`;
             }
         }
