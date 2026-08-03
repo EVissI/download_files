@@ -248,6 +248,13 @@
             min-width: 0;
         }
 
+        .ma-audio-controls__buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
         .ma-audio-controls__grid {
             display: flex;
             flex-direction: row;
@@ -263,14 +270,14 @@
             gap: 6px;
         }
 
-        .ma-audio-controls button {
-            width: 36px;
-            height: 36px;
+        .ma-audio-controls__buttons button {
+            width: 41px;
+            height: 41px;
             min-width: 0;
             padding: 0;
             margin: 0;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 16px;
             line-height: 1;
             background: #2f2f2f;
             border: 1px solid #555;
@@ -281,26 +288,26 @@
             box-sizing: border-box;
         }
 
-        .ma-audio-controls button:hover:not(:disabled) {
+        .ma-audio-controls__buttons button:hover:not(:disabled) {
             background: #3a3a3a;
             border-color: #777;
         }
 
-        .ma-audio-controls button:disabled {
+        .ma-audio-controls__buttons button:disabled {
             opacity: 0.35;
             background: #2f2f2f;
             color: #888;
             cursor: not-allowed;
         }
 
-        .ma-audio-controls button.is-recording {
+        .ma-audio-controls__buttons button.is-recording {
             background: #c0392b;
             border-color: #e74c3c;
             color: #fff;
             animation: ma-audio-pulse 1.1s ease-in-out infinite;
         }
 
-        .ma-audio-controls button.is-playing {
+        .ma-audio-controls__buttons button.is-playing {
             background: #1f6f8f;
             border-color: #2a9bb8;
             color: #fff;
@@ -568,14 +575,15 @@
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn,
-            .ma-audio-controls button {
+            #supportBtn {
                 width: 36px;
                 height: 36px;
             }
 
-            .ma-audio-controls button {
-                font-size: 14px;
+            .ma-audio-controls__buttons button {
+                width: 41px;
+                height: 41px;
+                font-size: 16px;
             }
 
             .ma-audio-controls__status {
@@ -627,14 +635,15 @@
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn,
-            .ma-audio-controls button {
+            #supportBtn {
                 width: 44px;
                 height: 44px;
             }
 
-            .ma-audio-controls button {
-                font-size: 17px;
+            .ma-audio-controls__buttons button {
+                width: 51px;
+                height: 51px;
+                font-size: 20px;
             }
 
             .ma-audio-controls__status {
@@ -690,14 +699,15 @@
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn,
-            .ma-audio-controls button {
+            #supportBtn {
                 width: 28px;
                 height: 28px;
             }
 
-            .ma-audio-controls button {
-                font-size: 11px;
+            .ma-audio-controls__buttons button {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
             }
 
             .ma-audio-controls__status {
@@ -722,14 +732,15 @@
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn,
-            .ma-audio-controls button {
+            #supportBtn {
                 width: 36px;
                 height: 36px;
             }
 
-            .ma-audio-controls button {
-                font-size: 14px;
+            .ma-audio-controls__buttons button {
+                width: 41px;
+                height: 41px;
+                font-size: 16px;
             }
 
             .ma-audio-controls__status {
@@ -757,14 +768,15 @@
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn,
-            .ma-audio-controls button {
+            #supportBtn {
                 width: 38px;
                 height: 38px;
             }
 
-            .ma-audio-controls button {
-                font-size: 15px;
+            .ma-audio-controls__buttons button {
+                width: 44px;
+                height: 44px;
+                font-size: 17px;
             }
 
             .ma-audio-controls__status {
@@ -1428,14 +1440,16 @@
             <div id="controls">
                 <div class="left-controls">
                     <div id="matchAnalysisAudioPanel" class="ma-audio-controls" style="display:none;" title="Аудио не прикреплено">
-                        <div class="ma-audio-controls__grid">
-                            <div>
-                                <button type="button" id="matchAnalysisAudioPlayBtn" onclick="toggleMatchAnalysisAudioPlay()" disabled title="Слушать"><i class="fa fa-play" aria-hidden="true"></i></button>
-                                <button type="button" id="matchAnalysisAudioAttachBtn" onclick="matchAnalysisPickAudioFile()" title="Прикрепить файл"><i class="fa fa-paperclip" aria-hidden="true"></i></button>
-                            </div>
-                            <div>
-                                <button type="button" id="matchAnalysisAudioRecordBtn" onclick="startMatchAnalysisRecording()" title="Записать"><i class="fa fa-microphone" aria-hidden="true"></i></button>
-                                <button type="button" id="matchAnalysisAudioDeleteBtn" onclick="deleteMatchAnalysisAudio()" disabled title="Удалить"><i class="fa fa-trash" aria-hidden="true"></i></button>
+                        <div class="ma-audio-controls__buttons">
+                            <div class="ma-audio-controls__grid">
+                                <div>
+                                    <button type="button" id="matchAnalysisAudioPlayBtn" onclick="toggleMatchAnalysisAudioPlay()" disabled title="Слушать"><i class="fa fa-play" aria-hidden="true"></i></button>
+                                    <button type="button" id="matchAnalysisAudioAttachBtn" onclick="matchAnalysisPickAudioFile()" title="Прикрепить файл"><i class="fa fa-paperclip" aria-hidden="true"></i></button>
+                                </div>
+                                <div>
+                                    <button type="button" id="matchAnalysisAudioRecordBtn" onclick="startMatchAnalysisRecording()" title="Записать"><i class="fa fa-microphone" aria-hidden="true"></i></button>
+                                    <button type="button" id="matchAnalysisAudioDeleteBtn" onclick="deleteMatchAnalysisAudio()" disabled title="Удалить"><i class="fa fa-trash" aria-hidden="true"></i></button>
+                                </div>
                             </div>
                         </div>
                         <div id="matchAnalysisAudioStatus" class="ma-audio-controls__status">нет аудио</div>
