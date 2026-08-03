@@ -3825,6 +3825,7 @@
 
         function measureHintViewerScreenshotBounds(extraPadding) {
             extraPadding = extraPadding == null ? 12 : extraPadding;
+            const topPadding = 10;
             const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
             const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
             const elements = [];
@@ -3866,11 +3867,16 @@
                 };
             }
 
+            const cropTop = Math.max(0, Math.floor(top + scrollY - topPadding));
+            const cropLeft = Math.max(0, Math.floor(left + scrollX - extraPadding));
+            const cropBottom = Math.ceil(bottom + scrollY + extraPadding);
+            const cropRight = Math.ceil(right + scrollX + extraPadding);
+
             return {
-                x: Math.max(0, Math.floor(left + scrollX - extraPadding)),
-                y: Math.max(0, Math.floor(top + scrollY - extraPadding)),
-                width: Math.max(1, Math.ceil(right - left + extraPadding * 2)),
-                height: Math.max(1, Math.ceil(bottom - top + extraPadding * 2)),
+                x: cropLeft,
+                y: cropTop,
+                width: Math.max(1, cropRight - cropLeft),
+                height: Math.max(1, cropBottom - cropTop),
                 windowWidth: document.documentElement.clientWidth,
                 windowHeight: document.documentElement.clientHeight,
             };
