@@ -318,6 +318,46 @@
             color: #2ecc71;
         }
 
+        .ma-audio-autoplay {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 41px;
+            min-width: 41px;
+            padding: 0 8px;
+            margin: 0;
+            border-radius: 6px;
+            font-size: 11px;
+            line-height: 1;
+            background: #2f2f2f;
+            border: 1px solid #555;
+            color: #eee;
+            box-sizing: border-box;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .ma-audio-autoplay input {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            accent-color: #2ecc71;
+            cursor: pointer;
+        }
+
+        .ma-audio-autoplay:has(input:checked) {
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .ma-audio-controls.is-user-mode .ma-audio-controls__status,
+        .ma-audio-controls.is-user-mode #matchAnalysisAudioAttachBtn,
+        .ma-audio-controls.is-user-mode #matchAnalysisAudioEditRow {
+            display: none !important;
+        }
+
         .ma-audio-controls__status {
             max-width: 168px;
             font-size: 10px;
@@ -582,6 +622,12 @@
                 font-size: 16px;
             }
 
+            .ma-audio-autoplay {
+                height: 41px;
+                min-width: 41px;
+                font-size: 11px;
+            }
+
             .ma-audio-controls__status {
                 max-width: 152px;
                 font-size: 10px;
@@ -640,6 +686,12 @@
                 width: 51px;
                 height: 51px;
                 font-size: 20px;
+            }
+
+            .ma-audio-autoplay {
+                height: 51px;
+                min-width: 51px;
+                font-size: 13px;
             }
 
             .ma-audio-controls__status {
@@ -703,6 +755,13 @@
                 font-size: 17px;
             }
 
+            .ma-audio-autoplay {
+                height: 35px;
+                min-width: 35px;
+                padding: 0 6px;
+                font-size: 10px;
+            }
+
             .ma-audio-controls__status {
                 max-width: 60px;
                 font-size: 9px;
@@ -734,6 +793,12 @@
                 width: 41px;
                 height: 41px;
                 font-size: 16px;
+            }
+
+            .ma-audio-autoplay {
+                height: 41px;
+                min-width: 41px;
+                font-size: 11px;
             }
 
             .ma-audio-controls__status {
@@ -770,6 +835,12 @@
                 width: 44px;
                 height: 44px;
                 font-size: 17px;
+            }
+
+            .ma-audio-autoplay {
+                height: 44px;
+                min-width: 44px;
+                font-size: 12px;
             }
 
             .ma-audio-controls__status {
@@ -1450,8 +1521,12 @@
                                 <div>
                                     <button type="button" id="matchAnalysisAudioPlayBtn" onclick="toggleMatchAnalysisAudioPlay()" disabled title="Слушать"><i class="fa fa-play" aria-hidden="true"></i></button>
                                     <button type="button" id="matchAnalysisAudioAttachBtn" onclick="matchAnalysisPickAudioFile()" title="Прикрепить файл"><i class="fa fa-paperclip" aria-hidden="true"></i></button>
+                                    <label id="matchAnalysisAudioAutoplayLabel" class="ma-audio-autoplay" style="display:none;" title="Автовоспроизведение">
+                                        <input type="checkbox" id="matchAnalysisAudioAutoplayChk" onchange="onMatchAnalysisAutoplayChange()">
+                                        <span>авто</span>
+                                    </label>
                                 </div>
-                                <div>
+                                <div id="matchAnalysisAudioEditRow">
                                     <button type="button" id="matchAnalysisAudioRecordBtn" onclick="startMatchAnalysisRecording()" title="Записать"><i class="fa fa-microphone" aria-hidden="true"></i></button>
                                     <button type="button" id="matchAnalysisAudioDeleteBtn" onclick="deleteMatchAnalysisAudio()" disabled title="Удалить"><i class="fa fa-trash" aria-hidden="true"></i></button>
                                 </div>
@@ -4702,6 +4777,8 @@
         let matchAnalysisAudioEl = null;
         let matchAnalysisMediaRecorder = null;
         let matchAnalysisRecordChunks = [];
+        let matchAnalysisAudioUiMoveKey = null;
+        const MATCH_ANALYSIS_AUTOPLAY_LS_KEY = 'matchAnalysisAudioAutoplay';
 
         function buildMatchAnalysisMediaUrl(s3Key) {
             return '/api/match_analysis/media?key=' + encodeURIComponent(s3Key);
@@ -4717,6 +4794,30 @@
                 audioS3Key: row.audioS3Key || null,
                 audioName: row.audioName || null,
             };
+        }
+
+        function getMatchAnalysisAudioMoveKey() {
+            const meta = getCurrentMoveAudioMeta();
+            return String(currentGameNum) + ':' + String(current) + ':' + String(meta.moveIndex);
+        }
+
+        function isMatchAnalysisAutoplayEnabled() {
+            const chk = document.getElementById('matchAnalysisAudioAutoplayChk');
+            return !!(chk && chk.checked);
+        }
+
+        function onMatchAnalysisAutoplayChange() {
+            const chk = document.getElementById('matchAnalysisAudioAutoplayChk');
+            if (!chk) return;
+            try {
+                localStorage.setItem(MATCH_ANALYSIS_AUTOPLAY_LS_KEY, chk.checked ? '1' : '0');
+            } catch (e) { /* ignore */ }
+            if (chk.checked) {
+                const meta = getCurrentMoveAudioMeta();
+                if (meta.audioS3Key) {
+                    playMatchAnalysisAudioForCurrentMove();
+                }
+            }
         }
 
         function syncMoveAudioInDoc(gameNumber, moveIndex, audioS3Key, audioName) {
@@ -4754,6 +4855,34 @@
                 : '<i class="fa fa-microphone" aria-hidden="true"></i>';
         }
 
+        function stopMatchAnalysisAudioPlayback() {
+            if (matchAnalysisAudioEl) {
+                try { matchAnalysisAudioEl.pause(); } catch (e) { /* ignore */ }
+                matchAnalysisAudioEl = null;
+            }
+            setMatchAnalysisPlayButtonState(false);
+        }
+
+        function playMatchAnalysisAudioForCurrentMove() {
+            const meta = getCurrentMoveAudioMeta();
+            if (!meta.audioS3Key) {
+                stopMatchAnalysisAudioPlayback();
+                return;
+            }
+            stopMatchAnalysisAudioPlayback();
+            matchAnalysisAudioEl = new Audio(buildMatchAnalysisMediaUrl(meta.audioS3Key));
+            matchAnalysisAudioEl.onended = function () {
+                setMatchAnalysisPlayButtonState(false);
+            };
+            matchAnalysisAudioEl.play().then(function () {
+                setMatchAnalysisPlayButtonState(true);
+            }).catch((e) => {
+                console.error(e);
+                setMatchAnalysisPlayButtonState(false);
+                showMessageModal('Не удалось воспроизвести аудио', 'error');
+            });
+        }
+
         function updateMatchAnalysisChromeUi() {
             const cabinetBackBtn = document.getElementById('matchAnalysisCabinetBackBtn');
             const headerEl = document.querySelector('.board-block .header');
@@ -4777,6 +4906,8 @@
             if (!panel) return;
             if (!matchAnalysisMode) {
                 panel.style.display = 'none';
+                stopMatchAnalysisAudioPlayback();
+                matchAnalysisAudioUiMoveKey = null;
                 return;
             }
             panel.style.display = 'flex';
@@ -4787,48 +4918,72 @@
             const attachBtn = document.getElementById('matchAnalysisAudioAttachBtn');
             const recordBtn = document.getElementById('matchAnalysisAudioRecordBtn');
             const deleteBtn = document.getElementById('matchAnalysisAudioDeleteBtn');
+            const autoplayLabel = document.getElementById('matchAnalysisAudioAutoplayLabel');
+            const autoplayChk = document.getElementById('matchAnalysisAudioAutoplayChk');
             const audioLabel = meta.audioS3Key
                 ? (meta.audioName || meta.audioS3Key.split('/').pop() || 'аудио')
                 : '';
+
             panel.classList.toggle('has-audio', !!meta.audioS3Key);
-            panel.title = meta.audioS3Key ? ('Аудио: ' + audioLabel) : 'Аудио не прикреплено';
-            if (statusEl) {
-                statusEl.textContent = meta.audioS3Key ? audioLabel : 'нет аудио';
-                statusEl.title = panel.title;
+            panel.classList.toggle('is-user-mode', !canEditAudio);
+
+            if (canEditAudio) {
+                panel.title = meta.audioS3Key ? ('Аудио: ' + audioLabel) : 'Аудио не прикреплено';
+                if (statusEl) {
+                    statusEl.style.display = '';
+                    statusEl.textContent = meta.audioS3Key ? audioLabel : 'нет аудио';
+                    statusEl.title = panel.title;
+                }
+                if (attachBtn) attachBtn.style.display = '';
+                if (recordBtn) recordBtn.style.display = '';
+                if (deleteBtn) {
+                    deleteBtn.style.display = '';
+                    deleteBtn.disabled = !meta.audioS3Key;
+                }
+                if (autoplayLabel) autoplayLabel.style.display = 'none';
+            } else {
+                panel.title = meta.audioS3Key ? 'Есть аудио на ходе' : 'Аудио не прикреплено';
+                if (statusEl) {
+                    statusEl.style.display = 'none';
+                    statusEl.textContent = '';
+                    statusEl.title = '';
+                }
+                if (attachBtn) attachBtn.style.display = 'none';
+                if (recordBtn) recordBtn.style.display = 'none';
+                if (deleteBtn) deleteBtn.style.display = 'none';
+                if (autoplayLabel) autoplayLabel.style.display = 'inline-flex';
+                if (autoplayChk && autoplayChk.dataset.synced !== '1') {
+                    try {
+                        autoplayChk.checked = localStorage.getItem(MATCH_ANALYSIS_AUTOPLAY_LS_KEY) === '1';
+                    } catch (e) {
+                        autoplayChk.checked = false;
+                    }
+                    autoplayChk.dataset.synced = '1';
+                }
             }
+
             if (playBtn) playBtn.disabled = !meta.audioS3Key;
-            if (attachBtn) attachBtn.style.display = canEditAudio ? '' : 'none';
-            if (recordBtn) recordBtn.style.display = canEditAudio ? '' : 'none';
-            if (deleteBtn) {
-                deleteBtn.style.display = canEditAudio ? '' : 'none';
-                deleteBtn.disabled = !canEditAudio || !meta.audioS3Key;
+
+            const moveKey = getMatchAnalysisAudioMoveKey();
+            const frameChanged = moveKey !== matchAnalysisAudioUiMoveKey;
+            matchAnalysisAudioUiMoveKey = moveKey;
+
+            if (frameChanged) {
+                stopMatchAnalysisAudioPlayback();
+                if (!canEditAudio && isMatchAnalysisAutoplayEnabled() && meta.audioS3Key) {
+                    playMatchAnalysisAudioForCurrentMove();
+                }
             }
-            if (matchAnalysisAudioEl) {
-                matchAnalysisAudioEl.pause();
-                matchAnalysisAudioEl = null;
-            }
-            setMatchAnalysisPlayButtonState(false);
         }
 
         function toggleMatchAnalysisAudioPlay() {
             const meta = getCurrentMoveAudioMeta();
             if (!meta.audioS3Key) return;
             if (matchAnalysisAudioEl && !matchAnalysisAudioEl.paused) {
-                matchAnalysisAudioEl.pause();
-                setMatchAnalysisPlayButtonState(false);
+                stopMatchAnalysisAudioPlayback();
                 return;
             }
-            matchAnalysisAudioEl = new Audio(buildMatchAnalysisMediaUrl(meta.audioS3Key));
-            matchAnalysisAudioEl.onended = function () {
-                setMatchAnalysisPlayButtonState(false);
-            };
-            matchAnalysisAudioEl.play().then(function () {
-                setMatchAnalysisPlayButtonState(true);
-            }).catch((e) => {
-                console.error(e);
-                setMatchAnalysisPlayButtonState(false);
-                showMessageModal('Не удалось воспроизвести аудио', 'error');
-            });
+            playMatchAnalysisAudioForCurrentMove();
         }
 
         function matchAnalysisPickAudioFile() {
