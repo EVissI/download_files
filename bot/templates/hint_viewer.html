@@ -5217,11 +5217,13 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 matchAnalysisRecordChunks = [];
-                const mime = MediaRecorder.isTypeSupported('audio/webm')
-                    ? 'audio/webm'
-                    : MediaRecorder.isTypeSupported('audio/ogg')
-                      ? 'audio/ogg'
-                      : '';
+                const mimeCandidates = [
+                    'audio/ogg;codecs=opus',
+                    'audio/ogg',
+                    'audio/webm;codecs=opus',
+                    'audio/webm',
+                ];
+                const mime = mimeCandidates.find((t) => MediaRecorder.isTypeSupported(t)) || '';
                 matchAnalysisMediaRecorder = mime
                     ? new MediaRecorder(stream, { mimeType: mime })
                     : new MediaRecorder(stream);

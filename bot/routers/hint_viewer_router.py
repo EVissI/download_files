@@ -895,6 +895,43 @@ async def _load_optional_screenshot_audio(form_data) -> tuple[bytes, str] | None
     return audio_bytes, str(audio_name)
 
 
+async def _send_screenshot_audio_to_chat(chat_id: int, audio_bytes: bytes, audio_name: str) -> None:
+    """
+    Шлёт аудио как голосовое сообщение (voice). Для mp3/m4a — как audio-плеер.
+    Если Telegram отклоняет формат — fallback в документ.
+    """
+    name = (audio_name or "audio.webm").strip() or "audio.webm"
+    ext = os.path.splitext(name)[1].lower().lstrip(".")
+
+    if ext in {"mp3", "m4a", "mpeg", "mp4"}:
+        try:
+            await bot.send_audio(
+                chat_id=chat_id,
+                audio=BufferedInputFile(audio_bytes, filename=name),
+                caption="Аудио к ходу",
+            )
+            return
+        except Exception as e:
+            logger.warning(f"send_audio failed for screenshot audio ({name}): {e}")
+
+    # Голосовое в TG: OGG/OPUS. webm+opus из MediaRecorder часто принимается как voice.ogg.
+    try:
+        await bot.send_voice(
+            chat_id=chat_id,
+            voice=BufferedInputFile(audio_bytes, filename="voice.ogg"),
+            caption="Аудио к ходу",
+        )
+        return
+    except Exception as e:
+        logger.warning(f"send_voice failed for screenshot audio ({name}): {e}")
+
+    await bot.send_document(
+        chat_id=chat_id,
+        document=BufferedInputFile(audio_bytes, filename=name),
+        caption="Аудио к ходу",
+    )
+
+
 @hint_viewer_api_router.post("/api/send_screenshot")
 async def send_screenshot(request: Request):
     """
@@ -974,11 +1011,7 @@ async def send_screenshot(request: Request):
             audio_payload = await _load_optional_screenshot_audio(form_data)
             if audio_payload:
                 audio_bytes, audio_name = audio_payload
-                await bot.send_document(
-                    chat_id=chat_id_int,
-                    document=BufferedInputFile(audio_bytes, filename=audio_name),
-                    caption="Аудио к ходу",
-                )
+                await _send_screenshot_audio_to_chat(chat_id_int, audio_bytes, audio_name)
 
             # Списываем баланс SCRINSHOT после успешной отправки
             await user_dao.decrease_analiz_balance(
