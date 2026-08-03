@@ -1432,6 +1432,18 @@
         <div id="top-row">
             <div id="controls">
                 <div class="left-controls">
+                    <div class="screenshot-controls">
+                        <div>
+                            <button onclick="toggleInvert()" id="invertBtn"></button>
+                            <button onclick="takeScreenshot()" id="screenshotBtn"></button>
+                        </div>
+                        <div>
+                            <button onclick="saveScreenshot()" id="screenSaveBtn"></button>
+                            <button onclick="uploadScreenshots()" id="screenUploadBtn"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="right-controls">
                     <div id="matchAnalysisAudioPanel" class="ma-audio-controls" style="display:none;" title="Аудио не прикреплено">
                         <div class="ma-audio-controls__buttons">
                             <div class="ma-audio-controls__grid">
@@ -1447,18 +1459,6 @@
                         </div>
                         <div id="matchAnalysisAudioStatus" class="ma-audio-controls__status">нет аудио</div>
                         <input type="file" id="matchAnalysisAudioFileInput" accept="audio/*" style="display:none" onchange="matchAnalysisOnAudioFileSelected(event)">
-                    </div>
-                </div>
-                <div class="right-controls">
-                    <div class="screenshot-controls">
-                        <div>
-                            <button onclick="toggleInvert()" id="invertBtn"></button>
-                            <button onclick="takeScreenshot()" id="screenshotBtn"></button>
-                        </div>
-                        <div>
-                            <button onclick="saveScreenshot()" id="screenSaveBtn"></button>
-                            <button onclick="uploadScreenshots()" id="screenUploadBtn"></button>
-                        </div>
                     </div>
                     <div class="navigation-controls">
                         <button onclick="prevTurn()" id="prevBtn"></button>
