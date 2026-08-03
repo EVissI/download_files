@@ -2750,9 +2750,7 @@
                     var wrapEl = document.querySelector('.wrap');
                     if (wrapEl) wrapEl.classList.add('wrap--no-footer');
                 } else if (IS_MATCH_ANALYSIS) {
-                    // Для MA: выделение нужно для папок; card-only send/link/id — нет.
-                    hideEl(generateLinkBtn);
-                    hideEl(sendSelectedBtn);
+                    // Для MA: выделение + assign/link; переключатель ID карточек не нужен.
                     hideEl(idToggleBtn);
                 }
                 if (!FEATURES.enable_search) {
@@ -4340,7 +4338,9 @@
                 function requestActivationLink() {
                     if (!isRootAdminUser || !generateLinkBtn) return;
                     if (generateLinkModalTitle) {
-                        generateLinkModalTitle.textContent = 'Одноразовая ссылка';
+                        generateLinkModalTitle.textContent = IS_MATCH_ANALYSIS
+                            ? 'Одноразовая ссылка на анализы'
+                            : 'Одноразовая ссылка';
                     }
                     var selectedCards = getSelectedCardsInCabinetOrder();
                     var selectedIds = selectedCards.map(function (row) { return row.id; });
@@ -5708,9 +5708,23 @@
                     }
                     if (FEATURES.enable_selection && sendSelectedBtn) {
                         sendSelectedBtn.classList.add('is-visible');
+                        if (IS_MATCH_ANALYSIS) {
+                            sendSelectedBtn.title = 'Отправить выбранные анализы пользователю';
+                            sendSelectedBtn.setAttribute(
+                                'aria-label',
+                                'Отправить выбранные анализы пользователю'
+                            );
+                        }
                     }
                     if (FEATURES.enable_selection && generateLinkBtn) {
                         generateLinkBtn.classList.add('is-visible');
+                        if (IS_MATCH_ANALYSIS) {
+                            generateLinkBtn.title = 'Получить одноразовую ссылку на анализы';
+                            generateLinkBtn.setAttribute(
+                                'aria-label',
+                                'Получить одноразовую ссылку на анализы'
+                            );
+                        }
                     }
                     if (!IS_MATCH_ANALYSIS) {
                         if (FEATURES.enable_labels && labelFilterWrap) {
