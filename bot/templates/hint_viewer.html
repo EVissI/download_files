@@ -218,6 +218,14 @@
             flex-wrap: nowrap;
         }
 
+        .right-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: nowrap;
+            margin-left: auto;
+        }
+
         /* По умолчанию (планшет/ПК): один ряд кнопок */
         .screenshot-controls {
             display: flex;
@@ -600,6 +608,10 @@
                 gap: 14px;
             }
 
+            .right-controls {
+                gap: 14px;
+            }
+
             .screenshot-controls,
             .ma-audio-controls__grid,
             .screenshot-controls > div,
@@ -718,6 +730,10 @@
             }
 
             .left-controls {
+                gap: 10px;
+            }
+
+            .right-controls {
                 gap: 10px;
             }
 
@@ -1424,6 +1440,8 @@
                         <div id="matchAnalysisAudioStatus" class="ma-audio-controls__status">нет аудио</div>
                         <input type="file" id="matchAnalysisAudioFileInput" accept="audio/*" style="display:none" onchange="matchAnalysisOnAudioFileSelected(event)">
                     </div>
+                </div>
+                <div class="right-controls">
                     <div class="screenshot-controls">
                         <div>
                             <button onclick="toggleInvert()" id="invertBtn"></button>
@@ -1434,11 +1452,11 @@
                             <button onclick="uploadScreenshots()" id="screenUploadBtn"></button>
                         </div>
                     </div>
-                </div>
-                <div class="navigation-controls">
-                    <button onclick="prevTurn()" id="prevBtn"></button>
-                    <span id="turnLabel">0</span>
-                    <button onclick="nextTurn()" id="nextBtn"></button>
+                    <div class="navigation-controls">
+                        <button onclick="prevTurn()" id="prevBtn"></button>
+                        <span id="turnLabel">0</span>
+                        <button onclick="nextTurn()" id="nextBtn"></button>
+                    </div>
                 </div>
             </div>
         </div>
