@@ -858,10 +858,48 @@ async def get_analysis_data(game_id: str, game_num: str = None):
         raise HTTPException(status_code=500, detail="Error generating analysis data")
 
 
+async def _load_optional_screenshot_audio(form_data) -> tuple[bytes, str] | None:
+    """
+    Достаёт аудио к скриншоту из form-поля ``audio`` или по ``audio_s3_key``.
+    """
+    audio_upload = form_data.get("audio")
+    if audio_upload is not None and hasattr(audio_upload, "read"):
+        audio_bytes = await audio_upload.read()
+        if audio_bytes:
+            filename = (
+                getattr(audio_upload, "filename", None)
+                or form_data.get("audio_name")
+                or "audio.webm"
+            )
+            return audio_bytes, str(filename)
+
+    audio_s3_key = form_data.get("audio_s3_key")
+    if not audio_s3_key:
+        return None
+    key = str(audio_s3_key).strip()
+    if not key or not HintS3Storage.is_match_analysis_media_key(key):
+        logger.warning(f"Invalid audio_s3_key for screenshot: {key!r}")
+        return None
+    try:
+        s3 = HintS3Storage.from_settings()
+        if not s3.exists(key):
+            logger.warning(f"Screenshot audio S3 key not found: {key}")
+            return None
+        audio_bytes = s3.download_bytes(key)
+    except Exception as e:
+        logger.error(f"Failed to download screenshot audio from S3 ({key}): {e}")
+        return None
+    if not audio_bytes:
+        return None
+    audio_name = form_data.get("audio_name") or key.rsplit("/", 1)[-1] or "audio.webm"
+    return audio_bytes, str(audio_name)
+
+
 @hint_viewer_api_router.post("/api/send_screenshot")
 async def send_screenshot(request: Request):
     """
     Принимает скриншот от веб-приложения и отправляет его в чат пользователя.
+    Опционально прикрепляет аудио текущего хода (файл или S3 key).
     """
     try:
         form_data = await request.form()
@@ -932,6 +970,15 @@ async def send_screenshot(request: Request):
             logger.debug(f"Screenshot file size: {len(photo_bytes)} bytes")
             photo_file = BufferedInputFile(photo_bytes, filename="screenshot.png")
             await bot.send_photo(chat_id=chat_id_int, photo=photo_file)
+
+            audio_payload = await _load_optional_screenshot_audio(form_data)
+            if audio_payload:
+                audio_bytes, audio_name = audio_payload
+                await bot.send_document(
+                    chat_id=chat_id_int,
+                    document=BufferedInputFile(audio_bytes, filename=audio_name),
+                    caption="Аудио к ходу",
+                )
 
             # Списываем баланс SCRINSHOT после успешной отправки
             await user_dao.decrease_analiz_balance(
@@ -1038,6 +1085,7 @@ async def send_to_support(request: Request):
 async def save_screenshot(request: Request):
     """
     Сохраняет скриншот в буфер для пользователя.
+    Опционально сохраняет аудио текущего хода рядом со скрином.
     """
     try:
         form_data = await request.form()
@@ -1068,6 +1116,18 @@ async def save_screenshot(request: Request):
         with open(filepath, "wb") as f:
             f.write(photo_bytes)
 
+        audio_payload = await _load_optional_screenshot_audio(form_data)
+        if audio_payload:
+            audio_bytes, audio_name = audio_payload
+            _, ext = os.path.splitext(audio_name)
+            if not ext:
+                ext = ".webm"
+            audio_filename = f"screenshot_{timestamp}_audio{ext}"
+            audio_path = os.path.join(buffer_dir, audio_filename)
+            with open(audio_path, "wb") as f:
+                f.write(audio_bytes)
+            logger.info(f"Screenshot audio saved to buffer: {audio_path}")
+
         logger.info(f"Screenshot saved to buffer: {filepath}")
         return {"status": "success"}
 
@@ -1081,7 +1141,7 @@ async def save_screenshot(request: Request):
 @hint_viewer_api_router.post("/api/upload_screenshots")
 async def upload_screenshots(request: Request):
     """
-    Создает ZIP архив из буфера скриншотов и отправляет в Telegram.
+    Создает ZIP архив из буфера скриншотов (и аудио, если есть) и отправляет в Telegram.
     """
     try:
         chat_id = request.query_params.get("chat_id")
@@ -1095,6 +1155,12 @@ async def upload_screenshots(request: Request):
         screenshots = [f for f in os.listdir(buffer_dir) if f.endswith(".png")]
         if not screenshots:
             raise HTTPException(status_code=404, detail="No screenshots in buffer")
+
+        extra_files = [
+            f
+            for f in os.listdir(buffer_dir)
+            if os.path.isfile(os.path.join(buffer_dir, f)) and not f.endswith(".png")
+        ]
 
         chat_id_int = int(chat_id)
         file_count = len(screenshots)
@@ -1149,15 +1215,21 @@ async def upload_screenshots(request: Request):
                 for screenshot in screenshots:
                     filepath = os.path.join(buffer_dir, screenshot)
                     zip_file.write(filepath, screenshot)
+                for extra in extra_files:
+                    filepath = os.path.join(buffer_dir, extra)
+                    zip_file.write(filepath, extra)
 
             zip_buffer.seek(0)
             zip_data = zip_buffer.getvalue()
 
             zip_file = BufferedInputFile(zip_data, filename="screenshots.zip")
+            caption = f"Архив с {file_count} скриншотами"
+            if extra_files:
+                caption += f" и {len(extra_files)} аудио"
             await bot.send_document(
                 chat_id=chat_id_int,
                 document=zip_file,
-                caption=f"Архив с {file_count} скриншотами",
+                caption=caption,
             )
 
             # Списываем баланс за каждый сохранённый файл (батчевое списание)

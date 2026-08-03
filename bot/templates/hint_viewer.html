@@ -3808,6 +3808,117 @@
             overlay.classList.add('show');
         }
 
+        const HINT_VIEWER_SCREENSHOT_SELECTORS = [
+            '.board-block',
+            '.hints-table',
+        ];
+
+        function isHintViewerScreenshotElementVisible(el) {
+            if (!el) return false;
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+                return false;
+            }
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 || rect.height > 0;
+        }
+
+        function measureHintViewerScreenshotBounds(extraPadding) {
+            extraPadding = extraPadding == null ? 12 : extraPadding;
+            const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+            const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            const elements = [];
+
+            HINT_VIEWER_SCREENSHOT_SELECTORS.forEach((selector) => {
+                document.querySelectorAll(selector).forEach((el) => {
+                    if (isHintViewerScreenshotElementVisible(el)) {
+                        elements.push(el);
+                    }
+                });
+            });
+
+            if (!elements.length) {
+                const container = document.querySelector('.container');
+                if (container) elements.push(container);
+            }
+
+            let top = Infinity;
+            let left = Infinity;
+            let bottom = -Infinity;
+            let right = -Infinity;
+
+            elements.forEach((el) => {
+                const rect = el.getBoundingClientRect();
+                top = Math.min(top, rect.top);
+                left = Math.min(left, rect.left);
+                bottom = Math.max(bottom, rect.bottom);
+                right = Math.max(right, rect.right);
+            });
+
+            if (!Number.isFinite(top)) {
+                return {
+                    x: 0,
+                    y: 0,
+                    width: document.documentElement.clientWidth,
+                    height: document.documentElement.clientHeight,
+                    windowWidth: document.documentElement.clientWidth,
+                    windowHeight: document.documentElement.clientHeight,
+                };
+            }
+
+            return {
+                x: Math.max(0, Math.floor(left + scrollX - extraPadding)),
+                y: Math.max(0, Math.floor(top + scrollY - extraPadding)),
+                width: Math.max(1, Math.ceil(right - left + extraPadding * 2)),
+                height: Math.max(1, Math.ceil(bottom - top + extraPadding * 2)),
+                windowWidth: document.documentElement.clientWidth,
+                windowHeight: document.documentElement.clientHeight,
+            };
+        }
+
+        function getHintViewerHtml2CanvasOptions() {
+            const bounds = measureHintViewerScreenshotBounds();
+            return {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#1a1a1a',
+                x: bounds.x,
+                y: bounds.y,
+                width: bounds.width,
+                height: bounds.height,
+                windowWidth: bounds.windowWidth,
+                windowHeight: bounds.windowHeight,
+                scrollX: 0,
+                scrollY: 0,
+                scale: Math.min(window.devicePixelRatio || 1, 2),
+            };
+        }
+
+        function captureHintViewerScreenshot() {
+            window.scrollTo(0, 0);
+            return new Promise((resolve, reject) => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        html2canvas(document.body, getHintViewerHtml2CanvasOptions())
+                            .then(resolve)
+                            .catch(reject);
+                    });
+                });
+            });
+        }
+
+        function appendMatchAnalysisAudioToFormData(formData) {
+            if (!matchAnalysisMode || typeof getCurrentMoveAudioMeta !== 'function') {
+                return;
+            }
+            const meta = getCurrentMoveAudioMeta();
+            if (!meta || !meta.audioS3Key) return;
+            formData.append('audio_s3_key', meta.audioS3Key);
+            if (meta.audioName) {
+                formData.append('audio_name', meta.audioName);
+            }
+        }
+
         function saveScreenshot() {
             // Hide controls and game selector before taking screenshot
             const controls = document.getElementById('controls');
@@ -3824,6 +3935,9 @@
             const settingsContainer = document.querySelector('.settings-container');
             const openEditorBtn = document.getElementById('openEditorBtn');
             const adminButtonContainer = document.getElementById('adminButtonContainer');
+            const topRow = document.getElementById('top-row');
+            const pageTitle = document.querySelector('.container > h1');
+            const viewerBelowBoard = document.querySelector('.viewer-below-board');
             const originalAdminButtonContainerDisplay = adminButtonContainer ? adminButtonContainer.style.display : null;
             let animationControlsParent = null;
             let animationControlsNextSibling = null;
@@ -3844,6 +3958,9 @@
             const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
             const originalSettingsDisplay = settingsContainer ? settingsContainer.style.display : null;
             const originalOpenEditorBtnDisplay = openEditorBtn ? openEditorBtn.style.display : null;
+            const originalTopRowDisplay = topRow ? topRow.style.display : null;
+            const originalPageTitleDisplay = pageTitle ? pageTitle.style.display : null;
+            const originalViewerBelowDisplay = viewerBelowBoard ? viewerBelowBoard.style.display : null;
             const settingsBtn = document.getElementById('settingsBtn');
             const settingsSpan = settingsContainer ? settingsContainer.querySelector('span') : null;
             const originalSettingsBtnDisplay = settingsBtn ? settingsBtn.style.display : null;
@@ -3872,6 +3989,9 @@
                 if (settingsSpan && originalSettingsSpanDisplay !== null) settingsSpan.style.display = originalSettingsSpanDisplay;
                 if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
                 if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
+                if (topRow && originalTopRowDisplay !== null) topRow.style.display = originalTopRowDisplay;
+                if (pageTitle && originalPageTitleDisplay !== null) pageTitle.style.display = originalPageTitleDisplay;
+                if (viewerBelowBoard && originalViewerBelowDisplay !== null) viewerBelowBoard.style.display = originalViewerBelowDisplay;
                 if (animationControls && animationControlsParent) {
                     if (animationControlsNextSibling) {
                         animationControlsParent.insertBefore(animationControls, animationControlsNextSibling);
@@ -3909,6 +4029,9 @@
             if (settingsSpan) settingsSpan.style.display = 'none';
             if (openEditorBtn) openEditorBtn.style.display = 'none';
             if (adminButtonContainer) adminButtonContainer.style.display = 'none';
+            if (topRow) topRow.style.display = 'none';
+            if (pageTitle) pageTitle.style.display = 'none';
+            if (viewerBelowBoard) viewerBelowBoard.style.display = 'none';
             setMatchAnalysisCabinetBackVisibleForScreenshot(false);
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
@@ -3926,16 +4049,12 @@
                 if (redPips) redPips.style.display = 'none';
             }
 
-            if (hidePipsCheckbox && hidePipsCheckbox.checked) {
-                if (blackPips) blackPips.style.display = 'none';
-                if (redPips) redPips.style.display = 'none';
-            }
-
             applyScreenshotFontScale();
-            html2canvas(document.body, { useCORS: true, allowTaint: true, backgroundColor: '#1a1a1a' }).then(canvas => {
+            captureHintViewerScreenshot().then(canvas => {
                 canvas.toBlob(blob => {
                     const formData = new FormData();
                     formData.append('photo', blob);
+                    appendMatchAnalysisAudioToFormData(formData);
                     fetch(`/api/save_screenshot?chat_id=${getActiveHintViewerChatId()}`, {
                         method: 'POST',
                         body: formData
@@ -4019,6 +4138,9 @@
             const settingsContainer = document.querySelector('.settings-container');
             const openEditorBtn = document.getElementById('openEditorBtn');
             const adminButtonContainer = document.getElementById('adminButtonContainer');
+            const topRow = document.getElementById('top-row');
+            const pageTitle = document.querySelector('.container > h1');
+            const viewerBelowBoard = document.querySelector('.viewer-below-board');
             const originalAdminButtonContainerDisplay = adminButtonContainer ? adminButtonContainer.style.display : null;
             let animationControlsParent = null;
             let animationControlsNextSibling = null;
@@ -4039,6 +4161,9 @@
             const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
             const originalSettingsDisplay = settingsContainer ? settingsContainer.style.display : null;
             const originalOpenEditorBtnDisplay = openEditorBtn ? openEditorBtn.style.display : null;
+            const originalTopRowDisplay = topRow ? topRow.style.display : null;
+            const originalPageTitleDisplay = pageTitle ? pageTitle.style.display : null;
+            const originalViewerBelowDisplay = viewerBelowBoard ? viewerBelowBoard.style.display : null;
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : null;
@@ -4072,6 +4197,9 @@
                 if (crawfordLabel && originalCrawfordDisplay !== null) crawfordLabel.style.display = originalCrawfordDisplay;
                 if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
                 if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
+                if (topRow && originalTopRowDisplay !== null) topRow.style.display = originalTopRowDisplay;
+                if (pageTitle && originalPageTitleDisplay !== null) pageTitle.style.display = originalPageTitleDisplay;
+                if (viewerBelowBoard && originalViewerBelowDisplay !== null) viewerBelowBoard.style.display = originalViewerBelowDisplay;
                 restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
                 setMatchAnalysisCabinetBackVisibleForScreenshot(true);
                 removeScreenshotFontScale();
@@ -4089,6 +4217,9 @@
             if (settingsContainer) settingsContainer.style.display = 'none';
             if (openEditorBtn) openEditorBtn.style.display = 'none';
             if (adminButtonContainer) adminButtonContainer.style.display = 'none';
+            if (topRow) topRow.style.display = 'none';
+            if (pageTitle) pageTitle.style.display = 'none';
+            if (viewerBelowBoard) viewerBelowBoard.style.display = 'none';
             setMatchAnalysisCabinetBackVisibleForScreenshot(false);
             // Keep crawfordLabel visible for screenshots
             if (hideInfoCheckbox && hideInfoCheckbox.checked) {
@@ -4101,13 +4232,8 @@
                 if (gameSelect) gameSelect.style.display = 'none';
             }
 
-            // Create a canvas to capture the entire page
             applyScreenshotFontScale();
-            html2canvas(document.body, {
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#1a1a1a'
-            }).then(canvas => {
+            captureHintViewerScreenshot().then(canvas => {
                 restoreControls();
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
@@ -4119,6 +4245,7 @@
                         // Use Telegram WebApp API to send the file
                         const formData = new FormData();
                         formData.append('photo', file);
+                        appendMatchAnalysisAudioToFormData(formData);
 
                         // chat_id текущего зрителя (Telegram WebApp), не создателя анализа
                         const currentChatId = getActiveHintViewerChatId();
@@ -4193,12 +4320,24 @@
             const supportContainer = document.querySelector('.support-container');
             const openEditorBtn = document.getElementById('openEditorBtn');
             const adminButtonContainer = document.getElementById('adminButtonContainer');
+            const topRow = document.getElementById('top-row');
+            const pageTitle = document.querySelector('.container > h1');
+            const viewerBelowBoard = document.querySelector('.viewer-below-board');
+            const hintsButtons = document.querySelector('.hints-buttons');
             const originalAdminButtonContainerDisplay = adminButtonContainer ? adminButtonContainer.style.display : null;
             const originalSupportDisplay = supportContainer.style.display;
             const originalOpenEditorBtnDisplay = openEditorBtn ? openEditorBtn.style.display : null;
+            const originalTopRowDisplay = topRow ? topRow.style.display : null;
+            const originalPageTitleDisplay = pageTitle ? pageTitle.style.display : null;
+            const originalViewerBelowDisplay = viewerBelowBoard ? viewerBelowBoard.style.display : null;
+            const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : null;
             supportContainer.style.display = 'none';
             if (openEditorBtn) openEditorBtn.style.display = 'none';
             if (adminButtonContainer) adminButtonContainer.style.display = 'none';
+            if (topRow) topRow.style.display = 'none';
+            if (pageTitle) pageTitle.style.display = 'none';
+            if (viewerBelowBoard) viewerBelowBoard.style.display = 'none';
+            if (hintsButtons) hintsButtons.style.display = 'none';
 
             // Still hide modal as requested previously
             const modal = document.getElementById('supportModal');
@@ -4206,11 +4345,7 @@
             modal.style.display = 'none';
 
             applyScreenshotFontScale();
-            html2canvas(document.body, {
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#1a1a1a'
-            }).then(canvas => {
+            captureHintViewerScreenshot().then(canvas => {
                 removeScreenshotFontScale();
                 canvas.toBlob(blob => {
                     const formData = new FormData();
@@ -4253,6 +4388,10 @@
                         sendBtn.innerText = originalBtnText;
                         supportContainer.style.display = originalSupportDisplay;
                         if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
+                        if (topRow && originalTopRowDisplay !== null) topRow.style.display = originalTopRowDisplay;
+                        if (pageTitle && originalPageTitleDisplay !== null) pageTitle.style.display = originalPageTitleDisplay;
+                        if (viewerBelowBoard && originalViewerBelowDisplay !== null) viewerBelowBoard.style.display = originalViewerBelowDisplay;
+                        if (hintsButtons && originalHintsButtonsDisplay !== null) hintsButtons.style.display = originalHintsButtonsDisplay;
                         restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
                         removeScreenshotFontScale();
                     });
@@ -4265,6 +4404,10 @@
                 sendBtn.innerText = originalBtnText;
                 supportContainer.style.display = originalSupportDisplay;
                 if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
+                if (topRow && originalTopRowDisplay !== null) topRow.style.display = originalTopRowDisplay;
+                if (pageTitle && originalPageTitleDisplay !== null) pageTitle.style.display = originalPageTitleDisplay;
+                if (viewerBelowBoard && originalViewerBelowDisplay !== null) viewerBelowBoard.style.display = originalViewerBelowDisplay;
+                if (hintsButtons && originalHintsButtonsDisplay !== null) hintsButtons.style.display = originalHintsButtonsDisplay;
                 restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
                 removeScreenshotFontScale();
             });
