@@ -25,6 +25,8 @@ class MainKeyboard:
     @staticmethod
     def get_admin_kb_text(i18n:TranslatorRunner) -> dict:
         return {
+            # Порядок: кабинет над «Админпанель», затем веб-админка.
+            'match_analysis_cabinet': i18n.keyboard.admin.reply.match_analysis_cabinet(),
             'admin_panel': i18n.keyboard.admin.reply.admin_panel(),
             'fab_admin': i18n.keyboard.admin.reply.fab_admin(),
         }
@@ -42,13 +44,13 @@ class MainKeyboard:
                 kb.add(KeyboardButton(text=text))
 
         # Пользовательские кнопки парами; админ-кнопки — каждая на своей строке
-        # (веб-админка под «Админпанель»).
+        # («Анализ матча» → «Админпанель» → «Веб-админка»).
         # Важно: web_app на ReplyKeyboard не передаёт initData (ограничение Telegram),
-        # поэтому «Веб-админка» — обычная текстовая кнопка → дальше inline WebApp.
+        # поэтому кабинет/веб-админка — текстовые кнопки → дальше inline WebApp.
         row_sizes: list[int] = [2] * (len(user_texts) // 2)
         if len(user_texts) % 2:
             row_sizes.append(1)
         if is_admin:
-            row_sizes.extend([1, 1])
+            row_sizes.extend([1, 1, 1])
         kb.adjust(*row_sizes)
         return kb.as_markup(resize_keyboard=True)

@@ -4,6 +4,7 @@ user-static-hello = Привет! Я бот для анализа игр в ко
 keyboard-user-reply-autoanalyze = 🔮 Анализ
 keyboard-user-reply-profile = 🧍‍♂️ Профиль
 keyboard-user-reply-short_board_view = 📊 Плеер
+keyboard-admin-reply-match_analysis_cabinet = 🎧 Анализ матча
 keyboard-admin-reply-admin_panel = Админпанель
 keyboard-admin-reply-fab_admin = 🖥 Веб-админка
 keyboard-user-reply-hint_viewer = 👁️ Ошибки
