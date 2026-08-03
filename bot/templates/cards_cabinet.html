@@ -4349,14 +4349,16 @@
                     }
 
                     generateLinkBtn.disabled = true;
-                    fetch('/api/content_cards/generate_link', {
+                    var linkUrl = IS_MATCH_ANALYSIS
+                        ? '/api/match_analysis/generate_link'
+                        : '/api/content_cards/generate_link';
+                    var linkBody = IS_MATCH_ANALYSIS
+                        ? authPayload({ match_analysis_ids: selectedIds })
+                        : authPayload({ content_card_ids: selectedIds });
+                    fetch(linkUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(
-                            authPayload({
-                                content_card_ids: selectedIds,
-                            })
-                        ),
+                        body: JSON.stringify(linkBody),
                     })
                         .then(function (r) {
                             if (!r.ok) {
@@ -4398,11 +4400,27 @@
                         numberByCardId[String(row.id)] = row.number;
                     });
                     if (!selectedCards.length) {
-                        setAssignModalMsg('Выберите хотя бы одну карточку.');
+                        setAssignModalMsg(
+                            IS_MATCH_ANALYSIS
+                                ? 'Выберите хотя бы один анализ.'
+                                : 'Выберите хотя бы одну карточку.'
+                        );
                         return;
                     }
 
                     function sendAssignRequest() {
+                        if (IS_MATCH_ANALYSIS) {
+                            return fetch('/api/match_analysis/assign_to_user', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(
+                                    authPayload({
+                                        target_user_id: selectedAssignUserId,
+                                        match_analysis_ids: selectedIds,
+                                    })
+                                ),
+                            });
+                        }
                         return fetch('/api/content_cards/assign_to_user', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -4415,7 +4433,56 @@
                         });
                     }
 
+                    function handleAssignResult(data) {
+                        var issuedCount = Number((data && data.issued_count) || 0);
+                        var alreadyHadCount = Number((data && data.already_had_count) || 0);
+                        var invalidCount = Number((data && data.invalid_count) || 0);
+                        var pieces = ['Выдано: ' + issuedCount + '.'];
+                        if (alreadyHadCount > 0) {
+                            pieces.push('Уже были у пользователя: ' + alreadyHadCount + '.');
+                        }
+                        if (invalidCount > 0) {
+                            pieces.push('Не найдены: ' + invalidCount + '.');
+                        }
+                        if (data && data.notify_sent === false && data.notify_error) {
+                            pieces.push('Уведомление не отправлено: ' + data.notify_error + '.');
+                        }
+                        return showCabinetNotice(
+                            pieces.join(' '),
+                            IS_MATCH_ANALYSIS ? 'Анализы отправлены' : 'Карточки отправлены'
+                        );
+                    }
+
                     setAssignUsersLoadingState(true);
+
+                    if (IS_MATCH_ANALYSIS) {
+                        sendAssignRequest()
+                            .then(function (r) {
+                                if (!r.ok) {
+                                    return r.json().then(function (j) {
+                                        throw new Error(j.detail || r.statusText);
+                                    }).catch(function () {
+                                        throw new Error('Ошибка отправки анализов');
+                                    });
+                                }
+                                return r.json();
+                            })
+                            .then(handleAssignResult)
+                            .then(function () {
+                                closeAssignModal();
+                                setSelectionMode(false);
+                            })
+                            .catch(function (e) {
+                                setAssignModalMsg(
+                                    e && e.message ? e.message : 'Ошибка отправки анализов'
+                                );
+                            })
+                            .finally(function () {
+                                setAssignUsersLoadingState(false);
+                            });
+                        return;
+                    }
+
                     fetch('/api/content_cards/assign_preview', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -4481,22 +4548,7 @@
                             }
                             return r.json();
                         })
-                        .then(function (data) {
-                            var issuedCount = Number((data && data.issued_count) || 0);
-                            var alreadyHadCount = Number((data && data.already_had_count) || 0);
-                            var invalidCount = Number((data && data.invalid_count) || 0);
-                            var pieces = ['Выдано: ' + issuedCount + '.'];
-                            if (alreadyHadCount > 0) {
-                                pieces.push('Уже были у пользователя: ' + alreadyHadCount + '.');
-                            }
-                            if (invalidCount > 0) {
-                                pieces.push('Не найдены: ' + invalidCount + '.');
-                            }
-                            if (data && data.notify_sent === false && data.notify_error) {
-                                pieces.push('Уведомление не отправлено: ' + data.notify_error + '.');
-                            }
-                            return showCabinetNotice(pieces.join(' '), 'Карточки отправлены');
-                        })
+                        .then(handleAssignResult)
                         .then(function () {
                             closeAssignModal();
                             setSelectionMode(false);
@@ -4791,7 +4843,7 @@
                 }
 
                 function toggleContentCardReady(cardId) {
-                    if (!isRootAdminUser || IS_MATCH_ANALYSIS) return;
+                    if (!isRootAdminUser) return;
                     var cardIdNum = Number(cardId);
                     if (!Number.isFinite(cardIdNum) || cardIdNum <= 0) return;
                     var row = null;
@@ -4803,13 +4855,16 @@
                     }
                     if (!row) return;
                     var nextReady = !row.is_ready;
-                    fetch('/api/content_cards/update_meta', {
+                    var readyUrl = IS_MATCH_ANALYSIS
+                        ? '/api/match_analysis/update_meta'
+                        : '/api/content_cards/update_meta';
+                    var readyBody = IS_MATCH_ANALYSIS
+                        ? authPayload({ id: cardIdNum, is_ready: nextReady })
+                        : authPayload({ content_card_id: cardIdNum, is_ready: nextReady });
+                    fetch(readyUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(authPayload({
-                            content_card_id: cardIdNum,
-                            is_ready: nextReady,
-                        })),
+                        body: JSON.stringify(readyBody),
                     })
                         .then(function (r) {
                             return parseApiJsonResponse(r, 'Не удалось обновить готовность');
@@ -4997,7 +5052,9 @@
                         if (!maCards.length) {
                             gridEl.innerHTML = allCards.length
                                 ? '<p class="empty">Ничего не найдено по запросу.</p>'
-                                : '<p class="empty">Пока нет сохранённых анализов</p>';
+                                : (isRootAdminUser
+                                    ? '<p class="empty">Пока нет сохранённых анализов</p>'
+                                    : '<p class="empty">Вам пока не выданы анализы матча</p>');
                             return;
                         }
                         maCards.forEach(function (row) {
@@ -5028,6 +5085,10 @@
                                     '/match-analysis-view?id=' + encodeURIComponent(String(id)) + '&error=0'
                                 );
                             });
+                            if (!isRootAdminUser) {
+                                gridEl.appendChild(btn);
+                                return;
+                            }
                             var tileWrap = document.createElement('div');
                             tileWrap.className = 'tile-wrap';
                             var editBtn = document.createElement('button');
@@ -5044,6 +5105,15 @@
                                 ev.stopPropagation();
                                 ev.preventDefault();
                                 openMatchRenameModal(cardIdNum, row.title || fullTitle);
+                            });
+                            var readyBtn = document.createElement('button');
+                            readyBtn.type = 'button';
+                            readyBtn.className = 'tile__ready';
+                            setTileReadyButtonState(readyBtn, !!row.is_ready);
+                            readyBtn.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                ev.preventDefault();
+                                toggleContentCardReady(cardIdNum);
                             });
                             var delBtn = document.createElement('button');
                             delBtn.type = 'button';
@@ -5066,6 +5136,7 @@
                             });
                             tileWrap.appendChild(editBtn);
                             tileWrap.appendChild(btn);
+                            tileWrap.appendChild(readyBtn);
                             tileWrap.appendChild(delBtn);
                             gridEl.appendChild(tileWrap);
                         });
@@ -5611,7 +5682,7 @@
                 }
 
                 function updateAdminStatusBar() {
-                    var show = !IS_MATCH_ANALYSIS && isRootAdminUser;
+                    var show = isRootAdminUser;
                     if (cabinetAdminStatus) {
                         cabinetAdminStatus.classList.toggle('is-visible', show);
                     }
@@ -5635,13 +5706,13 @@
                     if (FEATURES.enable_selection && quickSelectInput) {
                         quickSelectInput.classList.add('is-visible');
                     }
+                    if (FEATURES.enable_selection && sendSelectedBtn) {
+                        sendSelectedBtn.classList.add('is-visible');
+                    }
+                    if (FEATURES.enable_selection && generateLinkBtn) {
+                        generateLinkBtn.classList.add('is-visible');
+                    }
                     if (!IS_MATCH_ANALYSIS) {
-                        if (FEATURES.enable_selection && sendSelectedBtn) {
-                            sendSelectedBtn.classList.add('is-visible');
-                        }
-                        if (FEATURES.enable_selection && generateLinkBtn) {
-                            generateLinkBtn.classList.add('is-visible');
-                        }
                         if (FEATURES.enable_labels && labelFilterWrap) {
                             labelFilterWrap.classList.add('is-visible');
                         }
@@ -5691,12 +5762,14 @@
                 }
 
                 function normalizeMatchAnalysisCard(it, index) {
+                    var mid = it.id != null ? it.id : it.content_card_id;
                     return {
-                        content_card_id: it.id,
+                        content_card_id: mid,
                         title: it.title || '',
                         red_player: it.red_player || '',
                         black_player: it.black_player || '',
                         notes: it.notes || '',
+                        is_ready: !!it.is_ready,
                         status: 'UNVIEWED',
                         labels: [],
                         __index: index,
@@ -5740,7 +5813,10 @@
                             .then(function (data) {
                                 var items = (data && data.items) || [];
                                 return {
-                                    is_root_admin: true,
+                                    is_root_admin: !!(data && data.is_root_admin),
+                                    ready_for_issue_count: Number(
+                                        (data && data.ready_for_issue_count) || 0
+                                    ),
                                     folder: null,
                                     child_folders: [],
                                     cards: items.map(function (it, index) {
@@ -5827,14 +5903,12 @@
                 function applyCabinetPayload(payload, config) {
                     isRootAdminUser = !!(payload && payload.is_root_admin);
                     applyRootAdminCabinetUi();
-                    if (!IS_MATCH_ANALYSIS) {
-                        setReadyForIssueCount(
-                            payload && payload.ready_for_issue_count != null
-                                ? payload.ready_for_issue_count
-                                : readyForIssueCount
-                        );
-                        updateAdminStatusBar();
-                    }
+                    setReadyForIssueCount(
+                        payload && payload.ready_for_issue_count != null
+                            ? payload.ready_for_issue_count
+                            : readyForIssueCount
+                    );
+                    updateAdminStatusBar();
 
                     var headerTitle = document.querySelector('.cabinet-header h1');
                     if (config.mode === 'folder') {

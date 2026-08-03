@@ -17,7 +17,7 @@ from bot.common.tasks.match_analysis_folder_schedule import (
     remove_ma_folder_schedule_job,
     upsert_ma_folder_schedule_job,
 )
-from bot.config import bot, settings
+from bot.config import bot
 from bot.db.dao import MatchAnalysisFolderDAO, MatchAnalysisFolderLinkDAO
 from bot.db.database import async_session_maker
 from bot.db.models import (
@@ -27,7 +27,9 @@ from bot.db.models import (
     MatchAnalysisFolderSchedule,
 )
 from bot.routers.match_analysis_router import (
+    _is_ma_admin,
     _resolve_admin_user_id,
+    _resolve_user_id,
     _serialize_list_item,
     match_analysis_api_router,
 )
@@ -434,7 +436,8 @@ async def ma_folder_navigate_link(body: MaFolderNavigateLinkBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/link_resolve")
 async def ma_folder_link_resolve(body: MaFolderLinkResolveBody):
-    user_id = _resolve_admin_user_id(body.init_data)
+    # Read-only доступ по токену — как у content folders (не только admin).
+    user_id = _resolve_user_id(body.init_data)
     token = str(body.folder_token or "").strip()
     if not token:
         raise HTTPException(status_code=400, detail="folder_token обязателен")
@@ -496,7 +499,7 @@ async def ma_folder_link_resolve(body: MaFolderLinkResolveBody):
             "card_ids": match_ids,
             "cards": cards_data,
             "child_folders": child_folders,
-            "is_root_admin": user_id in settings.ROOT_ADMIN_IDS,
+            "is_root_admin": _is_ma_admin(user_id),
         }
 
 

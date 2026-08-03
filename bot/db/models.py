@@ -71,6 +71,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    user_match_analyses: Mapped[list["UserMatchAnalysis"]] = relationship(
+        "UserMatchAnalysis",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     @property
     @renders("active_promocodes")
@@ -190,6 +195,25 @@ class DetailedAnalysis(Base):
     user: Mapped["User"] = relationship("User", back_populates="detailed_analyzes")
 
 
+class ContentCardPool(str, enum.Enum):
+    """
+    Каталог выдачи: обычные «Карточки», «Подсчёт пипсов» или «Анализ матча».
+    Для MatchAnalysis значение пула только выбирает каталог (строки ContentCard
+    с pool=match_analysis не создаём).
+    """
+
+    CARDS = "cards"
+    PIP_COUNT = "pip_count"
+    MATCH_ANALYSIS = "match_analysis"
+
+
+content_card_pool_enum = Enum(
+    ContentCardPool,
+    name="contentcardpool",
+    values_callable=lambda enum_cls: [item.value for item in enum_cls],
+)
+
+
 class PromocodeType(str, enum.Enum):
     REGULAR = "regular"
     CARDS = "cards"
@@ -212,6 +236,12 @@ class Promocode(Base):
         nullable=False,
     )
     cards_issue_quantity: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    card_pool: Mapped["ContentCardPool"] = mapped_column(
+        content_card_pool_enum,
+        nullable=False,
+        default=ContentCardPool.CARDS,
+        server_default=ContentCardPool.CARDS.value,
+    )
 
     services: Mapped[list["PromocodeServiceQuantity"]] = relationship(
         "PromocodeServiceQuantity",
@@ -711,20 +741,6 @@ class TelegramProxy(Base):
         return f"{self.id} | {self.name}"
 
 
-class ContentCardPool(str, enum.Enum):
-    """Пул карточек: обычные «Карточки» или «Подсчёт пипсов»."""
-
-    CARDS = "cards"
-    PIP_COUNT = "pip_count"
-
-
-content_card_pool_enum = Enum(
-    ContentCardPool,
-    name="contentcardpool",
-    values_callable=lambda enum_cls: [item.value for item in enum_cls],
-)
-
-
 class LabelPreset(Base):
     """
     Пресеты текстов для меток карточек (ContentCard.labels): отдельный список на каждый пул
@@ -812,8 +828,11 @@ class ContentCardIssueSchedule(Base):
     @renders("card_pool_display")
     def card_pool_display(self) -> str:
         pool = self.card_pool
-        if pool == ContentCardPool.PIP_COUNT:
+        val = pool.value if hasattr(pool, "value") else str(pool)
+        if val == ContentCardPool.PIP_COUNT.value:
             return "Подсчёт пипсов"
+        if val == ContentCardPool.MATCH_ANALYSIS.value:
+            return "Анализ матча"
         return "Карточки"
 
 
@@ -887,6 +906,8 @@ class ContentCard(Base):
         val = pool.value if hasattr(pool, "value") else str(pool)
         if val == ContentCardPool.PIP_COUNT.value:
             return "Подсчёт пипсов"
+        if val == ContentCardPool.MATCH_ANALYSIS.value:
+            return "Анализ матча"
         return "Карточки"
 
 
@@ -1226,6 +1247,12 @@ class MatchAnalysis(Base):
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     analysis: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    is_ready: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=sa_false(),
+    )
 
     folder_items: Mapped[list["MatchAnalysisFolderItem"]] = relationship(
         "MatchAnalysisFolderItem",
@@ -1233,6 +1260,71 @@ class MatchAnalysis(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    users: Mapped[list["UserMatchAnalysis"]] = relationship(
+        "UserMatchAnalysis",
+        back_populates="match_analysis",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class UserMatchAnalysis(Base):
+    """Связь пользователь ↔ анализ матча (выдача), по аналогии с UserContentCard."""
+
+    __tablename__ = "user_match_analyses"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "match_analysis_id",
+            name="uq_user_match_analyses_user_id_match_analysis_id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    match_analysis_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("match_analyses.id", ondelete="CASCADE"), nullable=False
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="user_match_analyses")
+    match_analysis: Mapped["MatchAnalysis"] = relationship(
+        "MatchAnalysis", back_populates="users"
+    )
+
+
+class MatchAnalysisActivationLinkStatus(str, enum.Enum):
+    UNACTIVATE = "unactivate"
+    ACTIVATE = "activate"
+
+
+class MatchAnalysisActivationLink(Base):
+    """Одноразовая deep-link для активации выбранных анализов матча."""
+
+    __tablename__ = "match_analysis_activation_links"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    link: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    status: Mapped["MatchAnalysisActivationLinkStatus"] = mapped_column(
+        Enum(
+            MatchAnalysisActivationLinkStatus,
+            name="matchanalysislinkstatus",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+        ),
+        nullable=False,
+        default=MatchAnalysisActivationLinkStatus.UNACTIVATE,
+        server_default=MatchAnalysisActivationLinkStatus.UNACTIVATE.value,
+    )
+    match_analysis_ids: Mapped[list[int]] = mapped_column(JSONB, nullable=False)
+    activated_by_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    activated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    activated_by_user: Mapped[Optional["User"]] = relationship("User")
 
 
 class MatchAnalysisFolder(Base):

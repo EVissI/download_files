@@ -1750,6 +1750,9 @@
                   matchAnalysisDoc = payload.analysis || {};
                   matchAnalysisTitle = payload.title || '';
                   window.matchAnalysisId = matchAnalysisId;
+                  if (typeof payload.is_root_admin === 'boolean') {
+                      window.hintViewerIsAdmin = !!payload.is_root_admin;
+                  }
                   return {
                       game_info: matchAnalysisDoc.game_info || {},
                       games: (matchAnalysisDoc.games || []).map((g) => ({
@@ -4648,9 +4651,12 @@
                 return;
             }
             panel.style.display = 'flex';
+            const canEditAudio = !!window.hintViewerIsAdmin;
             const meta = getCurrentMoveAudioMeta();
             const statusEl = document.getElementById('matchAnalysisAudioStatus');
             const playBtn = document.getElementById('matchAnalysisAudioPlayBtn');
+            const attachBtn = document.getElementById('matchAnalysisAudioAttachBtn');
+            const recordBtn = document.getElementById('matchAnalysisAudioRecordBtn');
             const deleteBtn = document.getElementById('matchAnalysisAudioDeleteBtn');
             const audioLabel = meta.audioS3Key
                 ? (meta.audioName || meta.audioS3Key.split('/').pop() || 'аудио')
@@ -4662,7 +4668,12 @@
                 statusEl.title = panel.title;
             }
             if (playBtn) playBtn.disabled = !meta.audioS3Key;
-            if (deleteBtn) deleteBtn.disabled = !meta.audioS3Key;
+            if (attachBtn) attachBtn.style.display = canEditAudio ? '' : 'none';
+            if (recordBtn) recordBtn.style.display = canEditAudio ? '' : 'none';
+            if (deleteBtn) {
+                deleteBtn.style.display = canEditAudio ? '' : 'none';
+                deleteBtn.disabled = !canEditAudio || !meta.audioS3Key;
+            }
             if (matchAnalysisAudioEl) {
                 matchAnalysisAudioEl.pause();
                 matchAnalysisAudioEl = null;

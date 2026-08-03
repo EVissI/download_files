@@ -2,6 +2,7 @@ from loguru import logger
 import pytz
 import codecs
 import secrets
+from bot.config import settings
 from bot.db.base import BaseDAO
 from bot.db.models import (
     Broadcast,
@@ -15,6 +16,8 @@ from bot.db.models import (
     ContentCardFolderLink,
     ContentCardPool,
     MatchAnalysis,
+    MatchAnalysisActivationLink,
+    MatchAnalysisActivationLinkStatus,
     MatchAnalysisFolder,
     MatchAnalysisFolderItem,
     MatchAnalysisFolderLink,
@@ -28,6 +31,7 @@ from bot.db.models import (
     UserAnalizePayment,
     UserAnalizePaymentService,
     UserContentCard,
+    UserMatchAnalysis,
     UserGroup,
     UserInGroup,
     UserPromocode,
@@ -864,30 +868,74 @@ class PromoCodeDAO(BaseDAO[Promocode]):
                 if cards_to_issue <= 0:
                     return False, "cards_quantity_invalid"
 
-                all_cards_query = (
-                    select(ContentCard.id)
-                    .where(ContentCard.is_ready.is_(True))
-                    .order_by(ContentCard.id.asc())
-                )
-                all_cards_result = await self._session.execute(all_cards_query)
-                all_card_ids = [row[0] for row in all_cards_result.all() if row[0] is not None]
-                if not all_card_ids:
-                    return False, "cards_not_configured"
+                pool = promocode.card_pool or ContentCardPool.CARDS
+                if isinstance(pool, str):
+                    try:
+                        pool = ContentCardPool(pool)
+                    except ValueError:
+                        pool = ContentCardPool.CARDS
 
-                existing_card_ids_query = select(UserContentCard.content_card_id).where(
-                    UserContentCard.user_id == user_id
-                )
-                existing_card_ids_result = await self._session.execute(
-                    existing_card_ids_query
-                )
-                existing_card_ids = {
-                    row[0] for row in existing_card_ids_result.all() if row[0] is not None
-                }
-                available_cards = [
-                    card_id for card_id in all_card_ids if card_id not in existing_card_ids
-                ]
-                if not available_cards:
-                    return False, "no_new_cards"
+                if pool == ContentCardPool.MATCH_ANALYSIS:
+                    all_ma_query = (
+                        select(MatchAnalysis.id)
+                        .where(MatchAnalysis.is_ready.is_(True))
+                        .order_by(MatchAnalysis.id.asc())
+                    )
+                    all_ma_result = await self._session.execute(all_ma_query)
+                    all_ma_ids = [
+                        row[0] for row in all_ma_result.all() if row[0] is not None
+                    ]
+                    if not all_ma_ids:
+                        return False, "cards_not_configured"
+                    existing_ma_result = await self._session.execute(
+                        select(UserMatchAnalysis.match_analysis_id).where(
+                            UserMatchAnalysis.user_id == user_id
+                        )
+                    )
+                    existing_ma_ids = {
+                        row[0]
+                        for row in existing_ma_result.all()
+                        if row[0] is not None
+                    }
+                    available_ma = [
+                        mid for mid in all_ma_ids if mid not in existing_ma_ids
+                    ]
+                    if not available_ma:
+                        return False, "no_new_cards"
+                else:
+                    all_cards_query = (
+                        select(ContentCard.id)
+                        .where(
+                            ContentCard.is_ready.is_(True),
+                            ContentCard.card_pool == pool.value,
+                        )
+                        .order_by(ContentCard.id.asc())
+                    )
+                    all_cards_result = await self._session.execute(all_cards_query)
+                    all_card_ids = [
+                        row[0] for row in all_cards_result.all() if row[0] is not None
+                    ]
+                    if not all_card_ids:
+                        return False, "cards_not_configured"
+
+                    existing_card_ids_query = select(
+                        UserContentCard.content_card_id
+                    ).where(UserContentCard.user_id == user_id)
+                    existing_card_ids_result = await self._session.execute(
+                        existing_card_ids_query
+                    )
+                    existing_card_ids = {
+                        row[0]
+                        for row in existing_card_ids_result.all()
+                        if row[0] is not None
+                    }
+                    available_cards = [
+                        card_id
+                        for card_id in all_card_ids
+                        if card_id not in existing_card_ids
+                    ]
+                    if not available_cards:
+                        return False, "no_new_cards"
 
             return True, "ok"
         except SQLAlchemyError as e:
@@ -929,24 +977,73 @@ class PromoCodeDAO(BaseDAO[Promocode]):
 
             if promocode.promocode_type == PromocodeType.CARDS:
                 cards_to_issue = max(0, promocode.cards_issue_quantity or 0)
-                if cards_to_issue > 0:
+                pool = promocode.card_pool or ContentCardPool.CARDS
+                if isinstance(pool, str):
+                    try:
+                        pool = ContentCardPool(pool)
+                    except ValueError:
+                        pool = ContentCardPool.CARDS
+
+                if cards_to_issue > 0 and pool == ContentCardPool.MATCH_ANALYSIS:
+                    all_ma_query = (
+                        select(MatchAnalysis.id)
+                        .where(MatchAnalysis.is_ready.is_(True))
+                        .order_by(MatchAnalysis.id.asc())
+                    )
+                    all_ma_result = await self._session.execute(all_ma_query)
+                    all_ma_ids = [
+                        row[0] for row in all_ma_result.all() if row[0] is not None
+                    ]
+                    existing_ma_result = await self._session.execute(
+                        select(UserMatchAnalysis.match_analysis_id).where(
+                            UserMatchAnalysis.user_id == user_id
+                        )
+                    )
+                    existing_ma_ids = {
+                        row[0]
+                        for row in existing_ma_result.all()
+                        if row[0] is not None
+                    }
+                    issued_now = 0
+                    for mid in all_ma_ids:
+                        if mid in existing_ma_ids:
+                            continue
+                        self._session.add(
+                            UserMatchAnalysis(
+                                user_id=user_id,
+                                match_analysis_id=mid,
+                            )
+                        )
+                        existing_ma_ids.add(mid)
+                        issued_now += 1
+                        if issued_now >= cards_to_issue:
+                            break
+                    user_promo.issued_cards_count = issued_now
+                elif cards_to_issue > 0:
                     all_cards_query = (
                         select(ContentCard.id)
-                        .where(ContentCard.is_ready.is_(True))
+                        .where(
+                            ContentCard.is_ready.is_(True),
+                            ContentCard.card_pool == pool.value,
+                        )
                         .order_by(ContentCard.id.asc())
                     )
                     all_cards_result = await self._session.execute(all_cards_query)
-                    all_card_ids = [row[0] for row in all_cards_result.all() if row[0] is not None]
+                    all_card_ids = [
+                        row[0] for row in all_cards_result.all() if row[0] is not None
+                    ]
 
                     # Исключаем уже выданные пользователю карточки и сохраняем общий порядок.
-                    existing_card_ids_query = select(UserContentCard.content_card_id).where(
-                        UserContentCard.user_id == user_id
-                    )
+                    existing_card_ids_query = select(
+                        UserContentCard.content_card_id
+                    ).where(UserContentCard.user_id == user_id)
                     existing_card_ids_result = await self._session.execute(
                         existing_card_ids_query
                     )
                     existing_card_ids = {
-                        row[0] for row in existing_card_ids_result.all() if row[0] is not None
+                        row[0]
+                        for row in existing_card_ids_result.all()
+                        if row[0] is not None
                     }
 
                     issued_now = 0
@@ -2142,6 +2239,160 @@ class MatchAnalysisDAO(BaseDAO[MatchAnalysis]):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при списке MatchAnalysis: {e}")
             raise
+
+    async def list_for_user_ordered(self, user_id: int) -> list[MatchAnalysis]:
+        """Анализы, выданные пользователю (UserMatchAnalysis)."""
+        try:
+            query = (
+                select(self.model)
+                .join(
+                    UserMatchAnalysis,
+                    UserMatchAnalysis.match_analysis_id == self.model.id,
+                )
+                .where(UserMatchAnalysis.user_id == user_id)
+                .order_by(self.model.id.desc())
+            )
+            result = await self._session.execute(query)
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при списке MatchAnalysis для user={user_id}: {e}")
+            raise
+
+    async def user_has_access(self, user_id: int, match_analysis_id: int) -> bool:
+        if user_id in settings.ROOT_ADMIN_IDS:
+            return True
+        result = await self._session.execute(
+            select(UserMatchAnalysis.id)
+            .where(
+                UserMatchAnalysis.user_id == user_id,
+                UserMatchAnalysis.match_analysis_id == match_analysis_id,
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def count_ready_for_issue(self) -> int:
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(MatchAnalysis)
+            .where(MatchAnalysis.is_ready.is_(True))
+        )
+        return int(result.scalar() or 0)
+
+
+class MatchAnalysisActivationLinkDAO(BaseDAO[MatchAnalysisActivationLink]):
+    model = MatchAnalysisActivationLink
+
+    @staticmethod
+    def _normalize_ids(raw_ids: list[int] | None) -> list[int]:
+        seen: set[int] = set()
+        normalized: list[int] = []
+        for raw_id in raw_ids or []:
+            try:
+                mid = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if mid < 1 or mid in seen:
+                continue
+            seen.add(mid)
+            normalized.append(mid)
+        return normalized
+
+    async def create_link(
+        self, match_analysis_ids: list[int]
+    ) -> MatchAnalysisActivationLink:
+        normalized = self._normalize_ids(match_analysis_ids)
+        if not normalized:
+            raise ValueError("Нужно передать хотя бы один корректный match_analysis_id")
+        activation_link = MatchAnalysisActivationLink(
+            link=secrets.token_urlsafe(24),
+            status=MatchAnalysisActivationLinkStatus.UNACTIVATE,
+            match_analysis_ids=normalized,
+        )
+        self._session.add(activation_link)
+        await self._session.flush()
+        return activation_link
+
+    async def find_one_by_link(
+        self, link_value: str
+    ) -> MatchAnalysisActivationLink | None:
+        query = (
+            select(self.model)
+            .where(self.model.link == str(link_value or "").strip())
+            .limit(1)
+        )
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def activate_link_and_issue(
+        self, link_value: str, user_id: int
+    ) -> dict[str, int | str]:
+        cleaned_link = str(link_value or "").strip()
+        if not cleaned_link:
+            return {"ok": 0, "reason": "invalid_link"}
+
+        link_query = (
+            select(self.model)
+            .where(self.model.link == cleaned_link)
+            .with_for_update()
+            .limit(1)
+        )
+        link_result = await self._session.execute(link_query)
+        activation_link = link_result.scalar_one_or_none()
+        if not activation_link:
+            return {"ok": 0, "reason": "not_found"}
+
+        if activation_link.status == MatchAnalysisActivationLinkStatus.ACTIVATE:
+            return {"ok": 0, "reason": "already_activated"}
+
+        user = await self._session.get(User, user_id)
+        if not user:
+            return {"ok": 0, "reason": "user_not_found"}
+
+        requested_ids = self._normalize_ids(activation_link.match_analysis_ids)
+        if not requested_ids:
+            return {"ok": 0, "reason": "no_cards"}
+
+        existing_result = await self._session.execute(
+            select(MatchAnalysis.id).where(MatchAnalysis.id.in_(requested_ids))
+        )
+        existing_ids = {
+            int(mid) for mid in existing_result.scalars().all() if mid is not None
+        }
+        valid_ids = [mid for mid in requested_ids if mid in existing_ids]
+        if not valid_ids:
+            return {"ok": 0, "reason": "cards_not_found"}
+
+        existing_user_links = await self._session.execute(
+            select(UserMatchAnalysis.match_analysis_id).where(
+                UserMatchAnalysis.user_id == user_id,
+                UserMatchAnalysis.match_analysis_id.in_(valid_ids),
+            )
+        )
+        already_has_ids = {
+            int(mid)
+            for mid in existing_user_links.scalars().all()
+            if mid is not None
+        }
+        to_issue_ids = [mid for mid in valid_ids if mid not in already_has_ids]
+        for mid in to_issue_ids:
+            self._session.add(
+                UserMatchAnalysis(user_id=user_id, match_analysis_id=mid)
+            )
+
+        activation_link.status = MatchAnalysisActivationLinkStatus.ACTIVATE
+        activation_link.activated_by_user_id = user_id
+        activation_link.activated_at = datetime.now(timezone.utc)
+
+        await self._session.flush()
+        return {
+            "ok": 1,
+            "reason": "ok",
+            "issued_count": len(to_issue_ids),
+            "already_had_count": len(already_has_ids),
+            "total_count": len(valid_ids),
+            "link_id": int(activation_link.id),
+        }
 
 
 class MatchAnalysisFolderDAO(BaseDAO[MatchAnalysisFolder]):

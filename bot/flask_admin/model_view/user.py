@@ -10,6 +10,7 @@ from flask_wtf.csrf import generate_csrf
 from bot.db.models import (
     ContentCard,
     ContentCardPool,
+    MatchAnalysis,
     Promocode,
     User,
     UserAnalizePayment,
@@ -19,6 +20,7 @@ from bot.db.models import (
 from bot.config import create_bot_for_sync_context
 from bot.config import settings
 from bot.flask_admin.content_card_grant import grant_content_cards_from_pool_sync
+from bot.flask_admin.match_analysis_grant import grant_match_analyses_sync
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
@@ -38,11 +40,13 @@ def _run_telegram_sync(action):
 def _cards_cabinet_webapp_markup(cabinet_path: str = "/cards-cabinet"):
     base = settings.MINI_APP_URL.rstrip("/")
     url = f"{base}{cabinet_path}"
-    button_text = (
-        "Открыть кабинет пипсов"
-        if cabinet_path.rstrip("/") == "/pip-count-cabinet"
-        else "Открыть кабинет"
-    )
+    path = cabinet_path.rstrip("/")
+    if path == "/pip-count-cabinet":
+        button_text = "Открыть кабинет пипсов"
+    elif path == "/match-analysis-cabinet":
+        button_text = "Открыть «Анализ матча»"
+    else:
+        button_text = "Открыть кабинет"
     kb = InlineKeyboardBuilder()
     kb.button(text=button_text, web_app=WebAppInfo(url=url))
     kb.adjust(1)
@@ -276,6 +280,83 @@ class UserModelView(ModelView):
     @permission_name("show")
     def grant_pip_count_cards(self, pk: int):
         return self._grant_cards_for_pool(pk, ContentCardPool.PIP_COUNT)
+
+    @expose("/grant_match_analyses/<int:pk>", methods=["POST"])
+    @has_access
+    @permission_name("show")
+    def grant_match_analyses(self, pk: int):
+        user = self.datamodel.get(pk)
+        if not user:
+            flash("Пользователь не найден", "danger")
+            return redirect(url_for(f"{self.endpoint}.list"))
+
+        raw_qty = (request.form.get("cards_quantity") or "").strip()
+        try:
+            quantity = int(raw_qty)
+        except (TypeError, ValueError):
+            quantity = 0
+
+        if quantity <= 0:
+            flash("Введите корректное количество анализов (целое число > 0).", "warning")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        session = self.datamodel.session
+        issued_count = 0
+        try:
+            issued_count = grant_match_analyses_sync(
+                session, user_id=pk, quantity=quantity
+            )
+            if issued_count == 0:
+                any_ready = session.execute(
+                    select(MatchAnalysis.id)
+                    .where(MatchAnalysis.is_ready.is_(True))
+                    .limit(1)
+                ).first()
+                if not any_ready:
+                    flash(
+                        "Нет готовых к выдаче анализов матча (is_ready).",
+                        "warning",
+                    )
+                else:
+                    flash(
+                        "У пользователя уже есть все доступные анализы матча.",
+                        "warning",
+                    )
+                return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+        except SQLAlchemyError as e:
+            session.rollback()
+            flash(f"Ошибка выдачи анализов матча: {e}", "danger")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        try:
+            async def _send(tg_bot: Bot) -> None:
+                await tg_bot.send_message(
+                    chat_id=pk,
+                    text=(
+                        f"Вам зачислено {issued_count} анализов матча.\n"
+                        "Посмотрите их в кабинете «Анализ матча»."
+                    ),
+                    reply_markup=_cards_cabinet_webapp_markup(
+                        "/match-analysis-cabinet"
+                    ),
+                )
+
+            _run_telegram_sync(_send)
+        except Exception as e:
+            flash(
+                f"Анализы выданы, но сообщение в Telegram не отправлено: {e}",
+                "warning",
+            )
+
+        if issued_count < quantity:
+            flash(
+                f"Выдано {issued_count} из {quantity}: больше доступных анализов нет.",
+                "warning",
+            )
+        else:
+            flash(f"Пользователю выдано {issued_count} анализов матча.", "success")
+
+        return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
     def _grant_cards_for_pool(self, pk: int, card_pool: ContentCardPool):
         user = self.datamodel.get(pk)

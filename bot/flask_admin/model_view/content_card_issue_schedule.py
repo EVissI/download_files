@@ -119,18 +119,21 @@ class ContentCardIssueScheduleModelView(ModelView):
     description_columns = {
         "target_user": _("Пользователь, которому по расписанию выдаются карточки."),
         "target_user_id": _("Пользователь, которому по расписанию выдаются карточки."),
-        "card_pool": _("Из какого пула выдавать карточки: обычные или «Подсчёт пипсов»."),
-        "cards_per_run": _("Сколько новых карточек выдать за один запуск."),
+        "card_pool": _(
+            "Каталог выдачи: обычные карточки, «Подсчёт пипсов» или «Анализ матча»."
+        ),
+        "cards_per_run": _("Сколько новых единиц выдать за один запуск."),
         "weekdays": _("Выберите дни недели запуска."),
         "issue_time_msk": _("Формат: ЧЧ:ММ (Europe/Moscow)."),
     }
 
     add_form_extra_fields = {
         "card_pool": SelectField(
-            _("Пул карточек"),
+            _("Пул / каталог"),
             choices=[
                 (ContentCardPool.CARDS.value, _("Карточки")),
                 (ContentCardPool.PIP_COUNT.value, _("Подсчёт пипсов")),
+                (ContentCardPool.MATCH_ANALYSIS.value, _("Анализ матча")),
             ],
             default=ContentCardPool.CARDS.value,
             validators=[DataRequired()],
@@ -162,6 +165,8 @@ class ContentCardIssueScheduleModelView(ModelView):
         value = str(raw or ContentCardPool.CARDS.value).strip().lower()
         if value == ContentCardPool.PIP_COUNT.value:
             return ContentCardPool.PIP_COUNT
+        if value == ContentCardPool.MATCH_ANALYSIS.value:
+            return ContentCardPool.MATCH_ANALYSIS
         return ContentCardPool.CARDS
 
     def pre_add(self, item):

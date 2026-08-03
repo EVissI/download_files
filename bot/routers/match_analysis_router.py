@@ -1,5 +1,5 @@
 """
-API и страницы кабинета «Анализ матча» (ROOT_ADMIN).
+API и страницы кабинета «Анализ матча» (admin + владельцы UserMatchAnalysis).
 """
 from __future__ import annotations
 
@@ -10,19 +10,23 @@ import mimetypes
 import uuid
 from typing import Any, Optional
 
+from aiogram.types import InlineKeyboardMarkup, WebAppInfo
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.common.service.webapp_settings_service import get_webapp_fullscreen_enabled
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
-from bot.config import settings
-from bot.db.dao import MatchAnalysisDAO
+from bot.config import bot, settings
+from bot.db.dao import MatchAnalysisActivationLinkDAO, MatchAnalysisDAO
 from bot.db.database import async_session_maker
+from bot.db.models import MatchAnalysis, User, UserMatchAnalysis
 from bot.db.schemas import SMatchAnalysisCreate
 from bot.routers.hint_viewer_router import load_analysis_json_from_s3
 
@@ -56,6 +60,7 @@ class MatchAnalysisUpdateMetaBody(BaseModel):
     id: int
     title: Optional[str] = None
     notes: Optional[str] = None
+    is_ready: Optional[bool] = None
 
 
 class MatchAnalysisAudioDeleteBody(BaseModel):
@@ -66,6 +71,17 @@ class MatchAnalysisAudioDeleteBody(BaseModel):
     delete_s3: bool = True
 
 
+class MatchAnalysisAssignBody(BaseModel):
+    init_data: str
+    target_user_id: int = Field(..., ge=1)
+    match_analysis_ids: list[int]
+
+
+class MatchAnalysisGenerateLinkBody(BaseModel):
+    init_data: str
+    match_analysis_ids: list[int]
+
+
 def _require_match_analysis_admin(user_id: int) -> None:
     if user_id not in settings.ROOT_ADMIN_IDS:
         raise HTTPException(
@@ -74,7 +90,7 @@ def _require_match_analysis_admin(user_id: int) -> None:
         )
 
 
-def _resolve_admin_user_id(init_data: str) -> int:
+def _resolve_user_id(init_data: str) -> int:
     if not init_data:
         raise HTTPException(status_code=400, detail="Missing init_data")
     user_data = verify_telegram_webapp_data(init_data)
@@ -83,9 +99,54 @@ def _resolve_admin_user_id(init_data: str) -> int:
     user_id = (user_data.get("user") or {}).get("id")
     if not user_id:
         raise HTTPException(status_code=400, detail="Invalid user data")
-    uid = int(user_id)
+    return int(user_id)
+
+
+def _resolve_admin_user_id(init_data: str) -> int:
+    uid = _resolve_user_id(init_data)
     _require_match_analysis_admin(uid)
     return uid
+
+
+def _is_ma_admin(user_id: int) -> bool:
+    return user_id in settings.ROOT_ADMIN_IDS
+
+
+def _ma_cabinet_webapp_markup() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(
+        text="Открыть «Анализ матча»",
+        web_app=WebAppInfo(
+            url=f"{settings.MINI_APP_URL.rstrip('/')}/match-analysis-cabinet"
+        ),
+    )
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def _normalize_ma_ids(raw_ids: list[int] | None) -> list[int]:
+    seen: set[int] = set()
+    out: list[int] = []
+    for raw in raw_ids or []:
+        try:
+            mid = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if mid < 1 or mid in seen:
+            continue
+        seen.add(mid)
+        out.append(mid)
+    return out
+
+
+async def _build_malink_start_url(link_token: str) -> str:
+    me = await bot.get_me()
+    if not me.username:
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось определить username бота для генерации ссылки",
+        )
+    return f"https://t.me/{me.username}?start=malink_{link_token}"
 
 
 def _guess_upload_extension(filename: str | None, content_type: str | None) -> str:
@@ -218,9 +279,11 @@ def _serialize_list_item(row) -> dict[str, Any]:
                 audio_count += 1
     return {
         "id": row.id,
+        "content_card_id": row.id,  # совместимость с тайлами cards_cabinet
         "title": row.title,
         "source_game_id": row.source_game_id,
         "notes": row.notes,
+        "is_ready": bool(getattr(row, "is_ready", False)),
         "created_by_user_id": row.created_by_user_id,
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
@@ -337,19 +400,31 @@ async def match_analysis_save(body: MatchAnalysisSaveBody):
 
 @match_analysis_api_router.post("/api/match_analysis/list")
 async def match_analysis_list(body: MatchAnalysisInitBody):
-    _resolve_admin_user_id(body.init_data)
+    uid = _resolve_user_id(body.init_data)
+    is_admin = _is_ma_admin(uid)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
-        rows = await dao.list_all_ordered()
+        if is_admin:
+            rows = await dao.list_all_ordered()
+            ready_count = await dao.count_ready_for_issue()
+        else:
+            rows = await dao.list_for_user_ordered(uid)
+            ready_count = 0
         items = [_serialize_list_item(r) for r in rows]
-    return {"items": items}
+    return {
+        "items": items,
+        "is_root_admin": is_admin,
+        "ready_for_issue_count": ready_count,
+    }
 
 
 @match_analysis_api_router.post("/api/match_analysis/fetch")
 async def match_analysis_fetch(body: MatchAnalysisIdBody):
-    _resolve_admin_user_id(body.init_data)
+    uid = _resolve_user_id(body.init_data)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
+        if not await dao.user_has_access(uid, body.id):
+            raise HTTPException(status_code=403, detail="Нет доступа к этому анализу")
         row = await dao.find_one_or_none_by_id(body.id)
         if not row:
             raise HTTPException(status_code=404, detail="Анализ не найден")
@@ -358,10 +433,12 @@ async def match_analysis_fetch(body: MatchAnalysisIdBody):
             "title": row.title,
             "source_game_id": row.source_game_id,
             "notes": row.notes,
+            "is_ready": bool(getattr(row, "is_ready", False)),
             "created_by_user_id": row.created_by_user_id,
             "created_at": row.created_at.isoformat() if row.created_at else None,
             "updated_at": row.updated_at.isoformat() if row.updated_at else None,
             "analysis": row.analysis,
+            "is_root_admin": _is_ma_admin(uid),
         }
 
 
@@ -380,9 +457,137 @@ async def match_analysis_update_meta(body: MatchAnalysisUpdateMetaBody):
             row.title = title[:255]
         if body.notes is not None:
             row.notes = body.notes
-        out = {"id": row.id, "title": row.title, "notes": row.notes}
+        if body.is_ready is not None:
+            row.is_ready = bool(body.is_ready)
+        out = {
+            "id": row.id,
+            "title": row.title,
+            "notes": row.notes,
+            "is_ready": bool(row.is_ready),
+        }
         await session.commit()
         return out
+
+
+@match_analysis_api_router.post("/api/match_analysis/assign_to_user")
+async def match_analysis_assign_to_user(body: MatchAnalysisAssignBody):
+    _resolve_admin_user_id(body.init_data)
+    ids = _normalize_ma_ids(body.match_analysis_ids)
+    if not ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Нужно передать хотя бы один корректный match_analysis_id",
+        )
+
+    issued_count = 0
+    already_had_count = 0
+    invalid_count = 0
+    async with async_session_maker() as session:
+        target_exists = await session.scalar(
+            select(User.id).where(User.id == body.target_user_id).limit(1)
+        )
+        if target_exists is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        existing_result = await session.execute(
+            select(MatchAnalysis.id).where(MatchAnalysis.id.in_(ids))
+        )
+        existing_ids = {
+            int(mid) for mid in existing_result.scalars().all() if mid is not None
+        }
+        selected = [mid for mid in ids if mid in existing_ids]
+        invalid_count = len(ids) - len(selected)
+        if not selected:
+            raise HTTPException(status_code=404, detail="Выбранные анализы не найдены")
+
+        owned_result = await session.execute(
+            select(UserMatchAnalysis.match_analysis_id).where(
+                UserMatchAnalysis.user_id == body.target_user_id,
+                UserMatchAnalysis.match_analysis_id.in_(selected),
+            )
+        )
+        already_has = {
+            int(mid) for mid in owned_result.scalars().all() if mid is not None
+        }
+        already_had_count = len(already_has)
+
+        for mid in selected:
+            if mid in already_has:
+                continue
+            session.add(
+                UserMatchAnalysis(
+                    user_id=body.target_user_id,
+                    match_analysis_id=mid,
+                )
+            )
+            issued_count += 1
+
+        if issued_count > 0:
+            await session.commit()
+
+    notify_sent = False
+    notify_error = None
+    if issued_count > 0:
+        try:
+            await bot.send_message(
+                chat_id=body.target_user_id,
+                text=(
+                    f"Вам зачислено {issued_count} анализов матча.\n"
+                    "Посмотрите их в кабинете «Анализ матча»."
+                ),
+                reply_markup=_ma_cabinet_webapp_markup(),
+            )
+            notify_sent = True
+        except Exception as e:
+            notify_error = str(e)
+            logger.warning("MA assign notify failed: {}", e)
+
+    return {
+        "ok": True,
+        "issued_count": issued_count,
+        "already_had_count": already_had_count,
+        "invalid_count": invalid_count,
+        "notify_sent": notify_sent,
+        "notify_error": notify_error,
+    }
+
+
+@match_analysis_api_router.post("/api/match_analysis/generate_link")
+async def match_analysis_generate_link(body: MatchAnalysisGenerateLinkBody):
+    _resolve_admin_user_id(body.init_data)
+    ids = _normalize_ma_ids(body.match_analysis_ids)
+    if not ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Нужно передать хотя бы один корректный match_analysis_id",
+        )
+
+    async with async_session_maker() as session:
+        existing_result = await session.execute(
+            select(MatchAnalysis.id).where(MatchAnalysis.id.in_(ids))
+        )
+        existing_ids = {
+            int(mid) for mid in existing_result.scalars().all() if mid is not None
+        }
+        selected = [mid for mid in ids if mid in existing_ids]
+        if not selected:
+            raise HTTPException(status_code=404, detail="Выбранные анализы не найдены")
+
+        link_dao = MatchAnalysisActivationLinkDAO(session)
+        try:
+            activation_link = await link_dao.create_link(selected)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        link_token = str(activation_link.link)
+        await session.commit()
+
+    start_link = await _build_malink_start_url(link_token)
+    return {
+        "ok": True,
+        "link": start_link,
+        "token": link_token,
+        "cards_count": len(selected),
+    }
 
 
 @match_analysis_api_router.post("/api/match_analysis/delete")

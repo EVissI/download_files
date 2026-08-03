@@ -8,13 +8,34 @@ from sqlalchemy import select
 from bot.common.utils.notify import notify_user
 from bot.config import settings
 from bot.db.database import async_session_maker
-from bot.db.models import ContentCard, ContentCardIssueSchedule, ContentCardPool, User, UserContentCard
+from bot.db.models import (
+    ContentCard,
+    ContentCardIssueSchedule,
+    ContentCardPool,
+    User,
+    UserContentCard,
+)
+from bot.flask_admin.match_analysis_grant import grant_match_analyses_async
+
+
+def _normalize_pool(raw) -> ContentCardPool:
+    if isinstance(raw, ContentCardPool):
+        return raw
+    value = str(raw or ContentCardPool.CARDS.value).strip().lower()
+    if value == ContentCardPool.PIP_COUNT.value:
+        return ContentCardPool.PIP_COUNT
+    if value == ContentCardPool.MATCH_ANALYSIS.value:
+        return ContentCardPool.MATCH_ANALYSIS
+    return ContentCardPool.CARDS
 
 
 def _cabinet_webapp_markup(card_pool: ContentCardPool) -> InlineKeyboardMarkup:
     if card_pool == ContentCardPool.PIP_COUNT:
         cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/pip-count-cabinet"
         button_text = "Открыть кабинет пипсов"
+    elif card_pool == ContentCardPool.MATCH_ANALYSIS:
+        cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/match-analysis-cabinet"
+        button_text = "Открыть «Анализ матча»"
     else:
         cabinet_url = f"{settings.MINI_APP_URL.rstrip('/')}/cards-cabinet"
         button_text = "Открыть кабинет"
@@ -26,10 +47,9 @@ def _cabinet_webapp_markup(card_pool: ContentCardPool) -> InlineKeyboardMarkup:
 
 async def run_content_card_issue_schedule(schedule_id: int) -> None:
     """
-    Выдаёт карточки по расписанию:
-    - конкретному пользователю target_user_id;
-    - cards_per_run карточек из выбранного пула;
-    - по возрастанию ID, пропуская уже выданные.
+    Выдаёт по расписанию:
+    - cards / pip_count → UserContentCard из ContentCard;
+    - match_analysis → UserMatchAnalysis из MatchAnalysis (is_ready).
     """
     async with async_session_maker() as session:
         try:
@@ -42,13 +62,7 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
                 return
             target_user_id = int(schedule.target_user_id)
             cards_per_run = max(1, int(schedule.cards_per_run))
-            card_pool = schedule.card_pool or ContentCardPool.CARDS
-            if isinstance(card_pool, str):
-                card_pool = (
-                    ContentCardPool.PIP_COUNT
-                    if card_pool == ContentCardPool.PIP_COUNT.value
-                    else ContentCardPool.CARDS
-                )
+            card_pool = _normalize_pool(schedule.card_pool)
 
             user_exists = await session.scalar(
                 select(User.id).where(User.id == target_user_id).limit(1)
@@ -57,6 +71,33 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
                 logger.warning(
                     "Card issue schedule {} target user {} not found",
                     schedule_id,
+                    target_user_id,
+                )
+                return
+
+            if card_pool == ContentCardPool.MATCH_ANALYSIS:
+                issued_count = await grant_match_analyses_async(
+                    session,
+                    user_id=target_user_id,
+                    quantity=cards_per_run,
+                    commit=False,
+                )
+                schedule.last_run_at = datetime.now(timezone.utc)
+                await session.commit()
+                if issued_count <= 0:
+                    return
+                await notify_user(
+                    target_user_id,
+                    (
+                        f"Вам зачислено {issued_count} анализов матча.\n"
+                        "Посмотрите их в кабинете «Анализ матча»."
+                    ),
+                    _cabinet_webapp_markup(card_pool),
+                )
+                logger.info(
+                    "Card issue schedule {} granted {} match analyses to user {}",
+                    schedule_id,
+                    issued_count,
                     target_user_id,
                 )
                 return

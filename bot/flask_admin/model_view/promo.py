@@ -1,8 +1,9 @@
 from flask_appbuilder import ModelView, CompactCRUDMixin
 from flask_appbuilder.models.sqla.interface import SQLAInterface
-from wtforms import BooleanField, IntegerField
-from wtforms.validators import Optional, NumberRange
+from wtforms import BooleanField, IntegerField, SelectField
+from wtforms.validators import DataRequired, Optional, NumberRange
 from bot.db.models import (
+    ContentCardPool,
     Promocode,
     PromocodeServiceQuantity,
     PromocodeType,
@@ -47,6 +48,7 @@ class PromocodeModelView(ModelView):
         "activate_count_display",
         "duration_days_display",
         "promocode_type",
+        "card_pool",
         "cards_issue_quantity",
         "services_summary",
     ]
@@ -57,6 +59,7 @@ class PromocodeModelView(ModelView):
                      'activate_count_display':'Кол-во использований',
                      'duration_days_display':'Длительность',
                      'promocode_type':'Тип промокода',
+                     'card_pool':'Пул / каталог',
                      'cards_issue_quantity':'Выдать карточек',
                      'max_usage':'Макс использований',
                      'activate_count':'Кол-во использований',
@@ -70,6 +73,7 @@ class PromocodeModelView(ModelView):
         "code",
         "is_active",
         "promocode_type",
+        "card_pool",
         "max_usage",           
         "duration_days",
         "cards_issue_quantity",
@@ -78,6 +82,7 @@ class PromocodeModelView(ModelView):
         "code",
         "is_active",
         "promocode_type",
+        "card_pool",
         "max_usage",
         "duration_days",
         "cards_issue_quantity",
@@ -92,18 +97,30 @@ class PromocodeModelView(ModelView):
         "activate_count_display",
         "duration_days_display",
         "promocode_type",
+        "card_pool",
         "cards_issue_quantity",
         "services_summary",
     ]
 
     search_columns = ["code"]
 
+    _card_pool_field = SelectField(
+        label="Пул / каталог",
+        choices=[
+            (ContentCardPool.CARDS.value, "Карточки"),
+            (ContentCardPool.PIP_COUNT.value, "Подсчёт пипсов"),
+            (ContentCardPool.MATCH_ANALYSIS.value, "Анализ матча"),
+        ],
+        default=ContentCardPool.CARDS.value,
+        validators=[DataRequired()],
+    )
     edit_form_extra_fields = {
         'is_active': BooleanField(
             label='Активен?',
             default=True,          
             render_kw={'required': False}  
-        )
+        ),
+        'card_pool': _card_pool_field,
     }
     add_form_extra_fields = {
         'is_active': BooleanField(
@@ -111,6 +128,7 @@ class PromocodeModelView(ModelView):
             default=True,
             render_kw={'required': False},
         ),
+        'card_pool': _card_pool_field,
         'autofill_services': BooleanField(
             label='Автозаполнение',
             default=False,
@@ -135,6 +153,15 @@ class PromocodeModelView(ModelView):
         return super().get_count_query().options(joinedload(Promocode.services))
 
 
+    @staticmethod
+    def _normalize_card_pool(raw) -> ContentCardPool:
+        value = str(raw or ContentCardPool.CARDS.value).strip().lower()
+        if value == ContentCardPool.PIP_COUNT.value:
+            return ContentCardPool.PIP_COUNT
+        if value == ContentCardPool.MATCH_ANALYSIS.value:
+            return ContentCardPool.MATCH_ANALYSIS
+        return ContentCardPool.CARDS
+
     def _normalize_limits(self, item):
         """Преобразуем 0 в None для полей max_usage и duration_days."""
         if item.max_usage == 0:
@@ -144,8 +171,10 @@ class PromocodeModelView(ModelView):
         if item.promocode_type == PromocodeType.CARDS:
             # Карточечные промокоды не должны истекать по времени.
             item.duration_days = None
+            item.card_pool = self._normalize_card_pool(item.card_pool)
         if item.promocode_type == PromocodeType.REGULAR:
             item.cards_issue_quantity = None
+            item.card_pool = ContentCardPool.CARDS
         elif not item.cards_issue_quantity or item.cards_issue_quantity <= 0:
             item.cards_issue_quantity = 1
 

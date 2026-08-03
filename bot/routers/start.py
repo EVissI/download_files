@@ -18,13 +18,20 @@ from bot.db.dao import (
     ContentCardActivationLinkDAO,
     ContentCardFolderDAO,
     ContentCardFolderLinkDAO,
+    MatchAnalysisActivationLinkDAO,
     MatchAnalysisFolderDAO,
     MatchAnalysisFolderLinkDAO,
     MessageForNewDAO,
     MessagesTextsDAO,
     UserDAO,
 )
-from bot.db.models import ContentCard, ContentCardActivationLinkStatus, ContentCardPool, User
+from bot.db.models import (
+    ContentCard,
+    ContentCardActivationLinkStatus,
+    ContentCardPool,
+    MatchAnalysisActivationLinkStatus,
+    User,
+)
 from bot.db.schemas import SUser
 from bot.config import settings, translator_hub
 from html import escape
@@ -50,6 +57,8 @@ if TYPE_CHECKING:
 start_router = Router()
 CARD_LINK_START_PREFIX = "cardlink_"
 CARD_LINK_ACTIVATE_PREFIX = "activate_card_link:"
+MA_LINK_START_PREFIX = "malink_"
+MA_LINK_ACTIVATE_PREFIX = "activate_ma_link:"
 GALLERY_IMG_START_PREFIX = "imglink_"
 GALLERY_IMG_REDIS_PREFIX = "cabinet_gallery_img_share:"
 FOLDER_LINK_START_PREFIX = "folderlink_"
@@ -68,16 +77,18 @@ def _normalize_card_pool(raw) -> ContentCardPool:
 
 
 def _cabinet_base_path_for_pool(pool: ContentCardPool) -> str:
-    return (
-        "/pip-count-cabinet"
-        if pool == ContentCardPool.PIP_COUNT
-        else "/cards-cabinet"
-    )
+    if pool == ContentCardPool.PIP_COUNT:
+        return "/pip-count-cabinet"
+    if pool == ContentCardPool.MATCH_ANALYSIS:
+        return "/match-analysis-cabinet"
+    return "/cards-cabinet"
 
 
 def _cabinet_open_button_text(pool: ContentCardPool) -> str:
     if pool == ContentCardPool.PIP_COUNT:
         return "Открыть кабинет «Подсчёт пипсов»"
+    if pool == ContentCardPool.MATCH_ANALYSIS:
+        return "Открыть кабинет «Анализ матча»"
     return "Открыть кабинет"
 
 
@@ -133,6 +144,7 @@ def _is_cards_cabinet_deeplink(start_payload: str | None) -> bool:
         return False
     return (
         payload.startswith(CARD_LINK_START_PREFIX)
+        or payload.startswith(MA_LINK_START_PREFIX)
         or payload.startswith(FOLDER_LINK_START_PREFIX)
         or payload.startswith(MA_FOLDER_LINK_START_PREFIX)
         or payload.startswith(GALLERY_IMG_START_PREFIX)
@@ -188,6 +200,14 @@ def _extract_card_link_token(start_payload: str | None) -> str | None:
     if not payload.startswith(CARD_LINK_START_PREFIX):
         return None
     token = payload[len(CARD_LINK_START_PREFIX) :].strip()
+    return token or None
+
+
+def _extract_ma_link_token(start_payload: str | None) -> str | None:
+    payload = str(start_payload or "").strip()
+    if not payload.startswith(MA_LINK_START_PREFIX):
+        return None
+    token = payload[len(MA_LINK_START_PREFIX) :].strip()
     return token or None
 
 
@@ -248,6 +268,19 @@ def _confirm_link_activation_markup(link_token: str) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text="Активировать",
                     callback_data=f"{CARD_LINK_ACTIVATE_PREFIX}{link_token}",
+                )
+            ]
+        ]
+    )
+
+
+def _confirm_ma_link_activation_markup(link_token: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Активировать",
+                    callback_data=f"{MA_LINK_ACTIVATE_PREFIX}{link_token}",
                 )
             ]
         ]
@@ -409,6 +442,35 @@ async def _send_card_link_prompt_if_needed(
     )
 
 
+async def _send_ma_link_prompt_if_needed(
+    message: Message,
+    session: AsyncSession,
+    start_payload: str | None,
+) -> None:
+    link_token = _extract_ma_link_token(start_payload)
+    if not link_token:
+        return
+
+    link_dao = MatchAnalysisActivationLinkDAO(session)
+    activation_link = await link_dao.find_one_by_link(link_token)
+    if not activation_link:
+        await message.answer("Ссылка недействительна или не найдена.")
+        return
+    if activation_link.status == MatchAnalysisActivationLinkStatus.ACTIVATE:
+        await message.answer("Эта ссылка уже активирована.")
+        return
+
+    items_count = len(_normalize_card_ids(activation_link.match_analysis_ids))
+    if items_count < 1:
+        await message.answer("В ссылке нет доступных анализов для активации.")
+        return
+
+    await message.answer(
+        f"Хотите активировать анализы матча по ссылке? Доступно: {items_count}.",
+        reply_markup=_confirm_ma_link_activation_markup(link_token),
+    )
+
+
 async def _ensure_user_on_start(
     message: Message,
     session: AsyncSession,
@@ -448,6 +510,7 @@ async def _handle_cards_cabinet_deeplink_start(
 ) -> None:
     await _ensure_user_on_start(message, session)
     await _send_card_link_prompt_if_needed(message, session, start_payload)
+    await _send_ma_link_prompt_if_needed(message, session, start_payload)
     await _send_folder_link_prompt_if_needed(message, session, start_payload)
     await _send_ma_folder_link_prompt_if_needed(message, session, start_payload)
     await _send_gallery_image_from_start_if_needed(message, start_payload)
@@ -617,3 +680,74 @@ async def activate_cards_from_link(
         pass
 
     await callback.answer("Карточки активированы")
+
+
+@start_router.callback_query(F.data.startswith(MA_LINK_ACTIVATE_PREFIX))
+async def activate_match_analyses_from_link(
+    callback: CallbackQuery,
+    session_with_commit: AsyncSession,
+):
+    data = str(callback.data or "")
+    link_token = data[len(MA_LINK_ACTIVATE_PREFIX) :].strip()
+    if not link_token:
+        await callback.answer("Некорректная ссылка", show_alert=True)
+        return
+
+    if not callback.from_user:
+        await callback.answer("Не удалось определить пользователя", show_alert=True)
+        return
+
+    link_dao = MatchAnalysisActivationLinkDAO(session_with_commit)
+    result = await link_dao.activate_link_and_issue(
+        link_value=link_token,
+        user_id=callback.from_user.id,
+    )
+
+    reason = str(result.get("reason") or "unknown")
+    if int(result.get("ok") or 0) != 1:
+        error_map = {
+            "invalid_link": "Некорректная ссылка.",
+            "not_found": "Ссылка не найдена.",
+            "already_activated": "Эта ссылка уже активирована.",
+            "user_not_found": "Пользователь не найден.",
+            "no_cards": "В ссылке нет анализов для активации.",
+            "cards_not_found": "Анализы по ссылке не найдены.",
+        }
+        text = error_map.get(reason, "Не удалось активировать анализы.")
+        if callback.message:
+            await callback.message.edit_text(text)
+        await callback.answer()
+        return
+
+    await session_with_commit.commit()
+
+    issued_count = int(result.get("issued_count") or 0)
+    total_count = int(result.get("total_count") or 0)
+    link_id = int(result.get("link_id") or 0)
+    if callback.message:
+        await callback.message.edit_text(
+            f"Вам доступны {total_count} анализов матча, посмотреть их можете в кабинете",
+            reply_markup=_ma_cabinet_webapp_markup(),
+        )
+
+    user_ref = (
+        f"@{callback.from_user.username}"
+        if callback.from_user.username
+        else f"tg://user?id={callback.from_user.id}"
+    )
+    try:
+        await callback.bot.send_message(
+            settings.CHAT_GROUP_ID,
+            (
+                "<b>Активирована ссылка на анализы матча</b>\n"
+                f"Пользователь: {callback.from_user.first_name} ({user_ref})\n"
+                f"ID ссылки: {link_id}\n"
+                f"Всего в ссылке: {total_count}\n"
+                f"Новых добавлено: {issued_count}"
+            ),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
+
+    await callback.answer("Анализы активированы")
