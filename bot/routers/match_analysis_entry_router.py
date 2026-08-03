@@ -49,7 +49,7 @@ async def _send_match_analysis_cabinet_entry(message: Message, user_info) -> Non
         )
         return
     await message.answer(
-        "Кабинет «Анализ матча» — сохранённые протоколы с аудио-комментариями к ходам.",
+        'Кабинет "Анализ матча" - просмотр матча с аудио комментариями',
         reply_markup=get_match_analysis_cabinet_kb(),
     )
 
