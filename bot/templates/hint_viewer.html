@@ -3087,7 +3087,7 @@
             } else if (item.moves && item.moves.length > 0) {
                 info = prefix + `${item.gnu_move ? item.gnu_move.trim() : ''}`;
             } else if (item.moves && item.moves.length === 0) {
-                info = prefix + `Пропуск`;
+                info = prefix + `Пропуск хода`;
             } else {
                 info = prefix + '<div class="info-text">No moves available for this turn.</div>';
                 console.warn('No moves for turn:', turn, item);
@@ -3754,7 +3754,7 @@
             } else if (item.moves && item.moves.length > 0) {
                 info = prefix + `${item.gnu_move ? item.gnu_move.trim() : ''}`;
             } else if (item.moves && item.moves.length === 0) {
-                info = prefix + `Пропуск`;
+                info = prefix + `Пропуск хода`;
             } else {
                 info = prefix + '<div class="info-text">No moves available for this turn.</div>';
                 console.warn('No moves for turn:', current, item);
