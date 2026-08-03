@@ -215,44 +215,57 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-wrap: nowrap;
         }
 
+        /* По умолчанию (планшет/ПК): один ряд кнопок */
         .screenshot-controls {
             display: flex;
-            flex-direction: column;
-            gap: 20px;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 6px;
             justify-content: center;
+        }
+
+        .screenshot-controls > div {
+            display: flex;
+            flex-direction: row;
+            gap: 6px;
         }
 
         .ma-audio-controls {
             display: none;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
             gap: 4px;
             justify-content: center;
-            min-width: 72px;
+            min-width: 0;
         }
 
         .ma-audio-controls__grid {
             display: flex;
-            flex-direction: column;
-            gap: 20px;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 6px;
             justify-content: center;
         }
 
         .ma-audio-controls__grid > div {
             display: flex;
-            gap: 0;
+            flex-direction: row;
+            gap: 6px;
         }
 
         .ma-audio-controls button {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             min-width: 0;
             padding: 0;
             margin: 0;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: 14px;
             line-height: 1;
             background: #2f2f2f;
             border: 1px solid #555;
@@ -294,14 +307,14 @@
         }
 
         .ma-audio-controls__status {
-            max-width: 72px;
+            max-width: 168px;
             font-size: 10px;
             line-height: 1.15;
             color: #999;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            text-align: center;
+            text-align: left;
         }
 
         .ma-audio-controls.has-audio .ma-audio-controls__status {
@@ -317,8 +330,8 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            height: 64px;
-            /* Высота двух рядов кнопок (32px * 2) */
+            height: auto;
+            min-height: 42px;
             justify-content: center;
         }
 
@@ -399,8 +412,8 @@
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             padding: 0;
             color: transparent;
             background-color: transparent;
@@ -533,8 +546,8 @@
 
             #prevBtn,
             #nextBtn {
-                width: 62px;
-                height: 62px;
+                width: 48px;
+                height: 48px;
             }
 
             #invertBtn,
@@ -543,21 +556,37 @@
             #screenUploadBtn,
             #supportBtn,
             .ma-audio-controls button {
-                width: 48px;
-                height: 48px;
+                width: 36px;
+                height: 36px;
             }
 
             .ma-audio-controls button {
-                font-size: 18px;
+                font-size: 14px;
             }
 
             .ma-audio-controls__status {
-                max-width: 104px;
-                font-size: 11px;
+                max-width: 152px;
+                font-size: 10px;
+                text-align: center;
+            }
+
+            /* На узком экране оставляем компактную сетку 2×2 */
+            .screenshot-controls {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .ma-audio-controls {
+                align-items: center;
+            }
+
+            .ma-audio-controls__grid {
+                flex-direction: column;
+                gap: 8px;
             }
         }
 
-        /* Планшеты: меньший верхний отступ, без мобильной сетки кнопок */
+        /* Планшеты: один ряд, крупнее для пальца */
         @media (min-width: 601px) and (max-width: 1024px) {
             body {
                 padding: 0 20px 20px;
@@ -565,6 +594,42 @@
 
             .container {
                 padding: max(5vh, 24px) 20px 0 20px;
+            }
+
+            .left-controls {
+                gap: 14px;
+            }
+
+            .screenshot-controls,
+            .ma-audio-controls__grid,
+            .screenshot-controls > div,
+            .ma-audio-controls__grid > div {
+                gap: 8px;
+            }
+
+            #prevBtn,
+            #nextBtn {
+                width: 56px;
+                height: 56px;
+            }
+
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn,
+            #supportBtn,
+            .ma-audio-controls button {
+                width: 44px;
+                height: 44px;
+            }
+
+            .ma-audio-controls button {
+                font-size: 17px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 200px;
+                font-size: 11px;
             }
         }
 
@@ -625,12 +690,12 @@
             }
         }
 
-        @media (min-width: 1200px) {
-
+        /* Широкий ПК: компактный один ряд, без огромных кнопок */
+        @media (min-width: 1025px) {
             #prevBtn,
             #nextBtn {
-                width: 104px;
-                height: 104px;
+                width: 48px;
+                height: 48px;
             }
 
             #invertBtn,
@@ -639,17 +704,55 @@
             #screenUploadBtn,
             #supportBtn,
             .ma-audio-controls button {
-                width: 80px;
-                height: 80px;
+                width: 36px;
+                height: 36px;
             }
 
             .ma-audio-controls button {
-                font-size: 28px;
+                font-size: 14px;
             }
 
             .ma-audio-controls__status {
                 max-width: 168px;
-                font-size: 12px;
+                font-size: 10px;
+            }
+
+            .left-controls {
+                gap: 10px;
+            }
+
+            .screenshot-controls,
+            .ma-audio-controls__grid,
+            .screenshot-controls > div,
+            .ma-audio-controls__grid > div {
+                gap: 5px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            #prevBtn,
+            #nextBtn {
+                width: 52px;
+                height: 52px;
+            }
+
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn,
+            #supportBtn,
+            .ma-audio-controls button {
+                width: 38px;
+                height: 38px;
+            }
+
+            .ma-audio-controls button {
+                font-size: 15px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 176px;
+                font-size: 11px;
             }
         }
 
