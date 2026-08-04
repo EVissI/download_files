@@ -5157,6 +5157,72 @@
             await uploadMatchAnalysisAudioBlob(file, file.name || 'audio.webm');
         }
 
+        function withFetchRetry(options) {
+            const opts = options || {};
+            const retries = opts.retries == null ? 3 : opts.retries;
+            const delayMs = opts.delayMs == null ? 700 : opts.delayMs;
+            const factor = opts.factor == null ? 2 : opts.factor;
+            const shouldRetry = opts.shouldRetry || function (err) {
+                if (!err) return false;
+                if (err.name === 'TypeError') return true;
+                const msg = String(err.message || err).toLowerCase();
+                return (
+                    msg.includes('failed to fetch') ||
+                    msg.includes('networkerror') ||
+                    msg.includes('network request failed') ||
+                    msg.includes('load failed')
+                );
+            };
+
+            return function decorate(fn) {
+                const wrapped = async function (...args) {
+                    let attempt = 0;
+                    for (;;) {
+                        try {
+                            return await fn.apply(this, args);
+                        } catch (err) {
+                            if (attempt >= retries || !shouldRetry(err)) {
+                                throw err;
+                            }
+                            const wait = Math.round(delayMs * Math.pow(factor, attempt));
+                            attempt += 1;
+                            console.warn(
+                                `[audio upload retry ${attempt}/${retries}] ${err && err.message ? err.message : err}; wait ${wait}ms`
+                            );
+                            await new Promise((resolve) => setTimeout(resolve, wait));
+                        }
+                    }
+                };
+                Object.defineProperty(wrapped, 'name', {
+                    value: fn.name ? `withFetchRetry(${fn.name})` : 'withFetchRetry',
+                });
+                return wrapped;
+            };
+        }
+
+        const postMatchAnalysisAudioUpload = withFetchRetry({ retries: 3, delayMs: 700, factor: 2 })(
+            async function postMatchAnalysisAudioUpload(blob, filename, initData, meta) {
+                const fd = new FormData();
+                fd.append('init_data', initData);
+                fd.append('match_analysis_id', String(matchAnalysisId));
+                fd.append('game_number', String(currentGameNum));
+                fd.append('move_index', String(meta.moveIndex));
+                fd.append('file', blob, filename);
+                const resp = await fetch('/api/match_analysis/audio/upload', {
+                    method: 'POST',
+                    body: fd,
+                });
+                const payload = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    const detail = payload.detail || ('HTTP ' + resp.status);
+                    const err = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                    err.status = resp.status;
+                    throw err;
+                }
+                return payload;
+            }
+        );
+
         async function uploadMatchAnalysisAudioBlob(blob, filename) {
             const initData = getTelegramInitData();
             const meta = getCurrentMoveAudioMeta();
@@ -5168,21 +5234,8 @@
                 showMessageModal('Нет Telegram initData', 'error');
                 return;
             }
-            const fd = new FormData();
-            fd.append('init_data', initData);
-            fd.append('match_analysis_id', String(matchAnalysisId));
-            fd.append('game_number', String(currentGameNum));
-            fd.append('move_index', String(meta.moveIndex));
-            fd.append('file', blob, filename);
             try {
-                const resp = await fetch('/api/match_analysis/audio/upload', {
-                    method: 'POST',
-                    body: fd,
-                });
-                const payload = await resp.json().catch(() => ({}));
-                if (!resp.ok) {
-                    throw new Error(payload.detail || ('HTTP ' + resp.status));
-                }
+                const payload = await postMatchAnalysisAudioUpload(blob, filename, initData, meta);
                 syncMoveAudioInDoc(
                     currentGameNum,
                     meta.moveIndex,
