@@ -1383,11 +1383,19 @@
             return (meta && meta.getAttribute('content') === '1');
         })();
         const matchAnalysisMode = matchAnalysisModeFromServer || !!matchAnalysisId;
+        const matchAnalysisAsUserPreview =
+            urlParams.get('as_user') === '1' ||
+            urlParams.get('as_user') === 'true' ||
+            urlParams.get('user_preview') === '1';
         let matchAnalysisDoc = null;
         let matchAnalysisTitle = '';
         window.hintViewerIsAdmin = false;
         window.matchAnalysisMode = matchAnalysisMode;
         window.matchAnalysisId = matchAnalysisId;
+
+        function applyMatchAnalysisAdminFlag(isAdmin) {
+            window.hintViewerIsAdmin = matchAnalysisAsUserPreview ? false : !!isAdmin;
+        }
         let hintViewerScreenshotFontScale = (function () {
             const meta = document.querySelector('meta[name="hint-screenshot-font-scale"]');
             const parsed = parseInt(meta?.getAttribute('content') || '100', 10);
@@ -1955,7 +1963,7 @@
                   matchAnalysisTitle = payload.title || '';
                   window.matchAnalysisId = matchAnalysisId;
                   if (typeof payload.is_root_admin === 'boolean') {
-                      window.hintViewerIsAdmin = !!payload.is_root_admin;
+                      applyMatchAnalysisAdminFlag(payload.is_root_admin);
                   }
                   return {
                       game_info: matchAnalysisDoc.game_info || {},
@@ -4748,17 +4756,19 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.is_admin) {
-                        window.hintViewerIsAdmin = true;
-                        document.getElementById('adminButtonContainer').style.display = 'block';
-                        const fontScaleSelect = document.getElementById('screenshotFontScaleSelect');
-                        if (fontScaleSelect) {
-                            fontScaleSelect.value = String(hintViewerScreenshotFontScale);
-                        }
-                        if (matchAnalysisMode) {
-                            const pipBtn = document.getElementById('openPipCountCardEditorBtn');
-                            const cardBtn = document.getElementById('openCardEditorBtn');
-                            if (pipBtn) pipBtn.style.display = 'none';
-                            if (cardBtn) cardBtn.style.display = 'none';
+                        applyMatchAnalysisAdminFlag(true);
+                        if (window.hintViewerIsAdmin) {
+                            document.getElementById('adminButtonContainer').style.display = 'block';
+                            const fontScaleSelect = document.getElementById('screenshotFontScaleSelect');
+                            if (fontScaleSelect) {
+                                fontScaleSelect.value = String(hintViewerScreenshotFontScale);
+                            }
+                            if (matchAnalysisMode) {
+                                const pipBtn = document.getElementById('openPipCountCardEditorBtn');
+                                const cardBtn = document.getElementById('openCardEditorBtn');
+                                if (pipBtn) pipBtn.style.display = 'none';
+                                if (cardBtn) cardBtn.style.display = 'none';
+                            }
                         }
                         updateMatchAnalysisChromeUi();
                         console.log('Admin access granted for user:', data.user_id);

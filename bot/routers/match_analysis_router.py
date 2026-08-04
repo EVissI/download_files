@@ -318,6 +318,7 @@ async def match_analysis_cabinet_page(request: Request):
             "cabinet_title": "Анализ матча",
             "cabinet_state_key": "match_analysis_cabinet_state_v1",
             "show_open_hints_toggle": False,
+            "show_user_preview_toggle": True,
             "cabinet_features": {
                 "enable_gallery": True,
                 "enable_admin_fab": True,

@@ -2400,6 +2400,13 @@
                 <span class="cabinet-hints-toggle__label">Открыть подсказки</span>
             </label>
             {% endif %}
+            {% if show_user_preview_toggle|default(false) %}
+            <label id="user-preview-toggle-wrap" class="cabinet-hints-toggle" style="display:none;"
+                title="Открывать анализ так, как его видит пользователь (без админ-редактирования аудио)">
+                <input id="user-preview-toggle" type="checkbox" class="cabinet-hints-toggle__input">
+                <span class="cabinet-hints-toggle__label">Вид пользователя</span>
+            </label>
+            {% endif %}
         </div>
     </footer>
     <div id="generateLinkModal" class="link-modal" aria-hidden="true">
@@ -2598,6 +2605,7 @@
             var CABINET_DEFAULT_TITLE = {{ cabinet_title|default('Мои карточки')|tojson }};
             var cabinetStateKey = {{ cabinet_state_key|default('cards_cabinet_state_v1')|tojson }};
             var openHintsStateKey = {{ cabinet_open_hints_key|default('cards_cabinet_open_hints_v1')|tojson }};
+            var userPreviewStateKey = {{ cabinet_user_preview_key|default('match_analysis_cabinet_user_preview_v1')|tojson }};
             var cabinetConfig = (function () {
                 var folderToken = _urlParams.get('folder_token') || '';
                 if (folderToken) {
@@ -2806,6 +2814,8 @@
             var quickSelectionInvalid = false;
             var generatedActivationLink = '';
             var openHintsToggle = document.getElementById('open-hints-toggle');
+            var userPreviewToggle = document.getElementById('user-preview-toggle');
+            var userPreviewToggleWrap = document.getElementById('user-preview-toggle-wrap');
 
             function isOpenHintsEnabled() {
                 try {
@@ -2832,6 +2842,39 @@
             if (openHintsToggle) {
                 restoreOpenHintsState();
                 openHintsToggle.addEventListener('change', saveOpenHintsState);
+            }
+
+            function isUserPreviewEnabled() {
+                try {
+                    return localStorage.getItem(userPreviewStateKey) === '1';
+                } catch (_e) {
+                    return false;
+                }
+            }
+
+            function saveUserPreviewState() {
+                try {
+                    var v = userPreviewToggle && userPreviewToggle.checked ? '1' : '0';
+                    localStorage.setItem(userPreviewStateKey, v);
+                } catch (_e) { }
+            }
+
+            function restoreUserPreviewState() {
+                if (!userPreviewToggle) return;
+                userPreviewToggle.checked = isUserPreviewEnabled();
+            }
+
+            if (userPreviewToggle) {
+                restoreUserPreviewState();
+                userPreviewToggle.addEventListener('change', saveUserPreviewState);
+            }
+
+            function buildMatchAnalysisViewUrl(id) {
+                var url = '/match-analysis-view?id=' + encodeURIComponent(String(id)) + '&error=0';
+                if (isUserPreviewEnabled()) {
+                    url += '&as_user=1';
+                }
+                return url;
             }
 
             function showErr(msg) {
@@ -5081,9 +5124,7 @@
                                     renderCards();
                                     return;
                                 }
-                                window.location.assign(
-                                    '/match-analysis-view?id=' + encodeURIComponent(String(id)) + '&error=0'
-                                );
+                                window.location.assign(buildMatchAnalysisViewUrl(id));
                             });
                             if (!isRootAdminUser) {
                                 gridEl.appendChild(btn);
@@ -5725,6 +5766,9 @@
                                 'Получить одноразовую ссылку на анализы'
                             );
                         }
+                    }
+                    if (IS_MATCH_ANALYSIS && userPreviewToggleWrap) {
+                        userPreviewToggleWrap.style.display = '';
                     }
                     if (!IS_MATCH_ANALYSIS) {
                         if (FEATURES.enable_labels && labelFilterWrap) {
