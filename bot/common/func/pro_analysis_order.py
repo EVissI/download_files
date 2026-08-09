@@ -107,7 +107,7 @@ async def offer_pro_analysis_order(
         return None
 
     await message.answer(
-        "Нужен разбор от профессионала?",
+        "Нужен разбор от эксперта?",
         reply_markup=get_pro_analysis_order_kb(request_id),
     )
     return request_id
