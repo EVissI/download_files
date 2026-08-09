@@ -189,17 +189,6 @@ async def handle_document(
             reply_markup=keyboard,
         )
 
-        from bot.common.func.pro_analysis_order import offer_pro_analysis_order
-
-        await offer_pro_analysis_order(
-            message,
-            user_id=message.from_user.id,
-            username=message.from_user.username or getattr(user_info, "username", None),
-            service="short_board",
-            file_path=new_file_path if os.path.isfile(new_file_path) else file_path,
-            file_name=new_file_name,
-        )
-
         await UserDAO(session_without_commit).decrease_analiz_balance(
             user_id=user_info.id, service_type="SHORT_BOARD"
         )
