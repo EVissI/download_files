@@ -31,7 +31,7 @@ PRO_ORDER_TTL = 86400
 SERVICE_LABELS = {
     "hint_viewer": "Анализ ошибок",
     "short_board": "Short Board",
-    "autoanaliz": "Автоанализ",
+    "autoanaliz": "Анализ матча",
 }
 
 
@@ -162,7 +162,7 @@ def _build_admin_caption(order: dict[str, Any]) -> str:
     service_label = SERVICE_LABELS.get(service, service or "—")
     username_line = f"@{username}" if username else "—"
     return (
-        "📩 <b>Заказ анализа у профи</b>\n"
+        "📩 <b>Заказ анализа у эксперта</b>\n"
         f"Сервис: {service_label}\n"
         f"TG ID: <code>{user_id}</code>\n"
         f"Username: {username_line}"
