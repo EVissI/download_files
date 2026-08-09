@@ -13,6 +13,7 @@ class TranslatorRunner:
     auto: Auto
     analysis: Analysis
     waiting: Waiting
+    pro: Pro
 
 class UserStatic:
     @staticmethod
@@ -298,6 +299,45 @@ Date: { $date }"""]: ...
 class Auto:
     analyze: AutoAnalyze
     batch: AutoBatch
+
+
+class ProAnalysis:
+    @staticmethod
+    def ask() -> Literal["""Need a review from an expert?"""]: ...
+    @staticmethod
+    def order_button() -> Literal["""Order expert analysis"""]: ...
+    @staticmethod
+    def order_sent() -> Literal["""✅ Request sent to an expert. An admin will reply in this chat."""]: ...
+    @staticmethod
+    def order_not_found() -> Literal["""Request not found"""]: ...
+    @staticmethod
+    def order_expired() -> Literal["""Request expired or already submitted"""]: ...
+    @staticmethod
+    def order_not_yours() -> Literal["""This is not your request"""]: ...
+    @staticmethod
+    def order_sending() -> Literal["""Sending to admins…"""]: ...
+    @staticmethod
+    def order_file_missing() -> Literal["""❌ Match file is no longer available. Please analyze again and order once more."""]: ...
+    @staticmethod
+    def order_send_failed() -> Literal["""❌ Could not send the request to admins. Please try again later."""]: ...
+    @staticmethod
+    def admin_reply() -> Literal["""Reply"""]: ...
+    @staticmethod
+    def admin_caption(*, service: PossibleValue, user_id: PossibleValue, username: PossibleValue) -> Literal["""📩 <b>Expert analysis order</b>
+Service: { $service }
+TG ID: <code>{ $user_id }</code>
+Username: { $username }"""]: ...
+    @staticmethod
+    def service_hints() -> Literal["""Error analysis"""]: ...
+    @staticmethod
+    def service_match() -> Literal["""Match analysis"""]: ...
+    @staticmethod
+    def service_short_board() -> Literal["""Short Board"""]: ...
+
+
+class Pro:
+    analysis: ProAnalysis
+
 
 class AnalysisLuck:
     @staticmethod

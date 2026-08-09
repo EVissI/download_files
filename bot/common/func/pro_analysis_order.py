@@ -1,4 +1,4 @@
-"""Заказ анализа у профи: хранение заявки и рассылка .mat админам."""
+"""Заказ анализа у эксперта: хранение заявки и рассылка .mat админам."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 import os
 import tempfile
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aiogram import Bot
 from aiogram.types import FSInputFile, Message
@@ -19,20 +19,33 @@ from bot.common.kbds.inline.pro_analysis import (
     get_pro_analysis_order_kb,
 )
 from bot.common.service.hint_s3_service import HintS3Storage
-from bot.config import settings
+from bot.config import settings, translator_hub
 from bot.db.dao import UserDAO
 from bot.db.models import User
 from bot.db.redis import redis_client
 from bot.db.schemas import SUser
 
+if TYPE_CHECKING:
+    from locales.stub import TranslatorRunner
+
 PRO_ORDER_REDIS_PREFIX = "pro_order:"
 PRO_ORDER_TTL = 86400
 
-SERVICE_LABELS = {
-    "hint_viewer": "Анализ ошибок",
-    "short_board": "Short Board",
-    "autoanaliz": "Анализ матча",
-}
+
+def _get_i18n(lang_code: str | None = None) -> "TranslatorRunner":
+    return translator_hub.get_translator_by_locale(lang_code or "ru")
+
+
+def _service_label(i18n: "TranslatorRunner", service: str) -> str:
+    mapping = {
+        "hint_viewer": i18n.pro.analysis.service_hints,
+        "autoanaliz": i18n.pro.analysis.service_match,
+        "short_board": i18n.pro.analysis.service_short_board,
+    }
+    getter = mapping.get(service)
+    if getter is None:
+        return service or "—"
+    return getter()
 
 
 async def create_pro_order(
@@ -88,11 +101,14 @@ async def offer_pro_analysis_order(
     user_id: int,
     username: str | None,
     service: str,
+    i18n: "TranslatorRunner | None" = None,
+    lang_code: str | None = None,
     file_path: str | None = None,
     s3_key: str | None = None,
     file_name: str | None = None,
 ) -> str | None:
     """Отправляет пользователю кнопку заказа. Возвращает request_id или None."""
+    i18n = i18n or _get_i18n(lang_code)
     try:
         request_id = await create_pro_order(
             user_id=user_id,
@@ -107,8 +123,8 @@ async def offer_pro_analysis_order(
         return None
 
     await message.answer(
-        "Нужен разбор от эксперта?",
-        reply_markup=get_pro_analysis_order_kb(request_id),
+        i18n.pro.analysis.ask(),
+        reply_markup=get_pro_analysis_order_kb(request_id, i18n),
     )
     return request_id
 
@@ -155,17 +171,15 @@ async def _resolve_local_mat(order: dict[str, Any]) -> tuple[str, bool]:
     raise FileNotFoundError("Файл матча для заказа не найден")
 
 
-def _build_admin_caption(order: dict[str, Any]) -> str:
+def _build_admin_caption(order: dict[str, Any], i18n: "TranslatorRunner") -> str:
     user_id = order.get("user_id")
     username = order.get("username")
     service = order.get("service") or ""
-    service_label = SERVICE_LABELS.get(service, service or "—")
     username_line = f"@{username}" if username else "—"
-    return (
-        "📩 <b>Заказ анализа у эксперта</b>\n"
-        f"Сервис: {service_label}\n"
-        f"TG ID: <code>{user_id}</code>\n"
-        f"Username: {username_line}"
+    return i18n.pro.analysis.admin_caption(
+        service=_service_label(i18n, service),
+        user_id=user_id,
+        username=username_line,
     )
 
 
@@ -173,11 +187,15 @@ async def fulfill_pro_order(
     bot: Bot,
     session: AsyncSession,
     order: dict[str, Any],
+    *,
+    i18n: "TranslatorRunner | None" = None,
 ) -> int:
     """
     Отправляет .mat админам с кнопкой «Ответить».
     Возвращает число успешных отправок.
     """
+    # Подписи админам — на русском по умолчанию
+    i18n = i18n or _get_i18n("ru")
     local_path, is_temp = await _resolve_local_mat(order)
     admin_ids = await _resolve_admin_ids(session)
     if not admin_ids:
@@ -187,8 +205,8 @@ async def fulfill_pro_order(
     if not str(file_name).lower().endswith(".mat"):
         file_name = f"{file_name}.mat"
 
-    caption = _build_admin_caption(order)
-    reply_kb = get_pro_analysis_admin_reply_kb(int(order["user_id"]))
+    caption = _build_admin_caption(order, i18n)
+    reply_kb = get_pro_analysis_admin_reply_kb(int(order["user_id"]), i18n)
     sent = 0
     try:
         for admin_id in admin_ids:

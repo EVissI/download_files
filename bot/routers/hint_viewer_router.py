@@ -203,6 +203,7 @@ async def build_hint_viewer_result_keyboard(
         try:
             from bot.common.func.pro_analysis_order import create_pro_order
             from bot.common.kbds.inline.pro_analysis import PRO_ORDER_CALLBACK_PREFIX
+            from bot.config import translator_hub
 
             is_local = os.path.isfile(mat_ref)
             request_id = await create_pro_order(
@@ -213,10 +214,11 @@ async def build_hint_viewer_result_keyboard(
                 s3_key=None if is_local else mat_ref,
                 file_name=os.path.basename(mat_ref) if is_local else f"{game_id}.mat",
             )
+            i18n = translator_hub.get_translator_by_locale(lang_code or "ru")
             rows.append(
                 [
                     InlineKeyboardButton(
-                        text="Заказать анализ у профи",
+                        text=i18n.pro.analysis.order_button(),
                         callback_data=f"{PRO_ORDER_CALLBACK_PREFIX}{request_id}",
                     ),
                 ]
@@ -1523,6 +1525,7 @@ async def _notify_batch_file_telegram(
                 user_id=message.from_user.id,
                 username=message.from_user.username or getattr(user_info, "username", None),
                 service="hint_viewer",
+                lang_code=user_info.lang_code,
                 s3_key=mat_ref if not os.path.isfile(mat_ref) else None,
                 file_path=mat_ref if os.path.isfile(mat_ref) else None,
                 file_name=fname if str(fname).lower().endswith(".mat") else f"{fname}.mat",
@@ -1773,6 +1776,7 @@ async def check_job_status(
                                     username=message.from_user.username
                                     or getattr(user_info, "username", None),
                                     service="hint_viewer",
+                                    i18n=i18n,
                                     s3_key=mat_ref
                                     if not os.path.isfile(mat_ref)
                                     else None,

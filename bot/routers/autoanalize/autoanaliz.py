@@ -346,6 +346,7 @@ async def handle_mat_file(
                         username=message.from_user.username
                         or getattr(user_info, "username", None),
                         service="autoanaliz",
+                        i18n=i18n,
                         file_path=new_file_path,
                         file_name=os.path.basename(new_file_path),
                     )
@@ -380,6 +381,7 @@ async def handle_mat_file(
                         username=message.from_user.username
                         or getattr(user_info, "username", None),
                         service="autoanaliz",
+                        i18n=i18n,
                         file_path=new_file_path,
                         file_name=os.path.basename(new_file_path),
                     )
@@ -517,6 +519,7 @@ async def handle_player_selection(
             username=callback.from_user.username
             or getattr(user_info, "username", None),
             service="autoanaliz",
+            i18n=i18n,
             file_path=file_path,
             file_name=file_name or os.path.basename(file_path),
         )
