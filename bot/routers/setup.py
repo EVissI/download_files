@@ -13,6 +13,7 @@ from bot.routers.hint_viewer_router import hint_viewer_router
 from bot.routers.file_router import file_router
 from bot.routers.pokaz import pokaz_router
 from bot.routers.support_reply_router import support_reply_router
+from bot.routers.pro_analysis_order_router import pro_analysis_order_router
 from bot.routers.pokaz_entry_router import pokaz_entry_router
 from bot.routers.cards_cabinet_entry_router import cards_cabinet_entry_router
 from bot.routers.pip_count_cabinet_entry_router import pip_count_cabinet_entry_router
@@ -27,6 +28,7 @@ setup_router.include_routers(
     file_router,  # Должен быть первым для перехвата файлов вне FSM
     start_router,
     support_reply_router,
+    pro_analysis_order_router,
     stat_router,
     setup_autoanalize_router,
     profile_router,

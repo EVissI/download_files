@@ -136,6 +136,8 @@ async def build_hint_viewer_result_keyboard(
     red_player: str,
     black_player: str,
     user_id: int | None = None,
+    username: str | None = None,
+    mat_ref: str | None = None,
 ) -> InlineKeyboardMarkup:
     """Кнопки WebApp режимов + статистика; для ROOT_ADMIN — «Анализ матча»."""
     mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
@@ -197,6 +199,30 @@ async def build_hint_viewer_result_keyboard(
                 ),
             ]
         )
+    if user_id is not None and mat_ref:
+        try:
+            from bot.common.func.pro_analysis_order import create_pro_order
+            from bot.common.kbds.inline.pro_analysis import PRO_ORDER_CALLBACK_PREFIX
+
+            is_local = os.path.isfile(mat_ref)
+            request_id = await create_pro_order(
+                user_id=user_id,
+                username=username,
+                service="hint_viewer",
+                file_path=mat_ref if is_local else None,
+                s3_key=None if is_local else mat_ref,
+                file_name=os.path.basename(mat_ref) if is_local else f"{game_id}.mat",
+            )
+            rows.append(
+                [
+                    InlineKeyboardButton(
+                        text="Заказать анализ у профи",
+                        callback_data=f"{PRO_ORDER_CALLBACK_PREFIX}{request_id}",
+                    ),
+                ]
+            )
+        except Exception as e:
+            logger.error(f"Failed to create pro order for hint_viewer {game_id}: {e}")
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -1463,6 +1489,7 @@ async def _notify_batch_file_telegram(
             f"✅ <b>{fname}</b> обработан!\n{red_player} vs {black_player}{next_suffix}",
             parse_mode="HTML",
         )
+        mat_ref = payload.get("mat_path") or await redis_client.get(f"mat_path:{game_id}")
         keyboard = await build_hint_viewer_result_keyboard(
             message_dao,
             user_info.lang_code,
@@ -1470,6 +1497,8 @@ async def _notify_batch_file_telegram(
             red_player,
             black_player,
             user_id=message.from_user.id,
+            username=message.from_user.username or getattr(user_info, "username", None),
+            mat_ref=mat_ref,
         )
         await message.answer(
             text=await message_dao.get_text(
@@ -1485,6 +1514,19 @@ async def _notify_batch_file_telegram(
             f"✅ <b>{fname}</b> обработан, но игр не найдено.{next_suffix}",
             parse_mode="HTML",
         )
+        mat_ref = payload.get("mat_path")
+        if mat_ref:
+            from bot.common.func.pro_analysis_order import offer_pro_analysis_order
+
+            await offer_pro_analysis_order(
+                message,
+                user_id=message.from_user.id,
+                username=message.from_user.username or getattr(user_info, "username", None),
+                service="hint_viewer",
+                s3_key=mat_ref if not os.path.isfile(mat_ref) else None,
+                file_path=mat_ref if os.path.isfile(mat_ref) else None,
+                file_name=fname if str(fname).lower().endswith(".mat") else f"{fname}.mat",
+            )
     await session_without_commit.commit()
 
 
@@ -1695,6 +1737,9 @@ async def check_job_status(
                                 red_player,
                                 black_player,
                                 user_id=message.from_user.id,
+                                username=message.from_user.username
+                                or getattr(user_info, "username", None),
+                                mat_ref=result.get("mat_path"),
                             )
 
                             await message.answer(
@@ -1716,6 +1761,26 @@ async def check_job_status(
                                     black_player=job_info["black_player"],
                                 )
                             )
+                            mat_ref = result.get("mat_path")
+                            if mat_ref:
+                                from bot.common.func.pro_analysis_order import (
+                                    offer_pro_analysis_order,
+                                )
+
+                                await offer_pro_analysis_order(
+                                    message,
+                                    user_id=message.from_user.id,
+                                    username=message.from_user.username
+                                    or getattr(user_info, "username", None),
+                                    service="hint_viewer",
+                                    s3_key=mat_ref
+                                    if not os.path.isfile(mat_ref)
+                                    else None,
+                                    file_path=mat_ref
+                                    if os.path.isfile(mat_ref)
+                                    else None,
+                                    file_name=f"{game_id}.mat",
+                                )
                             await session_without_commit.commit()
 
                         # # DEBUG: zip с JSON игры админу-загрузчику (удалить вместе с _debug_* выше)

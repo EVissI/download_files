@@ -2542,11 +2542,32 @@
         </div>
     </div>
     {% include "cards_cabinet_assign_modal.html" %}
+    <script type="application/json" id="cards-cabinet-boot">
+        {
+            "webapp_fullscreen_enabled": {{ 'true' if webapp_fullscreen_enabled else 'false' }},
+            "cabinet_kind": {{ cabinet_kind|default('content_cards')|tojson }},
+            "cabinet_features": {{ cabinet_features|default({})|tojson }},
+            "cabinet_pool": {{ cabinet_pool|default('cards')|tojson }},
+            "cabinet_base_path": {{ cabinet_base_path|default('/cards-cabinet')|tojson }},
+            "cabinet_title": {{ cabinet_title|default('Мои карточки')|tojson }},
+            "cabinet_state_key": {{ cabinet_state_key|default('cards_cabinet_state_v1')|tojson }},
+            "cabinet_open_hints_key": {{ cabinet_open_hints_key|default('cards_cabinet_open_hints_v1')|tojson }},
+            "cabinet_user_preview_key": {{ cabinet_user_preview_key|default('match_analysis_cabinet_user_preview_v1')|tojson }}
+        }
+    </script>
     <script>
         (function () {
+            var bootEl = document.getElementById('cards-cabinet-boot');
+            var boot = {};
+            try {
+                boot = JSON.parse((bootEl && bootEl.textContent) || '{}') || {};
+            } catch (bootErr) {
+                console.warn('cards_cabinet boot config parse failed:', bootErr);
+                boot = {};
+            }
             if (window.Telegram && window.Telegram.WebApp) {
                 var tg = window.Telegram.WebApp;
-                var allowFullscreen = "{{ 'true' if webapp_fullscreen_enabled else 'false' }}" === 'true';
+                var allowFullscreen = !!boot.webapp_fullscreen_enabled;
                 var cabinetChromeColor = '#1a1a1a';
                 tg.ready();
                 tg.expand();
@@ -2585,7 +2606,7 @@
             var initData = '';
             var _urlParams = new URLSearchParams(window.location.search || '');
             var fabToken = _urlParams.get('fab_token') || '';
-            var CABINET_KIND = {{ cabinet_kind|default('content_cards')|tojson }};
+            var CABINET_KIND = boot.cabinet_kind || 'content_cards';
             var IS_MATCH_ANALYSIS = CABINET_KIND === 'match_analysis';
             var FEATURES = Object.assign({
                 enable_gallery: true,
@@ -2599,13 +2620,13 @@
                 enable_bulk_bg: true,
                 enable_interactive_stats: true,
                 enable_create_empty: true,
-            }, {{ cabinet_features|default({})|tojson }} || {});
-            var CABINET_POOL = {{ cabinet_pool|default('cards')|tojson }};
-            var CABINET_BASE_PATH = {{ cabinet_base_path|default('/cards-cabinet')|tojson }};
-            var CABINET_DEFAULT_TITLE = {{ cabinet_title|default('Мои карточки')|tojson }};
-            var cabinetStateKey = {{ cabinet_state_key|default('cards_cabinet_state_v1')|tojson }};
-            var openHintsStateKey = {{ cabinet_open_hints_key|default('cards_cabinet_open_hints_v1')|tojson }};
-            var userPreviewStateKey = {{ cabinet_user_preview_key|default('match_analysis_cabinet_user_preview_v1')|tojson }};
+            }, boot.cabinet_features || {});
+            var CABINET_POOL = boot.cabinet_pool || 'cards';
+            var CABINET_BASE_PATH = boot.cabinet_base_path || '/cards-cabinet';
+            var CABINET_DEFAULT_TITLE = boot.cabinet_title || 'Мои карточки';
+            var cabinetStateKey = boot.cabinet_state_key || 'cards_cabinet_state_v1';
+            var openHintsStateKey = boot.cabinet_open_hints_key || 'cards_cabinet_open_hints_v1';
+            var userPreviewStateKey = boot.cabinet_user_preview_key || 'match_analysis_cabinet_user_preview_v1';
             var cabinetConfig = (function () {
                 var folderToken = _urlParams.get('folder_token') || '';
                 if (folderToken) {
