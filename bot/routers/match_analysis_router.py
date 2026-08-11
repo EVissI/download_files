@@ -18,6 +18,7 @@ import uuid
 import zipfile
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import quote
 
 from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -831,6 +832,17 @@ def _safe_audio_stem(name: str | None) -> str:
     return (stem or "audio")[:80]
 
 
+def _content_disposition_attachment(filename: str) -> str:
+    """
+    Content-Disposition с ASCII filename= и UTF-8 filename*= (RFC 5987).
+    HTTP-заголовки кодируются как latin-1 — кириллица в filename= падает.
+    """
+    name = (filename or "download").replace("\\", "/").split("/")[-1].strip() or "download"
+    name = name.replace('"', "").replace("\r", "").replace("\n", "")[:200]
+    ascii_name = "".join(c if c.isascii() and c not in '"\\' else "_" for c in name).strip("._") or "download"
+    return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name, safe='')}"
+
+
 def _audio_filename_match_key(name: str | None) -> str:
     """Ключ полного соответствия имени: basename без расширения, lower-case."""
     base = Path(str(name or "").replace("\\", "/").split("/")[-1]).name
@@ -957,7 +969,7 @@ async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
         io.BytesIO(zip_bytes),
         media_type="application/zip",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": _content_disposition_attachment(filename),
             "Cache-Control": "no-store",
         },
     )
@@ -997,7 +1009,7 @@ async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody
         io.BytesIO(mp3),
         media_type="audio/mpeg",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": _content_disposition_attachment(filename),
             "Cache-Control": "no-store",
         },
     )
