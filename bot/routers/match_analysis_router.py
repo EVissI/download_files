@@ -443,9 +443,75 @@ async def match_analysis_fetch(body: MatchAnalysisIdBody):
         }
 
 
+def _starting_board_positions(invert_colors: bool) -> tuple[dict[str, Any], dict[str, Any]]:
+    if invert_colors:
+        return (
+            {"1": 2, "12": 5, "17": 3, "19": 5, "bar": 0, "off": 0},
+            {"6": 5, "8": 3, "13": 5, "24": 2, "bar": 0, "off": 0},
+        )
+    return (
+        {"24": 2, "6": 5, "8": 3, "13": 5, "bar": 0, "off": 0},
+        {"1": 2, "19": 5, "17": 3, "12": 5, "bar": 0, "off": 0},
+    )
+
+
+def _is_board_source_move(move: dict[str, Any]) -> bool:
+    """Ход, который попадает в timeline hint_viewer (и даёт positions)."""
+    if move.get("action") == "pass":
+        return False
+    if move.get("turn") is None and move.get("action") != "win":
+        return False
+    return bool(
+        isinstance(move.get("moves"), list)
+        or move.get("action") in ("win", "double", "take")
+    )
+
+
+def _board_snapshot_for_move(
+    game: dict[str, Any], move_index: int, move: dict[str, Any]
+) -> dict[str, Any]:
+    """Снимок доски как в hint_viewer.render: позиция до хода + кубики текущего хода."""
+    gi = game.get("game_info") or {}
+    invert = bool(gi.get("invert_colors"))
+    moves = game.get("moves") or []
+
+    # Эквивалент data[prevTurn].positions: предыдущий «видимый» ход в сыром массиве.
+    red = None
+    black = None
+    found_prev_visible = False
+    for j in range(move_index - 1, -1, -1):
+        prev = moves[j]
+        if not isinstance(prev, dict) or not _is_board_source_move(prev):
+            continue
+        found_prev_visible = True
+        if invert:
+            inv = prev.get("inverted_positions") or {}
+            red = inv.get("red")
+            black = inv.get("black")
+        else:
+            pos = prev.get("positions") or {}
+            red = pos.get("red")
+            black = pos.get("black")
+        break
+
+    if not found_prev_visible or not isinstance(red, dict) or not isinstance(black, dict):
+        red, black = _starting_board_positions(invert)
+
+    return {
+        "invert_colors": invert,
+        "player": move.get("player"),
+        "dice": move.get("dice"),
+        "action": move.get("action"),
+        "cube": move.get("cube"),
+        "positions": {"red": red, "black": black},
+    }
+
+
 def _collect_match_analysis_audios(analysis: dict[str, Any] | None) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for game in (analysis or {}).get("games") or []:
+        if not isinstance(game, dict):
+            continue
         try:
             game_number = int(game.get("game_number"))
         except (TypeError, ValueError):
@@ -464,9 +530,11 @@ def _collect_match_analysis_audios(analysis: dict[str, Any] | None) -> list[dict
                     "audio_s3_key": s3_key,
                     "audio_name": move.get("audioName") or s3_key.split("/")[-1] or "аудио",
                     "turn": move.get("turn"),
+                    "player": move.get("player"),
                     "player_name": move.get("player_name"),
                     "action": move.get("action"),
                     "gnu_move": move.get("gnu_move"),
+                    "board": _board_snapshot_for_move(game, move_index, move),
                 }
             )
     return items

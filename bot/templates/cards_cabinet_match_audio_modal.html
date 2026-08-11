@@ -62,7 +62,7 @@
         z-index: 1;
         width: 100%;
         max-width: 420px;
-        max-height: min(78vh, 640px);
+        max-height: min(86vh, 760px);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -120,15 +120,29 @@
     }
 
     .ma-audio-modal__item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 10px;
+        display: block;
+        padding: 0;
         border-bottom: 1px solid #2e2e2e;
     }
 
     .ma-audio-modal__item:last-child {
         border-bottom: 0;
+    }
+
+    .ma-audio-modal__item.is-expanded {
+        background: #22282f;
+    }
+
+    .ma-audio-modal__row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 10px;
+        cursor: pointer;
+    }
+
+    .ma-audio-modal__row:active {
+        background: rgba(255, 255, 255, 0.03);
     }
 
     .ma-audio-modal__meta {
@@ -184,6 +198,35 @@
         margin-top: 2px;
         font-size: 0.72rem;
         color: #8e8e8e;
+    }
+
+    .ma-audio-modal__board-wrap {
+        display: none;
+        padding: 0 10px 10px;
+    }
+
+    .ma-audio-modal__item.is-expanded .ma-audio-modal__board-wrap {
+        display: block;
+    }
+
+    .ma-audio-modal__board-canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        border-radius: 8px;
+        background: #111;
+        border: 1px solid #333;
+    }
+
+    .ma-audio-modal__board-empty {
+        margin: 0;
+        padding: 12px;
+        text-align: center;
+        color: #888;
+        font-size: 0.78rem;
+        border: 1px dashed #3a3a3a;
+        border-radius: 8px;
     }
 
     .ma-audio-modal__actions-row {
@@ -334,6 +377,9 @@
         recordChunks: [],
         audioEl: null,
         playingKey: null,
+        expandedKey: null,
+        boardAssets: null,
+        boardAssetsPromise: null,
     };
 
     function itemKey(item) {
@@ -343,6 +389,198 @@
 
     function mediaUrl(s3Key) {
         return '/api/match_analysis/media?key=' + encodeURIComponent(String(s3Key || ''));
+    }
+
+    function assetBust() {
+        var v = '';
+        try {
+            v = (window.__STATIC_ASSET_V || '') ||
+                ((document.querySelector('meta[name="static-asset-v"]') || {}).getAttribute
+                    ? document.querySelector('meta[name="static-asset-v"]').getAttribute('content')
+                    : '') ||
+                '';
+        } catch (_e) {
+            v = '';
+        }
+        return v ? ('?t=' + encodeURIComponent(v)) : '';
+    }
+
+    function loadImage(src) {
+        return new Promise(function (resolve, reject) {
+            var img = new Image();
+            img.onload = function () { resolve(img); };
+            img.onerror = function () { reject(new Error(src)); };
+            img.src = src;
+        });
+    }
+
+    function loadBoardAssets() {
+        if (state.boardAssets) return Promise.resolve(state.boardAssets);
+        if (state.boardAssetsPromise) return state.boardAssetsPromise;
+        var bust = assetBust();
+        var paths = {
+            board: '/static/board.webp' + bust,
+            black: '/static/black_checker.webp' + bust,
+            white: '/static/white_checker.webp' + bust,
+        };
+        var i;
+        for (i = 1; i <= 6; i++) {
+            paths['d' + i + 'w'] = '/static/' + i + 'w.webp' + bust;
+            paths['d' + i + 'b'] = '/static/' + i + 'b.webp' + bust;
+        }
+        state.boardAssetsPromise = Promise.all(
+            Object.keys(paths).map(function (key) {
+                return loadImage(paths[key]).then(function (img) {
+                    return [key, img];
+                });
+            })
+        ).then(function (pairs) {
+            var out = {};
+            pairs.forEach(function (pair) { out[pair[0]] = pair[1]; });
+            state.boardAssets = out;
+            return out;
+        }).catch(function (err) {
+            state.boardAssetsPromise = null;
+            throw err;
+        });
+        return state.boardAssetsPromise;
+    }
+
+    function getPointX(point) {
+        if (point >= 13 && point <= 18) {
+            return 50 + (point - 13) * 60 - (point === 13 ? 8 : 0);
+        }
+        if (point >= 19 && point <= 24) {
+            return 450 + (point - 19) * 60;
+        }
+        if (point >= 7 && point <= 12) {
+            return 50 + (12 - point) * 60 - (point === 12 ? 4 : 0);
+        }
+        if (point >= 1 && point <= 6) {
+            return 450 + (6 - point) * 60;
+        }
+        return 0;
+    }
+
+    function getBaseY(point) {
+        return point > 12 ? 70 : 690;
+    }
+
+    function getDy(point) {
+        return point > 12 ? 55 : -55;
+    }
+
+    function drawCheckers(ctx, player, img, positions, currentPlayer, invertColors) {
+        if (!positions) return;
+        ctx.font = 'bold 30px Arial';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        if (player === currentPlayer) {
+            for (var point = 1; point <= 24; point++) {
+                var x = getPointX(point);
+                var y = getBaseY(point);
+                var displayPoint = point;
+                if (invertColors) {
+                    if (player === 'red') displayPoint = 25 - point;
+                } else if (player === 'black') {
+                    displayPoint = 25 - point;
+                }
+                var numberY = point > 12 ? y - 50 : y + 60;
+                ctx.fillText(String(displayPoint), x, numberY);
+            }
+        }
+
+        Object.keys(positions).forEach(function (pointStr) {
+            if (pointStr === 'bar' || pointStr === 'off') return;
+            var p = parseInt(pointStr, 10);
+            var count = positions[pointStr];
+            var px = getPointX(p);
+            var py = getBaseY(p);
+            var dy = getDy(p);
+            var i;
+            for (i = 0; i < Math.min(count, 6); i++) {
+                ctx.drawImage(img, px - 31.25, py + (i * dy) - 31.25, 62.5, 62.5);
+            }
+            if (count > 6) {
+                ctx.fillText(String(count), px + 40, py + (5 * dy) + 5);
+            }
+        });
+
+        var barX = 400;
+        var barY = player === 'black' ? 220 : 520;
+        if (invertColors) barY = player === 'black' ? 520 : 220;
+        if (positions.bar && positions.bar !== 0) {
+            var by = barY;
+            var bdy = player === 'black' ? 55 : -55;
+            for (var bi = 0; bi < Math.min(Math.abs(positions.bar), 6); bi++) {
+                ctx.drawImage(img, barX - 31.25, by + (bi * bdy) - 31.25, 62.5, 62.5);
+            }
+            if (Math.abs(positions.bar) > 6) {
+                ctx.fillText('(' + Math.abs(positions.bar) + ')', barX + 30, by + (5 * bdy) + 5);
+            }
+        }
+
+        if (positions.off && positions.off !== 0) {
+            var offX = 783;
+            var offY = invertColors
+                ? (player === 'black' ? 440 : 340)
+                : (player === 'black' ? 340 : 440);
+            var prevFont = ctx.font;
+            ctx.font = 'bold 32px Arial';
+            ctx.fillText(String(positions.off), offX, offY);
+            ctx.font = prevFont;
+        }
+    }
+
+    function paintMiniBoard(canvas, board, imgs) {
+        if (!canvas || !board || !imgs || !imgs.board) return false;
+        var ctx = canvas.getContext('2d');
+        if (!ctx) return false;
+        ctx.clearRect(0, 0, 800, 800);
+        ctx.drawImage(imgs.board, 0, 0, 800, 800);
+
+        var invertColors = !!board.invert_colors;
+        var positions = board.positions || {};
+        var redPositions = positions.red || {};
+        var blackPositions = positions.black || {};
+        var currentPlayer = String(board.player || 'Red').toLowerCase();
+
+        drawCheckers(ctx, 'red', imgs.white, redPositions, currentPlayer, invertColors);
+        drawCheckers(ctx, 'black', imgs.black, blackPositions, currentPlayer, invertColors);
+
+        var dice = board.dice;
+        var action = board.action;
+        if (dice && dice.length >= 2 && ['double', 'take', 'win'].indexOf(action) === -1) {
+            var d1 = dice[0];
+            var d2 = dice[1];
+            var diceY = 350;
+            var diceX1;
+            var diceX2;
+            var diceSet;
+            var isRed = String(board.player || '').toLowerCase() === 'red';
+            var whiteDice = {
+                1: imgs.d1w, 2: imgs.d2w, 3: imgs.d3w, 4: imgs.d4w, 5: imgs.d5w, 6: imgs.d6w,
+            };
+            var blackDice = {
+                1: imgs.d1b, 2: imgs.d2b, 3: imgs.d3b, 4: imgs.d4b, 5: imgs.d5b, 6: imgs.d6b,
+            };
+            if (invertColors) {
+                if (isRed) {
+                    diceX1 = 130; diceX2 = 220; diceSet = whiteDice;
+                } else {
+                    diceX1 = 530; diceX2 = 620; diceSet = blackDice;
+                }
+            } else if (isRed) {
+                diceX1 = 530; diceX2 = 620; diceSet = whiteDice;
+            } else {
+                diceX1 = 130; diceX2 = 220; diceSet = blackDice;
+            }
+            if (diceSet[d1]) ctx.drawImage(diceSet[d1], diceX1, diceY, 60, 60);
+            if (diceSet[d2]) ctx.drawImage(diceSet[d2], diceX2, diceY, 60, 60);
+        }
+        return true;
     }
 
     function setPlayButtonState(btn, isPlaying) {
@@ -511,12 +749,75 @@
     function closeListModal() {
         closeEditModal();
         stopPlayback();
+        state.expandedKey = null;
         if (!listModal) return;
         listModal.classList.remove('is-open');
         listModal.setAttribute('aria-hidden', 'true');
         state.matchId = null;
         state.items = [];
         setListMsg('');
+    }
+
+    function paintExpandedBoard(li, item) {
+        if (!li || !item) return;
+        var wrap = li.querySelector('.ma-audio-modal__board-wrap');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        var canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 800;
+        canvas.className = 'ma-audio-modal__board-canvas';
+        canvas.setAttribute('aria-label', 'Доска хода');
+        wrap.appendChild(canvas);
+
+        if (!item.board || !item.board.positions) {
+            wrap.innerHTML = '';
+            var empty = document.createElement('p');
+            empty.className = 'ma-audio-modal__board-empty';
+            empty.textContent = 'Нет данных доски для этого хода';
+            wrap.appendChild(empty);
+            return;
+        }
+
+        loadBoardAssets().then(function (imgs) {
+            if (state.expandedKey !== itemKey(item)) return;
+            if (!paintMiniBoard(canvas, item.board, imgs)) {
+                wrap.innerHTML = '';
+                var fail = document.createElement('p');
+                fail.className = 'ma-audio-modal__board-empty';
+                fail.textContent = 'Не удалось отрисовать доску';
+                wrap.appendChild(fail);
+            }
+        }).catch(function (err) {
+            console.error(err);
+            if (state.expandedKey !== itemKey(item)) return;
+            wrap.innerHTML = '';
+            var errEl = document.createElement('p');
+            errEl.className = 'ma-audio-modal__board-empty';
+            errEl.textContent = 'Ошибка загрузки ресурсов доски';
+            wrap.appendChild(errEl);
+        });
+    }
+
+    function toggleExpand(li, item) {
+        var key = itemKey(item);
+        var wasExpanded = state.expandedKey === key;
+        if (listEl) {
+            var nodes = listEl.querySelectorAll('.ma-audio-modal__item.is-expanded');
+            for (var i = 0; i < nodes.length; i++) {
+                nodes[i].classList.remove('is-expanded');
+            }
+        }
+        if (wasExpanded) {
+            state.expandedKey = null;
+            return;
+        }
+        state.expandedKey = key;
+        li.classList.add('is-expanded');
+        paintExpandedBoard(li, item);
+        try {
+            li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch (_e) { /* ignore */ }
     }
 
     function openListModal() {
@@ -550,8 +851,16 @@
             return;
         }
         state.items.forEach(function (item) {
+            var key = itemKey(item);
             var li = document.createElement('li');
             li.className = 'ma-audio-modal__item';
+            if (state.expandedKey === key) {
+                li.classList.add('is-expanded');
+            }
+
+            var row = document.createElement('div');
+            row.className = 'ma-audio-modal__row';
+            row.title = 'Показать доску хода';
 
             var meta = document.createElement('div');
             meta.className = 'ma-audio-modal__meta';
@@ -562,17 +871,18 @@
             var playBtn = document.createElement('button');
             playBtn.type = 'button';
             playBtn.className = 'ma-audio-modal__play-btn';
-            playBtn.setAttribute('data-audio-key', itemKey(item));
+            playBtn.setAttribute('data-audio-key', key);
             setPlayButtonState(
                 playBtn,
                 !!(
                     state.playingKey &&
-                    state.playingKey === itemKey(item) &&
+                    state.playingKey === key &&
                     state.audioEl &&
                     !state.audioEl.paused
                 )
             );
-            playBtn.addEventListener('click', function () {
+            playBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
                 togglePlayback(item, playBtn);
             });
 
@@ -598,7 +908,8 @@
             redirectBtn.title = 'Перейти к кадру';
             redirectBtn.setAttribute('aria-label', 'Перейти к кадру');
             redirectBtn.innerHTML = '<i class="fa fa-external-link" aria-hidden="true"></i>';
-            redirectBtn.addEventListener('click', function () {
+            redirectBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
                 window.location.assign(
                     buildViewUrl(state.matchId, item.game_number, item.move_index)
                 );
@@ -610,7 +921,8 @@
             editBtn.title = 'Изменить';
             editBtn.setAttribute('aria-label', 'Изменить аудио');
             editBtn.innerHTML = '<i class="fa fa-pencil" aria-hidden="true"></i>';
-            editBtn.addEventListener('click', function () {
+            editBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
                 openEditModal(item);
             });
 
@@ -620,16 +932,31 @@
             delBtn.title = 'Удалить';
             delBtn.setAttribute('aria-label', 'Удалить аудио');
             delBtn.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
-            delBtn.addEventListener('click', function () {
+            delBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
                 deleteAudio(item);
             });
 
             actions.appendChild(redirectBtn);
             actions.appendChild(editBtn);
             actions.appendChild(delBtn);
-            li.appendChild(meta);
-            li.appendChild(actions);
+            row.appendChild(meta);
+            row.appendChild(actions);
+
+            var boardWrap = document.createElement('div');
+            boardWrap.className = 'ma-audio-modal__board-wrap';
+
+            row.addEventListener('click', function () {
+                toggleExpand(li, item);
+            });
+
+            li.appendChild(row);
+            li.appendChild(boardWrap);
             listEl.appendChild(li);
+
+            if (state.expandedKey === key) {
+                paintExpandedBoard(li, item);
+            }
         });
     }
 
