@@ -985,68 +985,110 @@
         }
     }
 
-    function measureBlobDurationSec(blob) {
+    function decodeArrayBufferDurationSec(arrayBuffer) {
         return new Promise(function (resolve) {
-            if (!blob) {
+            var Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx || !arrayBuffer) {
                 resolve(null);
                 return;
             }
-            var url = '';
+            var ctx = null;
+            var finished = false;
+            var finish = function (value) {
+                if (finished) return;
+                finished = true;
+                try {
+                    if (ctx && typeof ctx.close === 'function') ctx.close();
+                } catch (_e) { /* ignore */ }
+                resolve(value);
+            };
             try {
-                url = URL.createObjectURL(blob);
-            } catch (_e) {
+                ctx = new Ctx();
+            } catch (_e2) {
                 resolve(null);
                 return;
             }
+            var copy = arrayBuffer.slice(0);
+            var onOk = function (buf) {
+                var d = buf && Number(buf.duration);
+                finish(Number.isFinite(d) && d > 0 ? d : null);
+            };
+            var onErr = function () { finish(null); };
+            try {
+                // Современные браузеры возвращают Promise; старые — только callbacks.
+                var result = ctx.decodeAudioData(copy);
+                if (result && typeof result.then === 'function') {
+                    result.then(onOk).catch(onErr);
+                } else {
+                    ctx.decodeAudioData(copy, onOk, onErr);
+                }
+            } catch (_e3) {
+                try {
+                    ctx.decodeAudioData(copy, onOk, onErr);
+                } catch (_e4) {
+                    onErr();
+                }
+            }
+        });
+    }
+
+    function measureViaHtmlAudioFromUrl(url, revoke) {
+        return new Promise(function (resolve) {
             var audio = new Audio();
             var done = false;
             var finish = function (value) {
                 if (done) return;
                 done = true;
-                try { URL.revokeObjectURL(url); } catch (_e2) { /* ignore */ }
+                if (revoke) {
+                    try { URL.revokeObjectURL(url); } catch (_e) { /* ignore */ }
+                }
                 resolve(value);
             };
             audio.preload = 'metadata';
             audio.onloadedmetadata = function () {
                 var d = Number(audio.duration);
-                if (Number.isFinite(d) && d > 0 && d !== Infinity) {
-                    finish(d);
-                } else {
-                    finish(null);
-                }
+                if (Number.isFinite(d) && d > 0 && d !== Infinity) finish(d);
+                else finish(null);
             };
             audio.onerror = function () { finish(null); };
-            setTimeout(function () { finish(null); }, 8000);
+            setTimeout(function () { finish(null); }, 10000);
             audio.src = url;
         });
     }
 
-    function measureMediaUrlDurationSec(s3Key) {
-        return new Promise(function (resolve) {
-            if (!s3Key) {
-                resolve(null);
-                return;
-            }
-            var audio = new Audio();
-            var done = false;
-            var finish = function (value) {
-                if (done) return;
-                done = true;
-                resolve(value);
-            };
-            audio.preload = 'metadata';
-            audio.onloadedmetadata = function () {
-                var d = Number(audio.duration);
-                if (Number.isFinite(d) && d > 0 && d !== Infinity) {
-                    finish(d);
-                } else {
-                    finish(null);
+    function measureBlobDurationSec(blob) {
+        if (!blob) return Promise.resolve(null);
+        return blob.arrayBuffer()
+            .then(function (ab) { return decodeArrayBufferDurationSec(ab); })
+            .then(function (decoded) {
+                if (decoded != null) return decoded;
+                var url = '';
+                try {
+                    url = URL.createObjectURL(blob);
+                } catch (_e) {
+                    return null;
                 }
-            };
-            audio.onerror = function () { finish(null); };
-            setTimeout(function () { finish(null); }, 10000);
-            audio.src = mediaUrl(s3Key);
-        });
+                return measureViaHtmlAudioFromUrl(url, true);
+            })
+            .catch(function () { return null; });
+    }
+
+    function measureMediaUrlDurationSec(s3Key) {
+        if (!s3Key) return Promise.resolve(null);
+        var url = mediaUrl(s3Key);
+        return fetch(url)
+            .then(function (resp) {
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                return resp.arrayBuffer();
+            })
+            .then(function (ab) { return decodeArrayBufferDurationSec(ab); })
+            .then(function (decoded) {
+                if (decoded != null) return decoded;
+                return measureViaHtmlAudioFromUrl(url, false);
+            })
+            .catch(function () {
+                return measureViaHtmlAudioFromUrl(url, false);
+            });
     }
 
     function totalsFromItems(items) {
@@ -1317,7 +1359,7 @@
         });
     }
 
-    function uploadBlob(blob, filename) {
+    function uploadBlob(blob, filename, preferredDurationSec) {
         var item = state.editItem;
         var initData = getInitData();
         if (!item || !initData || !state.matchId) {
@@ -1329,14 +1371,19 @@
         if (editAttachBtn) editAttachBtn.disabled = true;
         if (editRecordBtn) editRecordBtn.disabled = true;
 
-        return measureBlobDurationSec(blob).then(function (durationSec) {
+        var preferred = Number(preferredDurationSec);
+        var durationPromise = (Number.isFinite(preferred) && preferred > 0)
+            ? Promise.resolve(preferred)
+            : measureBlobDurationSec(blob);
+
+        return durationPromise.then(function (durationSec) {
             var fd = new FormData();
             fd.append('init_data', initData);
             fd.append('match_analysis_id', String(state.matchId));
             fd.append('game_number', String(item.game_number));
             fd.append('move_index', String(item.move_index));
             fd.append('file', blob, filename || 'audio.webm');
-            if (durationSec != null) {
+            if (durationSec != null && Number.isFinite(Number(durationSec)) && Number(durationSec) > 0) {
                 fd.append('duration_sec', String(durationSec));
             }
 
@@ -1387,6 +1434,7 @@
         }
         state.mediaRecorder = null;
         state.recordChunks = [];
+        state.recordStartedAt = null;
     }
 
     function startOrStopRecording() {
@@ -1401,6 +1449,7 @@
         }
         navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
             state.recordChunks = [];
+            state.recordStartedAt = Date.now();
             var mimeCandidates = [
                 'audio/ogg;codecs=opus',
                 'audio/ogg',
@@ -1428,6 +1477,11 @@
                     editRecordBtn.classList.remove('is-recording');
                     editRecordBtn.innerHTML = '<i class="fa fa-microphone" aria-hidden="true"></i> Записать';
                 }
+                var wallSec = null;
+                if (state.recordStartedAt) {
+                    wallSec = (Date.now() - state.recordStartedAt) / 1000;
+                }
+                state.recordStartedAt = null;
                 var blobType = (state.mediaRecorder && state.mediaRecorder.mimeType) || mime || 'audio/webm';
                 var blob = new Blob(state.recordChunks, { type: blobType });
                 state.recordChunks = [];
@@ -1437,7 +1491,7 @@
                     return;
                 }
                 var ext = blobType.indexOf('ogg') >= 0 ? 'ogg' : 'webm';
-                uploadBlob(blob, 'voice_' + Date.now() + '.' + ext);
+                uploadBlob(blob, 'voice_' + Date.now() + '.' + ext, wallSec);
             };
             state.mediaRecorder.start();
             if (editRecordBtn) {

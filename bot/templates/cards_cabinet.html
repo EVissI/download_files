@@ -6126,8 +6126,7 @@
                     ) {
                         allCards.forEach(function (row) {
                             var count = Number(row && row.audio_count) || 0;
-                            var secs = Number(row && row.audio_seconds) || 0;
-                            if (count > 0 && secs <= 0) {
+                            if (count > 0) {
                                 window.CardsCabinetMatchAudio.ensureMinutes(row.content_card_id);
                             }
                         });

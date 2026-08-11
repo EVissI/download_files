@@ -5262,40 +5262,90 @@
             }
         );
 
-        function measureMatchAnalysisBlobDurationSec(blob) {
-            return new Promise((resolve) => {
-                if (!blob) {
+        function measureMatchAnalysisBlobDurationSec(blob, preferredDurationSec) {
+            const preferred = Number(preferredDurationSec);
+            if (Number.isFinite(preferred) && preferred > 0) {
+                return Promise.resolve(preferred);
+            }
+            if (!blob) return Promise.resolve(null);
+
+            const decodeAb = (arrayBuffer) => new Promise((resolve) => {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx || !arrayBuffer) {
                     resolve(null);
                     return;
                 }
-                let url = '';
+                let ctx = null;
+                const finish = (value) => {
+                    try {
+                        if (ctx && typeof ctx.close === 'function') ctx.close();
+                    } catch (e) { /* ignore */ }
+                    resolve(value);
+                };
                 try {
-                    url = URL.createObjectURL(blob);
+                    ctx = new Ctx();
                 } catch (e) {
                     resolve(null);
                     return;
                 }
-                const audio = new Audio();
-                let done = false;
-                const finish = (value) => {
-                    if (done) return;
-                    done = true;
-                    try { URL.revokeObjectURL(url); } catch (e2) { /* ignore */ }
-                    resolve(value);
+                const copy = arrayBuffer.slice(0);
+                let handled = false;
+                const onOk = (buf) => {
+                    if (handled) return;
+                    handled = true;
+                    const d = buf && Number(buf.duration);
+                    finish(Number.isFinite(d) && d > 0 ? d : null);
                 };
-                audio.preload = 'metadata';
-                audio.onloadedmetadata = () => {
-                    const d = Number(audio.duration);
-                    if (Number.isFinite(d) && d > 0 && d !== Infinity) finish(d);
-                    else finish(null);
+                const onErr = () => {
+                    if (handled) return;
+                    handled = true;
+                    finish(null);
                 };
-                audio.onerror = () => finish(null);
-                setTimeout(() => finish(null), 8000);
-                audio.src = url;
+                try {
+                    const maybePromise = ctx.decodeAudioData(copy, onOk, onErr);
+                    if (maybePromise && typeof maybePromise.then === 'function') {
+                        maybePromise.then(onOk).catch(onErr);
+                    }
+                } catch (e) {
+                    onErr();
+                }
             });
+
+            return blob.arrayBuffer()
+                .then((ab) => decodeAb(ab))
+                .then((decoded) => {
+                    if (decoded != null) return decoded;
+                    return new Promise((resolve) => {
+                        let url = '';
+                        try {
+                            url = URL.createObjectURL(blob);
+                        } catch (e) {
+                            resolve(null);
+                            return;
+                        }
+                        const audio = new Audio();
+                        let done = false;
+                        const finish = (value) => {
+                            if (done) return;
+                            done = true;
+                            try { URL.revokeObjectURL(url); } catch (e2) { /* ignore */ }
+                            resolve(value);
+                        };
+                        audio.preload = 'metadata';
+                        audio.onloadedmetadata = () => {
+                            const d = Number(audio.duration);
+                            if (Number.isFinite(d) && d > 0 && d !== Infinity) finish(d);
+                            else finish(null);
+                        };
+                        audio.onerror = () => finish(null);
+                        setTimeout(() => finish(null), 8000);
+                        audio.src = url;
+                    });
+                })
+                .catch(() => null);
         }
 
-        async function uploadMatchAnalysisAudioBlob(blob, filename) {
+        async function uploadMatchAnalysisAudioBlob(blob, filename, preferredDurationSec) {
             const initData = getTelegramInitData();
             const meta = getCurrentMoveAudioMeta();
             if (!matchAnalysisId || meta.moveIndex == null) {
@@ -5307,7 +5357,10 @@
                 return;
             }
             try {
-                const durationSec = await measureMatchAnalysisBlobDurationSec(blob);
+                const durationSec = await measureMatchAnalysisBlobDurationSec(
+                    blob,
+                    preferredDurationSec
+                );
                 const payload = await postMatchAnalysisAudioUpload(
                     blob,
                     filename,
@@ -5360,6 +5413,8 @@
             }
         }
 
+        let matchAnalysisRecordStartedAt = null;
+
         async function startMatchAnalysisRecording() {
             if (matchAnalysisMediaRecorder && matchAnalysisMediaRecorder.state === 'recording') {
                 matchAnalysisMediaRecorder.stop();
@@ -5368,6 +5423,7 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 matchAnalysisRecordChunks = [];
+                matchAnalysisRecordStartedAt = Date.now();
                 const mimeCandidates = [
                     'audio/ogg;codecs=opus',
                     'audio/ogg',
@@ -5383,17 +5439,26 @@
                 };
                 matchAnalysisMediaRecorder.onstop = async () => {
                     stream.getTracks().forEach((t) => t.stop());
+                    const wallSec = matchAnalysisRecordStartedAt
+                        ? (Date.now() - matchAnalysisRecordStartedAt) / 1000
+                        : null;
+                    matchAnalysisRecordStartedAt = null;
                     const type = matchAnalysisMediaRecorder.mimeType || 'audio/webm';
                     const blob = new Blob(matchAnalysisRecordChunks, { type });
                     const ext = type.includes('ogg') ? 'ogg' : type.includes('mp4') ? 'mp4' : 'webm';
                     setMatchAnalysisRecordButtonState(false);
-                    await uploadMatchAnalysisAudioBlob(blob, 'voice_' + Date.now() + '.' + ext);
+                    await uploadMatchAnalysisAudioBlob(
+                        blob,
+                        'voice_' + Date.now() + '.' + ext,
+                        wallSec
+                    );
                     matchAnalysisMediaRecorder = null;
                 };
                 matchAnalysisMediaRecorder.start();
                 setMatchAnalysisRecordButtonState(true);
             } catch (e) {
                 console.error(e);
+                matchAnalysisRecordStartedAt = null;
                 setMatchAnalysisRecordButtonState(false);
                 showMessageModal('Не удалось начать запись: ' + (e.message || e), 'error');
             }

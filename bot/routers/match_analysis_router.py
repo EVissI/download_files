@@ -537,10 +537,86 @@ def _probe_webm_duration_sec(data: bytes) -> float | None:
         start = idx + 2
 
 
+def _probe_ogg_opus_duration_sec(data: bytes) -> float | None:
+    """Длительность Ogg Opus по granule position последней страницы."""
+    if not data or len(data) < 28 or not data.startswith(b"OggS"):
+        return None
+    sample_rate = 48000
+    # OpusHead: channel mapping family… sample rate at +12 from 'OpusHead'
+    head_at = data.find(b"OpusHead")
+    if head_at >= 0 and head_at + 16 <= len(data):
+        try:
+            sr = struct.unpack_from("<I", data, head_at + 12)[0]
+            if 8000 <= sr <= 192000:
+                sample_rate = int(sr)
+        except struct.error:
+            pass
+
+    last_granule = None
+    offset = 0
+    n = len(data)
+    while offset + 27 <= n:
+        if data[offset : offset + 4] != b"OggS":
+            offset += 1
+            continue
+        try:
+            granule = struct.unpack_from("<Q", data, offset + 6)[0]
+            nseg = data[offset + 26]
+        except struct.error:
+            break
+        seg_table_off = offset + 27
+        if seg_table_off + nseg > n:
+            break
+        body_size = sum(data[seg_table_off : seg_table_off + nseg])
+        page_end = seg_table_off + nseg + body_size
+        if granule not in (0, 0xFFFFFFFFFFFFFFFF):
+            last_granule = int(granule)
+        if page_end <= offset:
+            break
+        offset = page_end
+
+    if last_granule is None or sample_rate <= 0:
+        return None
+    sec = last_granule / float(sample_rate)
+    if 0.05 <= sec <= 6 * 3600:
+        return sec
+    return None
+
+
 def _probe_audio_duration_sec(raw: bytes) -> float | None:
     if not raw:
         return None
-    return _probe_webm_duration_sec(raw)
+    return _probe_ogg_opus_duration_sec(raw) or _probe_webm_duration_sec(raw)
+
+
+def _fill_missing_audio_durations(analysis: dict[str, Any] | None) -> bool:
+    """Скачивает из S3 файлы без audioDurationSec и проставляет длительность. Возвращает, были ли изменения."""
+    if not isinstance(analysis, dict):
+        return False
+    s3 = None
+    changed = False
+    for game in analysis.get("games") or []:
+        if not isinstance(game, dict):
+            continue
+        for move in game.get("moves") or []:
+            if not isinstance(move, dict):
+                continue
+            key = move.get("audioS3Key")
+            if not key or _coerce_duration_sec(move.get("audioDurationSec")) is not None:
+                continue
+            if not HintS3Storage.is_match_analysis_media_key(str(key)):
+                continue
+            try:
+                if s3 is None:
+                    s3 = HintS3Storage.from_settings()
+                raw = s3.download_bytes(str(key))
+                dur = _probe_audio_duration_sec(raw)
+                if dur is not None:
+                    move["audioDurationSec"] = round(float(dur), 3)
+                    changed = True
+            except Exception as e:
+                logger.warning(f"Failed to probe audio duration for {key}: {e}")
+    return changed
 
 
 def _audio_totals(analysis: dict[str, Any] | None) -> tuple[int, float, int]:
@@ -664,8 +740,16 @@ async def match_analysis_audio_list(body: MatchAnalysisIdBody):
         row = await dao.find_one_or_none_by_id(body.id)
         if not row:
             raise HTTPException(status_code=404, detail="Анализ не найден")
-        items = _collect_match_analysis_audios(row.analysis)
-        _count, audio_seconds, audio_minutes = _audio_totals(row.analysis)
+        analysis = copy.deepcopy(row.analysis or {})
+        filled = await asyncio.to_thread(_fill_missing_audio_durations, analysis)
+        if filled:
+            row.analysis = analysis
+            flag_modified(row, "analysis")
+            await session.commit()
+        else:
+            analysis = row.analysis or {}
+        items = _collect_match_analysis_audios(analysis)
+        _count, audio_seconds, audio_minutes = _audio_totals(analysis)
     return {
         "id": body.id,
         "items": items,
@@ -704,7 +788,7 @@ async def match_analysis_audio_set_durations(body: MatchAnalysisAudioSetDuration
             row.analysis = analysis
             flag_modified(row, "analysis")
             await session.commit()
-        _count, audio_seconds, audio_minutes = _audio_totals(analysis)
+        _count, audio_seconds, audio_minutes = _audio_totals(row.analysis)
     return {
         "ok": True,
         "updated": updated,
