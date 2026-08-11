@@ -32,6 +32,25 @@
         border-color: rgba(106, 208, 160, 0.45);
     }
 
+    .tile__audio-minutes {
+        position: absolute;
+        right: 26px;
+        bottom: 2px;
+        z-index: 2;
+        min-width: 14px;
+        height: 22px;
+        padding: 0 3px;
+        border: 0;
+        background: transparent;
+        color: #2ecc71;
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 22px;
+        text-align: right;
+        pointer-events: none;
+        font-variant-numeric: tabular-nums;
+    }
+
     .ma-audio-modal {
         display: none;
         position: fixed;
@@ -960,10 +979,157 @@
         });
     }
 
-    function patchAudioCount(matchId, count) {
+    function patchAudioTotals(matchId, count, minutes) {
         if (typeof api().onAudioCountChanged === 'function') {
-            api().onAudioCountChanged(matchId, count);
+            api().onAudioCountChanged(matchId, count, minutes);
         }
+    }
+
+    function measureBlobDurationSec(blob) {
+        return new Promise(function (resolve) {
+            if (!blob) {
+                resolve(null);
+                return;
+            }
+            var url = '';
+            try {
+                url = URL.createObjectURL(blob);
+            } catch (_e) {
+                resolve(null);
+                return;
+            }
+            var audio = new Audio();
+            var done = false;
+            var finish = function (value) {
+                if (done) return;
+                done = true;
+                try { URL.revokeObjectURL(url); } catch (_e2) { /* ignore */ }
+                resolve(value);
+            };
+            audio.preload = 'metadata';
+            audio.onloadedmetadata = function () {
+                var d = Number(audio.duration);
+                if (Number.isFinite(d) && d > 0 && d !== Infinity) {
+                    finish(d);
+                } else {
+                    finish(null);
+                }
+            };
+            audio.onerror = function () { finish(null); };
+            setTimeout(function () { finish(null); }, 8000);
+            audio.src = url;
+        });
+    }
+
+    function measureMediaUrlDurationSec(s3Key) {
+        return new Promise(function (resolve) {
+            if (!s3Key) {
+                resolve(null);
+                return;
+            }
+            var audio = new Audio();
+            var done = false;
+            var finish = function (value) {
+                if (done) return;
+                done = true;
+                resolve(value);
+            };
+            audio.preload = 'metadata';
+            audio.onloadedmetadata = function () {
+                var d = Number(audio.duration);
+                if (Number.isFinite(d) && d > 0 && d !== Infinity) {
+                    finish(d);
+                } else {
+                    finish(null);
+                }
+            };
+            audio.onerror = function () { finish(null); };
+            setTimeout(function () { finish(null); }, 10000);
+            audio.src = mediaUrl(s3Key);
+        });
+    }
+
+    function totalsFromItems(items) {
+        var list = Array.isArray(items) ? items : [];
+        var seconds = 0;
+        list.forEach(function (it) {
+            var d = Number(it && it.duration_sec);
+            if (Number.isFinite(d) && d > 0) seconds += d;
+        });
+        return {
+            count: list.length,
+            seconds: seconds,
+            minutes: Math.floor(seconds / 60),
+        };
+    }
+
+    function backfillMissingDurations(items) {
+        var missing = (items || []).filter(function (it) {
+            var d = Number(it && it.duration_sec);
+            return it && it.audio_s3_key && !(Number.isFinite(d) && d > 0);
+        });
+        if (!missing.length) {
+            return Promise.resolve(false);
+        }
+        var initData = getInitData();
+        if (!initData || !state.matchId) {
+            return Promise.resolve(false);
+        }
+        return Promise.all(
+            missing.map(function (it) {
+                return measureMediaUrlDurationSec(it.audio_s3_key).then(function (dur) {
+                    return dur
+                        ? {
+                            game_number: it.game_number,
+                            move_index: it.move_index,
+                            duration_sec: dur,
+                        }
+                        : null;
+                });
+            })
+        ).then(function (measured) {
+            var payloadItems = measured.filter(Boolean);
+            if (!payloadItems.length) return false;
+            return fetch('/api/match_analysis/audio/set_durations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    init_data: initData,
+                    id: state.matchId,
+                    items: payloadItems,
+                }),
+            })
+                .then(function (resp) {
+                    return resp.json().catch(function () { return {}; }).then(function (payload) {
+                        if (!resp.ok) {
+                            throw new Error(payload.detail || ('HTTP ' + resp.status));
+                        }
+                        return payload;
+                    });
+                })
+                .then(function (payload) {
+                    var byKey = {};
+                    payloadItems.forEach(function (it) {
+                        byKey[String(it.game_number) + ':' + String(it.move_index)] = it.duration_sec;
+                    });
+                    state.items.forEach(function (it) {
+                        var key = String(it.game_number) + ':' + String(it.move_index);
+                        if (byKey[key] != null) {
+                            it.duration_sec = byKey[key];
+                        }
+                    });
+                    var totals = totalsFromItems(state.items);
+                    if (payload && payload.audio_minutes != null) {
+                        totals.minutes = Math.floor(Number(payload.audio_minutes) || 0);
+                    }
+                    patchAudioTotals(state.matchId, totals.count, totals.minutes);
+                    return true;
+                })
+                .catch(function (err) {
+                    console.warn('audio duration backfill failed', err);
+                    return false;
+                });
+        });
     }
 
     function loadAudios() {
@@ -995,13 +1161,111 @@
                         : ('ID #' + String(state.matchId));
                 }
                 renderList();
-                patchAudioCount(state.matchId, state.items.length);
+                var totals = totalsFromItems(state.items);
+                if (payload.audio_minutes != null) {
+                    totals.minutes = Math.floor(Number(payload.audio_minutes) || 0);
+                }
+                patchAudioTotals(state.matchId, totals.count, totals.minutes);
+                return backfillMissingDurations(state.items);
             })
             .catch(function (err) {
                 console.error(err);
                 state.items = [];
                 renderList();
                 setListMsg('Ошибка загрузки: ' + (err.message || err), true);
+            });
+    }
+
+    function ensureMinutes(matchId) {
+        var idNum = Number(matchId);
+        if (!idNum) return Promise.resolve();
+        var initData = getInitData();
+        if (!initData) return Promise.resolve();
+        return fetch('/api/match_analysis/audio/list', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: initData, id: idNum }),
+        })
+            .then(function (resp) {
+                return resp.json().catch(function () { return {}; }).then(function (payload) {
+                    if (!resp.ok) {
+                        throw new Error(payload.detail || ('HTTP ' + resp.status));
+                    }
+                    return payload;
+                });
+            })
+            .then(function (payload) {
+                var items = Array.isArray(payload.items) ? payload.items.slice() : [];
+                var missing = items.filter(function (it) {
+                    var d = Number(it && it.duration_sec);
+                    return it && it.audio_s3_key && !(Number.isFinite(d) && d > 0);
+                });
+                var applyTotals = function () {
+                    var totals = totalsFromItems(items);
+                    if (payload.audio_minutes != null && !missing.length) {
+                        totals.minutes = Math.floor(Number(payload.audio_minutes) || 0);
+                    }
+                    patchAudioTotals(idNum, totals.count, totals.minutes);
+                };
+                if (!missing.length) {
+                    applyTotals();
+                    return;
+                }
+                return Promise.all(
+                    missing.map(function (it) {
+                        return measureMediaUrlDurationSec(it.audio_s3_key).then(function (dur) {
+                            return dur
+                                ? {
+                                    game_number: it.game_number,
+                                    move_index: it.move_index,
+                                    duration_sec: dur,
+                                }
+                                : null;
+                        });
+                    })
+                ).then(function (measured) {
+                    var payloadItems = measured.filter(Boolean);
+                    if (!payloadItems.length) {
+                        applyTotals();
+                        return;
+                    }
+                    return fetch('/api/match_analysis/audio/set_durations', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            init_data: initData,
+                            id: idNum,
+                            items: payloadItems,
+                        }),
+                    })
+                        .then(function (resp) {
+                            return resp.json().catch(function () { return {}; }).then(function (body) {
+                                if (!resp.ok) {
+                                    throw new Error(body.detail || ('HTTP ' + resp.status));
+                                }
+                                return body;
+                            });
+                        })
+                        .then(function (body) {
+                            var byKey = {};
+                            payloadItems.forEach(function (it) {
+                                byKey[String(it.game_number) + ':' + String(it.move_index)] =
+                                    it.duration_sec;
+                            });
+                            items.forEach(function (it) {
+                                var key = String(it.game_number) + ':' + String(it.move_index);
+                                if (byKey[key] != null) it.duration_sec = byKey[key];
+                            });
+                            var totals = totalsFromItems(items);
+                            if (body && body.audio_minutes != null) {
+                                totals.minutes = Math.floor(Number(body.audio_minutes) || 0);
+                            }
+                            patchAudioTotals(idNum, totals.count, totals.minutes);
+                        });
+                });
+            })
+            .catch(function (err) {
+                console.warn('ensureMinutes failed', err);
             });
     }
 
@@ -1065,32 +1329,44 @@
         if (editAttachBtn) editAttachBtn.disabled = true;
         if (editRecordBtn) editRecordBtn.disabled = true;
 
-        var fd = new FormData();
-        fd.append('init_data', initData);
-        fd.append('match_analysis_id', String(state.matchId));
-        fd.append('game_number', String(item.game_number));
-        fd.append('move_index', String(item.move_index));
-        fd.append('file', blob, filename || 'audio.webm');
+        return measureBlobDurationSec(blob).then(function (durationSec) {
+            var fd = new FormData();
+            fd.append('init_data', initData);
+            fd.append('match_analysis_id', String(state.matchId));
+            fd.append('game_number', String(item.game_number));
+            fd.append('move_index', String(item.move_index));
+            fd.append('file', blob, filename || 'audio.webm');
+            if (durationSec != null) {
+                fd.append('duration_sec', String(durationSec));
+            }
 
-        return fetch('/api/match_analysis/audio/upload', {
-            method: 'POST',
-            body: fd,
-        })
-            .then(function (resp) {
-                return resp.json().catch(function () { return {}; }).then(function (payload) {
-                    if (!resp.ok) {
-                        var detail = payload.detail || ('HTTP ' + resp.status);
-                        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+            return fetch('/api/match_analysis/audio/upload', {
+                method: 'POST',
+                body: fd,
+            })
+                .then(function (resp) {
+                    return resp.json().catch(function () { return {}; }).then(function (payload) {
+                        if (!resp.ok) {
+                            var detail = payload.detail || ('HTTP ' + resp.status);
+                            throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                        }
+                        return payload;
+                    });
+                })
+                .then(function (payload) {
+                    if (payload && payload.audio_minutes != null) {
+                        patchAudioTotals(
+                            state.matchId,
+                            payload.count != null ? payload.count : null,
+                            payload.audio_minutes
+                        );
                     }
-                    return payload;
+                    closeEditModal();
+                    return loadAudios().then(function () {
+                        showNotice('Аудио обновлено', 'Готово');
+                    });
                 });
-            })
-            .then(function () {
-                closeEditModal();
-                return loadAudios().then(function () {
-                    showNotice('Аудио обновлено', 'Готово');
-                });
-            })
+        })
             .catch(function (err) {
                 console.error(err);
                 setEditMsg('Ошибка: ' + (err.message || err), true);
@@ -1217,6 +1493,7 @@
     window.CardsCabinetMatchAudio = {
         open: openForMatch,
         close: closeListModal,
+        ensureMinutes: ensureMinutes,
     };
 })();
 </script>

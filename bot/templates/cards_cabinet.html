@@ -2910,14 +2910,18 @@
                     return showCabinetConfirm(message, title, options);
                 },
                 buildMatchAnalysisViewUrl: buildMatchAnalysisViewUrl,
-                onAudioCountChanged: function (matchId, count) {
+                onAudioCountChanged: function (matchId, count, minutes) {
                     var idNum = Number(matchId);
-                    var n = Number(count) || 0;
+                    var n = count == null || count === undefined ? null : (Number(count) || 0);
+                    var mins = minutes == null || minutes === undefined
+                        ? null
+                        : Math.max(0, Math.floor(Number(minutes) || 0));
                     function patch(list) {
                         if (!Array.isArray(list)) return;
                         list.forEach(function (row) {
                             if (Number(row && row.content_card_id) === idNum) {
-                                row.audio_count = n;
+                                if (n != null) row.audio_count = n;
+                                if (mins != null) row.audio_minutes = mins;
                             }
                         });
                     }
@@ -2926,11 +2930,17 @@
                     var btn = document.querySelector(
                         '.tile__audio[data-match-id="' + String(idNum) + '"]'
                     );
-                    if (btn) {
+                    if (btn && n != null) {
                         btn.classList.toggle('has-audio', n > 0);
                         btn.title = n > 0
                             ? ('Аудиофайлы (' + n + ')')
                             : 'Аудиофайлы анализа';
+                    }
+                    var minsEl = document.querySelector(
+                        '.tile__audio-minutes[data-match-id="' + String(idNum) + '"]'
+                    );
+                    if (minsEl && mins != null) {
+                        minsEl.textContent = String(mins);
                     }
                 },
             };
@@ -5238,6 +5248,10 @@
                             audioBtn.className = 'tile__audio';
                             audioBtn.setAttribute('data-match-id', String(cardIdNum));
                             var audioCount = Number(row && row.audio_count) || 0;
+                            var audioMinutes = Math.max(
+                                0,
+                                Math.floor(Number(row && row.audio_minutes) || 0)
+                            );
                             if (audioCount > 0) {
                                 audioBtn.classList.add('has-audio');
                             }
@@ -5256,9 +5270,14 @@
                                     window.CardsCabinetMatchAudio.open(cardIdNum, fullTitle);
                                 }
                             });
+                            var audioMinutesEl = document.createElement('span');
+                            audioMinutesEl.className = 'tile__audio-minutes';
+                            audioMinutesEl.setAttribute('data-match-id', String(cardIdNum));
+                            audioMinutesEl.textContent = String(audioMinutes);
                             tileWrap.appendChild(editBtn);
                             tileWrap.appendChild(btn);
                             tileWrap.appendChild(readyBtn);
+                            tileWrap.appendChild(audioMinutesEl);
                             tileWrap.appendChild(audioBtn);
                             tileWrap.appendChild(delBtn);
                             gridEl.appendChild(tileWrap);
@@ -6099,6 +6118,20 @@
                         updateSelectionUi();
                     }
                     renderCards();
+                    if (
+                        IS_MATCH_ANALYSIS &&
+                        isRootAdminUser &&
+                        window.CardsCabinetMatchAudio &&
+                        typeof window.CardsCabinetMatchAudio.ensureMinutes === 'function'
+                    ) {
+                        allCards.forEach(function (row) {
+                            var count = Number(row && row.audio_count) || 0;
+                            var secs = Number(row && row.audio_seconds) || 0;
+                            if (count > 0 && secs <= 0) {
+                                window.CardsCabinetMatchAudio.ensureMinutes(row.content_card_id);
+                            }
+                        });
+                    }
                 }
 
                 function reloadCabinet() {

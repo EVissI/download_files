@@ -6,7 +6,9 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import math
 import mimetypes
+import struct
 import uuid
 from typing import Any, Optional
 
@@ -69,6 +71,18 @@ class MatchAnalysisAudioDeleteBody(BaseModel):
     game_number: int
     move_index: int
     delete_s3: bool = True
+
+
+class MatchAnalysisAudioDurationItem(BaseModel):
+    game_number: int
+    move_index: int
+    duration_sec: float = Field(..., ge=0)
+
+
+class MatchAnalysisAudioSetDurationsBody(BaseModel):
+    init_data: str
+    id: int
+    items: list[MatchAnalysisAudioDurationItem] = Field(default_factory=list)
 
 
 class MatchAnalysisAssignBody(BaseModel):
@@ -273,10 +287,15 @@ def _serialize_list_item(row) -> dict[str, Any]:
     gi = (row.analysis or {}).get("game_info") or {}
     games = (row.analysis or {}).get("games") or []
     audio_count = 0
+    audio_seconds = 0.0
     for g in games:
         for m in g.get("moves") or []:
-            if isinstance(m, dict) and m.get("audioS3Key"):
-                audio_count += 1
+            if not isinstance(m, dict) or not m.get("audioS3Key"):
+                continue
+            audio_count += 1
+            dur = _coerce_duration_sec(m.get("audioDurationSec"))
+            if dur is not None:
+                audio_seconds += dur
     return {
         "id": row.id,
         "content_card_id": row.id,  # совместимость с тайлами cards_cabinet
@@ -292,6 +311,8 @@ def _serialize_list_item(row) -> dict[str, Any]:
         "match_length": gi.get("match_length"),
         "games_count": len(games),
         "audio_count": audio_count,
+        "audio_seconds": audio_seconds,
+        "audio_minutes": int(audio_seconds // 60),
     }
 
 
@@ -443,6 +464,99 @@ async def match_analysis_fetch(body: MatchAnalysisIdBody):
         }
 
 
+def _coerce_duration_sec(value: Any) -> float | None:
+    try:
+        dur = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(dur) or dur < 0:
+        return None
+    return dur
+
+
+def _read_ebml_vint(data: bytes, offset: int) -> tuple[int, int] | None:
+    if offset < 0 or offset >= len(data):
+        return None
+    first = data[offset]
+    if first == 0:
+        return None
+    width = 1
+    mask = 0x80
+    while width <= 8 and not (first & mask):
+        width += 1
+        mask >>= 1
+    if width > 8 or offset + width > len(data):
+        return None
+    value = first & (mask - 1)
+    for i in range(1, width):
+        value = (value << 8) | data[offset + i]
+    return value, width
+
+
+def _probe_webm_duration_sec(data: bytes) -> float | None:
+    """Достаёт Duration из WebM/EBML Info (если есть)."""
+    if not data or b"webm" not in data[:64].lower() and b"matroska" not in data[:64].lower():
+        # всё равно ищем маркер Duration — часть рекордеров пишет без явного DocType в начале буфера
+        pass
+    needle = b"\x44\x89"
+    start = 0
+    while True:
+        idx = data.find(needle, start)
+        if idx < 0 or idx + 2 >= len(data):
+            return None
+        parsed = _read_ebml_vint(data, idx + 2)
+        if not parsed:
+            start = idx + 2
+            continue
+        size, size_width = parsed
+        value_offset = idx + 2 + size_width
+        if size not in (4, 8) or value_offset + size > len(data):
+            start = idx + 2
+            continue
+        chunk = data[value_offset : value_offset + size]
+        try:
+            if size == 4:
+                millis = float(struct.unpack(">f", chunk)[0])
+            else:
+                millis = float(struct.unpack(">d", chunk)[0])
+        except struct.error:
+            start = idx + 2
+            continue
+        # В WebM Duration обычно в таймкоде сегмента; часто это миллисекунды.
+        if not math.isfinite(millis) or millis <= 0:
+            start = idx + 2
+            continue
+        sec = millis / 1000.0 if millis > 1000 else millis
+        # эвристика: значения > 1000 скорее всего мс; 0.5..1000 — уже секунды
+        if millis > 1000:
+            sec = millis / 1000.0
+        else:
+            sec = millis
+        if 0.05 <= sec <= 6 * 3600:
+            return sec
+        start = idx + 2
+
+
+def _probe_audio_duration_sec(raw: bytes) -> float | None:
+    if not raw:
+        return None
+    return _probe_webm_duration_sec(raw)
+
+
+def _audio_totals(analysis: dict[str, Any] | None) -> tuple[int, float, int]:
+    count = 0
+    seconds = 0.0
+    for game in (analysis or {}).get("games") or []:
+        for move in game.get("moves") or []:
+            if not isinstance(move, dict) or not move.get("audioS3Key"):
+                continue
+            count += 1
+            dur = _coerce_duration_sec(move.get("audioDurationSec"))
+            if dur is not None:
+                seconds += dur
+    return count, seconds, int(seconds // 60)
+
+
 def _starting_board_positions(invert_colors: bool) -> tuple[dict[str, Any], dict[str, Any]]:
     if invert_colors:
         return (
@@ -529,6 +643,7 @@ def _collect_match_analysis_audios(analysis: dict[str, Any] | None) -> list[dict
                     "move_index": move_index,
                     "audio_s3_key": s3_key,
                     "audio_name": move.get("audioName") or s3_key.split("/")[-1] or "аудио",
+                    "duration_sec": _coerce_duration_sec(move.get("audioDurationSec")),
                     "turn": move.get("turn"),
                     "player": move.get("player"),
                     "player_name": move.get("player_name"),
@@ -550,7 +665,52 @@ async def match_analysis_audio_list(body: MatchAnalysisIdBody):
         if not row:
             raise HTTPException(status_code=404, detail="Анализ не найден")
         items = _collect_match_analysis_audios(row.analysis)
-    return {"id": body.id, "items": items, "count": len(items)}
+        _count, audio_seconds, audio_minutes = _audio_totals(row.analysis)
+    return {
+        "id": body.id,
+        "items": items,
+        "count": len(items),
+        "audio_seconds": audio_seconds,
+        "audio_minutes": audio_minutes,
+    }
+
+
+@match_analysis_api_router.post("/api/match_analysis/audio/set_durations")
+async def match_analysis_audio_set_durations(body: MatchAnalysisAudioSetDurationsBody):
+    """Сохраняет длительности аудио для ходов (дозаполнение со стороны клиента)."""
+    _resolve_admin_user_id(body.init_data)
+    if not body.items:
+        raise HTTPException(status_code=400, detail="Пустой список durations")
+    async with async_session_maker() as session:
+        dao = MatchAnalysisDAO(session)
+        row = await dao.find_one_or_none_by_id(body.id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Анализ не найден")
+        analysis = copy.deepcopy(row.analysis or {})
+        updated = 0
+        for item in body.items:
+            dur = _coerce_duration_sec(item.duration_sec)
+            if dur is None:
+                continue
+            try:
+                _, move = _find_game_and_move(analysis, item.game_number, item.move_index)
+            except HTTPException:
+                continue
+            if not move.get("audioS3Key"):
+                continue
+            move["audioDurationSec"] = round(dur, 3)
+            updated += 1
+        if updated:
+            row.analysis = analysis
+            flag_modified(row, "analysis")
+            await session.commit()
+        _count, audio_seconds, audio_minutes = _audio_totals(row.analysis)
+    return {
+        "ok": True,
+        "updated": updated,
+        "audio_seconds": audio_seconds,
+        "audio_minutes": audio_minutes,
+    }
 
 
 @match_analysis_api_router.post("/api/match_analysis/update_meta")
@@ -721,6 +881,7 @@ async def match_analysis_audio_upload(
     game_number: int = Form(...),
     move_index: int = Form(...),
     file: UploadFile = File(...),
+    duration_sec: Optional[float] = Form(None),
 ):
     uid = _resolve_admin_user_id(init_data)
     raw = await file.read()
@@ -740,6 +901,9 @@ async def match_analysis_audio_upload(
     s3.upload_bytes(key, raw, content_type=ct)
 
     audio_name = (file.filename or unique_name)[:255]
+    measured = _coerce_duration_sec(duration_sec)
+    if measured is None:
+        measured = await asyncio.to_thread(_probe_audio_duration_sec, raw)
 
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
@@ -751,9 +915,14 @@ async def match_analysis_audio_upload(
         old_key = move.get("audioS3Key")
         move["audioS3Key"] = key
         move["audioName"] = audio_name
+        if measured is not None:
+            move["audioDurationSec"] = round(measured, 3)
+        else:
+            move.pop("audioDurationSec", None)
         row.analysis = analysis
         flag_modified(row, "analysis")
         await session.commit()
+        _count, audio_seconds, audio_minutes = _audio_totals(analysis)
 
     if old_key and old_key != key and HintS3Storage.is_match_analysis_media_key(old_key):
         try:
@@ -763,7 +932,7 @@ async def match_analysis_audio_upload(
 
     logger.info(
         f"Match analysis audio uploaded: ma={match_analysis_id} "
-        f"g={game_number} m={move_index} key={key} user={uid}"
+        f"g={game_number} m={move_index} key={key} user={uid} dur={measured}"
     )
     return {
         "s3_key": key,
@@ -771,6 +940,9 @@ async def match_analysis_audio_upload(
         "content_type": ct,
         "game_number": game_number,
         "move_index": move_index,
+        "duration_sec": measured,
+        "audio_seconds": audio_seconds,
+        "audio_minutes": audio_minutes,
     }
 
 
@@ -788,9 +960,11 @@ async def match_analysis_audio_delete(body: MatchAnalysisAudioDeleteBody):
         old_key = move.get("audioS3Key")
         move["audioS3Key"] = None
         move["audioName"] = None
+        move.pop("audioDurationSec", None)
         row.analysis = analysis
         flag_modified(row, "analysis")
         await session.commit()
+        _count, audio_seconds, audio_minutes = _audio_totals(analysis)
 
     if body.delete_s3 and old_key and HintS3Storage.is_match_analysis_media_key(old_key):
         try:
@@ -798,7 +972,13 @@ async def match_analysis_audio_delete(body: MatchAnalysisAudioDeleteBody):
         except Exception as e:
             logger.warning(f"Failed to delete match analysis audio {old_key}: {e}")
 
-    return {"ok": True, "game_number": body.game_number, "move_index": body.move_index}
+    return {
+        "ok": True,
+        "game_number": body.game_number,
+        "move_index": body.move_index,
+        "audio_seconds": audio_seconds,
+        "audio_minutes": audio_minutes,
+    }
 
 
 @match_analysis_api_router.get("/api/match_analysis/media")

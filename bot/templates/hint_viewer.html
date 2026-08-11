@@ -5237,13 +5237,16 @@
         }
 
         const postMatchAnalysisAudioUpload = withFetchRetry({ retries: 3, delayMs: 700, factor: 2 })(
-            async function postMatchAnalysisAudioUpload(blob, filename, initData, meta) {
+            async function postMatchAnalysisAudioUpload(blob, filename, initData, meta, durationSec) {
                 const fd = new FormData();
                 fd.append('init_data', initData);
                 fd.append('match_analysis_id', String(matchAnalysisId));
                 fd.append('game_number', String(currentGameNum));
                 fd.append('move_index', String(meta.moveIndex));
                 fd.append('file', blob, filename);
+                if (durationSec != null && Number.isFinite(durationSec) && durationSec > 0) {
+                    fd.append('duration_sec', String(durationSec));
+                }
                 const resp = await fetch('/api/match_analysis/audio/upload', {
                     method: 'POST',
                     body: fd,
@@ -5259,6 +5262,39 @@
             }
         );
 
+        function measureMatchAnalysisBlobDurationSec(blob) {
+            return new Promise((resolve) => {
+                if (!blob) {
+                    resolve(null);
+                    return;
+                }
+                let url = '';
+                try {
+                    url = URL.createObjectURL(blob);
+                } catch (e) {
+                    resolve(null);
+                    return;
+                }
+                const audio = new Audio();
+                let done = false;
+                const finish = (value) => {
+                    if (done) return;
+                    done = true;
+                    try { URL.revokeObjectURL(url); } catch (e2) { /* ignore */ }
+                    resolve(value);
+                };
+                audio.preload = 'metadata';
+                audio.onloadedmetadata = () => {
+                    const d = Number(audio.duration);
+                    if (Number.isFinite(d) && d > 0 && d !== Infinity) finish(d);
+                    else finish(null);
+                };
+                audio.onerror = () => finish(null);
+                setTimeout(() => finish(null), 8000);
+                audio.src = url;
+            });
+        }
+
         async function uploadMatchAnalysisAudioBlob(blob, filename) {
             const initData = getTelegramInitData();
             const meta = getCurrentMoveAudioMeta();
@@ -5271,13 +5307,23 @@
                 return;
             }
             try {
-                const payload = await postMatchAnalysisAudioUpload(blob, filename, initData, meta);
+                const durationSec = await measureMatchAnalysisBlobDurationSec(blob);
+                const payload = await postMatchAnalysisAudioUpload(
+                    blob,
+                    filename,
+                    initData,
+                    meta,
+                    durationSec
+                );
                 syncMoveAudioInDoc(
                     currentGameNum,
                     meta.moveIndex,
                     payload.s3_key,
                     payload.audio_name
                 );
+                if (payload.duration_sec != null && data && data[current]) {
+                    data[current].audioDurationSec = payload.duration_sec;
+                }
                 updateMatchAnalysisAudioUi();
                 showMessageModal('Аудио прикреплено', 'info');
             } catch (e) {
