@@ -251,6 +251,10 @@
         display: block;
     }
 
+    .ma-audio-modal__board-stage {
+        position: relative;
+    }
+
     .ma-audio-modal__board-canvas {
         display: block;
         width: 100%;
@@ -259,6 +263,47 @@
         border-radius: 8px;
         background: #111;
         border: 1px solid #333;
+    }
+
+    .ma-audio-modal__pips {
+        padding: 3px 6px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        line-height: 1.2;
+        width: fit-content;
+        margin-left: auto;
+    }
+
+    .ma-audio-modal__pips--above {
+        background-color: #000000;
+        color: #ffffff;
+        margin: 0 0 4px auto;
+    }
+
+    .ma-audio-modal__pips--below {
+        background-color: #ffffff;
+        color: #000000;
+        position: absolute;
+        right: 0;
+        top: 0;
+        margin: 0;
+    }
+
+    .ma-audio-modal__pips--above.ma-audio-modal__pips--inverted {
+        background-color: #ffffff;
+        color: #000000;
+    }
+
+    .ma-audio-modal__pips--below.ma-audio-modal__pips--inverted {
+        background-color: #000000;
+        color: #ffffff;
+    }
+
+    .ma-audio-modal__board-footer {
+        position: relative;
+        min-height: 1.4em;
+        margin-top: 4px;
     }
 
     .ma-audio-modal__board-empty {
@@ -609,6 +654,55 @@
         }
     }
 
+    function calculatePips(positions, player, invertColors) {
+        var totalPips = 0;
+        if (!positions) return 0;
+        Object.keys(positions).forEach(function (pointStr) {
+            if (pointStr === 'bar') {
+                totalPips += Math.abs(positions[pointStr]) * 25;
+                return;
+            }
+            if (pointStr === 'off') return;
+            var point = parseInt(pointStr, 10);
+            if (!Number.isFinite(point)) return;
+            var count = Number(positions[pointStr]) || 0;
+            var effectivePoint = point;
+            if (invertColors) {
+                if (player === 'red') {
+                    effectivePoint = 25 - point;
+                } else if (player === 'black') {
+                    effectivePoint = point;
+                }
+            } else if (player === 'black') {
+                effectivePoint = 25 - point;
+            } else {
+                effectivePoint = point;
+            }
+            totalPips += count * effectivePoint;
+        });
+        return totalPips;
+    }
+
+    function applyPipsLabels(board, topEl, bottomEl) {
+        if (!board || !topEl || !bottomEl) return;
+        var invertColors = !!board.invert_colors;
+        var positions = board.positions || {};
+        var redPips = calculatePips(positions.red || {}, 'red', invertColors);
+        var blackPips = calculatePips(positions.black || {}, 'black', invertColors);
+        if (invertColors) {
+            // Как в hint_viewer: сверху красные, снизу чёрные; стили инвертированы.
+            topEl.textContent = String(redPips);
+            bottomEl.textContent = String(blackPips);
+            topEl.className = 'ma-audio-modal__pips ma-audio-modal__pips--above ma-audio-modal__pips--inverted';
+            bottomEl.className = 'ma-audio-modal__pips ma-audio-modal__pips--below ma-audio-modal__pips--inverted';
+        } else {
+            topEl.textContent = String(blackPips);
+            bottomEl.textContent = String(redPips);
+            topEl.className = 'ma-audio-modal__pips ma-audio-modal__pips--above';
+            bottomEl.className = 'ma-audio-modal__pips ma-audio-modal__pips--below';
+        }
+    }
+
     function paintMiniBoard(canvas, board, imgs) {
         if (!canvas || !board || !imgs || !imgs.board) return false;
         var ctx = canvas.getContext('2d');
@@ -840,21 +934,40 @@
         var wrap = li.querySelector('.ma-audio-modal__board-wrap');
         if (!wrap) return;
         wrap.innerHTML = '';
-        var canvas = document.createElement('canvas');
-        canvas.width = 800;
-        canvas.height = 800;
-        canvas.className = 'ma-audio-modal__board-canvas';
-        canvas.setAttribute('aria-label', 'Доска хода');
-        wrap.appendChild(canvas);
 
         if (!item.board || !item.board.positions) {
-            wrap.innerHTML = '';
             var empty = document.createElement('p');
             empty.className = 'ma-audio-modal__board-empty';
             empty.textContent = 'Нет данных доски для этого хода';
             wrap.appendChild(empty);
             return;
         }
+
+        var topPips = document.createElement('div');
+        topPips.className = 'ma-audio-modal__pips ma-audio-modal__pips--above';
+        topPips.textContent = '0';
+
+        var stage = document.createElement('div');
+        stage.className = 'ma-audio-modal__board-stage';
+
+        var canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 800;
+        canvas.className = 'ma-audio-modal__board-canvas';
+        canvas.setAttribute('aria-label', 'Доска хода');
+        stage.appendChild(canvas);
+
+        var footer = document.createElement('div');
+        footer.className = 'ma-audio-modal__board-footer';
+        var bottomPips = document.createElement('div');
+        bottomPips.className = 'ma-audio-modal__pips ma-audio-modal__pips--below';
+        bottomPips.textContent = '0';
+        footer.appendChild(bottomPips);
+
+        wrap.appendChild(topPips);
+        wrap.appendChild(stage);
+        wrap.appendChild(footer);
+        applyPipsLabels(item.board, topPips, bottomPips);
 
         loadBoardAssets().then(function (imgs) {
             if (state.expandedKey !== itemKey(item)) return;
