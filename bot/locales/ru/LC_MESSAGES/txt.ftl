@@ -146,7 +146,7 @@ auto-analyze-no_pdf = Хорошо, PDF не будет отправлен. Сп
 
 pro-analysis-ask = Нужен разбор от эксперта?
 pro-analysis-order_button = Заказать анализ у эксперта
-pro-analysis-order_sent = ✅ Заявка отправлена эксперту. Администратор ответит вам в этом чате.
+pro-analysis-order_sent = ✅ Заявка отправлена эксперту, ответ будет в этом чате.
 pro-analysis-order_not_found = Заявка не найдена
 pro-analysis-order_expired = Заявка устарела или уже отправлена
 pro-analysis-order_not_yours = Это не ваша заявка
@@ -154,6 +154,9 @@ pro-analysis-order_sending = Отправляем админам…
 pro-analysis-order_file_missing = ❌ Файл матча больше недоступен. Повторите анализ и закажите снова.
 pro-analysis-order_send_failed = ❌ Не удалось отправить заказ админам. Попробуйте позже.
 pro-analysis-admin_reply = Ответить
+pro-analysis-admin_send_to_analysis = Отправить на анализ
+pro-analysis-admin_no_document = ❌ В сообщении нет файла матча
+pro-analysis-admin_analyze_forbidden = Только для администраторов
 pro-analysis-admin_caption = 📩 <b>Заказ анализа у эксперта</b>
     Сервис: { $service }
     TG ID: <code>{ $user_id }</code>

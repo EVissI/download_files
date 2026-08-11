@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 
 PRO_ORDER_CALLBACK_PREFIX = "pro_order:"
+PRO_ANALYZE_CALLBACK_PREFIX = "pro_analyze:"
 
 
 def get_pro_analysis_order_kb(
@@ -24,16 +25,23 @@ def get_pro_analysis_order_kb(
 
 
 def get_pro_analysis_admin_reply_kb(
-    user_id: int, i18n: "TranslatorRunner"
+    user_id: int,
+    i18n: "TranslatorRunner",
+    *,
+    with_analyze: bool = True,
 ) -> InlineKeyboardMarkup:
-    """Кнопка «Ответить» для админа (FSM в support_reply_router)."""
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text=i18n.pro.analysis.admin_reply(),
-                    callback_data=f"admin_reply:{user_id}",
-                )
-            ]
-        ]
-    )
+    """Кнопки админа: «Ответить» и опционально «Отправить на анализ»."""
+    row = [
+        InlineKeyboardButton(
+            text=i18n.pro.analysis.admin_reply(),
+            callback_data=f"admin_reply:{user_id}",
+        )
+    ]
+    if with_analyze:
+        row.append(
+            InlineKeyboardButton(
+                text=i18n.pro.analysis.admin_send_to_analysis(),
+                callback_data=f"{PRO_ANALYZE_CALLBACK_PREFIX}{user_id}",
+            )
+        )
+    return InlineKeyboardMarkup(inline_keyboard=[row])

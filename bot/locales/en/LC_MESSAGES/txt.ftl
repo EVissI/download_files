@@ -142,7 +142,7 @@ auto-analyze-no_pdf = Okay, PDF will not be sent. Thank you for using the bot!
 
 pro-analysis-ask = Need a review from an expert?
 pro-analysis-order_button = Order expert analysis
-pro-analysis-order_sent = ✅ Request sent to an expert. An admin will reply in this chat.
+pro-analysis-order_sent = ✅ Request sent to an expert, the reply will be in this chat.
 pro-analysis-order_not_found = Request not found
 pro-analysis-order_expired = Request expired or already submitted
 pro-analysis-order_not_yours = This is not your request
@@ -150,6 +150,9 @@ pro-analysis-order_sending = Sending to admins…
 pro-analysis-order_file_missing = ❌ Match file is no longer available. Please analyze again and order once more.
 pro-analysis-order_send_failed = ❌ Could not send the request to admins. Please try again later.
 pro-analysis-admin_reply = Reply
+pro-analysis-admin_send_to_analysis = Send for analysis
+pro-analysis-admin_no_document = ❌ No match file in this message
+pro-analysis-admin_analyze_forbidden = Admins only
 pro-analysis-admin_caption = 📩 <b>Expert analysis order</b>
     Service: { $service }
     TG ID: <code>{ $user_id }</code>

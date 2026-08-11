@@ -1,4 +1,8 @@
+import os
+import uuid
+
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from fluentogram import TranslatorRunner
 from loguru import logger
@@ -10,10 +14,22 @@ from bot.common.func.pro_analysis_order import (
     fulfill_pro_order,
     load_pro_order,
 )
-from bot.common.kbds.inline.pro_analysis import PRO_ORDER_CALLBACK_PREFIX
+from bot.common.kbds.inline.pro_analysis import (
+    PRO_ANALYZE_CALLBACK_PREFIX,
+    PRO_ORDER_CALLBACK_PREFIX,
+    get_pro_analysis_admin_reply_kb,
+)
+from bot.config import settings
 from bot.db.models import User
 
 pro_analysis_order_router = Router()
+
+
+def _is_pro_admin(user_info: User) -> bool:
+    return (
+        getattr(user_info, "role", None) == User.Role.ADMIN.value
+        or int(user_info.id) in (settings.ROOT_ADMIN_IDS or [])
+    )
 
 
 @pro_analysis_order_router.callback_query(
@@ -64,3 +80,80 @@ async def handle_pro_analysis_order(
         pass
 
     await callback.message.answer(i18n.pro.analysis.order_sent())
+
+
+@pro_analysis_order_router.callback_query(
+    F.data.startswith(PRO_ANALYZE_CALLBACK_PREFIX), UserInfo()
+)
+async def handle_pro_admin_send_to_analysis(
+    callback: CallbackQuery,
+    user_info: User,
+    state: FSMContext,
+    session_without_commit: AsyncSession,
+    i18n: TranslatorRunner,
+):
+    """Админ запускает hint_viewer для .mat из заказа эксперту."""
+    if not _is_pro_admin(user_info):
+        await callback.answer(
+            i18n.pro.analysis.admin_analyze_forbidden(), show_alert=True
+        )
+        return
+
+    raw_user_id = (callback.data or "")[len(PRO_ANALYZE_CALLBACK_PREFIX) :].strip()
+    try:
+        order_user_id = int(raw_user_id)
+    except ValueError:
+        order_user_id = 0
+
+    doc = callback.message.document if callback.message else None
+    if not doc:
+        await callback.answer(
+            i18n.pro.analysis.admin_no_document(), show_alert=True
+        )
+        return
+
+    await callback.answer()
+
+    from bot.routers.hint_viewer_router import start_hint_viewer_from_local_mat
+
+    os.makedirs("files", exist_ok=True)
+    fname = doc.file_name or "match.mat"
+    if not str(fname).lower().endswith(".mat"):
+        fname = f"{fname}.mat"
+    local_mat = os.path.join(
+        "files", f"pro_{callback.from_user.id}_{uuid.uuid4().hex[:8]}_{fname}"
+    )
+
+    try:
+        file = await callback.bot.get_file(doc.file_id)
+        with open(local_mat, "wb") as f:
+            await callback.bot.download_file(file.file_path, f)
+
+        job_id = await start_hint_viewer_from_local_mat(
+            local_mat=local_mat,
+            chat_id=callback.message.chat.id,
+            user_info=user_info,
+            state=state,
+            session_without_commit=session_without_commit,
+            i18n=i18n,
+            bot_instance=callback.bot,
+            username=callback.from_user.username,
+        )
+        if job_id and order_user_id:
+            try:
+                await callback.message.edit_reply_markup(
+                    reply_markup=get_pro_analysis_admin_reply_kb(
+                        order_user_id, i18n, with_analyze=False
+                    )
+                )
+            except Exception:
+                pass
+    except Exception as e:
+        logger.exception(f"Pro admin hint analyze failed: {e}")
+        await callback.message.answer(f"❌ Ошибка при запуске анализа: {e}")
+    finally:
+        if os.path.isfile(local_mat):
+            try:
+                os.remove(local_mat)
+            except OSError:
+                pass

@@ -120,6 +120,148 @@ class HintViewerStates(StatesGroup):
     stats_player_selection = State()
 
 
+class _HintStatusMessage:
+    """Сообщения статуса hint_viewer в произвольный chat_id (не исходный Message)."""
+
+    def __init__(self, chat_id: int, bot, user_id: int, username: str | None = None):
+        self.chat = type("obj", (object,), {"id": chat_id})()
+        self.bot = bot
+        self.from_user = type(
+            "obj", (object,), {"id": user_id, "username": username}
+        )()
+        self._chat_id = chat_id
+
+    async def answer(self, text, **kwargs):
+        return await self.bot.send_message(chat_id=self._chat_id, text=text, **kwargs)
+
+    async def reply(self, text, **kwargs):
+        return await self.bot.send_message(chat_id=self._chat_id, text=text, **kwargs)
+
+
+async def start_hint_viewer_from_local_mat(
+    *,
+    local_mat: str,
+    chat_id: int,
+    user_info: User,
+    state: FSMContext,
+    session_without_commit: AsyncSession,
+    i18n: "TranslatorRunner",
+    bot_instance=None,
+    username: str | None = None,
+) -> str | None:
+    """
+    Ставит локальный .mat в очередь hint_viewer (как при ручной загрузке).
+    Возвращает job_id или None, если у пользователя уже есть активная задача.
+    """
+    message_dao = MessagesTextsDAO(session_without_commit)
+    tg_bot = bot_instance or bot
+    user_id = int(user_info.id)
+
+    if not can_enqueue_job(user_id):
+        await tg_bot.send_message(
+            chat_id,
+            await message_dao.get_text(
+                "hint_viewer_sin_active_job_err", user_info.lang_code
+            ),
+        )
+        return None
+
+    game_id = random_filename(ext="")
+    job_id = f"hint_{user_id}_{uuid.uuid4().hex[:8]}"
+
+    with open(local_mat, "r", encoding="utf-8") as f:
+        content = f.read()
+    red_player, black_player = extract_player_names(content)
+    estimated_time = estimate_processing_time(local_mat)
+
+    def _put_mat():
+        return HintS3Storage.from_settings().put_source_mat(game_id, local_mat)
+
+    mat_s3_key = await asyncio.to_thread(_put_mat)
+
+    job = task_queue.enqueue(
+        "bot.workers.hint_worker.analyze_backgammon_job",
+        game_id,
+        str(user_id),
+        job_id=job_id,
+    )
+    actual_job_id = job.id if getattr(job, "id", None) else job_id
+
+    await redis_client.set(f"mat_path:{game_id}", mat_s3_key, expire=86400)
+    add_active_job(user_id, actual_job_id)
+    await redis_client.set(
+        f"job_info:{actual_job_id}",
+        json.dumps(
+            {
+                "game_id": game_id,
+                "mat_s3_key": mat_s3_key,
+                "red_player": red_player,
+                "black_player": black_player,
+                "user_id": user_id,
+            }
+        ),
+        expire=3600,
+    )
+
+    queue_warning = await get_queue_position_message(
+        redis_rq,
+        ["backgammon_analysis", "backgammon_batch_analysis"],
+        session_without_commit,
+        user_info,
+    )
+    if queue_warning:
+        user_dao = UserDAO(session_without_commit)
+        admins_list = await user_dao.find_all(filters=SUser(role=User.Role.ADMIN.value))
+        for admin in admins_list or []:
+            try:
+                await tg_bot.send_message(
+                    chat_id=admin.id,
+                    text=(
+                        "Пользователь в очереди на анализ ошибок. "
+                        f"Его сообщение:{queue_warning}\n"
+                    ),
+                )
+            except Exception as e:
+                logger.error(
+                    f"Не удалось отправить уведомление админу {admin.id}: {e}"
+                )
+        await tg_bot.send_message(chat_id, queue_warning)
+
+    status_text = await message_dao.get_text(
+        "hint_viewer_sin_file_accepted",
+        user_info.lang_code,
+        estimated_time=estimated_time,
+    )
+    await tg_bot.send_message(chat_id, status_text, parse_mode="Markdown")
+
+    await state.set_state(HintViewerStates.waiting_file)
+    await state.update_data(
+        job_id=actual_job_id,
+        game_id=game_id,
+        mat_s3_key=mat_s3_key,
+        red_player=red_player,
+        black_player=black_player,
+    )
+
+    status_message = _HintStatusMessage(
+        chat_id,
+        tg_bot,
+        user_id,
+        username=username or getattr(user_info, "username", None),
+    )
+    asyncio.create_task(
+        check_job_status(
+            status_message,
+            actual_job_id,
+            state,
+            i18n,
+            session_without_commit,
+            user_info,
+        )
+    )
+    return actual_job_id
+
+
 def load_analysis_json_from_s3(game_id: str, game_num: str | None = None):
     """Синхронно: читает JSON анализа из S3 (для asyncio.to_thread)."""
     s3 = HintS3Storage.from_settings()
