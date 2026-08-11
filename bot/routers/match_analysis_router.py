@@ -10,6 +10,7 @@ import json
 import math
 import mimetypes
 import re
+import secrets
 import shutil
 import struct
 import subprocess
@@ -23,7 +24,7 @@ from urllib.parse import quote
 from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -37,6 +38,7 @@ from bot.config import bot, settings
 from bot.db.dao import MatchAnalysisActivationLinkDAO, MatchAnalysisDAO
 from bot.db.database import async_session_maker
 from bot.db.models import MatchAnalysis, User, UserMatchAnalysis
+from bot.db.redis import redis_client
 from bot.db.schemas import SMatchAnalysisCreate
 from bot.routers.hint_viewer_router import load_analysis_json_from_s3
 
@@ -47,6 +49,8 @@ from bot.common.utils.static_assets import get_static_asset_version as _get_stat
 templates.env.globals["cache_timestamp"] = _get_static_v()
 
 MA_MEDIA_MAX_BYTES = 30 * 1024 * 1024
+MA_TMP_DL_PREFIX = "match_analysis/tmp_dl/"
+MA_TMP_DL_TTL_SEC = 300
 
 
 class MatchAnalysisInitBody(BaseModel):
@@ -843,6 +847,32 @@ def _content_disposition_attachment(filename: str) -> str:
     return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name, safe='')}"
 
 
+async def _issue_tmp_download_link(
+    blob: bytes,
+    filename: str,
+    content_type: str,
+) -> dict[str, str]:
+    """
+    Кладёт файл во временный ключ S3 и возвращает URL для Telegram.WebApp.downloadFile.
+    """
+    token = secrets.token_urlsafe(24)
+    suffix = Path(filename).suffix.lower() or ""
+    if suffix not in (".zip", ".mp3", ".webm", ".ogg", ".wav"):
+        suffix = ".bin"
+    key = f"{MA_TMP_DL_PREFIX}{token}{suffix}"
+    s3 = HintS3Storage.from_settings()
+    await asyncio.to_thread(s3.upload_bytes, key, blob, content_type)
+    payload = json.dumps(
+        {"key": key, "file_name": filename, "content_type": content_type},
+        ensure_ascii=False,
+    )
+    await redis_client.set(f"ma_audio_dl:{token}", payload, expire=MA_TMP_DL_TTL_SEC)
+    return {
+        "url": f"/api/match_analysis/audio/file?token={token}",
+        "file_name": filename,
+    }
+
+
 def _audio_filename_match_key(name: str | None) -> str:
     """Ключ полного соответствия имени: basename без расширения, lower-case."""
     base = Path(str(name or "").replace("\\", "/").split("/")[-1]).name
@@ -951,7 +981,8 @@ async def match_analysis_audio_list(body: MatchAnalysisIdBody):
 @match_analysis_api_router.post("/api/match_analysis/audio/import_mp3_zip")
 async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
     """
-    «Импорт» в UI: конвертирует все аудио анализа в mp3, кладёт в zip и отдаёт на скачивание.
+    «Импорт» в UI: конвертирует все аудио анализа в mp3, кладёт в zip
+    и возвращает временную ссылку для Telegram.WebApp.downloadFile.
     """
     _resolve_admin_user_id(body.init_data)
     async with async_session_maker() as session:
@@ -965,19 +996,12 @@ async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
     zip_bytes = await asyncio.to_thread(_build_mp3_zip_for_analysis, analysis)
     safe_title = _safe_audio_stem(title) or f"match_{body.id}"
     filename = f"{safe_title}_audio_mp3.zip"
-    return StreamingResponse(
-        io.BytesIO(zip_bytes),
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": _content_disposition_attachment(filename),
-            "Cache-Control": "no-store",
-        },
-    )
+    return await _issue_tmp_download_link(zip_bytes, filename, "application/zip")
 
 
 @match_analysis_api_router.post("/api/match_analysis/audio/download_mp3")
 async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody):
-    """Скачивание одного аудиофайла хода в формате MP3."""
+    """Конвертация одного аудио в MP3 + временная ссылка для Telegram.WebApp.downloadFile."""
     _resolve_admin_user_id(body.init_data)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
@@ -1005,12 +1029,54 @@ async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody
     stem = Path(str(audio_name)).stem.strip() or "audio"
     stem = re.sub(r'[\\/:*?"<>|]+', "_", stem).strip(" ._") or "audio"
     filename = f"{stem[:120]}.mp3"
-    return StreamingResponse(
-        io.BytesIO(mp3),
-        media_type="audio/mpeg",
+    return await _issue_tmp_download_link(mp3, filename, "audio/mpeg")
+
+
+@match_analysis_api_router.get("/api/match_analysis/audio/file")
+async def match_analysis_audio_file_by_token(token: str = Query(...)):
+    """
+    Скачивание по временному токену (для Telegram.WebApp.downloadFile).
+    """
+    if not token:
+        raise HTTPException(status_code=400, detail="Параметр token обязателен")
+    raw = await redis_client.get(f"ma_audio_dl:{token}")
+    if not raw:
+        raise HTTPException(status_code=401, detail="Ссылка истекла или недействительна")
+    try:
+        data = json.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Некорректные данные ссылки") from e
+
+    key = str((data or {}).get("key") or "")
+    fname = str((data or {}).get("file_name") or "download.bin")
+    content_type = str((data or {}).get("content_type") or "application/octet-stream")
+    if not key.startswith(MA_TMP_DL_PREFIX):
+        raise HTTPException(status_code=400, detail="Некорректный ключ файла")
+
+    s3 = HintS3Storage.from_settings()
+    try:
+        blob = await asyncio.to_thread(s3.download_bytes, key)
+    except Exception as e:
+        logger.warning(f"ma audio tmp download failed key={key}: {e}")
+        raise HTTPException(status_code=404, detail="Файл не найден") from e
+
+    # Одноразовая ссылка: чистим redis и временный объект.
+    try:
+        await redis_client.delete(f"ma_audio_dl:{token}")
+    except Exception:
+        pass
+    try:
+        await asyncio.to_thread(s3.delete_object, key)
+    except Exception as e:
+        logger.warning(f"ma audio tmp cleanup failed key={key}: {e}")
+
+    return Response(
+        content=blob,
+        media_type=content_type,
         headers={
-            "Content-Disposition": _content_disposition_attachment(filename),
-            "Cache-Control": "no-store",
+            "Content-Disposition": _content_disposition_attachment(fname),
+            "Cache-Control": "private, no-store",
+            "Access-Control-Allow-Origin": "https://web.telegram.org",
         },
     )
 
