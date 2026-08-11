@@ -136,8 +136,42 @@
         min-width: 0;
     }
 
+    .ma-audio-modal__name-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .ma-audio-modal__play-btn {
+        flex-shrink: 0;
+        width: 26px;
+        height: 26px;
+        border: 1px solid #4a4a4a;
+        border-radius: 7px;
+        background: #2d2d2d;
+        color: #9fd0ff;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        font-size: 0.72rem;
+        line-height: 1;
+    }
+
+    .ma-audio-modal__play-btn:active {
+        background: #3a3a3a;
+    }
+
+    .ma-audio-modal__play-btn.is-playing {
+        color: #6ad0a0;
+        border-color: rgba(106, 208, 160, 0.45);
+    }
+
     .ma-audio-modal__name {
         display: block;
+        min-width: 0;
         font-size: 0.82rem;
         color: #e6e6e6;
         white-space: nowrap;
@@ -298,7 +332,95 @@
         busy: false,
         mediaRecorder: null,
         recordChunks: [],
+        audioEl: null,
+        playingKey: null,
     };
+
+    function itemKey(item) {
+        if (!item) return '';
+        return String(item.game_number) + ':' + String(item.move_index) + ':' + String(item.audio_s3_key || '');
+    }
+
+    function mediaUrl(s3Key) {
+        return '/api/match_analysis/media?key=' + encodeURIComponent(String(s3Key || ''));
+    }
+
+    function setPlayButtonState(btn, isPlaying) {
+        if (!btn) return;
+        btn.classList.toggle('is-playing', !!isPlaying);
+        btn.title = isPlaying ? 'Пауза' : 'Слушать';
+        btn.setAttribute('aria-label', isPlaying ? 'Пауза' : 'Слушать');
+        btn.innerHTML = isPlaying
+            ? '<i class="fa fa-pause" aria-hidden="true"></i>'
+            : '<i class="fa fa-play" aria-hidden="true"></i>';
+    }
+
+    function syncPlayButtons() {
+        if (!listEl) return;
+        var buttons = listEl.querySelectorAll('.ma-audio-modal__play-btn');
+        for (var i = 0; i < buttons.length; i++) {
+            var btn = buttons[i];
+            var key = btn.getAttribute('data-audio-key') || '';
+            var isPlaying = !!(
+                state.playingKey &&
+                state.playingKey === key &&
+                state.audioEl &&
+                !state.audioEl.paused
+            );
+            setPlayButtonState(btn, isPlaying);
+        }
+    }
+
+    function stopPlayback() {
+        if (state.audioEl) {
+            try { state.audioEl.pause(); } catch (_e) { /* ignore */ }
+            try { state.audioEl.src = ''; } catch (_e2) { /* ignore */ }
+            state.audioEl = null;
+        }
+        state.playingKey = null;
+        syncPlayButtons();
+    }
+
+    function togglePlayback(item, btn) {
+        if (!item || !item.audio_s3_key) return;
+        var key = itemKey(item);
+        if (state.playingKey === key && state.audioEl) {
+            if (!state.audioEl.paused) {
+                state.audioEl.pause();
+                syncPlayButtons();
+                return;
+            }
+            state.audioEl.play().then(function () {
+                syncPlayButtons();
+            }).catch(function (err) {
+                console.error(err);
+                setListMsg('Не удалось воспроизвести аудио', true);
+                stopPlayback();
+            });
+            return;
+        }
+        stopPlayback();
+        var audio = new Audio(mediaUrl(item.audio_s3_key));
+        state.audioEl = audio;
+        state.playingKey = key;
+        audio.onended = function () {
+            state.playingKey = null;
+            state.audioEl = null;
+            syncPlayButtons();
+        };
+        audio.onerror = function () {
+            setListMsg('Ошибка воспроизведения аудио', true);
+            stopPlayback();
+        };
+        setPlayButtonState(btn, true);
+        audio.play().then(function () {
+            syncPlayButtons();
+        }).catch(function (err) {
+            console.error(err);
+            setListMsg('Не удалось воспроизвести аудио', true);
+            stopPlayback();
+        });
+    }
 
     function api() {
         return window.CardsCabinetMatchAudioApi || {};
@@ -388,6 +510,7 @@
 
     function closeListModal() {
         closeEditModal();
+        stopPlayback();
         if (!listModal) return;
         listModal.classList.remove('is-open');
         listModal.setAttribute('aria-hidden', 'true');
@@ -403,6 +526,7 @@
     }
 
     function openEditModal(item) {
+        stopPlayback();
         state.editItem = item;
         if (editSub) {
             editSub.textContent =
@@ -431,14 +555,38 @@
 
             var meta = document.createElement('div');
             meta.className = 'ma-audio-modal__meta';
+
+            var nameRow = document.createElement('div');
+            nameRow.className = 'ma-audio-modal__name-row';
+
+            var playBtn = document.createElement('button');
+            playBtn.type = 'button';
+            playBtn.className = 'ma-audio-modal__play-btn';
+            playBtn.setAttribute('data-audio-key', itemKey(item));
+            setPlayButtonState(
+                playBtn,
+                !!(
+                    state.playingKey &&
+                    state.playingKey === itemKey(item) &&
+                    state.audioEl &&
+                    !state.audioEl.paused
+                )
+            );
+            playBtn.addEventListener('click', function () {
+                togglePlayback(item, playBtn);
+            });
+
             var name = document.createElement('span');
             name.className = 'ma-audio-modal__name';
             name.textContent = item.audio_name || 'аудио';
             name.title = item.audio_name || '';
+            nameRow.appendChild(playBtn);
+            nameRow.appendChild(name);
+
             var frame = document.createElement('span');
             frame.className = 'ma-audio-modal__frame';
             frame.textContent = frameLabel(item);
-            meta.appendChild(name);
+            meta.appendChild(nameRow);
             meta.appendChild(frame);
 
             var actions = document.createElement('div');
