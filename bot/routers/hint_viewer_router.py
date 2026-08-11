@@ -57,9 +57,13 @@ from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.routers.autoanalize.autoanaliz import analyze_file_by_path
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.common.hint_job_state import (
+    BATCH_DONE_FIELD,
+    BATCH_TIMEOUT_MAX_SEC,
     add_active_job,
+    calc_batch_job_timeout,
     can_enqueue_job,
     get_batch_file_statuses,
+    is_batch_effectively_done,
     remove_active_job,
 )
 from bot.common.service.webapp_settings_service import (
@@ -103,7 +107,9 @@ message_lock = asyncio.Lock()
 redis_rq = Redis.from_url(settings.REDIS_URL, decode_responses=False)
 task_queue = Queue("backgammon_analysis", connection=redis_rq, default_timeout=1800)
 batch_queue = Queue(
-    "backgammon_batch_analysis", connection=redis_rq, default_timeout=1800
+    "backgammon_batch_analysis",
+    connection=redis_rq,
+    default_timeout=BATCH_TIMEOUT_MAX_SEC,
 )
 
 
@@ -1365,6 +1371,7 @@ async def process_batch_hint_files(
 
         mat_s3_keys = await asyncio.to_thread(upload_batch_inputs)
         original_fnames = [os.path.basename(p) for p in file_paths]
+        job_timeout = calc_batch_job_timeout(total_files)
 
         job = batch_queue.enqueue(
             "bot.workers.hint_worker.analyze_backgammon_batch_job",
@@ -1373,9 +1380,12 @@ async def process_batch_hint_files(
             batch_id,
             original_fnames,
             job_id=job_id,
+            job_timeout=job_timeout,
+            result_ttl=86400,
+            failure_ttl=86400,
         )
 
-        add_active_job(message.from_user.id, job_id)
+        add_active_job(message.from_user.id, job_id, ttl=job_timeout + 3600)
 
         await redis_client.set(
             f"job_info:{job_id}",
@@ -1387,7 +1397,7 @@ async def process_batch_hint_files(
                     "total_files": total_files,
                 }
             ),
-            expire=3600,
+            expire=job_timeout + 3600,
         )
         batch_info = {
             "batch_id": batch_id,
@@ -1397,11 +1407,12 @@ async def process_batch_hint_files(
             "user_id": message.from_user.id,
             "total_files": total_files,
             "status": "queued",
+            "job_timeout": job_timeout,
         }
         await redis_client.set(
             f"batch_info:{batch_id}",
             json.dumps(batch_info),
-            expire=3600,
+            expire=job_timeout + 3600,
         )
         queue_warning = await get_queue_position_message(
             redis_rq,
@@ -1424,7 +1435,8 @@ async def process_batch_hint_files(
                     )
             await message.answer(queue_warning, parse_mode="Markdown")
         logger.info(
-            f"Batch {batch_id} queued with {total_files} files (job_id={job_id})"
+            f"Batch {batch_id} queued with {total_files} files "
+            f"(job_id={job_id}, timeout={job_timeout}s)"
         )
 
         summary = await message_dao.get_text(
@@ -1442,6 +1454,7 @@ async def process_batch_hint_files(
                 batch_id,
                 user_info,
                 session_without_commit,
+                total_files=total_files,
             )
         )
 
@@ -1540,6 +1553,7 @@ async def check_batch_job_status(
     batch_id: str,
     user_info: User,
     session_without_commit: AsyncSession,
+    total_files: int = 0,
 ):
     """
     Фоновая проверка батч-задачи: читает статусы файлов из Redis (воркер)
@@ -1552,7 +1566,7 @@ async def check_batch_job_status(
         async def drain_batch_notifications() -> None:
             statuses = await asyncio.to_thread(get_batch_file_statuses, batch_id)
             for idx_str, raw_json in statuses.items():
-                if idx_str in notified_indices:
+                if idx_str == BATCH_DONE_FIELD or idx_str in notified_indices:
                     continue
                 try:
                     payload = json.loads(raw_json)
@@ -1572,6 +1586,17 @@ async def check_batch_job_status(
             try:
                 await drain_batch_notifications()
 
+                # Файлы уже опубликованы — не ждём RQ, если horse убит на финише
+                if total_files and await asyncio.to_thread(
+                    is_batch_effectively_done, batch_id, total_files
+                ):
+                    await drain_batch_notifications()
+                    logger.info(
+                        f"Batch job {job_id} effectively done "
+                        f"({len(notified_indices)}/{total_files} files notified)"
+                    )
+                    break
+
                 job = Job.fetch(job_id, connection=redis_rq)
 
                 if job.is_finished:
@@ -1581,6 +1606,14 @@ async def check_batch_job_status(
 
                 if job.is_failed:
                     await drain_batch_notifications()
+                    if total_files and await asyncio.to_thread(
+                        is_batch_effectively_done, batch_id, total_files
+                    ):
+                        logger.warning(
+                            f"Batch job {job_id} marked failed in RQ, "
+                            "but all file statuses are present — treating as completed"
+                        )
+                        break
                     await message.answer(
                         "❌ Пакетный анализ завершился с критической ошибкой"
                     )
@@ -1589,6 +1622,15 @@ async def check_batch_job_status(
                 await asyncio.sleep(3)
 
             except NoSuchJobError:
+                await drain_batch_notifications()
+                if total_files and await asyncio.to_thread(
+                    is_batch_effectively_done, batch_id, total_files
+                ):
+                    logger.warning(
+                        f"Batch job {job_id} missing in Redis, "
+                        "but all file statuses are present — treating as completed"
+                    )
+                    break
                 logger.warning(
                     f"Batch job {job_id} no longer exists in Redis, removing active job"
                 )

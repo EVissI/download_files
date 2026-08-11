@@ -1,3 +1,4 @@
+import gc
 import os
 import socket
 import sys
@@ -7,7 +8,11 @@ from redis import Redis
 from rq import Worker, Queue
 from bot.common.func.hint_viewer import process_mat_file, extract_player_names
 from bot.common.service.hint_s3_service import HintS3Storage
-from bot.common.hint_job_state import publish_batch_file_ready
+from bot.common.hint_job_state import (
+    calc_batch_job_timeout,
+    publish_batch_completed,
+    publish_batch_file_ready,
+)
 from bot.db.redis import sync_redis_client
 
 logging.basicConfig(
@@ -107,10 +112,12 @@ def analyze_backgammon_batch_job(
     mat_s3_keys: ключи входных .mat в S3 (например hints/batch_in/...).
     Статусы файлов пишет в Redis; Telegram — только бот (check_batch_job_status).
     """
-    results = []
+    processed = 0
+    errors = 0
     total_files = len(mat_s3_keys)
     s3 = HintS3Storage.from_settings()
     original_fnames = original_fnames or []
+    status_ttl = calc_batch_job_timeout(total_files) + 3600
 
     logger.info(
         f"[Batch Job Start] batch_id={batch_id}, files={total_files}, user_id={user_id}"
@@ -167,19 +174,13 @@ def analyze_backgammon_batch_job(
                     "red_player": red_player,
                     "black_player": black_player,
                 },
+                ttl=status_ttl,
             )
 
             logger.info(
                 f"[Batch File Completed] {fname} -> {mat_key} (has_games={has_games})"
             )
-            results.append(
-                {
-                    "file_index": idx + 1,
-                    "mat_path": mat_key,
-                    "has_games": has_games,
-                    "status": "success",
-                }
-            )
+            processed += 1
 
         except Exception as e:
             logger.exception(f"[Batch File Failed] {fname}")
@@ -192,23 +193,25 @@ def analyze_backgammon_batch_job(
                     "next_fname": next_fname,
                     "error": str(e)[:200],
                 },
+                ttl=status_ttl,
             )
-            results.append(
-                {
-                    "file_index": idx + 1,
-                    "mat_path": input_mat_key,
-                    "status": "error",
-                    "error": str(e),
-                }
-            )
+            errors += 1
+
+        # Снижаем риск OOM / kill work-horse на длинных батчах
+        gc.collect()
+
+    # Маркер до return: если horse убьют при сериализации результата, бот всё равно завершит батч
+    publish_batch_completed(batch_id, total_files, ttl=status_ttl)
 
     logger.info(
-        f"[Batch Job Completed] batch_id={batch_id}, processed={len(results)}/{total_files}"
+        f"[Batch Job Completed] batch_id={batch_id}, "
+        f"ok={processed}, errors={errors}, total={total_files}"
     )
     return {
         "batch_id": batch_id,
         "total_files": total_files,
-        "results": results,
+        "processed": processed,
+        "errors": errors,
         "status": "completed",
     }
 
