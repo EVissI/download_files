@@ -704,7 +704,7 @@ async def match_analysis_audio_set_durations(body: MatchAnalysisAudioSetDuration
             row.analysis = analysis
             flag_modified(row, "analysis")
             await session.commit()
-        _count, audio_seconds, audio_minutes = _audio_totals(row.analysis)
+        _count, audio_seconds, audio_minutes = _audio_totals(analysis)
     return {
         "ok": True,
         "updated": updated,
