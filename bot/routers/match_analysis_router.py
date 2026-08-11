@@ -751,6 +751,9 @@ def _collect_match_analysis_audios(analysis: dict[str, Any] | None) -> list[dict
             s3_key = move.get("audioS3Key")
             if not s3_key:
                 continue
+            next_gnu = None
+            if move_index + 1 < len(moves) and isinstance(moves[move_index + 1], dict):
+                next_gnu = moves[move_index + 1].get("gnu_move")
             items.append(
                 {
                     "game_number": game_number,
@@ -763,6 +766,11 @@ def _collect_match_analysis_audios(analysis: dict[str, Any] | None) -> list[dict
                     "player_name": move.get("player_name"),
                     "action": move.get("action"),
                     "gnu_move": move.get("gnu_move"),
+                    "points": move.get("points"),
+                    "moves": move.get("moves"),
+                    "hints": move.get("hints") or [],
+                    "cube_hints": move.get("cube_hints") or [],
+                    "next_gnu_move": next_gnu,
                     "board": _board_snapshot_for_move(game, move_index, move),
                 }
             )
