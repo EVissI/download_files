@@ -135,15 +135,10 @@
 
     .ma-audio-modal__progress-bar {
         height: 100%;
-        width: 42%;
+        width: 0%;
         border-radius: inherit;
         background: linear-gradient(90deg, #8f6b3d, #c9a06a, #e8d0a0);
-        animation: ma-audio-progress-slide 1.15s ease-in-out infinite;
-    }
-
-    @keyframes ma-audio-progress-slide {
-        0% { transform: translateX(-130%); }
-        100% { transform: translateX(280%); }
+        transition: width 0.28s ease-out;
     }
 
     .ma-audio-modal__list {
@@ -431,6 +426,9 @@
     var listEl = document.getElementById('maAudioListModalList');
     var listMsg = document.getElementById('maAudioListModalMsg');
     var listProgress = document.getElementById('maAudioListProgress');
+    var listProgressBar = listProgress
+        ? listProgress.querySelector('.ma-audio-modal__progress-bar')
+        : null;
     var listSub = document.getElementById('maAudioListModalSub');
     var listTitle = document.getElementById('maAudioListModalTitle');
 
@@ -1405,7 +1403,7 @@
         var fallbackName = String(item.audio_name || 'audio.webm').split(/[\\/]/).pop() || 'audio.webm';
         var stem = fallbackName.replace(/\.[^.]+$/, '') || 'audio';
         setZipBusy(true);
-        setListMsg('Конвертация в MP3…');
+        startConvertEstimate('Конвертация в MP3…', { files: 1, msPerFile: 4200 });
         fetch('/api/match_analysis/audio/download_mp3', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1426,6 +1424,7 @@
                 });
             })
             .then(function (payload) {
+                completeConvertEstimate();
                 var url = payload && payload.url ? String(payload.url) : '';
                 var filename = (payload && payload.file_name)
                     ? String(payload.file_name)
@@ -1644,8 +1643,84 @@
         });
     }
 
+    var convertProgress = {
+        timer: null,
+        label: '',
+        pct: 0,
+        startedAt: 0,
+        expectedMs: 0,
+    };
+
     function isListModalOpen() {
         return !!(listModal && listModal.classList.contains('is-open'));
+    }
+
+    function setProgressBarPct(pct) {
+        if (!listProgressBar) return;
+        var v = Math.max(0, Math.min(100, Number(pct) || 0));
+        listProgressBar.style.width = v + '%';
+    }
+
+    function formatConvertMsg(label, pct) {
+        var p = Math.max(0, Math.min(99, Math.floor(Number(pct) || 0)));
+        return String(label || 'Конвертация…') + ' ' + p + '%';
+    }
+
+    function refreshConvertMsg() {
+        if (!state.convertActive || !convertProgress.label) return;
+        if (!isListModalOpen()) return;
+        setListMsg(formatConvertMsg(convertProgress.label, convertProgress.pct));
+    }
+
+    function stopConvertEstimate() {
+        if (convertProgress.timer) {
+            clearInterval(convertProgress.timer);
+            convertProgress.timer = null;
+        }
+        convertProgress.label = '';
+        convertProgress.pct = 0;
+        convertProgress.startedAt = 0;
+        convertProgress.expectedMs = 0;
+        setProgressBarPct(0);
+    }
+
+    function startConvertEstimate(label, opts) {
+        stopConvertEstimate();
+        var files = Math.max(1, Math.floor(Number(opts && opts.files) || 1));
+        var msPerFile = Math.max(800, Number(opts && opts.msPerFile) || 2800);
+        convertProgress.label = String(label || 'Конвертация…');
+        convertProgress.startedAt = Date.now();
+        convertProgress.expectedMs = Math.max(2200, files * msPerFile);
+        convertProgress.pct = 1;
+        setProgressBarPct(1);
+        refreshConvertMsg();
+        convertProgress.timer = setInterval(function () {
+            if (!state.convertActive) return;
+            var elapsed = Date.now() - convertProgress.startedAt;
+            // Асимптота к ~95%: примерный прогресс, пока сервер не ответил.
+            var raw = 1 - Math.exp((-elapsed / convertProgress.expectedMs) * 2.15);
+            var pct = Math.min(95, Math.max(1, Math.floor(raw * 95)));
+            if (pct < convertProgress.pct) pct = convertProgress.pct;
+            if (pct === convertProgress.pct && convertProgress.pct < 95 && elapsed > convertProgress.expectedMs) {
+                pct = Math.min(95, convertProgress.pct + 1);
+            }
+            if (pct === convertProgress.pct) return;
+            convertProgress.pct = pct;
+            setProgressBarPct(pct);
+            refreshConvertMsg();
+        }, 250);
+    }
+
+    function completeConvertEstimate() {
+        if (convertProgress.timer) {
+            clearInterval(convertProgress.timer);
+            convertProgress.timer = null;
+        }
+        convertProgress.pct = 100;
+        setProgressBarPct(100);
+        if (state.convertActive && convertProgress.label && isListModalOpen()) {
+            setListMsg(String(convertProgress.label) + ' 100%');
+        }
     }
 
     function setConvertProgressVisible(force) {
@@ -1653,6 +1728,10 @@
         var show = (force != null) ? !!force : (!!state.convertActive && isListModalOpen());
         listProgress.hidden = !show;
         listProgress.setAttribute('aria-hidden', show ? 'false' : 'true');
+        if (show) {
+            setProgressBarPct(convertProgress.pct || 1);
+            refreshConvertMsg();
+        }
     }
 
     function setZipBusy(isBusy) {
@@ -1662,6 +1741,9 @@
         if (listExportBtn) listExportBtn.disabled = !!isBusy;
         // «Закрыть» не блокируем — закрытие модалки не отменяет конвертацию.
         if (listCloseBtn) listCloseBtn.disabled = false;
+        if (!isBusy) {
+            stopConvertEstimate();
+        }
         setConvertProgressVisible();
     }
 
@@ -1709,8 +1791,12 @@
             return;
         }
         var matchId = state.matchId;
+        var fileCount = Math.max(1, state.items.length || 1);
         setZipBusy(true);
-        setListMsg('Импорт: конвертация в MP3…');
+        startConvertEstimate('Импорт: конвертация в MP3…', {
+            files: fileCount,
+            msPerFile: 3000,
+        });
         fetch('/api/match_analysis/audio/import_mp3_zip', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1726,6 +1812,7 @@
                 });
             })
             .then(function (payload) {
+                completeConvertEstimate();
                 var url = payload && payload.url ? String(payload.url) : '';
                 var filename = (payload && payload.file_name)
                     ? String(payload.file_name)
@@ -1759,8 +1846,15 @@
             return;
         }
         var matchId = state.matchId;
+        var approxFiles = Math.max(
+            1,
+            state.items.length || Math.round((Number(file.size) || 400000) / 400000)
+        );
         setZipBusy(true);
-        setListMsg('Экспорт: конвертация MP3 → WebM…');
+        startConvertEstimate('Экспорт: конвертация MP3 → WebM…', {
+            files: approxFiles,
+            msPerFile: 3400,
+        });
         var fd = new FormData();
         fd.append('init_data', initData);
         fd.append('match_analysis_id', String(matchId));
@@ -1779,6 +1873,7 @@
                 });
             })
             .then(function (payload) {
+                completeConvertEstimate();
                 if (payload.audio_minutes != null) {
                     patchAudioTotals(
                         matchId,
