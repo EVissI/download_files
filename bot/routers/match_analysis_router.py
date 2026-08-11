@@ -443,6 +443,48 @@ async def match_analysis_fetch(body: MatchAnalysisIdBody):
         }
 
 
+def _collect_match_analysis_audios(analysis: dict[str, Any] | None) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for game in (analysis or {}).get("games") or []:
+        try:
+            game_number = int(game.get("game_number"))
+        except (TypeError, ValueError):
+            continue
+        moves = game.get("moves") or []
+        for move_index, move in enumerate(moves):
+            if not isinstance(move, dict):
+                continue
+            s3_key = move.get("audioS3Key")
+            if not s3_key:
+                continue
+            items.append(
+                {
+                    "game_number": game_number,
+                    "move_index": move_index,
+                    "audio_s3_key": s3_key,
+                    "audio_name": move.get("audioName") or s3_key.split("/")[-1] or "аудио",
+                    "turn": move.get("turn"),
+                    "player_name": move.get("player_name"),
+                    "action": move.get("action"),
+                    "gnu_move": move.get("gnu_move"),
+                }
+            )
+    return items
+
+
+@match_analysis_api_router.post("/api/match_analysis/audio/list")
+async def match_analysis_audio_list(body: MatchAnalysisIdBody):
+    """Список аудиофайлов, прикреплённых к ходам анализа (админ)."""
+    _resolve_admin_user_id(body.init_data)
+    async with async_session_maker() as session:
+        dao = MatchAnalysisDAO(session)
+        row = await dao.find_one_or_none_by_id(body.id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Анализ не найден")
+        items = _collect_match_analysis_audios(row.analysis)
+    return {"id": body.id, "items": items, "count": len(items)}
+
+
 @match_analysis_api_router.post("/api/match_analysis/update_meta")
 async def match_analysis_update_meta(body: MatchAnalysisUpdateMetaBody):
     _resolve_admin_user_id(body.init_data)

@@ -1387,6 +1387,16 @@
             urlParams.get('as_user') === '1' ||
             urlParams.get('as_user') === 'true' ||
             urlParams.get('user_preview') === '1';
+        const deepLinkGameParam = urlParams.get('game') || urlParams.get('game_number');
+        const deepLinkMoveParam = urlParams.get('move') || urlParams.get('move_index');
+        let pendingDeepLinkGame = deepLinkGameParam ? parseInt(deepLinkGameParam, 10) : null;
+        if (pendingDeepLinkGame != null && Number.isNaN(pendingDeepLinkGame)) pendingDeepLinkGame = null;
+        let pendingDeepLinkMoveIndex = deepLinkMoveParam != null && deepLinkMoveParam !== ''
+            ? parseInt(deepLinkMoveParam, 10)
+            : null;
+        if (pendingDeepLinkMoveIndex != null && Number.isNaN(pendingDeepLinkMoveIndex)) {
+            pendingDeepLinkMoveIndex = null;
+        }
         let matchAnalysisDoc = null;
         let matchAnalysisTitle = '';
         window.hintViewerIsAdmin = false;
@@ -1908,10 +1918,27 @@
                 }
 
                 if (availableGames.length > 0) {
-                    loadGame(availableGames[0].game_number);
+                    let startGameNum = availableGames[0].game_number;
+                    if (pendingDeepLinkGame != null) {
+                        const deepGame = availableGames.find(
+                            (g) => String(g.game_number) === String(pendingDeepLinkGame)
+                        );
+                        if (deepGame) startGameNum = deepGame.game_number;
+                        pendingDeepLinkGame = null;
+                    }
+                    currentGameNum = parseInt(startGameNum);
+                    loadGame(startGameNum);
                 }
             } else if (availableGames.length > 0) {
-                currentGameNum = parseInt(availableGames[0].game_number);
+                let startGameNum = availableGames[0].game_number;
+                if (pendingDeepLinkGame != null) {
+                    const deepGame = availableGames.find(
+                        (g) => String(g.game_number) === String(pendingDeepLinkGame)
+                    );
+                    if (deepGame) startGameNum = deepGame.game_number;
+                    pendingDeepLinkGame = null;
+                }
+                currentGameNum = parseInt(startGameNum);
                 gameRedScore = redScore;
                 gameBlackScore = blackScore;
                 matchInfoDiv.innerHTML = 'Манигейм';
@@ -1930,7 +1957,7 @@
                         localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
                     });
                 }
-                loadGame(availableGames[0].game_number);
+                loadGame(startGameNum);
             } else {
                 matchInfoDiv.innerHTML = '';
                 playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
@@ -2179,6 +2206,15 @@
                             }
                             if (current >= data.length) {
                                 current = 0; // fallback
+                            }
+                            if (pendingDeepLinkMoveIndex != null) {
+                                const deepIdx = data.findIndex(
+                                    (row) => row && row._moveIndex === pendingDeepLinkMoveIndex
+                                );
+                                if (deepIdx >= 0) {
+                                    current = deepIdx;
+                                }
+                                pendingDeepLinkMoveIndex = null;
                             }
                             // Reset hints display
                             moveHintsTable.classList.remove('active');
