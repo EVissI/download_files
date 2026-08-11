@@ -293,7 +293,16 @@
 
     .ma-audio-modal__footer {
         display: flex;
-        justify-content: flex-end;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .ma-audio-modal__footer-left,
+    .ma-audio-modal__footer-right {
+        display: inline-flex;
+        align-items: center;
         gap: 8px;
     }
 
@@ -339,7 +348,18 @@
         <p id="maAudioListModalMsg" class="ma-audio-modal__msg"></p>
         <ul id="maAudioListModalList" class="ma-audio-modal__list"></ul>
         <div class="ma-audio-modal__footer">
-            <button type="button" id="maAudioListModalCloseBtn" class="ma-audio-modal__btn">Закрыть</button>
+            <div class="ma-audio-modal__footer-left">
+                <button type="button" id="maAudioListImportBtn" class="ma-audio-modal__btn" title="Скачать все аудио в ZIP (MP3)">
+                    Импорт
+                </button>
+                <button type="button" id="maAudioListExportBtn" class="ma-audio-modal__btn" title="Загрузить ZIP с MP3 и заменить аудио">
+                    Экспорт
+                </button>
+                <input type="file" id="maAudioListExportFileInput" accept=".zip,application/zip" style="display:none" tabindex="-1">
+            </div>
+            <div class="ma-audio-modal__footer-right">
+                <button type="button" id="maAudioListModalCloseBtn" class="ma-audio-modal__btn">Закрыть</button>
+            </div>
         </div>
     </div>
 </div>
@@ -372,6 +392,9 @@
     var listModal = document.getElementById('maAudioListModal');
     var listOverlay = document.getElementById('maAudioListModalOverlay');
     var listCloseBtn = document.getElementById('maAudioListModalCloseBtn');
+    var listImportBtn = document.getElementById('maAudioListImportBtn');
+    var listExportBtn = document.getElementById('maAudioListExportBtn');
+    var listExportFileInput = document.getElementById('maAudioListExportFileInput');
     var listEl = document.getElementById('maAudioListModalList');
     var listMsg = document.getElementById('maAudioListModalMsg');
     var listSub = document.getElementById('maAudioListModalSub');
@@ -1515,6 +1538,131 @@
         });
     }
 
+    function setZipBusy(isBusy) {
+        state.busy = !!isBusy;
+        if (listImportBtn) listImportBtn.disabled = !!isBusy;
+        if (listExportBtn) listExportBtn.disabled = !!isBusy;
+        if (listCloseBtn) listCloseBtn.disabled = !!isBusy;
+    }
+
+    function filenameFromContentDisposition(headerValue, fallback) {
+        var raw = String(headerValue || '');
+        var m = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"|filename=([^;]+)/i.exec(raw);
+        if (!m) return fallback;
+        var name = decodeURIComponent((m[1] || m[2] || m[3] || '').trim());
+        return name || fallback;
+    }
+
+    function downloadImportMp3Zip() {
+        if (state.busy || !state.matchId) return;
+        var initData = getInitData();
+        if (!initData) {
+            showNotice('Нет Telegram initData', 'Ошибка');
+            return;
+        }
+        if (!state.items.length) {
+            showNotice('В этом анализе нет аудио для импорта', 'Импорт');
+            return;
+        }
+        setZipBusy(true);
+        setListMsg('Импорт: конвертация в MP3…');
+        fetch('/api/match_analysis/audio/import_mp3_zip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: initData, id: state.matchId }),
+        })
+            .then(function (resp) {
+                if (!resp.ok) {
+                    return resp.json().catch(function () { return {}; }).then(function (payload) {
+                        var detail = payload.detail || ('HTTP ' + resp.status);
+                        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                    });
+                }
+                var filename = filenameFromContentDisposition(
+                    resp.headers.get('Content-Disposition'),
+                    'match_' + state.matchId + '_audio_mp3.zip'
+                );
+                return resp.blob().then(function (blob) {
+                    return { blob: blob, filename: filename };
+                });
+            })
+            .then(function (pack) {
+                var url = URL.createObjectURL(pack.blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = pack.filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(function () {
+                    try { URL.revokeObjectURL(url); } catch (_e) { /* ignore */ }
+                }, 1500);
+                setListMsg('Импорт готов: ZIP скачан');
+                showNotice('ZIP с MP3 скачан', 'Импорт');
+            })
+            .catch(function (err) {
+                console.error(err);
+                setListMsg('Ошибка импорта: ' + (err.message || err), true);
+                showNotice('Ошибка импорта: ' + (err.message || err), 'Ошибка');
+            })
+            .finally(function () {
+                setZipBusy(false);
+            });
+    }
+
+    function uploadExportMp3Zip(file) {
+        if (state.busy || !state.matchId || !file) return;
+        var initData = getInitData();
+        if (!initData) {
+            showNotice('Нет Telegram initData', 'Ошибка');
+            return;
+        }
+        setZipBusy(true);
+        setListMsg('Экспорт: конвертация MP3 → WebM…');
+        var fd = new FormData();
+        fd.append('init_data', initData);
+        fd.append('match_analysis_id', String(state.matchId));
+        fd.append('file', file, file.name || 'audio.zip');
+        fetch('/api/match_analysis/audio/export_mp3_zip', {
+            method: 'POST',
+            body: fd,
+        })
+            .then(function (resp) {
+                return resp.json().catch(function () { return {}; }).then(function (payload) {
+                    if (!resp.ok) {
+                        var detail = payload.detail || ('HTTP ' + resp.status);
+                        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                    }
+                    return payload;
+                });
+            })
+            .then(function (payload) {
+                if (payload.audio_minutes != null) {
+                    patchAudioTotals(
+                        state.matchId,
+                        payload.audio_count,
+                        payload.audio_minutes
+                    );
+                }
+                var skipped = Array.isArray(payload.skipped) ? payload.skipped : [];
+                var msg = 'Заменено: ' + String(payload.replaced || 0);
+                if (skipped.length) {
+                    msg += ', пропущено: ' + skipped.length;
+                }
+                setListMsg(msg);
+                showNotice(msg, 'Экспорт');
+                return loadAudios();
+            })
+            .catch(function (err) {
+                console.error(err);
+                setListMsg('Ошибка экспорта: ' + (err.message || err), true);
+                showNotice('Ошибка экспорта: ' + (err.message || err), 'Ошибка');
+            })
+            .finally(function () {
+                setZipBusy(false);
+            });
+    }
+
     function openForMatch(matchId, matchTitle) {
         var idNum = Number(matchId);
         if (!idNum) return;
@@ -1534,6 +1682,21 @@
 
     if (listOverlay) listOverlay.addEventListener('click', closeListModal);
     if (listCloseBtn) listCloseBtn.addEventListener('click', closeListModal);
+    if (listImportBtn) listImportBtn.addEventListener('click', downloadImportMp3Zip);
+    if (listExportBtn) {
+        listExportBtn.addEventListener('click', function () {
+            if (state.busy) return;
+            if (listExportFileInput) listExportFileInput.click();
+        });
+    }
+    if (listExportFileInput) {
+        listExportFileInput.addEventListener('change', function (ev) {
+            var file = ev.target && ev.target.files && ev.target.files[0];
+            if (ev.target) ev.target.value = '';
+            if (!file) return;
+            uploadExportMp3Zip(file);
+        });
+    }
     if (editOverlay) editOverlay.addEventListener('click', closeEditModal);
     if (editCloseBtn) editCloseBtn.addEventListener('click', closeEditModal);
     if (editAttachBtn) {

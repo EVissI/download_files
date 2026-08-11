@@ -5,17 +5,24 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import io
 import json
 import math
 import mimetypes
+import re
+import shutil
 import struct
+import subprocess
+import tempfile
 import uuid
+import zipfile
+from pathlib import Path
 from typing import Any, Optional
 
 from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -750,6 +757,150 @@ def _collect_match_analysis_audios(analysis: dict[str, Any] | None) -> list[dict
     return items
 
 
+def _ffmpeg_bin() -> str:
+    return shutil.which("ffmpeg") or "ffmpeg"
+
+
+def _run_ffmpeg(args: list[str]) -> None:
+    cmd = [_ffmpeg_bin(), "-y", "-hide_banner", "-loglevel", "error", *args]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, timeout=180)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="ffmpeg не найден на сервере — конвертация аудио недоступна",
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise HTTPException(status_code=500, detail="Таймаут конвертации ffmpeg") from exc
+    if proc.returncode != 0:
+        err = (proc.stderr or b"").decode("utf-8", "ignore").strip()[:400]
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка ffmpeg: {err or ('code ' + str(proc.returncode))}",
+        )
+
+
+def _convert_audio_bytes(
+    raw: bytes,
+    *,
+    src_suffix: str,
+    dst_suffix: str,
+    ffmpeg_args: list[str],
+) -> bytes:
+    with tempfile.TemporaryDirectory(prefix="ma_audio_") as td:
+        src = Path(td) / f"in{src_suffix}"
+        dst = Path(td) / f"out{dst_suffix}"
+        src.write_bytes(raw)
+        _run_ffmpeg(["-i", str(src), *ffmpeg_args, str(dst)])
+        if not dst.exists() or dst.stat().st_size <= 0:
+            raise HTTPException(status_code=500, detail="ffmpeg не создал выходной файл")
+        return dst.read_bytes()
+
+
+def _to_mp3_bytes(raw: bytes, src_name: str | None = None) -> bytes:
+    src_suffix = Path(src_name or "audio.webm").suffix.lower() or ".webm"
+    if src_suffix not in {".webm", ".ogg", ".opus", ".mp3", ".wav", ".m4a", ".mp4", ".aac"}:
+        src_suffix = ".webm"
+    return _convert_audio_bytes(
+        raw,
+        src_suffix=src_suffix,
+        dst_suffix=".mp3",
+        ffmpeg_args=["-vn", "-codec:a", "libmp3lame", "-qscale:a", "2"],
+    )
+
+
+def _mp3_to_webm_bytes(raw: bytes) -> bytes:
+    return _convert_audio_bytes(
+        raw,
+        src_suffix=".mp3",
+        dst_suffix=".webm",
+        ffmpeg_args=["-vn", "-c:a", "libopus", "-b:a", "64k"],
+    )
+
+
+def _safe_audio_stem(name: str | None) -> str:
+    stem = Path(str(name or "audio")).stem
+    stem = re.sub(r"[^\w\-]+", "_", stem, flags=re.UNICODE).strip("._")
+    return (stem or "audio")[:80]
+
+
+def _audio_filename_match_key(name: str | None) -> str:
+    """Ключ полного соответствия имени: basename без расширения, lower-case."""
+    base = Path(str(name or "").replace("\\", "/").split("/")[-1]).name
+    stem = Path(base).stem.strip()
+    return stem.lower()
+
+
+def _zip_safe_basename_mp3(audio_name: str | None, used: set[str]) -> str:
+    """Имя в zip = исходное имя файла с расширением .mp3 (без g/m префикса)."""
+    original = Path(str(audio_name or "audio")).name
+    stem = Path(original).stem.strip() or "audio"
+    stem = re.sub(r'[\\/:*?"<>|]+', "_", stem).strip(" ._") or "audio"
+    stem = stem[:120]
+    base = f"{stem}.mp3"
+    if base.lower() not in used:
+        used.add(base.lower())
+        return base
+    n = 2
+    while True:
+        cand = f"{stem}_{n}.mp3"
+        if cand.lower() not in used:
+            used.add(cand.lower())
+            return cand
+        n += 1
+
+
+def _build_mp3_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
+    items = _collect_match_analysis_audios(analysis)
+    if not items:
+        raise HTTPException(status_code=404, detail="В анализе нет аудиофайлов")
+    s3 = HintS3Storage.from_settings()
+    used_names: set[str] = set()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for item in items:
+            key = str(item.get("audio_s3_key") or "")
+            if not key or not HintS3Storage.is_match_analysis_media_key(key):
+                continue
+            try:
+                raw = s3.download_bytes(key)
+            except Exception as e:
+                logger.warning(f"export zip: download failed key={key}: {e}")
+                continue
+            try:
+                mp3 = _to_mp3_bytes(raw, src_name=key)
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.exception(f"export zip: convert failed key={key}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Не удалось конвертировать {item.get('audio_name')}: {e}",
+                ) from e
+            entry = _zip_safe_basename_mp3(item.get("audio_name"), used_names)
+            zf.writestr(entry, mp3)
+        if not used_names:
+            raise HTTPException(status_code=404, detail="Не удалось собрать ни одного файла")
+    return buf.getvalue()
+
+
+def _resolve_zip_mp3_target(
+    filename: str,
+    items: list[dict[str, Any]],
+) -> tuple[int, int] | None:
+    """Сопоставление только по полному соответствию имени файла (без учёта расширения)."""
+    want = _audio_filename_match_key(filename)
+    if not want:
+        return None
+    matches: list[tuple[int, int]] = []
+    for item in items:
+        if _audio_filename_match_key(item.get("audio_name")) == want:
+            matches.append((int(item["game_number"]), int(item["move_index"])))
+    if len(matches) == 1:
+        return matches[0]
+    return None
+
+
 @match_analysis_api_router.post("/api/match_analysis/audio/list")
 async def match_analysis_audio_list(body: MatchAnalysisIdBody):
     """Список аудиофайлов, прикреплённых к ходам анализа (админ)."""
@@ -773,6 +924,166 @@ async def match_analysis_audio_list(body: MatchAnalysisIdBody):
         "id": body.id,
         "items": items,
         "count": len(items),
+        "audio_seconds": audio_seconds,
+        "audio_minutes": audio_minutes,
+    }
+
+
+@match_analysis_api_router.post("/api/match_analysis/audio/import_mp3_zip")
+async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
+    """
+    «Импорт» в UI: конвертирует все аудио анализа в mp3, кладёт в zip и отдаёт на скачивание.
+    """
+    _resolve_admin_user_id(body.init_data)
+    async with async_session_maker() as session:
+        dao = MatchAnalysisDAO(session)
+        row = await dao.find_one_or_none_by_id(body.id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Анализ не найден")
+        analysis = row.analysis or {}
+        title = row.title or f"match_{row.id}"
+
+    zip_bytes = await asyncio.to_thread(_build_mp3_zip_for_analysis, analysis)
+    safe_title = _safe_audio_stem(title) or f"match_{body.id}"
+    filename = f"{safe_title}_audio_mp3.zip"
+    return StreamingResponse(
+        io.BytesIO(zip_bytes),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@match_analysis_api_router.post("/api/match_analysis/audio/export_mp3_zip")
+async def match_analysis_audio_export_mp3_zip(
+    init_data: str = Form(...),
+    match_analysis_id: int = Form(...),
+    file: UploadFile = File(...),
+):
+    """
+    «Экспорт» в UI: принимает zip с mp3, конвертирует в webm и заменяет аудио
+    с эквивалентными именами (g{N}_m{M}__stem.mp3 или совпадение по имени).
+    """
+    uid = _resolve_admin_user_id(init_data)
+    raw_zip = await file.read()
+    if not raw_zip:
+        raise HTTPException(status_code=400, detail="Пустой zip")
+    if len(raw_zip) > 200 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Zip слишком большой")
+
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(raw_zip))
+    except zipfile.BadZipFile as exc:
+        raise HTTPException(status_code=400, detail="Некорректный zip-файл") from exc
+
+    async with async_session_maker() as session:
+        dao = MatchAnalysisDAO(session)
+        row = await dao.find_one_or_none_by_id(match_analysis_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Анализ не найден")
+        analysis = copy.deepcopy(row.analysis or {})
+        items = _collect_match_analysis_audios(analysis)
+        if not items:
+            raise HTTPException(status_code=404, detail="В анализе нет аудио для замены")
+
+        s3 = HintS3Storage.from_settings()
+        replaced = 0
+        skipped: list[str] = []
+        old_keys_to_delete: list[str] = []
+
+        with zf:
+            for info in zf.infolist():
+                if info.is_dir():
+                    continue
+                name = info.filename.replace("\\", "/").split("/")[-1]
+                if not name.lower().endswith(".mp3"):
+                    continue
+                if name.startswith(".") or name.startswith("__MACOSX"):
+                    continue
+                target = _resolve_zip_mp3_target(name, items)
+                if not target:
+                    skipped.append(name)
+                    continue
+                game_number, move_index = target
+                try:
+                    mp3_raw = zf.read(info)
+                except Exception:
+                    skipped.append(name)
+                    continue
+                if not mp3_raw:
+                    skipped.append(name)
+                    continue
+                if len(mp3_raw) > MA_MEDIA_MAX_BYTES:
+                    skipped.append(name)
+                    continue
+
+                try:
+                    webm_raw = await asyncio.to_thread(_mp3_to_webm_bytes, mp3_raw)
+                except HTTPException:
+                    raise
+                except Exception as e:
+                    logger.exception(f"export zip convert failed name={name}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Не удалось конвертировать {name}: {e}",
+                    ) from e
+
+                unique_name = f"{uuid.uuid4().hex}.webm"
+                key = HintS3Storage.match_analysis_media_key(uid, unique_name)
+                s3.upload_bytes(key, webm_raw, content_type="audio/webm")
+                measured = await asyncio.to_thread(_probe_audio_duration_sec, webm_raw)
+
+                try:
+                    _, move = _find_game_and_move(analysis, game_number, move_index)
+                except HTTPException:
+                    skipped.append(name)
+                    try:
+                        s3.delete_object(key)
+                    except Exception:
+                        pass
+                    continue
+
+                old_key = move.get("audioS3Key")
+                prev_name = move.get("audioName") or name
+                move["audioS3Key"] = key
+                # Имя файла сохраняем эквивалентным исходному (только содержимое заменяется).
+                move["audioName"] = str(prev_name)[:255]
+                if measured is not None:
+                    move["audioDurationSec"] = round(float(measured), 3)
+                else:
+                    move.pop("audioDurationSec", None)
+                if old_key and old_key != key and HintS3Storage.is_match_analysis_media_key(old_key):
+                    old_keys_to_delete.append(old_key)
+                replaced += 1
+
+        if replaced <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Не удалось сопоставить ни одного mp3 с аудио анализа. "
+                    "Имена в ZIP должны полностью совпадать с именами файлов "
+                    "(без учёта расширения, например voice.mp3 → voice.webm)."
+                ),
+            )
+
+        row.analysis = analysis
+        flag_modified(row, "analysis")
+        await session.commit()
+        count, audio_seconds, audio_minutes = _audio_totals(analysis)
+
+    for old_key in old_keys_to_delete:
+        try:
+            s3.delete_object(old_key)
+        except Exception as e:
+            logger.warning(f"Failed to delete replaced audio {old_key}: {e}")
+
+    return {
+        "ok": True,
+        "replaced": replaced,
+        "skipped": skipped,
+        "audio_count": count,
         "audio_seconds": audio_seconds,
         "audio_minutes": audio_minutes,
     }
