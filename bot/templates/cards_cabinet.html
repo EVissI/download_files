@@ -5931,6 +5931,9 @@
                         is_ready: !!it.is_ready,
                         status: 'UNVIEWED',
                         labels: [],
+                        audio_count: Number(it.audio_count) || 0,
+                        audio_seconds: Number(it.audio_seconds) || 0,
+                        audio_minutes: Math.max(0, Math.floor(Number(it.audio_minutes) || 0)),
                         __index: index,
                     };
                 }
@@ -6122,14 +6125,9 @@
                         IS_MATCH_ANALYSIS &&
                         isRootAdminUser &&
                         window.CardsCabinetMatchAudio &&
-                        typeof window.CardsCabinetMatchAudio.ensureMinutes === 'function'
+                        typeof window.CardsCabinetMatchAudio.ensureAllCardMinutes === 'function'
                     ) {
-                        allCards.forEach(function (row) {
-                            var count = Number(row && row.audio_count) || 0;
-                            if (count > 0) {
-                                window.CardsCabinetMatchAudio.ensureMinutes(row.content_card_id);
-                            }
-                        });
+                        window.CardsCabinetMatchAudio.ensureAllCardMinutes(allCards);
                     }
                 }
 

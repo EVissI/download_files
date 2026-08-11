@@ -85,6 +85,11 @@ class MatchAnalysisAudioSetDurationsBody(BaseModel):
     items: list[MatchAnalysisAudioDurationItem] = Field(default_factory=list)
 
 
+class MatchAnalysisAudioEnsureBody(BaseModel):
+    init_data: str
+    ids: list[int] = Field(default_factory=list)
+
+
 class MatchAnalysisAssignBody(BaseModel):
     init_data: str
     target_user_id: int = Field(..., ge=1)
@@ -432,6 +437,20 @@ async def match_analysis_list(body: MatchAnalysisInitBody):
         else:
             rows = await dao.list_for_user_ordered(uid)
             ready_count = 0
+        # Дозаполняем длительности сразу при загрузке кабинета (админ).
+        if is_admin and rows:
+            changed = False
+            for row in rows:
+                analysis = copy.deepcopy(row.analysis or {})
+                filled = await asyncio.to_thread(_fill_missing_audio_durations, analysis)
+                if filled:
+                    row.analysis = analysis
+                    flag_modified(row, "analysis")
+                    changed = True
+            if changed:
+                await session.commit()
+                for row in rows:
+                    await session.refresh(row)
         items = [_serialize_list_item(r) for r in rows]
     return {
         "items": items,
@@ -784,17 +803,97 @@ async def match_analysis_audio_set_durations(body: MatchAnalysisAudioSetDuration
                 continue
             move["audioDurationSec"] = round(dur, 3)
             updated += 1
-        if updated:
+        if (updated):
             row.analysis = analysis
             flag_modified(row, "analysis")
             await session.commit()
-        _count, audio_seconds, audio_minutes = _audio_totals(row.analysis)
+        count, audio_seconds, audio_minutes = _audio_totals(row.analysis)
     return {
         "ok": True,
         "updated": updated,
+        "audio_count": count,
         "audio_seconds": audio_seconds,
         "audio_minutes": audio_minutes,
     }
+
+
+def _missing_audio_duration_items(analysis: dict[str, Any] | None) -> list[dict[str, Any]]:
+    missing: list[dict[str, Any]] = []
+    for game in (analysis or {}).get("games") or []:
+        if not isinstance(game, dict):
+            continue
+        try:
+            game_number = int(game.get("game_number"))
+        except (TypeError, ValueError):
+            continue
+        for move_index, move in enumerate(game.get("moves") or []):
+            if not isinstance(move, dict):
+                continue
+            key = move.get("audioS3Key")
+            if not key:
+                continue
+            if _coerce_duration_sec(move.get("audioDurationSec")) is not None:
+                continue
+            missing.append(
+                {
+                    "game_number": game_number,
+                    "move_index": move_index,
+                    "audio_s3_key": key,
+                }
+            )
+    return missing
+
+
+@match_analysis_api_router.post("/api/match_analysis/audio/ensure_durations")
+async def match_analysis_audio_ensure_durations(body: MatchAnalysisAudioEnsureBody):
+    """
+    Пакетно дозаполняет длительности по списку анализов (серверный probe)
+    и возвращает минуты + список файлов, которые ещё нужно измерить на клиенте.
+    """
+    _resolve_admin_user_id(body.init_data)
+    ids: list[int] = []
+    seen: set[int] = set()
+    for raw in body.ids or []:
+        try:
+            mid = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if mid <= 0 or mid in seen:
+            continue
+        seen.add(mid)
+        ids.append(mid)
+    if not ids:
+        return {"items": []}
+
+    out: list[dict[str, Any]] = []
+    async with async_session_maker() as session:
+        dao = MatchAnalysisDAO(session)
+        changed = False
+        for mid in ids:
+            row = await dao.find_one_or_none_by_id(mid)
+            if not row:
+                continue
+            analysis = copy.deepcopy(row.analysis or {})
+            filled = await asyncio.to_thread(_fill_missing_audio_durations, analysis)
+            if filled:
+                row.analysis = analysis
+                flag_modified(row, "analysis")
+                changed = True
+            else:
+                analysis = row.analysis or {}
+            count, seconds, minutes = _audio_totals(analysis)
+            out.append(
+                {
+                    "id": mid,
+                    "audio_count": count,
+                    "audio_seconds": seconds,
+                    "audio_minutes": minutes,
+                    "missing": _missing_audio_duration_items(analysis),
+                }
+            )
+        if changed:
+            await session.commit()
+    return {"items": out}
 
 
 @match_analysis_api_router.post("/api/match_analysis/update_meta")

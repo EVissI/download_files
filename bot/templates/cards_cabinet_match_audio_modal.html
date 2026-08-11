@@ -1218,15 +1218,24 @@
             });
     }
 
-    function ensureMinutes(matchId) {
-        var idNum = Number(matchId);
-        if (!idNum) return Promise.resolve();
+    function ensureAllCardMinutes(cards) {
         var initData = getInitData();
         if (!initData) return Promise.resolve();
-        return fetch('/api/match_analysis/audio/list', {
+        var ids = [];
+        var seen = {};
+        (cards || []).forEach(function (row) {
+            var count = Number(row && row.audio_count) || 0;
+            var idNum = Number(row && row.content_card_id);
+            if (count <= 0 || !idNum || seen[idNum]) return;
+            seen[idNum] = true;
+            ids.push(idNum);
+        });
+        if (!ids.length) return Promise.resolve();
+
+        return fetch('/api/match_analysis/audio/ensure_durations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: initData, id: idNum }),
+            body: JSON.stringify({ init_data: initData, ids: ids }),
         })
             .then(function (resp) {
                 return resp.json().catch(function () { return {}; }).then(function (payload) {
@@ -1237,78 +1246,79 @@
                 });
             })
             .then(function (payload) {
-                var items = Array.isArray(payload.items) ? payload.items.slice() : [];
-                var missing = items.filter(function (it) {
-                    var d = Number(it && it.duration_sec);
-                    return it && it.audio_s3_key && !(Number.isFinite(d) && d > 0);
+                var items = Array.isArray(payload.items) ? payload.items : [];
+                // Сразу обновляем минуты по серверному probe.
+                items.forEach(function (it) {
+                    patchAudioTotals(
+                        it.id,
+                        it.audio_count,
+                        it.audio_minutes
+                    );
                 });
-                var applyTotals = function () {
-                    var totals = totalsFromItems(items);
-                    if (payload.audio_minutes != null && !missing.length) {
-                        totals.minutes = Math.floor(Number(payload.audio_minutes) || 0);
-                    }
-                    patchAudioTotals(idNum, totals.count, totals.minutes);
-                };
-                if (!missing.length) {
-                    applyTotals();
-                    return;
-                }
-                return Promise.all(
-                    missing.map(function (it) {
-                        return measureMediaUrlDurationSec(it.audio_s3_key).then(function (dur) {
-                            return dur
-                                ? {
-                                    game_number: it.game_number,
-                                    move_index: it.move_index,
-                                    duration_sec: dur,
-                                }
-                                : null;
-                        });
-                    })
-                ).then(function (measured) {
-                    var payloadItems = measured.filter(Boolean);
-                    if (!payloadItems.length) {
-                        applyTotals();
-                        return;
-                    }
-                    return fetch('/api/match_analysis/audio/set_durations', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            init_data: initData,
-                            id: idNum,
-                            items: payloadItems,
-                        }),
-                    })
-                        .then(function (resp) {
-                            return resp.json().catch(function () { return {}; }).then(function (body) {
-                                if (!resp.ok) {
-                                    throw new Error(body.detail || ('HTTP ' + resp.status));
-                                }
-                                return body;
-                            });
-                        })
-                        .then(function (body) {
-                            var byKey = {};
-                            payloadItems.forEach(function (it) {
-                                byKey[String(it.game_number) + ':' + String(it.move_index)] =
-                                    it.duration_sec;
-                            });
-                            items.forEach(function (it) {
-                                var key = String(it.game_number) + ':' + String(it.move_index);
-                                if (byKey[key] != null) it.duration_sec = byKey[key];
-                            });
-                            var totals = totalsFromItems(items);
-                            if (body && body.audio_minutes != null) {
-                                totals.minutes = Math.floor(Number(body.audio_minutes) || 0);
-                            }
-                            patchAudioTotals(idNum, totals.count, totals.minutes);
-                        });
+
+                // Оставшиеся webm без duration — последовательно на клиенте.
+                var pending = items.filter(function (it) {
+                    return Array.isArray(it.missing) && it.missing.length > 0;
                 });
+                var chain = Promise.resolve();
+                pending.forEach(function (it) {
+                    chain = chain.then(function () {
+                        return Promise.all(
+                            it.missing.map(function (m) {
+                                return measureMediaUrlDurationSec(m.audio_s3_key).then(function (dur) {
+                                    return dur
+                                        ? {
+                                            game_number: m.game_number,
+                                            move_index: m.move_index,
+                                            duration_sec: dur,
+                                        }
+                                        : null;
+                                });
+                            })
+                        ).then(function (measured) {
+                            var payloadItems = measured.filter(Boolean);
+                            if (!payloadItems.length) return;
+                            return fetch('/api/match_analysis/audio/set_durations', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    init_data: initData,
+                                    id: it.id,
+                                    items: payloadItems,
+                                }),
+                            })
+                                .then(function (resp) {
+                                    return resp.json().catch(function () { return {}; }).then(function (body) {
+                                        if (!resp.ok) {
+                                            throw new Error(body.detail || ('HTTP ' + resp.status));
+                                        }
+                                        return body;
+                                    });
+                                })
+                                .then(function (body) {
+                                    if (body && body.audio_minutes != null) {
+                                        patchAudioTotals(
+                                            it.id,
+                                            body.audio_count != null ? body.audio_count : it.audio_count,
+                                            body.audio_minutes
+                                        );
+                                    }
+                                })
+                                .catch(function (err) {
+                                    console.warn('client duration fill failed', it.id, err);
+                                });
+                        });
+                    });
+                });
+                return chain;
             })
             .catch(function (err) {
-                console.warn('ensureMinutes failed', err);
+                console.warn('ensureAllCardMinutes failed', err);
             });
+    }
+
+    function ensureMinutes(matchId) {
+        return ensureAllCardMinutes([{ content_card_id: matchId, audio_count: 1 }]);
     }
 
     function deleteAudio(item) {
@@ -1548,6 +1558,7 @@
         open: openForMatch,
         close: closeListModal,
         ensureMinutes: ensureMinutes,
+        ensureAllCardMinutes: ensureAllCardMinutes,
     };
 })();
 </script>

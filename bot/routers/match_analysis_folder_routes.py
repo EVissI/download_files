@@ -4,6 +4,8 @@ API папок кабинета «Анализ матча» (ROOT_ADMIN).
 """
 from __future__ import annotations
 
+import asyncio
+import copy
 from datetime import datetime, timezone
 from typing import Any
 
@@ -11,6 +13,7 @@ from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.orm.attributes import flag_modified
 
 from bot.common.tasks.folder_schedule import normalize_weekdays, validate_issue_time_msk
 from bot.common.tasks.match_analysis_folder_schedule import (
@@ -27,6 +30,7 @@ from bot.db.models import (
     MatchAnalysisFolderSchedule,
 )
 from bot.routers.match_analysis_router import (
+    _fill_missing_audio_durations,
     _is_ma_admin,
     _resolve_admin_user_id,
     _resolve_user_id,
@@ -489,10 +493,23 @@ async def ma_folder_link_resolve(body: MaFolderLinkResolveBody):
             )
             by_id = {row.id: row for row in rows_res.scalars().all()}
             match_ids = [mid for mid in match_ids if mid in by_id]
+            changed = False
             for mid in match_ids:
                 row = by_id.get(mid)
-                if row:
-                    cards_data.append(_serialize_list_item(row))
+                if not row:
+                    continue
+                if _is_ma_admin(user_id):
+                    analysis = copy.deepcopy(row.analysis or {})
+                    filled = await asyncio.to_thread(
+                        _fill_missing_audio_durations, analysis
+                    )
+                    if filled:
+                        row.analysis = analysis
+                        flag_modified(row, "analysis")
+                        changed = True
+                cards_data.append(_serialize_list_item(row))
+            if changed:
+                await session.commit()
 
         return {
             "folder": _serialize_ma_folder(folder),
