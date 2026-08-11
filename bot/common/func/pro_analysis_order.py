@@ -37,15 +37,15 @@ def _get_i18n(lang_code: str | None = None) -> "TranslatorRunner":
 
 
 def _service_label(i18n: "TranslatorRunner", service: str) -> str:
-    mapping = {
-        "hint_viewer": i18n.pro.analysis.service_hints,
-        "autoanaliz": i18n.pro.analysis.service_match,
-        "short_board": i18n.pro.analysis.service_short_board,
-    }
-    getter = mapping.get(service)
-    if getter is None:
-        return service or "—"
-    return getter()
+    # fluentogram накапливает ключ на одном runner — нельзя сохранять getters
+    # и нельзя вызывать i18n.* пока уже открыт другой атрибутный путь.
+    if service == "hint_viewer":
+        return i18n.pro.analysis.service_hints()
+    if service == "autoanaliz":
+        return i18n.pro.analysis.service_match()
+    if service == "short_board":
+        return i18n.pro.analysis.service_short_board()
+    return service or "—"
 
 
 async def create_pro_order(
@@ -176,8 +176,10 @@ def _build_admin_caption(order: dict[str, Any], i18n: "TranslatorRunner") -> str
     username = order.get("username")
     service = order.get("service") or ""
     username_line = f"@{username}" if username else "—"
+    # Сначала резолвим service_label: иначе admin_caption + kwargs склеят ключ.
+    service_label = _service_label(i18n, service)
     return i18n.pro.analysis.admin_caption(
-        service=_service_label(i18n, service),
+        service=service_label,
         user_id=user_id,
         username=username_line,
     )

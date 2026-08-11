@@ -1516,13 +1516,24 @@ async def _notify_batch_file_telegram(
             username=message.from_user.username or getattr(user_info, "username", None),
             mat_ref=mat_ref,
         )
+        finished_text = await message_dao.get_text(
+            "hint_viewer_finished",
+            user_info.lang_code,
+            red_player=red_player,
+            black_player=black_player,
+        )
+        file_index = payload.get("file_index")
+        total_files = payload.get("total_files")
+        if file_index is not None and total_files:
+            counter = f"{file_index}/{total_files}"
+            if "Анализ завершен!" in finished_text:
+                finished_text = finished_text.replace(
+                    "Анализ завершен!", f"Анализ завершен! {counter}", 1
+                )
+            else:
+                finished_text = f"{finished_text} {counter}"
         await message.answer(
-            text=await message_dao.get_text(
-                "hint_viewer_finished",
-                user_info.lang_code,
-                red_player=red_player,
-                black_player=black_player,
-            ),
+            text=finished_text,
             reply_markup=keyboard,
         )
     else:
