@@ -31,6 +31,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 from rq import Queue
+from rq.exceptions import NoSuchJobError
 from rq.registry import StartedJobRegistry
 from rq.job import Job
 from redis import Redis
@@ -1542,6 +1543,12 @@ async def check_batch_job_status(
 
                 await asyncio.sleep(3)
 
+            except NoSuchJobError:
+                logger.warning(
+                    f"Batch job {job_id} no longer exists in Redis, removing active job"
+                )
+                remove_active_job(message.from_user.id, job_id)
+                break
             except Exception as e:
                 logger.warning(f"Error checking batch job status: {e}")
                 await asyncio.sleep(5)
@@ -1749,9 +1756,14 @@ async def check_job_status(
                     await asyncio.sleep(3)
                     continue
 
+            except NoSuchJobError:
+                logger.warning(
+                    f"Job {job_id} no longer exists in Redis, removing active job"
+                )
+                remove_active_job(message.from_user.id, job_id)
+                break
             except Exception as e:
                 logger.warning(f"Error checking job status: {e}")
-                remove_active_job(message.from_user.id, job_id)
                 await asyncio.sleep(5)
                 continue
 
