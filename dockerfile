@@ -7,6 +7,7 @@ RUN apt update && apt install -y --no-install-recommends \
     wget \
     gnupg2 \
     gnubg \
+    ffmpeg \
     tesseract-ocr \
     libtesseract-dev \
     tesseract-ocr-rus \

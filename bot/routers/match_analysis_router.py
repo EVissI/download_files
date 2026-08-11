@@ -80,6 +80,13 @@ class MatchAnalysisAudioDeleteBody(BaseModel):
     delete_s3: bool = True
 
 
+class MatchAnalysisAudioDownloadBody(BaseModel):
+    init_data: str
+    id: int
+    game_number: int
+    move_index: int
+
+
 class MatchAnalysisAudioDurationItem(BaseModel):
     game_number: int
     move_index: int
@@ -949,6 +956,46 @@ async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
     return StreamingResponse(
         io.BytesIO(zip_bytes),
         media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@match_analysis_api_router.post("/api/match_analysis/audio/download_mp3")
+async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody):
+    """Скачивание одного аудиофайла хода в формате MP3."""
+    _resolve_admin_user_id(body.init_data)
+    async with async_session_maker() as session:
+        dao = MatchAnalysisDAO(session)
+        row = await dao.find_one_or_none_by_id(body.id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Анализ не найден")
+        analysis = row.analysis or {}
+        _, move = _find_game_and_move(analysis, body.game_number, body.move_index)
+
+    key = move.get("audioS3Key")
+    if not key or not HintS3Storage.is_match_analysis_media_key(str(key)):
+        raise HTTPException(status_code=404, detail="Аудио не найдено")
+    audio_name = move.get("audioName") or Path(str(key)).name or "audio.webm"
+
+    s3 = HintS3Storage.from_settings()
+    try:
+        raw = await asyncio.to_thread(s3.download_bytes, str(key))
+    except Exception as e:
+        logger.warning(f"download_mp3: download failed key={key}: {e}")
+        raise HTTPException(status_code=404, detail="Не удалось скачать аудио из хранилища") from e
+    if not raw:
+        raise HTTPException(status_code=404, detail="Пустой аудиофайл")
+
+    mp3 = await asyncio.to_thread(_to_mp3_bytes, raw, str(key))
+    stem = Path(str(audio_name)).stem.strip() or "audio"
+    stem = re.sub(r'[\\/:*?"<>|]+', "_", stem).strip(" ._") or "audio"
+    filename = f"{stem[:120]}.mp3"
+    return StreamingResponse(
+        io.BytesIO(mp3),
+        media_type="audio/mpeg",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Cache-Control": "no-store",

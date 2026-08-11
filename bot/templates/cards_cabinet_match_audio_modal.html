@@ -944,6 +944,17 @@
             var actions = document.createElement('div');
             actions.className = 'ma-audio-modal__actions-row';
 
+            var downloadBtn = document.createElement('button');
+            downloadBtn.type = 'button';
+            downloadBtn.className = 'ma-audio-modal__icon-btn';
+            downloadBtn.title = 'Скачать';
+            downloadBtn.setAttribute('aria-label', 'Скачать аудио');
+            downloadBtn.innerHTML = '<i class="fa fa-download" aria-hidden="true"></i>';
+            downloadBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                downloadAudioItem(item);
+            });
+
             var redirectBtn = document.createElement('button');
             redirectBtn.type = 'button';
             redirectBtn.className = 'ma-audio-modal__icon-btn';
@@ -979,6 +990,7 @@
                 deleteAudio(item);
             });
 
+            actions.appendChild(downloadBtn);
             actions.appendChild(redirectBtn);
             actions.appendChild(editBtn);
             actions.appendChild(delBtn);
@@ -1342,6 +1354,61 @@
 
     function ensureMinutes(matchId) {
         return ensureAllCardMinutes([{ content_card_id: matchId, audio_count: 1 }]);
+    }
+
+    function downloadAudioItem(item) {
+        if (!item || state.matchId == null || item.move_index == null) return;
+        var initData = getInitData();
+        if (!initData) {
+            showNotice('Нет Telegram initData', 'Ошибка');
+            return;
+        }
+        var fallbackName = String(item.audio_name || 'audio.webm').split(/[\\/]/).pop() || 'audio.webm';
+        var stem = fallbackName.replace(/\.[^.]+$/, '') || 'audio';
+        setListMsg('Конвертация в MP3…');
+        fetch('/api/match_analysis/audio/download_mp3', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                init_data: initData,
+                id: state.matchId,
+                game_number: item.game_number,
+                move_index: item.move_index,
+            }),
+        })
+            .then(function (resp) {
+                if (!resp.ok) {
+                    return resp.json().catch(function () { return {}; }).then(function (payload) {
+                        var detail = payload.detail || ('HTTP ' + resp.status);
+                        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                    });
+                }
+                var filename = filenameFromContentDisposition(
+                    resp.headers.get('Content-Disposition'),
+                    stem + '.mp3'
+                );
+                return resp.blob().then(function (blob) {
+                    return { blob: blob, filename: filename };
+                });
+            })
+            .then(function (pack) {
+                var url = URL.createObjectURL(pack.blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = pack.filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(function () {
+                    try { URL.revokeObjectURL(url); } catch (_e) { /* ignore */ }
+                }, 1500);
+                setListMsg(state.items.length ? ('Файлов: ' + state.items.length) : '');
+            })
+            .catch(function (err) {
+                console.error(err);
+                setListMsg('Ошибка скачивания: ' + (err.message || err), true);
+                showNotice('Не удалось скачать MP3: ' + (err.message || err), 'Ошибка');
+            });
     }
 
     function deleteAudio(item) {
