@@ -309,7 +309,7 @@ async def process_batch_files(
         new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
         shutil.move(file_path, new_file_path)
         try:
-            asyncio.create_task(save_file_to_yandex_disk(new_file_path, original_name))
+            asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
         except Exception as e:
             logger.error(f"Error saving file to Yandex Disk: {e}")
         
@@ -535,7 +535,7 @@ async def handle_batch_player_selection(
                 new_file_path = os.path.join(os.getcwd(), "files", new_file_name)
                 shutil.move(file_path, new_file_path)
                 try:
-                    asyncio.create_task(save_file_to_yandex_disk(new_file_path, original_name))
+                    asyncio.create_task(save_file_to_yandex_disk(new_file_path, new_file_name))
                 except Exception as e:
                     logger.error(f"Error saving file to Yandex Disk: {e}")
                 

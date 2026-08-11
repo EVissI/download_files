@@ -28,6 +28,7 @@ from bot.common.kbds.inline.autoanalize import (
     get_download_pdf_kb,
     get_hint_viewer_kb,
 )
+from bot.common.func.pro_analysis_order import offer_pro_analysis_order
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import DetailedAnalysisDAO, UserDAO, MessagesTextsDAO
@@ -339,6 +340,16 @@ async def handle_mat_file(
                         i18n.auto.analyze.ask_hints(),
                         reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
                     )
+                    await offer_pro_analysis_order(
+                        message,
+                        user_id=message.from_user.id,
+                        username=message.from_user.username
+                        or getattr(user_info, "username", None),
+                        service="autoanaliz",
+                        i18n=i18n,
+                        file_path=new_file_path,
+                        file_name=os.path.basename(new_file_path),
+                    )
                 else:
                     # Single player
                     formatted_analysis, new_file_path = result
@@ -363,6 +374,16 @@ async def handle_mat_file(
                     await message.answer(
                         await message_dao.get_text('analyze_ask_pdf', user_info.lang_code),
                         reply_markup=get_download_pdf_kb(i18n, 'solo')
+                    )
+                    await offer_pro_analysis_order(
+                        message,
+                        user_id=message.from_user.id,
+                        username=message.from_user.username
+                        or getattr(user_info, "username", None),
+                        service="autoanaliz",
+                        i18n=i18n,
+                        file_path=new_file_path,
+                        file_name=os.path.basename(new_file_path),
                     )
                     await session_without_commit.commit()
 
@@ -491,6 +512,16 @@ async def handle_player_selection(
         await callback.message.answer(
             await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), 
             reply_markup=get_download_pdf_kb(i18n, 'solo')
+        )
+        await offer_pro_analysis_order(
+            callback.message,
+            user_id=callback.from_user.id,
+            username=callback.from_user.username
+            or getattr(user_info, "username", None),
+            service="autoanaliz",
+            i18n=i18n,
+            file_path=file_path,
+            file_name=file_name or os.path.basename(file_path),
         )
         await session_without_commit.commit()
         await state.clear()

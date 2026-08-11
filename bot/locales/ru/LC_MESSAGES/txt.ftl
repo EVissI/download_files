@@ -144,6 +144,24 @@ auto-analyze-ask_pdf = Хотите ли получить анализ в фор
 auto-analyze-pdf_ready = Ваш анализ в формате PDF:
 auto-analyze-no_pdf = Хорошо, PDF не будет отправлен. Спасибо за использование бота!
 
+pro-analysis-ask = Нужен разбор от эксперта?
+pro-analysis-order_button = Заказать анализ у эксперта
+pro-analysis-order_sent = ✅ Заявка отправлена эксперту. Администратор ответит вам в этом чате.
+pro-analysis-order_not_found = Заявка не найдена
+pro-analysis-order_expired = Заявка устарела или уже отправлена
+pro-analysis-order_not_yours = Это не ваша заявка
+pro-analysis-order_sending = Отправляем админам…
+pro-analysis-order_file_missing = ❌ Файл матча больше недоступен. Повторите анализ и закажите снова.
+pro-analysis-order_send_failed = ❌ Не удалось отправить заказ админам. Попробуйте позже.
+pro-analysis-admin_reply = Ответить
+pro-analysis-admin_caption = 📩 <b>Заказ анализа у эксперта</b>
+    Сервис: { $service }
+    TG ID: <code>{ $user_id }</code>
+    Username: { $username }
+pro-analysis-service_hints = Анализ ошибок
+pro-analysis-service_match = Анализ матча
+pro-analysis-service_short_board = Short Board
+
 analysis-cube-missed_doubles_below_cp = Пропущенный куб по ДП
 analysis-cube-missed_doubles_above_cp = Пропущенный куб по ТГ
 analysis-cube-wrong_doubles_below_sp = Ошибочный куб по ДП

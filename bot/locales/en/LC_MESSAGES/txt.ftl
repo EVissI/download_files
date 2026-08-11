@@ -140,6 +140,24 @@ auto-analyze-ask_pdf = Would you like to get the analysis as a PDF?
 auto-analyze-pdf_ready = Your analysis in PDF format:
 auto-analyze-no_pdf = Okay, PDF will not be sent. Thank you for using the bot!
 
+pro-analysis-ask = Need a review from an expert?
+pro-analysis-order_button = Order expert analysis
+pro-analysis-order_sent = ✅ Request sent to an expert. An admin will reply in this chat.
+pro-analysis-order_not_found = Request not found
+pro-analysis-order_expired = Request expired or already submitted
+pro-analysis-order_not_yours = This is not your request
+pro-analysis-order_sending = Sending to admins…
+pro-analysis-order_file_missing = ❌ Match file is no longer available. Please analyze again and order once more.
+pro-analysis-order_send_failed = ❌ Could not send the request to admins. Please try again later.
+pro-analysis-admin_reply = Reply
+pro-analysis-admin_caption = 📩 <b>Expert analysis order</b>
+    Service: { $service }
+    TG ID: <code>{ $user_id }</code>
+    Username: { $username }
+pro-analysis-service_hints = Error analysis
+pro-analysis-service_match = Match analysis
+pro-analysis-service_short_board = Short Board
+
 analysis-cube-missed_doubles_below_cp = Missed doubles below CP
 analysis-cube-missed_doubles_above_cp = Missed doubles above CP
 analysis-cube-wrong_doubles_below_sp = Wrong doubles below SP
