@@ -622,10 +622,10 @@
         <div class="ma-audio-modal__footer">
             <div class="ma-audio-modal__footer-left">
                 <button type="button" id="maAudioListImportBtn" class="ma-audio-modal__btn" title="Скачать все аудио в ZIP (MP3)">
-                    Импорт
+                    Экспорт
                 </button>
                 <button type="button" id="maAudioListExportBtn" class="ma-audio-modal__btn" title="Загрузить ZIP с MP3 и заменить аудио">
-                    Экспорт
+                    Импорт
                 </button>
                 <input type="file" id="maAudioListExportFileInput" accept=".zip,application/zip" style="display:none" tabindex="-1">
             </div>
@@ -2477,13 +2477,13 @@
             return;
         }
         if (!state.items.length) {
-            showNotice('В этом анализе нет аудио для импорта', 'Импорт');
+            showNotice('В этом анализе нет аудио для экспорта', 'Экспорт');
             return;
         }
         var matchId = state.matchId;
         var fileCount = Math.max(1, state.items.length || 1);
         setZipBusy(true);
-        startConvertEstimate('Импорт: конвертация в MP3…', {
+        startConvertEstimate('Экспорт: конвертация в MP3…', {
             files: fileCount,
             msPerFile: 3000,
         });
@@ -2512,16 +2512,16 @@
                 }
                 requestTelegramDownload(url, filename);
                 if (isListModalOpen() && state.matchId === matchId) {
-                    setListMsg('Импорт готов: ZIP скачан');
+                    setListMsg('Экспорт готов: ZIP скачан');
                 }
-                showNotice('ZIP с MP3 скачан', 'Импорт');
+                showNotice('ZIP с MP3 скачан', 'Экспорт');
             })
             .catch(function (err) {
                 console.error(err);
                 if (isListModalOpen() && state.matchId === matchId) {
-                    setListMsg('Ошибка импорта: ' + (err.message || err), true);
+                    setListMsg('Ошибка экспорта: ' + (err.message || err), true);
                 }
-                showNotice('Ошибка импорта: ' + (err.message || err), 'Ошибка');
+                showNotice('Ошибка экспорта: ' + (err.message || err), 'Ошибка');
             })
             .finally(function () {
                 setZipBusy(false);
@@ -2541,7 +2541,7 @@
             state.items.length || Math.round((Number(file.size) || 400000) / 400000)
         );
         setZipBusy(true);
-        startConvertEstimate('Экспорт: конвертация MP3 → WebM…', {
+        startConvertEstimate('Импорт: конвертация MP3 → WebM…', {
             files: approxFiles,
             msPerFile: 3400,
         });
@@ -2579,7 +2579,7 @@
                 if (isListModalOpen() && state.matchId === matchId) {
                     setListMsg(msg);
                 }
-                showNotice(msg, 'Экспорт');
+                showNotice(msg, 'Импорт');
                 if (state.matchId === matchId) {
                     return loadAudios();
                 }
@@ -2587,9 +2587,9 @@
             .catch(function (err) {
                 console.error(err);
                 if (isListModalOpen() && state.matchId === matchId) {
-                    setListMsg('Ошибка экспорта: ' + (err.message || err), true);
+                    setListMsg('Ошибка импорта: ' + (err.message || err), true);
                 }
-                showNotice('Ошибка экспорта: ' + (err.message || err), 'Ошибка');
+                showNotice('Ошибка импорта: ' + (err.message || err), 'Ошибка');
             })
             .finally(function () {
                 setZipBusy(false);

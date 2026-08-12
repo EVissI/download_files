@@ -989,7 +989,7 @@ async def match_analysis_audio_list(body: MatchAnalysisIdBody):
 @match_analysis_api_router.post("/api/match_analysis/audio/import_mp3_zip")
 async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
     """
-    «Импорт» в UI: конвертирует все аудио анализа в mp3, кладёт в zip
+    «Экспорт» в UI: конвертирует все аудио анализа в mp3, кладёт в zip
     и возвращает временную ссылку для Telegram.WebApp.downloadFile.
     """
     _resolve_admin_user_id(body.init_data)
@@ -1096,7 +1096,7 @@ async def match_analysis_audio_export_mp3_zip(
     file: UploadFile = File(...),
 ):
     """
-    «Экспорт» в UI: принимает zip с mp3, конвертирует в webm и заменяет аудио
+    «Импорт» в UI: принимает zip с mp3, конвертирует в webm и заменяет аудио
     с эквивалентными именами (g{N}_m{M}__stem.mp3 или совпадение по имени).
     """
     uid = _resolve_admin_user_id(init_data)
