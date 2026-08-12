@@ -951,18 +951,18 @@ def _build_mp3_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
 async def _set_export_job_state(job_id: str, **fields: Any) -> None:
     key = f"{MA_EXPORT_JOB_PREFIX}{job_id}"
     raw = await redis_client.get(key)
-    if not raw:
-        return
-    try:
-        data = json.loads(raw)
-    except Exception:
-        data = {}
+    if raw:
+        try:
+            data = json.loads(raw)
+        except Exception:
+            data = {}
+    else:
+        data = {"job_id": job_id}
     data.update(fields)
     await redis_client.set(key, json.dumps(data, ensure_ascii=False), expire=MA_EXPORT_JOB_TTL_SEC)
 
 
 async def _run_mp3_zip_export_job(job_id: str, match_id: int, admin_uid: int) -> None:
-    key = f"{MA_EXPORT_JOB_PREFIX}{job_id}"
     try:
         await _set_export_job_state(job_id, status="processing", progress=5)
         async with async_session_maker() as session:
@@ -992,15 +992,6 @@ async def _run_mp3_zip_export_job(job_id: str, match_id: int, admin_uid: int) ->
     except Exception as exc:
         logger.exception(f"export job failed job_id={job_id} match_id={match_id}")
         await _set_export_job_state(job_id, status="error", error=str(exc) or "Ошибка экспорта")
-    finally:
-        raw = await redis_client.get(key)
-        if raw:
-            try:
-                data = json.loads(raw)
-            except Exception:
-                data = {}
-            if data.get("status") in ("pending", "processing"):
-                await _set_export_job_state(job_id, status="error", error="Экспорт прерван")
 
 
 def _stream_s3_object_body(body: Any, chunk_size: int = 256 * 1024):

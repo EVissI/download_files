@@ -2689,21 +2689,16 @@
             })
             .then(function (payload) {
                 var jobId = payload && payload.job_id ? String(payload.job_id) : '';
-                if (!jobId) {
-                    if (payload && payload.url) {
-                        completeConvertEstimate();
-                        var legacyUrl = String(payload.url);
-                        var legacyName = (payload && payload.file_name)
-                            ? String(payload.file_name)
-                            : ('match_' + matchId + '_audio_mp3.zip');
-                        return requestTelegramDownload(legacyUrl, legacyName);
+                if (jobId) {
+                    if (isListModalOpen() && state.matchId === matchId) {
+                        setListMsg('Экспорт: конвертация на сервере…');
                     }
-                    throw new Error('Сервер не вернул задачу экспорта');
+                    return pollExportJob(jobId, initData);
                 }
-                if (isListModalOpen() && state.matchId === matchId) {
-                    setListMsg('Экспорт: конвертация на сервере…');
+                if (payload && payload.url) {
+                    return Promise.resolve(payload);
                 }
-                return pollExportJob(jobId, initData);
+                throw new Error('Сервер не вернул задачу экспорта');
             })
             .then(function (payload) {
                 completeConvertEstimate();
