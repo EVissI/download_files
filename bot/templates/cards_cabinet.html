@@ -384,7 +384,7 @@
         }
 
         .search-wrap.search-wrap--ma {
-            grid-template-columns: minmax(0, 1fr) minmax(132px, 38%) auto;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 9.8em) auto;
             gap: 8px;
         }
 
@@ -410,6 +410,7 @@
             min-width: 0;
             white-space: nowrap;
             justify-self: end;
+            flex-shrink: 0;
             transition: background 0.15s, border-color 0.15s, color 0.15s;
         }
 
@@ -477,13 +478,23 @@
             color: #fff;
         }
 
+        .search-wrap.search-wrap--ma > .search-input {
+            min-width: 0;
+            width: 100%;
+            max-width: 100%;
+        }
+
         .search-wrap.search-wrap--ma .status-filter-wrap {
-            width: auto;
-            justify-content: stretch;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            justify-content: flex-start;
+            overflow: hidden;
         }
 
         .search-wrap.search-wrap--ma .status-filter-select {
             width: 100%;
+            max-width: 100%;
             min-width: 0;
         }
 
