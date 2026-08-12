@@ -152,6 +152,13 @@ class HintS3Storage:
         resp = self._client.get_object(Bucket=self._bucket, Key=key)
         return resp["Body"].read()
 
+    def open_object(self, key: str, *, byte_range: str | None = None) -> dict:
+        """Открыть объект S3 для потоковой отдачи (get_object)."""
+        kw: dict = {"Bucket": self._bucket, "Key": key}
+        if byte_range:
+            kw["Range"] = byte_range
+        return self._client.get_object(**kw)
+
     def exists(self, key: str) -> bool:
         try:
             self._client.head_object(Bucket=self._bucket, Key=key)

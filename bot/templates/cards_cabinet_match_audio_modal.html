@@ -2208,7 +2208,9 @@
                 if (!url) {
                     throw new Error('Сервер не вернул ссылку для скачивания');
                 }
-                requestTelegramDownload(url, filename);
+                return requestTelegramDownload(url, filename);
+            })
+            .then(function () {
                 if (isListModalOpen() && state.matchId === matchId) {
                     setListMsg(state.items.length ? ('Файлов: ' + state.items.length) : '');
                 }
@@ -2523,8 +2525,53 @@
         setConvertProgressVisible();
     }
 
+    function sleepMs(ms) {
+        return new Promise(function (resolve) {
+            setTimeout(resolve, ms);
+        });
+    }
+
+    function downloadViaFetchBlob(absUrl, safeName, attempt, maxAttempts) {
+        attempt = attempt || 0;
+        maxAttempts = maxAttempts || 4;
+        return fetch(absUrl, { credentials: 'same-origin', cache: 'no-store' })
+            .then(function (resp) {
+                if (!resp.ok) {
+                    throw new Error('HTTP ' + resp.status);
+                }
+                return resp.blob();
+            })
+            .then(function (blob) {
+                if (!blob || !blob.size) {
+                    throw new Error('Пустой файл');
+                }
+                var objectUrl = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = objectUrl;
+                a.setAttribute('download', safeName);
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(function () {
+                    URL.revokeObjectURL(objectUrl);
+                }, 60000);
+            })
+            .catch(function (err) {
+                if (attempt + 1 < maxAttempts) {
+                    var delay = Math.min(12000, 1500 * Math.pow(2, attempt));
+                    return sleepMs(delay).then(function () {
+                        return downloadViaFetchBlob(absUrl, safeName, attempt + 1, maxAttempts);
+                    });
+                }
+                throw err;
+            });
+    }
+
     function requestTelegramDownload(path, fileName) {
-        if (!path) return;
+        if (!path) {
+            return Promise.reject(new Error('Нет ссылки для скачивания'));
+        }
         var safeName = String(fileName || 'file').replace(/[\\/]/g, '_').trim() || 'file';
         var absUrl;
         try {
@@ -2535,24 +2582,77 @@
         var tw = window.Telegram && window.Telegram.WebApp;
         if (tw && typeof tw.downloadFile === 'function') {
             try {
-                tw.downloadFile({ url: absUrl, file_name: safeName }, function (accepted) {
-                    if (accepted === false) {
-                        showNotice('Скачивание отменено', 'Скачивание');
-                    }
+                return new Promise(function (resolve, reject) {
+                    var settled = false;
+                    var fallbackTimer = setTimeout(function () {
+                        if (settled) return;
+                        downloadViaFetchBlob(absUrl, safeName)
+                            .then(function () {
+                                settled = true;
+                                resolve();
+                            })
+                            .catch(reject);
+                    }, 3000);
+                    tw.downloadFile({ url: absUrl, file_name: safeName }, function (accepted) {
+                        if (settled) return;
+                        settled = true;
+                        clearTimeout(fallbackTimer);
+                        if (accepted === false) {
+                            downloadViaFetchBlob(absUrl, safeName).then(resolve).catch(reject);
+                            return;
+                        }
+                        resolve();
+                    });
                 });
-                return;
             } catch (err) {
                 console.warn('Telegram.WebApp.downloadFile:', err);
             }
         }
-        var a = document.createElement('a');
-        a.href = absUrl;
-        a.setAttribute('download', safeName);
-        a.rel = 'noopener noreferrer';
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        return downloadViaFetchBlob(absUrl, safeName);
+    }
+
+    function pollExportJob(jobId, initData) {
+        var pollMs = 2000;
+        var maxWaitMs = 45 * 60 * 1000;
+        var startedAt = Date.now();
+
+        function pollOnce() {
+            if (Date.now() - startedAt > maxWaitMs) {
+                return Promise.reject(new Error('Превышено время ожидания экспорта'));
+            }
+            return fetch('/api/match_analysis/audio/export_job_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ init_data: initData, job_id: jobId }),
+            })
+                .then(function (resp) {
+                    return resp.json().catch(function () { return {}; }).then(function (payload) {
+                        if (!resp.ok) {
+                            var detail = payload.detail || ('HTTP ' + resp.status);
+                            throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                        }
+                        return payload;
+                    });
+                })
+                .then(function (payload) {
+                    var status = String((payload && payload.status) || '').toLowerCase();
+                    if (status === 'ready') {
+                        return payload;
+                    }
+                    if (status === 'error') {
+                        throw new Error(String((payload && payload.error) || 'Ошибка экспорта'));
+                    }
+                    var prog = Number(payload && payload.progress);
+                    if (Number.isFinite(prog) && prog > convertProgress.pct && prog < 100) {
+                        convertProgress.pct = prog;
+                        setProgressBarPct(prog);
+                        refreshConvertMsg();
+                    }
+                    return sleepMs(pollMs).then(pollOnce);
+                });
+        }
+
+        return pollOnce();
     }
 
     function downloadImportMp3Zip() {
@@ -2588,6 +2688,24 @@
                 });
             })
             .then(function (payload) {
+                var jobId = payload && payload.job_id ? String(payload.job_id) : '';
+                if (!jobId) {
+                    if (payload && payload.url) {
+                        completeConvertEstimate();
+                        var legacyUrl = String(payload.url);
+                        var legacyName = (payload && payload.file_name)
+                            ? String(payload.file_name)
+                            : ('match_' + matchId + '_audio_mp3.zip');
+                        return requestTelegramDownload(legacyUrl, legacyName);
+                    }
+                    throw new Error('Сервер не вернул задачу экспорта');
+                }
+                if (isListModalOpen() && state.matchId === matchId) {
+                    setListMsg('Экспорт: конвертация на сервере…');
+                }
+                return pollExportJob(jobId, initData);
+            })
+            .then(function (payload) {
                 completeConvertEstimate();
                 var url = payload && payload.url ? String(payload.url) : '';
                 var filename = (payload && payload.file_name)
@@ -2596,7 +2714,12 @@
                 if (!url) {
                     throw new Error('Сервер не вернул ссылку для скачивания');
                 }
-                requestTelegramDownload(url, filename);
+                if (isListModalOpen() && state.matchId === matchId) {
+                    setListMsg('Экспорт: скачивание ZIP…');
+                }
+                return requestTelegramDownload(url, filename);
+            })
+            .then(function () {
                 if (isListModalOpen() && state.matchId === matchId) {
                     setListMsg('Экспорт готов: ZIP скачан');
                 }

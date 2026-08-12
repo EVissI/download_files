@@ -24,7 +24,7 @@ from urllib.parse import quote
 from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -50,7 +50,9 @@ templates.env.globals["cache_timestamp"] = _get_static_v()
 
 MA_MEDIA_MAX_BYTES = 30 * 1024 * 1024
 MA_TMP_DL_PREFIX = "match_analysis/tmp_dl/"
-MA_TMP_DL_TTL_SEC = 300
+MA_TMP_DL_TTL_SEC = 3600
+MA_EXPORT_JOB_PREFIX = "ma_audio_export:"
+MA_EXPORT_JOB_TTL_SEC = 3600
 
 
 class MatchAnalysisInitBody(BaseModel):
@@ -90,6 +92,11 @@ class MatchAnalysisAudioDownloadBody(BaseModel):
     id: int
     game_number: int
     move_index: int
+
+
+class MatchAnalysisExportJobBody(BaseModel):
+    init_data: str
+    job_id: str
 
 
 class MatchAnalysisAudioDurationItem(BaseModel):
@@ -941,6 +948,75 @@ def _build_mp3_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
     return buf.getvalue()
 
 
+async def _set_export_job_state(job_id: str, **fields: Any) -> None:
+    key = f"{MA_EXPORT_JOB_PREFIX}{job_id}"
+    raw = await redis_client.get(key)
+    if not raw:
+        return
+    try:
+        data = json.loads(raw)
+    except Exception:
+        data = {}
+    data.update(fields)
+    await redis_client.set(key, json.dumps(data, ensure_ascii=False), expire=MA_EXPORT_JOB_TTL_SEC)
+
+
+async def _run_mp3_zip_export_job(job_id: str, match_id: int, admin_uid: int) -> None:
+    key = f"{MA_EXPORT_JOB_PREFIX}{job_id}"
+    try:
+        await _set_export_job_state(job_id, status="processing", progress=5)
+        async with async_session_maker() as session:
+            dao = MatchAnalysisDAO(session)
+            row = await dao.find_one_or_none_by_id(match_id)
+            if not row:
+                await _set_export_job_state(job_id, status="error", error="Анализ не найден")
+                return
+            analysis = row.analysis or {}
+            title = row.title or f"match_{match_id}"
+
+        await _set_export_job_state(job_id, progress=15)
+        zip_bytes = await asyncio.to_thread(_build_mp3_zip_for_analysis, analysis)
+        await _set_export_job_state(job_id, progress=85)
+        safe_title = _safe_audio_stem(title) or f"match_{match_id}"
+        filename = f"{safe_title}_audio_mp3.zip"
+        link = await _issue_tmp_download_link(zip_bytes, filename, "application/zip")
+        await _set_export_job_state(
+            job_id,
+            status="ready",
+            progress=100,
+            url=link["url"],
+            file_name=link["file_name"],
+        )
+    except HTTPException as exc:
+        await _set_export_job_state(job_id, status="error", error=str(exc.detail))
+    except Exception as exc:
+        logger.exception(f"export job failed job_id={job_id} match_id={match_id}")
+        await _set_export_job_state(job_id, status="error", error=str(exc) or "Ошибка экспорта")
+    finally:
+        raw = await redis_client.get(key)
+        if raw:
+            try:
+                data = json.loads(raw)
+            except Exception:
+                data = {}
+            if data.get("status") in ("pending", "processing"):
+                await _set_export_job_state(job_id, status="error", error="Экспорт прерван")
+
+
+def _stream_s3_object_body(body: Any, chunk_size: int = 256 * 1024):
+    try:
+        while True:
+            chunk = body.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
+    finally:
+        try:
+            body.close()
+        except Exception:
+            pass
+
+
 def _resolve_zip_mp3_target(
     filename: str,
     items: list[dict[str, Any]],
@@ -989,22 +1065,59 @@ async def match_analysis_audio_list(body: MatchAnalysisIdBody):
 @match_analysis_api_router.post("/api/match_analysis/audio/import_mp3_zip")
 async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
     """
-    «Экспорт» в UI: конвертирует все аудио анализа в mp3, кладёт в zip
-    и возвращает временную ссылку для Telegram.WebApp.downloadFile.
+    «Экспорт» в UI: ставит задачу конвертации всех аудио в mp3 и сборки zip.
+    Клиент опрашивает export_job_status и скачивает по временной ссылке.
     """
-    _resolve_admin_user_id(body.init_data)
+    uid = _resolve_admin_user_id(body.init_data)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
         row = await dao.find_one_or_none_by_id(body.id)
         if not row:
             raise HTTPException(status_code=404, detail="Анализ не найден")
-        analysis = row.analysis or {}
-        title = row.title or f"match_{row.id}"
+        items = _collect_match_analysis_audios(row.analysis or {})
+        if not items:
+            raise HTTPException(status_code=404, detail="В анализе нет аудиофайлов")
 
-    zip_bytes = await asyncio.to_thread(_build_mp3_zip_for_analysis, analysis)
-    safe_title = _safe_audio_stem(title) or f"match_{body.id}"
-    filename = f"{safe_title}_audio_mp3.zip"
-    return await _issue_tmp_download_link(zip_bytes, filename, "application/zip")
+    job_id = secrets.token_urlsafe(16)
+    payload = json.dumps(
+        {
+            "status": "pending",
+            "match_id": body.id,
+            "admin_uid": uid,
+            "progress": 0,
+        },
+        ensure_ascii=False,
+    )
+    await redis_client.set(
+        f"{MA_EXPORT_JOB_PREFIX}{job_id}",
+        payload,
+        expire=MA_EXPORT_JOB_TTL_SEC,
+    )
+    asyncio.create_task(_run_mp3_zip_export_job(job_id, body.id, uid))
+    return {"job_id": job_id, "status": "pending"}
+
+
+@match_analysis_api_router.post("/api/match_analysis/audio/export_job_status")
+async def match_analysis_audio_export_job_status(body: MatchAnalysisExportJobBody):
+    """Статус фоновой задачи экспорта MP3 zip."""
+    uid = _resolve_admin_user_id(body.init_data)
+    raw = await redis_client.get(f"{MA_EXPORT_JOB_PREFIX}{body.job_id}")
+    if not raw:
+        raise HTTPException(status_code=404, detail="Задача не найдена или истекла")
+    try:
+        data = json.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Некорректные данные задачи") from e
+    if int(data.get("admin_uid") or 0) != int(uid):
+        raise HTTPException(status_code=403, detail="Нет доступа к этой задаче")
+    return {
+        "job_id": body.job_id,
+        "status": data.get("status") or "pending",
+        "progress": int(data.get("progress") or 0),
+        "url": data.get("url"),
+        "file_name": data.get("file_name"),
+        "error": data.get("error"),
+    }
 
 
 @match_analysis_api_router.post("/api/match_analysis/audio/download_mp3")
@@ -1041,9 +1154,10 @@ async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody
 
 
 @match_analysis_api_router.get("/api/match_analysis/audio/file")
-async def match_analysis_audio_file_by_token(token: str = Query(...)):
+async def match_analysis_audio_file_by_token(request: Request, token: str = Query(...)):
     """
     Скачивание по временному токену (для Telegram.WebApp.downloadFile).
+    Потоковая отдача; ссылка действует до истечения TTL и допускает повторные запросы.
     """
     if not token:
         raise HTTPException(status_code=400, detail="Параметр token обязателен")
@@ -1061,31 +1175,39 @@ async def match_analysis_audio_file_by_token(token: str = Query(...)):
     if not key.startswith(MA_TMP_DL_PREFIX):
         raise HTTPException(status_code=400, detail="Некорректный ключ файла")
 
+    byte_range = request.headers.get("range") or request.headers.get("Range")
+
     s3 = HintS3Storage.from_settings()
     try:
-        blob = await asyncio.to_thread(s3.download_bytes, key)
+        obj = await asyncio.to_thread(s3.open_object, key, byte_range=byte_range)
     except Exception as e:
         logger.warning(f"ma audio tmp download failed key={key}: {e}")
         raise HTTPException(status_code=404, detail="Файл не найден") from e
 
-    # Одноразовая ссылка: чистим redis и временный объект.
-    try:
-        await redis_client.delete(f"ma_audio_dl:{token}")
-    except Exception:
-        pass
-    try:
-        await asyncio.to_thread(s3.delete_object, key)
-    except Exception as e:
-        logger.warning(f"ma audio tmp cleanup failed key={key}: {e}")
+    body = obj.get("Body")
+    if body is None:
+        raise HTTPException(status_code=404, detail="Файл не найден")
 
-    return Response(
-        content=blob,
-        media_type=content_type,
-        headers={
-            "Content-Disposition": _content_disposition_attachment(fname),
-            "Cache-Control": "private, no-store",
-            "Access-Control-Allow-Origin": "https://web.telegram.org",
-        },
+    headers = {
+        "Content-Disposition": _content_disposition_attachment(fname),
+        "Cache-Control": "private, no-store",
+        "Access-Control-Allow-Origin": "https://web.telegram.org",
+        "Accept-Ranges": "bytes",
+    }
+    content_length = obj.get("ContentLength")
+    if content_length is not None:
+        headers["Content-Length"] = str(content_length)
+    content_range = obj.get("ContentRange")
+    if content_range:
+        headers["Content-Range"] = content_range
+    media_type = content_type or obj.get("ContentType") or "application/octet-stream"
+    status_code = 206 if byte_range else 200
+
+    return StreamingResponse(
+        _stream_s3_object_body(body),
+        status_code=status_code,
+        media_type=media_type,
+        headers=headers,
     )
 
 
