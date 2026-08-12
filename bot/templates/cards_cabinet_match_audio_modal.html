@@ -2205,10 +2205,13 @@
                 var filename = (payload && payload.file_name)
                     ? String(payload.file_name)
                     : (stem + '.mp3');
+                var downloadName = (payload && payload.download_file_name)
+                    ? String(payload.download_file_name)
+                    : filename;
                 if (!url) {
                     throw new Error('Сервер не вернул ссылку для скачивания');
                 }
-                return requestTelegramDownload(url, filename);
+                return requestTelegramDownload(url, filename, { downloadFileName: downloadName });
             })
             .then(function () {
                 if (isListModalOpen() && state.matchId === matchId) {
@@ -2568,47 +2571,84 @@
             });
     }
 
-    function requestTelegramDownload(path, fileName) {
+    function toTelegramFileName(name) {
+        var safe = String(name || 'file').replace(/[\\/]/g, '_').trim() || 'file';
+        var ascii = safe
+            .replace(/[^\x20-\x7E._-]+/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^[._]+|[._]+$/g, '');
+        if (ascii) return ascii;
+        if (/\.zip$/i.test(safe)) return 'download.zip';
+        if (/\.mp3$/i.test(safe)) return 'download.mp3';
+        return 'download.bin';
+    }
+
+    function verifyDownloadUrl(absUrl) {
+        return fetch(absUrl, {
+            method: 'HEAD',
+            credentials: 'same-origin',
+            cache: 'no-store',
+        }).then(function (resp) {
+            if (!resp.ok) {
+                throw new Error('Файл недоступен (HTTP ' + resp.status + ')');
+            }
+            var len = resp.headers.get('content-length');
+            if (len !== null && Number(len) <= 0) {
+                throw new Error('Пустой файл на сервере');
+            }
+        });
+    }
+
+    function shouldPreferFetchBlobDownload() {
+        var tw = window.Telegram && window.Telegram.WebApp;
+        if (!tw) return true;
+        var p = String(tw.platform || '').toLowerCase();
+        return p === 'web' || p === 'weba' || p === 'unknown' || !p;
+    }
+
+    function requestTelegramDownload(path, fileName, opts) {
+        opts = opts || {};
         if (!path) {
             return Promise.reject(new Error('Нет ссылки для скачивания'));
         }
-        var safeName = String(fileName || 'file').replace(/[\\/]/g, '_').trim() || 'file';
+        var tgName = toTelegramFileName(opts.downloadFileName || fileName);
         var absUrl;
         try {
             absUrl = new URL(path, window.location.href).href;
         } catch (_e) {
             absUrl = path;
         }
-        var tw = window.Telegram && window.Telegram.WebApp;
-        if (tw && typeof tw.downloadFile === 'function') {
-            try {
-                return new Promise(function (resolve, reject) {
-                    var settled = false;
-                    var fallbackTimer = setTimeout(function () {
-                        if (settled) return;
-                        downloadViaFetchBlob(absUrl, safeName)
-                            .then(function () {
-                                settled = true;
-                                resolve();
-                            })
-                            .catch(reject);
-                    }, 3000);
-                    tw.downloadFile({ url: absUrl, file_name: safeName }, function (accepted) {
-                        if (settled) return;
-                        settled = true;
-                        clearTimeout(fallbackTimer);
-                        if (accepted === false) {
-                            downloadViaFetchBlob(absUrl, safeName).then(resolve).catch(reject);
-                            return;
-                        }
-                        resolve();
-                    });
+
+        return verifyDownloadUrl(absUrl).then(function () {
+            if (shouldPreferFetchBlobDownload()) {
+                return downloadViaFetchBlob(absUrl, tgName).then(function () {
+                    return { via: 'blob' };
                 });
-            } catch (err) {
-                console.warn('Telegram.WebApp.downloadFile:', err);
             }
-        }
-        return downloadViaFetchBlob(absUrl, safeName);
+            var tw = window.Telegram && window.Telegram.WebApp;
+            if (tw && typeof tw.downloadFile === 'function') {
+                return new Promise(function (resolve, reject) {
+                    try {
+                        tw.downloadFile({ url: absUrl, file_name: tgName }, function (accepted) {
+                            if (accepted === false) {
+                                downloadViaFetchBlob(absUrl, tgName)
+                                    .then(function () { resolve({ via: 'blob' }); })
+                                    .catch(reject);
+                                return;
+                            }
+                            resolve({ via: 'telegram' });
+                        });
+                    } catch (err) {
+                        downloadViaFetchBlob(absUrl, tgName)
+                            .then(function () { resolve({ via: 'blob' }); })
+                            .catch(reject);
+                    }
+                });
+            }
+            return downloadViaFetchBlob(absUrl, tgName).then(function () {
+                return { via: 'blob' };
+            });
+        });
     }
 
     function pollExportJob(jobId, initData) {
@@ -2706,19 +2746,31 @@
                 var filename = (payload && payload.file_name)
                     ? String(payload.file_name)
                     : ('match_' + matchId + '_audio_mp3.zip');
+                var downloadName = (payload && payload.download_file_name)
+                    ? String(payload.download_file_name)
+                    : filename;
                 if (!url) {
                     throw new Error('Сервер не вернул ссылку для скачивания');
                 }
                 if (isListModalOpen() && state.matchId === matchId) {
                     setListMsg('Экспорт: скачивание ZIP…');
                 }
-                return requestTelegramDownload(url, filename);
+                return requestTelegramDownload(url, filename, { downloadFileName: downloadName });
             })
-            .then(function () {
+            .then(function (result) {
                 if (isListModalOpen() && state.matchId === matchId) {
-                    setListMsg('Экспорт готов: ZIP скачан');
+                    setListMsg(
+                        result && result.via === 'blob'
+                            ? 'Экспорт готов: ZIP скачан'
+                            : 'Скачивание запущено в Telegram'
+                    );
                 }
-                showNotice('ZIP с MP3 скачан', 'Экспорт');
+                showNotice(
+                    result && result.via === 'blob'
+                        ? 'ZIP с MP3 скачан'
+                        : 'Скачивание запущено — проверьте загрузки Telegram',
+                    'Экспорт'
+                );
             })
             .catch(function (err) {
                 console.error(err);

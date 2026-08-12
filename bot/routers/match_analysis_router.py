@@ -24,7 +24,7 @@ from urllib.parse import quote
 from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -862,6 +862,13 @@ def _content_disposition_attachment(filename: str) -> str:
     return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name, safe='')}"
 
 
+def _ascii_download_filename(filename: str) -> str:
+    name = (filename or "download").replace("\\", "/").split("/")[-1].strip() or "download"
+    name = name.replace('"', "").replace("\r", "").replace("\n", "")[:200]
+    ascii_name = "".join(c if c.isascii() and c not in '"\\' else "_" for c in name).strip("._") or "download"
+    return ascii_name[:200]
+
+
 async def _issue_tmp_download_link(
     blob: bytes,
     filename: str,
@@ -877,14 +884,22 @@ async def _issue_tmp_download_link(
     key = f"{MA_TMP_DL_PREFIX}{token}{suffix}"
     s3 = HintS3Storage.from_settings()
     await asyncio.to_thread(s3.upload_bytes, key, blob, content_type)
+    ascii_name = _ascii_download_filename(filename)
     payload = json.dumps(
-        {"key": key, "file_name": filename, "content_type": content_type},
+        {
+            "key": key,
+            "file_name": filename,
+            "download_file_name": ascii_name,
+            "content_type": content_type,
+            "size": len(blob),
+        },
         ensure_ascii=False,
     )
     await redis_client.set(f"ma_audio_dl:{token}", payload, expire=MA_TMP_DL_TTL_SEC)
     return {
         "url": f"/api/match_analysis/audio/file?token={token}",
         "file_name": filename,
+        "download_file_name": ascii_name,
     }
 
 
@@ -986,26 +1001,13 @@ async def _run_mp3_zip_export_job(job_id: str, match_id: int, admin_uid: int) ->
             progress=100,
             url=link["url"],
             file_name=link["file_name"],
+            download_file_name=link.get("download_file_name") or link["file_name"],
         )
     except HTTPException as exc:
         await _set_export_job_state(job_id, status="error", error=str(exc.detail))
     except Exception as exc:
         logger.exception(f"export job failed job_id={job_id} match_id={match_id}")
         await _set_export_job_state(job_id, status="error", error=str(exc) or "Ошибка экспорта")
-
-
-def _stream_s3_object_body(body: Any, chunk_size: int = 256 * 1024):
-    try:
-        while True:
-            chunk = body.read(chunk_size)
-            if not chunk:
-                break
-            yield chunk
-    finally:
-        try:
-            body.close()
-        except Exception:
-            pass
 
 
 def _resolve_zip_mp3_target(
@@ -1107,6 +1109,7 @@ async def match_analysis_audio_export_job_status(body: MatchAnalysisExportJobBod
         "progress": int(data.get("progress") or 0),
         "url": data.get("url"),
         "file_name": data.get("file_name"),
+        "download_file_name": data.get("download_file_name"),
         "error": data.get("error"),
     }
 
@@ -1144,11 +1147,14 @@ async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody
     return await _issue_tmp_download_link(mp3, filename, "audio/mpeg")
 
 
-@match_analysis_api_router.get("/api/match_analysis/audio/file")
+@match_analysis_api_router.api_route(
+    "/api/match_analysis/audio/file",
+    methods=["GET", "HEAD"],
+)
 async def match_analysis_audio_file_by_token(request: Request, token: str = Query(...)):
     """
     Скачивание по временному токену (для Telegram.WebApp.downloadFile).
-    Потоковая отдача; ссылка действует до истечения TTL и допускает повторные запросы.
+    Цельный ответ — Telegram плохо работает с chunked/streaming.
     """
     if not token:
         raise HTTPException(status_code=400, detail="Параметр token обязателен")
@@ -1166,38 +1172,42 @@ async def match_analysis_audio_file_by_token(request: Request, token: str = Quer
     if not key.startswith(MA_TMP_DL_PREFIX):
         raise HTTPException(status_code=400, detail="Некорректный ключ файла")
 
-    byte_range = request.headers.get("range") or request.headers.get("Range")
-
-    s3 = HintS3Storage.from_settings()
-    try:
-        obj = await asyncio.to_thread(s3.open_object, key, byte_range=byte_range)
-    except Exception as e:
-        logger.warning(f"ma audio tmp download failed key={key}: {e}")
-        raise HTTPException(status_code=404, detail="Файл не найден") from e
-
-    body = obj.get("Body")
-    if body is None:
-        raise HTTPException(status_code=404, detail="Файл не найден")
-
     headers = {
         "Content-Disposition": _content_disposition_attachment(fname),
         "Cache-Control": "private, no-store",
         "Access-Control-Allow-Origin": "https://web.telegram.org",
-        "Accept-Ranges": "bytes",
+        "Access-Control-Expose-Headers": "Content-Disposition, Content-Length",
     }
-    content_length = obj.get("ContentLength")
-    if content_length is not None:
-        headers["Content-Length"] = str(content_length)
-    content_range = obj.get("ContentRange")
-    if content_range:
-        headers["Content-Range"] = content_range
-    media_type = content_type or obj.get("ContentType") or "application/octet-stream"
-    status_code = 206 if byte_range else 200
 
-    return StreamingResponse(
-        _stream_s3_object_body(body),
-        status_code=status_code,
-        media_type=media_type,
+    cached_size = int((data or {}).get("size") or 0)
+    if request.method == "HEAD":
+        size = cached_size
+        if size <= 0:
+            s3 = HintS3Storage.from_settings()
+            try:
+                obj = await asyncio.to_thread(s3.open_object, key)
+                size = int(obj.get("ContentLength") or 0)
+            except Exception as e:
+                logger.warning(f"ma audio tmp head failed key={key}: {e}")
+                raise HTTPException(status_code=404, detail="Файл не найден") from e
+        if size <= 0:
+            raise HTTPException(status_code=404, detail="Пустой файл")
+        headers["Content-Length"] = str(size)
+        return Response(content=b"", headers=headers, media_type=content_type)
+
+    s3 = HintS3Storage.from_settings()
+    try:
+        blob = await asyncio.to_thread(s3.download_bytes, key)
+    except Exception as e:
+        logger.warning(f"ma audio tmp download failed key={key}: {e}")
+        raise HTTPException(status_code=404, detail="Файл не найден") from e
+    if not blob:
+        raise HTTPException(status_code=404, detail="Пустой файл")
+
+    headers["Content-Length"] = str(len(blob))
+    return Response(
+        content=blob,
+        media_type=content_type,
         headers=headers,
     )
 
