@@ -55,7 +55,7 @@
         display: none;
         position: fixed;
         inset: 0;
-        z-index: 1200;
+        z-index: 225000;
         align-items: stretch;
         justify-content: stretch;
         padding: 0;
@@ -63,7 +63,7 @@
     }
 
     .ma-audio-modal--edit {
-        z-index: 1210;
+        z-index: 225010;
     }
 
     .ma-audio-modal.is-open {
@@ -665,6 +665,10 @@
         flex: 1 1 auto;
         min-width: 120px;
     }
+
+    .cabinet-footer.is-modal-overlay-hidden {
+        display: none !important;
+    }
 </style>
 
 <div id="maAudioListModal" class="ma-audio-modal" aria-hidden="true">
@@ -1188,6 +1192,12 @@
         }
     }
 
+    function setCabinetFooterHidden(hidden) {
+        var footer = document.querySelector('.cabinet-footer');
+        if (!footer || footer.classList.contains('is-feature-hidden')) return;
+        footer.classList.toggle('is-modal-overlay-hidden', !!hidden);
+    }
+
     function closeListModal() {
         closeEditModal();
         stopPlayback();
@@ -1198,6 +1208,7 @@
         state.matchId = null;
         state.items = [];
         setListMsg('');
+        setCabinetFooterHidden(false);
         // Конвертация на фоне продолжается; прогресс скрываем вместе с модалкой.
         setConvertProgressVisible(false);
     }
@@ -1665,6 +1676,7 @@
         if (!listModal) return;
         listModal.classList.add('is-open');
         listModal.setAttribute('aria-hidden', 'false');
+        setCabinetFooterHidden(true);
         setConvertProgressVisible();
     }
 
