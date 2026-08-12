@@ -342,10 +342,17 @@
     }
 
     .ma-audio-modal__board-panel {
-        width: 50%;
-        max-width: 50%;
+        width: 100%;
+        max-width: 100%;
         margin: 0 auto;
         box-sizing: border-box;
+    }
+
+    @media (min-width: 640px) {
+        .ma-audio-modal__board-panel {
+            width: 50%;
+            max-width: 50%;
+        }
     }
 
     .ma-audio-modal__board-stage {
