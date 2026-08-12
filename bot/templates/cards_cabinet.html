@@ -803,10 +803,6 @@
         }
 
         .tile.tile--match {
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 3px;
             font-size: 0.62rem;
             font-weight: 600;
             line-height: 1.2;
@@ -817,25 +813,9 @@
             overflow: hidden;
         }
 
-        .tile-wrap > .tile.tile--match {
+        .tile-wrap > .tile {
             padding: 24px 22px 26px;
-        }
-
-        .tile__order {
-            font-size: 1rem;
-            font-weight: 700;
-            line-height: 1;
-            color: #fff;
-            flex-shrink: 0;
-        }
-
-        .tile__match-title {
-            display: block;
-            font-size: 0.62rem;
-            font-weight: 600;
-            line-height: 1.2;
-            text-align: center;
-            word-break: break-word;
+            box-sizing: border-box;
         }
 
         .wrap.wrap--no-footer {
@@ -2807,8 +2787,7 @@
                     var wrapEl = document.querySelector('.wrap');
                     if (wrapEl) wrapEl.classList.add('wrap--no-footer');
                 } else if (IS_MATCH_ANALYSIS) {
-                    // Для MA: выделение + assign/link; переключатель ID карточек не нужен.
-                    hideEl(idToggleBtn);
+                    // Для MA: выделение + assign/link; id-toggle — цикл название/номер/ID.
                 }
                 if (!FEATURES.enable_search) {
                     hideEl(document.querySelector('.search-wrap'));
@@ -2857,6 +2836,7 @@
             var assignUsersLoaded = false;
             var alreadyHaveModalResolver = null;
             var isDbIdMode = false;
+            var maTileDisplayMode = 'title';
             var labelPresetsLoaded = false;
             var labelPresets = [];
             var pendingLabelFilterValue = '';
@@ -3124,6 +3104,7 @@
                         status: String(statusFilter ? (statusFilter.value || '') : ''),
                         label: String(labelFilter ? (labelFilter.value || '') : ''),
                         isDbIdMode: !!isDbIdMode,
+                        maTileDisplayMode: IS_MATCH_ANALYSIS ? maTileDisplayMode : undefined,
                     };
                     localStorage.setItem(cabinetStateKey, JSON.stringify(payload));
                 } catch (_e) { }
@@ -3146,6 +3127,12 @@
                         pendingLabelFilterValue = state.label;
                     }
                     isDbIdMode = !!(state && state.isDbIdMode);
+                    if (IS_MATCH_ANALYSIS && state && typeof state.maTileDisplayMode === 'string') {
+                        var mode = state.maTileDisplayMode;
+                        if (mode === 'title' || mode === 'order' || mode === 'id') {
+                            maTileDisplayMode = mode;
+                        }
+                    }
                 } catch (_e) { }
             }
 
@@ -3172,20 +3159,61 @@
                 return Number(((row && row.__index) || 0) + 1);
             }
 
-            function fillMatchAnalysisTile(btn, row, fullTitle) {
-                btn.innerHTML = '';
-                var orderEl = document.createElement('span');
-                orderEl.className = 'tile__order';
-                orderEl.textContent = String(getMatchAnalysisDisplayOrder(row));
-                var titleEl = document.createElement('span');
-                titleEl.className = 'tile__match-title';
+            function getMatchAnalysisTileText(row, fullTitle) {
+                if (maTileDisplayMode === 'order') {
+                    return String(getMatchAnalysisDisplayOrder(row));
+                }
+                if (maTileDisplayMode === 'id') {
+                    return String((row && row.content_card_id) || '');
+                }
                 var titleText = String(fullTitle || '');
                 if (titleText.length > 32) {
                     titleText = titleText.slice(0, 31) + '…';
                 }
-                titleEl.textContent = titleText;
-                btn.appendChild(orderEl);
-                btn.appendChild(titleEl);
+                return titleText;
+            }
+
+            function applyMatchAnalysisTileDisplay(btn, row, fullTitle, isSelected) {
+                var showTitle = maTileDisplayMode === 'title';
+                btn.className = 'tile' + (showTitle ? ' tile--match' : '') + (isSelected ? ' tile--selected' : '');
+                btn.textContent = getMatchAnalysisTileText(row, fullTitle);
+            }
+
+            function updateMaTileDisplayModeUi() {
+                if (!idToggleBtn) return;
+                var label = 'Название';
+                var hint = 'Показаны названия матчей';
+                if (maTileDisplayMode === 'order') {
+                    label = 'Номер';
+                    hint = 'Показаны порядковые номера';
+                } else if (maTileDisplayMode === 'id') {
+                    label = 'ID';
+                    hint = 'Показаны ID анализов';
+                }
+                idToggleBtn.textContent = label;
+                idToggleBtn.classList.toggle('is-active', maTileDisplayMode !== 'title');
+                idToggleBtn.title = hint;
+                idToggleBtn.setAttribute('aria-label', hint);
+                if (searchInput) {
+                    if (maTileDisplayMode === 'id') {
+                        searchInput.placeholder = 'Поиск по ID';
+                    } else if (maTileDisplayMode === 'order') {
+                        searchInput.placeholder = 'Поиск по номеру';
+                    } else {
+                        searchInput.placeholder = 'Поиск по названию или игрокам';
+                    }
+                }
+                if (quickSelectInput) {
+                    quickSelectInput.placeholder = maTileDisplayMode === 'id'
+                        ? '101,205,300-315'
+                        : '11,22,25-30';
+                }
+            }
+
+            function cycleMaTileDisplayMode() {
+                if (maTileDisplayMode === 'title') maTileDisplayMode = 'order';
+                else if (maTileDisplayMode === 'order') maTileDisplayMode = 'id';
+                else maTileDisplayMode = 'title';
             }
 
             function getCardHoverTitle(row, cardIdNum) {
@@ -3696,9 +3724,16 @@
                     var selectedByNumber = {};
                     if (parsed.numbers.length) {
                         allCards.forEach(function (row) {
-                            var matchValue = isDbIdMode
-                                ? Number(row && row.content_card_id)
-                                : Number((row && row.__index) || 0) + 1;
+                            var matchValue;
+                            if (IS_MATCH_ANALYSIS) {
+                                matchValue = maTileDisplayMode === 'id'
+                                    ? Number(row && row.content_card_id)
+                                    : Number((row && row.__index) || 0) + 1;
+                            } else {
+                                matchValue = isDbIdMode
+                                    ? Number(row && row.content_card_id)
+                                    : Number((row && row.__index) || 0) + 1;
+                            }
                             if (parsed.numbers.indexOf(matchValue) === -1) return;
                             var cardIdNum = Number(row && row.content_card_id);
                             if (Number.isFinite(cardIdNum) && cardIdNum > 0) {
@@ -5194,6 +5229,12 @@
                     if (IS_MATCH_ANALYSIS) {
                         var maCards = allCards.filter(function (row) {
                             if (!filter) return true;
+                            if (maTileDisplayMode === 'order') {
+                                return String(getMatchAnalysisDisplayOrder(row)).indexOf(filter) !== -1;
+                            }
+                            if (maTileDisplayMode === 'id') {
+                                return String((row && row.content_card_id) || '').indexOf(filter) !== -1;
+                            }
                             var title = matchAnalysisCardTitle(row).toLowerCase();
                             var red = String((row && row.red_player) || '').toLowerCase();
                             var black = String((row && row.black_player) || '').toLowerCase();
@@ -5219,12 +5260,10 @@
                             var fullTitle = matchAnalysisCardTitle(row);
                             var btn = document.createElement('button');
                             btn.type = 'button';
-                            btn.className = 'tile tile--match';
-                            if (selectedCardIds[String(cardIdNum)]) {
-                                btn.classList.add('tile--selected');
-                            }
-                            fillMatchAnalysisTile(btn, row, fullTitle);
-                            btn.title = fullTitle + ' · №' + String(getMatchAnalysisDisplayOrder(row));
+                            var isSelected = !!selectedCardIds[String(cardIdNum)];
+                            applyMatchAnalysisTileDisplay(btn, row, fullTitle, isSelected);
+                            btn.title = fullTitle + ' · №' + String(getMatchAnalysisDisplayOrder(row)) +
+                                ' · id:' + String(cardIdNum);
                             btn.addEventListener('click', function () {
                                 if (isSelectionMode) {
                                     var selectedKey = String(cardIdNum);
@@ -5649,12 +5688,21 @@
                 }
                 if (idToggleBtn) {
                     idToggleBtn.addEventListener('click', function () {
-                        isDbIdMode = !isDbIdMode;
-                        updateIdModeUi();
+                        if (IS_MATCH_ANALYSIS) {
+                            cycleMaTileDisplayMode();
+                            updateMaTileDisplayModeUi();
+                        } else {
+                            isDbIdMode = !isDbIdMode;
+                            updateIdModeUi();
+                        }
                         saveCabinetState();
                         renderCards();
                     });
-                    updateIdModeUi();
+                    if (IS_MATCH_ANALYSIS) {
+                        updateMaTileDisplayModeUi();
+                    } else {
+                        updateIdModeUi();
+                    }
                 }
                 if (shuffleModalOverlay) {
                     shuffleModalOverlay.addEventListener('click', closeShuffleModal);
