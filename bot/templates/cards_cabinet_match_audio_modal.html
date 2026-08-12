@@ -1088,10 +1088,22 @@
         editMsg.classList.toggle('is-error', !!isError && !!text);
     }
 
+    function playerSideLetter(item) {
+        var raw = String(
+            (item && item.player) ||
+            (item && item.board && item.board.player) ||
+            ''
+        ).toLowerCase();
+        if (raw === 'red' || raw === 'white') return 'б';
+        if (raw === 'black') return 'ч';
+        return '';
+    }
+
     function frameLabel(item) {
-        var parts = ['Игра ' + String(item.game_number), 'ход #' + String(item.move_index)];
+        var parts = ['Игра ' + String(item.game_number)];
         if (item.turn != null && item.turn !== '') {
-            parts.push('turn ' + String(item.turn));
+            var side = playerSideLetter(item);
+            parts.push('ход ' + String(item.turn) + (side ? ' ' + side : ''));
         }
         if (item.gnu_move) {
             parts.push(String(item.gnu_move));
