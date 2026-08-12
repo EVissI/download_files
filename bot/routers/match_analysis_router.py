@@ -824,22 +824,25 @@ def _convert_audio_bytes(
         return dst.read_bytes()
 
 
-def _to_mp3_bytes(raw: bytes, src_name: str | None = None) -> bytes:
+def _to_wav_bytes(raw: bytes, src_name: str | None = None) -> bytes:
     src_suffix = Path(src_name or "audio.webm").suffix.lower() or ".webm"
     if src_suffix not in {".webm", ".ogg", ".opus", ".mp3", ".wav", ".m4a", ".mp4", ".aac"}:
         src_suffix = ".webm"
     return _convert_audio_bytes(
         raw,
         src_suffix=src_suffix,
-        dst_suffix=".mp3",
-        ffmpeg_args=["-vn", "-codec:a", "libmp3lame", "-qscale:a", "2"],
+        dst_suffix=".wav",
+        ffmpeg_args=["-vn", "-acodec", "pcm_s16le"],
     )
 
 
-def _mp3_to_webm_bytes(raw: bytes) -> bytes:
+def _wav_to_webm_bytes(raw: bytes, src_suffix: str = ".wav") -> bytes:
+    suffix = (src_suffix or ".wav").lower()
+    if suffix not in {".wav", ".wave", ".mp3", ".m4a", ".ogg", ".opus", ".webm"}:
+        suffix = ".wav"
     return _convert_audio_bytes(
         raw,
-        src_suffix=".mp3",
+        src_suffix=suffix,
         dst_suffix=".webm",
         ffmpeg_args=["-vn", "-c:a", "libopus", "-b:a", "64k"],
     )
@@ -910,26 +913,26 @@ def _audio_filename_match_key(name: str | None) -> str:
     return stem.lower()
 
 
-def _zip_safe_basename_mp3(audio_name: str | None, used: set[str]) -> str:
-    """Имя в zip = исходное имя файла с расширением .mp3 (без g/m префикса)."""
+def _zip_safe_basename_wav(audio_name: str | None, used: set[str]) -> str:
+    """Имя в zip = исходное имя файла с расширением .wav (без g/m префикса)."""
     original = Path(str(audio_name or "audio")).name
     stem = Path(original).stem.strip() or "audio"
     stem = re.sub(r'[\\/:*?"<>|]+', "_", stem).strip(" ._") or "audio"
     stem = stem[:120]
-    base = f"{stem}.mp3"
+    base = f"{stem}.wav"
     if base.lower() not in used:
         used.add(base.lower())
         return base
     n = 2
     while True:
-        cand = f"{stem}_{n}.mp3"
+        cand = f"{stem}_{n}.wav"
         if cand.lower() not in used:
             used.add(cand.lower())
             return cand
         n += 1
 
 
-def _build_mp3_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
+def _build_wav_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
     items = _collect_match_analysis_audios(analysis)
     if not items:
         raise HTTPException(status_code=404, detail="В анализе нет аудиофайлов")
@@ -947,7 +950,7 @@ def _build_mp3_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
                 logger.warning(f"export zip: download failed key={key}: {e}")
                 continue
             try:
-                mp3 = _to_mp3_bytes(raw, src_name=key)
+                wav = _to_wav_bytes(raw, src_name=key)
             except HTTPException:
                 raise
             except Exception as e:
@@ -956,8 +959,8 @@ def _build_mp3_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
                     status_code=500,
                     detail=f"Не удалось конвертировать {item.get('audio_name')}: {e}",
                 ) from e
-            entry = _zip_safe_basename_mp3(item.get("audio_name"), used_names)
-            zf.writestr(entry, mp3)
+            entry = _zip_safe_basename_wav(item.get("audio_name"), used_names)
+            zf.writestr(entry, wav)
         if not used_names:
             raise HTTPException(status_code=404, detail="Не удалось собрать ни одного файла")
     return buf.getvalue()
@@ -977,7 +980,7 @@ async def _set_export_job_state(job_id: str, **fields: Any) -> None:
     await redis_client.set(key, json.dumps(data, ensure_ascii=False), expire=MA_EXPORT_JOB_TTL_SEC)
 
 
-async def _run_mp3_zip_export_job(job_id: str, match_id: int, admin_uid: int) -> None:
+async def _run_wav_zip_export_job(job_id: str, match_id: int, admin_uid: int) -> None:
     try:
         await _set_export_job_state(job_id, status="processing", progress=5)
         async with async_session_maker() as session:
@@ -990,10 +993,10 @@ async def _run_mp3_zip_export_job(job_id: str, match_id: int, admin_uid: int) ->
             title = row.title or f"match_{match_id}"
 
         await _set_export_job_state(job_id, progress=15)
-        zip_bytes = await asyncio.to_thread(_build_mp3_zip_for_analysis, analysis)
+        zip_bytes = await asyncio.to_thread(_build_wav_zip_for_analysis, analysis)
         await _set_export_job_state(job_id, progress=85)
         safe_title = _safe_audio_stem(title) or f"match_{match_id}"
-        filename = f"{safe_title}_audio_mp3.zip"
+        filename = f"{safe_title}_audio_wav.zip"
         link = await _issue_tmp_download_link(zip_bytes, filename, "application/zip")
         await _set_export_job_state(
             job_id,
@@ -1010,7 +1013,7 @@ async def _run_mp3_zip_export_job(job_id: str, match_id: int, admin_uid: int) ->
         await _set_export_job_state(job_id, status="error", error=str(exc) or "Ошибка экспорта")
 
 
-def _resolve_zip_mp3_target(
+def _resolve_zip_audio_target(
     filename: str,
     items: list[dict[str, Any]],
 ) -> tuple[int, int] | None:
@@ -1058,7 +1061,7 @@ async def match_analysis_audio_list(body: MatchAnalysisIdBody):
 @match_analysis_api_router.post("/api/match_analysis/audio/import_mp3_zip")
 async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
     """
-    «Экспорт» в UI: ставит задачу конвертации всех аудио в mp3 и сборки zip.
+    «Экспорт» в UI: ставит задачу конвертации всех аудио в wav и сборки zip.
     Клиент опрашивает export_job_status и скачивает по временной ссылке.
     """
     uid = _resolve_admin_user_id(body.init_data)
@@ -1086,7 +1089,7 @@ async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
         payload,
         expire=MA_EXPORT_JOB_TTL_SEC,
     )
-    asyncio.create_task(_run_mp3_zip_export_job(job_id, body.id, uid))
+    asyncio.create_task(_run_wav_zip_export_job(job_id, body.id, uid))
     return {"job_id": job_id, "status": "pending"}
 
 
@@ -1116,7 +1119,7 @@ async def match_analysis_audio_export_job_status(body: MatchAnalysisExportJobBod
 
 @match_analysis_api_router.post("/api/match_analysis/audio/download_mp3")
 async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody):
-    """Конвертация одного аудио в MP3 + временная ссылка для Telegram.WebApp.downloadFile."""
+    """Конвертация одного аудио в WAV + временная ссылка для Telegram.WebApp.downloadFile."""
     _resolve_admin_user_id(body.init_data)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
@@ -1140,11 +1143,11 @@ async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody
     if not raw:
         raise HTTPException(status_code=404, detail="Пустой аудиофайл")
 
-    mp3 = await asyncio.to_thread(_to_mp3_bytes, raw, str(key))
+    wav = await asyncio.to_thread(_to_wav_bytes, raw, str(key))
     stem = Path(str(audio_name)).stem.strip() or "audio"
     stem = re.sub(r'[\\/:*?"<>|]+', "_", stem).strip(" ._") or "audio"
-    filename = f"{stem[:120]}.mp3"
-    return await _issue_tmp_download_link(mp3, filename, "audio/mpeg")
+    filename = f"{stem[:120]}.wav"
+    return await _issue_tmp_download_link(wav, filename, "audio/wav")
 
 
 @match_analysis_api_router.api_route(
@@ -1219,8 +1222,8 @@ async def match_analysis_audio_export_mp3_zip(
     file: UploadFile = File(...),
 ):
     """
-    «Импорт» в UI: принимает zip с mp3, конвертирует в webm и заменяет аудио
-    с эквивалентными именами (g{N}_m{M}__stem.mp3 или совпадение по имени).
+    «Импорт» в UI: принимает zip с wav, конвертирует в webm и заменяет аудио
+    с эквивалентными именами (совпадение по имени без расширения).
     """
     uid = _resolve_admin_user_id(init_data)
     raw_zip = await file.read()
@@ -1254,29 +1257,33 @@ async def match_analysis_audio_export_mp3_zip(
                 if info.is_dir():
                     continue
                 name = info.filename.replace("\\", "/").split("/")[-1]
-                if not name.lower().endswith(".mp3"):
+                lower_name = name.lower()
+                if not (lower_name.endswith(".wav") or lower_name.endswith(".wave")):
                     continue
                 if name.startswith(".") or name.startswith("__MACOSX"):
                     continue
-                target = _resolve_zip_mp3_target(name, items)
+                target = _resolve_zip_audio_target(name, items)
                 if not target:
                     skipped.append(name)
                     continue
                 game_number, move_index = target
                 try:
-                    mp3_raw = zf.read(info)
+                    wav_raw = zf.read(info)
                 except Exception:
                     skipped.append(name)
                     continue
-                if not mp3_raw:
+                if not wav_raw:
                     skipped.append(name)
                     continue
-                if len(mp3_raw) > MA_MEDIA_MAX_BYTES:
+                if len(wav_raw) > max(MA_MEDIA_MAX_BYTES, 80 * 1024 * 1024):
                     skipped.append(name)
                     continue
 
                 try:
-                    webm_raw = await asyncio.to_thread(_mp3_to_webm_bytes, mp3_raw)
+                    src_suffix = Path(name).suffix.lower() or ".wav"
+                    webm_raw = await asyncio.to_thread(
+                        _wav_to_webm_bytes, wav_raw, src_suffix
+                    )
                 except HTTPException:
                     raise
                 except Exception as e:
@@ -1318,9 +1325,9 @@ async def match_analysis_audio_export_mp3_zip(
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    "Не удалось сопоставить ни одного mp3 с аудио анализа. "
+                    "Не удалось сопоставить ни одного wav с аудио анализа. "
                     "Имена в ZIP должны полностью совпадать с именами файлов "
-                    "(без учёта расширения, например voice.mp3 → voice.webm)."
+                    "(без учёта расширения, например voice.wav → voice.webm)."
                 ),
             )
 

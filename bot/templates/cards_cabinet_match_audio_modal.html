@@ -687,10 +687,10 @@
         </div>
         <div class="ma-audio-modal__footer">
             <div class="ma-audio-modal__footer-left">
-                <button type="button" id="maAudioListImportBtn" class="ma-audio-modal__btn" title="Скачать все аудио в ZIP (MP3)">
+                <button type="button" id="maAudioListImportBtn" class="ma-audio-modal__btn" title="Скачать все аудио в ZIP (WAV)">
                     Экспорт
                 </button>
-                <button type="button" id="maAudioListExportBtn" class="ma-audio-modal__btn" title="Загрузить ZIP с MP3 и заменить аудио">
+                <button type="button" id="maAudioListExportBtn" class="ma-audio-modal__btn" title="Загрузить ZIP с WAV и заменить аудио">
                     Импорт
                 </button>
                 <input type="file" id="maAudioListExportFileInput" accept=".zip,application/zip" style="display:none" tabindex="-1">
@@ -2179,7 +2179,7 @@
         var fallbackName = String(item.audio_name || 'audio.webm').split(/[\\/]/).pop() || 'audio.webm';
         var stem = fallbackName.replace(/\.[^.]+$/, '') || 'audio';
         setZipBusy(true);
-        startConvertEstimate('Конвертация в MP3…', { files: 1, msPerFile: 4200 });
+        startConvertEstimate('Конвертация в WAV…', { files: 1, msPerFile: 4200 });
         fetch('/api/match_analysis/audio/download_mp3', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2204,7 +2204,7 @@
                 var url = payload && payload.url ? String(payload.url) : '';
                 var filename = (payload && payload.file_name)
                     ? String(payload.file_name)
-                    : (stem + '.mp3');
+                    : (stem + '.wav');
                 var downloadName = (payload && payload.download_file_name)
                     ? String(payload.download_file_name)
                     : filename;
@@ -2223,7 +2223,7 @@
                 if (isListModalOpen() && state.matchId === matchId) {
                     setListMsg('Ошибка скачивания: ' + (err.message || err), true);
                 }
-                showNotice('Не удалось скачать MP3: ' + (err.message || err), 'Ошибка');
+                showNotice('Не удалось скачать WAV: ' + (err.message || err), 'Ошибка');
             })
             .finally(function () {
                 setZipBusy(false);
@@ -2579,6 +2579,7 @@
             .replace(/^[._]+|[._]+$/g, '');
         if (ascii) return ascii;
         if (/\.zip$/i.test(safe)) return 'download.zip';
+        if (/\.wav$/i.test(safe)) return 'download.wav';
         if (/\.mp3$/i.test(safe)) return 'download.mp3';
         return 'download.bin';
     }
@@ -2709,7 +2710,7 @@
         var matchId = state.matchId;
         var fileCount = Math.max(1, state.items.length || 1);
         setZipBusy(true);
-        startConvertEstimate('Экспорт: конвертация в MP3…', {
+        startConvertEstimate('Экспорт: конвертация в WAV…', {
             files: fileCount,
             msPerFile: 3000,
         });
@@ -2745,7 +2746,7 @@
                 var url = payload && payload.url ? String(payload.url) : '';
                 var filename = (payload && payload.file_name)
                     ? String(payload.file_name)
-                    : ('match_' + matchId + '_audio_mp3.zip');
+                    : ('match_' + matchId + '_audio_wav.zip');
                 var downloadName = (payload && payload.download_file_name)
                     ? String(payload.download_file_name)
                     : filename;
@@ -2767,7 +2768,7 @@
                 }
                 showNotice(
                     result && result.via === 'blob'
-                        ? 'ZIP с MP3 скачан'
+                        ? 'ZIP с WAV скачан'
                         : 'Скачивание запущено — проверьте загрузки Telegram',
                     'Экспорт'
                 );
@@ -2797,7 +2798,7 @@
             state.items.length || Math.round((Number(file.size) || 400000) / 400000)
         );
         setZipBusy(true);
-        startConvertEstimate('Импорт: конвертация MP3 → WebM…', {
+        startConvertEstimate('Импорт: конвертация WAV → WebM…', {
             files: approxFiles,
             msPerFile: 3400,
         });
