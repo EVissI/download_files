@@ -6391,9 +6391,12 @@
                             if (config.mode === 'folder') {
                                 gridEl.innerHTML =
                                     '<p class="empty">В этой папке пока нет матчей.</p>';
+                            } else if (!isRootAdminUser) {
+                                gridEl.innerHTML =
+                                    '<p class="empty">Вам пока не выданы анализы матча</p>';
                             } else {
                                 gridEl.innerHTML =
-                                    '<p class="empty">Пока нет сохранённых анализов</p>';
+                                    '<p class="empty">Пока нет выданных вам анализов</p>';
                             }
                             updateSelectionUi();
                             return;

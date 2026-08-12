@@ -306,6 +306,20 @@ async def save_match_analysis_from_game_id(
             )
         )
         row_id = row.id
+        # Как у content cards: создатель сразу получает выдачу, иначе анализ
+        # не появится в кабинете (list только по UserMatchAnalysis).
+        existing_grant = await session.scalar(
+            select(UserMatchAnalysis.id)
+            .where(
+                UserMatchAnalysis.user_id == user_id,
+                UserMatchAnalysis.match_analysis_id == row_id,
+            )
+            .limit(1)
+        )
+        if existing_grant is None:
+            session.add(
+                UserMatchAnalysis(user_id=user_id, match_analysis_id=row_id)
+            )
         await session.commit()
 
     base = settings.MINI_APP_URL.rstrip("/")
@@ -524,17 +538,14 @@ async def match_analysis_save(body: MatchAnalysisSaveBody):
 
 @match_analysis_api_router.post("/api/match_analysis/list")
 async def match_analysis_list(body: MatchAnalysisInitBody):
+    """Список анализов кабинета: только выданные текущему пользователю (как content cards)."""
     uid = _resolve_user_id(body.init_data)
     is_admin = _is_ma_admin(uid)
     recent_cutoff = datetime.utcnow() - timedelta(days=1)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
-        if is_admin:
-            rows = await dao.list_all_ordered()
-            ready_count = await dao.count_ready_for_issue()
-        else:
-            rows = await dao.list_for_user_ordered(uid)
-            ready_count = 0
+        rows = await dao.list_for_user_ordered(uid)
+        ready_count = await dao.count_ready_for_issue() if is_admin else 0
         # Дозаполняем длительности сразу при загрузке кабинета (админ).
         if is_admin and rows:
             changed = False
