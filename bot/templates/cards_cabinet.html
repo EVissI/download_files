@@ -805,17 +805,12 @@
         .tile.tile--match {
             font-size: 0.62rem;
             font-weight: 600;
-            line-height: 1.2;
-            padding: 10px 6px;
+            line-height: 1.15;
+            padding: 4px;
             text-align: center;
             white-space: normal;
             word-break: break-word;
             overflow: hidden;
-        }
-
-        .tile-wrap > .tile {
-            padding: 24px 22px 26px;
-            box-sizing: border-box;
         }
 
         .wrap.wrap--no-footer {
@@ -872,6 +867,14 @@
             height: 100%;
             aspect-ratio: unset;
             box-sizing: border-box;
+        }
+
+        .tile-wrap > .tile:not(.tile--match) {
+            padding: 24px 22px 26px;
+        }
+
+        .tile-wrap > .tile.tile--match {
+            padding: 24px 4px 26px;
         }
 
         .tile__del {
