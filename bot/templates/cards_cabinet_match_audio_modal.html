@@ -77,13 +77,12 @@
     }
 
     .ma-audio-modal__box {
-        position: relative;
+        position: absolute;
+        inset: 0;
         z-index: 1;
-        width: 100%;
-        max-width: none;
-        height: 100%;
-        height: 100dvh;
-        max-height: 100dvh;
+        width: auto;
+        height: auto;
+        min-height: 100%;
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -172,11 +171,19 @@
         transition: width 0.28s ease-out;
     }
 
-    .ma-audio-modal__list {
-        flex: 1 1 auto;
+    .ma-audio-modal__scroll {
+        flex: 1 1 0;
         min-height: 0;
-        overflow: auto;
+        overflow: hidden;
         margin: 0 0 10px;
+    }
+
+    .ma-audio-modal__list {
+        height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0;
         padding: 0;
         list-style: none;
         border: 1px solid #333;
@@ -609,9 +616,14 @@
         justify-content: space-between;
         gap: 8px;
         flex-wrap: wrap;
+        flex: 0 0 auto;
         flex-shrink: 0;
-        margin-top: auto;
-        padding-top: 4px;
+        position: relative;
+        z-index: 5;
+        background: #242424;
+        border-top: 1px solid #3a3a3a;
+        padding-top: 10px;
+        box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.35);
     }
 
     .ma-audio-modal__footer-left,
@@ -666,7 +678,9 @@
                 <div class="ma-audio-modal__progress-bar"></div>
             </div>
         </div>
-        <ul id="maAudioListModalList" class="ma-audio-modal__list"></ul>
+        <div class="ma-audio-modal__scroll">
+            <ul id="maAudioListModalList" class="ma-audio-modal__list"></ul>
+        </div>
         <div class="ma-audio-modal__footer">
             <div class="ma-audio-modal__footer-left">
                 <button type="button" id="maAudioListImportBtn" class="ma-audio-modal__btn" title="Скачать все аудио в ZIP (MP3)">
