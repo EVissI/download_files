@@ -457,13 +457,6 @@
             flex-shrink: 0;
         }
 
-        .ma-audio-only-filter__label {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 7.5em;
-        }
-
         .ma-audio-only-filter:has(.ma-audio-only-filter__input:checked) {
             border-color: #5f8fbd;
             background: #3e6f9f;
@@ -2288,11 +2281,11 @@
                 </select>
             </div>
             <label id="ma-audio-only-filter-wrap" class="ma-audio-only-filter"
-                title="При открытии анализа показывать только ходы с аудиокомментарием">
+                title="При открытии анализа показывать только ходы с аудиокомментарием"
+                aria-label="Только ходы с аудио">
                 <input id="ma-audio-only-filter" class="ma-audio-only-filter__input" type="checkbox">
                 <span class="ma-audio-only-filter__mark" aria-hidden="true"></span>
                 <i class="fa fa-headphones ma-audio-only-filter__icon" aria-hidden="true"></i>
-                <span class="ma-audio-only-filter__label">Аудио</span>
             </label>
             <div id="label-filter-wrap" class="label-filter-wrap">
                 <select id="label-filter" class="label-filter-select" title="Фильтр по метке">
