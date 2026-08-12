@@ -803,6 +803,10 @@
         }
 
         .tile.tile--match {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
             font-size: 0.62rem;
             font-weight: 600;
             line-height: 1.2;
@@ -811,6 +815,27 @@
             white-space: normal;
             word-break: break-word;
             overflow: hidden;
+        }
+
+        .tile-wrap > .tile.tile--match {
+            padding: 24px 22px 26px;
+        }
+
+        .tile__order {
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .tile__match-title {
+            display: block;
+            font-size: 0.62rem;
+            font-weight: 600;
+            line-height: 1.2;
+            text-align: center;
+            word-break: break-word;
         }
 
         .wrap.wrap--no-footer {
@@ -3143,6 +3168,26 @@
                 return Number(((row && row.__index) || 0) + 1);
             }
 
+            function getMatchAnalysisDisplayOrder(row) {
+                return Number(((row && row.__index) || 0) + 1);
+            }
+
+            function fillMatchAnalysisTile(btn, row, fullTitle) {
+                btn.innerHTML = '';
+                var orderEl = document.createElement('span');
+                orderEl.className = 'tile__order';
+                orderEl.textContent = String(getMatchAnalysisDisplayOrder(row));
+                var titleEl = document.createElement('span');
+                titleEl.className = 'tile__match-title';
+                var titleText = String(fullTitle || '');
+                if (titleText.length > 32) {
+                    titleText = titleText.slice(0, 31) + '…';
+                }
+                titleEl.textContent = titleText;
+                btn.appendChild(orderEl);
+                btn.appendChild(titleEl);
+            }
+
             function getCardHoverTitle(row, cardIdNum) {
                 var notes = String((row && row.notes) || '').trim();
                 if (notes) {
@@ -5178,8 +5223,8 @@
                             if (selectedCardIds[String(cardIdNum)]) {
                                 btn.classList.add('tile--selected');
                             }
-                            btn.textContent = truncateMatchTitle(fullTitle, 32);
-                            btn.title = fullTitle;
+                            fillMatchAnalysisTile(btn, row, fullTitle);
+                            btn.title = fullTitle + ' · №' + String(getMatchAnalysisDisplayOrder(row));
                             btn.addEventListener('click', function () {
                                 if (isSelectionMode) {
                                     var selectedKey = String(cardIdNum);
