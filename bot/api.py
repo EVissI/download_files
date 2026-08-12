@@ -1,5 +1,6 @@
 import mimetypes
 import uuid
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Request, Response, HTTPException, File, Form, UploadFile, Query
@@ -136,6 +137,17 @@ async def start_scheduler_on_api_startup():
         return
     scheduler.start(paused=True)
     logger.info("APScheduler started on FastAPI startup in paused mode")
+
+
+@app.on_event("startup")
+async def cleanup_match_analysis_tmp_downloads_on_startup():
+    """Подчищает просроченные временные ZIP/аудио экспорта на S3 после рестарта API."""
+    try:
+        from bot.routers.match_analysis_router import _maybe_cleanup_expired_tmp_downloads
+
+        asyncio.create_task(_maybe_cleanup_expired_tmp_downloads(force=True))
+    except Exception as e:
+        logger.warning(f"ma tmp dl startup cleanup schedule failed: {e}")
 
 
 @app.exception_handler(Exception)

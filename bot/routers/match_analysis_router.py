@@ -17,6 +17,7 @@ import subprocess
 import tempfile
 import uuid
 import zipfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
@@ -53,6 +54,9 @@ MA_TMP_DL_PREFIX = "match_analysis/tmp_dl/"
 MA_TMP_DL_TTL_SEC = 3600
 MA_EXPORT_JOB_PREFIX = "ma_audio_export:"
 MA_EXPORT_JOB_TTL_SEC = 3600
+_ma_tmp_cleanup_lock = asyncio.Lock()
+_ma_tmp_cleanup_last_ts = 0.0
+_ma_tmp_cleanup_min_interval_sec = 60.0
 
 
 class MatchAnalysisInitBody(BaseModel):
@@ -62,6 +66,12 @@ class MatchAnalysisInitBody(BaseModel):
 class MatchAnalysisIdBody(BaseModel):
     init_data: str
     id: int
+
+
+class MatchAnalysisAudioExportZipBody(BaseModel):
+    init_data: str
+    id: int
+    format: str = "wav"
 
 
 class MatchAnalysisSaveBody(BaseModel):
@@ -836,6 +846,32 @@ def _to_wav_bytes(raw: bytes, src_name: str | None = None) -> bytes:
     )
 
 
+def _to_mp3_bytes(raw: bytes, src_name: str | None = None) -> bytes:
+    """MP3 320 kbps."""
+    src_suffix = Path(src_name or "audio.webm").suffix.lower() or ".webm"
+    if src_suffix not in {".webm", ".ogg", ".opus", ".mp3", ".wav", ".m4a", ".mp4", ".aac"}:
+        src_suffix = ".webm"
+    return _convert_audio_bytes(
+        raw,
+        src_suffix=src_suffix,
+        dst_suffix=".mp3",
+        ffmpeg_args=["-vn", "-codec:a", "libmp3lame", "-b:a", "320k"],
+    )
+
+
+def _normalize_export_audio_format(raw: str | None) -> str:
+    fmt = str(raw or "wav").strip().lower()
+    if fmt in {"mp3", "mpeg"}:
+        return "mp3"
+    return "wav"
+
+
+def _convert_to_export_format(raw: bytes, fmt: str, src_name: str | None = None) -> bytes:
+    if fmt == "mp3":
+        return _to_mp3_bytes(raw, src_name=src_name)
+    return _to_wav_bytes(raw, src_name=src_name)
+
+
 def _wav_to_webm_bytes(raw: bytes, src_suffix: str = ".wav") -> bytes:
     suffix = (src_suffix or ".wav").lower()
     if suffix not in {".wav", ".wave", ".mp3", ".m4a", ".ogg", ".opus", ".webm"}:
@@ -872,6 +908,78 @@ def _ascii_download_filename(filename: str) -> str:
     return ascii_name[:200]
 
 
+def _delete_tmp_download_object_sync(key: str) -> None:
+    if not key or not key.startswith(MA_TMP_DL_PREFIX):
+        return
+    s3 = HintS3Storage.from_settings()
+    try:
+        s3.delete_object(key)
+    except Exception as e:
+        logger.warning(f"ma tmp dl delete failed key={key}: {e}")
+
+
+async def _delete_tmp_download_later(key: str, delay_sec: int) -> None:
+    """Гарантированное удаление конкретного временного объекта после TTL."""
+    try:
+        await asyncio.sleep(max(1, int(delay_sec)))
+        await asyncio.to_thread(_delete_tmp_download_object_sync, key)
+        logger.info(f"ma tmp dl cleaned by timer key={key}")
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        logger.warning(f"ma tmp dl timer cleanup failed key={key}: {e}")
+
+
+def _cleanup_expired_tmp_downloads_sync(max_age_sec: int = MA_TMP_DL_TTL_SEC) -> int:
+    """Удаляет объекты в tmp_dl старше max_age_sec (подстраховка после рестартов)."""
+    s3 = HintS3Storage.from_settings()
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, int(max_age_sec)))
+    deleted = 0
+    token: str | None = None
+    while True:
+        items, token = s3.list_objects_with_prefix(
+            MA_TMP_DL_PREFIX,
+            max_keys=200,
+            continuation_token=token,
+        )
+        for item in items:
+            key = str(item.get("key") or "")
+            lm = item.get("last_modified")
+            if not key.startswith(MA_TMP_DL_PREFIX):
+                continue
+            if lm is None or lm > cutoff:
+                continue
+            try:
+                s3.delete_object(key)
+                deleted += 1
+            except Exception as e:
+                logger.warning(f"ma tmp dl sweep delete failed key={key}: {e}")
+        if not token:
+            break
+    return deleted
+
+
+async def _maybe_cleanup_expired_tmp_downloads(force: bool = False) -> None:
+    """Не чаще раза в минуту чистит просроченные tmp_dl на S3."""
+    global _ma_tmp_cleanup_last_ts
+    now = asyncio.get_running_loop().time()
+    if not force and (now - _ma_tmp_cleanup_last_ts) < _ma_tmp_cleanup_min_interval_sec:
+        return
+    async with _ma_tmp_cleanup_lock:
+        now = asyncio.get_running_loop().time()
+        if not force and (now - _ma_tmp_cleanup_last_ts) < _ma_tmp_cleanup_min_interval_sec:
+            return
+        _ma_tmp_cleanup_last_ts = now
+        try:
+            deleted = await asyncio.to_thread(
+                _cleanup_expired_tmp_downloads_sync, MA_TMP_DL_TTL_SEC
+            )
+            if deleted:
+                logger.info(f"ma tmp dl sweep removed {deleted} object(s)")
+        except Exception as e:
+            logger.warning(f"ma tmp dl sweep failed: {e}")
+
+
 async def _issue_tmp_download_link(
     blob: bytes,
     filename: str,
@@ -879,6 +987,7 @@ async def _issue_tmp_download_link(
 ) -> dict[str, str]:
     """
     Кладёт файл во временный ключ S3 и возвращает URL для Telegram.WebApp.downloadFile.
+    Объект живёт MA_TMP_DL_TTL_SEC (1 час), затем удаляется таймером + sweep.
     """
     token = secrets.token_urlsafe(24)
     suffix = Path(filename).suffix.lower() or ""
@@ -888,6 +997,7 @@ async def _issue_tmp_download_link(
     s3 = HintS3Storage.from_settings()
     await asyncio.to_thread(s3.upload_bytes, key, blob, content_type)
     ascii_name = _ascii_download_filename(filename)
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=MA_TMP_DL_TTL_SEC)
     payload = json.dumps(
         {
             "key": key,
@@ -895,10 +1005,14 @@ async def _issue_tmp_download_link(
             "download_file_name": ascii_name,
             "content_type": content_type,
             "size": len(blob),
+            "expires_at": expires_at.isoformat(),
         },
         ensure_ascii=False,
     )
     await redis_client.set(f"ma_audio_dl:{token}", payload, expire=MA_TMP_DL_TTL_SEC)
+    # Таймер на удаление конкретного файла + фоновая зачистка «хвостов».
+    asyncio.create_task(_delete_tmp_download_later(key, MA_TMP_DL_TTL_SEC))
+    asyncio.create_task(_maybe_cleanup_expired_tmp_downloads())
     return {
         "url": f"/api/match_analysis/audio/file?token={token}",
         "file_name": filename,
@@ -913,26 +1027,29 @@ def _audio_filename_match_key(name: str | None) -> str:
     return stem.lower()
 
 
-def _zip_safe_basename_wav(audio_name: str | None, used: set[str]) -> str:
-    """Имя в zip = исходное имя файла с расширением .wav (без g/m префикса)."""
+def _zip_safe_basename(audio_name: str | None, used: set[str], ext: str) -> str:
+    """Имя в zip = исходное имя файла с заданным расширением."""
+    suffix = ext if str(ext).startswith(".") else f".{ext}"
     original = Path(str(audio_name or "audio")).name
     stem = Path(original).stem.strip() or "audio"
     stem = re.sub(r'[\\/:*?"<>|]+', "_", stem).strip(" ._") or "audio"
     stem = stem[:120]
-    base = f"{stem}.wav"
+    base = f"{stem}{suffix}"
     if base.lower() not in used:
         used.add(base.lower())
         return base
     n = 2
     while True:
-        cand = f"{stem}_{n}.wav"
+        cand = f"{stem}_{n}{suffix}"
         if cand.lower() not in used:
             used.add(cand.lower())
             return cand
         n += 1
 
 
-def _build_wav_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
+def _build_audio_zip_for_analysis(analysis: dict[str, Any], fmt: str = "wav") -> bytes:
+    fmt = _normalize_export_audio_format(fmt)
+    ext = ".mp3" if fmt == "mp3" else ".wav"
     items = _collect_match_analysis_audios(analysis)
     if not items:
         raise HTTPException(status_code=404, detail="В анализе нет аудиофайлов")
@@ -950,7 +1067,7 @@ def _build_wav_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
                 logger.warning(f"export zip: download failed key={key}: {e}")
                 continue
             try:
-                wav = _to_wav_bytes(raw, src_name=key)
+                converted = _convert_to_export_format(raw, fmt, src_name=key)
             except HTTPException:
                 raise
             except Exception as e:
@@ -959,8 +1076,8 @@ def _build_wav_zip_for_analysis(analysis: dict[str, Any]) -> bytes:
                     status_code=500,
                     detail=f"Не удалось конвертировать {item.get('audio_name')}: {e}",
                 ) from e
-            entry = _zip_safe_basename_wav(item.get("audio_name"), used_names)
-            zf.writestr(entry, wav)
+            entry = _zip_safe_basename(item.get("audio_name"), used_names, ext)
+            zf.writestr(entry, converted)
         if not used_names:
             raise HTTPException(status_code=404, detail="Не удалось собрать ни одного файла")
     return buf.getvalue()
@@ -980,9 +1097,15 @@ async def _set_export_job_state(job_id: str, **fields: Any) -> None:
     await redis_client.set(key, json.dumps(data, ensure_ascii=False), expire=MA_EXPORT_JOB_TTL_SEC)
 
 
-async def _run_wav_zip_export_job(job_id: str, match_id: int, admin_uid: int) -> None:
+async def _run_audio_zip_export_job(
+    job_id: str,
+    match_id: int,
+    admin_uid: int,
+    fmt: str = "wav",
+) -> None:
+    fmt = _normalize_export_audio_format(fmt)
     try:
-        await _set_export_job_state(job_id, status="processing", progress=5)
+        await _set_export_job_state(job_id, status="processing", progress=5, format=fmt)
         async with async_session_maker() as session:
             dao = MatchAnalysisDAO(session)
             row = await dao.find_one_or_none_by_id(match_id)
@@ -993,10 +1116,11 @@ async def _run_wav_zip_export_job(job_id: str, match_id: int, admin_uid: int) ->
             title = row.title or f"match_{match_id}"
 
         await _set_export_job_state(job_id, progress=15)
-        zip_bytes = await asyncio.to_thread(_build_wav_zip_for_analysis, analysis)
+        zip_bytes = await asyncio.to_thread(_build_audio_zip_for_analysis, analysis, fmt)
         await _set_export_job_state(job_id, progress=85)
         safe_title = _safe_audio_stem(title) or f"match_{match_id}"
-        filename = f"{safe_title}_audio_wav.zip"
+        tag = "mp3" if fmt == "mp3" else "wav"
+        filename = f"{safe_title}_audio_{tag}.zip"
         link = await _issue_tmp_download_link(zip_bytes, filename, "application/zip")
         await _set_export_job_state(
             job_id,
@@ -1005,6 +1129,7 @@ async def _run_wav_zip_export_job(job_id: str, match_id: int, admin_uid: int) ->
             url=link["url"],
             file_name=link["file_name"],
             download_file_name=link.get("download_file_name") or link["file_name"],
+            format=fmt,
         )
     except HTTPException as exc:
         await _set_export_job_state(job_id, status="error", error=str(exc.detail))
@@ -1059,12 +1184,13 @@ async def match_analysis_audio_list(body: MatchAnalysisIdBody):
 
 
 @match_analysis_api_router.post("/api/match_analysis/audio/import_mp3_zip")
-async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
+async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisAudioExportZipBody):
     """
-    «Экспорт» в UI: ставит задачу конвертации всех аудио в wav и сборки zip.
+    «Экспорт» в UI: ставит задачу конвертации всех аудио в wav/mp3 и сборки zip.
     Клиент опрашивает export_job_status и скачивает по временной ссылке.
     """
     uid = _resolve_admin_user_id(body.init_data)
+    fmt = _normalize_export_audio_format(body.format)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
         row = await dao.find_one_or_none_by_id(body.id)
@@ -1081,6 +1207,7 @@ async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
             "match_id": body.id,
             "admin_uid": uid,
             "progress": 0,
+            "format": fmt,
         },
         ensure_ascii=False,
     )
@@ -1089,8 +1216,8 @@ async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisIdBody):
         payload,
         expire=MA_EXPORT_JOB_TTL_SEC,
     )
-    asyncio.create_task(_run_wav_zip_export_job(job_id, body.id, uid))
-    return {"job_id": job_id, "status": "pending"}
+    asyncio.create_task(_run_audio_zip_export_job(job_id, body.id, uid, fmt))
+    return {"job_id": job_id, "status": "pending", "format": fmt}
 
 
 @match_analysis_api_router.post("/api/match_analysis/audio/export_job_status")
@@ -1161,6 +1288,7 @@ async def match_analysis_audio_file_by_token(request: Request, token: str = Quer
     """
     if not token:
         raise HTTPException(status_code=400, detail="Параметр token обязателен")
+    asyncio.create_task(_maybe_cleanup_expired_tmp_downloads())
     raw = await redis_client.get(f"ma_audio_dl:{token}")
     if not raw:
         raise HTTPException(status_code=401, detail="Ссылка истекла или недействительна")
@@ -1222,7 +1350,7 @@ async def match_analysis_audio_export_mp3_zip(
     file: UploadFile = File(...),
 ):
     """
-    «Импорт» в UI: принимает zip с wav, конвертирует в webm и заменяет аудио
+    «Импорт» в UI: принимает zip с wav/mp3, конвертирует в webm и заменяет аудио
     с эквивалентными именами (совпадение по имени без расширения).
     """
     uid = _resolve_admin_user_id(init_data)
@@ -1258,7 +1386,11 @@ async def match_analysis_audio_export_mp3_zip(
                     continue
                 name = info.filename.replace("\\", "/").split("/")[-1]
                 lower_name = name.lower()
-                if not (lower_name.endswith(".wav") or lower_name.endswith(".wave")):
+                if not (
+                    lower_name.endswith(".wav")
+                    or lower_name.endswith(".wave")
+                    or lower_name.endswith(".mp3")
+                ):
                     continue
                 if name.startswith(".") or name.startswith("__MACOSX"):
                     continue
@@ -1268,21 +1400,21 @@ async def match_analysis_audio_export_mp3_zip(
                     continue
                 game_number, move_index = target
                 try:
-                    wav_raw = zf.read(info)
+                    audio_raw = zf.read(info)
                 except Exception:
                     skipped.append(name)
                     continue
-                if not wav_raw:
+                if not audio_raw:
                     skipped.append(name)
                     continue
-                if len(wav_raw) > max(MA_MEDIA_MAX_BYTES, 80 * 1024 * 1024):
+                if len(audio_raw) > max(MA_MEDIA_MAX_BYTES, 80 * 1024 * 1024):
                     skipped.append(name)
                     continue
 
                 try:
                     src_suffix = Path(name).suffix.lower() or ".wav"
                     webm_raw = await asyncio.to_thread(
-                        _wav_to_webm_bytes, wav_raw, src_suffix
+                        _wav_to_webm_bytes, audio_raw, src_suffix
                     )
                 except HTTPException:
                     raise
@@ -1325,8 +1457,8 @@ async def match_analysis_audio_export_mp3_zip(
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    "Не удалось сопоставить ни одного wav с аудио анализа. "
-                    "Имена в ZIP должны полностью совпадать с именами файлов "
+                    "Не удалось сопоставить ни одного файла с аудио анализа. "
+                    "В ZIP нужны .wav или .mp3, имена должны совпадать с именами файлов "
                     "(без учёта расширения, например voice.wav → voice.webm)."
                 ),
             )

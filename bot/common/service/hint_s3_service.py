@@ -292,3 +292,40 @@ class HintS3Storage:
 
     def delete_object(self, key: str) -> None:
         self._client.delete_object(Bucket=self._bucket, Key=key)
+
+    def list_objects_with_prefix(
+        self,
+        prefix: str,
+        *,
+        max_keys: int = 200,
+        continuation_token: str | None = None,
+    ) -> tuple[list[dict], str | None]:
+        """Список объектов по префиксу: key, size, last_modified (UTC)."""
+        kw: dict = {
+            "Bucket": self._bucket,
+            "Prefix": prefix or "",
+            "MaxKeys": min(max(1, max_keys), 1000),
+        }
+        if continuation_token:
+            kw["ContinuationToken"] = continuation_token
+        resp = self._client.list_objects_v2(**kw)
+        items: list[dict] = []
+        for obj in resp.get("Contents") or []:
+            key = (obj.get("Key") or "").strip()
+            if not key or key.endswith("/"):
+                continue
+            lm = obj.get("LastModified")
+            if isinstance(lm, datetime):
+                if lm.tzinfo is None:
+                    lm = lm.replace(tzinfo=timezone.utc)
+                lm_utc = lm.astimezone(timezone.utc)
+            else:
+                lm_utc = None
+            items.append(
+                {
+                    "key": key,
+                    "size": int(obj.get("Size") or 0),
+                    "last_modified": lm_utc,
+                }
+            )
+        return items, resp.get("NextContinuationToken")

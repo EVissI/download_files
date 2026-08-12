@@ -666,6 +666,79 @@
         min-width: 120px;
     }
 
+    .ma-audio-modal--format .ma-audio-modal__box {
+        inset: auto;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(360px, calc(100vw - 28px));
+        max-width: 360px;
+        height: auto;
+        min-height: 0;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        padding: 16px 14px 12px;
+    }
+
+    .ma-audio-modal--format .ma-audio-modal__footer {
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .ma-audio-modal__format-options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 4px 0 14px;
+    }
+
+    .ma-audio-modal__format-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+        padding: 12px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.22);
+        color: #e8e8e8;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .ma-audio-modal__format-option:has(input:checked) {
+        border-color: #5f8fbd;
+        background: rgba(62, 111, 159, 0.35);
+    }
+
+    .ma-audio-modal__format-option input {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        accent-color: #5f8fbd;
+        flex-shrink: 0;
+    }
+
+    .ma-audio-modal__format-option-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .ma-audio-modal__format-option-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .ma-audio-modal__format-option-hint {
+        font-size: 0.78rem;
+        color: #a8a8a8;
+        line-height: 1.25;
+    }
+
     .cabinet-footer.is-modal-overlay-hidden {
         display: none !important;
     }
@@ -687,10 +760,10 @@
         </div>
         <div class="ma-audio-modal__footer">
             <div class="ma-audio-modal__footer-left">
-                <button type="button" id="maAudioListImportBtn" class="ma-audio-modal__btn" title="Скачать все аудио в ZIP (WAV)">
+                <button type="button" id="maAudioListImportBtn" class="ma-audio-modal__btn" title="Скачать все аудио в ZIP (WAV или MP3)">
                     Экспорт
                 </button>
-                <button type="button" id="maAudioListExportBtn" class="ma-audio-modal__btn" title="Загрузить ZIP с WAV и заменить аудио">
+                <button type="button" id="maAudioListExportBtn" class="ma-audio-modal__btn" title="Загрузить ZIP с WAV/MP3 и заменить аудио">
                     Импорт
                 </button>
                 <input type="file" id="maAudioListExportFileInput" accept=".zip,application/zip" style="display:none" tabindex="-1">
@@ -698,6 +771,34 @@
             <div class="ma-audio-modal__footer-right">
                 <button type="button" id="maAudioListModalCloseBtn" class="ma-audio-modal__btn">Закрыть</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<div id="maAudioExportFormatModal" class="ma-audio-modal ma-audio-modal--edit ma-audio-modal--format" aria-hidden="true">
+    <div class="ma-audio-modal__overlay" id="maAudioExportFormatOverlay"></div>
+    <div class="ma-audio-modal__box" role="dialog" aria-modal="true" aria-labelledby="maAudioExportFormatTitle">
+        <h3 id="maAudioExportFormatTitle" class="ma-audio-modal__title">Формат экспорта</h3>
+        <p class="ma-audio-modal__sub">Выберите формат файлов в ZIP</p>
+        <div class="ma-audio-modal__format-options" role="radiogroup" aria-label="Формат экспорта">
+            <label class="ma-audio-modal__format-option">
+                <input type="radio" name="maAudioExportFormat" value="wav" checked>
+                <span class="ma-audio-modal__format-option-text">
+                    <span class="ma-audio-modal__format-option-title">WAV</span>
+                    <span class="ma-audio-modal__format-option-hint">Без сжатия, максимальное качество</span>
+                </span>
+            </label>
+            <label class="ma-audio-modal__format-option">
+                <input type="radio" name="maAudioExportFormat" value="mp3">
+                <span class="ma-audio-modal__format-option-text">
+                    <span class="ma-audio-modal__format-option-title">MP3</span>
+                    <span class="ma-audio-modal__format-option-hint">Меньший размер файла</span>
+                </span>
+            </label>
+        </div>
+        <div class="ma-audio-modal__footer">
+            <button type="button" id="maAudioExportFormatCancelBtn" class="ma-audio-modal__btn">Отмена</button>
+            <button type="button" id="maAudioExportFormatConfirmBtn" class="ma-audio-modal__btn ma-audio-modal__btn--primary">Скачать</button>
         </div>
     </div>
 </div>
@@ -750,6 +851,13 @@
     var editAttachBtn = document.getElementById('maAudioEditAttachBtn');
     var editRecordBtn = document.getElementById('maAudioEditRecordBtn');
     var editFileInput = document.getElementById('maAudioEditFileInput');
+
+    var exportFormatModal = document.getElementById('maAudioExportFormatModal');
+    var exportFormatOverlay = document.getElementById('maAudioExportFormatOverlay');
+    var exportFormatCancelBtn = document.getElementById('maAudioExportFormatCancelBtn');
+    var exportFormatConfirmBtn = document.getElementById('maAudioExportFormatConfirmBtn');
+    var EXPORT_FORMAT_LS_KEY = 'ma_audio_export_format_v1';
+    var exportFormatResolver = null;
 
     var state = {
         matchId: null,
@@ -2707,17 +2815,85 @@
             showNotice('В этом анализе нет аудио для экспорта', 'Экспорт');
             return;
         }
+        chooseExportFormat().then(function (fmt) {
+            if (!fmt) return;
+            startZipExport(fmt, initData);
+        });
+    }
+
+    function normalizeExportFormat(raw) {
+        var fmt = String(raw || '').trim().toLowerCase();
+        return fmt === 'mp3' ? 'mp3' : 'wav';
+    }
+
+    function getSavedExportFormat() {
+        try {
+            return normalizeExportFormat(localStorage.getItem(EXPORT_FORMAT_LS_KEY) || 'wav');
+        } catch (_e) {
+            return 'wav';
+        }
+    }
+
+    function saveExportFormat(fmt) {
+        try {
+            localStorage.setItem(EXPORT_FORMAT_LS_KEY, normalizeExportFormat(fmt));
+        } catch (_e) { }
+    }
+
+    function setExportFormatRadios(fmt) {
+        var value = normalizeExportFormat(fmt);
+        var radios = document.querySelectorAll('input[name="maAudioExportFormat"]');
+        Array.prototype.forEach.call(radios, function (radio) {
+            radio.checked = String(radio.value) === value;
+        });
+    }
+
+    function getSelectedExportFormat() {
+        var checked = document.querySelector('input[name="maAudioExportFormat"]:checked');
+        return normalizeExportFormat(checked && checked.value);
+    }
+
+    function closeExportFormatModal(result) {
+        if (exportFormatModal) {
+            exportFormatModal.classList.remove('is-open');
+            exportFormatModal.setAttribute('aria-hidden', 'true');
+        }
+        var resolve = exportFormatResolver;
+        exportFormatResolver = null;
+        if (resolve) resolve(result || null);
+    }
+
+    function chooseExportFormat() {
+        return new Promise(function (resolve) {
+            if (!exportFormatModal) {
+                resolve(getSavedExportFormat());
+                return;
+            }
+            if (exportFormatResolver) {
+                exportFormatResolver(null);
+            }
+            exportFormatResolver = resolve;
+            setExportFormatRadios(getSavedExportFormat());
+            exportFormatModal.classList.add('is-open');
+            exportFormatModal.setAttribute('aria-hidden', 'false');
+        });
+    }
+
+    function startZipExport(fmt, initData) {
+        fmt = normalizeExportFormat(fmt);
+        saveExportFormat(fmt);
         var matchId = state.matchId;
         var fileCount = Math.max(1, state.items.length || 1);
+        var formatLabel = fmt === 'mp3' ? 'MP3' : 'WAV';
         setZipBusy(true);
-        startConvertEstimate('Экспорт: конвертация в WAV…', {
+        startConvertEstimate('Экспорт: конвертация в ' + formatLabel + '…', {
             files: fileCount,
-            msPerFile: 3000,
+            msPerFile: fmt === 'mp3' ? 3600 : 3000,
         });
         fetch('/api/match_analysis/audio/import_mp3_zip', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: initData, id: matchId }),
+            body: JSON.stringify({ init_data: initData, id: matchId, format: fmt }),
         })
             .then(function (resp) {
                 return resp.json().catch(function () { return {}; }).then(function (payload) {
@@ -2746,7 +2922,7 @@
                 var url = payload && payload.url ? String(payload.url) : '';
                 var filename = (payload && payload.file_name)
                     ? String(payload.file_name)
-                    : ('match_' + matchId + '_audio_wav.zip');
+                    : ('match_' + matchId + '_audio_' + fmt + '.zip');
                 var downloadName = (payload && payload.download_file_name)
                     ? String(payload.download_file_name)
                     : filename;
@@ -2756,9 +2932,14 @@
                 if (isListModalOpen() && state.matchId === matchId) {
                     setListMsg('Экспорт: скачивание ZIP…');
                 }
-                return requestTelegramDownload(url, filename, { downloadFileName: downloadName });
+                return requestTelegramDownload(url, filename, { downloadFileName: downloadName })
+                    .then(function (result) {
+                        return { result: result, formatLabel: formatLabel };
+                    });
             })
-            .then(function (result) {
+            .then(function (pack) {
+                var result = pack && pack.result;
+                var formatLabel = (pack && pack.formatLabel) || 'WAV';
                 if (isListModalOpen() && state.matchId === matchId) {
                     setListMsg(
                         result && result.via === 'blob'
@@ -2768,7 +2949,7 @@
                 }
                 showNotice(
                     result && result.via === 'blob'
-                        ? 'ZIP с WAV скачан'
+                        ? ('ZIP с ' + formatLabel + ' скачан')
                         : 'Скачивание запущено — проверьте загрузки Telegram',
                     'Экспорт'
                 );
@@ -2873,6 +3054,21 @@
     if (listOverlay) listOverlay.addEventListener('click', closeListModal);
     if (listCloseBtn) listCloseBtn.addEventListener('click', closeListModal);
     if (listImportBtn) listImportBtn.addEventListener('click', downloadImportMp3Zip);
+    if (exportFormatOverlay) {
+        exportFormatOverlay.addEventListener('click', function () {
+            closeExportFormatModal(null);
+        });
+    }
+    if (exportFormatCancelBtn) {
+        exportFormatCancelBtn.addEventListener('click', function () {
+            closeExportFormatModal(null);
+        });
+    }
+    if (exportFormatConfirmBtn) {
+        exportFormatConfirmBtn.addEventListener('click', function () {
+            closeExportFormatModal(getSelectedExportFormat());
+        });
+    }
     if (listExportBtn) {
         listExportBtn.addEventListener('click', function () {
             if (state.busy) return;
