@@ -38,7 +38,12 @@ from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.config import bot, settings
 from bot.db.dao import MatchAnalysisActivationLinkDAO, MatchAnalysisDAO
 from bot.db.database import async_session_maker
-from bot.db.models import MatchAnalysis, User, UserMatchAnalysis
+from bot.db.models import (
+    MatchAnalysis,
+    User,
+    UserContentCardStatus,
+    UserMatchAnalysis,
+)
 from bot.db.redis import redis_client
 from bot.db.schemas import SMatchAnalysisCreate
 from bot.routers.hint_viewer_router import load_analysis_json_from_s3
@@ -135,6 +140,17 @@ class MatchAnalysisAssignBody(BaseModel):
 class MatchAnalysisGenerateLinkBody(BaseModel):
     init_data: str
     match_analysis_ids: list[int]
+
+
+class MatchAnalysisSetStatusBody(BaseModel):
+    init_data: str
+    id: int = Field(..., ge=1)
+    status: UserContentCardStatus
+
+
+class MatchAnalysisMarkViewedBody(BaseModel):
+    init_data: str
+    id: int = Field(..., ge=1)
 
 
 def _require_match_analysis_admin(user_id: int) -> None:
@@ -324,7 +340,50 @@ def _find_game_and_move(
     return game, move
 
 
-def _serialize_list_item(row) -> dict[str, Any]:
+def _status_value(raw) -> str:
+    if hasattr(raw, "value"):
+        return str(raw.value)
+    return str(raw or UserContentCardStatus.UNVIEWED.value)
+
+
+def _list_status_for_link(
+    link: UserMatchAnalysis | None,
+    recent_cutoff: datetime,
+) -> str:
+    """Как у content cards: RECENT = UNVIEWED + выдано за последние сутки."""
+    if not link:
+        return UserContentCardStatus.UNVIEWED.value
+    status = _status_value(link.card_status)
+    if (
+        status == UserContentCardStatus.UNVIEWED.value
+        and link.created_at
+        and link.created_at.replace(tzinfo=None) >= recent_cutoff
+    ):
+        return "RECENT"
+    return status
+
+
+async def _user_ma_links_by_id(
+    session,
+    user_id: int,
+    match_ids: list[int],
+) -> dict[int, UserMatchAnalysis]:
+    if not match_ids:
+        return {}
+    result = await session.execute(
+        select(UserMatchAnalysis).where(
+            UserMatchAnalysis.user_id == user_id,
+            UserMatchAnalysis.match_analysis_id.in_(match_ids),
+        )
+    )
+    return {row.match_analysis_id: row for row in result.scalars().all()}
+
+
+def _serialize_list_item(
+    row,
+    *,
+    status: str | None = None,
+) -> dict[str, Any]:
     gi = (row.analysis or {}).get("game_info") or {}
     games = (row.analysis or {}).get("games") or []
     audio_count = 0
@@ -337,7 +396,7 @@ def _serialize_list_item(row) -> dict[str, Any]:
             dur = _coerce_duration_sec(m.get("audioDurationSec"))
             if dur is not None:
                 audio_seconds += dur
-    return {
+    out = {
         "id": row.id,
         "content_card_id": row.id,  # совместимость с тайлами cards_cabinet
         "title": row.title,
@@ -354,7 +413,9 @@ def _serialize_list_item(row) -> dict[str, Any]:
         "audio_count": audio_count,
         "audio_seconds": audio_seconds,
         "audio_minutes": int(audio_seconds // 60),
+        "status": status or UserContentCardStatus.UNVIEWED.value,
     }
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -387,7 +448,7 @@ async def match_analysis_cabinet_page(request: Request):
                 "enable_search": True,
                 "enable_folders": True,
                 "enable_labels": False,
-                "enable_status_filter": False,
+                "enable_status_filter": True,
                 "enable_shuffle": False,
                 "enable_selection": True,
                 "enable_bulk_bg": False,
@@ -465,6 +526,7 @@ async def match_analysis_save(body: MatchAnalysisSaveBody):
 async def match_analysis_list(body: MatchAnalysisInitBody):
     uid = _resolve_user_id(body.init_data)
     is_admin = _is_ma_admin(uid)
+    recent_cutoff = datetime.utcnow() - timedelta(days=1)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
         if is_admin:
@@ -487,7 +549,16 @@ async def match_analysis_list(body: MatchAnalysisInitBody):
                 await session.commit()
                 for row in rows:
                     await session.refresh(row)
-        items = [_serialize_list_item(r) for r in rows]
+        links_by_id = await _user_ma_links_by_id(
+            session, uid, [r.id for r in rows]
+        )
+        items = [
+            _serialize_list_item(
+                r,
+                status=_list_status_for_link(links_by_id.get(r.id), recent_cutoff),
+            )
+            for r in rows
+        ]
     return {
         "items": items,
         "is_root_admin": is_admin,
@@ -505,6 +576,19 @@ async def match_analysis_fetch(body: MatchAnalysisIdBody):
         row = await dao.find_one_or_none_by_id(body.id)
         if not row:
             raise HTTPException(status_code=404, detail="Анализ не найден")
+        link_res = await session.execute(
+            select(UserMatchAnalysis).where(
+                UserMatchAnalysis.user_id == uid,
+                UserMatchAnalysis.match_analysis_id == body.id,
+            )
+        )
+        link = link_res.scalar_one_or_none()
+        user_status = None
+        if link:
+            if link.card_status == UserContentCardStatus.UNVIEWED:
+                link.card_status = UserContentCardStatus.VIEWED
+                await session.commit()
+            user_status = _status_value(link.card_status)
         return {
             "id": row.id,
             "title": row.title,
@@ -516,7 +600,52 @@ async def match_analysis_fetch(body: MatchAnalysisIdBody):
             "updated_at": row.updated_at.isoformat() if row.updated_at else None,
             "analysis": row.analysis,
             "is_root_admin": _is_ma_admin(uid),
+            "user_card_status": user_status,
         }
+
+
+@match_analysis_api_router.post("/api/match_analysis/set_status")
+async def match_analysis_set_status(body: MatchAnalysisSetStatusBody):
+    """Ручная установка статуса анализа для текущего пользователя (как у content cards)."""
+    uid = _resolve_user_id(body.init_data)
+    if body.status in (UserContentCardStatus.UNVIEWED, UserContentCardStatus.VIEWED):
+        raise HTTPException(
+            status_code=400,
+            detail="Статусы UNVIEWED/VIEWED системные и не могут устанавливаться вручную",
+        )
+    async with async_session_maker() as session:
+        link_res = await session.execute(
+            select(UserMatchAnalysis).where(
+                UserMatchAnalysis.user_id == uid,
+                UserMatchAnalysis.match_analysis_id == body.id,
+            )
+        )
+        link = link_res.scalar_one_or_none()
+        if not link:
+            raise HTTPException(status_code=403, detail="Нет доступа к этому анализу")
+        link.card_status = body.status
+        await session.commit()
+    return {"ok": True, "status": body.status.value}
+
+
+@match_analysis_api_router.post("/api/match_analysis/mark_viewed")
+async def match_analysis_mark_viewed(body: MatchAnalysisMarkViewedBody):
+    """Помечает анализ как просмотренный (VIEWED) для текущего пользователя."""
+    uid = _resolve_user_id(body.init_data)
+    async with async_session_maker() as session:
+        link_res = await session.execute(
+            select(UserMatchAnalysis).where(
+                UserMatchAnalysis.user_id == uid,
+                UserMatchAnalysis.match_analysis_id == body.id,
+            )
+        )
+        link = link_res.scalar_one_or_none()
+        if not link:
+            return {"ok": True, "skipped": True}
+        if link.card_status == UserContentCardStatus.UNVIEWED:
+            link.card_status = UserContentCardStatus.VIEWED
+            await session.commit()
+    return {"ok": True}
 
 
 def _coerce_duration_sec(value: Any) -> float | None:

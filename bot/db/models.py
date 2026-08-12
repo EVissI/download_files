@@ -1287,6 +1287,12 @@ class UserMatchAnalysis(Base):
     match_analysis_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("match_analyses.id", ondelete="CASCADE"), nullable=False
     )
+    card_status: Mapped["UserContentCardStatus"] = mapped_column(
+        Enum(UserContentCardStatus, name="usercontentcardstatus"),
+        nullable=False,
+        default=UserContentCardStatus.UNVIEWED,
+        server_default=UserContentCardStatus.UNVIEWED.value,
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="user_match_analyses")
     match_analysis: Mapped["MatchAnalysis"] = relationship(

@@ -383,25 +383,34 @@
             gap: 14px;
         }
 
+        .search-wrap.search-wrap--ma {
+            grid-template-columns: minmax(0, 1fr) minmax(132px, 38%) auto;
+            gap: 8px;
+        }
+
         .ma-audio-only-filter {
             display: none;
             align-items: center;
-            justify-content: flex-end;
-            gap: 8px;
+            justify-content: center;
+            gap: 6px;
             margin: 0;
-            padding: 8px 10px;
-            color: #ddd;
-            font-size: 0.85rem;
-            line-height: 1.2;
+            padding: 0 10px;
+            color: #c8c8c8;
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1;
             cursor: pointer;
             user-select: none;
             border: 1px solid #454545;
             border-radius: 10px;
             background: #2b2b2b;
             box-sizing: border-box;
-            min-height: 42px;
-            width: 90%;
+            height: 42px;
+            width: auto;
+            min-width: 0;
+            white-space: nowrap;
             justify-self: end;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
         }
 
         .ma-audio-only-filter.is-visible {
@@ -409,11 +418,42 @@
         }
 
         .ma-audio-only-filter__input {
-            width: 16px;
-            height: 16px;
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
             margin: 0;
-            accent-color: #5f8fbd;
-            cursor: pointer;
+            pointer-events: none;
+        }
+
+        .ma-audio-only-filter__mark {
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid #6a6a6a;
+            border-radius: 4px;
+            background: #1f1f1f;
+            box-sizing: border-box;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .ma-audio-only-filter__mark::after {
+            content: '';
+            width: 7px;
+            height: 4px;
+            border-left: 2px solid transparent;
+            border-bottom: 2px solid transparent;
+            transform: rotate(-45deg) translateY(-1px);
+            box-sizing: border-box;
+        }
+
+        .ma-audio-only-filter__icon {
+            font-size: 0.78rem;
+            line-height: 1;
+            color: #8eb6d8;
             flex-shrink: 0;
         }
 
@@ -421,12 +461,37 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: 7.5em;
         }
 
         .ma-audio-only-filter:has(.ma-audio-only-filter__input:checked) {
             border-color: #5f8fbd;
             background: #3e6f9f;
             color: #fff;
+        }
+
+        .ma-audio-only-filter:has(.ma-audio-only-filter__input:checked) .ma-audio-only-filter__mark {
+            border-color: #fff;
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .ma-audio-only-filter:has(.ma-audio-only-filter__input:checked) .ma-audio-only-filter__mark::after {
+            border-left-color: #fff;
+            border-bottom-color: #fff;
+        }
+
+        .ma-audio-only-filter:has(.ma-audio-only-filter__input:checked) .ma-audio-only-filter__icon {
+            color: #fff;
+        }
+
+        .search-wrap.search-wrap--ma .status-filter-wrap {
+            width: auto;
+            justify-content: stretch;
+        }
+
+        .search-wrap.search-wrap--ma .status-filter-select {
+            width: 100%;
+            min-width: 0;
         }
 
         .search-input {
@@ -2211,11 +2276,6 @@
         <div class="search-wrap">
             <input id="card-search" class="search-input" type="text" inputmode="numeric" pattern="[0-9]*"
                 placeholder="Поиск по номеру карточки" autocomplete="off">
-            <label id="ma-audio-only-filter-wrap" class="ma-audio-only-filter"
-                title="При открытии анализа показывать только ходы с аудиокомментарием">
-                <input id="ma-audio-only-filter" class="ma-audio-only-filter__input" type="checkbox">
-                <span class="ma-audio-only-filter__label">Только с аудио</span>
-            </label>
             <div class="status-filter-wrap">
                 <select id="status-filter" class="status-filter-select" title="Фильтр по статусу">
                     <option value="">Все статусы</option>
@@ -2227,6 +2287,13 @@
                     <option value="HARD">Сложные</option>
                 </select>
             </div>
+            <label id="ma-audio-only-filter-wrap" class="ma-audio-only-filter"
+                title="При открытии анализа показывать только ходы с аудиокомментарием">
+                <input id="ma-audio-only-filter" class="ma-audio-only-filter__input" type="checkbox">
+                <span class="ma-audio-only-filter__mark" aria-hidden="true"></span>
+                <i class="fa fa-headphones ma-audio-only-filter__icon" aria-hidden="true"></i>
+                <span class="ma-audio-only-filter__label">Аудио</span>
+            </label>
             <div id="label-filter-wrap" class="label-filter-wrap">
                 <select id="label-filter" class="label-filter-select" title="Фильтр по метке">
                     <option value="">Все метки</option>
@@ -2850,8 +2917,13 @@
                     searchInput.removeAttribute('inputmode');
                     searchInput.removeAttribute('pattern');
                     searchInput.placeholder = 'Поиск по названию или игрокам';
+                    var searchWrapEl = document.querySelector('.search-wrap');
+                    if (searchWrapEl) searchWrapEl.classList.add('search-wrap--ma');
                     var maAudioOnlyWrap = document.getElementById('ma-audio-only-filter-wrap');
                     if (maAudioOnlyWrap) maAudioOnlyWrap.classList.add('is-visible');
+                    if (statusFilter) {
+                        statusFilter.title = 'Фильтр по статусу';
+                    }
                 }
                 if (IS_MATCH_ANALYSIS) {
                     var scheduleCountLabel = document.querySelector('label[for="folderScheduleCountInput"]');
@@ -3262,7 +3334,19 @@
 
             function applyMatchAnalysisTileDisplay(btn, row, fullTitle, isSelected) {
                 var showTitle = maTileDisplayMode === 'title';
+                var status = String((row && row.status) || 'UNVIEWED').toUpperCase();
                 btn.className = 'tile' + (showTitle ? ' tile--match' : '') + (isSelected ? ' tile--selected' : '');
+                if (status === 'VIEWED') {
+                    btn.classList.add('tile--viewed');
+                } else if (status === 'SOLVED') {
+                    btn.classList.add('tile--solved');
+                } else if (status === 'FAVORITE') {
+                    btn.classList.add('tile--favorite');
+                } else if (status === 'HARD') {
+                    btn.classList.add('tile--hard');
+                } else if (status === 'RECENT') {
+                    btn.classList.add('tile--recent');
+                }
                 btn.textContent = getMatchAnalysisTileText(row, fullTitle);
             }
 
@@ -5314,7 +5398,14 @@
                     var filter = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
 
                     if (IS_MATCH_ANALYSIS) {
+                        var statusFilterValue = statusFilter
+                            ? String(statusFilter.value || '').toUpperCase()
+                            : '';
                         var maCards = allCards.filter(function (row) {
+                            if (statusFilterValue) {
+                                var st = String((row && row.status) || 'UNVIEWED').toUpperCase();
+                                if (st !== statusFilterValue) return false;
+                            }
                             if (!filter) return true;
                             if (maTileDisplayMode === 'order') {
                                 return String(getMatchAnalysisDisplayOrder(row)).indexOf(filter) !== -1;
@@ -5363,7 +5454,21 @@
                                     renderCards();
                                     return;
                                 }
-                                window.location.assign(buildMatchAnalysisViewUrl(id));
+                                var openMa = function () {
+                                    window.location.assign(buildMatchAnalysisViewUrl(id));
+                                };
+                                var maStatus = String((row && row.status) || 'UNVIEWED').toUpperCase();
+                                if (maStatus !== 'UNVIEWED' && maStatus !== 'RECENT') {
+                                    openMa();
+                                    return;
+                                }
+                                fetch('/api/match_analysis/mark_viewed', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(authPayload({ id: Number(id) })),
+                                }).catch(function () {
+                                    // Даже если отметка статуса не удалась, всё равно открываем.
+                                }).finally(openMa);
                             });
                             if (!isRootAdminUser) {
                                 gridEl.appendChild(btn);
@@ -6102,14 +6207,16 @@
 
                 function normalizeMatchAnalysisCard(it, index) {
                     var mid = it.id != null ? it.id : it.content_card_id;
+                    var ready = !!it.is_ready;
+                    var status = String(it.status || 'UNVIEWED').toUpperCase();
                     return {
                         content_card_id: mid,
                         title: it.title || '',
                         red_player: it.red_player || '',
                         black_player: it.black_player || '',
                         notes: it.notes || '',
-                        is_ready: !!it.is_ready,
-                        status: 'UNVIEWED',
+                        is_ready: ready,
+                        status: status,
                         labels: [],
                         audio_count: Number(it.audio_count) || 0,
                         audio_seconds: Number(it.audio_seconds) || 0,

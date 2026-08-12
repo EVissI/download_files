@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import HTTPException
@@ -32,9 +32,11 @@ from bot.db.models import (
 from bot.routers.match_analysis_router import (
     _fill_missing_audio_durations,
     _is_ma_admin,
+    _list_status_for_link,
     _resolve_admin_user_id,
     _resolve_user_id,
     _serialize_list_item,
+    _user_ma_links_by_id,
     match_analysis_api_router,
 )
 
@@ -507,9 +509,22 @@ async def ma_folder_link_resolve(body: MaFolderLinkResolveBody):
                         row.analysis = analysis
                         flag_modified(row, "analysis")
                         changed = True
-                cards_data.append(_serialize_list_item(row))
             if changed:
                 await session.commit()
+            recent_cutoff = datetime.utcnow() - timedelta(days=1)
+            links_by_id = await _user_ma_links_by_id(session, user_id, match_ids)
+            for mid in match_ids:
+                row = by_id.get(mid)
+                if not row:
+                    continue
+                cards_data.append(
+                    _serialize_list_item(
+                        row,
+                        status=_list_status_for_link(
+                            links_by_id.get(mid), recent_cutoff
+                        ),
+                    )
+                )
 
         return {
             "folder": _serialize_ma_folder(folder),
