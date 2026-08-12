@@ -4990,6 +4990,7 @@
         let matchAnalysisMediaRecorder = null;
         let matchAnalysisRecordChunks = [];
         let matchAnalysisAudioUiMoveKey = null;
+        let matchAnalysisAudioPlayGen = 0;
         const MATCH_ANALYSIS_AUTOPLAY_LS_KEY = 'matchAnalysisAudioAutoplay';
 
         function buildMatchAnalysisMediaUrl(s3Key) {
@@ -5068,11 +5069,28 @@
         }
 
         function stopMatchAnalysisAudioPlayback() {
-            if (matchAnalysisAudioEl) {
-                try { matchAnalysisAudioEl.pause(); } catch (e) { /* ignore */ }
-                matchAnalysisAudioEl = null;
+            matchAnalysisAudioPlayGen += 1;
+            const el = matchAnalysisAudioEl;
+            matchAnalysisAudioEl = null;
+            if (el) {
+                try {
+                    el.onended = null;
+                    el.onerror = null;
+                    el.pause();
+                } catch (e) { /* ignore */ }
+                try {
+                    el.removeAttribute('src');
+                    el.load();
+                } catch (e) { /* ignore */ }
             }
             setMatchAnalysisPlayButtonState(false);
+        }
+
+        function isBenignAudioPlayError(err) {
+            const name = err && err.name ? String(err.name) : '';
+            // AbortError: play() interrupted by pause()/new play — ожидаемо при смене хода.
+            // NotAllowedError: автоплей без жеста пользователя — не показываем как сбой.
+            return name === 'AbortError' || name === 'NotAllowedError';
         }
 
         function playMatchAnalysisAudioForCurrentMove() {
@@ -5082,17 +5100,32 @@
                 return;
             }
             stopMatchAnalysisAudioPlayback();
-            matchAnalysisAudioEl = new Audio(buildMatchAnalysisMediaUrl(meta.audioS3Key));
-            matchAnalysisAudioEl.onended = function () {
+            const playGen = matchAnalysisAudioPlayGen;
+            const el = new Audio(buildMatchAnalysisMediaUrl(meta.audioS3Key));
+            matchAnalysisAudioEl = el;
+            el.onended = function () {
+                if (playGen !== matchAnalysisAudioPlayGen || matchAnalysisAudioEl !== el) return;
                 setMatchAnalysisPlayButtonState(false);
             };
-            matchAnalysisAudioEl.play().then(function () {
-                setMatchAnalysisPlayButtonState(true);
-            }).catch((e) => {
-                console.error(e);
-                setMatchAnalysisPlayButtonState(false);
-                showMessageModal('Не удалось воспроизвести аудио', 'error');
-            });
+            const playPromise = el.play();
+            if (!playPromise || typeof playPromise.then !== 'function') {
+                if (playGen === matchAnalysisAudioPlayGen && matchAnalysisAudioEl === el) {
+                    setMatchAnalysisPlayButtonState(true);
+                }
+                return;
+            }
+            playPromise
+                .then(function () {
+                    if (playGen !== matchAnalysisAudioPlayGen || matchAnalysisAudioEl !== el) return;
+                    setMatchAnalysisPlayButtonState(true);
+                })
+                .catch(function (e) {
+                    if (playGen !== matchAnalysisAudioPlayGen || matchAnalysisAudioEl !== el) return;
+                    setMatchAnalysisPlayButtonState(false);
+                    if (isBenignAudioPlayError(e)) return;
+                    console.error(e);
+                    showMessageModal('Не удалось воспроизвести аудио', 'error');
+                });
         }
 
         function updateMatchAnalysisChromeUi() {
