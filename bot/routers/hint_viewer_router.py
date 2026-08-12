@@ -1085,7 +1085,7 @@ async def _send_screenshot_audio_to_chat(chat_id: int, audio_bytes: bytes, audio
             await bot.send_audio(
                 chat_id=chat_id,
                 audio=BufferedInputFile(audio_bytes, filename=name),
-                caption="Аудио к ходу",
+                caption="Комментарий к позиции",
             )
             return
         except Exception as e:
@@ -1096,7 +1096,7 @@ async def _send_screenshot_audio_to_chat(chat_id: int, audio_bytes: bytes, audio
         await bot.send_voice(
             chat_id=chat_id,
             voice=BufferedInputFile(audio_bytes, filename="voice.ogg"),
-            caption="Аудио к ходу",
+            caption="Комментарий к позиции",
         )
         return
     except Exception as e:
@@ -1105,7 +1105,7 @@ async def _send_screenshot_audio_to_chat(chat_id: int, audio_bytes: bytes, audio
     await bot.send_document(
         chat_id=chat_id,
         document=BufferedInputFile(audio_bytes, filename=name),
-        caption="Аудио к ходу",
+        caption="Комментарий к позиции",
     )
 
 
