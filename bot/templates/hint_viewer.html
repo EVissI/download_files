@@ -3279,6 +3279,69 @@
             }
         }
 
+        function findNextVisibleIndex(fromIndex) {
+            let i = fromIndex;
+            while (i < data.length && !(data[i] && data[i].is_visible)) i++;
+            return i;
+        }
+
+        function findPrevVisibleIndex(fromIndex) {
+            let i = fromIndex;
+            while (i >= 0 && !(data[i] && data[i].is_visible)) i--;
+            return i;
+        }
+
+        function goToNextVisibleMoveOrGame() {
+            if (!dataLoaded || !data || !data.length) return false;
+            let nextIdx = findNextVisibleIndex(current + 1);
+            if (nextIdx < data.length) {
+                current = nextIdx;
+                render(current, invertColors);
+                updateButtons();
+                updateInfo();
+                return true;
+            }
+            if (availableGames.length > 1) {
+                const currentIndex = availableGames.findIndex(
+                    (game) => game.game_number == currentGameNum
+                );
+                if (currentIndex !== -1 && currentIndex < availableGames.length - 1) {
+                    loadGame(availableGames[currentIndex + 1].game_number);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function goToPrevVisibleMoveOrGame() {
+            if (!dataLoaded || !data || !data.length) return Promise.resolve(false);
+            let prevIdx = findPrevVisibleIndex(current - 1);
+            if (prevIdx >= 0) {
+                current = prevIdx;
+                render(current, invertColors);
+                updateButtons();
+                updateInfo();
+                return Promise.resolve(true);
+            }
+            if (availableGames.length > 1) {
+                const currentIndex = availableGames.findIndex(
+                    (game) => game.game_number == currentGameNum
+                );
+                if (currentIndex > 0) {
+                    const prevGameNum = availableGames[currentIndex - 1].game_number;
+                    return loadGame(prevGameNum).then(function () {
+                        current = findPrevVisibleIndex(data.length - 1);
+                        if (current < 0) current = 0;
+                        render(current, invertColors);
+                        updateButtons();
+                        updateInfo();
+                        return true;
+                    });
+                }
+            }
+            return Promise.resolve(false);
+        }
+
         async function prevTurn() {
             if (animating) {
                 skipAnimation = true;
@@ -3286,45 +3349,14 @@
                 setTimeout(() => {
                     if (pendingPrevGame) {
                         pendingPrevGame = false;
-                        if (current > 0) {
-                            current--;
-                            render(current, invertColors);
-                            updateButtons();
-                            updateInfo();
-                        }
+                        goToPrevVisibleMoveOrGame();
                     }
                 }, 50);
                 return;
             }
 
             if (dataLoaded) {
-                if (current > 0) {
-                    let newCurrent = current - 1;
-                    while (newCurrent >= 0 && !data[newCurrent].is_visible) {
-                        newCurrent--;
-                    }
-                    if (newCurrent >= 0) {
-                        render(newCurrent, invertColors);
-                        updateButtons();
-                        return;
-                    }
-                }
-                // If no prev visible in current game, try prev game
-                if (availableGames.length > 1) {
-                    const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
-                    if (currentIndex > 0) {
-                        const prevGameNum = availableGames[currentIndex - 1].game_number;
-                        await loadGame(prevGameNum);
-                        current = data.length - 1;
-                        while (current >= 0 && !data[current].is_visible) {
-                            current--;
-                        }
-                        if (current >= 0) {
-                            render(current, invertColors);
-                            updateButtons();
-                        }
-                    }
-                }
+                await goToPrevVisibleMoveOrGame();
             }
         }
 
@@ -3592,27 +3624,11 @@
         }
 
         function nextTurn() {
-            if (skipAnimationEnabled) {
+            // В режиме «только аудио» (и при выключенной анимации) прыгаем
+            // сразу на следующий видимый ход — без промежуточных кадров.
+            if (skipAnimationEnabled || matchAnalysisAudioOnly) {
                 if (dataLoaded) {
-                    if (current < data.length - 1) {
-                        let newCurrent = current + 1;
-                        while (newCurrent < data.length && !data[newCurrent].is_visible) {
-                            newCurrent++;
-                        }
-                        if (newCurrent < data.length) {
-                            render(newCurrent, invertColors);
-                            updateButtons();
-                            return;
-                        }
-                    }
-                    // If no next visible in current game, try next game
-                    if (availableGames.length > 1) {
-                        const currentIndex = availableGames.findIndex(game => game.game_number == currentGameNum);
-                        if (currentIndex !== -1 && currentIndex < availableGames.length - 1) {
-                            const nextGameNum = availableGames[currentIndex + 1].game_number;
-                            loadGame(nextGameNum);
-                        }
-                    }
+                    goToNextVisibleMoveOrGame();
                 }
                 return;
             }
@@ -3681,6 +3697,13 @@
                         to: toScreenPoint(m.to),
                     }));
 
+                    const finishAnimatedStep = () => {
+                        clearTimeout(timeoutId);
+                        animating = false;
+                        skipAnimation = false;
+                        goToNextVisibleMoveOrGame();
+                    };
+
                     const timeoutId = setTimeout(() => {
                         animating = false;
                         updateButtons();
@@ -3697,14 +3720,7 @@
                                     updateTempPositionsAfterMove(move, playerType, temp_positions);
                                     moveIndex++;
                                 }
-                                // Завершаем анимацию
-                                clearTimeout(timeoutId);
-                                current++;
-                                render(current, invertColors);
-                                updateButtons();
-                                updateInfo();
-                                animating = false;
-                                skipAnimation = false;
+                                finishAnimatedStep();
                                 return;
                             }
 
@@ -3722,22 +3738,12 @@
                                     }
                                 });
                             } else {
-                                clearTimeout(timeoutId);
-                                current++;
-                                render(current, invertColors);
-                                updateButtons();
-                                updateInfo();
-                                animating = false;
+                                finishAnimatedStep();
                             }
                         };
                         animateMoves();
                     } else {
-                        clearTimeout(timeoutId);
-                        current++;
-                        render(current, invertColors);
-                        updateButtons();
-                        updateInfo();
-                        animating = false;
+                        finishAnimatedStep();
                     }
                 }
             }
