@@ -872,9 +872,15 @@ def _convert_to_export_format(raw: bytes, fmt: str, src_name: str | None = None)
     return _to_wav_bytes(raw, src_name=src_name)
 
 
-def _wav_to_webm_bytes(raw: bytes, src_suffix: str = ".wav") -> bytes:
-    suffix = (src_suffix or ".wav").lower()
-    if suffix not in {".wav", ".wave", ".mp3", ".m4a", ".ogg", ".opus", ".webm"}:
+def _import_audio_to_webm_bytes(raw: bytes, src_name: str | None = None) -> bytes:
+    """Конвертация импортируемого wav/mp3 (и совместимых) в webm/opus."""
+    suffix = Path(str(src_name or "audio.wav")).suffix.lower() or ".wav"
+    if suffix == ".wave":
+        suffix = ".wav"
+    if suffix == ".mpeg":
+        suffix = ".mp3"
+    if suffix not in {".wav", ".mp3", ".m4a", ".ogg", ".opus", ".webm"}:
+        # По умолчанию пробуем как wav — чаще приходит без корректного имени.
         suffix = ".wav"
     return _convert_audio_bytes(
         raw,
@@ -1390,6 +1396,7 @@ async def match_analysis_audio_export_mp3_zip(
                     lower_name.endswith(".wav")
                     or lower_name.endswith(".wave")
                     or lower_name.endswith(".mp3")
+                    or lower_name.endswith(".mpeg")
                 ):
                     continue
                 if name.startswith(".") or name.startswith("__MACOSX"):
@@ -1407,14 +1414,19 @@ async def match_analysis_audio_export_mp3_zip(
                 if not audio_raw:
                     skipped.append(name)
                     continue
-                if len(audio_raw) > max(MA_MEDIA_MAX_BYTES, 80 * 1024 * 1024):
+                # WAV заметно тяжелее MP3 — для WAV допускаем до 80 МБ.
+                max_bytes = (
+                    max(MA_MEDIA_MAX_BYTES, 80 * 1024 * 1024)
+                    if lower_name.endswith((".wav", ".wave"))
+                    else MA_MEDIA_MAX_BYTES
+                )
+                if len(audio_raw) > max_bytes:
                     skipped.append(name)
                     continue
 
                 try:
-                    src_suffix = Path(name).suffix.lower() or ".wav"
                     webm_raw = await asyncio.to_thread(
-                        _wav_to_webm_bytes, audio_raw, src_suffix
+                        _import_audio_to_webm_bytes, audio_raw, name
                     )
                 except HTTPException:
                     raise
@@ -1459,7 +1471,7 @@ async def match_analysis_audio_export_mp3_zip(
                 detail=(
                     "Не удалось сопоставить ни одного файла с аудио анализа. "
                     "В ZIP нужны .wav или .mp3, имена должны совпадать с именами файлов "
-                    "(без учёта расширения, например voice.wav → voice.webm)."
+                    "(без учёта расширения, например voice.mp3 / voice.wav → voice.webm)."
                 ),
             )
 
