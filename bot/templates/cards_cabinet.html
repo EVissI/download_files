@@ -384,8 +384,8 @@
         }
 
         .search-wrap.search-wrap--ma {
-            grid-template-columns: minmax(0, 1fr) minmax(0, 9.8em) auto;
-            gap: 8px;
+            grid-template-columns: minmax(0, 0.88fr) minmax(10.5em, 12em) auto;
+            gap: 10px;
         }
 
         .ma-audio-only-filter {
@@ -482,6 +482,7 @@
             min-width: 0;
             width: 100%;
             max-width: 100%;
+            box-sizing: border-box;
         }
 
         .search-wrap.search-wrap--ma .status-filter-wrap {
@@ -490,12 +491,14 @@
             min-width: 0;
             justify-content: flex-start;
             overflow: hidden;
+            box-sizing: border-box;
         }
 
         .search-wrap.search-wrap--ma .status-filter-select {
             width: 100%;
             max-width: 100%;
             min-width: 0;
+            box-sizing: border-box;
         }
 
         .search-input {
