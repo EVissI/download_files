@@ -383,6 +383,52 @@
             gap: 14px;
         }
 
+        .ma-audio-only-filter {
+            display: none;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            margin: 0;
+            padding: 8px 10px;
+            color: #ddd;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid #454545;
+            border-radius: 10px;
+            background: #2b2b2b;
+            box-sizing: border-box;
+            min-height: 42px;
+            width: 90%;
+            justify-self: end;
+        }
+
+        .ma-audio-only-filter.is-visible {
+            display: inline-flex;
+        }
+
+        .ma-audio-only-filter__input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: #5f8fbd;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .ma-audio-only-filter__label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ma-audio-only-filter:has(.ma-audio-only-filter__input:checked) {
+            border-color: #5f8fbd;
+            background: #3e6f9f;
+            color: #fff;
+        }
+
         .search-input {
             width: 100%;
             background: #232323;
@@ -2165,6 +2211,11 @@
         <div class="search-wrap">
             <input id="card-search" class="search-input" type="text" inputmode="numeric" pattern="[0-9]*"
                 placeholder="Поиск по номеру карточки" autocomplete="off">
+            <label id="ma-audio-only-filter-wrap" class="ma-audio-only-filter"
+                title="При открытии анализа показывать только ходы с аудиокомментарием">
+                <input id="ma-audio-only-filter" class="ma-audio-only-filter__input" type="checkbox">
+                <span class="ma-audio-only-filter__label">Только с аудио</span>
+            </label>
             <div class="status-filter-wrap">
                 <select id="status-filter" class="status-filter-select" title="Фильтр по статусу">
                     <option value="">Все статусы</option>
@@ -2638,6 +2689,7 @@
             var cabinetStateKey = boot.cabinet_state_key || 'cards_cabinet_state_v1';
             var openHintsStateKey = boot.cabinet_open_hints_key || 'cards_cabinet_open_hints_v1';
             var userPreviewStateKey = boot.cabinet_user_preview_key || 'match_analysis_cabinet_user_preview_v1';
+            var maAudioOnlyStateKey = boot.cabinet_audio_only_key || 'match_analysis_cabinet_audio_only_v1';
             var cabinetConfig = (function () {
                 var folderToken = _urlParams.get('folder_token') || '';
                 if (folderToken) {
@@ -2798,6 +2850,8 @@
                     searchInput.removeAttribute('inputmode');
                     searchInput.removeAttribute('pattern');
                     searchInput.placeholder = 'Поиск по названию или игрокам';
+                    var maAudioOnlyWrap = document.getElementById('ma-audio-only-filter-wrap');
+                    if (maAudioOnlyWrap) maAudioOnlyWrap.classList.add('is-visible');
                 }
                 if (IS_MATCH_ANALYSIS) {
                     var scheduleCountLabel = document.querySelector('label[for="folderScheduleCountInput"]');
@@ -2901,10 +2955,40 @@
                 userPreviewToggle.addEventListener('change', saveUserPreviewState);
             }
 
+            var maAudioOnlyToggle = document.getElementById('ma-audio-only-filter');
+
+            function isMaAudioOnlyEnabled() {
+                try {
+                    return localStorage.getItem(maAudioOnlyStateKey) === '1';
+                } catch (_e) {
+                    return false;
+                }
+            }
+
+            function saveMaAudioOnlyState() {
+                try {
+                    var v = maAudioOnlyToggle && maAudioOnlyToggle.checked ? '1' : '0';
+                    localStorage.setItem(maAudioOnlyStateKey, v);
+                } catch (_e) { }
+            }
+
+            function restoreMaAudioOnlyState() {
+                if (!maAudioOnlyToggle) return;
+                maAudioOnlyToggle.checked = isMaAudioOnlyEnabled();
+            }
+
+            if (maAudioOnlyToggle) {
+                restoreMaAudioOnlyState();
+                maAudioOnlyToggle.addEventListener('change', saveMaAudioOnlyState);
+            }
+
             function buildMatchAnalysisViewUrl(id) {
                 var url = '/match-analysis-view?id=' + encodeURIComponent(String(id)) + '&error=0';
                 if (isUserPreviewEnabled()) {
                     url += '&as_user=1';
+                }
+                if (isMaAudioOnlyEnabled()) {
+                    url += '&audio_only=1';
                 }
                 return url;
             }

@@ -1387,6 +1387,11 @@
             urlParams.get('as_user') === '1' ||
             urlParams.get('as_user') === 'true' ||
             urlParams.get('user_preview') === '1';
+        const matchAnalysisAudioOnly =
+            matchAnalysisMode &&
+            (urlParams.get('audio_only') === '1' ||
+                urlParams.get('audio_only') === 'true' ||
+                urlParams.get('only_audio') === '1');
         const deepLinkGameParam = urlParams.get('game') || urlParams.get('game_number');
         const deepLinkMoveParam = urlParams.get('move') || urlParams.get('move_index');
         let pendingDeepLinkGame = deepLinkGameParam ? parseInt(deepLinkGameParam, 10) : null;
@@ -1819,31 +1824,7 @@
                 } else {
                     item.is_error = false;
                 }
-                const hasCubeError =
-                    (item.action === 'double' ||
-                        item.action === 'take' ||
-                        item.action === 'drop') &&
-                    item.is_best_move_cube === false;
-                const hasMoveError =
-                    Array.isArray(item.moves) &&
-                    item.moves.length > 0 &&
-                    item.is_best_move === false &&
-                    item.is_error;
-
-                item.is_visible =
-                    error === '0' ||
-                    (error === '1' &&
-                        (hasMoveError ||
-                            hasCubeError ||
-                            (item.action === 'win' && item.is_error))) ||
-                    (error === '2' &&
-                        ((item.player_name === redPlayer &&
-                            (hasMoveError || hasCubeError)) ||
-                            (item.action === 'win' && item.is_error))) ||
-                    (error === '3' &&
-                        ((item.player_name === blackPlayer &&
-                            (hasMoveError || hasCubeError)) ||
-                            (item.action === 'win' && item.is_error)));
+                item.is_visible = computeMoveIsVisible(item);
             });
 
             return gameInfo;
@@ -1875,6 +1856,41 @@
             } catch (e) {}
             hasErrorsInMatch = false;
             return scores;
+        }
+
+        function moveHasAudioComment(item) {
+            return !!(item && (item.audioS3Key || item.audio_s3_key));
+        }
+
+        function computeMoveIsVisible(item) {
+            const hasCubeError =
+                (item.action === 'double' ||
+                    item.action === 'take' ||
+                    item.action === 'drop') &&
+                item.is_best_move_cube === false;
+            const hasMoveError =
+                Array.isArray(item.moves) &&
+                item.moves.length > 0 &&
+                item.is_best_move === false &&
+                item.is_error;
+            let visible =
+                error === '0' ||
+                (error === '1' &&
+                    (hasMoveError ||
+                        hasCubeError ||
+                        (item.action === 'win' && item.is_error))) ||
+                (error === '2' &&
+                    ((item.player_name === redPlayer &&
+                        (hasMoveError || hasCubeError)) ||
+                        (item.action === 'win' && item.is_error))) ||
+                (error === '3' &&
+                    ((item.player_name === blackPlayer &&
+                        (hasMoveError || hasCubeError)) ||
+                        (item.action === 'win' && item.is_error)));
+            if (visible && matchAnalysisAudioOnly) {
+                visible = moveHasAudioComment(item);
+            }
+            return visible;
         }
 
         function startAnalysisBootstrap(json) {
@@ -2045,13 +2061,18 @@
                         const hasNonWinVisible = data.some(item => item.is_visible && item.action !== 'win');
                         if (hasNonWinVisible) {
                             hasErrorsInMatch = true;
-                        } else if (error !== '0') {
+                        } else if (error !== '0' || matchAnalysisAudioOnly) {
                             const nextGame = availableGames.find(g => g.game_number > currentGameNum);
                             if (nextGame) {
                                 loadGame(nextGame.game_number);
                             } else {
                                 if (!hasErrorsInMatch) {
-                                    showMessageModal('В матче нет ошибок', 'info');
+                                    showMessageModal(
+                                        matchAnalysisAudioOnly
+                                            ? 'В матче нет аудиокомментариев'
+                                            : 'В матче нет ошибок',
+                                        'info'
+                                    );
                                 }
                             }
                         }
@@ -2267,17 +2288,7 @@
                 } else {
                     item.is_error = false;
                 }
-                // Определяем, есть ли ошибка по кубу
-                const hasCubeError = (item.action === 'double' || item.action === 'take' || item.action === 'drop') && 
-                                    item.is_best_move_cube === false;
-                // Определяем, есть ли ошибка по ходу
-                const hasMoveError = (Array.isArray(item.moves) && item.moves.length > 0) && 
-                                   item.is_best_move === false && item.is_error;
-                
-                item.is_visible = (error === '0') ||
-                    (error === '1' && (hasMoveError || hasCubeError || (item.action === 'win' && item.is_error))) ||
-                    (error === '2' && ((item.player_name === redPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error))) ||
-                    (error === '3' && ((item.player_name === blackPlayer && (hasMoveError || hasCubeError)) || (item.action === 'win' && item.is_error)));
+                item.is_visible = computeMoveIsVisible(item);
             });
             // Проверить границы перед обращением к data[current]
             if (current < 0 || current >= data.length) {
