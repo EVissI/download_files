@@ -779,7 +779,7 @@
     <div class="ma-audio-modal__overlay" id="maAudioExportFormatOverlay"></div>
     <div class="ma-audio-modal__box" role="dialog" aria-modal="true" aria-labelledby="maAudioExportFormatTitle">
         <h3 id="maAudioExportFormatTitle" class="ma-audio-modal__title">Формат экспорта</h3>
-        <p class="ma-audio-modal__sub">Выберите формат файлов в ZIP</p>
+        <p id="maAudioExportFormatSub" class="ma-audio-modal__sub">Выберите формат файла</p>
         <div class="ma-audio-modal__format-options" role="radiogroup" aria-label="Формат экспорта">
             <label class="ma-audio-modal__format-option">
                 <input type="radio" name="maAudioExportFormat" value="wav" checked>
@@ -2283,11 +2283,27 @@
             showNotice('Нет Telegram initData', 'Ошибка');
             return;
         }
+        chooseExportFormat({
+            subtitle: 'Выберите формат файла для скачивания',
+        }).then(function (fmt) {
+            if (!fmt) return;
+            startSingleAudioDownload(item, initData, fmt);
+        });
+    }
+
+    function startSingleAudioDownload(item, initData, fmt) {
+        fmt = normalizeExportFormat(fmt);
+        saveExportFormat(fmt);
         var matchId = state.matchId;
         var fallbackName = String(item.audio_name || 'audio.webm').split(/[\\/]/).pop() || 'audio.webm';
         var stem = fallbackName.replace(/\.[^.]+$/, '') || 'audio';
+        var formatLabel = fmt === 'mp3' ? 'MP3' : 'WAV';
+        var ext = fmt === 'mp3' ? '.mp3' : '.wav';
         setZipBusy(true);
-        startConvertEstimate('Конвертация в WAV…', { files: 1, msPerFile: 4200 });
+        startConvertEstimate('Конвертация в ' + formatLabel + '…', {
+            files: 1,
+            msPerFile: fmt === 'mp3' ? 4200 : 3800,
+        });
         fetch('/api/match_analysis/audio/download_mp3', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2296,6 +2312,7 @@
                 id: matchId,
                 game_number: item.game_number,
                 move_index: item.move_index,
+                format: fmt,
             }),
         })
             .then(function (resp) {
@@ -2312,7 +2329,7 @@
                 var url = payload && payload.url ? String(payload.url) : '';
                 var filename = (payload && payload.file_name)
                     ? String(payload.file_name)
-                    : (stem + '.wav');
+                    : (stem + ext);
                 var downloadName = (payload && payload.download_file_name)
                     ? String(payload.download_file_name)
                     : filename;
@@ -2331,7 +2348,7 @@
                 if (isListModalOpen() && state.matchId === matchId) {
                     setListMsg('Ошибка скачивания: ' + (err.message || err), true);
                 }
-                showNotice('Не удалось скачать WAV: ' + (err.message || err), 'Ошибка');
+                showNotice('Не удалось скачать ' + formatLabel + ': ' + (err.message || err), 'Ошибка');
             })
             .finally(function () {
                 setZipBusy(false);
@@ -2815,7 +2832,9 @@
             showNotice('В этом анализе нет аудио для экспорта', 'Экспорт');
             return;
         }
-        chooseExportFormat().then(function (fmt) {
+        chooseExportFormat({
+            subtitle: 'Выберите формат файлов в ZIP',
+        }).then(function (fmt) {
             if (!fmt) return;
             startZipExport(fmt, initData);
         });
@@ -2863,7 +2882,11 @@
         if (resolve) resolve(result || null);
     }
 
-    function chooseExportFormat() {
+    function chooseExportFormat(options) {
+        var opts = options || {};
+        var subtitle = opts.subtitle
+            ? String(opts.subtitle)
+            : 'Выберите формат файлов в ZIP';
         return new Promise(function (resolve) {
             if (!exportFormatModal) {
                 resolve(getSavedExportFormat());
@@ -2874,6 +2897,8 @@
             }
             exportFormatResolver = resolve;
             setExportFormatRadios(getSavedExportFormat());
+            var subEl = document.getElementById('maAudioExportFormatSub');
+            if (subEl) subEl.textContent = subtitle;
             exportFormatModal.classList.add('is-open');
             exportFormatModal.setAttribute('aria-hidden', 'false');
         });

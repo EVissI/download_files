@@ -107,6 +107,7 @@ class MatchAnalysisAudioDownloadBody(BaseModel):
     id: int
     game_number: int
     move_index: int
+    format: str = "wav"
 
 
 class MatchAnalysisExportJobBody(BaseModel):
@@ -1392,8 +1393,9 @@ async def match_analysis_audio_export_job_status(body: MatchAnalysisExportJobBod
 
 @match_analysis_api_router.post("/api/match_analysis/audio/download_mp3")
 async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody):
-    """Конвертация одного аудио в WAV + временная ссылка для Telegram.WebApp.downloadFile."""
+    """Конвертация одного аудио в WAV/MP3 + временная ссылка для Telegram.WebApp.downloadFile."""
     _resolve_admin_user_id(body.init_data)
+    fmt = _normalize_export_audio_format(body.format)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
         row = await dao.find_one_or_none_by_id(body.id)
@@ -1416,11 +1418,16 @@ async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody
     if not raw:
         raise HTTPException(status_code=404, detail="Пустой аудиофайл")
 
-    wav = await asyncio.to_thread(_to_wav_bytes, raw, str(key))
+    converted = await asyncio.to_thread(_convert_to_export_format, raw, fmt, str(key))
     stem = Path(str(audio_name)).stem.strip() or "audio"
     stem = re.sub(r'[\\/:*?"<>|]+', "_", stem).strip(" ._") or "audio"
-    filename = f"{stem[:120]}.wav"
-    return await _issue_tmp_download_link(wav, filename, "audio/wav")
+    if fmt == "mp3":
+        filename = f"{stem[:120]}.mp3"
+        content_type = "audio/mpeg"
+    else:
+        filename = f"{stem[:120]}.wav"
+        content_type = "audio/wav"
+    return await _issue_tmp_download_link(converted, filename, content_type)
 
 
 @match_analysis_api_router.api_route(
