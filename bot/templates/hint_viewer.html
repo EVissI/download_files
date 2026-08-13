@@ -460,7 +460,7 @@
         .match-game-label {
             display: block;
             text-align: center;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.15rem;
             font: inherit;
             font-weight: inherit;
             color: inherit;
@@ -1045,6 +1045,35 @@
             box-sizing: border-box;
         }
 
+        /* Матч: Игра n → игроки → Матч до / выбор / Счет */
+        .header:has(.match-info-row) #match-info {
+            display: contents;
+        }
+
+        .header:has(.match-info-row) .match-game-label {
+            order: 1;
+        }
+
+        .header:has(.match-info-row) #players-info {
+            order: 2;
+        }
+
+        .header:has(.match-info-row) .match-info-row {
+            order: 3;
+        }
+
+        .header:has(.match-info-row) #top-bar {
+            order: 4;
+        }
+
+        .header.has-ma-cabinet-back:has(.match-info-row) .match-game-label,
+        .header.has-ma-cabinet-back:has(.match-info-row) #players-info,
+        .header.has-ma-cabinet-back:has(.match-info-row) .match-info-row {
+            padding-left: 42px;
+            padding-right: 42px;
+            box-sizing: border-box;
+        }
+
         #top-bar {
             display: flex;
             justify-content: space-between;
@@ -1080,6 +1109,7 @@
         #players-info {
             width: 100%;
             margin: 0 auto;
+            text-align: center;
         }
 
         .pips-above-board {
@@ -1554,7 +1584,7 @@
             .match-info-row {
                 justify-content: center;
                 gap: 0.75rem;
-                margin: 0.15rem 0 0.35rem;
+                margin: 0.25rem 0 0.35rem;
             }
 
             .match-info-row .match-length,
