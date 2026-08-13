@@ -262,8 +262,14 @@ async def get_board_viewer_web(request: Request, game_id: str = None):
 
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("player")
     from bot.common.utils.static_assets import get_static_asset_version
+    from bot.common.service.webapp_settings_service import (
+        get_board_viewer_screenshot_font_scale_percent,
+    )
 
     cache_timestamp = get_static_asset_version()
+    board_viewer_screenshot_font_scale_percent = (
+        await get_board_viewer_screenshot_font_scale_percent()
+    )
 
     return templates.TemplateResponse(
         "board_viewer.html",
@@ -272,6 +278,7 @@ async def get_board_viewer_web(request: Request, game_id: str = None):
             "game_id": game_id,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
             "cache_timestamp": cache_timestamp,
+            "board_viewer_screenshot_font_scale_percent": board_viewer_screenshot_font_scale_percent,
         },
     )
 

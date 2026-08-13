@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="board-screenshot-font-scale" content="{{ board_viewer_screenshot_font_scale_percent | default(100) }}">
     <title>Backgammon Board Viewer</title>
     <style>
         html {
@@ -477,6 +478,26 @@
 
         .pip-count-card-btn:hover {
             background-color: #185a73;
+        }
+
+        .admin-screenshot-font-scale {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .admin-screenshot-font-scale select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 14px;
         }
 
 
@@ -1191,6 +1212,24 @@
                     <button id="openPipCountCardEditorBtn" class="pip-count-card-btn" type="button" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}">
                         Карточки: подсчет пипсов
                     </button>
+                    <div class="admin-screenshot-font-scale">
+                        <label for="screenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
+                        <select id="screenshotFontScaleSelect" onchange="saveBoardViewerScreenshotFontScale()">
+                            <option value="80">80%</option>
+                            <option value="90">90%</option>
+                            <option value="100">100%</option>
+                            <option value="110">110%</option>
+                            <option value="120">120%</option>
+                            <option value="130">130%</option>
+                            <option value="140">140%</option>
+                            <option value="150">150%</option>
+                            <option value="160">160%</option>
+                            <option value="170">170%</option>
+                            <option value="180">180%</option>
+                            <option value="190">190%</option>
+                            <option value="200">200%</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2317,6 +2356,93 @@
             }
         }
 
+        let boardViewerScreenshotFontScale = (function () {
+            const meta = document.querySelector('meta[name="board-screenshot-font-scale"]');
+            const parsed = parseInt(meta?.getAttribute('content') || '100', 10);
+            return Number.isNaN(parsed) ? 100 : parsed;
+        })();
+        let screenshotFontScaleBackup = [];
+
+        function isScreenshotFontScaleSkipped(el) {
+            if (!el || el.nodeType !== 1) return true;
+            if (el.id === 'boardCanvas') return true;
+            if (el.closest('#boardCanvas')) return true;
+            if (el.closest('#adminButtonContainer')) return true;
+            if (el.closest('#boardToolbar')) return true;
+            if (el.closest('#controls')) return true;
+            if (el.tagName === 'CANVAS') return true;
+            return false;
+        }
+
+        function applyScreenshotFontScale() {
+            const scale = boardViewerScreenshotFontScale / 100;
+            screenshotFontScaleBackup = [];
+            if (scale === 1) return;
+
+            const container = document.querySelector('.container');
+            if (!container) return;
+
+            const elements = container.querySelectorAll('*');
+            const updates = [];
+            elements.forEach((el) => {
+                if (isScreenshotFontScaleSkipped(el)) return;
+                const px = parseFloat(window.getComputedStyle(el).fontSize);
+                if (!px || Number.isNaN(px)) return;
+                updates.push({
+                    el,
+                    fontSize: el.style.fontSize,
+                    nextFontSize: `${Math.round(px * scale * 10) / 10}px`,
+                });
+            });
+            updates.forEach(({ el, fontSize, nextFontSize }) => {
+                screenshotFontScaleBackup.push({ el, fontSize });
+                el.style.fontSize = nextFontSize;
+            });
+        }
+
+        function removeScreenshotFontScale() {
+            screenshotFontScaleBackup.forEach(({ el, fontSize }) => {
+                el.style.fontSize = fontSize;
+            });
+            screenshotFontScaleBackup = [];
+        }
+
+        async function saveBoardViewerScreenshotFontScale() {
+            const select = document.getElementById('screenshotFontScaleSelect');
+            if (!select) return;
+
+            const fontScalePercent = parseInt(select.value, 10);
+            boardViewerScreenshotFontScale = fontScalePercent;
+
+            let initData = '';
+            if (window.Telegram && window.Telegram.WebApp) {
+                initData = window.Telegram.WebApp.initData;
+            }
+            if (!initData) {
+                showMessageModal('Не удалось сохранить: нет данных Telegram', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/board_viewer_screenshot_font_scale', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData, fontScalePercent })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    boardViewerScreenshotFontScale = data.fontScalePercent;
+                    select.value = String(boardViewerScreenshotFontScale);
+                    showMessageModal('Масштаб шрифта для скриншота сохранён', 'success');
+                } else {
+                    showMessageModal('Не удалось сохранить масштаб шрифта', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving screenshot font scale:', error);
+                showMessageModal('Не удалось сохранить масштаб шрифта', 'error');
+            }
+        }
+
         const BOARD_VIEWER_SCREENSHOT_SELECTORS = [
             '.board-block',
         ];
@@ -2404,6 +2530,7 @@
 
         function captureBoardViewerScreenshot() {
             window.scrollTo(0, 0);
+            applyScreenshotFontScale();
             const boardBlock = document.querySelector('.board-block');
             return new Promise((resolve, reject) => {
                 requestAnimationFrame(() => {
@@ -2416,8 +2543,14 @@
                             scale: Math.min(window.devicePixelRatio || 1, 2),
                         } : getBoardViewerHtml2CanvasOptions();
                         html2canvas(target, options)
-                            .then(resolve)
-                            .catch(reject);
+                            .then((canvas) => {
+                                removeScreenshotFontScale();
+                                resolve(canvas);
+                            })
+                            .catch((err) => {
+                                removeScreenshotFontScale();
+                                reject(err);
+                            });
                     });
                 });
             });
@@ -2929,11 +3062,13 @@
             const originalModalDisplay = modal.style.display;
             modal.style.display = 'none';
 
+            applyScreenshotFontScale();
             html2canvas(document.body, {
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#1a1a1a'
             }).then(canvas => {
+                removeScreenshotFontScale();
                 canvas.toBlob(blob => {
                     const formData = new FormData();
                     formData.append('photo', blob);
@@ -2966,6 +3101,7 @@
                     });
                 });
             }).catch(error => {
+                removeScreenshotFontScale();
                 console.error('Error creating screenshot:', error);
                 alert('Ошибка при создании скриншота');
                 modal.style.display = originalModalDisplay;
@@ -3162,6 +3298,10 @@
                         const adminContainer = document.getElementById('adminButtonContainer');
                         if (adminContainer) {
                             adminContainer.style.display = 'block';
+                        }
+                        const fontScaleSelect = document.getElementById('screenshotFontScaleSelect');
+                        if (fontScaleSelect) {
+                            fontScaleSelect.value = String(boardViewerScreenshotFontScale);
                         }
                     }
                 }

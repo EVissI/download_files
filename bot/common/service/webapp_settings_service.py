@@ -82,6 +82,7 @@ async def _get_or_create_webapp_settings_row(session) -> tuple[WebAppSetting, bo
         webapp_fullscreen_player_enabled=True,
         hint_viewer_screenshot_font_scale_percent=DEFAULT_HINT_VIEWER_SCREENSHOT_FONT_SCALE_PERCENT,
         pokaz_screenshot_font_scale_percent=DEFAULT_HINT_VIEWER_SCREENSHOT_FONT_SCALE_PERCENT,
+        board_viewer_screenshot_font_scale_percent=DEFAULT_HINT_VIEWER_SCREENSHOT_FONT_SCALE_PERCENT,
     )
     session.add(row)
     return row, True
@@ -139,5 +140,33 @@ async def set_pokaz_screenshot_font_scale_percent(value: int) -> int:
     async with async_session_maker() as session:
         row, _created = await _get_or_create_webapp_settings_row(session)
         row.pokaz_screenshot_font_scale_percent = clamped
+        await session.commit()
+    return clamped
+
+
+async def get_board_viewer_screenshot_font_scale_percent(
+    default: int = DEFAULT_HINT_VIEWER_SCREENSHOT_FONT_SCALE_PERCENT,
+) -> int:
+    """Глобальный масштаб шрифта board_viewer при скриншоте (%, 100 = без изменений)."""
+    try:
+        async with async_session_maker() as session:
+            row, created = await _get_or_create_webapp_settings_row(session)
+            if created:
+                await session.commit()
+            return clamp_hint_viewer_screenshot_font_scale_percent(
+                row.board_viewer_screenshot_font_scale_percent,
+                default=default,
+            )
+    except Exception as e:
+        logger.error(f"get_board_viewer_screenshot_font_scale_percent failed: {e}")
+        return clamp_hint_viewer_screenshot_font_scale_percent(default, default=default)
+
+
+async def set_board_viewer_screenshot_font_scale_percent(value: int) -> int:
+    """Сохраняет глобальный масштаб шрифта board_viewer для скриншотов."""
+    clamped = clamp_hint_viewer_screenshot_font_scale_percent(value)
+    async with async_session_maker() as session:
+        row, _created = await _get_or_create_webapp_settings_row(session)
+        row.board_viewer_screenshot_font_scale_percent = clamped
         await session.commit()
     return clamped

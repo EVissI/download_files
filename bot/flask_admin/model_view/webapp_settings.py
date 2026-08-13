@@ -32,6 +32,7 @@ class WebAppSettingsModelView(ModelView):
         "webapp_fullscreen_player_enabled",
         "hint_viewer_screenshot_font_scale_percent",
         "pokaz_screenshot_font_scale_percent",
+        "board_viewer_screenshot_font_scale_percent",
         "admin_notification_email",
     ]
     show_columns = list_columns
@@ -78,6 +79,7 @@ class WebAppSettingsModelView(ModelView):
         "webapp_fullscreen_player_enabled": _("Плеер"),
         "hint_viewer_screenshot_font_scale_percent": _("Ошибки: масштаб шрифта на скриншоте (%)"),
         "pokaz_screenshot_font_scale_percent": _("Позиции: масштаб шрифта на скриншоте (%)"),
+        "board_viewer_screenshot_font_scale_percent": _("Плеер: масштаб шрифта на скриншоте (%)"),
         "admin_notification_email": _("Email для уведомлений"),
         "created_at": _("Создано"),
         "updated_at": _("Обновлено"),
