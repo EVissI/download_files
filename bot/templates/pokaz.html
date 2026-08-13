@@ -3682,14 +3682,20 @@
             }
 
             .controls-row {
-                grid-template-columns: 1fr !important;
-                gap: 10px !important;
+                grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto !important;
+                gap: 8px !important;
             }
 
             .action-buttons {
-                justify-content: center !important;
+                justify-content: flex-end !important;
                 height: auto !important;
-                padding-top: 2px;
+                padding-top: 0;
+                align-self: end !important;
+            }
+
+            .action-buttons-col {
+                flex-direction: row !important;
+                gap: 6px !important;
             }
 
             .jacobi-beaver-block,
@@ -3829,16 +3835,89 @@
             .dice-controls-wrapper {
                 justify-content: center;
             }
+
+            /* Куб + ход/кубики + кнопки в одну строку */
+            .controls-row {
+                display: grid;
+                grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
+                align-items: end;
+                justify-items: stretch;
+                gap: 10px;
+                width: 100%;
+                flex-wrap: nowrap;
+                box-sizing: border-box;
+            }
+
+            .cube-controls-block-wrapper,
+            .turn-dice-wrapper {
+                width: auto;
+                min-width: 0;
+                max-width: none;
+            }
+
+            .action-buttons {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 8px;
+                height: auto;
+                align-self: end;
+                width: auto;
+            }
+
+            .action-buttons-col {
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .action-buttons button {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                min-height: 44px;
+                padding: 0;
+            }
+
+            .action-buttons-col.right button {
+                width: 48px;
+                height: 48px;
+                min-width: 48px;
+                min-height: 48px;
+            }
+
+            .action-buttons-col.left button i {
+                font-size: 1.1rem;
+            }
+
+            .action-buttons-col.right button i {
+                font-size: 1.35rem;
+            }
+
+            .cube-controls-labels {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 4px;
+                width: 100%;
+            }
+
+            .cube-controls-block {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                align-items: center;
+                justify-items: center;
+                width: 100%;
+            }
         }
 
-        /* Смартфон: куб и ход/кубики в одну строку (два блока), кнопки ниже */
+        /* Смартфон: та же одна строка, компактнее */
         @media (max-width: 600px) {
             .controls-row {
                 display: grid;
-                grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+                grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
                 align-items: end;
                 justify-items: stretch;
-                gap: 8px;
+                gap: 6px;
                 width: 100%;
                 flex-wrap: nowrap;
             }
@@ -3852,10 +3931,41 @@
             }
 
             .action-buttons {
-                grid-column: 1 / -1;
-                width: 100%;
-                justify-content: center;
-                margin-top: 2px;
+                grid-column: auto;
+                width: auto;
+                justify-content: flex-end;
+                align-self: end;
+                margin-top: 0;
+                gap: 6px;
+                height: auto;
+            }
+
+            .action-buttons-col {
+                flex-direction: row;
+                gap: 6px;
+            }
+
+            .action-buttons button {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+                min-height: 36px;
+                padding: 0;
+            }
+
+            .action-buttons-col.right button {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                min-height: 40px;
+            }
+
+            .action-buttons-col.left button i {
+                font-size: 0.95rem;
+            }
+
+            .action-buttons-col.right button i {
+                font-size: 1.15rem;
             }
 
             .cube-controls-labels {
@@ -3926,12 +4036,13 @@
 
         @media (max-width: 380px) {
             .controls-row {
-                gap: 6px;
+                gap: 4px;
+                grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
             }
 
             .cube-controls-labels label,
             .turn-dice-labels label {
-                font-size: 0.52rem;
+                font-size: 0.5rem;
             }
 
             .cube-controls-block,
@@ -3948,6 +4059,20 @@
                 height: 24px;
                 min-width: 24px;
                 min-height: 24px;
+            }
+
+            .action-buttons button {
+                width: 32px;
+                height: 32px;
+                min-width: 32px;
+                min-height: 32px;
+            }
+
+            .action-buttons-col.right button {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+                min-height: 36px;
             }
         }
     </style>
