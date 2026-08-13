@@ -2999,51 +2999,52 @@
                 margin: 0;
             }
 
-            /* При открытой таблице: доска|таблица сверху, управление снизу */
+            /* При открытой таблице: доска слева, справа таблица над инструментами */
             .container.pokaz-board-open .pokaz-workspace {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .container.pokaz-board-open .pokaz-main-stage {
                 flex-direction: row;
                 align-items: flex-start;
                 justify-content: center;
                 gap: 28px;
-                width: 100%;
-                max-width: 100%;
             }
 
-            .container.pokaz-board-open .board-wrapper {
+            .container.pokaz-board-open .pokaz-main-stage {
                 flex: 1 1 0;
                 min-width: 0;
                 width: auto;
                 max-width: min(656px, calc(52% - 14px));
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .container.pokaz-board-open .board-wrapper {
+                width: 100%;
+                max-width: 100%;
                 margin-left: 0;
                 margin-right: 0;
                 margin-top: 1.5rem;
             }
 
-            .container.pokaz-board-open .hints-table.active {
+            .container.pokaz-board-open .pokaz-side {
                 flex: 1 1 0;
                 min-width: 320px;
                 width: auto;
                 max-width: min(640px, calc(48% - 14px));
+                margin-top: 1.5rem;
+                gap: 12px;
+            }
+
+            .container.pokaz-board-open .hints-table.active {
+                width: 100%;
+                max-width: 100%;
                 margin-left: 0;
                 margin-right: 0;
-                margin-top: 1.5rem;
-                align-self: stretch;
+                margin-top: 0;
+                order: -1;
                 box-sizing: border-box;
             }
 
-            .container.pokaz-board-open .pokaz-side {
-                width: min(960px, 100%);
-                max-width: min(960px, 100%);
-                margin-top: 0.5rem;
-            }
-
             .container.pokaz-board-open .board-open-controls.active {
-                padding-top: 1rem;
+                padding-top: 0.5rem;
             }
 
             .container.pokaz-board-open .hints-table.active table {
@@ -3078,7 +3079,8 @@
             }
 
             .board-wrapper,
-            .pokaz-main-stage .hints-table {
+            .pokaz-side .hints-table,
+            .hints-table {
                 width: 100%;
                 max-width: 100%;
                 margin-left: 0;
@@ -3235,7 +3237,9 @@
             <canvas id="boardCanvas" width="800" height="800"></canvas>
             <div id="red-pips" class="pips-below-board" style="display:none">0</div>
         </div>
+        </div>
 
+        <div class="pokaz-side">
         <div class="hints-table" id="hintsTableContainer">
             <div class="hints-table-body">
                 <button type="button" class="hints-table-toggle" id="hintsTableToggle" data-i18n-title="toggle_table"
@@ -3247,9 +3251,6 @@
                 </div>
             </div>
         </div>
-        </div>
-
-        <div class="pokaz-side">
         <div class="board-open-controls" id="boardOpenControls">
             <div class="board-open-controls-spacer"></div>
             <div class="history-nav">
