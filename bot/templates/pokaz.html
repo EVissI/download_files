@@ -5083,9 +5083,17 @@
         function getTotalCheckers(pos) {
             let total = 0;
             for (let key in pos) {
-                total += pos[key];
+                if (key === 'off') continue;
+                total += Math.abs(Number(pos[key]) || 0);
             }
             return total;
+        }
+
+        /** Копия позиций с явным off = 15 − (пункты + бар) для визуала в редакторе/карточках. */
+        function withComputedOffCount(pos) {
+            const copy = JSON.parse(JSON.stringify(pos || {}));
+            copy.off = Math.max(0, 15 - getTotalCheckers(copy));
+            return copy;
         }
 
         function getSelectedCheckerColor() {
@@ -7621,8 +7629,8 @@
                     invertColors: upperPlayerColor === 'white',
                     xgid: typeof generateXGID === 'function' ? generateXGID() : '',
                     positions: {
-                        red: JSON.parse(JSON.stringify(positions.first || {})),
-                        black: JSON.parse(JSON.stringify(positions.second || {}))
+                        red: withComputedOffCount(positions.first || {}),
+                        black: withComputedOffCount(positions.second || {})
                     },
                     cubeVisual: cubeVisual,
                     scores: {

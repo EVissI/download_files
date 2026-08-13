@@ -643,10 +643,16 @@ export function drawBoardPreviewCheckersImpl(editor, ctx, player, img, positions
     } else {
         offY = (player === 'black') ? 340 : 440;
     }
-    if (positions.off && positions.off !== 0) {
+    let onBoard = 0;
+    for (const key in positions) {
+        if (key === 'off') continue;
+        onBoard += Math.abs(Number(positions[key]) || 0);
+    }
+    const offCount = Math.max(0, 15 - onBoard);
+    if (offCount > 0) {
         const originalFont = ctx.font;
         ctx.font = 'bold 32px Arial';
-        ctx.fillText(`${positions.off}`, offX, offY);
+        ctx.fillText(`${offCount}`, offX, offY);
         ctx.font = originalFont;
     }
 }
