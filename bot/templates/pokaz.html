@@ -78,6 +78,21 @@
             --board-pip-radius: calc(4px * var(--board-ui-scale));
         }
 
+        .pokaz-main-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .pokaz-below-stage {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
         .game-type-label {
             color: white;
             font-size: 19px;
@@ -2571,6 +2586,74 @@
             }
         }
 
+        /* Десктоп: при открытой таблице — доска слева, таблица справа, остальное снизу */
+        @media (min-width: 1025px) {
+            .container {
+                max-width: 1400px;
+                padding: 1rem 1.5rem 1.5rem;
+            }
+
+            .container.pokaz-board-open .pokaz-main-stage {
+                flex-direction: row;
+                align-items: flex-start;
+                justify-content: center;
+                gap: 28px;
+            }
+
+            .container.pokaz-board-open .board-wrapper {
+                flex: 1 1 0;
+                min-width: 0;
+                width: auto;
+                max-width: min(656px, calc(52% - 14px));
+                margin-left: 0;
+                margin-right: 0;
+                margin-top: 1.5rem;
+            }
+
+            .container.pokaz-board-open .hints-table.active {
+                flex: 1 1 0;
+                min-width: 320px;
+                width: auto;
+                max-width: min(640px, calc(48% - 14px));
+                margin-left: 0;
+                margin-right: 0;
+                margin-top: 1.5rem;
+                align-self: stretch;
+                box-sizing: border-box;
+            }
+
+            .container.pokaz-board-open .board-open-controls,
+            .container.pokaz-board-open .turn-label,
+            .container.pokaz-board-open .screenshot-controls,
+            .container.pokaz-board-open .admin-comment-container,
+            .container.pokaz-board-open #pokazScreenshotAdminContainer {
+                width: 100%;
+                max-width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+                box-sizing: border-box;
+            }
+
+            .container.pokaz-board-open .board-open-controls.active {
+                padding-top: 1rem;
+            }
+
+            .container.pokaz-board-open .hints-table.active table {
+                font-size: 15px;
+            }
+
+            .container.pokaz-board-open .hints-table.active th,
+            .container.pokaz-board-open .hints-table.active td {
+                padding: 10px 14px;
+                word-spacing: 10px;
+            }
+
+            .container.pokaz-board-open .hints-table.active th {
+                font-size: 15px;
+                padding: 8px 10px;
+            }
+        }
+
         /* Планшеты: меньший верхний отступ (после общих min-width правил, чтобы не перезаписаться) */
         @media (min-width: 601px) and (max-width: 1024px) {
             .container {
@@ -2586,7 +2669,8 @@
                 padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
             }
 
-            .board-wrapper {
+            .board-wrapper,
+            .pokaz-main-stage .hints-table {
                 width: 100%;
                 max-width: 100%;
                 margin-left: 0;
@@ -2736,11 +2820,48 @@
                 <i class="fa fa-mouse-pointer"></i>
             </button>
         </div>
+        <div class="pokaz-main-stage">
         <div class="board-wrapper">
             <div id="black-pips" class="pips-above-board" style="display:none">0</div>
             <canvas id="boardCanvas" width="800" height="800"></canvas>
             <div id="red-pips" class="pips-below-board" style="display:none">0</div>
         </div>
+
+        <div class="hints-table" id="hintsTableContainer">
+            <div class="hints-table-body">
+                <button type="button" class="hints-table-toggle" id="hintsTableToggle" data-i18n-title="toggle_table"
+                    data-i18n-aria-label="collapse_table" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
+                    <i class="fa fa-chevron-down"></i>
+                </button>
+                <div class="hints-table-content">
+                    <div id="hintsTable" class="hints-content"></div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <div class="board-open-controls" id="boardOpenControls">
+            <div class="board-open-controls-spacer"></div>
+            <div class="history-nav">
+                <button type="button" id="history-back-btn" class="history-nav-btn" data-i18n-title="history_back"
+                    data-i18n-aria-label="history_back" title="Назад по истории" aria-label="Назад по истории"></button>
+                <div id="turn-checker-indicator" class="turn-checker-indicator white" data-i18n-title="whose_turn"
+                    title="Чей ход"></div>
+                <button type="button" id="history-forward-btn" class="history-nav-btn" data-i18n-title="history_forward"
+                    data-i18n-aria-label="history_forward" title="Вперёд по истории"
+                    aria-label="Вперёд по истории"></button>
+            </div>
+            <div class="board-open-controls-buttons">
+                <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode"
+                    data-i18n-title="confirm_move" data-i18n-aria-label="confirm_move" title="Подтвердить ход"
+                    aria-label="Подтвердить ход">OK</button>
+                <button type="button" id="board-open-random-dice-btn" data-i18n-title="random_dice" title="Случайные кубики"><i class="fa fa-random"></i></button>
+                <button type="button" id="board-open-eye-btn" data-i18n-title="analyze_position" title="Анализ позиции"><i class="fa fa-eye"></i></button>
+            </div>
+        </div>
+
+        <div id="turn-label" class="turn-label"></div>
+
         <div class="selectors-wrapper">
             <div class="selectors-container">
                 <div class="checker-selector">
@@ -3025,9 +3146,8 @@
                         class="fa fa-rub"></i></button>
             </div>
         </div>
-    </div>
 
-    <div class="controls-row">
+        <div class="controls-row">
         <div class="cube-controls-block-wrapper">
             <div class="cube-controls-labels">
                 <label for="cube-shown-select" data-i18n="cube_shown">Показан куб?</label>
@@ -3184,41 +3304,6 @@
             </div>
         </div>
     </div>
-    </div>
-
-    <div class="board-open-controls" id="boardOpenControls">
-        <div class="board-open-controls-spacer"></div>
-        <div class="history-nav">
-            <button type="button" id="history-back-btn" class="history-nav-btn" data-i18n-title="history_back"
-                data-i18n-aria-label="history_back" title="Назад по истории" aria-label="Назад по истории"></button>
-            <div id="turn-checker-indicator" class="turn-checker-indicator white" data-i18n-title="whose_turn"
-                title="Чей ход"></div>
-            <button type="button" id="history-forward-btn" class="history-nav-btn" data-i18n-title="history_forward"
-                data-i18n-aria-label="history_forward" title="Вперёд по истории"
-                aria-label="Вперёд по истории"></button>
-        </div>
-        <div class="board-open-controls-buttons">
-            <button type="button" id="hints-table-check-btn" class="hints-table-check-btn check-mode"
-                data-i18n-title="confirm_move" data-i18n-aria-label="confirm_move" title="Подтвердить ход"
-                aria-label="Подтвердить ход">OK</button>
-            <button type="button" id="board-open-random-dice-btn" data-i18n-title="random_dice" title="Случайные кубики"><i class="fa fa-random"></i></button>
-            <button type="button" id="board-open-eye-btn" data-i18n-title="analyze_position" title="Анализ позиции"><i class="fa fa-eye"></i></button>
-        </div>
-    </div>
-
-    <div id="turn-label" class="turn-label"></div>
-
-    <div class="hints-table" id="hintsTableContainer">
-        <div class="hints-table-body">
-            <button type="button" class="hints-table-toggle" id="hintsTableToggle" data-i18n-title="toggle_table"
-                data-i18n-aria-label="collapse_table" title="Свернуть/развернуть таблицу" aria-label="Свернуть таблицу">
-                <i class="fa fa-chevron-down"></i>
-            </button>
-            <div class="hints-table-content">
-                <div id="hintsTable" class="hints-content"></div>
-            </div>
-        </div>
-    </div>
 
     <div class="screenshot-controls" id="screenshotControls">
         <button onclick="takeScreenshot()" id="screenshotBtn" data-i18n-title="take_screenshot"
@@ -3336,6 +3421,7 @@
                 <option value="200">200%</option>
             </select>
         </div>
+    </div>
     </div>
 
     <div id="msgModalOverlay" class="msg-modal-overlay">
@@ -6899,10 +6985,14 @@
             const selectorsWrapper = document.querySelector('.selectors-wrapper');
             const controlsRow = document.querySelector('.controls-row');
             const boardOpenControls = document.getElementById('boardOpenControls');
+            const container = document.querySelector('.container');
             if (!hintsTableContainer || !selectorsWrapper || !boardOpenControls) return;
             const isTableActive = hintsTableContainer.classList.contains('active');
             const isTableCollapsed = hintsTableContainer.classList.contains('collapsed');
             const isBoardOpen = isTableActive && !isTableCollapsed;
+            if (container) {
+                container.classList.toggle('pokaz-board-open', isBoardOpen);
+            }
             if (isBoardOpen) {
                 selectorsWrapper.style.display = 'none';
                 if (controlsRow) controlsRow.style.display = 'none';
