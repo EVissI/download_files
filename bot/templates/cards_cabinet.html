@@ -2037,10 +2037,22 @@
             background: rgba(255, 255, 255, .08);
             color: #e8e8e8;
             border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 11px;
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+            padding: 0;
+            font-size: 13px;
             cursor: pointer;
-            line-height: 1.2;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        .folder-node__action i {
+            pointer-events: none;
+            line-height: 1;
         }
 
         .folder-node__action:active {
@@ -2050,13 +2062,61 @@
         .folder-node__action--danger {
             background: transparent;
             color: #aaaaaa;
-            font-size: 16px;
-            padding: 2px 6px;
+            font-size: 15px;
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
         }
 
         .folder-node__action--schedule-active {
             background: rgba(46, 109, 164, .28);
             color: #9ec9ff;
+        }
+
+        @media (max-width: 520px) {
+            .folder-node__name-wrap {
+                max-width: 42%;
+            }
+
+            .folder-node__actions {
+                gap: 3px;
+            }
+
+            .folder-node__action {
+                width: 28px;
+                height: 28px;
+                min-width: 28px;
+                font-size: 12px;
+                border-radius: 5px;
+            }
+
+            .folder-node__action--danger {
+                width: 26px;
+                height: 26px;
+                min-width: 26px;
+                font-size: 14px;
+            }
+
+            .folder-node__right {
+                gap: 4px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .folder-node__name-wrap {
+                max-width: 36%;
+            }
+
+            .folder-node__count {
+                display: none;
+            }
+
+            .folder-node__action {
+                width: 26px;
+                height: 26px;
+                min-width: 26px;
+                font-size: 11px;
+            }
         }
 
         .folder-schedule-modal .shuffle-modal__box {
@@ -7213,8 +7273,9 @@
                     var linkBtn = document.createElement('button');
                     linkBtn.type = 'button';
                     linkBtn.className = 'folder-node__action';
-                    linkBtn.textContent = 'Ссылка';
+                    linkBtn.innerHTML = '<i class="fa fa-link" aria-hidden="true"></i>';
                     linkBtn.title = 'Получить ссылку';
+                    linkBtn.setAttribute('aria-label', 'Получить ссылку на папку «' + node.name + '»');
                     linkBtn.addEventListener('click', function (ev) {
                         ev.stopPropagation();
                         openFolderShareLinkModal(node.id);
@@ -7227,10 +7288,16 @@
                     if (node.schedule && node.schedule.is_active) {
                         scheduleBtn.className += ' folder-node__action--schedule-active';
                     }
-                    scheduleBtn.textContent = 'Расписание';
+                    scheduleBtn.innerHTML = '<i class="fa fa-calendar" aria-hidden="true"></i>';
                     scheduleBtn.title = node.schedule && node.schedule.is_active
                         ? 'Расписание активно'
                         : 'Настроить расписание';
+                    scheduleBtn.setAttribute(
+                        'aria-label',
+                        (node.schedule && node.schedule.is_active
+                            ? 'Расписание активно: '
+                            : 'Настроить расписание: ') + node.name
+                    );
                     scheduleBtn.addEventListener('click', function (ev) {
                         ev.stopPropagation();
                         loadFolderScheduleAndOpen(node.id, node.name, node.schedule || null);
@@ -7240,8 +7307,9 @@
                     var goBtn = document.createElement('button');
                     goBtn.type = 'button';
                     goBtn.className = 'folder-node__action';
-                    goBtn.textContent = 'Перейти';
+                    goBtn.innerHTML = '<i class="fa fa-arrow-right" aria-hidden="true"></i>';
                     goBtn.title = 'Открыть папку';
+                    goBtn.setAttribute('aria-label', 'Открыть папку «' + node.name + '»');
                     goBtn.addEventListener('click', function (ev) {
                         ev.stopPropagation();
                         navigateToFolder(node.id);
@@ -7251,8 +7319,9 @@
                     var delBtn = document.createElement('button');
                     delBtn.type = 'button';
                     delBtn.className = 'folder-node__action folder-node__action--danger';
-                    delBtn.textContent = '✕';
+                    delBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
                     delBtn.title = 'Удалить папку';
+                    delBtn.setAttribute('aria-label', 'Удалить папку «' + node.name + '»');
                     delBtn.addEventListener('click', function (ev) {
                         ev.stopPropagation();
                         showCabinetConfirm(

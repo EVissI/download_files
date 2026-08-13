@@ -5,13 +5,15 @@ from aiogram.filters import Command
 from aiogram.types import Message, WebAppInfo
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from loguru import logger
 from sqlalchemy import select
 
 from bot.common.filters.user_info import UserInfo
 from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import settings, translator_hub
 from bot.db.database import async_session_maker
-from bot.db.models import User, UserMatchAnalysis
+from bot.db.models import MatchAnalysis, User, UserMatchAnalysis
+from bot.flask_admin.match_analysis_grant import grant_match_analyses_async
 
 
 match_analysis_entry_router = Router()
@@ -29,11 +31,15 @@ def get_match_analysis_cabinet_kb() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-async def _send_match_analysis_cabinet_entry(message: Message, user_info) -> None:
-    user_id = int(user_info.id) if user_info else int(message.from_user.id)
-    is_admin = user_id in settings.ROOT_ADMIN_IDS or (
+def _is_match_analysis_admin(user_id: int, user_info) -> bool:
+    return user_id in settings.ROOT_ADMIN_IDS or (
         user_info is not None and user_info.role == User.Role.ADMIN.value
     )
+
+
+async def _send_match_analysis_cabinet_entry(message: Message, user_info) -> None:
+    user_id = int(user_info.id) if user_info else int(message.from_user.id)
+    is_admin = _is_match_analysis_admin(user_id, user_info)
     has_grants = False
     if not is_admin:
         async with async_session_maker() as session:
@@ -57,6 +63,57 @@ async def _send_match_analysis_cabinet_entry(message: Message, user_info) -> Non
 @match_analysis_entry_router.message(Command("match_analysis"), UserInfo())
 async def handle_match_analysis_command(message: Message, user_info):
     await _send_match_analysis_cabinet_entry(message, user_info)
+
+
+@match_analysis_entry_router.message(
+    Command("all_analyses"),
+    UserInfo(),
+)
+async def handle_grant_all_ready_match_analyses(message: Message, user_info):
+    """
+    Админ: выдать себе все ready (is_ready) анализы матча, которых ещё нет.
+    Команда: /all_analyses
+    """
+    user_id = int(user_info.id) if user_info else int(message.from_user.id)
+    if not _is_match_analysis_admin(user_id, user_info):
+        await message.answer("Команда доступна только администраторам.")
+        return
+
+    try:
+        async with async_session_maker() as session:
+            any_ready = await session.scalar(
+                select(MatchAnalysis.id)
+                .where(MatchAnalysis.is_ready.is_(True))
+                .limit(1)
+            )
+            if any_ready is None:
+                await message.answer(
+                    "Нет анализов с флагом «готов к выдаче» (is_ready)."
+                )
+                return
+
+            issued = await grant_match_analyses_async(
+                session,
+                user_id=user_id,
+                quantity=None,
+                commit=True,
+            )
+    except Exception as e:
+        logger.exception("all_analyses grant failed user_id={}", user_id)
+        await message.answer(f"Ошибка выдачи анализов: {e}")
+        return
+
+    if issued <= 0:
+        await message.answer(
+            "У вас уже есть все доступные готовые анализы матча.",
+            reply_markup=get_match_analysis_cabinet_kb(),
+        )
+        return
+
+    await message.answer(
+        f"Выдано анализов матча: {issued}.\nОткройте кабинет, чтобы посмотреть.",
+        reply_markup=get_match_analysis_cabinet_kb(),
+    )
 
 
 @match_analysis_entry_router.message(

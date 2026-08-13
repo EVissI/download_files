@@ -58,13 +58,20 @@ async def grant_match_analyses_async(
     session: AsyncSession,
     *,
     user_id: int,
-    quantity: int,
+    quantity: int | None = None,
     commit: bool = False,
 ) -> int:
-    """Async-вариант выдачи анализов (для promo / schedule). Не коммитит по умолчанию."""
-    cards_quantity = max(0, int(quantity))
-    if cards_quantity <= 0:
-        return 0
+    """
+    Async-вариант выдачи анализов (для promo / schedule / TG-команд).
+    quantity=None — выдать все доступные ready-анализы, которых ещё нет у пользователя.
+    Не коммитит по умолчанию.
+    """
+    if quantity is not None:
+        cards_quantity = max(0, int(quantity))
+        if cards_quantity <= 0:
+            return 0
+    else:
+        cards_quantity = None
 
     all_ids_result = await session.execute(
         select(MatchAnalysis.id)
@@ -90,7 +97,9 @@ async def grant_match_analyses_async(
     if not available_ids:
         return 0
 
-    to_issue_ids = available_ids[:cards_quantity]
+    to_issue_ids = (
+        available_ids if cards_quantity is None else available_ids[:cards_quantity]
+    )
     for mid in to_issue_ids:
         session.add(
             UserMatchAnalysis(
