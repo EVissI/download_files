@@ -65,6 +65,8 @@
         .board-wrapper {
             position: relative;
             margin-top: 1.5rem;
+            /* место под нижний ряд point-selector (они absolute и выходят за canvas) */
+            padding-bottom: calc(58px * var(--board-ui-scale) + 16px);
             flex: 1;
             width: calc(99% * 0.5);
             max-width: calc(99% * 0.5);
@@ -2524,6 +2526,7 @@
         .pokaz-tools {
             width: 100%;
             box-sizing: border-box;
+            margin-top: 1rem;
         }
 
         /* ---------- Адаптивная верстка ---------- */
@@ -2586,7 +2589,7 @@
             .pokaz-tools {
                 width: min(960px, 100%);
                 max-width: min(960px, 100%);
-                margin: 1.25rem auto 0;
+                margin: 2.5rem auto 0;
                 padding: 18px 20px 16px;
                 display: flex;
                 flex-direction: column;
