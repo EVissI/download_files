@@ -1217,6 +1217,35 @@
         }
     }
 
+    function getFabToken() {
+        if (typeof api().getFabToken === 'function') {
+            return api().getFabToken() || '';
+        }
+        try {
+            return new URLSearchParams(window.location.search || '').get('fab_token') || '';
+        } catch (_e) {
+            return '';
+        }
+    }
+
+    function authPayload(extra) {
+        var base = {};
+        var initData = getInitData();
+        var fabToken = getFabToken();
+        if (initData) base.init_data = initData;
+        else if (fabToken) base.fab_token = fabToken;
+        if (extra && typeof extra === 'object') {
+            Object.keys(extra).forEach(function (k) { base[k] = extra[k]; });
+        }
+        return base;
+    }
+
+    function requireAuth() {
+        if (getInitData() || getFabToken()) return true;
+        showNotice('Нет Telegram initData / FAB-токена', 'Ошибка');
+        return false;
+    }
+
     function showNotice(message, title) {
         if (typeof api().showNotice === 'function') {
             return api().showNotice(message, title);
@@ -2069,7 +2098,7 @@
             return Promise.resolve(false);
         }
         var initData = getInitData();
-        if (!initData || !state.matchId) {
+        if ((!initData && !getFabToken()) || !state.matchId) {
             return Promise.resolve(false);
         }
         return Promise.all(
@@ -2090,11 +2119,8 @@
             return fetch('/api/match_analysis/audio/set_durations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    init_data: initData,
-                    id: state.matchId,
-                    items: payloadItems,
-                }),
+                body: JSON.stringify(authPayload({id: state.matchId,
+                    items: payloadItems,})),
             })
                 .then(function (resp) {
                     return resp.json().catch(function () { return {}; }).then(function (payload) {
@@ -2130,16 +2156,15 @@
     }
 
     function loadAudios() {
-        var initData = getInitData();
-        if (!initData || !state.matchId) {
-            setListMsg('Нет Telegram initData', true);
+        if (!requireAuth() || !state.matchId) {
+            if (!state.matchId) setListMsg('Нет ID матча', true);
             return Promise.resolve();
         }
         setListMsg('Загрузка…');
         return fetch('/api/match_analysis/audio/list', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: initData, id: state.matchId }),
+            body: JSON.stringify(authPayload({ id: state.matchId })),
         })
             .then(function (resp) {
                 return resp.json().catch(function () { return {}; }).then(function (payload) {
@@ -2190,7 +2215,7 @@
         return fetch('/api/match_analysis/audio/ensure_durations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: initData, ids: ids }),
+            body: JSON.stringify(authPayload({ids: ids})),
         })
             .then(function (resp) {
                 return resp.json().catch(function () { return {}; }).then(function (payload) {
@@ -2236,11 +2261,8 @@
                             return fetch('/api/match_analysis/audio/set_durations', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    init_data: initData,
-                                    id: it.id,
-                                    items: payloadItems,
-                                }),
+                                body: JSON.stringify(authPayload({id: it.id,
+                                    items: payloadItems,})),
                             })
                                 .then(function (resp) {
                                     return resp.json().catch(function () { return {}; }).then(function (body) {
@@ -2278,11 +2300,8 @@
 
     function downloadAudioItem(item) {
         if (!item || state.busy || state.matchId == null || item.move_index == null) return;
+        if (!requireAuth()) return;
         var initData = getInitData();
-        if (!initData) {
-            showNotice('Нет Telegram initData', 'Ошибка');
-            return;
-        }
         chooseExportFormat({
             subtitle: 'Выберите формат файла для скачивания',
         }).then(function (fmt) {
@@ -2307,13 +2326,10 @@
         fetch('/api/match_analysis/audio/download_mp3', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                init_data: initData,
-                id: matchId,
+            body: JSON.stringify(authPayload({id: matchId,
                 game_number: item.game_number,
                 move_index: item.move_index,
-                format: fmt,
-            }),
+                format: fmt,})),
         })
             .then(function (resp) {
                 return resp.json().catch(function () { return {}; }).then(function (payload) {
@@ -2363,23 +2379,18 @@
             { confirmLabel: 'Удалить', danger: true }
         ).then(function (ok) {
             if (!ok) return;
-            var initData = getInitData();
-            if (!initData) {
-                showNotice('Нет Telegram initData', 'Ошибка');
-                return;
-            }
+            if (!requireAuth()) return;
             state.busy = true;
             setListMsg('Удаление…');
             fetch('/api/match_analysis/audio/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    init_data: initData,
+                body: JSON.stringify(authPayload({
                     id: state.matchId,
                     game_number: item.game_number,
                     move_index: item.move_index,
                     delete_s3: true,
-                }),
+                })),
             })
                 .then(function (resp) {
                     return resp.json().catch(function () { return {}; }).then(function (payload) {
@@ -2422,7 +2433,8 @@
 
         return durationPromise.then(function (durationSec) {
             var fd = new FormData();
-            fd.append('init_data', initData);
+            fd.append('init_data', initData || '');
+            if (getFabToken()) fd.append('fab_token', getFabToken());
             fd.append('match_analysis_id', String(state.matchId));
             fd.append('game_number', String(item.game_number));
             fd.append('move_index', String(item.move_index));
@@ -2789,7 +2801,7 @@
             return fetch('/api/match_analysis/audio/export_job_status', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ init_data: initData, job_id: jobId }),
+                body: JSON.stringify(authPayload({job_id: jobId})),
             })
                 .then(function (resp) {
                     return resp.json().catch(function () { return {}; }).then(function (payload) {
@@ -2823,11 +2835,8 @@
 
     function downloadImportMp3Zip() {
         if (state.busy || !state.matchId) return;
+        if (!requireAuth()) return;
         var initData = getInitData();
-        if (!initData) {
-            showNotice('Нет Telegram initData', 'Ошибка');
-            return;
-        }
         if (!state.items.length) {
             showNotice('В этом анализе нет аудио для экспорта', 'Экспорт');
             return;
@@ -2918,7 +2927,7 @@
         fetch('/api/match_analysis/audio/import_mp3_zip', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: initData, id: matchId, format: fmt }),
+            body: JSON.stringify(authPayload({id: matchId, format: fmt})),
         })
             .then(function (resp) {
                 return resp.json().catch(function () { return {}; }).then(function (payload) {
@@ -2993,11 +3002,8 @@
 
     function uploadExportMp3Zip(file) {
         if (state.busy || !state.matchId || !file) return;
+        if (!requireAuth()) return;
         var initData = getInitData();
-        if (!initData) {
-            showNotice('Нет Telegram initData', 'Ошибка');
-            return;
-        }
         var matchId = state.matchId;
         var approxFiles = Math.max(
             1,
@@ -3009,7 +3015,8 @@
             msPerFile: 3400,
         });
         var fd = new FormData();
-        fd.append('init_data', initData);
+        fd.append('init_data', initData || '');
+            if (getFabToken()) fd.append('fab_token', getFabToken());
         fd.append('match_analysis_id', String(matchId));
         fd.append('file', file, file.name || 'audio.zip');
         fetch('/api/match_analysis/audio/export_mp3_zip', {

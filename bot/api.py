@@ -1350,6 +1350,17 @@ async def admin_pip_count_cabinet_bridge(request: Request):
     return RedirectResponse(url=url, status_code=302)
 
 
+@app.get("/admin/match-analysis-cabinet")
+async def admin_match_analysis_cabinet_bridge(request: Request):
+    """
+    Мост FAB -> кабинет «Анализ матча».
+    """
+    admin_id = await _require_admin_session_user_id(request)
+    fab_token = await _issue_fab_cards_auth_token(admin_id)
+    url = f"/match-analysis-cabinet?fab_token={fab_token}"
+    return RedirectResponse(url=url, status_code=302)
+
+
 @app.get("/admin/content-card-view/{content_card_id}")
 async def admin_content_card_view_bridge(content_card_id: int, request: Request):
     """

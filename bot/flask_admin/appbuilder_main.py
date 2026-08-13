@@ -27,6 +27,7 @@ from bot.flask_admin.model_view.user import (
 )
 from bot.flask_admin.model_view.user_group import FabUserGroupsModelView
 from bot.flask_admin.model_view.users_with_cards import UsersWithCardsView
+from bot.flask_admin.model_view.users_with_match_analyses import UsersWithMatchAnalysesView
 from bot.flask_admin.model_view.users_with_pip_count_cards import UsersWithPipCountCardsView
 from bot.flask_admin.model_view.telegram_proxy import TelegramProxyModelView
 from bot.flask_admin.model_view.webapp_settings import WebAppSettingsModelView
@@ -198,6 +199,11 @@ def register_models(appbuilder, db):
         "Пользователи с карточками (пипсы)",
         icon="fa-table",
     )
+    appbuilder.add_view(
+        UsersWithMatchAnalysesView,
+        "Пользователи с анализом матча",
+        icon="fa-headphones",
+    )
     appbuilder.add_link(
         "Кабинет карточек",
         href="/admin/cards-cabinet",
@@ -207,6 +213,11 @@ def register_models(appbuilder, db):
         "Кабинет пипсов",
         href="/admin/pip-count-cabinet",
         icon="fa-th",
+    )
+    appbuilder.add_link(
+        "Кабинет «Анализ матча»",
+        href="/admin/match-analysis-cabinet",
+        icon="fa-play-circle",
     )
 
 

@@ -15,6 +15,7 @@ from bot.db.models import (
     User,
     UserAnalizePayment,
     UserContentCard,
+    UserMatchAnalysis,
     UserPromocode,
 )
 from bot.config import create_bot_for_sync_context
@@ -241,6 +242,38 @@ class UserModelView(ModelView):
                 "current_admin_insert_name",
                 (user.admin_insert_name or "") if user else "",
             )
+            session = self.datamodel.session
+            ma_count = 0
+            ready_available = 0
+            try:
+                if current_pk is not None:
+                    ma_count = int(
+                        session.scalar(
+                            select(func.count())
+                            .select_from(UserMatchAnalysis)
+                            .where(UserMatchAnalysis.user_id == int(current_pk))
+                        )
+                        or 0
+                    )
+                    owned = select(UserMatchAnalysis.match_analysis_id).where(
+                        UserMatchAnalysis.user_id == int(current_pk)
+                    )
+                    ready_available = int(
+                        session.scalar(
+                            select(func.count())
+                            .select_from(MatchAnalysis)
+                            .where(
+                                MatchAnalysis.is_ready.is_(True),
+                                MatchAnalysis.id.not_in(owned),
+                            )
+                        )
+                        or 0
+                    )
+            except SQLAlchemyError:
+                ma_count = 0
+                ready_available = 0
+            kwargs.setdefault("match_analyses_count", ma_count)
+            kwargs.setdefault("match_analyses_ready_available", ready_available)
         return super().render_template(template, **kwargs)
 
     @expose("/update_admin_insert_name/<int:pk>", methods=["POST"])

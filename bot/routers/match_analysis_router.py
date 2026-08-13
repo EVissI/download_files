@@ -65,29 +65,34 @@ _ma_tmp_cleanup_min_interval_sec = 60.0
 
 
 class MatchAnalysisInitBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
 
 
 class MatchAnalysisIdBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     id: int
 
 
 class MatchAnalysisAudioExportZipBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     id: int
     format: str = "wav"
 
 
 class MatchAnalysisSaveBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     game_id: str
     title: Optional[str] = None
     notes: Optional[str] = None
 
 
 class MatchAnalysisUpdateMetaBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     id: int
     title: Optional[str] = None
     notes: Optional[str] = None
@@ -95,7 +100,8 @@ class MatchAnalysisUpdateMetaBody(BaseModel):
 
 
 class MatchAnalysisAudioDeleteBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     id: int
     game_number: int
     move_index: int
@@ -103,7 +109,8 @@ class MatchAnalysisAudioDeleteBody(BaseModel):
 
 
 class MatchAnalysisAudioDownloadBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     id: int
     game_number: int
     move_index: int
@@ -111,7 +118,8 @@ class MatchAnalysisAudioDownloadBody(BaseModel):
 
 
 class MatchAnalysisExportJobBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     job_id: str
 
 
@@ -122,35 +130,41 @@ class MatchAnalysisAudioDurationItem(BaseModel):
 
 
 class MatchAnalysisAudioSetDurationsBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     id: int
     items: list[MatchAnalysisAudioDurationItem] = Field(default_factory=list)
 
 
 class MatchAnalysisAudioEnsureBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     ids: list[int] = Field(default_factory=list)
 
 
 class MatchAnalysisAssignBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     target_user_id: int = Field(..., ge=1)
     match_analysis_ids: list[int]
 
 
 class MatchAnalysisGenerateLinkBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     match_analysis_ids: list[int]
 
 
 class MatchAnalysisSetStatusBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     id: int = Field(..., ge=1)
     status: UserContentCardStatus
 
 
 class MatchAnalysisMarkViewedBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
     id: int = Field(..., ge=1)
 
 
@@ -174,8 +188,32 @@ def _resolve_user_id(init_data: str) -> int:
     return int(user_id)
 
 
+async def _resolve_ma_user_id(
+    init_data: str | None = None,
+    fab_token: str | None = None,
+) -> int:
+    """Telegram init_data или FAB-токен (как у content cards)."""
+    if init_data and str(init_data).strip():
+        return _resolve_user_id(str(init_data).strip())
+    if fab_token and str(fab_token).strip():
+        token_val = await redis_client.get(f"fab_cards_auth:{str(fab_token).strip()}")
+        if not token_val:
+            raise HTTPException(status_code=401, detail="Недействительный FAB-токен")
+        return int(token_val)
+    raise HTTPException(status_code=401, detail="Требуется init_data или fab_token")
+
+
 def _resolve_admin_user_id(init_data: str) -> int:
     uid = _resolve_user_id(init_data)
+    _require_match_analysis_admin(uid)
+    return uid
+
+
+async def _resolve_ma_admin_user_id(
+    init_data: str | None = None,
+    fab_token: str | None = None,
+) -> int:
+    uid = await _resolve_ma_user_id(init_data, fab_token)
     _require_match_analysis_admin(uid)
     return uid
 
@@ -516,7 +554,7 @@ async def match_analysis_view_page(request: Request, id: int | None = None):
 
 @match_analysis_api_router.post("/api/match_analysis/save")
 async def match_analysis_save(body: MatchAnalysisSaveBody):
-    uid = _resolve_admin_user_id(body.init_data)
+    uid = await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     game_id = (body.game_id or "").strip()
     if not game_id:
         raise HTTPException(status_code=400, detail="game_id обязателен")
@@ -540,7 +578,7 @@ async def match_analysis_save(body: MatchAnalysisSaveBody):
 @match_analysis_api_router.post("/api/match_analysis/list")
 async def match_analysis_list(body: MatchAnalysisInitBody):
     """Список анализов кабинета: только выданные текущему пользователю (как content cards)."""
-    uid = _resolve_user_id(body.init_data)
+    uid = await _resolve_ma_user_id(body.init_data, body.fab_token)
     is_admin = _is_ma_admin(uid)
     recent_cutoff = datetime.utcnow() - timedelta(days=1)
     async with async_session_maker() as session:
@@ -580,7 +618,7 @@ async def match_analysis_list(body: MatchAnalysisInitBody):
 
 @match_analysis_api_router.post("/api/match_analysis/fetch")
 async def match_analysis_fetch(body: MatchAnalysisIdBody):
-    uid = _resolve_user_id(body.init_data)
+    uid = await _resolve_ma_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
         if not await dao.user_has_access(uid, body.id):
@@ -619,7 +657,7 @@ async def match_analysis_fetch(body: MatchAnalysisIdBody):
 @match_analysis_api_router.post("/api/match_analysis/set_status")
 async def match_analysis_set_status(body: MatchAnalysisSetStatusBody):
     """Ручная установка статуса анализа для текущего пользователя (как у content cards)."""
-    uid = _resolve_user_id(body.init_data)
+    uid = await _resolve_ma_user_id(body.init_data, body.fab_token)
     if body.status in (UserContentCardStatus.UNVIEWED, UserContentCardStatus.VIEWED):
         raise HTTPException(
             status_code=400,
@@ -643,7 +681,7 @@ async def match_analysis_set_status(body: MatchAnalysisSetStatusBody):
 @match_analysis_api_router.post("/api/match_analysis/mark_viewed")
 async def match_analysis_mark_viewed(body: MatchAnalysisMarkViewedBody):
     """Помечает анализ как просмотренный (VIEWED) для текущего пользователя."""
-    uid = _resolve_user_id(body.init_data)
+    uid = await _resolve_ma_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         link_res = await session.execute(
             select(UserMatchAnalysis).where(
@@ -1305,7 +1343,7 @@ def _resolve_zip_audio_target(
 @match_analysis_api_router.post("/api/match_analysis/audio/list")
 async def match_analysis_audio_list(body: MatchAnalysisIdBody):
     """Список аудиофайлов, прикреплённых к ходам анализа (админ)."""
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
         row = await dao.find_one_or_none_by_id(body.id)
@@ -1336,7 +1374,7 @@ async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisAudioExportZipB
     «Экспорт» в UI: ставит задачу конвертации всех аудио в wav/mp3 и сборки zip.
     Клиент опрашивает export_job_status и скачивает по временной ссылке.
     """
-    uid = _resolve_admin_user_id(body.init_data)
+    uid = await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     fmt = _normalize_export_audio_format(body.format)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
@@ -1370,7 +1408,7 @@ async def match_analysis_audio_import_mp3_zip(body: MatchAnalysisAudioExportZipB
 @match_analysis_api_router.post("/api/match_analysis/audio/export_job_status")
 async def match_analysis_audio_export_job_status(body: MatchAnalysisExportJobBody):
     """Статус фоновой задачи экспорта MP3 zip."""
-    uid = _resolve_admin_user_id(body.init_data)
+    uid = await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     raw = await redis_client.get(f"{MA_EXPORT_JOB_PREFIX}{body.job_id}")
     if not raw:
         raise HTTPException(status_code=404, detail="Задача не найдена или истекла")
@@ -1394,7 +1432,7 @@ async def match_analysis_audio_export_job_status(body: MatchAnalysisExportJobBod
 @match_analysis_api_router.post("/api/match_analysis/audio/download_mp3")
 async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody):
     """Конвертация одного аудио в WAV/MP3 + временная ссылка для Telegram.WebApp.downloadFile."""
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     fmt = _normalize_export_audio_format(body.format)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
@@ -1498,7 +1536,8 @@ async def match_analysis_audio_file_by_token(request: Request, token: str = Quer
 
 @match_analysis_api_router.post("/api/match_analysis/audio/export_mp3_zip")
 async def match_analysis_audio_export_mp3_zip(
-    init_data: str = Form(...),
+    init_data: str | None = Form(None),
+    fab_token: str | None = Form(None),
     match_analysis_id: int = Form(...),
     file: UploadFile = File(...),
 ):
@@ -1506,7 +1545,7 @@ async def match_analysis_audio_export_mp3_zip(
     «Импорт» в UI: принимает zip с wav/mp3, конвертирует в webm и заменяет аудио
     с эквивалентными именами (совпадение по имени без расширения).
     """
-    uid = _resolve_admin_user_id(init_data)
+    uid = await _resolve_ma_admin_user_id(init_data, fab_token)
     raw_zip = await file.read()
     if not raw_zip:
         raise HTTPException(status_code=400, detail="Пустой zip")
@@ -1646,7 +1685,7 @@ async def match_analysis_audio_export_mp3_zip(
 @match_analysis_api_router.post("/api/match_analysis/audio/set_durations")
 async def match_analysis_audio_set_durations(body: MatchAnalysisAudioSetDurationsBody):
     """Сохраняет длительности аудио для ходов (дозаполнение со стороны клиента)."""
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     if not body.items:
         raise HTTPException(status_code=400, detail="Пустой список durations")
     async with async_session_maker() as session:
@@ -1715,7 +1754,7 @@ async def match_analysis_audio_ensure_durations(body: MatchAnalysisAudioEnsureBo
     Пакетно дозаполняет длительности по списку анализов (серверный probe)
     и возвращает минуты + список файлов, которые ещё нужно измерить на клиенте.
     """
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     ids: list[int] = []
     seen: set[int] = set()
     for raw in body.ids or []:
@@ -1763,7 +1802,7 @@ async def match_analysis_audio_ensure_durations(body: MatchAnalysisAudioEnsureBo
 
 @match_analysis_api_router.post("/api/match_analysis/update_meta")
 async def match_analysis_update_meta(body: MatchAnalysisUpdateMetaBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
         row = await dao.find_one_or_none_by_id(body.id)
@@ -1790,7 +1829,7 @@ async def match_analysis_update_meta(body: MatchAnalysisUpdateMetaBody):
 
 @match_analysis_api_router.post("/api/match_analysis/assign_to_user")
 async def match_analysis_assign_to_user(body: MatchAnalysisAssignBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     ids = _normalize_ma_ids(body.match_analysis_ids)
     if not ids:
         raise HTTPException(
@@ -1873,7 +1912,7 @@ async def match_analysis_assign_to_user(body: MatchAnalysisAssignBody):
 
 @match_analysis_api_router.post("/api/match_analysis/generate_link")
 async def match_analysis_generate_link(body: MatchAnalysisGenerateLinkBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     ids = _normalize_ma_ids(body.match_analysis_ids)
     if not ids:
         raise HTTPException(
@@ -1911,7 +1950,7 @@ async def match_analysis_generate_link(body: MatchAnalysisGenerateLinkBody):
 
 @match_analysis_api_router.post("/api/match_analysis/delete")
 async def match_analysis_delete(body: MatchAnalysisIdBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
         row = await dao.find_one_or_none_by_id(body.id)
@@ -1924,14 +1963,15 @@ async def match_analysis_delete(body: MatchAnalysisIdBody):
 
 @match_analysis_api_router.post("/api/match_analysis/audio/upload")
 async def match_analysis_audio_upload(
-    init_data: str = Form(...),
+    init_data: str | None = Form(None),
+    fab_token: str | None = Form(None),
     match_analysis_id: int = Form(...),
     game_number: int = Form(...),
     move_index: int = Form(...),
     file: UploadFile = File(...),
     duration_sec: Optional[float] = Form(None),
 ):
-    uid = _resolve_admin_user_id(init_data)
+    uid = await _resolve_ma_admin_user_id(init_data, fab_token)
     raw = await file.read()
     if len(raw) > MA_MEDIA_MAX_BYTES:
         raise HTTPException(status_code=413, detail="Файл слишком большой")
@@ -1996,7 +2036,7 @@ async def match_analysis_audio_upload(
 
 @match_analysis_api_router.post("/api/match_analysis/audio/delete")
 async def match_analysis_audio_delete(body: MatchAnalysisAudioDeleteBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     s3 = HintS3Storage.from_settings()
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)

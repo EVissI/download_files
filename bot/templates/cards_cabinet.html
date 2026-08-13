@@ -3074,6 +3074,7 @@
 
             window.CardsCabinetMatchAudioApi = {
                 getInitData: function () { return initData || ''; },
+                getFabToken: function () { return fabToken || ''; },
                 showNotice: function (message, title) {
                     return showCabinetNotice(message, title);
                 },
@@ -3439,8 +3440,8 @@
                     (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ||
                     '';
                 if (IS_MATCH_ANALYSIS) {
-                    if (!initData) {
-                        showErr('Откройте кабинет через Telegram-команду /match_analysis');
+                    if (!initData && !fabToken) {
+                        showErr('Откройте кабинет через Telegram (/match_analysis) или через FAB.');
                         return;
                     }
                 } else if (!initData && !fabToken) {
@@ -5325,11 +5326,10 @@
                     fetch('/api/match_analysis/update_meta', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            init_data: initData,
+                        body: JSON.stringify(authPayload({
                             id: matchRenameTargetId,
                             title: title,
-                        }),
+                        })),
                     })
                         .then(function (r) {
                             return parseApiJsonResponse(r, 'Не удалось переименовать');
@@ -5379,7 +5379,7 @@
                             : fetch('/api/match_analysis/delete', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ init_data: initData, id: matchIdNum }),
+                                body: JSON.stringify(authPayload({ id: matchIdNum })),
                             }).then(function (r) {
                                 return parseApiJsonResponse(r, 'Не удалось удалить анализ');
                             });
@@ -6261,7 +6261,7 @@
                         return fetch('/api/match_analysis/list', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ init_data: initData }),
+                            body: JSON.stringify(authPayload()),
                         })
                             .then(function (r) {
                                 return parseApiJsonResponse(r, 'Ошибка загрузки списка');

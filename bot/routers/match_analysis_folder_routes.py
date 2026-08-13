@@ -33,8 +33,8 @@ from bot.routers.match_analysis_router import (
     _fill_missing_audio_durations,
     _is_ma_admin,
     _list_status_for_link,
-    _resolve_admin_user_id,
-    _resolve_user_id,
+    _resolve_ma_admin_user_id,
+    _resolve_ma_user_id,
     _serialize_list_item,
     _user_ma_links_by_id,
     match_analysis_api_router,
@@ -44,7 +44,8 @@ MA_FOLDER_LINK_START_PREFIX = "mafolderlink_"
 
 
 class MaFolderBaseBody(BaseModel):
-    init_data: str
+    init_data: str | None = None
+    fab_token: str | None = None
 
 
 class MaFolderCreateBody(MaFolderBaseBody):
@@ -221,7 +222,7 @@ async def _build_ma_folder_start_link(link_token: str) -> str:
 
 @match_analysis_api_router.post("/api/match_analysis/folders/tree")
 async def ma_folder_tree(body: MaFolderBaseBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         dao = MatchAnalysisFolderDAO(session)
         folders = await dao.get_all_folders()
@@ -242,7 +243,7 @@ async def ma_folder_tree(body: MaFolderBaseBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/create")
 async def ma_folder_create(body: MaFolderCreateBody):
-    user_id = _resolve_admin_user_id(body.init_data)
+    user_id = await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
@@ -263,7 +264,7 @@ async def ma_folder_create(body: MaFolderCreateBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/update")
 async def ma_folder_update(body: MaFolderUpdateBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
@@ -279,7 +280,7 @@ async def ma_folder_update(body: MaFolderUpdateBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/move")
 async def ma_folder_move(body: MaFolderMoveBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
@@ -304,7 +305,7 @@ async def ma_folder_move(body: MaFolderMoveBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/delete")
 async def ma_folder_delete(body: MaFolderDeleteBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
@@ -321,7 +322,7 @@ async def ma_folder_delete(body: MaFolderDeleteBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/add_items")
 async def ma_folder_add_items(body: MaFolderItemsBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     match_ids = _normalize_ids(body.card_ids)
     if not match_ids:
         raise HTTPException(status_code=400, detail="Нужен хотя бы один id матча")
@@ -348,7 +349,7 @@ async def ma_folder_add_items(body: MaFolderItemsBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/remove_items")
 async def ma_folder_remove_items(body: MaFolderItemsBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     match_ids = _normalize_ids(body.card_ids)
     if not match_ids:
         raise HTTPException(status_code=400, detail="Нужен хотя бы один id матча")
@@ -368,7 +369,7 @@ async def ma_folder_remove_items(body: MaFolderItemsBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/set_items")
 async def ma_folder_set_items(body: MaFolderItemsBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     match_ids = _normalize_ids(body.card_ids)
     async with async_session_maker() as session:
         async with session.begin():
@@ -385,7 +386,7 @@ async def ma_folder_set_items(body: MaFolderItemsBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/generate_link")
 async def ma_folder_generate_link(body: MaFolderGenerateLinkBody):
-    user_id = _resolve_admin_user_id(body.init_data)
+    user_id = await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         async with session.begin():
             folder_dao = MatchAnalysisFolderDAO(session)
@@ -405,7 +406,7 @@ async def ma_folder_generate_link(body: MaFolderGenerateLinkBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/navigate_link")
 async def ma_folder_navigate_link(body: MaFolderNavigateLinkBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     token = str(body.folder_token or "").strip()
     if not token:
         raise HTTPException(status_code=400, detail="folder_token обязателен")
@@ -443,7 +444,7 @@ async def ma_folder_navigate_link(body: MaFolderNavigateLinkBody):
 @match_analysis_api_router.post("/api/match_analysis/folders/link_resolve")
 async def ma_folder_link_resolve(body: MaFolderLinkResolveBody):
     # Read-only доступ по токену — как у content folders (не только admin).
-    user_id = _resolve_user_id(body.init_data)
+    user_id = await _resolve_ma_user_id(body.init_data, body.fab_token)
     token = str(body.folder_token or "").strip()
     if not token:
         raise HTTPException(status_code=400, detail="folder_token обязателен")
@@ -537,7 +538,7 @@ async def ma_folder_link_resolve(body: MaFolderLinkResolveBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/schedule_get")
 async def ma_folder_schedule_get(body: MaFolderScheduleGetBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         folder = await session.scalar(
             select(MatchAnalysisFolder).where(MatchAnalysisFolder.id == body.folder_id)
@@ -554,7 +555,7 @@ async def ma_folder_schedule_get(body: MaFolderScheduleGetBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/schedule_save")
 async def ma_folder_schedule_save(body: MaFolderScheduleSaveBody):
-    user_id = _resolve_admin_user_id(body.init_data)
+    user_id = await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     try:
         weekdays = normalize_weekdays(body.weekdays)
         validate_issue_time_msk(body.issue_time_msk)
@@ -615,7 +616,7 @@ async def ma_folder_schedule_save(body: MaFolderScheduleSaveBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/schedule_delete")
 async def ma_folder_schedule_delete(body: MaFolderScheduleDeleteBody):
-    _resolve_admin_user_id(body.init_data)
+    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         schedule = await session.scalar(
             select(MatchAnalysisFolderSchedule).where(

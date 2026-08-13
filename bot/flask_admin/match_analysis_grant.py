@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from bot.db.models import MatchAnalysis, UserMatchAnalysis
+from bot.db.models import MatchAnalysis, UserContentCardStatus, UserMatchAnalysis
 
 
 def grant_match_analyses_sync(
@@ -43,7 +43,13 @@ def grant_match_analyses_sync(
 
     to_issue_ids = available_ids[:cards_quantity]
     for mid in to_issue_ids:
-        session.add(UserMatchAnalysis(user_id=user_id, match_analysis_id=mid))
+        session.add(
+            UserMatchAnalysis(
+                user_id=user_id,
+                match_analysis_id=mid,
+                card_status=UserContentCardStatus.UNVIEWED,
+            )
+        )
     session.commit()
     return len(to_issue_ids)
 
@@ -86,7 +92,13 @@ async def grant_match_analyses_async(
 
     to_issue_ids = available_ids[:cards_quantity]
     for mid in to_issue_ids:
-        session.add(UserMatchAnalysis(user_id=user_id, match_analysis_id=mid))
+        session.add(
+            UserMatchAnalysis(
+                user_id=user_id,
+                match_analysis_id=mid,
+                card_status=UserContentCardStatus.UNVIEWED,
+            )
+        )
     if commit:
         await session.commit()
     else:
