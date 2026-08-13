@@ -2803,11 +2803,17 @@
             .pokaz-tools .checker-selector,
             .pokaz-tools .bar-selector,
             .pokaz-tools .jb-wrap,
-            .pokaz-tools .match-panel,
             .pokaz-tools .cube-controls-block-wrapper,
             .pokaz-tools .turn-dice-wrapper,
             .pokaz-tools .game-type-right {
                 display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+
+            /* match-panel остаётся display:none, пока JS не переключит на матч */
+            .pokaz-tools .match-panel {
                 flex-direction: column;
                 align-items: stretch;
                 gap: 6px;
@@ -3074,7 +3080,14 @@
                 margin: 0;
             }
 
-            /* При открытой таблице: доска слева, справа таблица над инструментами */
+            .pokaz-tools .pokaz-aux-panel {
+                display: flex;
+                flex-direction: column;
+                gap: 0;
+                width: 100%;
+            }
+
+            /* При открытой таблице: доска слева, справа таблица; aux-панель — под доской */
             .container.pokaz-board-open .pokaz-workspace {
                 flex-direction: row;
                 align-items: flex-start;
@@ -3106,6 +3119,52 @@
                 max-width: min(640px, calc(48% - 14px));
                 margin-top: 1.5rem;
                 gap: 12px;
+            }
+
+            .container.pokaz-board-open .pokaz-tools.is-aux-relocated {
+                display: none;
+            }
+
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                width: 100%;
+                margin-top: 12px;
+                padding: 14px 16px 12px;
+                background: #232323;
+                border: 1px solid #3a3a3a;
+                border-radius: 14px;
+                box-sizing: border-box;
+            }
+
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .screenshot-controls,
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .admin-comment-container,
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel #pokazScreenshotAdminContainer {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+            }
+
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .screenshot-controls {
+                justify-content: center;
+                gap: 12px;
+                padding: 0;
+                border-top: none;
+            }
+
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .admin-comment-container {
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 10px 0 0;
+                border-top: 1px solid #353535;
+            }
+
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel #pokazScreenshotAdminContainer {
+                margin: 0 !important;
+                padding-top: 4px;
+                border-top: 1px solid #353535;
             }
 
             .container.pokaz-board-open .hints-table.active {
@@ -3367,11 +3426,16 @@
             .pokaz-tools .checker-selector,
             .pokaz-tools .bar-selector,
             .pokaz-tools .jb-wrap,
-            .pokaz-tools .match-panel,
             .pokaz-tools .cube-controls-block-wrapper,
             .pokaz-tools .turn-dice-wrapper,
             .pokaz-tools .game-type-right {
                 display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+
+            .pokaz-tools .match-panel {
                 flex-direction: column;
                 align-items: stretch;
                 gap: 6px;
@@ -4840,6 +4904,7 @@
         </div>
         </div>
 
+        <div class="pokaz-aux-panel">
         <div class="screenshot-controls" id="screenshotControls">
             <button onclick="takeScreenshot()" id="screenshotBtn" data-i18n-title="take_screenshot"
                 title="Сделать скриншот"></button>
@@ -4847,38 +4912,6 @@
                 title="Сохранить скриншот в буфер"></button>
             <button onclick="uploadScreenshots()" id="screenUploadBtn" data-i18n-title="upload_screenshots"
                 title="Отправить скриншоты"></button>
-        </div>
-
-        <!-- Modal window for clear confirmation -->
-        <div id="clear-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 data-i18n="confirm">Подтверждение</h3>
-                </div>
-                <div class="modal-body">
-                    <p data-i18n="clear_confirm_msg">Вы уверены, что хотите очистить доску?</p>
-                </div>
-                <div class="modal-footer">
-                    <button id="modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
-                    <button id="modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="clear">Очистить</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal window for init confirmation -->
-        <div id="init-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 data-i18n="confirm">Подтверждение</h3>
-                </div>
-                <div class="modal-body">
-                    <p data-i18n="init_confirm_msg">Вы уверены, что хотите расставить начальную позицию?</p>
-                </div>
-                <div class="modal-footer">
-                    <button id="init-modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
-                    <button id="init-modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="init">Расставить</button>
-                </div>
-            </div>
         </div>
 
         <div class="admin-comment-container">
@@ -4924,19 +4957,6 @@
                 else %}RU{% endif %}</a>
         </div>
 
-        <div id="adminCommentModal" class="admin-modal">
-            <div class="admin-modal-content">
-                <p data-i18n="comment_modal_title">Задайте вопрос по расставленной позиции</p>
-                <textarea id="adminCommentText" data-i18n-placeholder="admin_comment_placeholder"
-                    placeholder="Введите текст сообщения..."></textarea>
-                <div class="admin-modal-footer">
-                    <button class="admin-cancel-btn" onclick="closeAdminCommentModal()" data-i18n="cancel">Отмена</button>
-                    <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()"
-                        data-i18n="comment_send">Отправить</button>
-                </div>
-            </div>
-        </div>
-
         <div id="pokazScreenshotAdminContainer" style="margin: 0 0 20px; text-align: center; display: none;">
             <div class="admin-screenshot-font-scale">
                 <label for="pokazScreenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
@@ -4959,6 +4979,52 @@
         </div>
         </div>
         </div>
+        </div>
+        </div>
+
+        <!-- Modal window for clear confirmation -->
+        <div id="clear-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 data-i18n="confirm">Подтверждение</h3>
+                </div>
+                <div class="modal-body">
+                    <p data-i18n="clear_confirm_msg">Вы уверены, что хотите очистить доску?</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
+                    <button id="modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="clear">Очистить</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal window for init confirmation -->
+        <div id="init-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 data-i18n="confirm">Подтверждение</h3>
+                </div>
+                <div class="modal-body">
+                    <p data-i18n="init_confirm_msg">Вы уверены, что хотите расставить начальную позицию?</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="init-modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
+                    <button id="init-modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="init">Расставить</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="adminCommentModal" class="admin-modal">
+            <div class="admin-modal-content">
+                <p data-i18n="comment_modal_title">Задайте вопрос по расставленной позиции</p>
+                <textarea id="adminCommentText" data-i18n-placeholder="admin_comment_placeholder"
+                    placeholder="Введите текст сообщения..."></textarea>
+                <div class="admin-modal-footer">
+                    <button class="admin-cancel-btn" onclick="closeAdminCommentModal()" data-i18n="cancel">Отмена</button>
+                    <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()"
+                        data-i18n="comment_send">Отправить</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -8544,6 +8610,18 @@
 
         // При открытой доске: скрыть selectors-wrapper и controls-row, показать board-open-controls
         // При свёрнутой таблице — восстанавливаем старые элементы
+        function relocatePokazAuxPanel(underBoard) {
+            const auxPanel = document.querySelector('.pokaz-aux-panel');
+            const mainStage = document.querySelector('.pokaz-main-stage');
+            const tools = document.querySelector('.pokaz-tools');
+            if (!auxPanel || !mainStage || !tools) return;
+            const target = underBoard ? mainStage : tools;
+            if (auxPanel.parentElement !== target) {
+                target.appendChild(auxPanel);
+            }
+            tools.classList.toggle('is-aux-relocated', !!underBoard);
+        }
+
         function updateBoardOpenState() {
             const hintsTableContainer = document.getElementById('hintsTableContainer');
             const selectorsWrapper = document.querySelector('.selectors-wrapper');
@@ -8554,6 +8632,7 @@
             const isTableActive = hintsTableContainer.classList.contains('active');
             const isTableCollapsed = hintsTableContainer.classList.contains('collapsed');
             const isBoardOpen = isTableActive && !isTableCollapsed;
+            const isWide = window.matchMedia('(min-width: 900px)').matches;
             if (container) {
                 container.classList.toggle('pokaz-board-open', isBoardOpen);
             }
@@ -8568,7 +8647,12 @@
                 if (controlsRow) controlsRow.style.display = '';
                 boardOpenControls.classList.remove('active');
             }
+            relocatePokazAuxPanel(isBoardOpen && isWide);
         }
+
+        window.addEventListener('resize', () => {
+            if (typeof updateBoardOpenState === 'function') updateBoardOpenState();
+        });
 
         // Кнопки навигации по истории
         document.getElementById('history-back-btn').addEventListener('click', goBackInHistory);
