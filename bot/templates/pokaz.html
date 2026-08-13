@@ -2655,6 +2655,8 @@
                 border: 1px solid #3a3a3a;
                 border-radius: 14px;
                 box-sizing: border-box;
+                container-type: inline-size;
+                container-name: pokaz-tools;
             }
 
             /* Десктоп: доска слева, управление справа (таблица закрыта) */
@@ -3060,6 +3062,355 @@
             .container.pokaz-board-open .hints-table.active th {
                 font-size: 15px;
                 padding: 8px 10px;
+            }
+        }
+
+        /* ~1000–1300: доска и инструменты столбцом — панель инструментов на полную ширину */
+        @media (min-width: 1025px) and (max-width: 1299px) {
+            .pokaz-workspace,
+            .container.pokaz-board-open .pokaz-workspace {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+
+            .pokaz-main-stage,
+            .pokaz-side,
+            .container.pokaz-board-open .pokaz-main-stage,
+            .container.pokaz-board-open .pokaz-side {
+                flex: none;
+                width: 100%;
+                max-width: min(960px, 100%);
+                min-width: 0;
+            }
+
+            .pokaz-side,
+            .container.pokaz-board-open .pokaz-side {
+                margin-top: 0.25rem;
+            }
+
+            .pokaz-tools {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+
+        /* Планшет / узкий десктоп: тот же «карточный» блок инструментов */
+        @media (min-width: 900px) and (max-width: 1024px) {
+            .pokaz-tools {
+                width: min(960px, 100%);
+                max-width: min(960px, 100%);
+                margin: 1.5rem auto 0;
+                padding: 16px 18px 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                background: #232323;
+                border: 1px solid #3a3a3a;
+                border-radius: 14px;
+                box-sizing: border-box;
+                container-type: inline-size;
+                container-name: pokaz-tools;
+            }
+
+            .pokaz-tools .selectors-wrapper,
+            .pokaz-tools .controls-row,
+            .pokaz-tools .screenshot-controls,
+            .pokaz-tools .admin-comment-container,
+            .pokaz-tools #pokazScreenshotAdminContainer {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+            }
+
+            .pokaz-tools .selectors-wrapper {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(180px, 2fr) 56px;
+                align-items: end;
+                justify-items: stretch;
+                gap: 12px 12px;
+                padding-top: 0;
+                font-size: 15px;
+                overflow: visible;
+            }
+
+            .pokaz-tools .selectors-container {
+                display: contents;
+            }
+
+            .pokaz-tools .checker-selector {
+                grid-column: 1;
+                width: 100%;
+                gap: 6px;
+                font-size: 36px;
+            }
+
+            .pokaz-tools .bar-selector {
+                grid-column: 2;
+                width: 100%;
+                gap: 6px;
+                font-size: 36px;
+            }
+
+            .pokaz-tools .jb-wrap,
+            .pokaz-tools .match-panel {
+                grid-column: 3;
+                width: 100%;
+                gap: 6px;
+                font-size: 15px;
+            }
+
+            .pokaz-tools .game-type-right {
+                grid-column: 4;
+                width: 56px;
+                gap: 6px;
+                justify-self: end;
+                align-self: end;
+            }
+
+            .pokaz-tools .checker-label,
+            .pokaz-tools .bar-label,
+            .pokaz-tools .jb-title,
+            .pokaz-tools .match-header,
+            .pokaz-tools .cube-controls-labels label,
+            .pokaz-tools .turn-dice-labels label,
+            .pokaz-tools .game-type-right label {
+                font-size: 11px !important;
+                line-height: 1.2;
+                font-weight: 600;
+                color: #cfcfcf;
+                white-space: nowrap;
+            }
+
+            .pokaz-tools .checker-options,
+            .pokaz-tools .bar-options,
+            .pokaz-tools .jacobi-beaver-block,
+            .pokaz-tools .score-inputs,
+            .pokaz-tools .cube-controls-block,
+            .pokaz-tools .turn-dice-block {
+                min-height: 56px;
+                height: 56px;
+                box-sizing: border-box;
+                margin: 0;
+                padding: 6px 10px;
+                border: 2px solid #555;
+                border-style: double;
+                border-radius: 10px;
+                background-color: #3b3b3b;
+                box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
+                display: flex;
+                align-items: center;
+                justify-content: space-around;
+                gap: 8px;
+            }
+
+            .pokaz-tools .jacobi-beaver-block {
+                flex-direction: column;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .pokaz-tools .jb-row {
+                width: 100%;
+                justify-content: space-around;
+                gap: 6px;
+            }
+
+            .pokaz-tools .jb-section {
+                flex: 1 1 0;
+            }
+
+            .pokaz-tools #game-type-button {
+                width: 52px;
+                height: 52px;
+                margin-top: 0;
+                border-radius: 10px;
+            }
+
+            .pokaz-tools .controls-row {
+                display: grid;
+                grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+                align-items: end;
+                gap: 12px;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper,
+            .pokaz-tools .turn-dice-wrapper {
+                width: 100%;
+                gap: 6px;
+            }
+
+            .pokaz-tools .cube-controls-labels,
+            .pokaz-tools .turn-dice-labels {
+                display: flex;
+                gap: 6px;
+                justify-content: space-around;
+                width: 100%;
+            }
+
+            .pokaz-tools .cube-controls-labels label,
+            .pokaz-tools .turn-dice-labels label {
+                flex: 1 1 0;
+                text-align: center;
+                min-width: 0;
+            }
+
+            .pokaz-tools .action-buttons {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 8px;
+                height: 56px;
+            }
+
+            .pokaz-tools .action-buttons-col {
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .pokaz-tools .action-buttons button {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                min-height: 44px;
+                padding: 0;
+                border-radius: 10px;
+                margin: 0;
+            }
+
+            .pokaz-tools .action-buttons-col.right button {
+                width: 52px;
+                height: 52px;
+                min-width: 52px;
+                min-height: 52px;
+            }
+
+            .pokaz-tools .screenshot-controls {
+                justify-content: center;
+                gap: 12px;
+                padding: 10px 0 0;
+                margin: 0;
+                border-top: 1px solid #353535;
+            }
+
+            .pokaz-tools .admin-comment-container {
+                margin: 0;
+                padding: 10px 0 0;
+                border-top: 1px solid #353535;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .pokaz-tools #adminCommentBtn,
+            .pokaz-tools #openPokazPipCountCardEditorBtn,
+            .pokaz-tools #openPokazCardEditorBtn {
+                height: 38px;
+                padding: 0 12px !important;
+                margin: 0 !important;
+                font-size: 12px !important;
+                border-radius: 8px;
+            }
+        }
+
+        /* Узкая колонка инструментов (сайдбар): компактная сетка без наложений */
+        @container pokaz-tools (max-width: 580px) {
+            .selectors-wrapper {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 52px !important;
+                gap: 10px 10px !important;
+            }
+
+            .checker-selector {
+                grid-column: 1 !important;
+            }
+
+            .bar-selector {
+                grid-column: 2 !important;
+            }
+
+            .jb-wrap,
+            .match-panel {
+                grid-column: 1 / 3 !important;
+                grid-row: 2 !important;
+            }
+
+            .game-type-right {
+                grid-column: 3 !important;
+                grid-row: 1 / 3 !important;
+                width: 52px !important;
+                align-self: center !important;
+                justify-self: end !important;
+            }
+
+            .checker-label,
+            .bar-label,
+            .jb-title,
+            .match-header,
+            .cube-controls-labels label,
+            .turn-dice-labels label,
+            .game-type-right label {
+                font-size: 10px !important;
+                white-space: normal !important;
+            }
+
+            .controls-row {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            .action-buttons {
+                justify-content: center !important;
+                height: auto !important;
+                padding-top: 2px;
+            }
+
+            .checker-options,
+            .bar-options,
+            .jacobi-beaver-block,
+            .score-inputs,
+            .cube-controls-block,
+            .turn-dice-block {
+                height: auto !important;
+                min-height: 52px !important;
+                padding: 6px 8px !important;
+            }
+
+            .admin-comment-container {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+
+            #adminCommentBtn,
+            #openPokazPipCountCardEditorBtn,
+            #openPokazCardEditorBtn {
+                width: 100% !important;
+                justify-content: center;
+            }
+
+            .admin-screenshot-font-scale {
+                flex-wrap: wrap;
+                justify-content: center;
+                text-align: center;
+            }
+        }
+
+        @container pokaz-tools (max-width: 420px) {
+            .selectors-wrapper {
+                grid-template-columns: 1fr 1fr !important;
+            }
+
+            .game-type-right {
+                grid-column: 2 !important;
+                grid-row: 3 !important;
+                justify-self: end !important;
+                align-self: end !important;
+            }
+
+            .jb-wrap,
+            .match-panel {
+                grid-column: 1 / -1 !important;
+                grid-row: 2 !important;
             }
         }
 
