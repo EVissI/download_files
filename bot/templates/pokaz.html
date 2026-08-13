@@ -3139,7 +3139,7 @@
         }
 
         /* Узкий десктоп / широкий планшет: чуть плотнее двухколоночный layout */
-        @media (min-width: 900px) and (max-width: 1100px) {
+        @media (min-width: 900px) and (max-width: 1250px) {
             .container {
                 padding: 0.75rem 1rem 1.25rem;
             }
@@ -3170,6 +3170,55 @@
             .pokaz-side .pokaz-tools {
                 padding: 14px 14px 12px;
                 gap: 10px;
+            }
+
+            /* ~1000px: при Кроуфорде Куб / Чей куб? уходят на второй ряд */
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels,
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-block {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                grid-template-areas:
+                    "shown crawford"
+                    "value owner";
+                gap: 8px 12px;
+                align-items: center;
+                justify-items: center;
+                height: auto;
+                min-height: 0;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-shown-select"],
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-shown-selector {
+                grid-area: shown;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-value-select"],
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-value-options {
+                grid-area: value;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-owner-select-btn"],
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-owner-selector {
+                grid-area: owner;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford #crawford-label,
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .crawford-checkbox-wrapper {
+                grid-area: crawford;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-control-section {
+                width: 100%;
+                flex: none;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label {
+                width: 100%;
+                flex: none;
+            }
+
+            .pokaz-tools .controls-row:has(.has-crawford) {
+                align-items: start;
             }
         }
 
@@ -3626,6 +3675,51 @@
             .jb-row {
                 justify-content: space-evenly !important;
                 gap: 4px !important;
+            }
+
+            /* При Кроуфорде: Куб и Чей куб? — вторым рядом (на ~1000px в правой панели) */
+            .cube-controls-block-wrapper.has-crawford .cube-controls-labels,
+            .cube-controls-block-wrapper.has-crawford .cube-controls-block {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+                grid-template-areas:
+                    "shown crawford"
+                    "value owner" !important;
+                gap: 8px 12px !important;
+                align-items: center !important;
+                justify-items: center !important;
+                height: auto !important;
+                min-height: 0 !important;
+            }
+
+            .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-shown-select"],
+            .cube-controls-block-wrapper.has-crawford .cube-shown-selector {
+                grid-area: shown !important;
+            }
+
+            .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-value-select"],
+            .cube-controls-block-wrapper.has-crawford .cube-value-options {
+                grid-area: value !important;
+            }
+
+            .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-owner-select-btn"],
+            .cube-controls-block-wrapper.has-crawford .cube-owner-selector {
+                grid-area: owner !important;
+            }
+
+            .cube-controls-block-wrapper.has-crawford #crawford-label,
+            .cube-controls-block-wrapper.has-crawford .crawford-checkbox-wrapper {
+                grid-area: crawford !important;
+            }
+
+            .cube-controls-block-wrapper.has-crawford .cube-control-section {
+                width: 100% !important;
+                flex: none !important;
+            }
+
+            .cube-controls-block-wrapper.has-crawford .cube-controls-labels label {
+                width: 100% !important;
+                flex: none !important;
             }
         }
 
@@ -7025,6 +7119,9 @@
 
                     // Update game type label
                     updateGameTypeLabel();
+                    if (typeof setCrawfordControlsVisible === 'function') {
+                        setCrawfordControlsVisible(true);
+                    }
                 }
             } else {
                 // Switch to money game mode
@@ -7040,6 +7137,9 @@
 
                     // Update game type label
                     updateGameTypeLabel();
+                    if (typeof setCrawfordControlsVisible === 'function') {
+                        setCrawfordControlsVisible(false);
+                    }
                 }
             }
 
@@ -8175,6 +8275,9 @@
             const jbWrap = document.querySelector('.jb-wrap');
             if (matchPanel) matchPanel.style.display = 'none';
             if (jbWrap) jbWrap.style.display = 'flex';
+            if (typeof setCrawfordControlsVisible === 'function') {
+                setCrawfordControlsVisible(false);
+            }
 
             const hintsTableContainer = document.querySelector('.hints-table');
             const hintsTable = document.getElementById('hintsTable');
@@ -8397,6 +8500,15 @@
         const crawfordCheckbox = document.getElementById('crawford-checkbox');
         const crawfordLabel = document.getElementById('crawford-label');
         const crawfordWrapper = document.querySelector('.crawford-checkbox-wrapper');
+        const cubeControlsBlockWrapper = document.querySelector('.cube-controls-block-wrapper');
+
+        function setCrawfordControlsVisible(visible) {
+            if (crawfordLabel) crawfordLabel.style.display = visible ? '' : 'none';
+            if (crawfordWrapper) crawfordWrapper.style.display = visible ? 'flex' : 'none';
+            if (cubeControlsBlockWrapper) {
+                cubeControlsBlockWrapper.classList.toggle('has-crawford', !!visible);
+            }
+        }
 
         if (crawfordCheckbox) {
             crawfordCheckbox.addEventListener('change', () => {
@@ -8624,8 +8736,7 @@
                 updateGameTypeLabel();
 
                 // Hide Crawford checkbox
-                if (crawfordLabel) crawfordLabel.style.display = 'none';
-                if (crawfordWrapper) crawfordWrapper.style.display = 'none';
+                setCrawfordControlsVisible(false);
                 if (crawfordCheckbox) {
                     crawfordCheckbox.checked = false;
                     crawfordCheckbox.dispatchEvent(new Event('change'));
@@ -8645,8 +8756,7 @@
                 updateGameTypeLabel();
 
                 // Show Crawford checkbox
-                if (crawfordLabel) crawfordLabel.style.display = '';
-                if (crawfordWrapper) crawfordWrapper.style.display = 'flex';
+                setCrawfordControlsVisible(true);
 
                 // Filter cube options based on match max cube
                 filterCubeOptions();
