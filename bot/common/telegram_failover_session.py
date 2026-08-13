@@ -22,12 +22,17 @@ from bot.common.service.telegram_proxy_service import (
     record_proxy_connection_success_sync,
     resolve_session_proxy_sync,
 )
-from bot.common.service.telegram_proxy_notification_service import (
-    sync_telegram_proxy_availability_notification,
-)
 from bot.common.telegram_proxy_config import clear_telegram_proxy_cache
 
 DB_SYNC_INTERVAL_SECONDS = 5.0
+
+
+async def _notify_proxy_availability_sync() -> None:
+    from bot.common.service.telegram_proxy_notification_service import (
+        sync_telegram_proxy_availability_notification,
+    )
+
+    await asyncio.to_thread(sync_telegram_proxy_availability_notification)
 
 
 class NoActiveTelegramProxyError(RuntimeError):
@@ -67,7 +72,7 @@ async def run_telegram_proxy_db_sync_loop(
             await session.sync_from_db()
         except NoActiveTelegramProxyError:
             logger.warning("Telegram proxy DB poll: no active proxies in DB")
-            await asyncio.to_thread(sync_telegram_proxy_availability_notification)
+            await _notify_proxy_availability_sync()
         except Exception as exc:
             logger.warning("Telegram proxy DB poll failed: {}", exc)
         await asyncio.sleep(interval)
@@ -170,13 +175,13 @@ class FailoverAiohttpSession(AiohttpSession):
                 self._active_proxy_url = None
                 if changed and interrupt_inflight:
                     await self.close()
-            await asyncio.to_thread(sync_telegram_proxy_availability_notification)
+            await _notify_proxy_availability_sync()
             raise NoActiveTelegramProxyError(
                 "No active Telegram proxies configured in DB"
             )
 
         proxy_id, proxy_url, proxy_name = resolved
-        await asyncio.to_thread(sync_telegram_proxy_availability_notification)
+        await _notify_proxy_availability_sync()
         async with self._state_lock:
             previous_id = self._active_proxy_id
             previous_url = self._active_proxy_url

@@ -10,10 +10,15 @@ from sqlalchemy import select
 
 from bot.common.service.email_service import email_service
 from bot.common.service.telegram_proxy_service import fetch_usable_proxies_sync
-from bot.db.redis import sync_redis_client
 
 ALL_PROXIES_DOWN_REDIS_KEY = "telegram_proxies:all_down_notified"
 MSK = ZoneInfo("Europe/Moscow")
+
+
+def _sync_redis():
+    from bot.db.redis import sync_redis_client
+
+    return sync_redis_client
 
 
 def fetch_admin_notification_email_sync() -> str | None:
@@ -64,13 +69,14 @@ def sync_telegram_proxy_availability_notification() -> None:
     Если все прокси недоступны — один раз отправляет email админу.
     """
     usable = fetch_usable_proxies_sync()
+    redis = _sync_redis()
     if usable:
-        if sync_redis_client.get(ALL_PROXIES_DOWN_REDIS_KEY):
-            sync_redis_client.delete(ALL_PROXIES_DOWN_REDIS_KEY)
+        if redis.get(ALL_PROXIES_DOWN_REDIS_KEY):
+            redis.delete(ALL_PROXIES_DOWN_REDIS_KEY)
             logger.info("Telegram proxies recovered, all-down notification flag cleared")
         return
 
-    if sync_redis_client.get(ALL_PROXIES_DOWN_REDIS_KEY):
+    if redis.get(ALL_PROXIES_DOWN_REDIS_KEY):
         return
 
     admin_email = fetch_admin_notification_email_sync()
@@ -93,7 +99,7 @@ def sync_telegram_proxy_availability_notification() -> None:
         body_html,
         body_text=body_text,
     ):
-        sync_redis_client.set(ALL_PROXIES_DOWN_REDIS_KEY, "1")
+        redis.set(ALL_PROXIES_DOWN_REDIS_KEY, "1")
         logger.error(
             "All Telegram proxies are down — notification email sent to {}",
             admin_email,
