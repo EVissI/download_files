@@ -59,11 +59,13 @@ async def grant_match_analyses_async(
     *,
     user_id: int,
     quantity: int | None = None,
+    ready_only: bool = True,
     commit: bool = False,
 ) -> int:
     """
     Async-вариант выдачи анализов (для promo / schedule / TG-команд).
-    quantity=None — выдать все доступные ready-анализы, которых ещё нет у пользователя.
+    quantity=None — выдать все подходящие анализы, которых ещё нет у пользователя.
+    ready_only=True — только is_ready; False — все анализы.
     Не коммитит по умолчанию.
     """
     if quantity is not None:
@@ -73,11 +75,10 @@ async def grant_match_analyses_async(
     else:
         cards_quantity = None
 
-    all_ids_result = await session.execute(
-        select(MatchAnalysis.id)
-        .where(MatchAnalysis.is_ready.is_(True))
-        .order_by(MatchAnalysis.id.asc())
-    )
+    query = select(MatchAnalysis.id).order_by(MatchAnalysis.id.asc())
+    if ready_only:
+        query = query.where(MatchAnalysis.is_ready.is_(True))
+    all_ids_result = await session.execute(query)
     all_ids = [
         int(mid) for mid in all_ids_result.scalars().all() if mid is not None
     ]

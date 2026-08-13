@@ -71,7 +71,7 @@ async def handle_match_analysis_command(message: Message, user_info):
 )
 async def handle_grant_all_ready_match_analyses(message: Message, user_info):
     """
-    Админ: выдать себе все ready (is_ready) анализы матча, которых ещё нет.
+    Админ: выдать себе все анализы матча (без фильтра is_ready), которых ещё нет.
     Команда: /all_analyses
     """
     user_id = int(user_info.id) if user_info else int(message.from_user.id)
@@ -81,21 +81,16 @@ async def handle_grant_all_ready_match_analyses(message: Message, user_info):
 
     try:
         async with async_session_maker() as session:
-            any_ready = await session.scalar(
-                select(MatchAnalysis.id)
-                .where(MatchAnalysis.is_ready.is_(True))
-                .limit(1)
-            )
-            if any_ready is None:
-                await message.answer(
-                    "Нет анализов с флагом «готов к выдаче» (is_ready)."
-                )
+            any_analysis = await session.scalar(select(MatchAnalysis.id).limit(1))
+            if any_analysis is None:
+                await message.answer("В системе пока нет сохранённых анализов матча.")
                 return
 
             issued = await grant_match_analyses_async(
                 session,
                 user_id=user_id,
                 quantity=None,
+                ready_only=False,
                 commit=True,
             )
     except Exception as e:
@@ -105,7 +100,7 @@ async def handle_grant_all_ready_match_analyses(message: Message, user_info):
 
     if issued <= 0:
         await message.answer(
-            "У вас уже есть все доступные готовые анализы матча.",
+            "У вас уже есть все анализы матча.",
             reply_markup=get_match_analysis_cabinet_kb(),
         )
         return
