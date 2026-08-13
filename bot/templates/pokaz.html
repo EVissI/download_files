@@ -991,6 +991,28 @@
             font-size: 1.6em;
         }
 
+        .jb-labels {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            justify-content: space-around;
+            width: 100%;
+            gap: 0.35rem;
+            box-sizing: border-box;
+            margin-bottom: 0.15rem;
+        }
+
+        .jb-label {
+            flex: 1 1 0;
+            min-width: 0;
+            text-align: center;
+            color: #cfcfcf;
+            font-size: clamp(0.55rem, 1.1vw, 0.72rem);
+            font-weight: 600;
+            line-height: 1.15;
+            white-space: nowrap;
+        }
+
         .jacobi-beaver-block {
             display: flex;
             flex-direction: column;
@@ -1002,6 +1024,7 @@
             box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
             width: 100%;
             box-sizing: border-box;
+            position: relative;
         }
 
         .jb-row {
@@ -2647,7 +2670,7 @@
                 width: min(960px, 100%);
                 max-width: min(960px, 100%);
                 margin: 2.5rem auto 0;
-                padding: 18px 20px 16px;
+                padding: 22px 20px 16px;
                 display: flex;
                 flex-direction: column;
                 gap: 14px;
@@ -2657,6 +2680,7 @@
                 box-sizing: border-box;
                 container-type: inline-size;
                 container-name: pokaz-tools;
+                overflow: visible;
             }
 
             /* Десктоп: доска слева, управление справа (таблица закрыта) */
@@ -2719,11 +2743,11 @@
 
             .pokaz-tools .selectors-wrapper {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 2.1fr) 64px;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) 56px;
                 align-items: end;
                 justify-items: stretch;
-                gap: 14px 16px;
-                padding-top: 0;
+                gap: 14px 12px;
+                padding-top: 10px;
                 font-size: 16px;
                 overflow: visible;
             }
@@ -2736,7 +2760,7 @@
             .pokaz-tools .bar-selector {
                 font-size: 40px;
                 width: 100%;
-                gap: 8px;
+                gap: 0;
             }
 
             .pokaz-tools .checker-selector {
@@ -2752,18 +2776,19 @@
                 grid-column: 3;
                 font-size: 16px;
                 width: 100%;
-                gap: 8px;
+                gap: 0;
             }
 
             .pokaz-tools .checker-label,
             .pokaz-tools .bar-label,
             .pokaz-tools .jb-title,
+            .pokaz-tools .jb-label,
             .pokaz-tools .match-header,
             .pokaz-tools .cube-controls-labels label,
             .pokaz-tools .turn-dice-labels label,
             .pokaz-tools .game-type-right label {
-                font-size: 12px !important;
-                line-height: 1.2;
+                font-size: 11px !important;
+                line-height: 1.15;
                 font-weight: 600;
                 color: #cfcfcf;
                 letter-spacing: 0.01em;
@@ -2771,46 +2796,116 @@
             }
 
             .pokaz-tools .jb-title {
-                font-size: 12px;
+                display: none;
+            }
+
+            /* Плавающие лейблы поверх верхнего края блоков */
+            .pokaz-tools .checker-selector,
+            .pokaz-tools .bar-selector,
+            .pokaz-tools .jacobi-beaver-block,
+            .pokaz-tools .match-panel,
+            .pokaz-tools .cube-controls-block-wrapper,
+            .pokaz-tools .turn-dice-wrapper,
+            .pokaz-tools .game-type-right {
+                position: relative;
+            }
+
+            .pokaz-tools .checker-label,
+            .pokaz-tools .bar-label,
+            .pokaz-tools .jb-labels,
+            .pokaz-tools .match-panel-headers,
+            .pokaz-tools .cube-controls-labels,
+            .pokaz-tools .turn-dice-labels,
+            .pokaz-tools .game-type-right label {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                transform: translateY(-50%);
+                z-index: 2;
+                margin: 0;
+                pointer-events: none;
+            }
+
+            .pokaz-tools .jb-labels {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+                padding: 0 8px;
+                box-sizing: border-box;
+            }
+
+            .pokaz-tools .jb-label {
+                flex: 1 1 0;
+                min-width: 0;
+                text-align: center;
+                background: #232323;
+                padding: 0 2px;
+                border-radius: 3px;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .pokaz-tools .match-panel-headers {
-                padding-left: 0;
-                gap: 8px;
+                display: flex;
+                gap: 4px;
                 justify-content: space-around;
+                padding: 0 6px;
+                box-sizing: border-box;
+            }
+
+            .pokaz-tools .checker-label,
+            .pokaz-tools .bar-label,
+            .pokaz-tools .game-type-right label {
+                text-align: center;
+                width: max-content;
+                max-width: 100%;
+                left: 50%;
+                right: auto;
+                transform: translate(-50%, -50%);
+                background: #232323;
+                padding: 0 4px;
+                border-radius: 3px;
+            }
+
+            .pokaz-tools .cube-controls-labels label,
+            .pokaz-tools .turn-dice-labels label,
+            .pokaz-tools .match-header {
+                background: #232323;
+                padding: 0 3px;
+                border-radius: 3px;
             }
 
             .pokaz-tools .game-type-right {
                 grid-column: 4;
-                width: 64px;
-                gap: 8px;
+                width: 56px;
+                gap: 0;
                 justify-self: end;
                 align-self: end;
             }
 
             .pokaz-tools #game-type-button {
-                width: 56px;
-                height: 56px;
+                width: 52px;
+                height: 52px;
                 margin-top: 0;
                 border-radius: 10px;
             }
 
             .pokaz-tools #game-type-button i {
-                font-size: 22px;
+                font-size: 20px;
             }
 
-            /* Единый вид «карточек» контролов */
             .pokaz-tools .checker-options,
             .pokaz-tools .bar-options,
             .pokaz-tools .jacobi-beaver-block,
             .pokaz-tools .score-inputs,
             .pokaz-tools .cube-controls-block,
             .pokaz-tools .turn-dice-block {
-                min-height: 64px;
-                height: 64px;
+                min-height: 52px;
+                height: 52px;
                 box-sizing: border-box;
                 margin: 0;
-                padding: 8px 12px;
+                padding: 8px 10px;
                 border: 2px solid #555;
                 border-style: double;
                 border-radius: 10px;
@@ -2819,29 +2914,43 @@
                 display: flex;
                 align-items: center;
                 justify-content: space-around;
-                gap: 10px;
+                gap: 8px;
             }
 
             .pokaz-tools .jacobi-beaver-block {
                 flex-direction: column;
                 width: 100%;
                 justify-content: center;
+                height: 52px;
+                min-height: 52px;
+                gap: 0;
+                padding-top: 8px;
+                padding-bottom: 8px;
             }
 
             .pokaz-tools .jb-row {
                 width: 100%;
-                justify-content: space-around;
-                gap: 8px;
+                justify-content: space-evenly;
+                gap: 6px;
             }
 
             .pokaz-tools .jb-section {
                 flex: 1 1 0;
+                min-width: 0;
             }
 
             .pokaz-tools .score-inputs {
                 width: 100%;
                 gap: 12px;
                 padding: 8px 10px;
+            }
+
+            .pokaz-tools .match-panel {
+                gap: 0;
+            }
+
+            .pokaz-tools .jb-wrap {
+                gap: 0;
             }
 
             .pokaz-tools .toggle-btn {
@@ -2864,12 +2973,13 @@
                 align-items: end;
                 gap: 14px 16px;
                 flex-wrap: nowrap;
+                padding-top: 10px;
             }
 
             .pokaz-tools .cube-controls-block-wrapper,
             .pokaz-tools .turn-dice-wrapper {
                 width: 100%;
-                gap: 8px;
+                gap: 0;
             }
 
             .pokaz-tools .cube-controls-labels,
@@ -2878,6 +2988,8 @@
                 gap: 8px;
                 justify-content: space-around;
                 width: 100%;
+                padding: 0 6px;
+                box-sizing: border-box;
             }
 
             .pokaz-tools .cube-controls-labels label,
@@ -2924,7 +3036,7 @@
                 align-items: center;
                 justify-content: flex-end;
                 gap: 10px;
-                height: 64px;
+                height: 52px;
             }
 
             .pokaz-tools .action-buttons-col {
@@ -3101,7 +3213,7 @@
                 width: min(960px, 100%);
                 max-width: min(960px, 100%);
                 margin: 1.5rem auto 0;
-                padding: 16px 18px 14px;
+                padding: 20px 18px 14px;
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
@@ -3111,6 +3223,7 @@
                 box-sizing: border-box;
                 container-type: inline-size;
                 container-name: pokaz-tools;
+                overflow: visible;
             }
 
             .pokaz-tools .selectors-wrapper,
@@ -3129,7 +3242,7 @@
                 align-items: end;
                 justify-items: stretch;
                 gap: 12px 12px;
-                padding-top: 0;
+                padding-top: 10px;
                 font-size: 15px;
                 overflow: visible;
             }
@@ -3141,14 +3254,14 @@
             .pokaz-tools .checker-selector {
                 grid-column: 1;
                 width: 100%;
-                gap: 6px;
+                gap: 0;
                 font-size: 36px;
             }
 
             .pokaz-tools .bar-selector {
                 grid-column: 2;
                 width: 100%;
-                gap: 6px;
+                gap: 0;
                 font-size: 36px;
             }
 
@@ -3156,14 +3269,14 @@
             .pokaz-tools .match-panel {
                 grid-column: 3;
                 width: 100%;
-                gap: 6px;
+                gap: 0;
                 font-size: 15px;
             }
 
             .pokaz-tools .game-type-right {
                 grid-column: 4;
                 width: 56px;
-                gap: 6px;
+                gap: 0;
                 justify-self: end;
                 align-self: end;
             }
@@ -3171,15 +3284,96 @@
             .pokaz-tools .checker-label,
             .pokaz-tools .bar-label,
             .pokaz-tools .jb-title,
+            .pokaz-tools .jb-label,
             .pokaz-tools .match-header,
             .pokaz-tools .cube-controls-labels label,
             .pokaz-tools .turn-dice-labels label,
             .pokaz-tools .game-type-right label {
                 font-size: 11px !important;
-                line-height: 1.2;
+                line-height: 1.15;
                 font-weight: 600;
                 color: #cfcfcf;
                 white-space: nowrap;
+            }
+
+            .pokaz-tools .jb-title {
+                display: none;
+            }
+
+            .pokaz-tools .checker-selector,
+            .pokaz-tools .bar-selector,
+            .pokaz-tools .jacobi-beaver-block,
+            .pokaz-tools .match-panel,
+            .pokaz-tools .cube-controls-block-wrapper,
+            .pokaz-tools .turn-dice-wrapper,
+            .pokaz-tools .game-type-right {
+                position: relative;
+            }
+
+            .pokaz-tools .checker-label,
+            .pokaz-tools .bar-label,
+            .pokaz-tools .jb-labels,
+            .pokaz-tools .match-panel-headers,
+            .pokaz-tools .cube-controls-labels,
+            .pokaz-tools .turn-dice-labels,
+            .pokaz-tools .game-type-right label {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                transform: translateY(-50%);
+                z-index: 2;
+                margin: 0;
+                pointer-events: none;
+            }
+
+            .pokaz-tools .jb-labels {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+                padding: 0 8px;
+                box-sizing: border-box;
+            }
+
+            .pokaz-tools .jb-label {
+                flex: 1 1 0;
+                min-width: 0;
+                text-align: center;
+                background: #232323;
+                padding: 0 2px;
+                border-radius: 3px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .pokaz-tools .match-panel-headers {
+                display: flex;
+                gap: 4px;
+                justify-content: space-around;
+                padding: 0 6px;
+                box-sizing: border-box;
+            }
+
+            .pokaz-tools .checker-label,
+            .pokaz-tools .bar-label,
+            .pokaz-tools .game-type-right label {
+                text-align: center;
+                width: max-content;
+                max-width: 100%;
+                left: 50%;
+                right: auto;
+                transform: translate(-50%, -50%);
+                background: #232323;
+                padding: 0 4px;
+                border-radius: 3px;
+            }
+
+            .pokaz-tools .cube-controls-labels label,
+            .pokaz-tools .turn-dice-labels label,
+            .pokaz-tools .match-header {
+                background: #232323;
+                padding: 0 3px;
+                border-radius: 3px;
             }
 
             .pokaz-tools .checker-options,
@@ -3188,8 +3382,8 @@
             .pokaz-tools .score-inputs,
             .pokaz-tools .cube-controls-block,
             .pokaz-tools .turn-dice-block {
-                min-height: 56px;
-                height: 56px;
+                min-height: 52px;
+                height: 52px;
                 box-sizing: border-box;
                 margin: 0;
                 padding: 6px 10px;
@@ -3208,6 +3402,9 @@
                 flex-direction: column;
                 width: 100%;
                 justify-content: center;
+                height: 52px;
+                min-height: 52px;
+                gap: 0;
             }
 
             .pokaz-tools .jb-row {
@@ -3218,6 +3415,7 @@
 
             .pokaz-tools .jb-section {
                 flex: 1 1 0;
+                min-width: 0;
             }
 
             .pokaz-tools #game-type-button {
@@ -3232,12 +3430,13 @@
                 grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
                 align-items: end;
                 gap: 12px;
+                padding-top: 10px;
             }
 
             .pokaz-tools .cube-controls-block-wrapper,
             .pokaz-tools .turn-dice-wrapper {
                 width: 100%;
-                gap: 6px;
+                gap: 0;
             }
 
             .pokaz-tools .cube-controls-labels,
@@ -3246,6 +3445,8 @@
                 gap: 6px;
                 justify-content: space-around;
                 width: 100%;
+                padding: 0 6px;
+                box-sizing: border-box;
             }
 
             .pokaz-tools .cube-controls-labels label,
@@ -3261,7 +3462,7 @@
                 align-items: center;
                 justify-content: flex-end;
                 gap: 8px;
-                height: 56px;
+                height: 52px;
             }
 
             .pokaz-tools .action-buttons-col {
@@ -3346,12 +3547,13 @@
             .checker-label,
             .bar-label,
             .jb-title,
+            .jb-label,
             .match-header,
             .cube-controls-labels label,
             .turn-dice-labels label,
             .game-type-right label {
                 font-size: 10px !important;
-                white-space: normal !important;
+                white-space: nowrap !important;
             }
 
             .controls-row {
@@ -3699,8 +3901,12 @@
                 </div>
             </div>
             <div class="jb-wrap">
-                <div class="jb-title" data-i18n="jacobi_beaver_max">Якоби Бивер Макс куб</div>
                 <div class="jacobi-beaver-block">
+                    <div class="jb-labels" aria-hidden="false">
+                        <span class="jb-label" data-i18n="jacobi">Якоби</span>
+                        <span class="jb-label" data-i18n="beaver">Бивер</span>
+                        <span class="jb-label" data-i18n="max_cube_short">Макс куб</span>
+                    </div>
                     <div class="jb-row">
                         <div class="jb-section">
                             <button type="button" class="toggle-btn on" data-target="jacobi-select"

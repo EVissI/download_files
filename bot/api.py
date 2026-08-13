@@ -226,6 +226,9 @@ def _get_pokaz_translations(lang: str) -> dict:
         "jacobi_beaver_max": t(
             "pokaz-page-jacobi-beaver-max", "Jacoby Beaver Max cube"
         ),
+        "jacobi": t("pokaz-page-jacobi", "Jacoby"),
+        "beaver": t("pokaz-page-beaver", "Beaver"),
+        "max_cube_short": t("pokaz-page-max-cube-short", "Max cube"),
         "yes": t("pokaz-page-yes", "Yes"),
         "no": t("pokaz-page-no", "No"),
         "game_type": t("pokaz-page-game-type", "Game type"),
