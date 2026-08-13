@@ -460,8 +460,10 @@
         .match-game-label {
             display: block;
             text-align: center;
-            font-weight: bold;
             margin-bottom: 0.25rem;
+            font: inherit;
+            font-weight: inherit;
+            color: inherit;
         }
 
         .match-info-row {
@@ -1559,6 +1561,10 @@
             .match-info-row .match-score {
                 flex: 0 1 auto;
                 text-align: center;
+                font-size: 0.95rem;
+            }
+
+            .match-game-label {
                 font-size: 0.95rem;
             }
 
