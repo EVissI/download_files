@@ -469,30 +469,42 @@
         }
 
         .match-info-row {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             align-items: center;
-            gap: 0.6rem;
+            column-gap: 0.6rem;
             width: 100%;
             box-sizing: border-box;
         }
 
-        .match-info-row .match-length,
-        .match-info-row .match-score {
-            flex: 0 1 auto;
-            min-width: 0;
-            white-space: nowrap;
-        }
-
         .match-info-row .match-length {
-            text-align: left;
-        }
-
-        .match-info-row .match-score {
-            text-align: center;
+            justify-self: end;
+            text-align: right;
+            white-space: nowrap;
+            min-width: 0;
         }
 
         .match-info-row .game-select {
+            justify-self: center;
+            grid-column: 2;
+        }
+
+        .match-info-row .match-info-trailing {
+            grid-column: 3;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .match-info-row .match-score {
+            white-space: nowrap;
+            text-align: left;
+        }
+
+        .match-info-row .right-group {
+            margin-left: auto;
             flex: 0 0 auto;
         }
 
@@ -1607,17 +1619,14 @@
                 aspect-ratio: 1 / 1;
             }
 
-            /* Матч: «Матч до» | выбор игры | «Счет» в одну строку */
+            /* Матч: выбор игры по центру, слева/справа лейблы, пипсы справа */
             .match-info-row {
-                justify-content: center;
-                gap: 0.75rem;
                 margin: 0.25rem 0 0;
+                column-gap: 0.5rem;
             }
 
             .match-info-row .match-length,
             .match-info-row .match-score {
-                flex: 0 1 auto;
-                text-align: center;
                 font-size: 0.95rem;
             }
 
@@ -2246,12 +2255,14 @@
                 '<div class="match-info-row">' +
                 `<span class="match-length">Матч до ${matchLength}</span>` +
                 buildGameSelectHtml(currentGameNum) +
+                '<div class="match-info-trailing">' +
                 `<span class="match-score">Счет: ${gameRedScore} - ${gameBlackScore}</span>` +
                 '<div class="right-group">' +
                 `<input type="checkbox" id="hideInfoCheckbox"${hideChecked ? ' checked' : ''}>` +
                 `<div id="black-pips" class="${pipsClass}"` +
                 (pipsDisplay ? ` style="display: ${pipsDisplay}"` : '') +
                 `>${pipsText}</div>` +
+                '</div>' +
                 '</div>' +
                 '</div>';
 
