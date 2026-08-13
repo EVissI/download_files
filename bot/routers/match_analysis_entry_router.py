@@ -120,5 +120,5 @@ async def handle_grant_all_ready_match_analyses(message: Message, user_info):
     UserInfo(),
 )
 async def handle_match_analysis_cabinet_button(message: Message, user_info):
-    """Кнопка «Анализ матча» в общем ряду с «Карточки» и «Подсчёт пипсов»."""
+    """Кнопка «Анализ матча» в общем пуле (после «Карточки», перед «Подсчёт пипсов»)."""
     await _send_match_analysis_cabinet_entry(message, user_info)

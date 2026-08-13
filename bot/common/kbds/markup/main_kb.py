@@ -42,12 +42,13 @@ class MainKeyboard:
             for text in MainKeyboard.get_admin_kb_text(i18n).values():
                 kb.add(KeyboardButton(text=text))
 
-        # Ряды: пары → «Карточки | Анализ матча | Подсчёт пипсов» → Профиль;
-        # у админа ниже — «Админпанель» и «Веб-админка» по одной на строку.
+        # Все пользовательские кнопки парами:
+        # «Карточки | Анализ матча», затем «Подсчёт пипсов | Профиль»;
+        # у админа ниже — «Админпанель | Веб-админка».
         # Важно: web_app на ReplyKeyboard не передаёт initData (ограничение Telegram),
         # поэтому кабинет/веб-админка — текстовые кнопки → дальше inline WebApp.
-        row_sizes: list[int] = [2, 2, 3, 1]
+        row_sizes: list[int] = [2, 2, 2, 2]
         if is_admin:
-            row_sizes.extend([1, 1])
+            row_sizes.append(2)
         kb.adjust(*row_sizes)
         return kb.as_markup(resize_keyboard=True)

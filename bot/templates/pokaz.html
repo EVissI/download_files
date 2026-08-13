@@ -2659,8 +2659,8 @@
             }
         }
 
-        /* Десктоп: доска слева, инструменты справа */
-        @media (min-width: 1001px) {
+        /* Десктоп / широкий планшет: доска слева, инструменты справа */
+        @media (min-width: 900px) {
             .container {
                 max-width: 1400px;
                 padding: 1rem 1.5rem 1.5rem;
@@ -3138,16 +3138,92 @@
             }
         }
 
-        /* Планшет: карточный блок инструментов (до перехода в ряд доска|инструменты) */
-        @media (min-width: 900px) and (max-width: 1000px) {
+        /* Узкий десктоп / широкий планшет: чуть плотнее двухколоночный layout */
+        @media (min-width: 900px) and (max-width: 1100px) {
+            .container {
+                padding: 0.75rem 1rem 1.25rem;
+            }
+
+            .pokaz-workspace,
+            .container.pokaz-board-open .pokaz-workspace {
+                gap: 18px;
+            }
+
+            .pokaz-main-stage,
+            .container.pokaz-board-open .pokaz-main-stage {
+                max-width: min(560px, calc(50% - 9px));
+            }
+
+            .pokaz-side,
+            .container.pokaz-board-open .pokaz-side {
+                min-width: 280px;
+                max-width: min(560px, calc(50% - 9px));
+                margin-top: 1rem;
+            }
+
+            .pokaz-main-stage .board-wrapper,
+            .container.pokaz-board-open .board-wrapper {
+                margin-top: 1rem;
+                --board-ui-scale: 0.92;
+            }
+
+            .pokaz-side .pokaz-tools {
+                padding: 14px 14px 12px;
+                gap: 10px;
+            }
+        }
+
+        /* Планшет (портрет / узкий): компактная колонка, доска не на всю ширину */
+        @media (min-width: 601px) and (max-width: 899px) {
+            .container {
+                max-width: 640px;
+                padding: 0.85rem 1.1rem 1.35rem;
+                box-sizing: border-box;
+            }
+
+            .mode-toggle-container,
+            .selectors-wrapper,
+            .controls-row,
+            .board-open-controls,
+            .turn-label,
+            .hints-table,
+            .screenshot-controls,
+            .admin-comment-container,
             .pokaz-tools {
-                width: min(960px, 100%);
-                max-width: min(960px, 100%);
-                margin: 1.5rem auto 0;
-                padding: 16px 18px 14px;
+                max-width: 100%;
+            }
+
+            .pokaz-main-stage {
+                width: 100%;
+                max-width: 100%;
+                align-items: center;
+            }
+
+            .board-wrapper {
+                width: min(480px, 92%);
+                max-width: min(480px, 92%);
+                margin-top: 0.85rem;
+                margin-left: auto;
+                margin-right: auto;
+                --board-ui-scale: 0.88;
+                padding-bottom: calc(52px * var(--board-ui-scale) + 12px);
+            }
+
+            .pokaz-side {
+                width: 100%;
+                max-width: 100%;
+                margin-top: 0.35rem;
+                gap: 10px;
+            }
+
+            .pokaz-tools {
+                width: 100%;
+                max-width: 100%;
+                margin: 0.85rem auto 0;
+                padding: 14px 14px 12px;
                 display: flex;
                 flex-direction: column;
-                gap: 12px;
+                gap: 10px;
                 background: #232323;
                 border: 1px solid #3a3a3a;
                 border-radius: 14px;
@@ -3169,12 +3245,12 @@
 
             .pokaz-tools .selectors-wrapper {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(180px, 2fr) 56px;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(160px, 2fr) 52px;
                 align-items: end;
                 justify-items: stretch;
-                gap: 12px 12px;
+                gap: 10px 10px;
                 padding-top: 0;
-                font-size: 15px;
+                font-size: 14px;
                 overflow: visible;
             }
 
@@ -3185,29 +3261,29 @@
             .pokaz-tools .checker-selector {
                 grid-column: 1;
                 width: 100%;
-                gap: 6px;
-                font-size: 36px;
+                gap: 5px;
+                font-size: 32px;
             }
 
             .pokaz-tools .bar-selector {
                 grid-column: 2;
                 width: 100%;
-                gap: 6px;
-                font-size: 36px;
+                gap: 5px;
+                font-size: 32px;
             }
 
             .pokaz-tools .jb-wrap,
             .pokaz-tools .match-panel {
                 grid-column: 3;
                 width: 100%;
-                gap: 6px;
-                font-size: 15px;
+                gap: 5px;
+                font-size: 14px;
             }
 
             .pokaz-tools .game-type-right {
                 grid-column: 4;
-                width: 56px;
-                gap: 6px;
+                width: 52px;
+                gap: 5px;
                 justify-self: end;
                 align-self: end;
             }
@@ -3285,11 +3361,11 @@
             .pokaz-tools .score-inputs,
             .pokaz-tools .cube-controls-block,
             .pokaz-tools .turn-dice-block {
-                min-height: 56px;
-                height: 56px;
+                min-height: 48px;
+                height: 48px;
                 box-sizing: border-box;
                 margin: 0;
-                padding: 6px 10px;
+                padding: 5px 8px;
                 border: 2px solid #555;
                 border-style: double;
                 border-radius: 10px;
@@ -3298,15 +3374,15 @@
                 display: flex;
                 align-items: center;
                 justify-content: space-around;
-                gap: 8px;
+                gap: 6px;
             }
 
             .pokaz-tools .jacobi-beaver-block {
                 flex-direction: column;
                 width: 100%;
                 justify-content: center;
-                height: 56px;
-                min-height: 56px;
+                height: 48px;
+                min-height: 48px;
                 gap: 0;
             }
 
@@ -3322,8 +3398,8 @@
             }
 
             .pokaz-tools #game-type-button {
-                width: 52px;
-                height: 52px;
+                width: 48px;
+                height: 48px;
                 margin-top: 0;
                 border-radius: 10px;
             }
@@ -3332,7 +3408,7 @@
                 display: grid;
                 grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
                 align-items: end;
-                gap: 12px;
+                gap: 10px;
                 padding-top: 0;
             }
 
@@ -3386,7 +3462,7 @@
                 align-items: center;
                 justify-content: flex-end;
                 gap: 8px;
-                height: 56px;
+                height: 48px;
             }
 
             .pokaz-tools .action-buttons-col {
@@ -3395,20 +3471,20 @@
             }
 
             .pokaz-tools .action-buttons button {
-                width: 44px;
-                height: 44px;
-                min-width: 44px;
-                min-height: 44px;
+                width: 42px;
+                height: 42px;
+                min-width: 42px;
+                min-height: 42px;
                 padding: 0;
                 border-radius: 10px;
                 margin: 0;
             }
 
             .pokaz-tools .action-buttons-col.right button {
-                width: 52px;
-                height: 52px;
-                min-width: 52px;
-                min-height: 52px;
+                width: 48px;
+                height: 48px;
+                min-width: 48px;
+                min-height: 48px;
             }
 
             .pokaz-tools .screenshot-controls {
@@ -3436,6 +3512,19 @@
                 margin: 0 !important;
                 font-size: 12px !important;
                 border-radius: 8px;
+            }
+        }
+
+        /* Планшет с низкой высотой: не раздувать доску */
+        @media (min-width: 601px) and (max-width: 899px) and (max-height: 820px) {
+            .container {
+                padding-top: 0.55rem;
+            }
+
+            .board-wrapper {
+                width: min(400px, 70vh, 92%);
+                max-width: min(400px, 70vh, 92%);
+                --board-ui-scale: 0.82;
             }
         }
 
@@ -3713,22 +3802,13 @@
             }
         }
 
-        /* Планшеты: меньший верхний отступ (после общих min-width правил, чтобы не перезаписаться) */
-        @media (min-width: 601px) and (max-width: 1000px) {
-            .container {
-                padding: max(5vh, 24px) 1rem 1.5rem;
-                box-sizing: border-box;
-            }
-        }
-
-        /* Мобильные и планшеты: доска на всю доступную ширину, высота масштабируется пропорционально */
-        @media (max-width: 1000px) {
+        /* Мобильные и узкий планшет: stacked layout; доска 100% только на телефоне */
+        @media (max-width: 899px) {
             .container {
                 padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
                 padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
             }
 
-            .board-wrapper,
             .pokaz-side .hints-table,
             .hints-table {
                 width: 100%;
@@ -3882,6 +3962,13 @@
 
         /* Смартфон: та же одна строка, компактнее */
         @media (max-width: 600px) {
+            .board-wrapper {
+                width: 100%;
+                max-width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+            }
+
             .controls-row {
                 display: grid;
                 grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
