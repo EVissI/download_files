@@ -2659,8 +2659,8 @@
             }
         }
 
-        /* Десктоп: единая сетка инструментов */
-        @media (min-width: 1025px) {
+        /* Десктоп: доска слева, инструменты справа */
+        @media (min-width: 1001px) {
             .container {
                 max-width: 1400px;
                 padding: 1rem 1.5rem 1.5rem;
@@ -3138,38 +3138,8 @@
             }
         }
 
-        /* ~1000–1500: доска и инструменты столбцом — панель на полную ширину, как на широком */
-        @media (min-width: 1025px) and (max-width: 1499px) {
-            .pokaz-workspace,
-            .container.pokaz-board-open .pokaz-workspace {
-                flex-direction: column;
-                align-items: center;
-                gap: 20px;
-            }
-
-            .pokaz-main-stage,
-            .pokaz-side,
-            .container.pokaz-board-open .pokaz-main-stage,
-            .container.pokaz-board-open .pokaz-side {
-                flex: none;
-                width: 100%;
-                max-width: min(960px, 100%);
-                min-width: 0;
-            }
-
-            .pokaz-side,
-            .container.pokaz-board-open .pokaz-side {
-                margin-top: 0.25rem;
-            }
-
-            .pokaz-tools {
-                width: 100%;
-                max-width: 100%;
-            }
-        }
-
-        /* Планшет / узкий десктоп: тот же «карточный» блок инструментов */
-        @media (min-width: 900px) and (max-width: 1024px) {
+        /* Планшет: карточный блок инструментов (до перехода в ряд доска|инструменты) */
+        @media (min-width: 900px) and (max-width: 1000px) {
             .pokaz-tools {
                 width: min(960px, 100%);
                 max-width: min(960px, 100%);
@@ -3744,7 +3714,7 @@
         }
 
         /* Планшеты: меньший верхний отступ (после общих min-width правил, чтобы не перезаписаться) */
-        @media (min-width: 601px) and (max-width: 1024px) {
+        @media (min-width: 601px) and (max-width: 1000px) {
             .container {
                 padding: max(5vh, 24px) 1rem 1.5rem;
                 box-sizing: border-box;
@@ -3752,7 +3722,7 @@
         }
 
         /* Мобильные и планшеты: доска на всю доступную ширину, высота масштабируется пропорционально */
-        @media (max-width: 1024px) {
+        @media (max-width: 1000px) {
             .container {
                 padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
                 padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
