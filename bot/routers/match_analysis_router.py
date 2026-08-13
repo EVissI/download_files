@@ -656,13 +656,26 @@ async def match_analysis_fetch(body: MatchAnalysisIdBody):
 
 @match_analysis_api_router.post("/api/match_analysis/set_status")
 async def match_analysis_set_status(body: MatchAnalysisSetStatusBody):
-    """Ручная установка статуса анализа для текущего пользователя (как у content cards)."""
+    """
+    Статус анализа для пользователя.
+    Для MA вручную доступны только FAVORITE и VIEWED (снятие избранного).
+    """
     uid = await _resolve_ma_user_id(body.init_data, body.fab_token)
-    if body.status in (UserContentCardStatus.UNVIEWED, UserContentCardStatus.VIEWED):
+    if body.status == UserContentCardStatus.UNVIEWED:
         raise HTTPException(
             status_code=400,
-            detail="Статусы UNVIEWED/VIEWED системные и не могут устанавливаться вручную",
+            detail="Статус UNVIEWED системный и не может устанавливаться вручную",
         )
+    if body.status in (UserContentCardStatus.SOLVED, UserContentCardStatus.HARD):
+        raise HTTPException(
+            status_code=400,
+            detail="Для анализа матча доступны только Избранное / обычный просмотр",
+        )
+    if body.status not in (
+        UserContentCardStatus.FAVORITE,
+        UserContentCardStatus.VIEWED,
+    ):
+        raise HTTPException(status_code=400, detail="Недопустимый статус")
     async with async_session_maker() as session:
         link_res = await session.execute(
             select(UserMatchAnalysis).where(

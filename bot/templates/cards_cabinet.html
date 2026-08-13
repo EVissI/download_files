@@ -2989,6 +2989,12 @@
                     var maAudioOnlyWrap = document.getElementById('ma-audio-only-filter-wrap');
                     if (maAudioOnlyWrap) maAudioOnlyWrap.classList.add('is-visible');
                     if (statusFilter) {
+                        statusFilter.innerHTML =
+                            '<option value="">Все статусы</option>' +
+                            '<option value="RECENT">Недавно добавленные</option>' +
+                            '<option value="UNVIEWED">Не просмотренные</option>' +
+                            '<option value="VIEWED">Просмотренные</option>' +
+                            '<option value="FAVORITE">Избранные</option>';
                         statusFilter.title = 'Фильтр по статусу';
                     }
                 }
