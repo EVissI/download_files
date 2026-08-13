@@ -56,6 +56,16 @@ class Settings(BaseSettings):
     # Версия статики для ?t= (если пусто — max mtime bot/static при старте процесса)
     STATIC_ASSET_VERSION: str = ""
 
+    # SMTP для email-уведомлений (адрес получателя — в FAB → «Настройки WebApp»)
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_FROM_EMAIL: str | None = None
+    SMTP_FROM_NAME: str = "Backgammon Bot"
+    SMTP_USE_TLS: bool = True
+    SMTP_USE_SSL: bool = False
+
     @property
     def DB_URL(self):
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:5432/{self.POSTGRES_DB}"
@@ -68,6 +78,15 @@ class Settings(BaseSettings):
     @property
     def REDIS_URL(self):
         return f"redis://{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+    def is_smtp_configured(self) -> bool:
+        has_from = bool(self.SMTP_FROM_EMAIL or self.SMTP_USER)
+        return bool(self.SMTP_HOST and has_from)
+
+    def get_smtp_from_email(self) -> str | None:
+        if self.SMTP_FROM_EMAIL:
+            return self.SMTP_FROM_EMAIL
+        return self.SMTP_USER
 
     model_config = SettingsConfigDict(env_file=f"{BASE_DIR}/.env")
 

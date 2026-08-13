@@ -314,6 +314,11 @@ def record_proxy_connection_failure_sync(proxy_url: str) -> bool:
                 from bot.common.telegram_proxy_config import clear_telegram_proxy_cache
 
                 clear_telegram_proxy_cache()
+            from bot.common.service.telegram_proxy_notification_service import (
+                sync_telegram_proxy_availability_notification,
+            )
+
+            sync_telegram_proxy_availability_notification()
             return deactivated
     except Exception as exc:
         logger.exception(

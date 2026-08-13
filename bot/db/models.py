@@ -696,6 +696,9 @@ class WebAppSetting(Base):
     pokaz_screenshot_font_scale_percent: Mapped[int] = mapped_column(
         Integer, nullable=False, default=100
     )
+    admin_notification_email: Mapped[str | None] = mapped_column(
+        String(320), nullable=True
+    )
 
 
 class TelegramProxy(Base):

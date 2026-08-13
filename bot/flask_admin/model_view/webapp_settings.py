@@ -2,7 +2,8 @@ from flask import flash
 from flask_appbuilder import ModelView
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
-from wtforms import SelectField
+from wtforms import SelectField, StringField
+from wtforms.validators import Email, Optional
 
 from bot.db.models import WebAppSetting
 
@@ -31,6 +32,7 @@ class WebAppSettingsModelView(ModelView):
         "webapp_fullscreen_player_enabled",
         "hint_viewer_screenshot_font_scale_percent",
         "pokaz_screenshot_font_scale_percent",
+        "admin_notification_email",
     ]
     show_columns = list_columns
     edit_columns = list_columns[1:]
@@ -61,6 +63,10 @@ class WebAppSettingsModelView(ModelView):
             choices=[("true", _("Включено")), ("false", _("Выключено"))],
             coerce=lambda x: str(x).strip().lower() in ("1", "true", "on", "yes"),
         ),
+        "admin_notification_email": StringField(
+            _("Email для уведомлений"),
+            validators=[Optional(), Email(message=_("Некорректный email"))],
+        ),
     }
 
     label_columns = {
@@ -72,11 +78,21 @@ class WebAppSettingsModelView(ModelView):
         "webapp_fullscreen_player_enabled": _("Плеер"),
         "hint_viewer_screenshot_font_scale_percent": _("Ошибки: масштаб шрифта на скриншоте (%)"),
         "pokaz_screenshot_font_scale_percent": _("Позиции: масштаб шрифта на скриншоте (%)"),
+        "admin_notification_email": _("Email для уведомлений"),
         "created_at": _("Создано"),
         "updated_at": _("Обновлено"),
     }
 
     base_order = ("id", "asc")
 
+    description_columns = {
+        "admin_notification_email": _(
+            "Email для оповещений (например, когда все Telegram-прокси недоступны). "
+            "Требуется настройка SMTP в .env."
+        ),
+    }
+
     def post_update(self, item):
+        if item.admin_notification_email is not None:
+            item.admin_notification_email = str(item.admin_notification_email).strip() or None
         flash(_("Настройка WebApp сохранена"), "success")
