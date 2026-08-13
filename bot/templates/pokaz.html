@@ -88,6 +88,21 @@
             box-sizing: border-box;
         }
 
+        .pokaz-workspace {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .pokaz-side {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
         .pokaz-below-stage {
             display: flex;
             flex-direction: column;
@@ -2637,6 +2652,54 @@
                 box-sizing: border-box;
             }
 
+            /* Десктоп: доска слева, управление справа (таблица закрыта) */
+            .pokaz-workspace {
+                flex-direction: row;
+                align-items: flex-start;
+                justify-content: center;
+                gap: 28px;
+            }
+
+            .pokaz-main-stage {
+                flex: 1 1 0;
+                min-width: 0;
+                width: auto;
+                max-width: min(656px, calc(52% - 14px));
+                align-items: stretch;
+            }
+
+            .pokaz-main-stage .board-wrapper {
+                width: 100%;
+                max-width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+                margin-top: 1.5rem;
+            }
+
+            .pokaz-side {
+                flex: 1 1 0;
+                min-width: 340px;
+                width: auto;
+                max-width: min(640px, calc(48% - 14px));
+                margin-top: 1.5rem;
+                gap: 12px;
+            }
+
+            .pokaz-side .pokaz-tools {
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+            }
+
+            .pokaz-side .board-open-controls,
+            .pokaz-side .turn-label {
+                width: 100%;
+                max-width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+                box-sizing: border-box;
+            }
+
             .pokaz-tools .selectors-wrapper,
             .pokaz-tools .controls-row,
             .pokaz-tools .screenshot-controls,
@@ -2931,11 +2994,19 @@
                 margin: 0;
             }
 
+            /* При открытой таблице: доска|таблица сверху, управление снизу */
+            .container.pokaz-board-open .pokaz-workspace {
+                flex-direction: column;
+                align-items: center;
+            }
+
             .container.pokaz-board-open .pokaz-main-stage {
                 flex-direction: row;
                 align-items: flex-start;
                 justify-content: center;
                 gap: 28px;
+                width: 100%;
+                max-width: 100%;
             }
 
             .container.pokaz-board-open .board-wrapper {
@@ -2960,14 +3031,10 @@
                 box-sizing: border-box;
             }
 
-            .container.pokaz-board-open .board-open-controls,
-            .container.pokaz-board-open .turn-label,
-            .container.pokaz-board-open .pokaz-tools {
+            .container.pokaz-board-open .pokaz-side {
                 width: min(960px, 100%);
                 max-width: min(960px, 100%);
-                margin-left: auto;
-                margin-right: auto;
-                box-sizing: border-box;
+                margin-top: 0.5rem;
             }
 
             .container.pokaz-board-open .board-open-controls.active {
@@ -3156,6 +3223,7 @@
                 <i class="fa fa-mouse-pointer"></i>
             </button>
         </div>
+        <div class="pokaz-workspace">
         <div class="pokaz-main-stage">
         <div class="board-wrapper">
             <div id="black-pips" class="pips-above-board" style="display:none">0</div>
@@ -3176,6 +3244,7 @@
         </div>
         </div>
 
+        <div class="pokaz-side">
         <div class="board-open-controls" id="boardOpenControls">
             <div class="board-open-controls-spacer"></div>
             <div class="history-nav">
@@ -3762,6 +3831,8 @@
                     <option value="200">200%</option>
                 </select>
             </div>
+        </div>
+        </div>
         </div>
         </div>
     </div>
