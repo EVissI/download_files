@@ -24,7 +24,7 @@
             margin: 0 auto;
             padding: 0 20px;
             box-sizing: border-box;
-            /* Колонка = текущая ширина доски; все блоки ниже совпадают с ней */
+            /* Мобильный столбец ≈ половине ширины; на десктопе переопределяется */
             --viewer-col-width: calc(99% * 0.5);
         }
 
@@ -42,12 +42,15 @@
             box-sizing: border-box;
         }
 
+        .board-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
         .board-block,
-        #top-row,
-        .hints-table,
-        .viewer-below-board,
-        .support-container,
-        #adminButtonContainer {
+        .board-panel {
             width: var(--viewer-col-width);
             max-width: var(--viewer-col-width);
             margin-left: auto;
@@ -69,6 +72,29 @@
         .board-block .header,
         .board-block .board-footer {
             width: 100%;
+        }
+
+        .board-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            padding-top: 4px;
+            padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+            min-width: 0;
+        }
+
+        .board-panel > #top-row,
+        .board-panel > .hints-table,
+        .board-panel > .viewer-below-board,
+        .board-panel > .support-container,
+        .board-panel > #adminButtonContainer {
+            width: 100%;
+            max-width: 100%;
+            margin-left: 0;
+            margin-right: 0;
+            box-sizing: border-box;
         }
 
         #boardCanvas {
@@ -772,12 +798,12 @@
             }
         }
 
-        /* Широкий ПК: компактный один ряд, без огромных кнопок */
+        /* Широкий ПК: кнопки управления чуть крупнее в правой панели */
         @media (min-width: 1025px) {
             #prevBtn,
             #nextBtn {
-                width: 48px;
-                height: 48px;
+                width: 56px;
+                height: 56px;
             }
 
             #invertBtn,
@@ -785,50 +811,8 @@
             #screenSaveBtn,
             #screenUploadBtn,
             #supportBtn {
-                width: 36px;
-                height: 36px;
-            }
-
-            .ma-audio-controls__buttons button {
-                width: 41px;
-                height: 41px;
-                font-size: 16px;
-            }
-
-            .ma-audio-autoplay {
-                height: 41px;
-                min-width: 41px;
-                font-size: 11px;
-            }
-
-            .ma-audio-controls__status {
-                max-width: 168px;
-                font-size: 10px;
-            }
-
-
-            .screenshot-controls,
-            .ma-audio-controls__grid,
-            .screenshot-controls > div,
-            .ma-audio-controls__grid > div {
-                gap: 5px;
-            }
-        }
-
-        @media (min-width: 1200px) {
-            #prevBtn,
-            #nextBtn {
-                width: 52px;
-                height: 52px;
-            }
-
-            #invertBtn,
-            #screenshotBtn,
-            #screenSaveBtn,
-            #screenUploadBtn,
-            #supportBtn {
-                width: 38px;
-                height: 38px;
+                width: 40px;
+                height: 40px;
             }
 
             .ma-audio-controls__buttons button {
@@ -844,7 +828,82 @@
             }
 
             .ma-audio-controls__status {
-                max-width: 176px;
+                max-width: 200px;
+                font-size: 11px;
+            }
+
+            .screenshot-controls,
+            .ma-audio-controls__grid,
+            .screenshot-controls > div,
+            .ma-audio-controls__grid > div {
+                gap: 6px;
+            }
+
+            #controls {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .left-controls,
+            .right-controls {
+                margin-left: 0;
+            }
+
+            .right-controls {
+                margin-left: auto;
+            }
+
+            .hints-table {
+                flex: 1 1 auto;
+                min-height: 0;
+            }
+
+            table {
+                font-size: 15px;
+            }
+
+            th,
+            td {
+                padding: 10px 14px;
+                word-spacing: 10px;
+            }
+
+            th {
+                font-size: 15px;
+                padding: 8px 10px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            #prevBtn,
+            #nextBtn {
+                width: 64px;
+                height: 64px;
+            }
+
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn,
+            #supportBtn {
+                width: 44px;
+                height: 44px;
+            }
+
+            .ma-audio-controls__buttons button {
+                width: 46px;
+                height: 46px;
+                font-size: 18px;
+            }
+
+            .ma-audio-autoplay {
+                height: 46px;
+                min-width: 46px;
+                font-size: 12px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 220px;
                 font-size: 11px;
             }
         }
@@ -1379,9 +1438,57 @@
             }
         }
 
-        @media (min-width: 1024px) {
+        /* Десктоп: слева доска и инфо, справа управление и таблица */
+        @media (min-width: 1025px) {
             .container {
-                max-width: 1140px;
+                max-width: 1400px;
+                padding: 1rem 1.5rem 1.5rem;
+            }
+
+            .board-layout {
+                flex-direction: row;
+                align-items: flex-start;
+                justify-content: center;
+                gap: 28px;
+            }
+
+            .board-block {
+                flex: 1 1 0;
+                min-width: 0;
+                width: auto;
+                max-width: min(656px, calc(52% - 14px));
+                margin: 1.5rem 0 20px;
+            }
+
+            .board-panel {
+                flex: 1 1 0;
+                min-width: 340px;
+                width: auto;
+                max-width: min(640px, calc(48% - 14px));
+                margin: 1.5rem 0 20px;
+                padding-top: 0;
+                align-self: stretch;
+            }
+
+            #top-row {
+                margin-top: 0;
+            }
+
+            .hints-table {
+                margin-top: 0;
+            }
+
+            .viewer-below-board {
+                margin-top: 8px;
+            }
+
+            .support-container {
+                margin-bottom: 8px;
+            }
+
+            #adminButtonContainer {
+                margin-top: 8px !important;
+                margin-bottom: 0 !important;
             }
         }
 
@@ -1394,11 +1501,7 @@
             }
 
             .board-block,
-            #top-row,
-            .hints-table,
-            .viewer-below-board,
-            .support-container,
-            #adminButtonContainer {
+            .board-panel {
                 margin-left: 0;
                 margin-right: 0;
             }
@@ -1554,6 +1657,7 @@
 <body>
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
+        <div class="board-layout">
         <div class="board-block">
             <div class="header">
                 <button type="button" id="matchAnalysisCabinetBackBtn" class="ma-cabinet-back-btn" onclick="openMatchAnalysisCabinet()" title="В кабинет «Анализ матча»" aria-label="В кабинет «Анализ матча»" style="display:none;">
@@ -1573,6 +1677,7 @@
             </div>
         </div>
 
+        <div class="board-panel">
         <div id="top-row">
             <div id="controls">
                 <div class="left-controls">
@@ -1651,6 +1756,59 @@
         <div class="support-container">
             <button id="supportBtn" onclick="openSupportModal()" title="Техподержка"></button>
             <span>Отправить скрин в тех поддержку</span>
+        </div>
+
+        <!-- Admin button container -->
+        <div id="adminButtonContainer" style="margin-top: 20px; margin-bottom: 20px; text-align: center; display: none;">
+            <button id="openPipCountCardEditorBtn" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}" style="
+                padding: 12px 24px;
+                margin-right: 10px;
+                background-color: #1f6f8f;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                transition: background-color 0.3s;
+            " onmouseover="this.style.backgroundColor='#185a73'" onmouseout="this.style.backgroundColor='#1f6f8f'">
+                Карточка: подсчёт пипсов
+            </button>
+            <button id="openCardEditorBtn" onclick="openCardEditor()" data-version="{{ cache_timestamp }}" style="
+                padding: 12px 24px;
+                background-color: #28a745;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                transition: background-color 0.3s;
+            " onmouseover="this.style.backgroundColor='#218838'" onmouseout="this.style.backgroundColor='#28a745'">
+                Открыть редактор карточек
+            </button>
+            <div class="admin-screenshot-font-scale">
+                <label for="screenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
+                <select id="screenshotFontScaleSelect" onchange="saveHintViewerScreenshotFontScale()">
+                    <option value="80">80%</option>
+                    <option value="90">90%</option>
+                    <option value="100">100%</option>
+                    <option value="110">110%</option>
+                    <option value="120">120%</option>
+                    <option value="130">130%</option>
+                    <option value="140">140%</option>
+                    <option value="150">150%</option>
+                    <option value="160">160%</option>
+                    <option value="170">170%</option>
+                    <option value="180">180%</option>
+                    <option value="190">190%</option>
+                    <option value="200">200%</option>
+                </select>
+            </div>
+        </div>
+        </div>
         </div>
 
         <div id="supportModal" class="modal">
@@ -5726,57 +5884,6 @@
         });
 
     </script>
-
-    <!-- Admin button container -->
-    <div id="adminButtonContainer" style="margin-top: 20px; margin-bottom: 20px; text-align: center; display: none;">
-        <button id="openPipCountCardEditorBtn" onclick="openPipCountCardEditor()" data-version="{{ cache_timestamp }}" style="
-            padding: 12px 24px;
-            margin-right: 10px;
-            background-color: #1f6f8f;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s;
-        " onmouseover="this.style.backgroundColor='#185a73'" onmouseout="this.style.backgroundColor='#1f6f8f'">
-            Карточка: подсчёт пипсов
-        </button>
-        <button id="openCardEditorBtn" onclick="openCardEditor()" data-version="{{ cache_timestamp }}" style="
-            padding: 12px 24px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s;
-        " onmouseover="this.style.backgroundColor='#218838'" onmouseout="this.style.backgroundColor='#28a745'">
-            Открыть редактор карточек
-        </button>
-        <div class="admin-screenshot-font-scale">
-            <label for="screenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
-            <select id="screenshotFontScaleSelect" onchange="saveHintViewerScreenshotFontScale()">
-                <option value="80">80%</option>
-                <option value="90">90%</option>
-                <option value="100">100%</option>
-                <option value="110">110%</option>
-                <option value="120">120%</option>
-                <option value="130">130%</option>
-                <option value="140">140%</option>
-                <option value="150">150%</option>
-                <option value="160">160%</option>
-                <option value="170">170%</option>
-                <option value="180">180%</option>
-                <option value="190">190%</option>
-                <option value="200">200%</option>
-            </select>
-        </div>
-    </div>
 
     <div id="msgModalOverlay" class="msg-modal-overlay">
         <div class="msg-modal">
